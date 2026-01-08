@@ -9,7 +9,9 @@ from fastapi.staticfiles import StaticFiles
 
 from uwos.db import close_db, init_db
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
+from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uwos.services.auth_service import AuthServiceImpl
+from uwos.services.notes_service import NotesServiceImpl
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +86,21 @@ def create_app() -> FastAPI:
                         "POST /auth.v1.AuthService/GetCurrentUser",
                     ],
                 },
+                "NotesService": {
+                    "path": "/notes.v1.NotesService",
+                    "methods": [
+                        "POST /notes.v1.NotesService/CreateNote",
+                        "POST /notes.v1.NotesService/GetNote",
+                        "POST /notes.v1.NotesService/UpdateNote",
+                        "POST /notes.v1.NotesService/DeleteNote",
+                        "POST /notes.v1.NotesService/ListNotes",
+                        "POST /notes.v1.NotesService/SearchNotes",
+                        "POST /notes.v1.NotesService/GetBacklinks",
+                        "POST /notes.v1.NotesService/TogglePin",
+                        "POST /notes.v1.NotesService/RestoreNote",
+                        "POST /notes.v1.NotesService/AutosaveNote",
+                    ],
+                },
                 "RandomService": {
                     "path": "/randomnum.v1.RandomService",
                     "methods": ["POST /randomnum.v1.RandomService/GetRandomNumber"],
@@ -91,6 +108,7 @@ def create_app() -> FastAPI:
             },
             "proto_files": [
                 "proto/auth/v1/auth.proto",
+                "proto/notes/v1/notes.proto",
                 "proto/randomnum/v1/random.proto",
             ],
             "documentation": "/api/docs for this page, see proto files for full specs",
@@ -108,6 +126,12 @@ def _mount_connect_services(app: FastAPI) -> None:
     auth_app = AuthServiceASGIApplication(auth_service)
     app.mount("/auth.v1.AuthService", auth_app)
     logger.info("Mounted AuthService at /auth.v1.AuthService")
+
+    # Create and mount the notes service
+    notes_service = NotesServiceImpl()
+    notes_app = NotesServiceASGIApplication(notes_service)
+    app.mount("/notes.v1.NotesService", notes_app)
+    logger.info("Mounted NotesService at /notes.v1.NotesService")
 
 
 def _mount_ui(app: FastAPI) -> None:
