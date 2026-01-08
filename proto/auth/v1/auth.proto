@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package auth.v1;
+
+// AuthService provides authentication and user management
+service AuthService {
+  // Register a new user
+  rpc Register(RegisterRequest) returns (AuthResponse) {}
+  
+  // Login with email and password
+  rpc Login(LoginRequest) returns (AuthResponse) {}
+  
+  // Refresh access token using refresh token
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse) {}
+  
+  // Get current user info
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (UserInfoResponse) {}
+}
+
+// Request to register a new user
+message RegisterRequest {
+  // User's email address
+  string email = 1;
+  // Desired username
+  string username = 2;
+  // User's password (min 8 characters)
+  string password = 3;
+  // Optional full name
+  optional string full_name = 4;
+  // Optional organization slug to join after registration
+  optional string organization_slug = 5;
+}
+
+// Request to login
+message LoginRequest {
+  // User's email address
+  string email = 1;
+  // User's password
+  string password = 2;
+  // Optional organization slug to authenticate into
+  optional string organization_slug = 3;
+}
+
+// Request to refresh access token
+message RefreshTokenRequest {
+  // Refresh token
+  string refresh_token = 1;
+  // Optional organization slug to switch context
+  optional string organization_slug = 2;
+}
+
+// Request to get current user info
+message GetCurrentUserRequest {
+  // Empty request, user identified by token
+}
+
+// Authentication response with tokens
+message AuthResponse {
+  // JWT access token
+  string access_token = 1;
+  // JWT refresh token
+  string refresh_token = 2;
+  // Token type (always "bearer")
+  string token_type = 3;
+  // User ID
+  string user_id = 4;
+  // Organization ID if logged into specific org
+  optional string organization_id = 5;
+}
+
+// User information response
+message UserInfoResponse {
+  // User ID
+  string id = 1;
+  // User email
+  string email = 2;
+  // Username
+  string username = 3;
+  // Full name
+  optional string full_name = 4;
+  // Whether user is active
+  bool is_active = 5;
+  // Whether user is system admin
+  bool is_system_admin = 6;
+  // Whether email is verified
+  bool email_verified = 7;
+}
