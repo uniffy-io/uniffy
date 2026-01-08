@@ -17,9 +17,11 @@ proto: ## Generate all protobuf code (backend + UI)
 	@echo "Generating protobuf code..."
 	rm -rf src/uwos/gen src/ui/src/gen
 	PATH="$(PWD)/src/ui/node_modules/.bin:$(PATH)" buf generate
-	mkdir -p src/uwos/gen/randomnum src/uwos/gen/randomnum/v1 src/uwos/gen/auth src/uwos/gen/auth/v1
-	touch src/uwos/gen/__init__.py src/uwos/gen/randomnum/__init__.py src/uwos/gen/randomnum/v1/__init__.py
-	touch src/uwos/gen/auth/__init__.py src/uwos/gen/auth/v1/__init__.py
+	touch src/uwos/gen/__init__.py
+	touch src/uwos/gen/auth/__init__.py 
+	touch src/uwos/gen/auth/v1/__init__.py
+	touch src/uwos/gen/notes/v1/__init__.py
+	touch src/uwos/gen/notes/__init__.py
 	@echo "Protobuf code generated for backend and UI!"
 
 clean: ## Clean generated files

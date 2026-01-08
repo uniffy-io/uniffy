@@ -9,9 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from uwos.db import close_db, init_db
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
-from uwos.gen.randomnum.v1.random_connect import RandomServiceASGIApplication
 from uwos.services.auth_service import AuthServiceImpl
-from uwos.services.random_service import RandomServiceImpl
 
 logger = logging.getLogger(__name__)
 
@@ -110,12 +108,6 @@ def _mount_connect_services(app: FastAPI) -> None:
     auth_app = AuthServiceASGIApplication(auth_service)
     app.mount("/auth.v1.AuthService", auth_app)
     logger.info("Mounted AuthService at /auth.v1.AuthService")
-
-    # Create and mount the random service (example)
-    random_service = RandomServiceImpl()
-    random_app = RandomServiceASGIApplication(random_service)
-    app.mount("/randomnum.v1.RandomService", random_app)
-    logger.info("Mounted RandomService at /randomnum.v1.RandomService")
 
 
 def _mount_ui(app: FastAPI) -> None:

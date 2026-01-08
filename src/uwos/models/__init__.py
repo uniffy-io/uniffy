@@ -6,6 +6,7 @@ from uwos.models.login.organization import Organization
 from uwos.models.login.organization_member import OrganizationMember, OrganizationRole
 from uwos.models.login.sso_configuration import SSOConfiguration, SSOProvider
 from uwos.models.login.user import User
+from uwos.models.notes.note import Note
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "GroupRole",
     "SSOConfiguration",
     "SSOProvider",
+    "Note",
 ]

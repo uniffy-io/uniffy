@@ -1,0 +1,278 @@
+syntax = "proto3";
+
+package notes.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// NotesService provides note management functionality
+service NotesService {
+  // Create a new note
+  rpc CreateNote(CreateNoteRequest) returns (NoteResponse) {}
+  
+  // Get a note by ID
+  rpc GetNote(GetNoteRequest) returns (NoteResponse) {}
+  
+  // Update an existing note
+  rpc UpdateNote(UpdateNoteRequest) returns (NoteResponse) {}
+  
+  // Delete a note (soft delete)
+  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse) {}
+  
+  // List notes in organization with pagination and filters
+  rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {}
+  
+  // Search notes using full-text search
+  rpc SearchNotes(SearchNotesRequest) returns (SearchNotesResponse) {}
+  
+  // Get backlinks for a note (other notes that reference this note)
+  rpc GetBacklinks(GetBacklinksRequest) returns (BacklinksResponse) {}
+  
+  // Pin/unpin a note
+  rpc TogglePin(TogglePinRequest) returns (NoteResponse) {}
+  
+  // Restore a deleted note
+  rpc RestoreNote(RestoreNoteRequest) returns (NoteResponse) {}
+  
+  // Autosave note content (optimized for frequent updates)
+  rpc AutosaveNote(AutosaveNoteRequest) returns (AutosaveNoteResponse) {}
+}
+
+// Request to create a new note
+message CreateNoteRequest {
+  // Organization ID (required for multi-tenancy)
+  string organization_id = 1;
+  // Note title
+  string title = 2;
+  // Note content in markdown
+  string content = 3;
+  // Optional URL-friendly slug (auto-generated if not provided)
+  optional string slug = 4;
+  // Optional parent note ID for hierarchy
+  optional string parent_id = 5;
+  // Optional tags
+  repeated string tags = 6;
+  // Optional metadata
+  map<string, string> metadata = 7;
+}
+
+// Request to get a note
+message GetNoteRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+}
+
+// Request to update a note
+message UpdateNoteRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Updated title (optional)
+  optional string title = 3;
+  // Updated content (optional)
+  optional string content = 4;
+  // Updated slug (optional)
+  optional string slug = 5;
+  // Updated parent ID (optional, use empty string to remove parent)
+  optional string parent_id = 6;
+  // Updated tags (optional, replaces existing tags)
+  repeated string tags = 7;
+  // Updated metadata (optional, merges with existing)
+  map<string, string> metadata = 8;
+}
+
+// Request to delete a note
+message DeleteNoteRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Permanent delete flag (default: false for soft delete)
+  bool permanent = 3;
+}
+
+// Response for delete operation
+message DeleteNoteResponse {
+  // Success flag
+  bool success = 1;
+  // Message
+  string message = 2;
+}
+
+// Response containing a single note
+message NoteResponse {
+  // The note data
+  Note note = 1;
+}
+
+// Request to list notes
+message ListNotesRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Optional parent ID filter (null = root notes only)
+  optional string parent_id = 2;
+  // Optional tag filter
+  repeated string tags = 3;
+  // Include deleted notes
+  bool include_deleted = 4;
+  // Only pinned notes
+  bool pinned_only = 5;
+  // Pagination: page number (1-indexed)
+  int32 page = 6;
+  // Pagination: page size (default: 50, max: 100)
+  int32 page_size = 7;
+  // Sort by field (created_at, updated_at, title)
+  string sort_by = 8;
+  // Sort order (asc, desc)
+  string sort_order = 9;
+}
+
+// Response for listing notes
+message ListNotesResponse {
+  // List of notes
+  repeated Note notes = 1;
+  // Total count of notes matching filters
+  int32 total_count = 2;
+  // Current page
+  int32 page = 3;
+  // Page size
+  int32 page_size = 4;
+  // Total pages
+  int32 total_pages = 5;
+}
+
+// Request to search notes
+message SearchNotesRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Search query (full-text search)
+  string query = 2;
+  // Optional tag filter
+  repeated string tags = 3;
+  // Include deleted notes
+  bool include_deleted = 4;
+  // Pagination: page number (1-indexed)
+  int32 page = 5;
+  // Pagination: page size (default: 50, max: 100)
+  int32 page_size = 6;
+}
+
+// Response for searching notes
+message SearchNotesResponse {
+  // List of notes matching search
+  repeated Note notes = 1;
+  // Total count of notes matching search
+  int32 total_count = 2;
+  // Current page
+  int32 page = 3;
+  // Page size
+  int32 page_size = 4;
+}
+
+// Request to get backlinks
+message GetBacklinksRequest {
+  // Note ID to get backlinks for
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+}
+
+// Response with backlinks
+message BacklinksResponse {
+  // List of notes that reference the target note
+  repeated NoteReference backlinks = 1;
+  // Total count
+  int32 total_count = 2;
+}
+
+// Request to toggle pin status
+message TogglePinRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Pin status (true = pin, false = unpin)
+  bool pinned = 3;
+}
+
+// Request to restore a deleted note
+message RestoreNoteRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+}
+
+// Request to autosave note (lightweight, frequent updates)
+message AutosaveNoteRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Updated content (markdown)
+  string content = 3;
+  // Optional updated title
+  optional string title = 4;
+  // Client timestamp for conflict resolution
+  int64 client_timestamp = 5;
+}
+
+// Response for autosave operation
+message AutosaveNoteResponse {
+  // Success flag
+  bool success = 1;
+  // Server timestamp of the save
+  google.protobuf.Timestamp saved_at = 2;
+  // Note version for conflict detection
+  int64 version = 3;
+}
+
+// Note message
+message Note {
+  // Note ID
+  string id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // Created by user ID
+  string created_by = 3;
+  // Note title
+  string title = 4;
+  // Note content (markdown)
+  string content = 5;
+  // URL-friendly slug
+  string slug = 6;
+  // Is deleted flag
+  bool is_deleted = 7;
+  // Is pinned flag
+  bool is_pinned = 8;
+  // Version number for conflict detection
+  int64 version = 9;
+  // Optional parent note ID
+  optional string parent_id = 10;
+  // Tags
+  repeated string tags = 11;
+  // Metadata
+  map<string, string> metadata = 12;
+  // Created timestamp
+  google.protobuf.Timestamp created_at = 13;
+  // Updated timestamp
+  google.protobuf.Timestamp updated_at = 14;
+  // Deleted timestamp (if soft-deleted)
+  optional google.protobuf.Timestamp deleted_at = 15;
+}
+
+// Note reference (lightweight representation for backlinks)
+message NoteReference {
+  // Note ID
+  string id = 1;
+  // Note title
+  string title = 2;
+  // Note slug
+  string slug = 3;
+  // Created by user ID
+  string created_by = 4;
+  // Updated timestamp
+  google.protobuf.Timestamp updated_at = 5;
+}
