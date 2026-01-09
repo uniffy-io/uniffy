@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AutosaveNoteRequest, AutosaveNoteResponse, BacklinksResponse, CreateNoteRequest, DeleteNoteRequest, DeleteNoteResponse, GetBacklinksRequest, GetNoteRequest, ListNotesRequest, ListNotesResponse, NoteResponse, RestoreNoteRequest, SearchNotesRequest, SearchNotesResponse, TogglePinRequest, UpdateNoteRequest } from "./notes_pb.js";
+import { AutosaveNoteRequest, AutosaveNoteResponse, BacklinksResponse, CopyNoteRequest, CreateNoteRequest, DeleteNoteRequest, DeleteNoteResponse, GetBacklinksRequest, GetNoteRequest, GetNoteSharingRequest, GrantPermissionRequest, ListNotesRequest, ListNotesResponse, MoveNoteRequest, NoteResponse, NoteSharingResponse, PermissionResponse, RestoreNoteRequest, RevokePermissionRequest, SearchNotesRequest, SearchNotesResponse, ShareNoteResponse, ShareNoteWithGroupRequest, TogglePinRequest, UnshareNoteFromGroupRequest, UpdateNoteRequest } from "./notes_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -122,6 +122,83 @@ export const NotesService = {
       name: "AutosaveNote",
       I: AutosaveNoteRequest,
       O: AutosaveNoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Move note between spaces (personal, group, organization)
+     *
+     * @generated from rpc notes.v1.NotesService.MoveNote
+     */
+    moveNote: {
+      name: "MoveNote",
+      I: MoveNoteRequest,
+      O: NoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Copy note to another space
+     *
+     * @generated from rpc notes.v1.NotesService.CopyNote
+     */
+    copyNote: {
+      name: "CopyNote",
+      I: CopyNoteRequest,
+      O: NoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Share note with group(s)
+     *
+     * @generated from rpc notes.v1.NotesService.ShareNoteWithGroup
+     */
+    shareNoteWithGroup: {
+      name: "ShareNoteWithGroup",
+      I: ShareNoteWithGroupRequest,
+      O: ShareNoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Unshare note from group
+     *
+     * @generated from rpc notes.v1.NotesService.UnshareNoteFromGroup
+     */
+    unshareNoteFromGroup: {
+      name: "UnshareNoteFromGroup",
+      I: UnshareNoteFromGroupRequest,
+      O: ShareNoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get sharing info for a note
+     *
+     * @generated from rpc notes.v1.NotesService.GetNoteSharing
+     */
+    getNoteSharing: {
+      name: "GetNoteSharing",
+      I: GetNoteSharingRequest,
+      O: NoteSharingResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Grant permission to user/group for a note
+     *
+     * @generated from rpc notes.v1.NotesService.GrantPermission
+     */
+    grantPermission: {
+      name: "GrantPermission",
+      I: GrantPermissionRequest,
+      O: PermissionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Revoke permission from user/group for a note
+     *
+     * @generated from rpc notes.v1.NotesService.RevokePermission
+     */
+    revokePermission: {
+      name: "RevokePermission",
+      I: RevokePermissionRequest,
+      O: PermissionResponse,
       kind: MethodKind.Unary,
     },
   }

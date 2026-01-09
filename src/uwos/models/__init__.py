@@ -7,6 +7,9 @@ from uwos.models.login.organization_member import OrganizationMember, Organizati
 from uwos.models.login.sso_configuration import SSOConfiguration, SSOProvider
 from uwos.models.login.user import User
 from uwos.models.notes.note import Note
+from uwos.models.permissions.content_group_link import ContentGroupLink
+from uwos.models.permissions.content_permission import ContentPermission
+from uwos.models.shared import ContentType, PermissionLevel, SubjectType, VisibilityScope
 
 __all__ = [
     "User",
@@ -19,4 +22,10 @@ __all__ = [
     "SSOConfiguration",
     "SSOProvider",
     "Note",
+    "ContentGroupLink",
+    "ContentPermission",
+    "VisibilityScope",
+    "ContentType",
+    "PermissionLevel",
+    "SubjectType",
 ]

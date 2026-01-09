@@ -11,6 +11,7 @@ import UsersPage from '@/features/admin/pages/UsersPage';
 import SettingsPage from '@/features/admin/pages/SettingsPage';
 import OrgSettingsPage from '@/features/organization/pages/OrgSettingsPage';
 import UserProfilePage from '@/features/auth/pages/UserProfilePage';
+import NotesPage from '@/features/notes/pages/NotesPage';
 
 // Simple layout for authentication pages
 function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -64,6 +65,12 @@ export default function App() {
             <MainLayout>
               <UserProfilePage />
             </MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/notes" element={
+          <ProtectedRoute>
+            <NotesPage />
           </ProtectedRoute>
         } />
         

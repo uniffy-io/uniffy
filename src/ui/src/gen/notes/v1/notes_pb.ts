@@ -7,6 +7,102 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
 
 /**
+ * Visibility scope for content
+ *
+ * @generated from enum notes.v1.VisibilityScope
+ */
+export enum VisibilityScope {
+  /**
+   * @generated from enum value: VISIBILITY_SCOPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Personal space - only owner can access
+   *
+   * @generated from enum value: VISIBILITY_SCOPE_PRIVATE = 1;
+   */
+  PRIVATE = 1,
+
+  /**
+   * Group space - accessible to group members
+   *
+   * @generated from enum value: VISIBILITY_SCOPE_GROUP = 2;
+   */
+  GROUP = 2,
+
+  /**
+   * Organization space - accessible to all org members
+   *
+   * @generated from enum value: VISIBILITY_SCOPE_ORGANIZATION = 3;
+   */
+  ORGANIZATION = 3,
+
+  /**
+   * Public - accessible externally (future)
+   *
+   * @generated from enum value: VISIBILITY_SCOPE_PUBLIC = 4;
+   */
+  PUBLIC = 4,
+}
+// Retrieve enum metadata with: proto3.getEnumType(VisibilityScope)
+proto3.util.setEnumType(VisibilityScope, "notes.v1.VisibilityScope", [
+  { no: 0, name: "VISIBILITY_SCOPE_UNSPECIFIED" },
+  { no: 1, name: "VISIBILITY_SCOPE_PRIVATE" },
+  { no: 2, name: "VISIBILITY_SCOPE_GROUP" },
+  { no: 3, name: "VISIBILITY_SCOPE_ORGANIZATION" },
+  { no: 4, name: "VISIBILITY_SCOPE_PUBLIC" },
+]);
+
+/**
+ * Permission levels for content access
+ *
+ * @generated from enum notes.v1.PermissionLevel
+ */
+export enum PermissionLevel {
+  /**
+   * @generated from enum value: PERMISSION_LEVEL_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Can view content
+   *
+   * @generated from enum value: PERMISSION_LEVEL_VIEW = 1;
+   */
+  VIEW = 1,
+
+  /**
+   * Can view and edit content
+   *
+   * @generated from enum value: PERMISSION_LEVEL_EDIT = 2;
+   */
+  EDIT = 2,
+
+  /**
+   * Can view, edit, delete, and share
+   *
+   * @generated from enum value: PERMISSION_LEVEL_ADMIN = 3;
+   */
+  ADMIN = 3,
+
+  /**
+   * Full control including ownership transfer
+   *
+   * @generated from enum value: PERMISSION_LEVEL_OWNER = 4;
+   */
+  OWNER = 4,
+}
+// Retrieve enum metadata with: proto3.getEnumType(PermissionLevel)
+proto3.util.setEnumType(PermissionLevel, "notes.v1.PermissionLevel", [
+  { no: 0, name: "PERMISSION_LEVEL_UNSPECIFIED" },
+  { no: 1, name: "PERMISSION_LEVEL_VIEW" },
+  { no: 2, name: "PERMISSION_LEVEL_EDIT" },
+  { no: 3, name: "PERMISSION_LEVEL_ADMIN" },
+  { no: 4, name: "PERMISSION_LEVEL_OWNER" },
+]);
+
+/**
  * Request to create a new note
  *
  * @generated from message notes.v1.CreateNoteRequest
@@ -61,6 +157,20 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
    */
   metadata: { [key: string]: string } = {};
 
+  /**
+   * Visibility scope (defaults to PRIVATE)
+   *
+   * @generated from field: optional notes.v1.VisibilityScope visibility = 8;
+   */
+  visibility?: VisibilityScope;
+
+  /**
+   * Optional group ID(s) if visibility is GROUP
+   *
+   * @generated from field: repeated string group_ids = 9;
+   */
+  groupIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -76,6 +186,8 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
     { no: 5, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 8, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 9, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNoteRequest {
@@ -457,6 +569,27 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
    */
   sortOrder = "";
 
+  /**
+   * Optional visibility filter
+   *
+   * @generated from field: optional notes.v1.VisibilityScope visibility = 10;
+   */
+  visibility?: VisibilityScope;
+
+  /**
+   * Optional group ID filter (for group-scoped notes)
+   *
+   * @generated from field: optional string group_id = 11;
+   */
+  groupId?: string;
+
+  /**
+   * Show only my personal notes
+   *
+   * @generated from field: bool personal_only = 12;
+   */
+  personalOnly = false;
+
   constructor(data?: PartialMessage<ListNotesRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -474,6 +607,9 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
     { no: 7, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 8, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 11, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 12, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListNotesRequest {
@@ -1067,95 +1203,116 @@ export class Note extends Message<Note> {
   organizationId = "";
 
   /**
-   * Created by user ID
+   * Owner user ID (who owns the note)
    *
-   * @generated from field: string created_by = 3;
+   * @generated from field: string owner_id = 3;
    */
-  createdBy = "";
+  ownerId = "";
+
+  /**
+   * Visibility scope
+   *
+   * @generated from field: notes.v1.VisibilityScope visibility = 4;
+   */
+  visibility = VisibilityScope.UNSPECIFIED;
 
   /**
    * Note title
    *
-   * @generated from field: string title = 4;
+   * @generated from field: string title = 5;
    */
   title = "";
 
   /**
    * Note content (markdown)
    *
-   * @generated from field: string content = 5;
+   * @generated from field: string content = 6;
    */
   content = "";
 
   /**
    * URL-friendly slug
    *
-   * @generated from field: string slug = 6;
+   * @generated from field: string slug = 7;
    */
   slug = "";
 
   /**
    * Is deleted flag
    *
-   * @generated from field: bool is_deleted = 7;
+   * @generated from field: bool is_deleted = 8;
    */
   isDeleted = false;
 
   /**
    * Is pinned flag
    *
-   * @generated from field: bool is_pinned = 8;
+   * @generated from field: bool is_pinned = 9;
    */
   isPinned = false;
 
   /**
    * Version number for conflict detection
    *
-   * @generated from field: int64 version = 9;
+   * @generated from field: int64 version = 10;
    */
   version = protoInt64.zero;
 
   /**
    * Optional parent note ID
    *
-   * @generated from field: optional string parent_id = 10;
+   * @generated from field: optional string parent_id = 11;
    */
   parentId?: string;
 
   /**
    * Tags
    *
-   * @generated from field: repeated string tags = 11;
+   * @generated from field: repeated string tags = 12;
    */
   tags: string[] = [];
 
   /**
    * Metadata
    *
-   * @generated from field: map<string, string> metadata = 12;
+   * @generated from field: map<string, string> metadata = 13;
    */
   metadata: { [key: string]: string } = {};
 
   /**
    * Created timestamp
    *
-   * @generated from field: google.protobuf.Timestamp created_at = 13;
+   * @generated from field: google.protobuf.Timestamp created_at = 14;
    */
   createdAt?: Timestamp;
 
   /**
    * Updated timestamp
    *
-   * @generated from field: google.protobuf.Timestamp updated_at = 14;
+   * @generated from field: google.protobuf.Timestamp updated_at = 15;
    */
   updatedAt?: Timestamp;
 
   /**
    * Deleted timestamp (if soft-deleted)
    *
-   * @generated from field: optional google.protobuf.Timestamp deleted_at = 15;
+   * @generated from field: optional google.protobuf.Timestamp deleted_at = 16;
    */
   deletedAt?: Timestamp;
+
+  /**
+   * Group IDs if shared with groups
+   *
+   * @generated from field: repeated string group_ids = 17;
+   */
+  groupIds: string[] = [];
+
+  /**
+   * User's permission level on this note
+   *
+   * @generated from field: notes.v1.PermissionLevel user_permission = 18;
+   */
+  userPermission = PermissionLevel.UNSPECIFIED;
 
   constructor(data?: PartialMessage<Note>) {
     super();
@@ -1167,19 +1324,22 @@ export class Note extends Message<Note> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 8, name: "is_pinned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 9, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 10, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 11, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 12, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 13, name: "created_at", kind: "message", T: Timestamp },
-    { no: 14, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 15, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
+    { no: 3, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 5, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "is_pinned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 11, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 12, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 13, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 14, name: "created_at", kind: "message", T: Timestamp },
+    { no: 15, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 16, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
+    { no: 17, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 18, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {
@@ -1227,11 +1387,11 @@ export class NoteReference extends Message<NoteReference> {
   slug = "";
 
   /**
-   * Created by user ID
+   * Owner user ID
    *
-   * @generated from field: string created_by = 4;
+   * @generated from field: string owner_id = 4;
    */
-  createdBy = "";
+  ownerId = "";
 
   /**
    * Updated timestamp
@@ -1239,6 +1399,13 @@ export class NoteReference extends Message<NoteReference> {
    * @generated from field: google.protobuf.Timestamp updated_at = 5;
    */
   updatedAt?: Timestamp;
+
+  /**
+   * Visibility scope
+   *
+   * @generated from field: notes.v1.VisibilityScope visibility = 6;
+   */
+  visibility = VisibilityScope.UNSPECIFIED;
 
   constructor(data?: PartialMessage<NoteReference>) {
     super();
@@ -1251,8 +1418,9 @@ export class NoteReference extends Message<NoteReference> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteReference {
@@ -1269,6 +1437,769 @@ export class NoteReference extends Message<NoteReference> {
 
   static equals(a: NoteReference | PlainMessage<NoteReference> | undefined, b: NoteReference | PlainMessage<NoteReference> | undefined): boolean {
     return proto3.util.equals(NoteReference, a, b);
+  }
+}
+
+/**
+ * Request to move note between spaces
+ *
+ * @generated from message notes.v1.MoveNoteRequest
+ */
+export class MoveNoteRequest extends Message<MoveNoteRequest> {
+  /**
+   * Note ID
+   *
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Target visibility scope
+   *
+   * @generated from field: notes.v1.VisibilityScope target_visibility = 3;
+   */
+  targetVisibility = VisibilityScope.UNSPECIFIED;
+
+  /**
+   * Target group ID(s) if moving to GROUP visibility
+   *
+   * @generated from field: repeated string target_group_ids = 4;
+   */
+  targetGroupIds: string[] = [];
+
+  constructor(data?: PartialMessage<MoveNoteRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.MoveNoteRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "target_visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 4, name: "target_group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveNoteRequest {
+    return new MoveNoteRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MoveNoteRequest {
+    return new MoveNoteRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MoveNoteRequest {
+    return new MoveNoteRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MoveNoteRequest | PlainMessage<MoveNoteRequest> | undefined, b: MoveNoteRequest | PlainMessage<MoveNoteRequest> | undefined): boolean {
+    return proto3.util.equals(MoveNoteRequest, a, b);
+  }
+}
+
+/**
+ * Request to copy note to another space
+ *
+ * @generated from message notes.v1.CopyNoteRequest
+ */
+export class CopyNoteRequest extends Message<CopyNoteRequest> {
+  /**
+   * Source note ID
+   *
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Target visibility scope
+   *
+   * @generated from field: notes.v1.VisibilityScope target_visibility = 3;
+   */
+  targetVisibility = VisibilityScope.UNSPECIFIED;
+
+  /**
+   * Target group ID(s) if copying to GROUP visibility
+   *
+   * @generated from field: repeated string target_group_ids = 4;
+   */
+  targetGroupIds: string[] = [];
+
+  /**
+   * Optional: new title for the copy
+   *
+   * @generated from field: optional string title = 5;
+   */
+  title?: string;
+
+  constructor(data?: PartialMessage<CopyNoteRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.CopyNoteRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "target_visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 4, name: "target_group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CopyNoteRequest {
+    return new CopyNoteRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CopyNoteRequest {
+    return new CopyNoteRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CopyNoteRequest {
+    return new CopyNoteRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CopyNoteRequest | PlainMessage<CopyNoteRequest> | undefined, b: CopyNoteRequest | PlainMessage<CopyNoteRequest> | undefined): boolean {
+    return proto3.util.equals(CopyNoteRequest, a, b);
+  }
+}
+
+/**
+ * Request to share note with group
+ *
+ * @generated from message notes.v1.ShareNoteWithGroupRequest
+ */
+export class ShareNoteWithGroupRequest extends Message<ShareNoteWithGroupRequest> {
+  /**
+   * Note ID
+   *
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Group ID to share with
+   *
+   * @generated from field: string group_id = 3;
+   */
+  groupId = "";
+
+  constructor(data?: PartialMessage<ShareNoteWithGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.ShareNoteWithGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ShareNoteWithGroupRequest {
+    return new ShareNoteWithGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ShareNoteWithGroupRequest {
+    return new ShareNoteWithGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ShareNoteWithGroupRequest {
+    return new ShareNoteWithGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ShareNoteWithGroupRequest | PlainMessage<ShareNoteWithGroupRequest> | undefined, b: ShareNoteWithGroupRequest | PlainMessage<ShareNoteWithGroupRequest> | undefined): boolean {
+    return proto3.util.equals(ShareNoteWithGroupRequest, a, b);
+  }
+}
+
+/**
+ * Request to unshare note from group
+ *
+ * @generated from message notes.v1.UnshareNoteFromGroupRequest
+ */
+export class UnshareNoteFromGroupRequest extends Message<UnshareNoteFromGroupRequest> {
+  /**
+   * Note ID
+   *
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Group ID to unshare from
+   *
+   * @generated from field: string group_id = 3;
+   */
+  groupId = "";
+
+  constructor(data?: PartialMessage<UnshareNoteFromGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.UnshareNoteFromGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnshareNoteFromGroupRequest {
+    return new UnshareNoteFromGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnshareNoteFromGroupRequest {
+    return new UnshareNoteFromGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnshareNoteFromGroupRequest {
+    return new UnshareNoteFromGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UnshareNoteFromGroupRequest | PlainMessage<UnshareNoteFromGroupRequest> | undefined, b: UnshareNoteFromGroupRequest | PlainMessage<UnshareNoteFromGroupRequest> | undefined): boolean {
+    return proto3.util.equals(UnshareNoteFromGroupRequest, a, b);
+  }
+}
+
+/**
+ * Response for share/unshare operations
+ *
+ * @generated from message notes.v1.ShareNoteResponse
+ */
+export class ShareNoteResponse extends Message<ShareNoteResponse> {
+  /**
+   * Success flag
+   *
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  /**
+   * Message
+   *
+   * @generated from field: string message = 2;
+   */
+  message = "";
+
+  /**
+   * Updated list of group IDs
+   *
+   * @generated from field: repeated string group_ids = 3;
+   */
+  groupIds: string[] = [];
+
+  constructor(data?: PartialMessage<ShareNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.ShareNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ShareNoteResponse {
+    return new ShareNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ShareNoteResponse {
+    return new ShareNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ShareNoteResponse {
+    return new ShareNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ShareNoteResponse | PlainMessage<ShareNoteResponse> | undefined, b: ShareNoteResponse | PlainMessage<ShareNoteResponse> | undefined): boolean {
+    return proto3.util.equals(ShareNoteResponse, a, b);
+  }
+}
+
+/**
+ * Request to get note sharing info
+ *
+ * @generated from message notes.v1.GetNoteSharingRequest
+ */
+export class GetNoteSharingRequest extends Message<GetNoteSharingRequest> {
+  /**
+   * Note ID
+   *
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<GetNoteSharingRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.GetNoteSharingRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNoteSharingRequest {
+    return new GetNoteSharingRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNoteSharingRequest {
+    return new GetNoteSharingRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNoteSharingRequest {
+    return new GetNoteSharingRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNoteSharingRequest | PlainMessage<GetNoteSharingRequest> | undefined, b: GetNoteSharingRequest | PlainMessage<GetNoteSharingRequest> | undefined): boolean {
+    return proto3.util.equals(GetNoteSharingRequest, a, b);
+  }
+}
+
+/**
+ * Response with note sharing information
+ *
+ * @generated from message notes.v1.NoteSharingResponse
+ */
+export class NoteSharingResponse extends Message<NoteSharingResponse> {
+  /**
+   * Note visibility
+   *
+   * @generated from field: notes.v1.VisibilityScope visibility = 1;
+   */
+  visibility = VisibilityScope.UNSPECIFIED;
+
+  /**
+   * Owner user ID
+   *
+   * @generated from field: string owner_id = 2;
+   */
+  ownerId = "";
+
+  /**
+   * Group IDs if shared with groups
+   *
+   * @generated from field: repeated string group_ids = 3;
+   */
+  groupIds: string[] = [];
+
+  /**
+   * Explicit permissions granted
+   *
+   * @generated from field: repeated notes.v1.ContentPermission permissions = 4;
+   */
+  permissions: ContentPermission[] = [];
+
+  constructor(data?: PartialMessage<NoteSharingResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.NoteSharingResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 2, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "permissions", kind: "message", T: ContentPermission, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteSharingResponse {
+    return new NoteSharingResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteSharingResponse {
+    return new NoteSharingResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteSharingResponse {
+    return new NoteSharingResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NoteSharingResponse | PlainMessage<NoteSharingResponse> | undefined, b: NoteSharingResponse | PlainMessage<NoteSharingResponse> | undefined): boolean {
+    return proto3.util.equals(NoteSharingResponse, a, b);
+  }
+}
+
+/**
+ * Request to grant permission
+ *
+ * @generated from message notes.v1.GrantPermissionRequest
+ */
+export class GrantPermissionRequest extends Message<GrantPermissionRequest> {
+  /**
+   * Note ID
+   *
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Subject type (user or group)
+   *
+   * @generated from field: string subject_type = 3;
+   */
+  subjectType = "";
+
+  /**
+   * Subject ID (user or group ID)
+   *
+   * @generated from field: string subject_id = 4;
+   */
+  subjectId = "";
+
+  /**
+   * Permission level
+   *
+   * @generated from field: notes.v1.PermissionLevel permission_level = 5;
+   */
+  permissionLevel = PermissionLevel.UNSPECIFIED;
+
+  /**
+   * Optional: fine-grained permissions
+   *
+   * @generated from field: optional bool can_view = 6;
+   */
+  canView?: boolean;
+
+  /**
+   * @generated from field: optional bool can_edit = 7;
+   */
+  canEdit?: boolean;
+
+  /**
+   * @generated from field: optional bool can_delete = 8;
+   */
+  canDelete?: boolean;
+
+  /**
+   * @generated from field: optional bool can_share = 9;
+   */
+  canShare?: boolean;
+
+  /**
+   * @generated from field: optional bool can_move = 10;
+   */
+  canMove?: boolean;
+
+  constructor(data?: PartialMessage<GrantPermissionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.GrantPermissionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subject_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 6, name: "can_view", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 7, name: "can_edit", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 8, name: "can_delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 9, name: "can_share", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "can_move", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GrantPermissionRequest {
+    return new GrantPermissionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GrantPermissionRequest {
+    return new GrantPermissionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GrantPermissionRequest {
+    return new GrantPermissionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GrantPermissionRequest | PlainMessage<GrantPermissionRequest> | undefined, b: GrantPermissionRequest | PlainMessage<GrantPermissionRequest> | undefined): boolean {
+    return proto3.util.equals(GrantPermissionRequest, a, b);
+  }
+}
+
+/**
+ * Request to revoke permission
+ *
+ * @generated from message notes.v1.RevokePermissionRequest
+ */
+export class RevokePermissionRequest extends Message<RevokePermissionRequest> {
+  /**
+   * Note ID
+   *
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Subject type (user or group)
+   *
+   * @generated from field: string subject_type = 3;
+   */
+  subjectType = "";
+
+  /**
+   * Subject ID (user or group ID)
+   *
+   * @generated from field: string subject_id = 4;
+   */
+  subjectId = "";
+
+  constructor(data?: PartialMessage<RevokePermissionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.RevokePermissionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subject_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokePermissionRequest {
+    return new RevokePermissionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokePermissionRequest {
+    return new RevokePermissionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokePermissionRequest {
+    return new RevokePermissionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokePermissionRequest | PlainMessage<RevokePermissionRequest> | undefined, b: RevokePermissionRequest | PlainMessage<RevokePermissionRequest> | undefined): boolean {
+    return proto3.util.equals(RevokePermissionRequest, a, b);
+  }
+}
+
+/**
+ * Response for permission operations
+ *
+ * @generated from message notes.v1.PermissionResponse
+ */
+export class PermissionResponse extends Message<PermissionResponse> {
+  /**
+   * Success flag
+   *
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  /**
+   * Message
+   *
+   * @generated from field: string message = 2;
+   */
+  message = "";
+
+  constructor(data?: PartialMessage<PermissionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.PermissionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PermissionResponse {
+    return new PermissionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PermissionResponse {
+    return new PermissionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PermissionResponse {
+    return new PermissionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PermissionResponse | PlainMessage<PermissionResponse> | undefined, b: PermissionResponse | PlainMessage<PermissionResponse> | undefined): boolean {
+    return proto3.util.equals(PermissionResponse, a, b);
+  }
+}
+
+/**
+ * Content permission details
+ *
+ * @generated from message notes.v1.ContentPermission
+ */
+export class ContentPermission extends Message<ContentPermission> {
+  /**
+   * Permission ID
+   *
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * Subject type (user, group, organization)
+   *
+   * @generated from field: string subject_type = 2;
+   */
+  subjectType = "";
+
+  /**
+   * Subject ID
+   *
+   * @generated from field: string subject_id = 3;
+   */
+  subjectId = "";
+
+  /**
+   * Permission level
+   *
+   * @generated from field: notes.v1.PermissionLevel permission_level = 4;
+   */
+  permissionLevel = PermissionLevel.UNSPECIFIED;
+
+  /**
+   * Fine-grained permissions
+   *
+   * @generated from field: bool can_view = 5;
+   */
+  canView = false;
+
+  /**
+   * @generated from field: bool can_edit = 6;
+   */
+  canEdit = false;
+
+  /**
+   * @generated from field: bool can_delete = 7;
+   */
+  canDelete = false;
+
+  /**
+   * @generated from field: bool can_share = 8;
+   */
+  canShare = false;
+
+  /**
+   * @generated from field: bool can_move = 9;
+   */
+  canMove = false;
+
+  /**
+   * Granted by user ID
+   *
+   * @generated from field: string granted_by_user_id = 10;
+   */
+  grantedByUserId = "";
+
+  /**
+   * Granted timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp granted_at = 11;
+   */
+  grantedAt?: Timestamp;
+
+  /**
+   * Optional expiration
+   *
+   * @generated from field: optional google.protobuf.Timestamp expires_at = 12;
+   */
+  expiresAt?: Timestamp;
+
+  constructor(data?: PartialMessage<ContentPermission>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.ContentPermission";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "subject_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 5, name: "can_view", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "can_edit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "can_delete", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "can_share", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "can_move", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "granted_by_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "granted_at", kind: "message", T: Timestamp },
+    { no: 12, name: "expires_at", kind: "message", T: Timestamp, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ContentPermission {
+    return new ContentPermission().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ContentPermission {
+    return new ContentPermission().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ContentPermission {
+    return new ContentPermission().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ContentPermission | PlainMessage<ContentPermission> | undefined, b: ContentPermission | PlainMessage<ContentPermission> | undefined): boolean {
+    return proto3.util.equals(ContentPermission, a, b);
   }
 }
 

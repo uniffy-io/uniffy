@@ -4,6 +4,32 @@ package notes.v1;
 
 import "google/protobuf/timestamp.proto";
 
+// Visibility scope for content
+enum VisibilityScope {
+  VISIBILITY_SCOPE_UNSPECIFIED = 0;
+  // Personal space - only owner can access
+  VISIBILITY_SCOPE_PRIVATE = 1;
+  // Group space - accessible to group members
+  VISIBILITY_SCOPE_GROUP = 2;
+  // Organization space - accessible to all org members
+  VISIBILITY_SCOPE_ORGANIZATION = 3;
+  // Public - accessible externally (future)
+  VISIBILITY_SCOPE_PUBLIC = 4;
+}
+
+// Permission levels for content access
+enum PermissionLevel {
+  PERMISSION_LEVEL_UNSPECIFIED = 0;
+  // Can view content
+  PERMISSION_LEVEL_VIEW = 1;
+  // Can view and edit content
+  PERMISSION_LEVEL_EDIT = 2;
+  // Can view, edit, delete, and share
+  PERMISSION_LEVEL_ADMIN = 3;
+  // Full control including ownership transfer
+  PERMISSION_LEVEL_OWNER = 4;
+}
+
 // NotesService provides note management functionality
 service NotesService {
   // Create a new note
@@ -35,6 +61,27 @@ service NotesService {
   
   // Autosave note content (optimized for frequent updates)
   rpc AutosaveNote(AutosaveNoteRequest) returns (AutosaveNoteResponse) {}
+  
+  // Move note between spaces (personal, group, organization)
+  rpc MoveNote(MoveNoteRequest) returns (NoteResponse) {}
+  
+  // Copy note to another space
+  rpc CopyNote(CopyNoteRequest) returns (NoteResponse) {}
+  
+  // Share note with group(s)
+  rpc ShareNoteWithGroup(ShareNoteWithGroupRequest) returns (ShareNoteResponse) {}
+  
+  // Unshare note from group
+  rpc UnshareNoteFromGroup(UnshareNoteFromGroupRequest) returns (ShareNoteResponse) {}
+  
+  // Get sharing info for a note
+  rpc GetNoteSharing(GetNoteSharingRequest) returns (NoteSharingResponse) {}
+  
+  // Grant permission to user/group for a note
+  rpc GrantPermission(GrantPermissionRequest) returns (PermissionResponse) {}
+  
+  // Revoke permission from user/group for a note
+  rpc RevokePermission(RevokePermissionRequest) returns (PermissionResponse) {}
 }
 
 // Request to create a new note
@@ -53,6 +100,10 @@ message CreateNoteRequest {
   repeated string tags = 6;
   // Optional metadata
   map<string, string> metadata = 7;
+  // Visibility scope (defaults to PRIVATE)
+  optional VisibilityScope visibility = 8;
+  // Optional group ID(s) if visibility is GROUP
+  repeated string group_ids = 9;
 }
 
 // Request to get a note
@@ -127,6 +178,12 @@ message ListNotesRequest {
   string sort_by = 8;
   // Sort order (asc, desc)
   string sort_order = 9;
+  // Optional visibility filter
+  optional VisibilityScope visibility = 10;
+  // Optional group ID filter (for group-scoped notes)
+  optional string group_id = 11;
+  // Show only my personal notes
+  bool personal_only = 12;
 }
 
 // Response for listing notes
@@ -235,32 +292,38 @@ message Note {
   string id = 1;
   // Organization ID
   string organization_id = 2;
-  // Created by user ID
-  string created_by = 3;
+  // Owner user ID (who owns the note)
+  string owner_id = 3;
+  // Visibility scope
+  VisibilityScope visibility = 4;
   // Note title
-  string title = 4;
+  string title = 5;
   // Note content (markdown)
-  string content = 5;
+  string content = 6;
   // URL-friendly slug
-  string slug = 6;
+  string slug = 7;
   // Is deleted flag
-  bool is_deleted = 7;
+  bool is_deleted = 8;
   // Is pinned flag
-  bool is_pinned = 8;
+  bool is_pinned = 9;
   // Version number for conflict detection
-  int64 version = 9;
+  int64 version = 10;
   // Optional parent note ID
-  optional string parent_id = 10;
+  optional string parent_id = 11;
   // Tags
-  repeated string tags = 11;
+  repeated string tags = 12;
   // Metadata
-  map<string, string> metadata = 12;
+  map<string, string> metadata = 13;
   // Created timestamp
-  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp created_at = 14;
   // Updated timestamp
-  google.protobuf.Timestamp updated_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
   // Deleted timestamp (if soft-deleted)
-  optional google.protobuf.Timestamp deleted_at = 15;
+  optional google.protobuf.Timestamp deleted_at = 16;
+  // Group IDs if shared with groups
+  repeated string group_ids = 17;
+  // User's permission level on this note
+  PermissionLevel user_permission = 18;
 }
 
 // Note reference (lightweight representation for backlinks)
@@ -271,8 +334,150 @@ message NoteReference {
   string title = 2;
   // Note slug
   string slug = 3;
-  // Created by user ID
-  string created_by = 4;
+  // Owner user ID
+  string owner_id = 4;
   // Updated timestamp
   google.protobuf.Timestamp updated_at = 5;
+  // Visibility scope
+  VisibilityScope visibility = 6;
+}
+
+// Request to move note between spaces
+message MoveNoteRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Target visibility scope
+  VisibilityScope target_visibility = 3;
+  // Target group ID(s) if moving to GROUP visibility
+  repeated string target_group_ids = 4;
+}
+
+// Request to copy note to another space
+message CopyNoteRequest {
+  // Source note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Target visibility scope
+  VisibilityScope target_visibility = 3;
+  // Target group ID(s) if copying to GROUP visibility
+  repeated string target_group_ids = 4;
+  // Optional: new title for the copy
+  optional string title = 5;
+}
+
+// Request to share note with group
+message ShareNoteWithGroupRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Group ID to share with
+  string group_id = 3;
+}
+
+// Request to unshare note from group
+message UnshareNoteFromGroupRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Group ID to unshare from
+  string group_id = 3;
+}
+
+// Response for share/unshare operations
+message ShareNoteResponse {
+  // Success flag
+  bool success = 1;
+  // Message
+  string message = 2;
+  // Updated list of group IDs
+  repeated string group_ids = 3;
+}
+
+// Request to get note sharing info
+message GetNoteSharingRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+}
+
+// Response with note sharing information
+message NoteSharingResponse {
+  // Note visibility
+  VisibilityScope visibility = 1;
+  // Owner user ID
+  string owner_id = 2;
+  // Group IDs if shared with groups
+  repeated string group_ids = 3;
+  // Explicit permissions granted
+  repeated ContentPermission permissions = 4;
+}
+
+// Request to grant permission
+message GrantPermissionRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Subject type (user or group)
+  string subject_type = 3;
+  // Subject ID (user or group ID)
+  string subject_id = 4;
+  // Permission level
+  PermissionLevel permission_level = 5;
+  // Optional: fine-grained permissions
+  optional bool can_view = 6;
+  optional bool can_edit = 7;
+  optional bool can_delete = 8;
+  optional bool can_share = 9;
+  optional bool can_move = 10;
+}
+
+// Request to revoke permission
+message RevokePermissionRequest {
+  // Note ID
+  string note_id = 1;
+  // Organization ID for access control
+  string organization_id = 2;
+  // Subject type (user or group)
+  string subject_type = 3;
+  // Subject ID (user or group ID)
+  string subject_id = 4;
+}
+
+// Response for permission operations
+message PermissionResponse {
+  // Success flag
+  bool success = 1;
+  // Message
+  string message = 2;
+}
+
+// Content permission details
+message ContentPermission {
+  // Permission ID
+  string id = 1;
+  // Subject type (user, group, organization)
+  string subject_type = 2;
+  // Subject ID
+  string subject_id = 3;
+  // Permission level
+  PermissionLevel permission_level = 4;
+  // Fine-grained permissions
+  bool can_view = 5;
+  bool can_edit = 6;
+  bool can_delete = 7;
+  bool can_share = 8;
+  bool can_move = 9;
+  // Granted by user ID
+  string granted_by_user_id = 10;
+  // Granted timestamp
+  google.protobuf.Timestamp granted_at = 11;
+  // Optional expiration
+  optional google.protobuf.Timestamp expires_at = 12;
 }

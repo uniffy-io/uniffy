@@ -1,6 +1,7 @@
 """Note repository for database operations."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
@@ -62,10 +63,11 @@ async def get_note_by_slug(session: AsyncSession, slug: str, organization_id: UU
 async def create_note(
     session: AsyncSession,
     organization_id: UUID,
-    created_by: UUID,
+    owner_id: UUID,
     title: str,
     content: str,
     slug: str,
+    visibility: Any | None = None,
     parent_id: UUID | None = None,
     tags: list[str] | None = None,
     metadata: dict | None = None,
@@ -79,14 +81,16 @@ async def create_note(
         Database session.
     organization_id : UUID
         Organization ID.
-    created_by : UUID
-        User ID of creator.
+    owner_id : UUID
+        User ID of owner/creator.
     title : str
         Note title.
     content : str
         Note content (markdown).
     slug : str
         URL-friendly slug.
+    visibility : VisibilityScope | None
+        Visibility scope (defaults to PRIVATE).
     parent_id : UUID | None
         Optional parent note ID.
     tags : list[str] | None
@@ -100,9 +104,12 @@ async def create_note(
         Created note.
 
     """
+    from uwos.models.shared import VisibilityScope
+
     note = Note(
         organization_id=organization_id,
-        created_by=created_by,
+        owner_id=owner_id,
+        visibility=visibility or VisibilityScope.PRIVATE,
         title=title,
         content=content,
         slug=slug,

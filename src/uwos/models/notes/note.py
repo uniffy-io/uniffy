@@ -8,6 +8,8 @@ from sqlalchemy import Column, DateTime, text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlmodel import Field, SQLModel
 
+from uwos.models.shared import VisibilityScope
+
 
 class Note(SQLModel, table=True):
     """
@@ -16,14 +18,22 @@ class Note(SQLModel, table=True):
     Notes are organization-scoped and can be linked to other notes using wiki-links.
     Supports markdown content, backlinks, and full-text search.
 
+    Content Visibility:
+    - PRIVATE: Personal space - only owner can access
+    - GROUP: Shared with specific group(s) via ContentGroupLink
+    - ORGANIZATION: Accessible to all organization members
+    - PUBLIC: Accessible externally (future feature)
+
     Attributes
     ----------
     id : UUID
         Unique identifier for the note (primary key).
     organization_id : UUID
         Organization this note belongs to (foreign key).
-    created_by : UUID
-        User who created the note (foreign key to login_users).
+    owner_id : UUID
+        User who owns the note (foreign key to login_users).
+    visibility : VisibilityScope
+        Who can access this note (PRIVATE, GROUP, ORGANIZATION, PUBLIC).
     title : str
         Note title (max 500 chars).
     content : str
@@ -57,7 +67,8 @@ class Note(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
-    created_by: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
+    owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
+    visibility: VisibilityScope = Field(default=VisibilityScope.PRIVATE, nullable=False, index=True)
     title: str = Field(max_length=500, nullable=False)
     content: str = Field(default="", nullable=False)
     slug: str = Field(max_length=500, nullable=False, index=True)
@@ -87,4 +98,4 @@ class Note(SQLModel, table=True):
 
     def __repr__(self) -> str:
         """Return string representation of Note."""
-        return f"<Note(id={self.id}, title={self.title!r}, organization_id={self.organization_id})>"
+        return f"<Note(id={self.id}, title={self.title!r}, visibility={self.visibility}, organization_id={self.organization_id})>"

@@ -2,12 +2,39 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class VisibilityScope(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    VISIBILITY_SCOPE_UNSPECIFIED: _ClassVar[VisibilityScope]
+    VISIBILITY_SCOPE_PRIVATE: _ClassVar[VisibilityScope]
+    VISIBILITY_SCOPE_GROUP: _ClassVar[VisibilityScope]
+    VISIBILITY_SCOPE_ORGANIZATION: _ClassVar[VisibilityScope]
+    VISIBILITY_SCOPE_PUBLIC: _ClassVar[VisibilityScope]
+
+class PermissionLevel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    PERMISSION_LEVEL_UNSPECIFIED: _ClassVar[PermissionLevel]
+    PERMISSION_LEVEL_VIEW: _ClassVar[PermissionLevel]
+    PERMISSION_LEVEL_EDIT: _ClassVar[PermissionLevel]
+    PERMISSION_LEVEL_ADMIN: _ClassVar[PermissionLevel]
+    PERMISSION_LEVEL_OWNER: _ClassVar[PermissionLevel]
+VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope
+VISIBILITY_SCOPE_PRIVATE: VisibilityScope
+VISIBILITY_SCOPE_GROUP: VisibilityScope
+VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope
+VISIBILITY_SCOPE_PUBLIC: VisibilityScope
+PERMISSION_LEVEL_UNSPECIFIED: PermissionLevel
+PERMISSION_LEVEL_VIEW: PermissionLevel
+PERMISSION_LEVEL_EDIT: PermissionLevel
+PERMISSION_LEVEL_ADMIN: PermissionLevel
+PERMISSION_LEVEL_OWNER: PermissionLevel
 
 class CreateNoteRequest(_message.Message):
     __slots__ = ()
@@ -25,6 +52,8 @@ class CreateNoteRequest(_message.Message):
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     title: str
     content: str
@@ -32,7 +61,9 @@ class CreateNoteRequest(_message.Message):
     parent_id: str
     tags: _containers.RepeatedScalarFieldContainer[str]
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    visibility: VisibilityScope
+    group_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetNoteRequest(_message.Message):
     __slots__ = ()
@@ -104,6 +135,9 @@ class ListNotesRequest(_message.Message):
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     SORT_BY_FIELD_NUMBER: _ClassVar[int]
     SORT_ORDER_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+    PERSONAL_ONLY_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     parent_id: str
     tags: _containers.RepeatedScalarFieldContainer[str]
@@ -113,7 +147,10 @@ class ListNotesRequest(_message.Message):
     page_size: int
     sort_by: str
     sort_order: str
-    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., pinned_only: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ...) -> None: ...
+    visibility: VisibilityScope
+    group_id: str
+    personal_only: bool
+    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., pinned_only: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ...) -> None: ...
 
 class ListNotesResponse(_message.Message):
     __slots__ = ()
@@ -226,7 +263,8 @@ class Note(_message.Message):
         def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    CREATED_BY_FIELD_NUMBER: _ClassVar[int]
+    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -239,9 +277,12 @@ class Note(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
+    GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    USER_PERMISSION_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
-    created_by: str
+    owner_id: str
+    visibility: VisibilityScope
     title: str
     content: str
     slug: str
@@ -254,18 +295,170 @@ class Note(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     deleted_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., created_by: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    group_ids: _containers.RepeatedScalarFieldContainer[str]
+    user_permission: PermissionLevel
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ...) -> None: ...
 
 class NoteReference(_message.Message):
     __slots__ = ()
     ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
-    CREATED_BY_FIELD_NUMBER: _ClassVar[int]
+    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     id: str
     title: str
     slug: str
-    created_by: str
+    owner_id: str
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., slug: _Optional[str] = ..., created_by: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    visibility: VisibilityScope
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., slug: _Optional[str] = ..., owner_id: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ...) -> None: ...
+
+class MoveNoteRequest(_message.Message):
+    __slots__ = ()
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    TARGET_GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    organization_id: str
+    target_visibility: VisibilityScope
+    target_group_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., target_visibility: _Optional[_Union[VisibilityScope, str]] = ..., target_group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class CopyNoteRequest(_message.Message):
+    __slots__ = ()
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    TARGET_GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    organization_id: str
+    target_visibility: VisibilityScope
+    target_group_ids: _containers.RepeatedScalarFieldContainer[str]
+    title: str
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., target_visibility: _Optional[_Union[VisibilityScope, str]] = ..., target_group_ids: _Optional[_Iterable[str]] = ..., title: _Optional[str] = ...) -> None: ...
+
+class ShareNoteWithGroupRequest(_message.Message):
+    __slots__ = ()
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    organization_id: str
+    group_id: str
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., group_id: _Optional[str] = ...) -> None: ...
+
+class UnshareNoteFromGroupRequest(_message.Message):
+    __slots__ = ()
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    organization_id: str
+    group_id: str
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., group_id: _Optional[str] = ...) -> None: ...
+
+class ShareNoteResponse(_message.Message):
+    __slots__ = ()
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    group_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ..., group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class GetNoteSharingRequest(_message.Message):
+    __slots__ = ()
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    organization_id: str
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
+class NoteSharingResponse(_message.Message):
+    __slots__ = ()
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
+    GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    PERMISSIONS_FIELD_NUMBER: _ClassVar[int]
+    visibility: VisibilityScope
+    owner_id: str
+    group_ids: _containers.RepeatedScalarFieldContainer[str]
+    permissions: _containers.RepeatedCompositeFieldContainer[ContentPermission]
+    def __init__(self, visibility: _Optional[_Union[VisibilityScope, str]] = ..., owner_id: _Optional[str] = ..., group_ids: _Optional[_Iterable[str]] = ..., permissions: _Optional[_Iterable[_Union[ContentPermission, _Mapping]]] = ...) -> None: ...
+
+class GrantPermissionRequest(_message.Message):
+    __slots__ = ()
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    CAN_VIEW_FIELD_NUMBER: _ClassVar[int]
+    CAN_EDIT_FIELD_NUMBER: _ClassVar[int]
+    CAN_DELETE_FIELD_NUMBER: _ClassVar[int]
+    CAN_SHARE_FIELD_NUMBER: _ClassVar[int]
+    CAN_MOVE_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    organization_id: str
+    subject_type: str
+    subject_id: str
+    permission_level: PermissionLevel
+    can_view: bool
+    can_edit: bool
+    can_delete: bool
+    can_share: bool
+    can_move: bool
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., subject_type: _Optional[str] = ..., subject_id: _Optional[str] = ..., permission_level: _Optional[_Union[PermissionLevel, str]] = ..., can_view: _Optional[bool] = ..., can_edit: _Optional[bool] = ..., can_delete: _Optional[bool] = ..., can_share: _Optional[bool] = ..., can_move: _Optional[bool] = ...) -> None: ...
+
+class RevokePermissionRequest(_message.Message):
+    __slots__ = ()
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    organization_id: str
+    subject_type: str
+    subject_id: str
+    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., subject_type: _Optional[str] = ..., subject_id: _Optional[str] = ...) -> None: ...
+
+class PermissionResponse(_message.Message):
+    __slots__ = ()
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
+
+class ContentPermission(_message.Message):
+    __slots__ = ()
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    CAN_VIEW_FIELD_NUMBER: _ClassVar[int]
+    CAN_EDIT_FIELD_NUMBER: _ClassVar[int]
+    CAN_DELETE_FIELD_NUMBER: _ClassVar[int]
+    CAN_SHARE_FIELD_NUMBER: _ClassVar[int]
+    CAN_MOVE_FIELD_NUMBER: _ClassVar[int]
+    GRANTED_BY_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    GRANTED_AT_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    subject_type: str
+    subject_id: str
+    permission_level: PermissionLevel
+    can_view: bool
+    can_edit: bool
+    can_delete: bool
+    can_share: bool
+    can_move: bool
+    granted_by_user_id: str
+    granted_at: _timestamp_pb2.Timestamp
+    expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., subject_type: _Optional[str] = ..., subject_id: _Optional[str] = ..., permission_level: _Optional[_Union[PermissionLevel, str]] = ..., can_view: _Optional[bool] = ..., can_edit: _Optional[bool] = ..., can_delete: _Optional[bool] = ..., can_share: _Optional[bool] = ..., can_move: _Optional[bool] = ..., granted_by_user_id: _Optional[str] = ..., granted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
