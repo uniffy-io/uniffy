@@ -1,6 +1,8 @@
 import { useAppSelector } from '@/app/hooks';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export function Home() {
+  useDocumentTitle('Home');
   const { user } = useAppSelector((state) => state.auth);
 
   return (

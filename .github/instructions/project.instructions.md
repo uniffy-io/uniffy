@@ -17,6 +17,7 @@ UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, b
   - All database I/O must be async with AsyncSession
   - Alembic for schema migrations (runs on startup)
   - Custom Postgres extensions (pg_trgm, pgvector, etc.) managed via startup scripts
+  - Alembic handles all schema changes (tables, columns, indexes, constraints)
 - **Frontend**: ReactJS, TypeScript
 - **API Communication**: Buf and ConnectRPC (Protocol Buffers with Connect protocol)
   - Use `.proto` files in the `proto/` directory to define services

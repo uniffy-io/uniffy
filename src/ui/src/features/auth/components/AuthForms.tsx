@@ -1,42 +1,78 @@
 import { useState, useEffect } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "../store/authSlice";
-
-// Use environment variable or default to localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://dev.local.uniffy.io:8000";
-
-const transport = createConnectTransport({
-  baseUrl: API_BASE_URL,
-});
+import { transport } from "@/config";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const authClient = createClient(AuthService, transport);
 
 export default function AuthForms() {
+  useDocumentTitle('Login');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, currentOrganizationId } = useAppSelector((state) => state.auth);
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/', { replace: true });
+      if (currentOrganizationId) {
+        navigate('/', { replace: true });
+      } else {
+        navigate('/select-org', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, currentOrganizationId, navigate]);
 
   // Form fields
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+
+  const fetchUserAndDispatch = async (accessToken: string, refreshToken: string, organizationId?: string) => {
+    try {
+      // Create a temporary client with the auth token
+      const authenticatedClient = createClient(AuthService, transport);
+      
+      const userResponse = await authenticatedClient.getCurrentUser(
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const plainUser = {
+        id: userResponse.id,
+        email: userResponse.email,
+        username: userResponse.username,
+        fullName: userResponse.fullName,
+        isActive: userResponse.isActive,
+        isSystemAdmin: userResponse.isSystemAdmin,
+        emailVerified: userResponse.emailVerified,
+      };
+
+      dispatch(setCredentials({
+        user: plainUser,
+        accessToken,
+        refreshToken,
+        organizationId
+      }));
+
+    } catch (err: any) {
+      console.error('Error fetching user details:', err);
+      throw new Error('Failed to fetch user details');
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,11 +87,7 @@ export default function AuthForms() {
         fullName: fullName || undefined,
       });
 
-      // Dispatch to Redux
-      dispatch(setCredentials({
-        user: response.user!,
-        accessToken: response.accessToken
-      }));
+      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId);
       
       // Navigation will be handled by the useEffect above
     } catch (err: any) {
@@ -77,10 +109,7 @@ export default function AuthForms() {
         password,
       });
 
-      dispatch(setCredentials({
-        user: response.user!,
-        accessToken: response.accessToken
-      }));
+      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId);
 
       // Navigation will be handled by the useEffect above
     } catch (err: any) {
@@ -235,4 +264,3 @@ export default function AuthForms() {
     </div>
   );
 }
-

@@ -1,7 +1,6 @@
 """User model."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime
@@ -45,18 +44,18 @@ class User(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
     email: str = Field(max_length=255, unique=True, index=True, nullable=False)
     username: str = Field(max_length=255, unique=True, index=True, nullable=False)
-    full_name: Optional[str] = Field(default=None, max_length=255)
-    hashed_password: Optional[str] = Field(default=None, max_length=255)
+    full_name: str | None = Field(default=None, max_length=255)
+    hashed_password: str | None = Field(default=None, max_length=255)
     is_active: bool = Field(default=True, nullable=False)
     is_system_admin: bool = Field(default=False, nullable=False)
     email_verified: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc)),
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
 
     def __repr__(self) -> str:

@@ -7,6 +7,772 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3 } from "@bufbuild/protobuf";
 
 /**
+ * Simple empty message for responses without data
+ *
+ * @generated from message auth.v1.Empty
+ */
+export class Empty extends Message<Empty> {
+  constructor(data?: PartialMessage<Empty>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.Empty";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Empty {
+    return new Empty().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Empty {
+    return new Empty().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Empty {
+    return new Empty().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Empty | PlainMessage<Empty> | undefined, b: Empty | PlainMessage<Empty> | undefined): boolean {
+    return proto3.util.equals(Empty, a, b);
+  }
+}
+
+/**
+ * Request to list users in an organization
+ *
+ * @generated from message auth.v1.ListOrganizationUsersRequest
+ */
+export class ListOrganizationUsersRequest extends Message<ListOrganizationUsersRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: int32 page = 2;
+   */
+  page = 0;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize = 0;
+
+  /**
+   * @generated from field: optional string query = 4;
+   */
+  query?: string;
+
+  constructor(data?: PartialMessage<ListOrganizationUsersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListOrganizationUsersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListOrganizationUsersRequest {
+    return new ListOrganizationUsersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListOrganizationUsersRequest {
+    return new ListOrganizationUsersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListOrganizationUsersRequest {
+    return new ListOrganizationUsersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListOrganizationUsersRequest | PlainMessage<ListOrganizationUsersRequest> | undefined, b: ListOrganizationUsersRequest | PlainMessage<ListOrganizationUsersRequest> | undefined): boolean {
+    return proto3.util.equals(ListOrganizationUsersRequest, a, b);
+  }
+}
+
+/**
+ * Response with list of organization users
+ *
+ * @generated from message auth.v1.OrganizationUserListResponse
+ */
+export class OrganizationUserListResponse extends Message<OrganizationUserListResponse> {
+  /**
+   * @generated from field: repeated auth.v1.UserInfoResponse users = 1;
+   */
+  users: UserInfoResponse[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<OrganizationUserListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.OrganizationUserListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "users", kind: "message", T: UserInfoResponse, repeated: true },
+    { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationUserListResponse {
+    return new OrganizationUserListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationUserListResponse {
+    return new OrganizationUserListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationUserListResponse {
+    return new OrganizationUserListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrganizationUserListResponse | PlainMessage<OrganizationUserListResponse> | undefined, b: OrganizationUserListResponse | PlainMessage<OrganizationUserListResponse> | undefined): boolean {
+    return proto3.util.equals(OrganizationUserListResponse, a, b);
+  }
+}
+
+/**
+ * Group information
+ *
+ * @generated from message auth.v1.GroupInfo
+ */
+export class GroupInfo extends Message<GroupInfo> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string slug = 4;
+   */
+  slug = "";
+
+  /**
+   * @generated from field: optional string description = 5;
+   */
+  description?: string;
+
+  /**
+   * @generated from field: bool is_private = 6;
+   */
+  isPrivate = false;
+
+  /**
+   * @generated from field: bool is_default = 7;
+   */
+  isDefault = false;
+
+  /**
+   * @generated from field: string created_at = 8;
+   */
+  createdAt = "";
+
+  /**
+   * @generated from field: int32 member_count = 9;
+   */
+  memberCount = 0;
+
+  constructor(data?: PartialMessage<GroupInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.GroupInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "is_private", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GroupInfo {
+    return new GroupInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GroupInfo {
+    return new GroupInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GroupInfo {
+    return new GroupInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GroupInfo | PlainMessage<GroupInfo> | undefined, b: GroupInfo | PlainMessage<GroupInfo> | undefined): boolean {
+    return proto3.util.equals(GroupInfo, a, b);
+  }
+}
+
+/**
+ * Request to list groups
+ *
+ * @generated from message auth.v1.ListGroupsRequest
+ */
+export class ListGroupsRequest extends Message<ListGroupsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: int32 page = 2;
+   */
+  page = 0;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize = 0;
+
+  /**
+   * @generated from field: optional string query = 4;
+   */
+  query?: string;
+
+  constructor(data?: PartialMessage<ListGroupsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListGroupsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupsRequest {
+    return new ListGroupsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListGroupsRequest {
+    return new ListGroupsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListGroupsRequest {
+    return new ListGroupsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListGroupsRequest | PlainMessage<ListGroupsRequest> | undefined, b: ListGroupsRequest | PlainMessage<ListGroupsRequest> | undefined): boolean {
+    return proto3.util.equals(ListGroupsRequest, a, b);
+  }
+}
+
+/**
+ * Response with list of groups
+ *
+ * @generated from message auth.v1.GroupListResponse
+ */
+export class GroupListResponse extends Message<GroupListResponse> {
+  /**
+   * @generated from field: repeated auth.v1.GroupInfo groups = 1;
+   */
+  groups: GroupInfo[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<GroupListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.GroupListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "groups", kind: "message", T: GroupInfo, repeated: true },
+    { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GroupListResponse {
+    return new GroupListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GroupListResponse {
+    return new GroupListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GroupListResponse {
+    return new GroupListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GroupListResponse | PlainMessage<GroupListResponse> | undefined, b: GroupListResponse | PlainMessage<GroupListResponse> | undefined): boolean {
+    return proto3.util.equals(GroupListResponse, a, b);
+  }
+}
+
+/**
+ * Request to create a group
+ *
+ * @generated from message auth.v1.CreateGroupRequest
+ */
+export class CreateGroupRequest extends Message<CreateGroupRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug = "";
+
+  /**
+   * @generated from field: optional string description = 4;
+   */
+  description?: string;
+
+  /**
+   * @generated from field: bool is_private = 5;
+   */
+  isPrivate = false;
+
+  /**
+   * @generated from field: bool is_default = 6;
+   */
+  isDefault = false;
+
+  constructor(data?: PartialMessage<CreateGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.CreateGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "is_private", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateGroupRequest {
+    return new CreateGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateGroupRequest {
+    return new CreateGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateGroupRequest {
+    return new CreateGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateGroupRequest | PlainMessage<CreateGroupRequest> | undefined, b: CreateGroupRequest | PlainMessage<CreateGroupRequest> | undefined): boolean {
+    return proto3.util.equals(CreateGroupRequest, a, b);
+  }
+}
+
+/**
+ * Request to update a group
+ *
+ * @generated from message auth.v1.UpdateGroupRequest
+ */
+export class UpdateGroupRequest extends Message<UpdateGroupRequest> {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId = "";
+
+  /**
+   * @generated from field: optional string name = 2;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: optional string description = 3;
+   */
+  description?: string;
+
+  /**
+   * @generated from field: optional bool is_private = 4;
+   */
+  isPrivate?: boolean;
+
+  /**
+   * @generated from field: optional bool is_default = 5;
+   */
+  isDefault?: boolean;
+
+  constructor(data?: PartialMessage<UpdateGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.UpdateGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "is_private", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 5, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateGroupRequest {
+    return new UpdateGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateGroupRequest {
+    return new UpdateGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateGroupRequest {
+    return new UpdateGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateGroupRequest | PlainMessage<UpdateGroupRequest> | undefined, b: UpdateGroupRequest | PlainMessage<UpdateGroupRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateGroupRequest, a, b);
+  }
+}
+
+/**
+ * Request to delete a group
+ *
+ * @generated from message auth.v1.DeleteGroupRequest
+ */
+export class DeleteGroupRequest extends Message<DeleteGroupRequest> {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId = "";
+
+  constructor(data?: PartialMessage<DeleteGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.DeleteGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteGroupRequest {
+    return new DeleteGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteGroupRequest {
+    return new DeleteGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteGroupRequest {
+    return new DeleteGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteGroupRequest | PlainMessage<DeleteGroupRequest> | undefined, b: DeleteGroupRequest | PlainMessage<DeleteGroupRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteGroupRequest, a, b);
+  }
+}
+
+/**
+ * Request to list group members
+ *
+ * @generated from message auth.v1.ListGroupMembersRequest
+ */
+export class ListGroupMembersRequest extends Message<ListGroupMembersRequest> {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId = "";
+
+  /**
+   * @generated from field: int32 page = 2;
+   */
+  page = 0;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize = 0;
+
+  /**
+   * @generated from field: optional string query = 4;
+   */
+  query?: string;
+
+  constructor(data?: PartialMessage<ListGroupMembersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListGroupMembersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupMembersRequest {
+    return new ListGroupMembersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListGroupMembersRequest {
+    return new ListGroupMembersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListGroupMembersRequest {
+    return new ListGroupMembersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListGroupMembersRequest | PlainMessage<ListGroupMembersRequest> | undefined, b: ListGroupMembersRequest | PlainMessage<ListGroupMembersRequest> | undefined): boolean {
+    return proto3.util.equals(ListGroupMembersRequest, a, b);
+  }
+}
+
+/**
+ * Group member info
+ *
+ * @generated from message auth.v1.GroupMemberInfo
+ */
+export class GroupMemberInfo extends Message<GroupMemberInfo> {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: string email = 2;
+   */
+  email = "";
+
+  /**
+   * @generated from field: string username = 3;
+   */
+  username = "";
+
+  /**
+   * @generated from field: optional string full_name = 4;
+   */
+  fullName?: string;
+
+  /**
+   * "admin", "member"
+   *
+   * @generated from field: string role = 5;
+   */
+  role = "";
+
+  /**
+   * @generated from field: string joined_at = 6;
+   */
+  joinedAt = "";
+
+  constructor(data?: PartialMessage<GroupMemberInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.GroupMemberInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "full_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "joined_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GroupMemberInfo {
+    return new GroupMemberInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GroupMemberInfo {
+    return new GroupMemberInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GroupMemberInfo {
+    return new GroupMemberInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GroupMemberInfo | PlainMessage<GroupMemberInfo> | undefined, b: GroupMemberInfo | PlainMessage<GroupMemberInfo> | undefined): boolean {
+    return proto3.util.equals(GroupMemberInfo, a, b);
+  }
+}
+
+/**
+ * Response with list of group members
+ *
+ * @generated from message auth.v1.GroupMemberListResponse
+ */
+export class GroupMemberListResponse extends Message<GroupMemberListResponse> {
+  /**
+   * @generated from field: repeated auth.v1.GroupMemberInfo members = 1;
+   */
+  members: GroupMemberInfo[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<GroupMemberListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.GroupMemberListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "members", kind: "message", T: GroupMemberInfo, repeated: true },
+    { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GroupMemberListResponse {
+    return new GroupMemberListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GroupMemberListResponse {
+    return new GroupMemberListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GroupMemberListResponse {
+    return new GroupMemberListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GroupMemberListResponse | PlainMessage<GroupMemberListResponse> | undefined, b: GroupMemberListResponse | PlainMessage<GroupMemberListResponse> | undefined): boolean {
+    return proto3.util.equals(GroupMemberListResponse, a, b);
+  }
+}
+
+/**
+ * Request to add member to group
+ *
+ * @generated from message auth.v1.AddGroupMemberRequest
+ */
+export class AddGroupMemberRequest extends Message<AddGroupMemberRequest> {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  /**
+   * "admin", "member"
+   *
+   * @generated from field: string role = 3;
+   */
+  role = "";
+
+  constructor(data?: PartialMessage<AddGroupMemberRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AddGroupMemberRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddGroupMemberRequest {
+    return new AddGroupMemberRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddGroupMemberRequest {
+    return new AddGroupMemberRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddGroupMemberRequest {
+    return new AddGroupMemberRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AddGroupMemberRequest | PlainMessage<AddGroupMemberRequest> | undefined, b: AddGroupMemberRequest | PlainMessage<AddGroupMemberRequest> | undefined): boolean {
+    return proto3.util.equals(AddGroupMemberRequest, a, b);
+  }
+}
+
+/**
+ * Request to remove member from group
+ *
+ * @generated from message auth.v1.RemoveGroupMemberRequest
+ */
+export class RemoveGroupMemberRequest extends Message<RemoveGroupMemberRequest> {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  constructor(data?: PartialMessage<RemoveGroupMemberRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RemoveGroupMemberRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveGroupMemberRequest {
+    return new RemoveGroupMemberRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveGroupMemberRequest {
+    return new RemoveGroupMemberRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveGroupMemberRequest {
+    return new RemoveGroupMemberRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveGroupMemberRequest | PlainMessage<RemoveGroupMemberRequest> | undefined, b: RemoveGroupMemberRequest | PlainMessage<RemoveGroupMemberRequest> | undefined): boolean {
+    return proto3.util.equals(RemoveGroupMemberRequest, a, b);
+  }
+}
+
+/**
  * Request to register a new user
  *
  * @generated from message auth.v1.RegisterRequest
@@ -221,6 +987,147 @@ export class GetCurrentUserRequest extends Message<GetCurrentUserRequest> {
 }
 
 /**
+ * Request to list user's organizations
+ *
+ * Empty request, user identified by token
+ *
+ * @generated from message auth.v1.ListMyOrganizationsRequest
+ */
+export class ListMyOrganizationsRequest extends Message<ListMyOrganizationsRequest> {
+  constructor(data?: PartialMessage<ListMyOrganizationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListMyOrganizationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListMyOrganizationsRequest {
+    return new ListMyOrganizationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListMyOrganizationsRequest {
+    return new ListMyOrganizationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListMyOrganizationsRequest {
+    return new ListMyOrganizationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListMyOrganizationsRequest | PlainMessage<ListMyOrganizationsRequest> | undefined, b: ListMyOrganizationsRequest | PlainMessage<ListMyOrganizationsRequest> | undefined): boolean {
+    return proto3.util.equals(ListMyOrganizationsRequest, a, b);
+  }
+}
+
+/**
+ * Organization information
+ *
+ * @generated from message auth.v1.OrganizationInfo
+ */
+export class OrganizationInfo extends Message<OrganizationInfo> {
+  /**
+   * Organization ID
+   *
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * Organization name
+   *
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * Organization slug
+   *
+   * @generated from field: string slug = 3;
+   */
+  slug = "";
+
+  /**
+   * User's role in the organization
+   *
+   * @generated from field: string role = 4;
+   */
+  role = "";
+
+  constructor(data?: PartialMessage<OrganizationInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.OrganizationInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationInfo {
+    return new OrganizationInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationInfo {
+    return new OrganizationInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationInfo {
+    return new OrganizationInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrganizationInfo | PlainMessage<OrganizationInfo> | undefined, b: OrganizationInfo | PlainMessage<OrganizationInfo> | undefined): boolean {
+    return proto3.util.equals(OrganizationInfo, a, b);
+  }
+}
+
+/**
+ * Response containing list of organizations
+ *
+ * @generated from message auth.v1.OrganizationListResponse
+ */
+export class OrganizationListResponse extends Message<OrganizationListResponse> {
+  /**
+   * List of organizations
+   *
+   * @generated from field: repeated auth.v1.OrganizationInfo organizations = 1;
+   */
+  organizations: OrganizationInfo[] = [];
+
+  constructor(data?: PartialMessage<OrganizationListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.OrganizationListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organizations", kind: "message", T: OrganizationInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationListResponse {
+    return new OrganizationListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationListResponse {
+    return new OrganizationListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationListResponse {
+    return new OrganizationListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrganizationListResponse | PlainMessage<OrganizationListResponse> | undefined, b: OrganizationListResponse | PlainMessage<OrganizationListResponse> | undefined): boolean {
+    return proto3.util.equals(OrganizationListResponse, a, b);
+  }
+}
+
+/**
  * Authentication response with tokens
  *
  * @generated from message auth.v1.AuthResponse
@@ -379,6 +1286,818 @@ export class UserInfoResponse extends Message<UserInfoResponse> {
 
   static equals(a: UserInfoResponse | PlainMessage<UserInfoResponse> | undefined, b: UserInfoResponse | PlainMessage<UserInfoResponse> | undefined): boolean {
     return proto3.util.equals(UserInfoResponse, a, b);
+  }
+}
+
+/**
+ * Admin: Request to list all organizations
+ *
+ * @generated from message auth.v1.ListAllOrganizationsRequest
+ */
+export class ListAllOrganizationsRequest extends Message<ListAllOrganizationsRequest> {
+  /**
+   * Page number (1-based)
+   *
+   * @generated from field: int32 page = 1;
+   */
+  page = 0;
+
+  /**
+   * Page size (default 20)
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize = 0;
+
+  /**
+   * Optional search query
+   *
+   * @generated from field: optional string query = 3;
+   */
+  query?: string;
+
+  constructor(data?: PartialMessage<ListAllOrganizationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListAllOrganizationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAllOrganizationsRequest {
+    return new ListAllOrganizationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAllOrganizationsRequest {
+    return new ListAllOrganizationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAllOrganizationsRequest {
+    return new ListAllOrganizationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAllOrganizationsRequest | PlainMessage<ListAllOrganizationsRequest> | undefined, b: ListAllOrganizationsRequest | PlainMessage<ListAllOrganizationsRequest> | undefined): boolean {
+    return proto3.util.equals(ListAllOrganizationsRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Detailed organization info
+ *
+ * @generated from message auth.v1.AdminOrganizationInfo
+ */
+export class AdminOrganizationInfo extends Message<AdminOrganizationInfo> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug = "";
+
+  /**
+   * @generated from field: optional string domain = 4;
+   */
+  domain?: string;
+
+  /**
+   * @generated from field: string plan = 5;
+   */
+  plan = "";
+
+  /**
+   * @generated from field: bool is_active = 6;
+   */
+  isActive = false;
+
+  /**
+   * @generated from field: string created_at = 7;
+   */
+  createdAt = "";
+
+  /**
+   * Number of members
+   *
+   * @generated from field: int32 member_count = 8;
+   */
+  memberCount = 0;
+
+  constructor(data?: PartialMessage<AdminOrganizationInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminOrganizationInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "domain", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminOrganizationInfo {
+    return new AdminOrganizationInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminOrganizationInfo {
+    return new AdminOrganizationInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminOrganizationInfo {
+    return new AdminOrganizationInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminOrganizationInfo | PlainMessage<AdminOrganizationInfo> | undefined, b: AdminOrganizationInfo | PlainMessage<AdminOrganizationInfo> | undefined): boolean {
+    return proto3.util.equals(AdminOrganizationInfo, a, b);
+  }
+}
+
+/**
+ * Admin: Response with list of organizations
+ *
+ * @generated from message auth.v1.AdminOrganizationListResponse
+ */
+export class AdminOrganizationListResponse extends Message<AdminOrganizationListResponse> {
+  /**
+   * @generated from field: repeated auth.v1.AdminOrganizationInfo organizations = 1;
+   */
+  organizations: AdminOrganizationInfo[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<AdminOrganizationListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminOrganizationListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organizations", kind: "message", T: AdminOrganizationInfo, repeated: true },
+    { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminOrganizationListResponse {
+    return new AdminOrganizationListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminOrganizationListResponse {
+    return new AdminOrganizationListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminOrganizationListResponse {
+    return new AdminOrganizationListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminOrganizationListResponse | PlainMessage<AdminOrganizationListResponse> | undefined, b: AdminOrganizationListResponse | PlainMessage<AdminOrganizationListResponse> | undefined): boolean {
+    return proto3.util.equals(AdminOrganizationListResponse, a, b);
+  }
+}
+
+/**
+ * Admin: Request to create an organization
+ *
+ * @generated from message auth.v1.AdminCreateOrganizationRequest
+ */
+export class AdminCreateOrganizationRequest extends Message<AdminCreateOrganizationRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug = "";
+
+  /**
+   * @generated from field: optional string domain = 3;
+   */
+  domain?: string;
+
+  /**
+   * @generated from field: string plan = 4;
+   */
+  plan = "";
+
+  constructor(data?: PartialMessage<AdminCreateOrganizationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminCreateOrganizationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "domain", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminCreateOrganizationRequest {
+    return new AdminCreateOrganizationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminCreateOrganizationRequest {
+    return new AdminCreateOrganizationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminCreateOrganizationRequest {
+    return new AdminCreateOrganizationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminCreateOrganizationRequest | PlainMessage<AdminCreateOrganizationRequest> | undefined, b: AdminCreateOrganizationRequest | PlainMessage<AdminCreateOrganizationRequest> | undefined): boolean {
+    return proto3.util.equals(AdminCreateOrganizationRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Request to update organization
+ *
+ * @generated from message auth.v1.UpdateOrganizationRequest
+ */
+export class UpdateOrganizationRequest extends Message<UpdateOrganizationRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional string name = 2;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: optional string domain = 3;
+   */
+  domain?: string;
+
+  /**
+   * @generated from field: optional string plan = 4;
+   */
+  plan?: string;
+
+  /**
+   * @generated from field: optional bool is_active = 5;
+   */
+  isActive?: boolean;
+
+  constructor(data?: PartialMessage<UpdateOrganizationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.UpdateOrganizationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "domain", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationRequest {
+    return new UpdateOrganizationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationRequest {
+    return new UpdateOrganizationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationRequest {
+    return new UpdateOrganizationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationRequest | PlainMessage<UpdateOrganizationRequest> | undefined, b: UpdateOrganizationRequest | PlainMessage<UpdateOrganizationRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Request to list all users
+ *
+ * @generated from message auth.v1.ListAllUsersRequest
+ */
+export class ListAllUsersRequest extends Message<ListAllUsersRequest> {
+  /**
+   * @generated from field: int32 page = 1;
+   */
+  page = 0;
+
+  /**
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize = 0;
+
+  /**
+   * @generated from field: optional string query = 3;
+   */
+  query?: string;
+
+  constructor(data?: PartialMessage<ListAllUsersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListAllUsersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAllUsersRequest {
+    return new ListAllUsersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAllUsersRequest {
+    return new ListAllUsersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAllUsersRequest {
+    return new ListAllUsersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAllUsersRequest | PlainMessage<ListAllUsersRequest> | undefined, b: ListAllUsersRequest | PlainMessage<ListAllUsersRequest> | undefined): boolean {
+    return proto3.util.equals(ListAllUsersRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Response with list of users
+ *
+ * @generated from message auth.v1.AdminUserListResponse
+ */
+export class AdminUserListResponse extends Message<AdminUserListResponse> {
+  /**
+   * @generated from field: repeated auth.v1.UserInfoResponse users = 1;
+   */
+  users: UserInfoResponse[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<AdminUserListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminUserListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "users", kind: "message", T: UserInfoResponse, repeated: true },
+    { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminUserListResponse {
+    return new AdminUserListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminUserListResponse {
+    return new AdminUserListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminUserListResponse {
+    return new AdminUserListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminUserListResponse | PlainMessage<AdminUserListResponse> | undefined, b: AdminUserListResponse | PlainMessage<AdminUserListResponse> | undefined): boolean {
+    return proto3.util.equals(AdminUserListResponse, a, b);
+  }
+}
+
+/**
+ * Admin: Request to create a user
+ *
+ * @generated from message auth.v1.AdminCreateUserRequest
+ */
+export class AdminCreateUserRequest extends Message<AdminCreateUserRequest> {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email = "";
+
+  /**
+   * @generated from field: string username = 2;
+   */
+  username = "";
+
+  /**
+   * @generated from field: string password = 3;
+   */
+  password = "";
+
+  /**
+   * @generated from field: optional string full_name = 4;
+   */
+  fullName?: string;
+
+  /**
+   * @generated from field: bool is_active = 5;
+   */
+  isActive = false;
+
+  /**
+   * @generated from field: bool is_system_admin = 6;
+   */
+  isSystemAdmin = false;
+
+  /**
+   * @generated from field: bool email_verified = 7;
+   */
+  emailVerified = false;
+
+  /**
+   * Optional: Add to organization immediately
+   *
+   * @generated from field: optional string organization_id = 8;
+   */
+  organizationId?: string;
+
+  /**
+   * "member", "admin", "owner"
+   *
+   * @generated from field: optional string organization_role = 9;
+   */
+  organizationRole?: string;
+
+  constructor(data?: PartialMessage<AdminCreateUserRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminCreateUserRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "full_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "is_system_admin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "email_verified", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "organization_role", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminCreateUserRequest {
+    return new AdminCreateUserRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminCreateUserRequest {
+    return new AdminCreateUserRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminCreateUserRequest {
+    return new AdminCreateUserRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminCreateUserRequest | PlainMessage<AdminCreateUserRequest> | undefined, b: AdminCreateUserRequest | PlainMessage<AdminCreateUserRequest> | undefined): boolean {
+    return proto3.util.equals(AdminCreateUserRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Request to update user
+ *
+ * @generated from message auth.v1.UpdateUserRequest
+ */
+export class UpdateUserRequest extends Message<UpdateUserRequest> {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: optional string full_name = 2;
+   */
+  fullName?: string;
+
+  /**
+   * @generated from field: optional string username = 3;
+   */
+  username?: string;
+
+  /**
+   * @generated from field: optional string email = 4;
+   */
+  email?: string;
+
+  /**
+   * @generated from field: optional bool is_active = 5;
+   */
+  isActive?: boolean;
+
+  /**
+   * @generated from field: optional bool is_system_admin = 6;
+   */
+  isSystemAdmin?: boolean;
+
+  /**
+   * @generated from field: optional bool email_verified = 7;
+   */
+  emailVerified?: boolean;
+
+  constructor(data?: PartialMessage<UpdateUserRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.UpdateUserRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "full_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 6, name: "is_system_admin", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 7, name: "email_verified", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateUserRequest {
+    return new UpdateUserRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateUserRequest {
+    return new UpdateUserRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateUserRequest {
+    return new UpdateUserRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateUserRequest | PlainMessage<UpdateUserRequest> | undefined, b: UpdateUserRequest | PlainMessage<UpdateUserRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateUserRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Request to list organizations for a user
+ *
+ * @generated from message auth.v1.AdminListUserOrganizationsRequest
+ */
+export class AdminListUserOrganizationsRequest extends Message<AdminListUserOrganizationsRequest> {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  constructor(data?: PartialMessage<AdminListUserOrganizationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminListUserOrganizationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminListUserOrganizationsRequest {
+    return new AdminListUserOrganizationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminListUserOrganizationsRequest {
+    return new AdminListUserOrganizationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminListUserOrganizationsRequest {
+    return new AdminListUserOrganizationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminListUserOrganizationsRequest | PlainMessage<AdminListUserOrganizationsRequest> | undefined, b: AdminListUserOrganizationsRequest | PlainMessage<AdminListUserOrganizationsRequest> | undefined): boolean {
+    return proto3.util.equals(AdminListUserOrganizationsRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Organization info with role for a specific user
+ *
+ * @generated from message auth.v1.AdminUserOrganizationInfo
+ */
+export class AdminUserOrganizationInfo extends Message<AdminUserOrganizationInfo> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug = "";
+
+  /**
+   * @generated from field: string role = 4;
+   */
+  role = "";
+
+  /**
+   * @generated from field: bool is_active = 5;
+   */
+  isActive = false;
+
+  /**
+   * @generated from field: string joined_at = 6;
+   */
+  joinedAt = "";
+
+  constructor(data?: PartialMessage<AdminUserOrganizationInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminUserOrganizationInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "joined_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminUserOrganizationInfo {
+    return new AdminUserOrganizationInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminUserOrganizationInfo {
+    return new AdminUserOrganizationInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminUserOrganizationInfo {
+    return new AdminUserOrganizationInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminUserOrganizationInfo | PlainMessage<AdminUserOrganizationInfo> | undefined, b: AdminUserOrganizationInfo | PlainMessage<AdminUserOrganizationInfo> | undefined): boolean {
+    return proto3.util.equals(AdminUserOrganizationInfo, a, b);
+  }
+}
+
+/**
+ * Admin: Response with list of user's organizations
+ *
+ * @generated from message auth.v1.AdminUserOrganizationListResponse
+ */
+export class AdminUserOrganizationListResponse extends Message<AdminUserOrganizationListResponse> {
+  /**
+   * @generated from field: repeated auth.v1.AdminUserOrganizationInfo organizations = 1;
+   */
+  organizations: AdminUserOrganizationInfo[] = [];
+
+  constructor(data?: PartialMessage<AdminUserOrganizationListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminUserOrganizationListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organizations", kind: "message", T: AdminUserOrganizationInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminUserOrganizationListResponse {
+    return new AdminUserOrganizationListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminUserOrganizationListResponse {
+    return new AdminUserOrganizationListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminUserOrganizationListResponse {
+    return new AdminUserOrganizationListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminUserOrganizationListResponse | PlainMessage<AdminUserOrganizationListResponse> | undefined, b: AdminUserOrganizationListResponse | PlainMessage<AdminUserOrganizationListResponse> | undefined): boolean {
+    return proto3.util.equals(AdminUserOrganizationListResponse, a, b);
+  }
+}
+
+/**
+ * Admin: Request to add user to organization
+ *
+ * @generated from message auth.v1.AdminAddUserToOrganizationRequest
+ */
+export class AdminAddUserToOrganizationRequest extends Message<AdminAddUserToOrganizationRequest> {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * "owner", "admin", "member"
+   *
+   * @generated from field: string role = 3;
+   */
+  role = "";
+
+  constructor(data?: PartialMessage<AdminAddUserToOrganizationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminAddUserToOrganizationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminAddUserToOrganizationRequest {
+    return new AdminAddUserToOrganizationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminAddUserToOrganizationRequest {
+    return new AdminAddUserToOrganizationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminAddUserToOrganizationRequest {
+    return new AdminAddUserToOrganizationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminAddUserToOrganizationRequest | PlainMessage<AdminAddUserToOrganizationRequest> | undefined, b: AdminAddUserToOrganizationRequest | PlainMessage<AdminAddUserToOrganizationRequest> | undefined): boolean {
+    return proto3.util.equals(AdminAddUserToOrganizationRequest, a, b);
+  }
+}
+
+/**
+ * Admin: Request to remove user from organization
+ *
+ * @generated from message auth.v1.AdminRemoveUserFromOrganizationRequest
+ */
+export class AdminRemoveUserFromOrganizationRequest extends Message<AdminRemoveUserFromOrganizationRequest> {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<AdminRemoveUserFromOrganizationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.AdminRemoveUserFromOrganizationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminRemoveUserFromOrganizationRequest {
+    return new AdminRemoveUserFromOrganizationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminRemoveUserFromOrganizationRequest {
+    return new AdminRemoveUserFromOrganizationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminRemoveUserFromOrganizationRequest {
+    return new AdminRemoveUserFromOrganizationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminRemoveUserFromOrganizationRequest | PlainMessage<AdminRemoveUserFromOrganizationRequest> | undefined, b: AdminRemoveUserFromOrganizationRequest | PlainMessage<AdminRemoveUserFromOrganizationRequest> | undefined): boolean {
+    return proto3.util.equals(AdminRemoveUserFromOrganizationRequest, a, b);
   }
 }
 

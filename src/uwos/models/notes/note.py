@@ -1,6 +1,6 @@
 """Note model for the notes feature."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -76,12 +76,12 @@ class Note(SQLModel, table=True):
         ),
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc)),
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
     deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 

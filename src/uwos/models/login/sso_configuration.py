@@ -1,8 +1,8 @@
 """SSO configuration model for enterprise authentication."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime
@@ -70,19 +70,19 @@ class SSOConfiguration(SQLModel, table=True):
     is_enabled: bool = Field(default=False, nullable=False)
     enforce_sso: bool = Field(default=False, nullable=False)
     domain: str = Field(max_length=255, nullable=False)
-    metadata_url: Optional[str] = Field(default=None, max_length=1000)
-    entity_id: Optional[str] = Field(default=None, max_length=500)
-    sso_url: Optional[str] = Field(default=None, max_length=1000)
-    certificate: Optional[str] = Field(default=None)
-    client_secret: Optional[str] = Field(default=None)
-    settings: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    metadata_url: str | None = Field(default=None, max_length=1000)
+    entity_id: str | None = Field(default=None, max_length=500)
+    sso_url: str | None = Field(default=None, max_length=1000)
+    certificate: str | None = Field(default=None)
+    client_secret: str | None = Field(default=None)
+    settings: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc)),
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
 
     def __repr__(self) -> str:

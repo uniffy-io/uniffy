@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -125,9 +125,7 @@ class NotesServiceImpl:
     Provides note management via ConnectRPC.
     """
 
-    async def create_note(
-        self, request: CreateNoteRequest, ctx: RequestContext
-    ) -> NoteResponse:
+    async def create_note(self, request: CreateNoteRequest, ctx: RequestContext) -> NoteResponse:
         """
         Create a new note.
 
@@ -168,12 +166,10 @@ class NotesServiceImpl:
         try:
             async for session in get_async_session():
                 # Check if slug already exists
-                existing = await note_repo.get_note_by_slug(
-                    session, slug, organization_id
-                )
+                existing = await note_repo.get_note_by_slug(session, slug, organization_id)
                 if existing:
                     # Append timestamp to make slug unique
-                    slug = f"{slug}-{int(datetime.now(timezone.utc).timestamp())}"
+                    slug = f"{slug}-{int(datetime.now(UTC).timestamp())}"
 
                 note = await note_repo.create_note(
                     session=session,
@@ -195,9 +191,7 @@ class NotesServiceImpl:
             logger.error(f"Error creating note: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def get_note(
-        self, request: GetNoteRequest, ctx: RequestContext
-    ) -> NoteResponse:
+    async def get_note(self, request: GetNoteRequest, ctx: RequestContext) -> NoteResponse:
         """
         Get a note by ID.
 
@@ -222,9 +216,7 @@ class NotesServiceImpl:
 
         try:
             async for session in get_async_session():
-                note = await note_repo.get_note_by_id(
-                    session, note_id, organization_id
-                )
+                note = await note_repo.get_note_by_id(session, note_id, organization_id)
 
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")
@@ -237,9 +229,7 @@ class NotesServiceImpl:
             logger.error(f"Error getting note: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def update_note(
-        self, request: UpdateNoteRequest, ctx: RequestContext
-    ) -> NoteResponse:
+    async def update_note(self, request: UpdateNoteRequest, ctx: RequestContext) -> NoteResponse:
         """
         Update an existing note.
 
@@ -264,9 +254,7 @@ class NotesServiceImpl:
 
         try:
             async for session in get_async_session():
-                note = await note_repo.get_note_by_id(
-                    session, note_id, organization_id
-                )
+                note = await note_repo.get_note_by_id(session, note_id, organization_id)
 
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")
@@ -284,9 +272,7 @@ class NotesServiceImpl:
                         try:
                             parent_id = UUID(request.parent_id)
                         except ValueError:
-                            raise ConnectError(
-                                Code.INVALID_ARGUMENT, "Invalid parent_id"
-                            )
+                            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
 
                 tags = list(request.tags) if request.tags else None
                 metadata = dict(request.metadata) if request.metadata else None
@@ -337,9 +323,7 @@ class NotesServiceImpl:
 
         try:
             async for session in get_async_session():
-                note = await note_repo.get_note_by_id(
-                    session, note_id, organization_id
-                )
+                note = await note_repo.get_note_by_id(session, note_id, organization_id)
 
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")
@@ -359,9 +343,7 @@ class NotesServiceImpl:
             logger.error(f"Error deleting note: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def list_notes(
-        self, request: ListNotesRequest, ctx: RequestContext
-    ) -> ListNotesResponse:
+    async def list_notes(self, request: ListNotesRequest, ctx: RequestContext) -> ListNotesResponse:
         """
         List notes with filters and pagination.
 
@@ -512,9 +494,7 @@ class NotesServiceImpl:
 
         try:
             async for session in get_async_session():
-                backlinks = await note_repo.get_backlinks(
-                    session, note_id, organization_id
-                )
+                backlinks = await note_repo.get_backlinks(session, note_id, organization_id)
 
                 references = [
                     NoteReference(
@@ -527,9 +507,7 @@ class NotesServiceImpl:
                     for note in backlinks
                 ]
 
-                return BacklinksResponse(
-                    backlinks=references, total_count=len(references)
-                )
+                return BacklinksResponse(backlinks=references, total_count=len(references))
 
         except ConnectError:
             raise
@@ -537,9 +515,7 @@ class NotesServiceImpl:
             logger.error(f"Error getting backlinks: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def toggle_pin(
-        self, request: TogglePinRequest, ctx: RequestContext
-    ) -> NoteResponse:
+    async def toggle_pin(self, request: TogglePinRequest, ctx: RequestContext) -> NoteResponse:
         """
         Pin or unpin a note.
 
@@ -564,9 +540,7 @@ class NotesServiceImpl:
 
         try:
             async for session in get_async_session():
-                note = await note_repo.get_note_by_id(
-                    session, note_id, organization_id
-                )
+                note = await note_repo.get_note_by_id(session, note_id, organization_id)
 
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")
@@ -581,9 +555,7 @@ class NotesServiceImpl:
             logger.error(f"Error toggling pin: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def restore_note(
-        self, request: RestoreNoteRequest, ctx: RequestContext
-    ) -> NoteResponse:
+    async def restore_note(self, request: RestoreNoteRequest, ctx: RequestContext) -> NoteResponse:
         """
         Restore a deleted note.
 
@@ -608,9 +580,7 @@ class NotesServiceImpl:
 
         try:
             async for session in get_async_session():
-                note = await note_repo.get_note_by_id(
-                    session, note_id, organization_id
-                )
+                note = await note_repo.get_note_by_id(session, note_id, organization_id)
 
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")
@@ -655,9 +625,7 @@ class NotesServiceImpl:
 
         try:
             async for session in get_async_session():
-                note = await note_repo.get_note_by_id(
-                    session, note_id, organization_id
-                )
+                note = await note_repo.get_note_by_id(session, note_id, organization_id)
 
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")

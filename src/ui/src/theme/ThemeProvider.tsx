@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import type { Theme } from './types';
 import { defaultTheme, darkTheme } from './types';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { setThemeName } from './themeSlice';
 
 interface ThemeContextType {
   theme: Theme;
@@ -10,14 +12,27 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const themes: Record<string, Theme> = {
+  [defaultTheme.name]: defaultTheme,
+  [darkTheme.name]: darkTheme,
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const dispatch = useAppDispatch();
+  const currentThemeName = useAppSelector((state) => state.theme.currentTheme);
+  
+  // Resolve the actual theme object from the name in Redux
+  const theme = themes[currentThemeName] || defaultTheme;
+
+  const setTheme = (newTheme: Theme) => {
+    dispatch(setThemeName(newTheme.name));
+  };
 
   // Apply theme variables to root
   useEffect(() => {
     const root = window.document.documentElement;
     
-    // Remove old classes if using class-based (we are using variables, but good to reset)
+    // Remove old classes
     root.classList.remove('dark');
     
     if (theme.name === 'dark') {

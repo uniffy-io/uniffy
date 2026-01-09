@@ -1,7 +1,14 @@
 import logging
+import sys
+from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
+
+# Add the generated code directory to sys.path to allow imports like 'import auth.v1...'
+# This is required because buf generates code that assumes the output directory is the root
+gen_path = Path(__file__).parent / "gen"
+sys.path.append(str(gen_path))
 
 from uwos.factory import create_app
 

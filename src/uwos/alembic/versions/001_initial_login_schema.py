@@ -211,4 +211,6 @@ def downgrade() -> None:
     # Drop enums
     sa.Enum("OWNER", "ADMIN", "MEMBER", name="organizationrole").drop(op.get_bind(), checkfirst=True)
     sa.Enum("ADMIN", "MEMBER", name="grouprole").drop(op.get_bind(), checkfirst=True)
-    sa.Enum("SAML", "OIDC", "GOOGLE", "MICROSOFT", "OKTA", name="ssoprovider").drop(op.get_bind(), checkfirst=True)
+    sa.Enum("SAML", "OIDC", "GOOGLE", "MICROSOFT", "OKTA", name="ssoprovider").drop(
+        op.get_bind(), checkfirst=True
+    )

@@ -1,6 +1,6 @@
 """Note repository for database operations."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
@@ -9,9 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uwos.models import Note
 
 
-async def get_note_by_id(
-    session: AsyncSession, note_id: UUID, organization_id: UUID
-) -> Note | None:
+async def get_note_by_id(session: AsyncSession, note_id: UUID, organization_id: UUID) -> Note | None:
     """
     Get a note by ID within an organization.
 
@@ -31,16 +29,12 @@ async def get_note_by_id(
 
     """
     result = await session.execute(
-        select(Note).where(
-            and_(Note.id == note_id, Note.organization_id == organization_id)
-        )
+        select(Note).where(and_(Note.id == note_id, Note.organization_id == organization_id))
     )
     return result.scalar_one_or_none()
 
 
-async def get_note_by_slug(
-    session: AsyncSession, slug: str, organization_id: UUID
-) -> Note | None:
+async def get_note_by_slug(session: AsyncSession, slug: str, organization_id: UUID) -> Note | None:
     """
     Get a note by slug within an organization.
 
@@ -60,9 +54,7 @@ async def get_note_by_slug(
 
     """
     result = await session.execute(
-        select(Note).where(
-            and_(Note.slug == slug, Note.organization_id == organization_id)
-        )
+        select(Note).where(and_(Note.slug == slug, Note.organization_id == organization_id))
     )
     return result.scalar_one_or_none()
 
@@ -181,7 +173,7 @@ async def update_note(
             note.note_metadata = metadata
 
     note.version += 1
-    note.updated_at = datetime.now(timezone.utc)
+    note.updated_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(note)
@@ -206,8 +198,8 @@ async def soft_delete_note(session: AsyncSession, note: Note) -> Note:
 
     """
     note.is_deleted = True
-    note.deleted_at = datetime.now(timezone.utc)
-    note.updated_at = datetime.now(timezone.utc)
+    note.deleted_at = datetime.now(UTC)
+    note.updated_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(note)
@@ -233,7 +225,7 @@ async def restore_note(session: AsyncSession, note: Note) -> Note:
     """
     note.is_deleted = False
     note.deleted_at = None
-    note.updated_at = datetime.now(timezone.utc)
+    note.updated_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(note)
@@ -280,7 +272,7 @@ async def toggle_pin(session: AsyncSession, note: Note, pinned: bool) -> Note:
 
     """
     note.is_pinned = pinned
-    note.updated_at = datetime.now(timezone.utc)
+    note.updated_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(note)
@@ -433,9 +425,7 @@ async def search_notes(
     total_count = total_result.scalar_one()
 
     # Order by relevance
-    query = query.order_by(
-        func.ts_rank(Note.content_search, search_query).desc()
-    )
+    query = query.order_by(func.ts_rank(Note.content_search, search_query).desc())
 
     # Apply pagination
     offset = (page - 1) * page_size
@@ -448,9 +438,7 @@ async def search_notes(
     return notes, total_count
 
 
-async def get_backlinks(
-    session: AsyncSession, note_id: UUID, organization_id: UUID
-) -> list[Note]:
+async def get_backlinks(session: AsyncSession, note_id: UUID, organization_id: UUID) -> list[Note]:
     """
     Get notes that reference (link to) this note.
 

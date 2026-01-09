@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from alembic import command
 from alembic.config import Config
@@ -53,7 +53,7 @@ async def create_extensions(engine: AsyncEngine) -> None:
         logger.info("Extension pg_trgm enabled")
 
         # Enable uuid-ossp for UUID generation
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""))
+        await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
         logger.info("Extension uuid-ossp enabled")
 
         # Add more extensions as needed:
@@ -73,22 +73,22 @@ def run_migrations() -> None:
     # expected: src/uwos/alembic.ini
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     alembic_cfg_path = os.path.join(base_dir, "alembic.ini")
-    
+
     if not os.path.exists(alembic_cfg_path):
         raise FileNotFoundError(f"alembic.ini not found at {alembic_cfg_path}")
 
     alembic_cfg = Config(alembic_cfg_path)
-    
+
     # Override the database URL to use synchronous driver for migrations
     db_host = os.getenv("POSTGRES_HOST", "localhost")
     db_port = os.getenv("POSTGRES_PORT", "5432")
     db_user = os.getenv("POSTGRES_USER", "uwos")
     db_password = os.getenv("POSTGRES_PASSWORD", "uwos")
     db_name = os.getenv("POSTGRES_DB", "uwos")
-    
+
     sync_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
-    
+
     command.upgrade(alembic_cfg, "head")
 
     logger.info("Migrations completed successfully")
@@ -133,7 +133,7 @@ async def init_db() -> None:
     logger.info("Database initialized successfully")
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_async_session() -> AsyncGenerator[AsyncSession]:
     """
     Get an async database session.
 

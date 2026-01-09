@@ -24,25 +24,87 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x61uth/v1/auth.proto\x12\x07\x61uth.v1\"\xd7\x01\n\x0fRegisterRequest\x12\x14\n\x05\x65mail\x18\x01 \x01(\tR\x05\x65mail\x12\x1a\n\x08username\x18\x02 \x01(\tR\x08username\x12\x1a\n\x08password\x18\x03 \x01(\tR\x08password\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08\x66ullName\x88\x01\x01\x12\x30\n\x11organization_slug\x18\x05 \x01(\tH\x01R\x10organizationSlug\x88\x01\x01\x42\x0c\n\n_full_nameB\x14\n\x12_organization_slug\"\x88\x01\n\x0cLoginRequest\x12\x14\n\x05\x65mail\x18\x01 \x01(\tR\x05\x65mail\x12\x1a\n\x08password\x18\x02 \x01(\tR\x08password\x12\x30\n\x11organization_slug\x18\x03 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01\x42\x14\n\x12_organization_slug\"\x82\x01\n\x13RefreshTokenRequest\x12#\n\rrefresh_token\x18\x01 \x01(\tR\x0crefreshToken\x12\x30\n\x11organization_slug\x18\x02 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01\x42\x14\n\x12_organization_slug\"\x17\n\x15GetCurrentUserRequest\"\xd0\x01\n\x0c\x41uthResponse\x12!\n\x0c\x61\x63\x63\x65ss_token\x18\x01 \x01(\tR\x0b\x61\x63\x63\x65ssToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x42\x12\n\x10_organization_id\"\xf0\x01\n\x10UserInfoResponse\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n\x05\x65mail\x18\x02 \x01(\tR\x05\x65mail\x12\x1a\n\x08username\x18\x03 \x01(\tR\x08username\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08\x66ullName\x88\x01\x01\x12\x1b\n\tis_active\x18\x05 \x01(\x08R\x08isActive\x12&\n\x0fis_system_admin\x18\x06 \x01(\x08R\risSystemAdmin\x12%\n\x0e\x65mail_verified\x18\x07 \x01(\x08R\remailVerifiedB\x0c\n\n_full_name2\x9b\x02\n\x0b\x41uthService\x12=\n\x08Register\x12\x18.auth.v1.RegisterRequest\x1a\x15.auth.v1.AuthResponse\"\x00\x12\x37\n\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x15.auth.v1.AuthResponse\"\x00\x12\x45\n\x0cRefreshToken\x12\x1c.auth.v1.RefreshTokenRequest\x1a\x15.auth.v1.AuthResponse\"\x00\x12M\n\x0eGetCurrentUser\x12\x1e.auth.v1.GetCurrentUserRequest\x1a\x19.auth.v1.UserInfoResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x61uth/v1/auth.proto\x12\x07\x61uth.v1\"\x07\n\x05\x45mpty\"\x9d\x01\n\x1cListOrganizationUsersRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x03 \x01(\x05R\x08pageSize\x12\x19\n\x05query\x18\x04 \x01(\tH\x00R\x05query\x88\x01\x01\x42\x08\n\x06_query\"p\n\x1cOrganizationUserListResponse\x12/\n\x05users\x18\x01 \x03(\x0b\x32\x19.auth.v1.UserInfoResponseR\x05users\x12\x1f\n\x0btotal_count\x18\x02 \x01(\x05R\ntotalCount\"\xa3\x02\n\tGroupInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n\x04slug\x18\x04 \x01(\tR\x04slug\x12%\n\x0b\x64\x65scription\x18\x05 \x01(\tH\x00R\x0b\x64\x65scription\x88\x01\x01\x12\x1d\n\nis_private\x18\x06 \x01(\x08R\tisPrivate\x12\x1d\n\nis_default\x18\x07 \x01(\x08R\tisDefault\x12\x1d\n\ncreated_at\x18\x08 \x01(\tR\tcreatedAt\x12!\n\x0cmember_count\x18\t \x01(\x05R\x0bmemberCountB\x0e\n\x0c_description\"\x92\x01\n\x11ListGroupsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x03 \x01(\x05R\x08pageSize\x12\x19\n\x05query\x18\x04 \x01(\tH\x00R\x05query\x88\x01\x01\x42\x08\n\x06_query\"`\n\x11GroupListResponse\x12*\n\x06groups\x18\x01 \x03(\x0b\x32\x12.auth.v1.GroupInfoR\x06groups\x12\x1f\n\x0btotal_count\x18\x02 \x01(\x05R\ntotalCount\"\xda\x01\n\x12\x43reateGroupRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n\x04slug\x18\x03 \x01(\tR\x04slug\x12%\n\x0b\x64\x65scription\x18\x04 \x01(\tH\x00R\x0b\x64\x65scription\x88\x01\x01\x12\x1d\n\nis_private\x18\x05 \x01(\x08R\tisPrivate\x12\x1d\n\nis_default\x18\x06 \x01(\x08R\tisDefaultB\x0e\n\x0c_description\"\xee\x01\n\x12UpdateGroupRequest\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x17\n\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n\x0b\x64\x65scription\x18\x03 \x01(\tH\x01R\x0b\x64\x65scription\x88\x01\x01\x12\"\n\nis_private\x18\x04 \x01(\x08H\x02R\tisPrivate\x88\x01\x01\x12\"\n\nis_default\x18\x05 \x01(\x08H\x03R\tisDefault\x88\x01\x01\x42\x07\n\x05_nameB\x0e\n\x0c_descriptionB\r\n\x0b_is_privateB\r\n\x0b_is_default\"/\n\x12\x44\x65leteGroupRequest\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\"\x8a\x01\n\x17ListGroupMembersRequest\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x12\n\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x03 \x01(\x05R\x08pageSize\x12\x19\n\x05query\x18\x04 \x01(\tH\x00R\x05query\x88\x01\x01\x42\x08\n\x06_query\"\xbd\x01\n\x0fGroupMemberInfo\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12\x14\n\x05\x65mail\x18\x02 \x01(\tR\x05\x65mail\x12\x1a\n\x08username\x18\x03 \x01(\tR\x08username\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08\x66ullName\x88\x01\x01\x12\x12\n\x04role\x18\x05 \x01(\tR\x04role\x12\x1b\n\tjoined_at\x18\x06 \x01(\tR\x08joinedAtB\x0c\n\n_full_name\"n\n\x17GroupMemberListResponse\x12\x32\n\x07members\x18\x01 \x03(\x0b\x32\x18.auth.v1.GroupMemberInfoR\x07members\x12\x1f\n\x0btotal_count\x18\x02 \x01(\x05R\ntotalCount\"_\n\x15\x41\x64\x64GroupMemberRequest\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12\x12\n\x04role\x18\x03 \x01(\tR\x04role\"N\n\x18RemoveGroupMemberRequest\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\"\xd7\x01\n\x0fRegisterRequest\x12\x14\n\x05\x65mail\x18\x01 \x01(\tR\x05\x65mail\x12\x1a\n\x08username\x18\x02 \x01(\tR\x08username\x12\x1a\n\x08password\x18\x03 \x01(\tR\x08password\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08\x66ullName\x88\x01\x01\x12\x30\n\x11organization_slug\x18\x05 \x01(\tH\x01R\x10organizationSlug\x88\x01\x01\x42\x0c\n\n_full_nameB\x14\n\x12_organization_slug\"\x88\x01\n\x0cLoginRequest\x12\x14\n\x05\x65mail\x18\x01 \x01(\tR\x05\x65mail\x12\x1a\n\x08password\x18\x02 \x01(\tR\x08password\x12\x30\n\x11organization_slug\x18\x03 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01\x42\x14\n\x12_organization_slug\"\x82\x01\n\x13RefreshTokenRequest\x12#\n\rrefresh_token\x18\x01 \x01(\tR\x0crefreshToken\x12\x30\n\x11organization_slug\x18\x02 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01\x42\x14\n\x12_organization_slug\"\x17\n\x15GetCurrentUserRequest\"\x1c\n\x1aListMyOrganizationsRequest\"^\n\x10OrganizationInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n\x04slug\x18\x03 \x01(\tR\x04slug\x12\x12\n\x04role\x18\x04 \x01(\tR\x04role\"[\n\x18OrganizationListResponse\x12?\n\rorganizations\x18\x01 \x03(\x0b\x32\x19.auth.v1.OrganizationInfoR\rorganizations\"\xd0\x01\n\x0c\x41uthResponse\x12!\n\x0c\x61\x63\x63\x65ss_token\x18\x01 \x01(\tR\x0b\x61\x63\x63\x65ssToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x42\x12\n\x10_organization_id\"\xf0\x01\n\x10UserInfoResponse\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n\x05\x65mail\x18\x02 \x01(\tR\x05\x65mail\x12\x1a\n\x08username\x18\x03 \x01(\tR\x08username\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08\x66ullName\x88\x01\x01\x12\x1b\n\tis_active\x18\x05 \x01(\x08R\x08isActive\x12&\n\x0fis_system_admin\x18\x06 \x01(\x08R\risSystemAdmin\x12%\n\x0e\x65mail_verified\x18\x07 \x01(\x08R\remailVerifiedB\x0c\n\n_full_name\"s\n\x1bListAllOrganizationsRequest\x12\x12\n\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x02 \x01(\x05R\x08pageSize\x12\x19\n\x05query\x18\x03 \x01(\tH\x00R\x05query\x88\x01\x01\x42\x08\n\x06_query\"\xea\x01\n\x15\x41\x64minOrganizationInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n\x04slug\x18\x03 \x01(\tR\x04slug\x12\x1b\n\x06\x64omain\x18\x04 \x01(\tH\x00R\x06\x64omain\x88\x01\x01\x12\x12\n\x04plan\x18\x05 \x01(\tR\x04plan\x12\x1b\n\tis_active\x18\x06 \x01(\x08R\x08isActive\x12\x1d\n\ncreated_at\x18\x07 \x01(\tR\tcreatedAt\x12!\n\x0cmember_count\x18\x08 \x01(\x05R\x0bmemberCountB\t\n\x07_domain\"\x86\x01\n\x1d\x41\x64minOrganizationListResponse\x12\x44\n\rorganizations\x18\x01 \x03(\x0b\x32\x1e.auth.v1.AdminOrganizationInfoR\rorganizations\x12\x1f\n\x0btotal_count\x18\x02 \x01(\x05R\ntotalCount\"\x84\x01\n\x1e\x41\x64minCreateOrganizationRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n\x04slug\x18\x02 \x01(\tR\x04slug\x12\x1b\n\x06\x64omain\x18\x03 \x01(\tH\x00R\x06\x64omain\x88\x01\x01\x12\x12\n\x04plan\x18\x04 \x01(\tR\x04planB\t\n\x07_domain\"\xe0\x01\n\x19UpdateOrganizationRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n\x06\x64omain\x18\x03 \x01(\tH\x01R\x06\x64omain\x88\x01\x01\x12\x17\n\x04plan\x18\x04 \x01(\tH\x02R\x04plan\x88\x01\x01\x12 \n\tis_active\x18\x05 \x01(\x08H\x03R\x08isActive\x88\x01\x01\x42\x07\n\x05_nameB\t\n\x07_domainB\x07\n\x05_planB\x0c\n\n_is_active\"k\n\x13ListAllUsersRequest\x12\x12\n\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x02 \x01(\x05R\x08pageSize\x12\x19\n\x05query\x18\x03 \x01(\tH\x00R\x05query\x88\x01\x01\x42\x08\n\x06_query\"i\n\x15\x41\x64minUserListResponse\x12/\n\x05users\x18\x01 \x03(\x0b\x32\x19.auth.v1.UserInfoResponseR\x05users\x12\x1f\n\x0btotal_count\x18\x02 \x01(\x05R\ntotalCount\"\x8c\x03\n\x16\x41\x64minCreateUserRequest\x12\x14\n\x05\x65mail\x18\x01 \x01(\tR\x05\x65mail\x12\x1a\n\x08username\x18\x02 \x01(\tR\x08username\x12\x1a\n\x08password\x18\x03 \x01(\tR\x08password\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08\x66ullName\x88\x01\x01\x12\x1b\n\tis_active\x18\x05 \x01(\x08R\x08isActive\x12&\n\x0fis_system_admin\x18\x06 \x01(\x08R\risSystemAdmin\x12%\n\x0e\x65mail_verified\x18\x07 \x01(\x08R\remailVerified\x12,\n\x0forganization_id\x18\x08 \x01(\tH\x01R\x0eorganizationId\x88\x01\x01\x12\x30\n\x11organization_role\x18\t \x01(\tH\x02R\x10organizationRole\x88\x01\x01\x42\x0c\n\n_full_nameB\x12\n\x10_organization_idB\x14\n\x12_organization_role\"\xdf\x02\n\x11UpdateUserRequest\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12 \n\tfull_name\x18\x02 \x01(\tH\x00R\x08\x66ullName\x88\x01\x01\x12\x1f\n\x08username\x18\x03 \x01(\tH\x01R\x08username\x88\x01\x01\x12\x19\n\x05\x65mail\x18\x04 \x01(\tH\x02R\x05\x65mail\x88\x01\x01\x12 \n\tis_active\x18\x05 \x01(\x08H\x03R\x08isActive\x88\x01\x01\x12+\n\x0fis_system_admin\x18\x06 \x01(\x08H\x04R\risSystemAdmin\x88\x01\x01\x12*\n\x0e\x65mail_verified\x18\x07 \x01(\x08H\x05R\remailVerified\x88\x01\x01\x42\x0c\n\n_full_nameB\x0b\n\t_usernameB\x08\n\x06_emailB\x0c\n\n_is_activeB\x12\n\x10_is_system_adminB\x11\n\x0f_email_verified\"<\n!AdminListUserOrganizationsRequest\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\"\xba\x01\n\x19\x41\x64minUserOrganizationInfo\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n\x04slug\x18\x03 \x01(\tR\x04slug\x12\x12\n\x04role\x18\x04 \x01(\tR\x04role\x12\x1b\n\tis_active\x18\x05 \x01(\x08R\x08isActive\x12\x1b\n\tjoined_at\x18\x06 \x01(\tR\x08joinedAt\"m\n!AdminUserOrganizationListResponse\x12H\n\rorganizations\x18\x01 \x03(\x0b\x32\".auth.v1.AdminUserOrganizationInfoR\rorganizations\"y\n!AdminAddUserToOrganizationRequest\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x12\n\x04role\x18\x03 \x01(\tR\x04role\"j\n&AdminRemoveUserFromOrganizationRequest\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId2\xb7\x0e\n\x0b\x41uthService\x12=\n\x08Register\x12\x18.auth.v1.RegisterRequest\x1a\x15.auth.v1.AuthResponse\"\x00\x12\x37\n\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x15.auth.v1.AuthResponse\"\x00\x12\x45\n\x0cRefreshToken\x12\x1c.auth.v1.RefreshTokenRequest\x1a\x15.auth.v1.AuthResponse\"\x00\x12M\n\x0eGetCurrentUser\x12\x1e.auth.v1.GetCurrentUserRequest\x1a\x19.auth.v1.UserInfoResponse\"\x00\x12_\n\x13ListMyOrganizations\x12#.auth.v1.ListMyOrganizationsRequest\x1a!.auth.v1.OrganizationListResponse\"\x00\x12\x66\n\x14ListAllOrganizations\x12$.auth.v1.ListAllOrganizationsRequest\x1a&.auth.v1.AdminOrganizationListResponse\"\x00\x12Z\n\x12UpdateOrganization\x12\".auth.v1.UpdateOrganizationRequest\x1a\x1e.auth.v1.AdminOrganizationInfo\"\x00\x12\x64\n\x17\x41\x64minCreateOrganization\x12\'.auth.v1.AdminCreateOrganizationRequest\x1a\x1e.auth.v1.AdminOrganizationInfo\"\x00\x12N\n\x0cListAllUsers\x12\x1c.auth.v1.ListAllUsersRequest\x1a\x1e.auth.v1.AdminUserListResponse\"\x00\x12O\n\x0f\x41\x64minCreateUser\x12\x1f.auth.v1.AdminCreateUserRequest\x1a\x19.auth.v1.UserInfoResponse\"\x00\x12\x45\n\nUpdateUser\x12\x1a.auth.v1.UpdateUserRequest\x1a\x19.auth.v1.UserInfoResponse\"\x00\x12v\n\x1a\x41\x64minListUserOrganizations\x12*.auth.v1.AdminListUserOrganizationsRequest\x1a*.auth.v1.AdminUserOrganizationListResponse\"\x00\x12n\n\x1a\x41\x64minAddUserToOrganization\x12*.auth.v1.AdminAddUserToOrganizationRequest\x1a\".auth.v1.AdminUserOrganizationInfo\"\x00\x12\x64\n\x1f\x41\x64minRemoveUserFromOrganization\x12/.auth.v1.AdminRemoveUserFromOrganizationRequest\x1a\x0e.auth.v1.Empty\"\x00\x12\x46\n\nListGroups\x12\x1a.auth.v1.ListGroupsRequest\x1a\x1a.auth.v1.GroupListResponse\"\x00\x12@\n\x0b\x43reateGroup\x12\x1b.auth.v1.CreateGroupRequest\x1a\x12.auth.v1.GroupInfo\"\x00\x12@\n\x0bUpdateGroup\x12\x1b.auth.v1.UpdateGroupRequest\x1a\x12.auth.v1.GroupInfo\"\x00\x12<\n\x0b\x44\x65leteGroup\x12\x1b.auth.v1.DeleteGroupRequest\x1a\x0e.auth.v1.Empty\"\x00\x12X\n\x10ListGroupMembers\x12 .auth.v1.ListGroupMembersRequest\x1a .auth.v1.GroupMemberListResponse\"\x00\x12\x42\n\x0e\x41\x64\x64GroupMember\x12\x1e.auth.v1.AddGroupMemberRequest\x1a\x0e.auth.v1.Empty\"\x00\x12H\n\x11RemoveGroupMember\x12!.auth.v1.RemoveGroupMemberRequest\x1a\x0e.auth.v1.Empty\"\x00\x12g\n\x15ListOrganizationUsers\x12%.auth.v1.ListOrganizationUsersRequest\x1a%.auth.v1.OrganizationUserListResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'auth.v1.auth_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_REGISTERREQUEST']._serialized_start=32
-  _globals['_REGISTERREQUEST']._serialized_end=247
-  _globals['_LOGINREQUEST']._serialized_start=250
-  _globals['_LOGINREQUEST']._serialized_end=386
-  _globals['_REFRESHTOKENREQUEST']._serialized_start=389
-  _globals['_REFRESHTOKENREQUEST']._serialized_end=519
-  _globals['_GETCURRENTUSERREQUEST']._serialized_start=521
-  _globals['_GETCURRENTUSERREQUEST']._serialized_end=544
-  _globals['_AUTHRESPONSE']._serialized_start=547
-  _globals['_AUTHRESPONSE']._serialized_end=755
-  _globals['_USERINFORESPONSE']._serialized_start=758
-  _globals['_USERINFORESPONSE']._serialized_end=998
-  _globals['_AUTHSERVICE']._serialized_start=1001
-  _globals['_AUTHSERVICE']._serialized_end=1284
+  _globals['_EMPTY']._serialized_start=31
+  _globals['_EMPTY']._serialized_end=38
+  _globals['_LISTORGANIZATIONUSERSREQUEST']._serialized_start=41
+  _globals['_LISTORGANIZATIONUSERSREQUEST']._serialized_end=198
+  _globals['_ORGANIZATIONUSERLISTRESPONSE']._serialized_start=200
+  _globals['_ORGANIZATIONUSERLISTRESPONSE']._serialized_end=312
+  _globals['_GROUPINFO']._serialized_start=315
+  _globals['_GROUPINFO']._serialized_end=606
+  _globals['_LISTGROUPSREQUEST']._serialized_start=609
+  _globals['_LISTGROUPSREQUEST']._serialized_end=755
+  _globals['_GROUPLISTRESPONSE']._serialized_start=757
+  _globals['_GROUPLISTRESPONSE']._serialized_end=853
+  _globals['_CREATEGROUPREQUEST']._serialized_start=856
+  _globals['_CREATEGROUPREQUEST']._serialized_end=1074
+  _globals['_UPDATEGROUPREQUEST']._serialized_start=1077
+  _globals['_UPDATEGROUPREQUEST']._serialized_end=1315
+  _globals['_DELETEGROUPREQUEST']._serialized_start=1317
+  _globals['_DELETEGROUPREQUEST']._serialized_end=1364
+  _globals['_LISTGROUPMEMBERSREQUEST']._serialized_start=1367
+  _globals['_LISTGROUPMEMBERSREQUEST']._serialized_end=1505
+  _globals['_GROUPMEMBERINFO']._serialized_start=1508
+  _globals['_GROUPMEMBERINFO']._serialized_end=1697
+  _globals['_GROUPMEMBERLISTRESPONSE']._serialized_start=1699
+  _globals['_GROUPMEMBERLISTRESPONSE']._serialized_end=1809
+  _globals['_ADDGROUPMEMBERREQUEST']._serialized_start=1811
+  _globals['_ADDGROUPMEMBERREQUEST']._serialized_end=1906
+  _globals['_REMOVEGROUPMEMBERREQUEST']._serialized_start=1908
+  _globals['_REMOVEGROUPMEMBERREQUEST']._serialized_end=1986
+  _globals['_REGISTERREQUEST']._serialized_start=1989
+  _globals['_REGISTERREQUEST']._serialized_end=2204
+  _globals['_LOGINREQUEST']._serialized_start=2207
+  _globals['_LOGINREQUEST']._serialized_end=2343
+  _globals['_REFRESHTOKENREQUEST']._serialized_start=2346
+  _globals['_REFRESHTOKENREQUEST']._serialized_end=2476
+  _globals['_GETCURRENTUSERREQUEST']._serialized_start=2478
+  _globals['_GETCURRENTUSERREQUEST']._serialized_end=2501
+  _globals['_LISTMYORGANIZATIONSREQUEST']._serialized_start=2503
+  _globals['_LISTMYORGANIZATIONSREQUEST']._serialized_end=2531
+  _globals['_ORGANIZATIONINFO']._serialized_start=2533
+  _globals['_ORGANIZATIONINFO']._serialized_end=2627
+  _globals['_ORGANIZATIONLISTRESPONSE']._serialized_start=2629
+  _globals['_ORGANIZATIONLISTRESPONSE']._serialized_end=2720
+  _globals['_AUTHRESPONSE']._serialized_start=2723
+  _globals['_AUTHRESPONSE']._serialized_end=2931
+  _globals['_USERINFORESPONSE']._serialized_start=2934
+  _globals['_USERINFORESPONSE']._serialized_end=3174
+  _globals['_LISTALLORGANIZATIONSREQUEST']._serialized_start=3176
+  _globals['_LISTALLORGANIZATIONSREQUEST']._serialized_end=3291
+  _globals['_ADMINORGANIZATIONINFO']._serialized_start=3294
+  _globals['_ADMINORGANIZATIONINFO']._serialized_end=3528
+  _globals['_ADMINORGANIZATIONLISTRESPONSE']._serialized_start=3531
+  _globals['_ADMINORGANIZATIONLISTRESPONSE']._serialized_end=3665
+  _globals['_ADMINCREATEORGANIZATIONREQUEST']._serialized_start=3668
+  _globals['_ADMINCREATEORGANIZATIONREQUEST']._serialized_end=3800
+  _globals['_UPDATEORGANIZATIONREQUEST']._serialized_start=3803
+  _globals['_UPDATEORGANIZATIONREQUEST']._serialized_end=4027
+  _globals['_LISTALLUSERSREQUEST']._serialized_start=4029
+  _globals['_LISTALLUSERSREQUEST']._serialized_end=4136
+  _globals['_ADMINUSERLISTRESPONSE']._serialized_start=4138
+  _globals['_ADMINUSERLISTRESPONSE']._serialized_end=4243
+  _globals['_ADMINCREATEUSERREQUEST']._serialized_start=4246
+  _globals['_ADMINCREATEUSERREQUEST']._serialized_end=4642
+  _globals['_UPDATEUSERREQUEST']._serialized_start=4645
+  _globals['_UPDATEUSERREQUEST']._serialized_end=4996
+  _globals['_ADMINLISTUSERORGANIZATIONSREQUEST']._serialized_start=4998
+  _globals['_ADMINLISTUSERORGANIZATIONSREQUEST']._serialized_end=5058
+  _globals['_ADMINUSERORGANIZATIONINFO']._serialized_start=5061
+  _globals['_ADMINUSERORGANIZATIONINFO']._serialized_end=5247
+  _globals['_ADMINUSERORGANIZATIONLISTRESPONSE']._serialized_start=5249
+  _globals['_ADMINUSERORGANIZATIONLISTRESPONSE']._serialized_end=5358
+  _globals['_ADMINADDUSERTOORGANIZATIONREQUEST']._serialized_start=5360
+  _globals['_ADMINADDUSERTOORGANIZATIONREQUEST']._serialized_end=5481
+  _globals['_ADMINREMOVEUSERFROMORGANIZATIONREQUEST']._serialized_start=5483
+  _globals['_ADMINREMOVEUSERFROMORGANIZATIONREQUEST']._serialized_end=5589
+  _globals['_AUTHSERVICE']._serialized_start=5592
+  _globals['_AUTHSERVICE']._serialized_end=7439
 # @@protoc_insertion_point(module_scope)

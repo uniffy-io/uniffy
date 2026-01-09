@@ -1,4 +1,6 @@
-applyTo: src/ui/**
+---
+applyTo: ./src/ui/**
+---
 
 ### UI Architecture
 The frontend follows a feature-sliced architecture for scalability and maintainability.

@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from uwos.db import close_db, init_db
+from uwos.db.seed import seed_initial_data
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uwos.services.auth_service import AuthServiceImpl
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting UWOS application...")
     try:
         await init_db()
+        await seed_initial_data()
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
