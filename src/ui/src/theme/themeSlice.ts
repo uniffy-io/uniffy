@@ -5,11 +5,13 @@ import { defaultTheme } from './types';
 interface ThemeState {
   currentTheme: string;
   accentColor: string | null;
+  fontFamily: string | null; // 'inter', 'geist', 'system', or null for default
 }
 
 const initialState: ThemeState = {
   currentTheme: defaultTheme.name,
   accentColor: null,
+  fontFamily: null, // defaults to Inter
 };
 
 export const themeSlice = createSlice({
@@ -25,9 +27,12 @@ export const themeSlice = createSlice({
     setAccentColor: (state, action: PayloadAction<string | null>) => {
       state.accentColor = action.payload;
     },
+    setFontFamily: (state, action: PayloadAction<string | null>) => {
+      state.fontFamily = action.payload;
+    },
   },
 });
 
-export const { setThemeName, toggleTheme, setAccentColor } = themeSlice.actions;
+export const { setThemeName, toggleTheme, setAccentColor, setFontFamily } = themeSlice.actions;
 
 export default themeSlice.reducer;

@@ -202,9 +202,11 @@ class UpdateMyProfileRequest(_message.Message):
     __slots__ = ()
     FULL_NAME_FIELD_NUMBER: _ClassVar[int]
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
+    FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
     full_name: str
     accent_color: str
-    def __init__(self, full_name: _Optional[str] = ..., accent_color: _Optional[str] = ...) -> None: ...
+    font_family: str
+    def __init__(self, full_name: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ...) -> None: ...
 
 class ListMyOrganizationsRequest(_message.Message):
     __slots__ = ()
@@ -252,6 +254,7 @@ class UserInfoResponse(_message.Message):
     IS_SYSTEM_ADMIN_FIELD_NUMBER: _ClassVar[int]
     EMAIL_VERIFIED_FIELD_NUMBER: _ClassVar[int]
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
+    FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
     id: str
     email: str
     username: str
@@ -260,7 +263,8 @@ class UserInfoResponse(_message.Message):
     is_system_admin: bool
     email_verified: bool
     accent_color: str
-    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ...) -> None: ...
+    font_family: str
+    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ...) -> None: ...
 
 class ListAllOrganizationsRequest(_message.Message):
     __slots__ = ()
@@ -376,6 +380,7 @@ class UpdateUserRequest(_message.Message):
     IS_SYSTEM_ADMIN_FIELD_NUMBER: _ClassVar[int]
     EMAIL_VERIFIED_FIELD_NUMBER: _ClassVar[int]
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
+    FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     full_name: str
     username: str
@@ -384,7 +389,8 @@ class UpdateUserRequest(_message.Message):
     is_system_admin: bool
     email_verified: bool
     accent_color: str
-    def __init__(self, user_id: _Optional[str] = ..., full_name: _Optional[str] = ..., username: _Optional[str] = ..., email: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ...) -> None: ...
+    font_family: str
+    def __init__(self, user_id: _Optional[str] = ..., full_name: _Optional[str] = ..., username: _Optional[str] = ..., email: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ...) -> None: ...
 
 class AdminListUserOrganizationsRequest(_message.Message):
     __slots__ = ()

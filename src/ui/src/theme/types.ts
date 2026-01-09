@@ -14,6 +14,7 @@ export interface Theme {
     ring: string;
   };
   accentColor?: string; // Optional custom accent color in HSL format
+  fontFamily?: string; // Optional custom font: 'inter', 'geist', 'system'
 }
 
 export const defaultTheme: Theme = {

@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCredentials } from '@/features/auth/store/authSlice';
-import { setAccentColor } from '@/theme/themeSlice';
+import { setAccentColor, setFontFamily } from '@/theme/themeSlice';
 import { AccentColorPicker } from '@/components/ui/accent-color-picker';
+import { FontPicker } from '@/components/ui/font-picker';
 import { createClient } from '@connectrpc/connect';
 import { AuthService } from '@/gen/auth/v1/auth_connect';
 import { transport } from '@/config/api';
@@ -16,12 +17,15 @@ export default function UserProfilePage() {
 
   const client = createClient(AuthService, transport);
 
-  // Set accent color from user data on mount
+  // Set accent color and font from user data on mount
   useEffect(() => {
     if (user?.accentColor) {
       dispatch(setAccentColor(user.accentColor));
     }
-  }, [user?.accentColor, dispatch]);
+    if (user?.fontFamily) {
+      dispatch(setFontFamily(user.fontFamily));
+    }
+  }, [user?.accentColor, user?.fontFamily, dispatch]);
 
   const handleAccentColorChange = async (color: string) => {
     if (!user || !accessToken) return;
@@ -51,6 +55,7 @@ export default function UserProfilePage() {
         isSystemAdmin: response.isSystemAdmin,
         emailVerified: response.emailVerified,
         accentColor: response.accentColor,
+        fontFamily: response.fontFamily,
       };
 
       // Update user data in Redux with the updated info
@@ -68,6 +73,58 @@ export default function UserProfilePage() {
     } catch (error) {
       console.error('Failed to update accent color:', error);
       setSaveMessage({ type: 'error', text: 'Failed to save accent color. Please try again.' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFontFamilyChange = async (font: string) => {
+    if (!user || !accessToken) return;
+
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      // Update Redux state immediately for instant UI feedback
+      dispatch(setFontFamily(font || null));
+
+      // Call API to persist the change with authentication header
+      const response = await client.updateMyProfile(
+        {
+          fontFamily: font || '',
+        },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      // Convert protobuf response to plain object for Redux
+      const plainUser = {
+        id: response.id,
+        email: response.email,
+        username: response.username,
+        fullName: response.fullName,
+        isActive: response.isActive,
+        isSystemAdmin: response.isSystemAdmin,
+        emailVerified: response.emailVerified,
+        accentColor: response.accentColor,
+        fontFamily: response.fontFamily,
+      };
+
+      // Update user data in Redux with the updated info
+      if (accessToken && refreshToken) {
+        dispatch(setCredentials({
+          user: plainUser,
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          organizationId: currentOrganizationId || undefined,
+        }));
+      }
+
+      setSaveMessage({ type: 'success', text: 'Font family saved successfully!' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Failed to update font family:', error);
+      setSaveMessage({ type: 'error', text: 'Failed to save font family. Please try again.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setSaving(false);
@@ -162,15 +219,26 @@ export default function UserProfilePage() {
           <h2 className="text-lg font-semibold text-foreground">Appearance</h2>
           <p className="text-sm text-muted-foreground mt-1">Customize how UWOS looks for you</p>
         </div>
-        <div className="p-6">
-          <AccentColorPicker
-            currentColor={user.accentColor || null}
-            onColorChange={handleAccentColorChange}
-          />
+        <div className="p-6 space-y-8">
+          {/* Accent Color Section */}
+          <div>
+            <AccentColorPicker
+              currentColor={user.accentColor || null}
+              onColorChange={handleAccentColorChange}
+            />
+          </div>
+
+          {/* Font Family Section */}
+          <div className="border-t border-border pt-8">
+            <FontPicker
+              currentFont={user.fontFamily || null}
+              onFontChange={handleFontFamilyChange}
+            />
+          </div>
           
           {/* Preview Examples */}
-          <div className="mt-8 space-y-4">
-            <div className="border-t border-border pt-6">
+          <div className="border-t border-border pt-8">
+            <div>
               <h3 className="text-sm font-semibold text-foreground mb-4">Preview</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 See how your accent color looks across the interface
@@ -237,7 +305,7 @@ export default function UserProfilePage() {
           
           {/* Save Status Message */}
           {saveMessage && (
-            <div className={`mt-4 p-3 rounded-lg ${
+            <div className={`p-3 rounded-lg ${
               saveMessage.type === 'success' 
                 ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-900/50' 
                 : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-900/50'
@@ -248,8 +316,7 @@ export default function UserProfilePage() {
 
           {/* Saving Indicator */}
           {saving && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary"></div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">\n              <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary"></div>
               <span>Saving...</span>
             </div>
           )}

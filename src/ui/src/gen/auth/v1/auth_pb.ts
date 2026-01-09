@@ -1006,6 +1006,13 @@ export class UpdateMyProfileRequest extends Message<UpdateMyProfileRequest> {
    */
   accentColor?: string;
 
+  /**
+   * Optional font family: 'inter', 'geist', or 'system'
+   *
+   * @generated from field: optional string font_family = 3;
+   */
+  fontFamily?: string;
+
   constructor(data?: PartialMessage<UpdateMyProfileRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1016,6 +1023,7 @@ export class UpdateMyProfileRequest extends Message<UpdateMyProfileRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "full_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "accent_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "font_family", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateMyProfileRequest {
@@ -1311,6 +1319,13 @@ export class UserInfoResponse extends Message<UserInfoResponse> {
    */
   accentColor?: string;
 
+  /**
+   * User's preferred font family: 'inter', 'geist', or 'system'
+   *
+   * @generated from field: optional string font_family = 9;
+   */
+  fontFamily?: string;
+
   constructor(data?: PartialMessage<UserInfoResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1327,6 +1342,7 @@ export class UserInfoResponse extends Message<UserInfoResponse> {
     { no: 6, name: "is_system_admin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "email_verified", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "accent_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "font_family", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserInfoResponse {
@@ -1884,6 +1900,11 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
    */
   accentColor?: string;
 
+  /**
+   * @generated from field: optional string font_family = 9;
+   */
+  fontFamily?: string;
+
   constructor(data?: PartialMessage<UpdateUserRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1900,6 +1921,7 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
     { no: 6, name: "is_system_admin", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "email_verified", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 8, name: "accent_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "font_family", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateUserRequest {

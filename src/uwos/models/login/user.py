@@ -54,6 +54,11 @@ class User(SQLModel, table=True):
         max_length=50,
         description="User's preferred accent color in HSL format (e.g., '221.2 83.2% 53.3%')",
     )
+    font_family: str | None = Field(
+        default=None,
+        max_length=20,
+        description="User's preferred font family: 'inter', 'geist', or 'system'",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

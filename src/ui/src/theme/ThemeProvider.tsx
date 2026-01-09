@@ -62,11 +62,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const dispatch = useAppDispatch();
   const currentThemeName = useAppSelector((state) => state.theme.currentTheme);
   const accentColor = useAppSelector((state) => state.theme.accentColor);
+  const fontFamily = useAppSelector((state) => state.theme.fontFamily);
   
   // Resolve the actual theme object from the name in Redux
   const theme: Theme = {
     ...themes[currentThemeName] || defaultTheme,
     accentColor: accentColor || undefined,
+    fontFamily: fontFamily || undefined,
   };
 
   const setTheme = (newTheme: Theme) => {
@@ -109,6 +111,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.style.setProperty('--primary', theme.colors.primary);
       root.style.setProperty('--primary-foreground', theme.colors.primaryForeground);
       root.style.setProperty('--ring', theme.colors.ring);
+    }
+
+    // Apply custom font family
+    if (theme.fontFamily) {
+      const fontVar = theme.fontFamily === 'inter' ? 'var(--font-inter)' 
+                    : theme.fontFamily === 'geist' ? 'var(--font-geist)'
+                    : theme.fontFamily === 'system' ? 'var(--font-system)'
+                    : 'var(--font-inter)'; // default fallback
+      root.style.setProperty('--font-sans', fontVar);
+    } else {
+      // Reset to Inter as default
+      root.style.setProperty('--font-sans', 'var(--font-inter)');
     }
   }, [theme]);
 

@@ -241,6 +241,7 @@ class AuthServiceImpl:
                     is_system_admin=user.is_system_admin,
                     email_verified=user.email_verified,
                     accent_color=user.accent_color or "",
+                    font_family=user.font_family or "",
                 )
         except ConnectError:
             raise
@@ -261,6 +262,7 @@ class AuthServiceImpl:
                     UUID(user_id),
                     full_name=request.full_name if request.HasField("full_name") else None,
                     accent_color=request.accent_color if request.HasField("accent_color") else None,
+                    font_family=request.font_family if request.HasField("font_family") else None,
                 )
 
                 if not user:
@@ -275,6 +277,7 @@ class AuthServiceImpl:
                     is_system_admin=user.is_system_admin,
                     email_verified=user.email_verified,
                     accent_color=user.accent_color or "",
+                    font_family=user.font_family or "",
                 )
         except ConnectError:
             raise
@@ -339,6 +342,7 @@ class AuthServiceImpl:
                             is_system_admin=user.is_system_admin,
                             email_verified=user.email_verified,
                             accent_color=user.accent_color or "",
+                            font_family=user.font_family or "",
                         )
                         for user in users
                     ],
@@ -409,6 +413,7 @@ class AuthServiceImpl:
                     is_system_admin=user.is_system_admin,
                     email_verified=user.email_verified,
                     accent_color=user.accent_color or "",
+                    font_family=user.font_family or "",
                 )
         except ConnectError:
             raise
@@ -958,6 +963,7 @@ class AuthServiceImpl:
                             is_system_admin=user.is_system_admin,
                             email_verified=user.email_verified,
                             accent_color=user.accent_color or "",
+                            font_family=user.font_family or "",
                         )
                         for user in users
                     ],
