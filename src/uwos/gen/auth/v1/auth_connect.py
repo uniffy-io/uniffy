@@ -28,6 +28,9 @@ class AuthService(Protocol):
     async def get_current_user(self, request: auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.UserInfoResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def update_my_profile(self, request: auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.UserInfoResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_my_organizations(self, request: auth_dot_v1_dot_auth__pb2.ListMyOrganizationsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.OrganizationListResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -127,6 +130,16 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_current_user,
+                ),
+                "/auth.v1.AuthService/UpdateMyProfile": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateMyProfile",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest,
+                        output=auth_dot_v1_dot_auth__pb2.UserInfoResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_my_profile,
                 ),
                 "/auth.v1.AuthService/ListMyOrganizations": Endpoint.unary(
                     method=MethodInfo(
@@ -393,6 +406,26 @@ class AuthServiceClient(ConnectClient):
                 name="GetCurrentUser",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest,
+                output=auth_dot_v1_dot_auth__pb2.UserInfoResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_my_profile(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.UserInfoResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateMyProfile",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest,
                 output=auth_dot_v1_dot_auth__pb2.UserInfoResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
@@ -770,6 +803,8 @@ class AuthServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_current_user(self, request: auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.UserInfoResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_my_profile(self, request: auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.UserInfoResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_my_organizations(self, request: auth_dot_v1_dot_auth__pb2.ListMyOrganizationsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.OrganizationListResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_all_organizations(self, request: auth_dot_v1_dot_auth__pb2.ListAllOrganizationsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AdminOrganizationListResponse:
@@ -851,6 +886,16 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_current_user,
+                ),
+                "/auth.v1.AuthService/UpdateMyProfile": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateMyProfile",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest,
+                        output=auth_dot_v1_dot_auth__pb2.UserInfoResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_my_profile,
                 ),
                 "/auth.v1.AuthService/ListMyOrganizations": EndpointSync.unary(
                     method=MethodInfo(
@@ -1117,6 +1162,26 @@ class AuthServiceClientSync(ConnectClientSync):
                 name="GetCurrentUser",
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest,
+                output=auth_dot_v1_dot_auth__pb2.UserInfoResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_my_profile(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.UserInfoResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateMyProfile",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.UpdateMyProfileRequest,
                 output=auth_dot_v1_dot_auth__pb2.UserInfoResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),

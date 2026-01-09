@@ -70,6 +70,7 @@ export function UserMenu() {
 
           <div className="py-1">
             <button
+              onClick={() => navigate('/profile')}
               className="group flex w-full items-center px-4 py-2 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
             >
               <UserCircleIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-primary" aria-hidden="true" />

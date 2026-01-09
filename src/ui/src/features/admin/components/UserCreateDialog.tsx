@@ -5,6 +5,7 @@ import { AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";
+import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface UserCreateDialogProps {
   isOpen: boolean;
@@ -37,8 +38,6 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
   const fetchOrganizations = async () => {
     try {
       const client = createClient(AuthService, transport);
-      // Fetch reasonably large number of orgs for the dropdown
-      // In a real app with many orgs, this should be an async search select
       const response = await client.listAllOrganizations(
         { page: 1, pageSize: 100 }, 
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -93,118 +92,147 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-10">
-      <div className="bg-background w-full max-w-lg rounded-lg shadow-lg border border-border p-6 animate-in fade-in zoom-in duration-200">
-        <h2 className="text-xl font-bold mb-6">Create New User</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-background w-full max-w-lg rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in duration-200 my-8">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+          <h2 className="text-xl font-bold">Create New User</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 hover:bg-muted transition-colors"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
         
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Full Name</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
-            />
+        {/* Body */}
+        <form onSubmit={handleSave} className="p-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold">Full Name</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold">Username *</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="johndoe"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Username *</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Email *</label>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Email *</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              placeholder="john@example.com"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password *</label>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Password *</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              placeholder="••••••••"
             />
+            <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
           </div>
           
-          <div className="space-y-2 pt-2">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="create-isActive"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="h-4 w-4"
-              />
-              <label htmlFor="create-isActive" className="text-sm font-medium">Active</label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="create-isSystemAdmin"
-                checked={isSystemAdmin}
-                onChange={(e) => setIsSystemAdmin(e.target.checked)}
-                className="h-4 w-4"
-              />
-              <label htmlFor="create-isSystemAdmin" className="text-sm font-medium">System Admin</label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="create-emailVerified"
-                checked={emailVerified}
-                onChange={(e) => setEmailVerified(e.target.checked)}
-                className="h-4 w-4"
-              />
-              <label htmlFor="create-emailVerified" className="text-sm font-medium">Email Verified</label>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-border">
-            <h4 className="text-sm font-medium mb-2">Initial Organization (Optional)</h4>
+          <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/20">
+            <p className="text-sm font-semibold">User Permissions</p>
             <div className="space-y-2">
-              <select
-                value={orgId}
-                onChange={(e) => setOrgId(e.target.value)}
-                className="w-full p-2 border border-input bg-background rounded text-sm focus:ring-2 focus:ring-ring outline-none"
-              >
-                <option value="">Select an organization...</option>
-                {organizations.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name} ({org.slug})
-                  </option>
-                ))}
-              </select>
-              <select
-                value={orgRole}
-                onChange={(e) => setOrgRole(e.target.value)}
-                disabled={!orgId}
-                className="w-full p-2 border border-input bg-background rounded text-sm focus:ring-2 focus:ring-ring outline-none disabled:opacity-50"
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  id="create-isActive"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium group-hover:text-foreground">Active account</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  id="create-isSystemAdmin"
+                  checked={isSystemAdmin}
+                  onChange={(e) => setIsSystemAdmin(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium group-hover:text-foreground">System Administrator</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  id="create-emailVerified"
+                  checked={emailVerified}
+                  onChange={(e) => setEmailVerified(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium group-hover:text-foreground">Email verified</span>
+              </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
+          <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/20">
+            <p className="text-sm font-semibold">Initial Organization (Optional)</p>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-muted-foreground">Organization</label>
+                <select
+                  value={orgId}
+                  onChange={(e) => setOrgId(e.target.value)}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">Select an organization...</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} ({org.slug})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-muted-foreground">Role</label>
+                <select
+                  value={orgRole}
+                  onChange={(e) => setOrgRole(e.target.value)}
+                  disabled={!orgId}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed capitalize"
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" size="md" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={loading}>
+            <Button type="submit" size="md" disabled={loading}>
               {loading ? 'Creating...' : 'Create User'}
             </Button>
           </div>

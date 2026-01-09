@@ -10,6 +10,7 @@ import OrganizationsPage from '@/features/admin/pages/OrganizationsPage';
 import UsersPage from '@/features/admin/pages/UsersPage';
 import SettingsPage from '@/features/admin/pages/SettingsPage';
 import OrgSettingsPage from '@/features/organization/pages/OrgSettingsPage';
+import UserProfilePage from '@/features/auth/pages/UserProfilePage';
 
 // Simple layout for authentication pages
 function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -54,6 +55,14 @@ export default function App() {
           <ProtectedRoute>
             <MainLayout>
               <Home />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <UserProfilePage />
             </MainLayout>
           </ProtectedRoute>
         } />

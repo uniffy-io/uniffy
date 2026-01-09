@@ -987,6 +987,55 @@ export class GetCurrentUserRequest extends Message<GetCurrentUserRequest> {
 }
 
 /**
+ * Request to update current user's profile
+ *
+ * @generated from message auth.v1.UpdateMyProfileRequest
+ */
+export class UpdateMyProfileRequest extends Message<UpdateMyProfileRequest> {
+  /**
+   * Optional full name
+   *
+   * @generated from field: optional string full_name = 1;
+   */
+  fullName?: string;
+
+  /**
+   * Optional accent color in HSL format
+   *
+   * @generated from field: optional string accent_color = 2;
+   */
+  accentColor?: string;
+
+  constructor(data?: PartialMessage<UpdateMyProfileRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.UpdateMyProfileRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "full_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "accent_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateMyProfileRequest {
+    return new UpdateMyProfileRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateMyProfileRequest {
+    return new UpdateMyProfileRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateMyProfileRequest {
+    return new UpdateMyProfileRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateMyProfileRequest | PlainMessage<UpdateMyProfileRequest> | undefined, b: UpdateMyProfileRequest | PlainMessage<UpdateMyProfileRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateMyProfileRequest, a, b);
+  }
+}
+
+/**
  * Request to list user's organizations
  *
  * Empty request, user identified by token
@@ -1255,6 +1304,13 @@ export class UserInfoResponse extends Message<UserInfoResponse> {
    */
   emailVerified = false;
 
+  /**
+   * User's preferred accent color in HSL format
+   *
+   * @generated from field: optional string accent_color = 8;
+   */
+  accentColor?: string;
+
   constructor(data?: PartialMessage<UserInfoResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1270,6 +1326,7 @@ export class UserInfoResponse extends Message<UserInfoResponse> {
     { no: 5, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "is_system_admin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "email_verified", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "accent_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserInfoResponse {
@@ -1822,6 +1879,11 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
    */
   emailVerified?: boolean;
 
+  /**
+   * @generated from field: optional string accent_color = 8;
+   */
+  accentColor?: string;
+
   constructor(data?: PartialMessage<UpdateUserRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1837,6 +1899,7 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
     { no: 5, name: "is_active", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 6, name: "is_system_admin", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "email_verified", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 8, name: "accent_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateUserRequest {

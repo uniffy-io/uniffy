@@ -200,6 +200,7 @@ async def update_user(session: AsyncSession, user_id: UUID, **kwargs) -> User | 
         "is_active",
         "is_system_admin",
         "email_verified",
+        "accent_color",
     }
     update_data = {k: v for k, v in kwargs.items() if k in valid_keys and v is not None}
 

@@ -5,6 +5,7 @@ import { AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";
+import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface OrganizationEditDialogProps {
   org?: AdminOrganizationInfo | null;
@@ -86,52 +87,65 @@ export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: Organiz
   const isEdit = !!org;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-background w-full max-w-lg rounded-lg shadow-lg border border-border p-6 animate-in fade-in zoom-in duration-200">
-        <h2 className="text-xl font-bold mb-4">{isEdit ? 'Edit Organization' : 'Create Organization'}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-background w-full max-w-lg rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+          <h2 className="text-xl font-bold">{isEdit ? 'Edit Organization' : 'Create Organization'}</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 hover:bg-muted transition-colors"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
         
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
+        {/* Body */}
+        <form onSubmit={handleSave} className="p-6 space-y-5">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Name *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              placeholder="Acme Corporation"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Slug</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Slug *</label>
             <input
               type="text"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               required
               disabled={isEdit}
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none disabled:opacity-50"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              placeholder="acme-corp"
             />
-            {isEdit && <p className="text-xs text-muted-foreground mt-1">Slug cannot be changed.</p>}
+            {isEdit && <p className="text-xs text-muted-foreground">Slug cannot be changed after creation</p>}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Domain</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Domain</label>
             <input
               type="text"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
-              placeholder="example.com"
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
+              placeholder="acme.com"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
             />
+            <p className="text-xs text-muted-foreground">Optional: Custom domain for this organization</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Plan</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Plan *</label>
             <select
               value={plan}
               onChange={(e) => setPlan(e.target.value)}
-              className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
+              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all capitalize"
             >
               <option value="free">Free</option>
               <option value="pro">Pro</option>
@@ -140,24 +154,27 @@ export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: Organiz
           </div>
 
           {isEdit && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/30">
               <input
                 type="checkbox"
                 id="isActive"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
-              <label htmlFor="isActive" className="text-sm font-medium">Active</label>
+              <label htmlFor="isActive" className="text-sm font-medium cursor-pointer">
+                Organization is active
+              </label>
             </div>
           )}
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" size="md" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" size="md" disabled={loading}>
+              {loading ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Organization'}
             </Button>
           </div>
         </form>

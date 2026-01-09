@@ -53,6 +53,7 @@ from uwos.gen.auth.v1.auth_pb2 import (
     RegisterRequest,
     RemoveGroupMemberRequest,
     UpdateGroupRequest,
+    UpdateMyProfileRequest,
     UpdateOrganizationRequest,
     UpdateUserRequest,
     UserInfoResponse,
@@ -123,10 +124,7 @@ class AuthServiceImpl:
         membership = await get_user_organization_membership(
             session, UUID(user_id), UUID(organization_id)
         )
-        if (
-            not membership
-            or membership.role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN)
-        ):
+        if not membership or membership.role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
             raise ConnectError(Code.PERMISSION_DENIED, "Requires organization admin privileges")
 
     # --- Authentication & User Self-Service ---
@@ -242,11 +240,46 @@ class AuthServiceImpl:
                     is_active=user.is_active,
                     is_system_admin=user.is_system_admin,
                     email_verified=user.email_verified,
+                    accent_color=user.accent_color or "",
                 )
         except ConnectError:
             raise
         except Exception as e:
             logger.error(f"Error fetching user: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def update_my_profile(
+        self, request: UpdateMyProfileRequest, ctx: RequestContext
+    ) -> UserInfoResponse:
+        """Update current user's profile (own profile only)."""
+        user_id = self._get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                user = await update_user(
+                    session,
+                    UUID(user_id),
+                    full_name=request.full_name if request.HasField("full_name") else None,
+                    accent_color=request.accent_color if request.HasField("accent_color") else None,
+                )
+
+                if not user:
+                    raise ConnectError(Code.NOT_FOUND, "User not found")
+
+                return UserInfoResponse(
+                    id=str(user.id),
+                    email=user.email,
+                    username=user.username,
+                    full_name=user.full_name or "",
+                    is_active=user.is_active,
+                    is_system_admin=user.is_system_admin,
+                    email_verified=user.email_verified,
+                    accent_color=user.accent_color or "",
+                )
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error updating profile: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_my_organizations(
@@ -305,6 +338,7 @@ class AuthServiceImpl:
                             is_active=user.is_active,
                             is_system_admin=user.is_system_admin,
                             email_verified=user.email_verified,
+                            accent_color=user.accent_color or "",
                         )
                         for user in users
                     ],
@@ -374,6 +408,7 @@ class AuthServiceImpl:
                     is_active=user.is_active,
                     is_system_admin=user.is_system_admin,
                     email_verified=user.email_verified,
+                    accent_color=user.accent_color or "",
                 )
         except ConnectError:
             raise
@@ -404,6 +439,7 @@ class AuthServiceImpl:
                     email_verified=request.email_verified
                     if request.HasField("email_verified")
                     else None,
+                    accent_color=request.accent_color if request.HasField("accent_color") else None,
                 )
 
                 if not user:
@@ -700,9 +736,7 @@ class AuthServiceImpl:
                         name=request.name,
                         slug=request.slug,
                         created_by_user_id=UUID(user_id),
-                        description=request.description
-                        if request.HasField("description")
-                        else None,
+                        description=request.description if request.HasField("description") else None,
                         is_private=request.is_private,
                         is_default=request.is_default,
                     )
@@ -831,9 +865,7 @@ class AuthServiceImpl:
             logger.error(f"Error listing group members: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def add_group_member(
-        self, request: AddGroupMemberRequest, ctx: RequestContext
-    ) -> Empty:
+    async def add_group_member(self, request: AddGroupMemberRequest, ctx: RequestContext) -> Empty:
         """Add user to group (Org Admin only)."""
         user_id = self._get_user_id_from_context(ctx)
 
@@ -888,9 +920,7 @@ class AuthServiceImpl:
 
                 await self._check_org_admin(session, user_id, str(group.organization_id))
 
-                await remove_group_member(
-                    session, UUID(request.group_id), UUID(request.user_id)
-                )
+                await remove_group_member(session, UUID(request.group_id), UUID(request.user_id))
 
                 return Empty()
         except ConnectError:
@@ -927,6 +957,7 @@ class AuthServiceImpl:
                             is_active=user.is_active,
                             is_system_admin=user.is_system_admin,
                             email_verified=user.email_verified,
+                            accent_color=user.accent_color or "",
                         )
                         for user in users
                     ],

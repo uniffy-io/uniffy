@@ -5,6 +5,8 @@ import { UserInfoResponse, AdminUserOrganizationInfo, AdminOrganizationInfo } fr
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";
+import { XMarkIcon, UserCircleIcon, BuildingOfficeIcon, PlusIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { cn } from "@/utils/cn";
 
 interface UserEditDialogProps {
   user: UserInfoResponse;
@@ -137,147 +139,205 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-10">
-      <div className="bg-background w-full max-w-2xl rounded-lg shadow-lg border border-border p-6 animate-in fade-in zoom-in duration-200">
-        <h2 className="text-xl font-bold mb-6">Edit User: {user.username}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-background w-full max-w-4xl rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in duration-200 my-8">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2">
+              <UserCircleIcon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Edit User</h2>
+              <p className="text-xs text-muted-foreground">@{user.username}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 hover:bg-muted transition-colors"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <form onSubmit={handleSave} className="space-y-4">
-            <h3 className="text-lg font-semibold">Details</h3>
-            <div>
-              <label className="block text-sm font-medium mb-1">Full Name</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Username</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full p-2 border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
-              />
-            </div>
-            
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                <label htmlFor="isActive" className="text-sm font-medium">Active</label>
+        {/* Body */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* User Details Form */}
+            <form onSubmit={handleSave} className="space-y-5">
+              <div className="flex items-center gap-2 mb-4">
+                <UserCircleIcon className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">User Details</h3>
               </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isSystemAdmin"
-                  checked={isSystemAdmin}
-                  onChange={(e) => setIsSystemAdmin(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                <label htmlFor="isSystemAdmin" className="text-sm font-medium">System Admin</label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="emailVerified"
-                  checked={emailVerified}
-                  onChange={(e) => setEmailVerified(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                <label htmlFor="emailVerified" className="text-sm font-medium">Email Verified</label>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
-              <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={loading}>
-                Save Details
-              </Button>
-            </div>
-          </form>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Organizations</h3>
-            <div className="border rounded-md overflow-hidden max-h-60 overflow-y-auto">
-              {orgs.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">No organizations assigned</div>
-              ) : (
-                <ul className="divide-y divide-border">
-                  {orgs.map((org) => (
-                    <li key={org.organizationId} className="p-3 flex justify-between items-center text-sm">
-                      <div>
-                        <div className="font-medium">{org.name}</div>
-                        <div className="text-xs text-muted-foreground capitalize">{org.role}</div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="xs" 
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => handleRemoveOrg(org.organizationId)}
-                      >
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Remove
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-border">
-              <h4 className="text-sm font-medium mb-2">Add to Organization</h4>
+              
               <div className="space-y-2">
-                <select
-                  value={newOrgId}
-                  onChange={(e) => setNewOrgId(e.target.value)}
-                  className="w-full p-2 border border-input bg-background rounded text-sm focus:ring-2 focus:ring-ring outline-none"
-                >
-                  <option value="">Select an organization...</option>
-                  {availableOrgs.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name} ({org.slug})
-                    </option>
-                  ))}
-                </select>
-                <div className="flex gap-2">
-                  <select
-                    value={newOrgRole}
-                    onChange={(e) => setNewOrgRole(e.target.value)}
-                    className="flex-1 p-2 border border-input bg-background rounded text-sm focus:ring-2 focus:ring-ring outline-none"
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                    <option value="owner">Owner</option>
-                  </select>
-                  <Button onClick={handleAddOrg} disabled={!newOrgId} size="sm">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add
-                  </Button>
+                <label className="block text-sm font-semibold">Full Name</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold">Username *</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold">Email *</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                />
+              </div>
+              
+              <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/20">
+                <p className="text-sm font-semibold">User Permissions</p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium group-hover:text-foreground">Active account</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      id="isSystemAdmin"
+                      checked={isSystemAdmin}
+                      onChange={(e) => setIsSystemAdmin(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium group-hover:text-foreground">System Administrator</span>
+                      <ShieldCheckIcon className="h-4 w-4 text-purple-600" />
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      id="emailVerified"
+                      checked={emailVerified}
+                      onChange={(e) => setEmailVerified(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium group-hover:text-foreground">Email verified</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" size="md" onClick={onClose} disabled={loading}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="md" disabled={loading}>
+                  {loading ? 'Saving...' : 'Save Details'}
+                </Button>
+              </div>
+            </form>
+
+            {/* Organizations Section */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 mb-4">
+                <BuildingOfficeIcon className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Organizations</h3>
+              </div>
+
+              {/* Current Organizations */}
+              <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                <div className="max-h-64 overflow-y-auto">
+                  {orgs.length === 0 ? (
+                    <div className="p-6 text-center">
+                      <BuildingOfficeIcon className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No organizations assigned</p>
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {orgs.map((org) => (
+                        <li key={org.organizationId} className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                              <BuildingOfficeIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-sm">{org.name}</div>
+                              <div className="text-xs text-muted-foreground capitalize">{org.role}</div>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="xs" 
+                            className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 transition-opacity"
+                            onClick={() => handleRemoveOrg(org.organizationId)}
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                            Remove
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* Add Organization Form */}
+              <div className="rounded-xl border border-border bg-gradient-to-br from-muted/30 to-muted/10 p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <PlusIcon className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold">Add to Organization</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Organization</label>
+                    <select
+                      value={newOrgId}
+                      onChange={(e) => setNewOrgId(e.target.value)}
+                      className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                    >
+                      <option value="">Choose an organization...</option>
+                      {availableOrgs.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name} • {org.slug}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</label>
+                      <select
+                        value={newOrgRole}
+                        onChange={(e) => setNewOrgRole(e.target.value)}
+                        className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all capitalize"
+                      >
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                        <option value="owner">Owner</option>
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button onClick={handleAddOrg} disabled={!newOrgId} size="md" className="w-full">
+                        <PlusIcon className="h-4 w-4" />
+                        Add
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

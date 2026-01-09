@@ -13,6 +13,7 @@ export interface Theme {
     input: string;
     ring: string;
   };
+  accentColor?: string; // Optional custom accent color in HSL format
 }
 
 export const defaultTheme: Theme = {

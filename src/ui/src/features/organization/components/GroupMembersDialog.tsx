@@ -5,6 +5,8 @@ import { GroupInfo, GroupMemberInfo, UserInfoResponse } from "@/gen/auth/v1/auth
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";
+import { XMarkIcon, UserPlusIcon, UserGroupIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { cn } from "@/utils/cn";
 
 interface GroupMembersDialogProps {
   group: GroupInfo;
@@ -111,110 +113,201 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-10">
-      <div className="bg-background w-full max-w-2xl rounded-lg shadow-lg border border-border p-6 animate-in fade-in zoom-in duration-200">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">Members: {group.name}</h2>
-          <Button size="xs" onClick={() => setShowAddForm(!showAddForm)}>
-            {showAddForm ? 'Cancel' : 'Add Member'}
-          </Button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-background w-full max-w-3xl rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gradient-to-r from-muted/50 to-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2">
+              <UserGroupIcon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Group Members</h2>
+              <p className="text-sm text-muted-foreground">{group.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              onClick={() => setShowAddForm(!showAddForm)}
+              variant={showAddForm ? "outline" : "default"}
+            >
+              <UserPlusIcon className="h-4 w-4" />
+              {showAddForm ? 'Cancel' : 'Add Member'}
+            </Button>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 hover:bg-muted transition-colors"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         
-        {showAddForm && (
-          <form onSubmit={handleAddMember} className="mb-6 p-4 bg-muted/50 rounded-md border border-border">
-            <h3 className="text-sm font-medium mb-3">Add User to Group</h3>
-            <div className="flex gap-2 items-end">
-              <div className="flex-1">
-                <label className="block text-xs font-medium mb-1">Select User</label>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  required
-                  className="w-full p-2 text-sm border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
-                  disabled={loadingUsers}
-                >
-                  <option value="">Select a user...</option>
-                  {availableUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.username} {user.email ? `(${user.email})` : ''}
-                    </option>
-                  ))}
-                </select>
-                {loadingUsers && <p className="text-xs text-muted-foreground mt-1">Loading users...</p>}
-                {availableUsers.length === 0 && !loadingUsers && (
-                  <p className="text-xs text-muted-foreground mt-1">No more users to add.</p>
-                )}
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          {showAddForm && (
+            <form onSubmit={handleAddMember} className="rounded-xl border border-border bg-gradient-to-br from-muted/30 to-muted/10 p-5 space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <UserPlusIcon className="h-5 w-5 text-primary" />
+                <h3 className="text-sm font-semibold">Add User to Group</h3>
               </div>
-              <div className="w-32">
-                <label className="block text-xs font-medium mb-1">Role</label>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full p-2 text-sm border border-input bg-background rounded focus:ring-2 focus:ring-ring outline-none"
-                >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,auto] gap-3">
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Select User</label>
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    required
+                    disabled={loadingUsers}
+                    className={cn(
+                      "w-full px-3 py-2.5 text-sm border border-input bg-background rounded-lg",
+                      "focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    <option value="">Choose a user...</option>
+                    {availableUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.username} {user.email ? `• ${user.email}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingUsers && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-muted border-t-primary"></span>
+                      Loading users...
+                    </p>
+                  )}
+                  {availableUsers.length === 0 && !loadingUsers && (
+                    <p className="text-xs text-muted-foreground">All organization users are already members</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</label>
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="w-full md:w-32 px-3 py-2.5 text-sm border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all capitalize"
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button type="submit" size="md" disabled={!selectedUserId || loadingUsers} className="w-full md:w-auto">
+                    Add Member
+                  </Button>
+                </div>
               </div>
-              <Button type="submit" size="sm" disabled={!selectedUserId}>Add</Button>
-            </div>
-          </form>
-        )}
+            </form>
+          )}
 
-        <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted text-muted-foreground uppercase font-medium sticky top-0">
-              <tr>
-                <th className="px-4 py-2">User</th>
-                <th className="px-4 py-2">Role</th>
-                <th className="px-4 py-2">Joined</th>
-                <th className="px-4 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-card">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                    Loading members...
-                  </td>
-                </tr>
-              ) : members.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                    No members found
-                  </td>
-                </tr>
-              ) : (
-                members.map((member) => (
-                  <tr key={member.userId} className="hover:bg-accent/50">
-                    <td className="px-4 py-2">
-                      <div className="font-medium">{member.username}</div>
-                      <div className="text-xs text-muted-foreground">{member.email}</div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${member.role === 'admin' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted text-muted-foreground border-transparent'}`}>
-                        {member.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground text-xs">
-                      {new Date(member.joinedAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <Button variant="ghost" size="xs" onClick={() => handleRemoveMember(member.userId)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                        Remove
-                      </Button>
-                    </td>
+          {/* Members Table */}
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="max-h-[500px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10">
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Joined</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+                          <p className="text-sm text-muted-foreground">Loading members...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : members.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <UserGroupIcon className="h-12 w-12 text-muted-foreground/50" />
+                          <p className="text-sm font-medium text-foreground">No members found</p>
+                          <p className="text-xs text-muted-foreground">Add users to this group to get started</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    members.map((member) => (
+                      <tr key={member.userId} className="group hover:bg-accent/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold",
+                              member.role === 'admin'
+                                ? "bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-600 dark:text-purple-400"
+                                : "bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400"
+                            )}>
+                              {member.username.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-foreground flex items-center gap-2">
+                                {member.username}
+                                {member.role === 'admin' && (
+                                  <ShieldCheckIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{member.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn(
+                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
+                            member.role === 'admin'
+                              ? 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-950 dark:to-purple-900 dark:text-purple-300'
+                              : 'bg-muted text-muted-foreground'
+                          )}>
+                            {member.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(member.joinedAt).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="xs" 
+                            onClick={() => handleRemoveMember(member.userId)} 
+                            className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 transition-opacity"
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                            Remove
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-        <div className="flex justify-end mt-6">
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Close
-          </Button>
+          {/* Footer Stats */}
+          <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-muted/30 border border-border">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <UserGroupIcon className="h-4 w-4" />
+              <span className="font-medium">{members.length}</span>
+              <span>member{members.length !== 1 ? 's' : ''}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={onClose}>
+              Close
+            </Button>
+          </div>
         </div>
       </div>
     </div>

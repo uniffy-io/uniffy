@@ -8,6 +8,8 @@ import { UserEditDialog } from "../components/UserEditDialog";
 import { UserCreateDialog } from "../components/UserCreateDialog";
 import { transport } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { UserGroupIcon, PlusIcon, PencilSquareIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { cn } from "@/utils/cn";
 
 export default function UsersPage() {
   useDocumentTitle('Users');
@@ -50,77 +52,136 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-        <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-primary p-3 shadow-lg">
+            <UserGroupIcon className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage all user accounts in the system
+            </p>
+          </div>
+        </div>
+        <Button size="md" onClick={() => setIsCreateOpen(true)}>
+          <PlusIcon className="h-4 w-4" />
           Add User
         </Button>
       </div>
 
       {error && (
-        <div className="bg-destructive/10 text-destructive p-4 rounded-md">
-          {error}
+        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/30 p-4">
+          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
         </div>
       )}
 
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-muted text-muted-foreground uppercase font-medium">
-            <tr>
-              <th className="px-4 py-3">Username</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Full Name</th>
-              <th className="px-4 py-3 text-center">System Admin</th>
-              <th className="px-4 py-3 text-center">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border bg-card">
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  Loading...
-                </td>
+      {/* Users Table */}
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Name</th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  No users found
-                </td>
-              </tr>
-            ) : (
-              users.map((user) => (
-                <tr key={user.id} className="hover:bg-accent/50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{user.username}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{user.fullName || '-'}</td>
-                  <td className="px-4 py-3 text-center">
-                    {user.isSystemAdmin && (
-                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold border-transparent bg-primary text-primary-foreground">
-                        Admin
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-block w-2 h-2 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`} title={user.isActive ? 'Active' : 'Inactive'} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="xs" onClick={() => handleEdit(user)}>
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit
-                    </Button>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+                      <p className="text-sm text-muted-foreground">Loading users...</p>
+                    </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <UserGroupIcon className="h-12 w-12 text-muted-foreground/50" />
+                      <p className="text-sm font-medium text-foreground">No users found</p>
+                      <p className="text-xs text-muted-foreground">Create your first user to get started</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr 
+                    key={user.id} 
+                    className="group hover:bg-accent/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold",
+                          user.isSystemAdmin 
+                            ? "bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-600 dark:text-purple-400"
+                            : "bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400"
+                        )}>
+                          {user.username.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground flex items-center gap-2">
+                            {user.username}
+                            {user.isSystemAdmin && (
+                              <ShieldCheckIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">@{user.username}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{user.fullName || '-'}</td>
+                    <td className="px-6 py-4 text-center">
+                      {user.isSystemAdmin && (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-950 dark:to-purple-900 dark:text-purple-300">
+                          Admin
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className={cn(
+                          "h-2 w-2 rounded-full animate-pulse",
+                          user.isActive ? "bg-green-500" : "bg-red-500"
+                        )} />
+                        <span className={cn(
+                          "text-xs font-medium",
+                          user.isActive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                        )}>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="xs" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(user);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <PencilSquareIcon className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {editingUser && (

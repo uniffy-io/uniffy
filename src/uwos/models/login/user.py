@@ -49,6 +49,11 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True, nullable=False)
     is_system_admin: bool = Field(default=False, nullable=False)
     email_verified: bool = Field(default=False, nullable=False)
+    accent_color: str | None = Field(
+        default=None,
+        max_length=50,
+        description="User's preferred accent color in HSL format (e.g., '221.2 83.2% 53.3%')",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

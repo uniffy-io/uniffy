@@ -21,10 +21,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'cursor-pointer',
           // Variant styles
           {
-            // Default - Primary action button with gradient
-            'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/25': 
+            // Default - Primary action button with gradient (uses accent color via CSS variable)
+            'bg-primary text-primary-foreground shadow-sm': 
               variant === 'default',
-            'hover:from-blue-600 hover:to-blue-700 hover:shadow-md hover:shadow-blue-500/30': 
+            'hover:bg-primary/90 hover:shadow-md': 
               variant === 'default',
             
             // Secondary - Muted alternative

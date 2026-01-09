@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddGroupMemberRequest, AdminAddUserToOrganizationRequest, AdminCreateOrganizationRequest, AdminCreateUserRequest, AdminListUserOrganizationsRequest, AdminOrganizationInfo, AdminOrganizationListResponse, AdminRemoveUserFromOrganizationRequest, AdminUserListResponse, AdminUserOrganizationInfo, AdminUserOrganizationListResponse, AuthResponse, CreateGroupRequest, DeleteGroupRequest, Empty, GetCurrentUserRequest, GroupInfo, GroupListResponse, GroupMemberListResponse, ListAllOrganizationsRequest, ListAllUsersRequest, ListGroupMembersRequest, ListGroupsRequest, ListMyOrganizationsRequest, ListOrganizationUsersRequest, LoginRequest, OrganizationListResponse, OrganizationUserListResponse, RefreshTokenRequest, RegisterRequest, RemoveGroupMemberRequest, UpdateGroupRequest, UpdateOrganizationRequest, UpdateUserRequest, UserInfoResponse } from "./auth_pb.js";
+import { AddGroupMemberRequest, AdminAddUserToOrganizationRequest, AdminCreateOrganizationRequest, AdminCreateUserRequest, AdminListUserOrganizationsRequest, AdminOrganizationInfo, AdminOrganizationListResponse, AdminRemoveUserFromOrganizationRequest, AdminUserListResponse, AdminUserOrganizationInfo, AdminUserOrganizationListResponse, AuthResponse, CreateGroupRequest, DeleteGroupRequest, Empty, GetCurrentUserRequest, GroupInfo, GroupListResponse, GroupMemberListResponse, ListAllOrganizationsRequest, ListAllUsersRequest, ListGroupMembersRequest, ListGroupsRequest, ListMyOrganizationsRequest, ListOrganizationUsersRequest, LoginRequest, OrganizationListResponse, OrganizationUserListResponse, RefreshTokenRequest, RegisterRequest, RemoveGroupMemberRequest, UpdateGroupRequest, UpdateMyProfileRequest, UpdateOrganizationRequest, UpdateUserRequest, UserInfoResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -55,6 +55,17 @@ export const AuthService = {
     getCurrentUser: {
       name: "GetCurrentUser",
       I: GetCurrentUserRequest,
+      O: UserInfoResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Update current user's profile (own profile only)
+     *
+     * @generated from rpc auth.v1.AuthService.UpdateMyProfile
+     */
+    updateMyProfile: {
+      name: "UpdateMyProfile",
+      I: UpdateMyProfileRequest,
       O: UserInfoResponse,
       kind: MethodKind.Unary,
     },
