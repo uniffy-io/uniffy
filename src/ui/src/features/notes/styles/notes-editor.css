@@ -1,0 +1,577 @@
+/* Notes Editor Styles */
+
+/* 
+ * Milkdown Crepe Theme Integration
+ * Maps Crepe's CSS variables to our app's theme system
+ * Reference: https://milkdown.dev/docs/guide/styling
+ */
+
+/* Set up Crepe's required CSS variables mapped to our theme */
+.crepe-editor-wrapper {
+  /* Background Colors */
+  --crepe-color-background: transparent;
+  --crepe-color-surface: hsl(var(--muted));
+  --crepe-color-surface-low: hsl(var(--muted));
+  
+  /* Text Colors - Critical for visibility */
+  --crepe-color-on-background: hsl(var(--foreground));
+  --crepe-color-on-surface: hsl(var(--foreground));
+  --crepe-color-on-surface-variant: hsl(var(--muted-foreground));
+  
+  /* Accent Colors */
+  --crepe-color-primary: hsl(var(--primary));
+  --crepe-color-secondary: hsl(var(--muted));
+  --crepe-color-on-secondary: hsl(var(--foreground));
+  
+  /* UI Colors */
+  --crepe-color-outline: hsl(var(--muted-foreground));
+  --crepe-color-hover: hsl(var(--muted));
+  --crepe-color-selected: hsl(var(--primary) / 0.2);
+  --crepe-color-inverse: hsl(var(--background));
+  --crepe-color-on-inverse: hsl(var(--foreground));
+  
+  /* Code/Inline styling */
+  --crepe-color-inline-code: hsl(var(--primary));
+  --crepe-color-inline-area: hsl(var(--muted));
+  --crepe-color-error: #ef4444;
+  
+  /* Typography - use our theme fonts */
+  --crepe-font-title: var(--font-sans);
+  --crepe-font-default: var(--font-sans);
+  --crepe-font-code: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  
+  /* Shadows */
+  --crepe-shadow-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --crepe-shadow-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  
+  /* Ensure the editor doesn't affect global colors */
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Scope Crepe styles to only affect the editor */
+.crepe-editor {
+  background: transparent !important;
+}
+
+/* Remove top margin/padding from first element to avoid empty space at top */
+.crepe-editor .milkdown > :first-child,
+.crepe-editor .ProseMirror > :first-child,
+.crepe-editor-wrapper .milkdown > :first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Also handle the editor container itself */
+.crepe-editor .milkdown,
+.crepe-editor .ProseMirror {
+  padding-top: 0 !important;
+}
+
+/* 
+ * List Item Styling - Milkdown uses custom list-item-block component
+ * The bullet/number is rendered via SVG or label, not ::marker
+ */
+.crepe-editor-wrapper .milkdown-list-item-block,
+.crepe-editor .milkdown-list-item-block {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* List item labels (bullets, numbers) - these use SVG fills */
+.crepe-editor-wrapper .milkdown-list-item-block .label-wrapper,
+.crepe-editor .milkdown-list-item-block .label-wrapper {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-list-item-block .label-wrapper svg,
+.crepe-editor .milkdown-list-item-block .label-wrapper svg {
+  fill: hsl(var(--muted-foreground)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Ordered list numbers */
+.crepe-editor-wrapper .milkdown-list-item-block .label-wrapper .label,
+.crepe-editor .milkdown-list-item-block .label-wrapper .label {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Checkbox icons for task lists */
+.crepe-editor-wrapper .milkdown-list-item-block .label-wrapper .checked svg,
+.crepe-editor-wrapper .milkdown-list-item-block .label-wrapper .unchecked svg,
+.crepe-editor .milkdown-list-item-block .label-wrapper .checked svg,
+.crepe-editor .milkdown-list-item-block .label-wrapper .unchecked svg {
+  fill: hsl(var(--primary)) !important;
+  color: hsl(var(--primary)) !important;
+}
+
+/* Fallback for native list markers if used */
+.crepe-editor ul li::marker,
+.crepe-editor .milkdown ul li::marker,
+.crepe-editor .ProseMirror ul li::marker,
+.crepe-editor-wrapper ul li::marker {
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor ol li::marker,
+.crepe-editor .milkdown ol li::marker,
+.crepe-editor .ProseMirror ol li::marker,
+.crepe-editor-wrapper ol li::marker {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure all text uses theme foreground color */
+.crepe-editor,
+.crepe-editor .milkdown,
+.crepe-editor .ProseMirror,
+.crepe-editor-wrapper {
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor p,
+.crepe-editor h1,
+.crepe-editor h2,
+.crepe-editor h3,
+.crepe-editor h4,
+.crepe-editor h5,
+.crepe-editor h6,
+.crepe-editor li,
+.crepe-editor .ProseMirror p,
+.crepe-editor .ProseMirror h1,
+.crepe-editor .ProseMirror h2,
+.crepe-editor .ProseMirror h3,
+.crepe-editor .ProseMirror li {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Text spans OUTSIDE of code blocks - don't touch .cm-editor spans (syntax highlighting) */
+.crepe-editor > span,
+.crepe-editor .ProseMirror > p span,
+.crepe-editor .milkdown-list-item-block span:not(.cm-editor span) {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Cursor styling */
+.crepe-editor .ProseMirror-cursor,
+.crepe-editor .milkdown .ProseMirror-cursor {
+  border-left: 2px solid hsl(var(--primary)) !important;
+}
+
+.crepe-editor .ProseMirror {
+  caret-color: hsl(var(--primary));
+}
+
+/* Ensure toolbar matches design */
+.crepe-editor .milkdown-toolbar,
+.crepe-editor [data-milkdown-toolbar] {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Block edit handle */
+.crepe-editor .milkdown-block-handle,
+.crepe-editor [data-block-handle] {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+/* Slash command menu */
+.crepe-editor .milkdown-slash-menu,
+.crepe-editor [data-slash-menu],
+.crepe-editor .crepe-slash-menu {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor .milkdown-slash-menu-item:hover,
+.crepe-editor [data-slash-menu] [data-item]:hover {
+  background: hsl(var(--accent));
+}
+
+/* Slash menu items text */
+.crepe-editor [data-slash-menu] [data-item],
+.crepe-editor .crepe-slash-menu-item {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Crepe specific slash menu */
+.crepe [data-crepe-slash-menu],
+[data-crepe-slash-menu] {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Code block styling */
+.crepe-editor .milkdown pre {
+  background: hsl(var(--muted));
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* Link tooltip */
+.crepe-editor .milkdown-link-tooltip {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Table styling */
+.crepe-editor .milkdown table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.crepe-editor .milkdown th,
+.crepe-editor .milkdown td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem 0.75rem;
+}
+
+.crepe-editor .milkdown th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+}
+
+/* Placeholder styling */
+.crepe-editor .milkdown .ProseMirror-placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Selection highlight */
+.crepe-editor .milkdown ::selection {
+  background: hsl(var(--primary) / 0.2);
+}
+
+/* Focus outline for the editor */
+.crepe-editor .ProseMirror:focus {
+  outline: none;
+}
+
+/* Checkbox styling */
+.crepe-editor .milkdown input[type="checkbox"] {
+  accent-color: hsl(var(--primary));
+}
+
+/* Task list completed items */
+.crepe-editor .milkdown li[data-checked="true"] {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Image block styling */
+.crepe-editor .milkdown img {
+  border-radius: 0.5rem;
+  max-width: 100%;
+}
+
+/* Math/LaTeX blocks */
+.crepe-editor .milkdown .math-display {
+  background: hsl(var(--muted));
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+/* Inline code */
+.crepe-editor .milkdown code:not(pre code) {
+  background: hsl(var(--muted));
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+/* Blockquote */
+.crepe-editor .milkdown blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  padding-left: 1rem;
+  margin-left: 0;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Horizontal rule */
+.crepe-editor .milkdown hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 2rem 0;
+}
+
+/* Drag cursor indicator */
+.crepe-editor .ProseMirror-dropcursor {
+  color: hsl(var(--primary));
+}
+
+/* Gap cursor */
+.crepe-editor .ProseMirror-gapcursor:after {
+  border-top: 1px solid hsl(var(--primary));
+}
+
+/* 
+ * CodeMirror Code Block Styling
+ * Crepe uses CodeMirror for code blocks with syntax highlighting
+ */
+.crepe-editor-wrapper .milkdown-code-block,
+.crepe-editor .milkdown-code-block {
+  background: hsl(var(--muted)) !important;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.crepe-editor-wrapper .milkdown-code-block .cm-editor,
+.crepe-editor .milkdown-code-block .cm-editor {
+  background: transparent !important;
+}
+
+.crepe-editor-wrapper .milkdown-code-block .cm-gutters,
+.crepe-editor .milkdown-code-block .cm-gutters {
+  background: transparent !important;
+  border-right: none !important;
+}
+
+/* 
+ * DO NOT override .cm-content color - let oneDark theme handle syntax highlighting
+ * The theme applies specific colors to tokens like .tok-keyword, .tok-string, etc.
+ */
+
+/* Line numbers */
+.crepe-editor-wrapper .cm-editor .cm-lineNumbers .cm-gutterElement,
+.crepe-editor .cm-editor .cm-lineNumbers .cm-gutterElement {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Active line highlight */
+.crepe-editor-wrapper .cm-editor .cm-activeLine,
+.crepe-editor .cm-editor .cm-activeLine {
+  background: hsl(var(--muted) / 0.5) !important;
+}
+
+.crepe-editor-wrapper .cm-editor .cm-activeLineGutter,
+.crepe-editor .cm-editor .cm-activeLineGutter {
+  background: hsl(var(--muted) / 0.5) !important;
+}
+
+/* Selection */
+.crepe-editor-wrapper .cm-editor .cm-selectionBackground,
+.crepe-editor .cm-editor .cm-selectionBackground,
+.crepe-editor-wrapper .cm-editor .cm-content ::selection,
+.crepe-editor .cm-editor .cm-content ::selection {
+  background: hsl(var(--primary) / 0.3) !important;
+}
+
+/* Cursor */
+.crepe-editor-wrapper .cm-editor .cm-cursor,
+.crepe-editor .cm-editor .cm-cursor {
+  border-left-color: hsl(var(--primary)) !important;
+}
+
+/* Language picker dropdown */
+.crepe-editor-wrapper .milkdown-code-block .language-picker,
+.crepe-editor .milkdown-code-block .language-picker {
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-code-block .language-picker input,
+.crepe-editor .milkdown-code-block .language-picker input {
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* Code block tools/buttons */
+.crepe-editor-wrapper .milkdown-code-block .tools button,
+.crepe-editor .milkdown-code-block .tools button {
+  color: hsl(var(--muted-foreground)) !important;
+  background: hsl(var(--muted)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-code-block .tools button:hover,
+.crepe-editor .milkdown-code-block .tools button:hover {
+  background: hsl(var(--muted-foreground) / 0.2) !important;
+}
+
+/* 
+ * Block Edit Menu (Slash Commands)
+ * Style the popup menus to match our theme
+ */
+.crepe-editor-wrapper [data-crepe-block-edit-menu],
+[data-crepe-block-edit-menu] {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.75rem !important;
+  color: hsl(var(--foreground)) !important;
+  box-shadow: var(--crepe-shadow-2) !important;
+}
+
+[data-crepe-block-edit-menu] h6,
+[data-crepe-block-edit-menu] .menu-group h6 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+[data-crepe-block-edit-menu] li,
+[data-crepe-block-edit-menu] .menu-group li {
+  color: hsl(var(--foreground)) !important;
+}
+
+[data-crepe-block-edit-menu] li svg,
+[data-crepe-block-edit-menu] .menu-group li svg {
+  color: hsl(var(--muted-foreground)) !important;
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+[data-crepe-block-edit-menu] li.hover,
+[data-crepe-block-edit-menu] li:hover,
+[data-crepe-block-edit-menu] .menu-group li.hover,
+[data-crepe-block-edit-menu] .menu-group li:hover {
+  background: hsl(var(--muted)) !important;
+}
+
+[data-crepe-block-edit-menu] li.active,
+[data-crepe-block-edit-menu] .menu-group li.active {
+  background: hsl(var(--primary) / 0.2) !important;
+}
+
+/* Tab group in block edit menu */
+[data-crepe-block-edit-menu] .tab-group {
+  border-bottom-color: hsl(var(--border)) !important;
+}
+
+[data-crepe-block-edit-menu] .tab-group li.selected {
+  background: hsl(var(--primary) / 0.2) !important;
+}
+
+/* Block handle (drag handle) */
+.crepe-editor-wrapper [data-crepe-block-handle],
+[data-crepe-block-handle] {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.crepe-editor-wrapper [data-crepe-block-handle] svg,
+[data-crepe-block-handle] svg {
+  fill: hsl(var(--muted-foreground)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* 
+ * Toolbar Styling
+ */
+.crepe-editor-wrapper .milkdown-toolbar,
+.milkdown-toolbar {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: var(--crepe-shadow-1) !important;
+}
+
+.crepe-editor-wrapper .milkdown-toolbar .toolbar-item svg,
+.milkdown-toolbar .toolbar-item svg {
+  color: hsl(var(--muted-foreground)) !important;
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-toolbar .toolbar-item:hover,
+.milkdown-toolbar .toolbar-item:hover {
+  background: hsl(var(--muted)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-toolbar .toolbar-item.active svg,
+.milkdown-toolbar .toolbar-item.active svg {
+  color: hsl(var(--primary)) !important;
+  fill: hsl(var(--primary)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-toolbar .divider,
+.milkdown-toolbar .divider {
+  background: hsl(var(--border)) !important;
+}
+
+/*
+ * Link Tooltip
+ */
+.crepe-editor-wrapper .milkdown-link-preview,
+.crepe-editor-wrapper .milkdown-link-edit,
+.milkdown-link-preview,
+.milkdown-link-edit {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+  box-shadow: var(--crepe-shadow-1) !important;
+}
+
+.crepe-editor-wrapper .milkdown-link-preview a,
+.milkdown-link-preview a {
+  color: hsl(var(--primary)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-link-edit input,
+.milkdown-link-edit input {
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/*
+ * Table Block Styling
+ */
+.crepe-editor-wrapper .milkdown-table-block th,
+.crepe-editor .milkdown-table-block th {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-table-block td,
+.crepe-editor .milkdown-table-block td {
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-table-block th,
+.crepe-editor-wrapper .milkdown-table-block td,
+.crepe-editor .milkdown-table-block th,
+.crepe-editor .milkdown-table-block td {
+  border-color: hsl(var(--border)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-table-block .selectedCell::after,
+.crepe-editor .milkdown-table-block .selectedCell::after {
+  background-color: hsl(var(--primary) / 0.2) !important;
+}
+
+/*
+ * Image Block Styling
+ */
+.crepe-editor-wrapper .milkdown-image-block,
+.crepe-editor .milkdown-image-block {
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-image-block .image-edit-area,
+.crepe-editor .milkdown-image-block .image-edit-area {
+  background: hsl(var(--muted)) !important;
+  border: 1px dashed hsl(var(--border)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.crepe-editor-wrapper .milkdown-image-block button,
+.crepe-editor .milkdown-image-block button {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/*
+ * LaTeX/Math Block
+ */
+.crepe-editor-wrapper .milkdown-latex-inline,
+.crepe-editor-wrapper .milkdown-latex-block,
+.crepe-editor .milkdown-latex-inline,
+.crepe-editor .milkdown-latex-block {
+  color: hsl(var(--foreground)) !important;
+}
+
+.crepe-editor-wrapper .katex,
+.crepe-editor .katex {
+  color: hsl(var(--foreground)) !important;
+}

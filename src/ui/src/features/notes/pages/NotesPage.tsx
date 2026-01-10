@@ -2,16 +2,35 @@ import { useEffect } from 'react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { NotesLayout } from '../components/NotesLayout';
-import { NotesTreeNav } from '../components/tree/NotesTreeNav';
+import { NotesSidebar } from '../components/sidebar/NotesSidebar';
 import { NotesEditor } from '../components/editor/NotesEditor';
 import { NotesMetadataPanel } from '../components/metadata/NotesMetadataPanel';
-import { useAppSelector } from '@/app/hooks';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { toggleSidebar } from '../store/editorSlice';
 
 export default function NotesPage() {
   useDocumentTitle('Notes');
+  const dispatch = useAppDispatch();
   
-  const { currentNoteId } = useAppSelector((state) => state.notes);
-  const { isMetadataPanelOpen } = useAppSelector((state) => state.editor);
+  const notesState = useAppSelector((state) => state.notes);
+  const editorState = useAppSelector((state) => state.editor);
+  
+  const currentNoteId = notesState?.currentNoteId;
+  const isSidebarOpen = editorState?.isSidebarOpen ?? true;
+  const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
+  
+  // Keyboard shortcut for toggling sidebar (Cmd/Ctrl + \)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+        e.preventDefault();
+        dispatch(toggleSidebar());
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dispatch]);
   
   // Load initial notes on mount
   useEffect(() => {
@@ -22,9 +41,10 @@ export default function NotesPage() {
     <>
       <AppHeader />
       <NotesLayout
-        treeNav={<NotesTreeNav />}
+        sidebar={<NotesSidebar />}
         editor={<NotesEditor />}
         metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}
+        showSidebar={isSidebarOpen}
         showMetadataPanel={isMetadataPanelOpen && !!currentNoteId}
       />
     </>

@@ -14,10 +14,10 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans antialiased">
       <AppHeader />
-      <div className="container mx-auto py-6 px-4 flex gap-8">
-        <aside className="w-64 hidden md:block shrink-0">
-          <nav className="flex flex-col space-y-1">
-            <div className="px-3 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+      <div className="container mx-auto py-6 px-4 flex flex-col md:flex-row gap-8">
+        <aside className="w-full md:w-64 shrink-0">
+          <nav className="flex flex-row md:flex-col space-x-1 md:space-x-0 md:space-y-1 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0">
+            <div className="hidden md:block px-3 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               System Admin
             </div>
             {navItems.map((item) => (
@@ -25,7 +25,7 @@ export function AdminLayout() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  "px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
                   location.pathname.startsWith(item.path)
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-accent hover:text-accent-foreground"

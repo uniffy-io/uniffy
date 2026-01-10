@@ -6,7 +6,6 @@ import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";
 import { XMarkIcon, PencilSquareIcon, LockClosedIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
-import { cn } from "@/utils/cn";
 
 interface GroupEditDialogProps {
   group: GroupInfo;

@@ -13,6 +13,7 @@
     "@bufbuild/protobuf": "1.10.0",
     "@codemirror/commands": "^6.10.1",
     "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.1",
     "@codemirror/language-data": "^6.5.2",
     "@codemirror/state": "^6.5.3",
     "@codemirror/theme-one-dark": "^6.1.3",
@@ -23,7 +24,9 @@
     "@heroicons/react": "^2.2.0",
     "@milkdown/components": "^7.18.0",
     "@milkdown/core": "^7.18.0",
+    "@milkdown/crepe": "^7.18.0",
     "@milkdown/ctx": "^7.18.0",
+    "@milkdown/plugin-highlight": "^7.18.0",
     "@milkdown/plugin-history": "^7.18.0",
     "@milkdown/plugin-listener": "^7.18.0",
     "@milkdown/preset-commonmark": "^7.18.0",
@@ -39,6 +42,7 @@
     "react-resizable-panels": "^4.3.2",
     "react-router-dom": "^7.12.0",
     "redux-persist": "^6.0.0",
+    "shiki": "^3.21.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

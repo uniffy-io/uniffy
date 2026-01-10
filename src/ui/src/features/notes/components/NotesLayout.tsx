@@ -1,33 +1,64 @@
 import type { ReactNode } from 'react';
+import { Panel, Group, Separator } from 'react-resizable-panels';
 
 interface NotesLayoutProps {
-  treeNav: ReactNode;
+  sidebar: ReactNode;
   editor: ReactNode;
   metadataPanel?: ReactNode;
+  showSidebar?: boolean;
   showMetadataPanel?: boolean;
 }
 
-export function NotesLayout({ treeNav, editor, metadataPanel, showMetadataPanel = false }: NotesLayoutProps) {
+export function NotesLayout({ 
+  sidebar, 
+  editor, 
+  metadataPanel, 
+  showSidebar = true,
+  showMetadataPanel = false 
+}: NotesLayoutProps) {
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel: Tree Navigator */}
-        <div className="w-80 border-r border-border flex-shrink-0 overflow-y-auto">
-          {treeNav}
-        </div>
-
-        {/* Center Panel: Editor */}
-        <div className="flex-1 overflow-hidden">
-          {editor}
-        </div>
-
-        {/* Right Panel: Metadata (Conditional) */}
-        {showMetadataPanel && metadataPanel && (
-          <div className="w-80 border-l border-border flex-shrink-0 overflow-y-auto">
-            {metadataPanel}
-          </div>
+    <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">
+      <Group orientation="horizontal" className="h-full">
+        {/* Left Sidebar */}
+        {showSidebar && (
+          <>
+            <Panel 
+              id="sidebar"
+              defaultSize="280px"
+              minSize="200px"
+              maxSize="400px"
+              className="bg-card overflow-hidden"
+            >
+              {sidebar}
+            </Panel>
+            
+            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+          </>
         )}
-      </div>
+        
+        {/* Main Editor Area */}
+        <Panel id="editor" minSize="400px">
+          <div className="h-full overflow-hidden bg-card">
+            {editor}
+          </div>
+        </Panel>
+        
+        {/* Right Metadata Panel (conditional) */}
+        {showMetadataPanel && metadataPanel && (
+          <>
+            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <Panel 
+              id="metadata"
+              defaultSize="320px"
+              minSize="250px"
+              maxSize="450px"
+              className="bg-card overflow-hidden"
+            >
+              {metadataPanel}
+            </Panel>
+          </>
+        )}
+      </Group>
     </div>
   );
 }

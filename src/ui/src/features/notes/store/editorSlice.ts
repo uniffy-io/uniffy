@@ -1,6 +1,15 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
+// Editor modes:
+// - 'crepe': Full WYSIWYG Crepe editor with all features (toolbar, slash commands, etc.)
+// - 'markdown': Raw markdown editor with CodeMirror + optional split preview
+// - 'readonly': Read-only view for published/shared notes
+export type EditorMode = 'crepe' | 'markdown' | 'readonly';
+
+// Metadata panel tabs
+export type MetadataPanelTab = 'outline' | 'links' | 'properties' | 'ai' | 'history';
+
 interface EditorState {
     // Editor content (draft state, not saved yet)
     draftContent: Record<string, string>;
@@ -17,14 +26,23 @@ interface EditorState {
 
     // Editor settings
     settings: {
-        previewMode: 'split' | 'preview' | 'edit';
+        editorMode: EditorMode;
+        showMarkdownPreview: boolean; // For markdown mode: show split preview
         fontSize: number;
         lineHeight: number;
+        spellCheck: boolean;
     };
+
+    // Left sidebar state
+    isSidebarOpen: boolean;
 
     // Right panel state
     isMetadataPanelOpen: boolean;
     metadataPanelWidth: number;
+    metadataPanelTab: MetadataPanelTab;
+
+    // Note starred state (favorites)
+    starredNotes: Record<string, boolean>;
 }
 
 const initialState: EditorState = {
@@ -36,12 +54,17 @@ const initialState: EditorState = {
         error: {},
     },
     settings: {
-        previewMode: 'edit',
+        editorMode: 'crepe',
+        showMarkdownPreview: true,
         fontSize: 16,
         lineHeight: 1.6,
+        spellCheck: true,
     },
-    isMetadataPanelOpen: false,
+    isSidebarOpen: true,
+    isMetadataPanelOpen: true,
     metadataPanelWidth: 320,
+    metadataPanelTab: 'outline',
+    starredNotes: {},
 };
 
 export const editorSlice = createSlice({
@@ -93,8 +116,16 @@ export const editorSlice = createSlice({
         },
 
         // Editor settings
-        setPreviewMode: (state, action: PayloadAction<'split' | 'preview' | 'edit'>) => {
-            state.settings.previewMode = action.payload;
+        setEditorMode: (state, action: PayloadAction<EditorMode>) => {
+            state.settings.editorMode = action.payload;
+        },
+
+        toggleMarkdownPreview: (state) => {
+            state.settings.showMarkdownPreview = !state.settings.showMarkdownPreview;
+        },
+
+        setShowMarkdownPreview: (state, action: PayloadAction<boolean>) => {
+            state.settings.showMarkdownPreview = action.payload;
         },
 
         setFontSize: (state, action: PayloadAction<number>) => {
@@ -103,6 +134,19 @@ export const editorSlice = createSlice({
 
         setLineHeight: (state, action: PayloadAction<number>) => {
             state.settings.lineHeight = action.payload;
+        },
+
+        setSpellCheck: (state, action: PayloadAction<boolean>) => {
+            state.settings.spellCheck = action.payload;
+        },
+
+        // Sidebar
+        toggleSidebar: (state) => {
+            state.isSidebarOpen = !state.isSidebarOpen;
+        },
+
+        setSidebarOpen: (state, action: PayloadAction<boolean>) => {
+            state.isSidebarOpen = action.payload;
         },
 
         // Metadata panel
@@ -117,6 +161,19 @@ export const editorSlice = createSlice({
         setMetadataPanelWidth: (state, action: PayloadAction<number>) => {
             state.metadataPanelWidth = action.payload;
         },
+
+        setMetadataPanelTab: (state, action: PayloadAction<MetadataPanelTab>) => {
+            state.metadataPanelTab = action.payload;
+        },
+
+        // Starred notes
+        toggleStarredNote: (state, action: PayloadAction<string>) => {
+            state.starredNotes[action.payload] = !state.starredNotes[action.payload];
+        },
+
+        setStarredNote: (state, action: PayloadAction<{ noteId: string; starred: boolean }>) => {
+            state.starredNotes[action.payload.noteId] = action.payload.starred;
+        },
     },
 });
 
@@ -129,12 +186,20 @@ export const {
     setAutosaveSaving,
     setAutosaveError,
     clearAutosaveState,
-    setPreviewMode,
+    setEditorMode,
+    toggleMarkdownPreview,
+    setShowMarkdownPreview,
     setFontSize,
     setLineHeight,
+    setSpellCheck,
+    toggleSidebar,
+    setSidebarOpen,
     toggleMetadataPanel,
     setMetadataPanelOpen,
     setMetadataPanelWidth,
+    setMetadataPanelTab,
+    toggleStarredNote,
+    setStarredNote,
 } = editorSlice.actions;
 
 export default editorSlice.reducer;

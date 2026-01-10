@@ -1,26 +1,69 @@
-import { useAppSelector } from '@/app/hooks';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { EditorHeader } from './EditorHeader';
-import { MarkdownEditor } from './MarkdownEditor';
+import { CrepeEditor } from './CrepeEditor';
+import { MarkdownSplitEditor } from './MarkdownSplitEditor';
+import { ReadOnlyViewer } from './ReadOnlyViewer';
+import { toggleSidebar } from '../../store/editorSlice';
+import { ChevronDoubleRightIcon } from '@heroicons/react/24/outline';
 
 export function NotesEditor() {
-  const { currentNoteId, notes } = useAppSelector((state) => state.notes);
+  const dispatch = useAppDispatch();
+  const notesState = useAppSelector((state) => state.notes);
+  const editorState = useAppSelector((state) => state.editor);
+  
+  const currentNoteId = notesState?.currentNoteId;
+  const notes = notesState?.notes || {};
+  const settings = editorState?.settings;
+  const editorMode = settings?.editorMode || 'crepe';
+  const isSidebarOpen = editorState?.isSidebarOpen ?? true;
   
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   
   if (!currentNote) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-card text-muted-foreground">
-        <div className="text-6xl mb-4">📝</div>
-        <h3 className="text-xl font-semibold mb-2">No note selected</h3>
-        <p className="text-sm">Select a note from the sidebar or create a new one</p>
+      <div className="flex flex-col h-full bg-card">
+        {/* Header with sidebar toggle when sidebar is hidden */}
+        {!isSidebarOpen && (
+          <div className="flex items-center px-4 py-2 border-b border-border">
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+              title="Show sidebar (⌘\\)"
+            >
+              <ChevronDoubleRightIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        
+        {/* Empty state */}
+        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+          <div className="text-6xl mb-4">📝</div>
+          <h3 className="text-xl font-semibold mb-2">No note selected</h3>
+          <p className="text-sm">Select a note from the sidebar or create a new one</p>
+        </div>
       </div>
     );
   }
+
+  const renderEditor = () => {
+    switch (editorMode) {
+      case 'crepe':
+        return <CrepeEditor note={currentNote} />;
+      case 'markdown':
+        return <MarkdownSplitEditor note={currentNote} />;
+      case 'readonly':
+        return <ReadOnlyViewer note={currentNote} />;
+      default:
+        return <CrepeEditor note={currentNote} />;
+    }
+  };
   
   return (
     <div className="flex flex-col h-full bg-card">
       <EditorHeader note={currentNote} />
-      <MarkdownEditor note={currentNote} />
+      <div className="flex-1 overflow-hidden">
+        {renderEditor()}
+      </div>
     </div>
   );
 }
