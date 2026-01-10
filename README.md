@@ -55,6 +55,24 @@ The application will:
 - Start the FastAPI backend
 - Start the React frontend
 
+### 5. Working with alembic Migrations
+
+**Migration are applied on app startup automatically.**
+
+- model first approach using SQLModel
+   - Write your models in `app/models/`
+      - Create migration: `cd src/uwos && uv run alembic revision --autogenerate -m "Add content permission system and visibility scopes"`
+   - AI All development -> let the ai write both the model and the migration
+
+**Manual Migration Commands:**
+
+```bash
+cd src/uwos
+uv run alembic upgrade head   # Apply migrations
+uv run alembic downgrade -1   # Revert last migration
+uv run alembic revision --autogenerate -m "description"  # Create migration
+```
+
 ## 📚 Documentation
 
 - **[Concept & Vision](docs/uwos-concept.md)** - What UWOS is and why it exists
