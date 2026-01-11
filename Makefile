@@ -17,7 +17,7 @@ proto: ## Generate all protobuf code (backend + UI)
 	@echo "Generating protobuf code..."
 	rm -rf src/uwos/gen src/ui/src/gen
 	PATH="$(PWD)/src/ui/node_modules/.bin:$(PATH)" buf generate
-	touch src/uwos/gen/__init__.py
+	printf "import os\nimport sys\n\nsys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))\n" > src/uwos/gen/__init__.py
 	touch src/uwos/gen/auth/__init__.py 
 	touch src/uwos/gen/auth/v1/__init__.py
 	touch src/uwos/gen/notes/v1/__init__.py
