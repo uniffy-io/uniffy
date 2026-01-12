@@ -25,6 +25,13 @@ class PermissionLevel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PERMISSION_LEVEL_EDIT: _ClassVar[PermissionLevel]
     PERMISSION_LEVEL_ADMIN: _ClassVar[PermissionLevel]
     PERMISSION_LEVEL_OWNER: _ClassVar[PermissionLevel]
+
+class NodeType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    NODE_TYPE_UNSPECIFIED: _ClassVar[NodeType]
+    NODE_TYPE_NOTE: _ClassVar[NodeType]
+    NODE_TYPE_FOLDER: _ClassVar[NodeType]
+    NODE_TYPE_TEMPLATE: _ClassVar[NodeType]
 VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope
 VISIBILITY_SCOPE_PRIVATE: VisibilityScope
 VISIBILITY_SCOPE_GROUP: VisibilityScope
@@ -35,6 +42,10 @@ PERMISSION_LEVEL_VIEW: PermissionLevel
 PERMISSION_LEVEL_EDIT: PermissionLevel
 PERMISSION_LEVEL_ADMIN: PermissionLevel
 PERMISSION_LEVEL_OWNER: PermissionLevel
+NODE_TYPE_UNSPECIFIED: NodeType
+NODE_TYPE_NOTE: NodeType
+NODE_TYPE_FOLDER: NodeType
+NODE_TYPE_TEMPLATE: NodeType
 
 class CreateNoteRequest(_message.Message):
     __slots__ = ()
@@ -54,6 +65,7 @@ class CreateNoteRequest(_message.Message):
     METADATA_FIELD_NUMBER: _ClassVar[int]
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    NODE_TYPE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     title: str
     content: str
@@ -63,7 +75,8 @@ class CreateNoteRequest(_message.Message):
     metadata: _containers.ScalarMap[str, str]
     visibility: VisibilityScope
     group_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    node_type: NodeType
+    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ...) -> None: ...
 
 class GetNoteRequest(_message.Message):
     __slots__ = ()
@@ -228,6 +241,22 @@ class RestoreNoteRequest(_message.Message):
     organization_id: str
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
+class EmptyTrashRequest(_message.Message):
+    __slots__ = ()
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class EmptyTrashResponse(_message.Message):
+    __slots__ = ()
+    DELETED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    deleted_count: int
+    success: bool
+    message: str
+    def __init__(self, deleted_count: _Optional[int] = ..., success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
+
 class AutosaveNoteRequest(_message.Message):
     __slots__ = ()
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -265,6 +294,7 @@ class Note(_message.Message):
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    NODE_TYPE_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -283,6 +313,7 @@ class Note(_message.Message):
     organization_id: str
     owner_id: str
     visibility: VisibilityScope
+    node_type: NodeType
     title: str
     content: str
     slug: str
@@ -297,7 +328,7 @@ class Note(_message.Message):
     deleted_at: _timestamp_pb2.Timestamp
     group_ids: _containers.RepeatedScalarFieldContainer[str]
     user_permission: PermissionLevel
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ...) -> None: ...
 
 class NoteReference(_message.Message):
     __slots__ = ()
@@ -307,13 +338,15 @@ class NoteReference(_message.Message):
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    NODE_TYPE_FIELD_NUMBER: _ClassVar[int]
     id: str
     title: str
     slug: str
     owner_id: str
     updated_at: _timestamp_pb2.Timestamp
     visibility: VisibilityScope
-    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., slug: _Optional[str] = ..., owner_id: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ...) -> None: ...
+    node_type: NodeType
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., slug: _Optional[str] = ..., owner_id: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ...) -> None: ...
 
 class MoveNoteRequest(_message.Message):
     __slots__ = ()

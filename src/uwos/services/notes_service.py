@@ -1,6 +1,5 @@
 """Notes service implementation for ConnectRPC."""
 
-import logging
 import re
 from datetime import UTC, datetime
 from uuid import UUID
@@ -9,8 +8,10 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from google.protobuf.timestamp_pb2 import Timestamp
+from loguru import logger
 from sqlalchemy import func, select
 
+from uwos.auth.context import get_user_id_from_context
 from uwos.db import get_async_session
 from uwos.gen.notes.v1.notes_pb2 import (
     AutosaveNoteRequest,
@@ -19,10 +20,13 @@ from uwos.gen.notes.v1.notes_pb2 import (
     CreateNoteRequest,
     DeleteNoteRequest,
     DeleteNoteResponse,
+    EmptyTrashRequest,
+    EmptyTrashResponse,
     GetBacklinksRequest,
     GetNoteRequest,
     ListNotesRequest,
     ListNotesResponse,
+    NodeType,
     Note,
     NoteReference,
     NoteResponse,
@@ -32,16 +36,19 @@ from uwos.gen.notes.v1.notes_pb2 import (
     TogglePinRequest,
     UpdateNoteRequest,
 )
+from uwos.gen.notes.v1.notes_pb2 import (
+    VisibilityScope as ProtoVisibilityScope,
+)
 from uwos.models import Note as NoteModel
 from uwos.models.permissions import ContentGroupLink
 from uwos.models.shared import ContentType, VisibilityScope
+from uwos.models.shared import NodeType as NodeTypeModel
 from uwos.repositories import note as note_repo
 from uwos.services.permissions import (
     ContentAccessQuery,
     PermissionChecker,
 )
-
-logger = logging.getLogger(__name__)
+from uwos.services.search_service import upsert_search_index
 
 
 def slugify(text: str) -> str:
@@ -103,11 +110,34 @@ def note_to_proto(note, user_permission_level=None) -> Note:
         Protobuf note message.
 
     """
+    # Import proto enums
+    from uwos.gen.notes.v1.notes_pb2 import VisibilityScope as ProtoVisibilityScope
+
+    # Map visibility from model to proto enum
+    visibility_map = {
+        "private": ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
+        "group": ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP,
+        "organization": ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION,
+        "public": ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC,
+    }
+    proto_visibility = visibility_map.get(
+        note.visibility.value, ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE
+    )
+
+    # Map node_type from model to proto enum
+    node_type_map = {
+        "NOTE": NodeType.NODE_TYPE_NOTE,
+        "FOLDER": NodeType.NODE_TYPE_FOLDER,
+        "TEMPLATE": NodeType.NODE_TYPE_TEMPLATE,
+    }
+    proto_node_type = node_type_map.get(note.node_type.value, NodeType.NODE_TYPE_NOTE)
+
     proto_note = Note(
         id=str(note.id),
         organization_id=str(note.organization_id),
         owner_id=str(note.owner_id),
-        visibility=note.visibility.value.upper(),  # Convert to proto enum format
+        visibility=proto_visibility,
+        node_type=proto_node_type,
         title=note.title,
         content=note.content,
         slug=note.slug,
@@ -141,26 +171,6 @@ class NotesServiceImpl:
         """Initialize the notes service."""
         pass
 
-    def _get_user_id_from_context(self, ctx: RequestContext) -> UUID:
-        """
-        Extract user ID from request context.
-
-        TODO: Implement JWT token extraction from Authorization header.
-
-        Parameters
-        ----------
-        ctx : RequestContext
-            RPC context.
-
-        Returns
-        -------
-        UUID
-            User ID.
-
-        """
-        # Placeholder until JWT authentication is implemented
-        return UUID("00000000-0000-0000-0000-000000000000")
-
     async def create_note(self, request: CreateNoteRequest, ctx: RequestContext) -> NoteResponse:
         """
         Create a new note.
@@ -183,17 +193,28 @@ class NotesServiceImpl:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
 
-        visibility = VisibilityScope.PRIVATE  # Default
+        # Parse visibility (default to PRIVATE)
+        visibility = VisibilityScope.PRIVATE
         if request.HasField("visibility"):
-            visibility_str = request.visibility.lower()
-            try:
-                visibility = VisibilityScope(visibility_str.replace("visibility_scope_", ""))
-            except ValueError:
-                raise ConnectError(
-                    Code.INVALID_ARGUMENT, f"Invalid visibility: {request.visibility}"
-                )
+            visibility_map = {
+                ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE: VisibilityScope.PRIVATE,
+                ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP: VisibilityScope.GROUP,
+                ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope.ORGANIZATION,
+                ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC: VisibilityScope.PUBLIC,
+            }
+            visibility = visibility_map.get(request.visibility, VisibilityScope.PRIVATE)
+
+        # Parse node_type - enum fields always have a value, so check if it's not UNSPECIFIED
+        node_type = NodeTypeModel.NOTE
+        if request.node_type != NodeType.NODE_TYPE_UNSPECIFIED:
+            node_type_map = {
+                NodeType.NODE_TYPE_NOTE: NodeTypeModel.NOTE,
+                NodeType.NODE_TYPE_FOLDER: NodeTypeModel.FOLDER,
+                NodeType.NODE_TYPE_TEMPLATE: NodeTypeModel.TEMPLATE,
+            }
+            node_type = node_type_map.get(request.node_type, NodeTypeModel.NOTE)
 
         # Generate slug if not provided
         slug = request.slug if request.HasField("slug") else slugify(request.title)
@@ -222,6 +243,7 @@ class NotesServiceImpl:
                     content=request.content,
                     slug=slug,
                     visibility=visibility,
+                    node_type=node_type,
                     parent_id=parent_id,
                     tags=list(request.tags) if request.tags else None,
                     metadata=dict(request.metadata) if request.metadata else None,
@@ -246,13 +268,40 @@ class NotesServiceImpl:
                     await session.commit()
                     await session.refresh(note)
 
+                # Index for Unified Search
+                await upsert_search_index(
+                    session=session,
+                    urn=f"urn:uwos:content:note:{note.id}",
+                    organization_id=organization_id,
+                    title=note.title,
+                    entity_type="note",
+                    url_path=f"/notes/{note.id}",
+                    visibility=note.visibility.value,
+                    owner_id=note.owner_id,
+                    description=note.content[:200] if note.content else None,
+                    keywords=(
+                        f"{note.title} {' '.join(note.tags or [])} "
+                        f"{note.content[:1000] if note.content else ''}"
+                    ),
+                    shared_group_ids=(
+                        [UUID(str(gid)) for gid in request.group_ids]
+                        if visibility == VisibilityScope.GROUP
+                        else []
+                    ),
+                    shared_user_ids=None,  # TODO: Add when direct sharing is implemented
+                )
+                await session.commit()  # Commit search index changes
+
                 return NoteResponse(note=note_to_proto(note))
 
         except ConnectError:
             raise
         except Exception as e:
             logger.error(f"Error creating note: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+            logger.error(
+                f"Request data - org_id: {request.organization_id}, title: {request.title}, visibility: {request.visibility}"
+            )
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
 
     async def get_note(self, request: GetNoteRequest, ctx: RequestContext) -> NoteResponse:
         """
@@ -277,7 +326,7 @@ class NotesServiceImpl:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
@@ -340,7 +389,7 @@ class NotesServiceImpl:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
@@ -393,6 +442,37 @@ class NotesServiceImpl:
                     metadata=metadata,
                 )
 
+                # Update Search Index
+                # We need to re-fetch group links if visibility is GROUP to ensure accuracy
+                shared_group_ids = []
+                if note.visibility == VisibilityScope.GROUP:
+                    # Fetch valid group links
+                    stmt = select(ContentGroupLink.group_id).where(
+                        ContentGroupLink.content_id == note.id,
+                        ContentGroupLink.content_type == ContentType.NOTE,
+                    )
+                    result = await session.execute(stmt)
+                    shared_group_ids = list(result.scalars().all())
+
+                await upsert_search_index(
+                    session=session,
+                    urn=f"urn:uwos:content:note:{note.id}",
+                    organization_id=organization_id,
+                    title=note.title,
+                    entity_type="note",
+                    url_path=f"/notes/{note.id}",
+                    visibility=note.visibility.value,
+                    owner_id=note.owner_id,
+                    description=note.content[:200] if note.content else None,
+                    keywords=(
+                        f"{note.title} {' '.join(note.tags or [])} "
+                        f"{note.content[:1000] if note.content else ''}"
+                    ),
+                    shared_group_ids=shared_group_ids,
+                    shared_user_ids=None,  # Placeholder: Direct user sharing not yet implemented
+                )
+                await session.commit()
+
                 return NoteResponse(note=note_to_proto(note))
 
         except ConnectError:
@@ -426,7 +506,7 @@ class NotesServiceImpl:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
@@ -481,12 +561,13 @@ class NotesServiceImpl:
             List of notes with pagination info.
 
         """
+
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
 
         # Parse optional filters
         group_id = None
@@ -605,16 +686,15 @@ class NotesServiceImpl:
                 notes = list(result.scalars().all())
 
                 # Get permission levels for each note
+                checker = PermissionChecker(session)
                 note_protos = []
                 for note in notes:
-                    perm_level = await PermissionChecker.get_user_permission_level(
-                        session=session,
+                    perm_level = await checker.get_user_permission_level(
                         user_id=user_id,
+                        organization_id=organization_id,
                         content_type=ContentType.NOTE,
                         content_id=note.id,
-                        owner_id=note.owner_id,
-                        visibility=note.visibility,
-                        organization_id=organization_id,
+                        content_owner_id=note.owner_id,
                     )
                     note_protos.append(note_to_proto(note, user_permission_level=perm_level))
 
@@ -632,7 +712,10 @@ class NotesServiceImpl:
             raise
         except Exception as e:
             logger.error(f"Error listing notes: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+            logger.error(
+                f"Request details - org_id: {request.organization_id}, page: {page}, page_size: {page_size}"
+            )
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
 
     async def search_notes(
         self, request: SearchNotesRequest, ctx: RequestContext
@@ -667,7 +750,7 @@ class NotesServiceImpl:
         try:
             async for session in get_async_session():
                 # Get user_id for permission filtering
-                user_id = await self._get_user_id_from_context(ctx, session)
+                user_id = get_user_id_from_context(ctx)
 
                 # Build base query with permission filtering
                 query = ContentAccessQuery.build_accessible_filter(
@@ -759,7 +842,7 @@ class NotesServiceImpl:
         try:
             async for session in get_async_session():
                 # Get user_id for permission checking
-                user_id = await self._get_user_id_from_context(ctx, session)
+                user_id = get_user_id_from_context(ctx)
 
                 # Check if user can view the target note
                 note = await note_repo.get_note_by_id(session, note_id, organization_id)
@@ -844,21 +927,21 @@ class NotesServiceImpl:
         try:
             async for session in get_async_session():
                 # Get user_id for permission checking
-                user_id = await self._get_user_id_from_context(ctx, session)
+                user_id = get_user_id_from_context(ctx)
 
                 note = await note_repo.get_note_by_id(session, note_id, organization_id)
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")
 
                 # Check if user has edit permission
-                can_edit = await PermissionChecker.can_edit_content(
-                    session=session,
+                checker = PermissionChecker(session)
+                can_edit = await checker.can_edit_content(
                     user_id=user_id,
+                    organization_id=organization_id,
                     content_type=ContentType.NOTE,
                     content_id=note_id,
-                    owner_id=note.owner_id,
-                    visibility=note.visibility,
-                    organization_id=organization_id,
+                    content_owner_id=note.owner_id,
+                    content_visibility=note.visibility,
                 )
 
                 if not can_edit:
@@ -913,7 +996,7 @@ class NotesServiceImpl:
         try:
             async for session in get_async_session():
                 # Get user_id for permission checking
-                user_id = await self._get_user_id_from_context(ctx, session)
+                user_id = get_user_id_from_context(ctx)
 
                 note = await note_repo.get_note_by_id(session, note_id, organization_id)
                 if not note:
@@ -923,14 +1006,14 @@ class NotesServiceImpl:
                     raise ConnectError(Code.FAILED_PRECONDITION, "Note is not deleted")
 
                 # Check if user has edit permission (restore requires edit)
-                can_edit = await PermissionChecker.can_edit_content(
-                    session=session,
+                checker = PermissionChecker(session)
+                can_edit = await checker.can_edit_content(
                     user_id=user_id,
+                    organization_id=organization_id,
                     content_type=ContentType.NOTE,
                     content_id=note_id,
-                    owner_id=note.owner_id,
-                    visibility=note.visibility,
-                    organization_id=organization_id,
+                    content_owner_id=note.owner_id,
+                    content_visibility=note.visibility,
                 )
 
                 if not can_edit:
@@ -957,7 +1040,7 @@ class NotesServiceImpl:
             raise
         except Exception as e:
             logger.error(f"Error restoring note: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
 
     async def autosave_note(
         self, request: AutosaveNoteRequest, ctx: RequestContext
@@ -987,21 +1070,21 @@ class NotesServiceImpl:
         try:
             async for session in get_async_session():
                 # Get user_id for permission checking
-                user_id = await self._get_user_id_from_context(ctx, session)
+                user_id = get_user_id_from_context(ctx)
 
                 note = await note_repo.get_note_by_id(session, note_id, organization_id)
                 if not note:
                     raise ConnectError(Code.NOT_FOUND, "Note not found")
 
                 # Check if user has edit permission
-                can_edit = await PermissionChecker.can_edit_content(
-                    session=session,
+                checker = PermissionChecker(session)
+                can_edit = await checker.can_edit_content(
                     user_id=user_id,
+                    organization_id=organization_id,
                     content_type=ContentType.NOTE,
                     content_id=note_id,
-                    owner_id=note.owner_id,
-                    visibility=note.visibility,
-                    organization_id=organization_id,
+                    content_owner_id=note.owner_id,
+                    content_visibility=note.visibility,
                 )
 
                 if not can_edit:
@@ -1028,4 +1111,59 @@ class NotesServiceImpl:
             raise
         except Exception as e:
             logger.error(f"Error autosaving note: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+
+    # TODO: Implement remaining methods
+    async def move_note(self, request, ctx: RequestContext):
+        """Move a note to a different parent."""
+        raise ConnectError(Code.UNIMPLEMENTED, "MoveNote not yet implemented")
+
+    async def copy_note(self, request, ctx: RequestContext):
+        """Create a copy of a note."""
+        raise ConnectError(Code.UNIMPLEMENTED, "CopyNote not yet implemented")
+
+    async def share_note_with_group(self, request, ctx: RequestContext):
+        """Share a note with a group."""
+        raise ConnectError(Code.UNIMPLEMENTED, "ShareNoteWithGroup not yet implemented")
+
+    async def unshare_note_from_group(self, request, ctx: RequestContext):
+        """Unshare a note from a group."""
+        raise ConnectError(Code.UNIMPLEMENTED, "UnshareNoteFromGroup not yet implemented")
+
+    async def get_note_sharing(self, request, ctx: RequestContext):
+        """Get sharing information for a note."""
+        raise ConnectError(Code.UNIMPLEMENTED, "GetNoteSharing not yet implemented")
+
+    async def grant_permission(self, request, ctx: RequestContext):
+        """Grant permission to a user or group."""
+        raise ConnectError(Code.UNIMPLEMENTED, "GrantPermission not yet implemented")
+
+    async def revoke_permission(self, request, ctx: RequestContext):
+        """Revoke permission from a user or group."""
+        raise ConnectError(Code.UNIMPLEMENTED, "RevokePermission not yet implemented")
+
+    async def empty_trash(self, request: EmptyTrashRequest, ctx: RequestContext):
+        """Permanently delete all soft-deleted notes in an organization."""
+        try:
+            # Authenticate user
+            get_user_id_from_context(ctx)
+            organization_id = UUID(request.organization_id)
+
+            async for session in get_async_session():
+                # Delete all soft-deleted notes in the organization
+                deleted_count = await note_repo.empty_trash(
+                    session=session,
+                    organization_id=organization_id,
+                )
+
+                return EmptyTrashResponse(
+                    deleted_count=deleted_count,
+                    success=True,
+                    message=f"Successfully deleted {deleted_count} note(s) from trash",
+                )
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error emptying trash: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")

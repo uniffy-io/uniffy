@@ -22,10 +22,10 @@ class VisibilityScope(str, Enum):
 
     """
 
-    PRIVATE = "private"
-    GROUP = "group"
-    ORGANIZATION = "organization"
-    PUBLIC = "public"
+    PRIVATE = "PRIVATE"
+    GROUP = "GROUP"
+    ORGANIZATION = "ORGANIZATION"
+    PUBLIC = "PUBLIC"
 
 
 class PermissionLevel(str, Enum):
@@ -51,6 +51,28 @@ class PermissionLevel(str, Enum):
     EDIT = "edit"
     ADMIN = "admin"
     OWNER = "owner"
+
+
+class NodeType(str, Enum):
+    """
+    Node type for notes hierarchy.
+
+    Defines the type of a note in the hierarchy.
+
+    Attributes
+    ----------
+    NOTE : str
+        Regular note with content.
+    FOLDER : str
+        Folder for organizing notes (can also have content).
+    TEMPLATE : str
+        Template note for creating new notes (future use).
+
+    """
+
+    NOTE = "NOTE"
+    FOLDER = "FOLDER"
+    TEMPLATE = "TEMPLATE"
 
 
 class ContentType(str, Enum):

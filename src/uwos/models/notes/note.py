@@ -4,11 +4,11 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, text
+from sqlalchemy import Column, DateTime, Enum, text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlmodel import Field, SQLModel
 
-from uwos.models.shared import VisibilityScope
+from uwos.models.shared import NodeType, VisibilityScope
 
 
 class Note(SQLModel, table=True):
@@ -34,6 +34,8 @@ class Note(SQLModel, table=True):
         User who owns the note (foreign key to login_users).
     visibility : VisibilityScope
         Who can access this note (PRIVATE, GROUP, ORGANIZATION, PUBLIC).
+    node_type : NodeType
+        Type of node (NOTE, FOLDER, TEMPLATE).
     title : str
         Note title (max 500 chars).
     content : str
@@ -52,6 +54,8 @@ class Note(SQLModel, table=True):
         Tags for categorization.
     note_metadata : dict | None
         Additional metadata (custom fields, AI-generated summaries, etc).
+    outgoing_references : list[str] | None
+        List of URNs referenced in this note (e.g. ["urn:uwos:file:123", ...]).
     content_search : Any
         Full-text search vector (managed by database trigger).
     created_at : datetime
@@ -68,7 +72,26 @@ class Note(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    visibility: VisibilityScope = Field(default=VisibilityScope.PRIVATE, nullable=False, index=True)
+    visibility: VisibilityScope = Field(
+        default=VisibilityScope.PRIVATE,
+        sa_column=Column(
+            Enum(
+                VisibilityScope,
+                name="visibilityscope",
+                values_callable=lambda x: [e.value for e in x],
+            ),
+            nullable=False,
+            index=True,
+        ),
+    )
+    node_type: NodeType = Field(
+        default=NodeType.NOTE,
+        sa_column=Column(
+            Enum(NodeType, name="nodetype", values_callable=lambda x: [e.value for e in x]),
+            nullable=False,
+            index=True,
+        ),
+    )
     title: str = Field(max_length=500, nullable=False)
     content: str = Field(default="", nullable=False)
     slug: str = Field(max_length=500, nullable=False, index=True)
@@ -78,6 +101,7 @@ class Note(SQLModel, table=True):
     parent_id: UUID | None = Field(default=None, foreign_key="notes_notes.id", index=True)
     tags: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     note_metadata: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    outgoing_references: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     content_search: Any = Field(
         default=None,
         sa_column=Column(

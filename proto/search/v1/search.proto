@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package search.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// The unified search service handling global search and indexing
+service SearchService {
+  // Perform a global search across all entities (Spotlight-like)
+  rpc Search(SearchRequest) returns (SearchResponse) {}
+  
+  // Index an item (Internal use, or called by other services)
+  rpc IndexItem(IndexItemRequest) returns (IndexItemResponse) {}
+  
+  // Remove an item from the index
+  rpc DeleteItem(DeleteItemRequest) returns (DeleteItemResponse) {}
+}
+
+enum SearchResultType {
+  SEARCH_RESULT_TYPE_UNSPECIFIED = 0;
+  SEARCH_RESULT_TYPE_NOTE = 1;
+  SEARCH_RESULT_TYPE_FILE = 2; 
+  SEARCH_RESULT_TYPE_CHAT = 3; 
+  SEARCH_RESULT_TYPE_USER = 4;
+  SEARCH_RESULT_TYPE_BOOK = 5;
+  SEARCH_RESULT_TYPE_CALENDAR_EVENT = 6;
+  SEARCH_RESULT_TYPE_PASSWORD = 7;
+  SEARCH_RESULT_TYPE_WORKFLOW = 8;
+  SEARCH_RESULT_TYPE_SPACE = 9;
+}
+
+message SearchRequest {
+  string organization_id = 1;
+  string query = 2;
+  repeated SearchResultType type_filters = 3;
+  int32 limit = 4;
+}
+
+message SearchResponse {
+  repeated SearchResultItem items = 1;
+}
+
+message SearchResultItem {
+  string urn = 1; // Universal Resource Name (urn:uwos:note:uuid)
+  string title = 2;
+  string description = 3; // Snippet or subtitle
+  SearchResultType type = 4;
+  string url = 5; // Frontend route path
+  double score = 6; // Relevance score
+  map<string, string> metadata = 7; // Extra icon info, etc.
+}
+
+message IndexItemRequest {
+  string organization_id = 1;
+  string urn = 2;
+  SearchResultType type = 3;
+  string title = 4;
+  string content = 5; // Content to be indexed for full text
+  string url = 6;
+  map<string, string> metadata = 7;
+}
+
+message IndexItemResponse {
+  bool success = 1;
+}
+
+message DeleteItemRequest {
+  string urn = 1;
+  string organization_id = 2;
+}
+
+message DeleteItemResponse {
+  bool success = 1;
+}

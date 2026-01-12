@@ -5,8 +5,8 @@ import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
 import type { Note } from '@/gen/notes/v1/notes_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setDraftContent } from '../../store/editorSlice';
+import { useAppSelector } from '@/app/hooks';
+import { useAutosave } from '../../hooks/useNotesHooks';
 
 // Import only common Crepe styles - frame themes set global html/body styles that break our app
 import '@milkdown/crepe/theme/common/style.css';
@@ -66,29 +66,52 @@ function createCrepeConfig(root: HTMLElement, content: string, readonly: boolean
 }
 
 export function CrepeEditor({ note, readonly = false, content: propContent, className }: CrepeEditorProps) {
-  const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
-  const draftContent = editorState?.draftContent || {};
   const settings = editorState?.settings || {};
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeRef = useRef<Crepe | null>(null);
   const contentRef = useRef<string>('');
+  const initializedNoteIdRef = useRef<string | null>(null);
+
+  // Autosave hook - handles debounced saving (only active in edit mode)
+  const { scheduleAutosave } = useAutosave(readonly ? null : note.id);
+  
+  // Get draft content directly from Redux (works in both edit and readonly modes)
+  const currentDraft = useAppSelector((state) => state.editor.draftContent[note.id]);
 
   // Use provided content, or fall back to draft content, or note content
-  const content = propContent ?? (draftContent[note.id] !== undefined ? draftContent[note.id] : note.content);
+  // Check for both null and undefined in draft content
+  const content = propContent ?? (currentDraft != null ? currentDraft : note.content);
+  
+  console.log('[CrepeEditor] Content calculation:', {
+    noteId: note.id,
+    noteContent: note.content,
+    noteContentLength: note.content?.length,
+    propContent,
+    currentDraft,
+    finalContent: content,
+    finalContentLength: content?.length,
+    readonly,
+  });
 
   // Handle content changes from the editor
   const handleContentChange = useCallback((markdown: string) => {
     if (readonly) return;
-    dispatch(setDraftContent({
-      noteId: note.id,
-      content: markdown,
-    }));
-  }, [dispatch, note.id, readonly]);
+    // Schedule autosave (debounced)
+    scheduleAutosave(markdown);
+  }, [readonly, scheduleAutosave]);
 
   // Initialize Crepe editor
   useEffect(() => {
     if (!editorRef.current) return;
+
+    console.log('[CrepeEditor] Initializing with content:', {
+      noteId: note.id,
+      contentLength: content?.length,
+      contentPreview: content?.substring(0, 100),
+      hasEditorRef: !!editorRef.current,
+      readonly,
+    });
 
     const container = editorRef.current;
     let cancelled = false;
@@ -103,6 +126,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     clearContainer(container);
     
     contentRef.current = content;
+    initializedNoteIdRef.current = note.id;
 
     const crepe = new Crepe(createCrepeConfig(container, content, readonly));
 
@@ -137,19 +161,29 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       }
       // Also clear container on cleanup to handle Strict Mode remount
       clearContainer(container);
+      initializedNoteIdRef.current = null;
     };
-  }, [note.id, readonly, handleContentChange]);
+    // Only recreate when note ID or readonly mode changes
+    // Content changes in edit mode are handled by editor's internal state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.id, readonly]);
 
-  // Update content when it changes externally (for preview pane syncing)
+  // Separate effect to handle content updates in readonly mode only
   useEffect(() => {
-    if (!readonly || !editorRef.current) return;
+    // Only run this effect for readonly mode after initial mount
+    if (!readonly || !crepeRef.current) return;
     
-    // Only update if content actually changed and editor exists
+    // Check if content actually changed
     if (contentRef.current === content) return;
-    if (!crepeRef.current) return;
     
-    contentRef.current = content;
+    console.log('[CrepeEditor] Updating readonly content', {
+      oldContent: contentRef.current?.substring(0, 50),
+      newContent: content?.substring(0, 50),
+    });
+    
     const container = editorRef.current;
+    if (!container) return;
+    
     let cancelled = false;
     
     // Destroy current instance
@@ -158,6 +192,8 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     
     // Clear container before recreating
     clearContainer(container);
+    
+    contentRef.current = content;
     
     // Recreate with new content
     const crepe = new Crepe(createCrepeConfig(container, content, true));

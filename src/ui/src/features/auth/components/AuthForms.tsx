@@ -5,6 +5,7 @@ import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "../store/authSlice";
+import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
 import { transport } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
@@ -59,7 +60,17 @@ export default function AuthForms() {
         isActive: userResponse.isActive,
         isSystemAdmin: userResponse.isSystemAdmin,
         emailVerified: userResponse.emailVerified,
+        accentColor: userResponse.accentColor,
+        fontFamily: userResponse.fontFamily,
       };
+
+      // Sync theme preferences from user profile
+      if (userResponse.accentColor) {
+        dispatch(setAccentColor(userResponse.accentColor));
+      }
+      if (userResponse.fontFamily) {
+        dispatch(setFontFamily(userResponse.fontFamily));
+      }
 
       dispatch(setCredentials({
         user: plainUser,

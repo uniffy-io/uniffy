@@ -9,6 +9,7 @@ from uwos.models.login.user import User
 from uwos.models.notes.note import Note
 from uwos.models.permissions.content_group_link import ContentGroupLink
 from uwos.models.permissions.content_permission import ContentPermission
+from uwos.models.search.search_index import SearchIndex
 from uwos.models.shared import ContentType, PermissionLevel, SubjectType, VisibilityScope
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "SSOConfiguration",
     "SSOProvider",
     "Note",
+    "SearchIndex",
     "ContentGroupLink",
     "ContentPermission",
     "VisibilityScope",

@@ -7,6 +7,8 @@ import { NotesEditor } from '../components/editor/NotesEditor';
 import { NotesMetadataPanel } from '../components/metadata/NotesMetadataPanel';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { toggleSidebar } from '../store/editorSlice';
+import { fetchNotes } from '../store/notesSlice';
+import { fetchNotesTree } from '../store/notesTreeSlice';
 
 export default function NotesPage() {
   useDocumentTitle('Notes');
@@ -14,6 +16,7 @@ export default function NotesPage() {
   
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   
   const currentNoteId = notesState?.currentNoteId;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
@@ -32,10 +35,14 @@ export default function NotesPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [dispatch]);
   
-  // Load initial notes on mount
+  // Load initial notes on mount when we have an organization
   useEffect(() => {
-    // TODO: Fetch notes from API
-  }, []);
+    if (!organizationId) return;
+    
+    // Fetch all notes and populate both the list and tree
+    dispatch(fetchNotes());
+    dispatch(fetchNotesTree());
+  }, [dispatch, organizationId]);
   
   return (
     <>

@@ -9,7 +9,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uwos.auth.jwt import decode_access_token
+from uwos.auth.context import get_user_id_from_context
 from uwos.auth.password import hash_password
 from uwos.auth.service import (
     AuthenticationError,
@@ -98,23 +98,6 @@ class AuthServiceImpl:
     """
 
     # --- Helpers ---
-
-    def _get_user_id_from_context(self, ctx: RequestContext) -> str:
-        """Extract user ID from request context."""
-        headers = ctx.request_headers()
-        auth_header = headers.get("authorization", "")
-
-        if not auth_header.startswith("Bearer "):
-            raise ConnectError(Code.UNAUTHENTICATED, "Missing or invalid authorization header")
-
-        token = auth_header[7:]
-
-        try:
-            payload = decode_access_token(token)
-            return payload["sub"]
-        except Exception as e:
-            logger.warning(f"Invalid token: {e}")
-            raise ConnectError(Code.UNAUTHENTICATED, f"Invalid token: {e}")
 
     async def _check_org_admin(self, session: AsyncSession, user_id: str, organization_id: str):
         """
@@ -224,7 +207,7 @@ class AuthServiceImpl:
         self, request: GetCurrentUserRequest, ctx: RequestContext
     ) -> UserInfoResponse:
         """Get current authenticated user info."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -253,7 +236,7 @@ class AuthServiceImpl:
         self, request: UpdateMyProfileRequest, ctx: RequestContext
     ) -> UserInfoResponse:
         """Update current user's profile (own profile only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -289,7 +272,7 @@ class AuthServiceImpl:
         self, request: ListMyOrganizationsRequest, ctx: RequestContext
     ) -> OrganizationListResponse:
         """List organizations the current user is a member of."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -316,7 +299,7 @@ class AuthServiceImpl:
         self, request: ListAllUsersRequest, ctx: RequestContext
     ) -> AdminUserListResponse:
         """List all users (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -358,7 +341,7 @@ class AuthServiceImpl:
         self, request: AdminCreateUserRequest, ctx: RequestContext
     ) -> UserInfoResponse:
         """Create a new user (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -423,7 +406,7 @@ class AuthServiceImpl:
 
     async def update_user(self, request: UpdateUserRequest, ctx: RequestContext) -> UserInfoResponse:
         """Update user details (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -469,7 +452,7 @@ class AuthServiceImpl:
         self, request: AdminListUserOrganizationsRequest, ctx: RequestContext
     ) -> AdminUserOrganizationListResponse:
         """List organizations for a specific user (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -502,7 +485,7 @@ class AuthServiceImpl:
         self, request: AdminAddUserToOrganizationRequest, ctx: RequestContext
     ) -> AdminUserOrganizationInfo:
         """Add user to organization (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -542,7 +525,7 @@ class AuthServiceImpl:
         self, request: AdminRemoveUserFromOrganizationRequest, ctx: RequestContext
     ) -> Empty:
         """Remove user from organization (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -565,7 +548,7 @@ class AuthServiceImpl:
         self, request: ListAllOrganizationsRequest, ctx: RequestContext
     ) -> AdminOrganizationListResponse:
         """List all organizations (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -606,7 +589,7 @@ class AuthServiceImpl:
         self, request: UpdateOrganizationRequest, ctx: RequestContext
     ) -> AdminOrganizationInfo:
         """Update organization details (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -646,7 +629,7 @@ class AuthServiceImpl:
         self, request: AdminCreateOrganizationRequest, ctx: RequestContext
     ) -> AdminOrganizationInfo:
         """Create a new organization (System Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -689,7 +672,7 @@ class AuthServiceImpl:
         self, request: ListGroupsRequest, ctx: RequestContext
     ) -> GroupListResponse:
         """List groups in an organization (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -728,7 +711,7 @@ class AuthServiceImpl:
 
     async def create_group(self, request: CreateGroupRequest, ctx: RequestContext) -> GroupInfo:
         """Create a new group (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -768,7 +751,7 @@ class AuthServiceImpl:
 
     async def update_group(self, request: UpdateGroupRequest, ctx: RequestContext) -> GroupInfo:
         """Update a group (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -809,7 +792,7 @@ class AuthServiceImpl:
 
     async def delete_group(self, request: DeleteGroupRequest, ctx: RequestContext) -> Empty:
         """Delete a group (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -832,7 +815,7 @@ class AuthServiceImpl:
         self, request: ListGroupMembersRequest, ctx: RequestContext
     ) -> GroupMemberListResponse:
         """List members of a group (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -872,7 +855,7 @@ class AuthServiceImpl:
 
     async def add_group_member(self, request: AddGroupMemberRequest, ctx: RequestContext) -> Empty:
         """Add user to group (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -915,7 +898,7 @@ class AuthServiceImpl:
         self, request: RemoveGroupMemberRequest, ctx: RequestContext
     ) -> Empty:
         """Remove user from group (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():
@@ -938,7 +921,7 @@ class AuthServiceImpl:
         self, request: ListOrganizationUsersRequest, ctx: RequestContext
     ) -> OrganizationUserListResponse:
         """List users in an organization (Org Admin only)."""
-        user_id = self._get_user_id_from_context(ctx)
+        user_id = str(get_user_id_from_context(ctx))
 
         try:
             async for session in get_async_session():

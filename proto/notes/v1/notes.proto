@@ -30,6 +30,17 @@ enum PermissionLevel {
   PERMISSION_LEVEL_OWNER = 4;
 }
 
+// Node type for notes hierarchy
+enum NodeType {
+  NODE_TYPE_UNSPECIFIED = 0;
+  // Regular note with content
+  NODE_TYPE_NOTE = 1;
+  // Folder for organizing notes (can also have content)
+  NODE_TYPE_FOLDER = 2;
+  // Template note (future use)
+  NODE_TYPE_TEMPLATE = 3;
+}
+
 // NotesService provides note management functionality
 service NotesService {
   // Create a new note
@@ -58,6 +69,9 @@ service NotesService {
   
   // Restore a deleted note
   rpc RestoreNote(RestoreNoteRequest) returns (NoteResponse) {}
+  
+  // Empty trash (permanently delete all soft-deleted notes)
+  rpc EmptyTrash(EmptyTrashRequest) returns (EmptyTrashResponse) {}
   
   // Autosave note content (optimized for frequent updates)
   rpc AutosaveNote(AutosaveNoteRequest) returns (AutosaveNoteResponse) {}
@@ -104,6 +118,8 @@ message CreateNoteRequest {
   optional VisibilityScope visibility = 8;
   // Optional group ID(s) if visibility is GROUP
   repeated string group_ids = 9;
+  // Node type (defaults to NOTE)
+  optional NodeType node_type = 10;
 }
 
 // Request to get a note
@@ -262,6 +278,22 @@ message RestoreNoteRequest {
   string organization_id = 2;
 }
 
+// Request to empty trash
+message EmptyTrashRequest {
+  // Organization ID for access control
+  string organization_id = 1;
+}
+
+// Response for empty trash operation
+message EmptyTrashResponse {
+  // Number of notes permanently deleted
+  int32 deleted_count = 1;
+  // Success flag
+  bool success = 2;
+  // Message
+  string message = 3;
+}
+
 // Request to autosave note (lightweight, frequent updates)
 message AutosaveNoteRequest {
   // Note ID
@@ -296,34 +328,36 @@ message Note {
   string owner_id = 3;
   // Visibility scope
   VisibilityScope visibility = 4;
+  // Node type (note, folder, template)
+  NodeType node_type = 5;
   // Note title
-  string title = 5;
+  string title = 6;
   // Note content (markdown)
-  string content = 6;
+  string content = 7;
   // URL-friendly slug
-  string slug = 7;
+  string slug = 8;
   // Is deleted flag
-  bool is_deleted = 8;
+  bool is_deleted = 9;
   // Is pinned flag
-  bool is_pinned = 9;
+  bool is_pinned = 10;
   // Version number for conflict detection
-  int64 version = 10;
+  int64 version = 11;
   // Optional parent note ID
-  optional string parent_id = 11;
+  optional string parent_id = 12;
   // Tags
-  repeated string tags = 12;
+  repeated string tags = 13;
   // Metadata
-  map<string, string> metadata = 13;
+  map<string, string> metadata = 14;
   // Created timestamp
-  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp created_at = 15;
   // Updated timestamp
-  google.protobuf.Timestamp updated_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
   // Deleted timestamp (if soft-deleted)
-  optional google.protobuf.Timestamp deleted_at = 16;
+  optional google.protobuf.Timestamp deleted_at = 17;
   // Group IDs if shared with groups
-  repeated string group_ids = 17;
+  repeated string group_ids = 18;
   // User's permission level on this note
-  PermissionLevel user_permission = 18;
+  PermissionLevel user_permission = 19;
 }
 
 // Note reference (lightweight representation for backlinks)
@@ -340,6 +374,8 @@ message NoteReference {
   google.protobuf.Timestamp updated_at = 5;
   // Visibility scope
   VisibilityScope visibility = 6;
+  // Node type
+  NodeType node_type = 7;
 }
 
 // Request to move note between spaces

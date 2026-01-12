@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   EllipsisHorizontalIcon, 
   ShareIcon, 
@@ -11,12 +11,18 @@ import {
   PlusIcon,
   ChevronDoubleRightIcon,
   ChevronDoubleLeftIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import type { Note } from '@/gen/notes/v1/notes_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setEditorMode, toggleMetadataPanel, toggleStarredNote, toggleSidebar, toggleMarkdownPreview } from '../../store/editorSlice';
+import { updateNote } from '../../store/notesSlice';
+import { useSaveStatus } from '../../hooks/useNotesHooks';
+import { buildBreadcrumbPath } from '../../utils/notesTreeUtils';
 import type { EditorMode } from '../../store/editorSlice';
 
 interface EditorHeaderProps {
@@ -32,6 +38,7 @@ const mockCollaborators = [
 export function EditorHeader({ note }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
+  const allNotes = useAppSelector((state) => state.notes.notes);
   const settings = editorState?.settings;
   const editorMode = settings?.editorMode || 'crepe';
   const showMarkdownPreview = settings?.showMarkdownPreview ?? true;
@@ -40,11 +47,32 @@ export function EditorHeader({ note }: EditorHeaderProps) {
   const starredNotes = editorState?.starredNotes || {};
   const [title, setTitle] = useState(note.title);
   
+  // Save status
+  const { isSaving, hasUnsavedChanges, error: saveError, statusText } = useSaveStatus(note.id);
+  
   const isStarred = starredNotes?.[note.id] || false;
+
+  // Build breadcrumb path from parent folders
+  const breadcrumb = useMemo(() => {
+    const notesArray = Object.values(allNotes);
+    return buildBreadcrumbPath(notesArray, note.id);
+  }, [allNotes, note.id]);
+
+  // Sync title with note when note changes
+  useEffect(() => {
+    setTitle(note.title);
+  }, [note.title, note.id]);
   
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    // TODO: Debounced title update
+    // Title change will be saved via autosave
+  };
+
+  const handleTitleBlur = () => {
+    // Save title on blur if changed
+    if (title !== note.title && title.trim()) {
+      dispatch(updateNote({ noteId: note.id, title: title.trim() }));
+    }
   };
   
   const handleShare = () => {
@@ -62,8 +90,6 @@ export function EditorHeader({ note }: EditorHeaderProps) {
     { mode: 'readonly', icon: EyeIcon, label: 'Read Only' },
   ];
 
-  // Mock breadcrumb - would come from parent folder structure
-  const breadcrumb = ['Workspace', 'Engineering', note.title];
 
   // Format date
   const formatDate = (timestamp?: { seconds: bigint | number; nanos: number }) => {
@@ -104,6 +130,31 @@ export function EditorHeader({ note }: EditorHeaderProps) {
               </span>
             ))}
           </nav>
+
+          {/* Save Status */}
+          <div className="flex items-center gap-1.5 ml-4 text-xs">
+            {isSaving ? (
+              <>
+                <ArrowPathIcon className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                <span className="text-muted-foreground">{statusText}</span>
+              </>
+            ) : saveError ? (
+              <>
+                <ExclamationCircleIcon className="h-3.5 w-3.5 text-red-500" />
+                <span className="text-red-500">Save failed</span>
+              </>
+            ) : hasUnsavedChanges ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="text-muted-foreground">{statusText}</span>
+              </>
+            ) : (
+              <>
+                <CheckCircleIcon className="h-3.5 w-3.5 text-green-500" />
+                <span className="text-muted-foreground">{statusText}</span>
+              </>
+            )}
+          </div>
         </div>
         
         {/* Right Actions */}
@@ -222,6 +273,7 @@ export function EditorHeader({ note }: EditorHeaderProps) {
               type="text"
               value={title}
               onChange={(e) => handleTitleChange(e.target.value)}
+              onBlur={handleTitleBlur}
               placeholder="Untitled"
               className="w-full text-3xl font-bold bg-transparent border-none outline-none focus:ring-0 text-foreground"
             />

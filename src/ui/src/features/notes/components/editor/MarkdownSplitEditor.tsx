@@ -8,8 +8,8 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { defaultKeymap } from '@codemirror/commands';
 import type { Note } from '@/gen/notes/v1/notes_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setDraftContent } from '../../store/editorSlice';
+import { useAppSelector } from '@/app/hooks';
+import { useAutosave } from '../../hooks/useNotesHooks';
 import { CrepeEditor } from './CrepeEditor';
 
 interface MarkdownSplitEditorProps {
@@ -19,13 +19,15 @@ interface MarkdownSplitEditorProps {
 const MIN_PANE_WIDTH = 200; // Minimum width in pixels
 
 export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
-  const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
-  const draftContent = editorState?.draftContent || {};
   const settings = editorState?.settings || {};
   const showMarkdownPreview = settings?.showMarkdownPreview ?? true;
+
+  // Autosave hook
+  const { scheduleAutosave, draftContent } = useAutosave(note.id);
   
-  const content = draftContent[note.id] !== undefined ? draftContent[note.id] : note.content;
+  // Check for both null and undefined in draft content
+  const content = draftContent != null ? draftContent : note.content;
   
   // CodeMirror refs
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -37,11 +39,8 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleContentChange = useCallback((newContent: string) => {
-    dispatch(setDraftContent({
-      noteId: note.id,
-      content: newContent,
-    }));
-  }, [dispatch, note.id]);
+    scheduleAutosave(newContent);
+  }, [scheduleAutosave]);
 
   // Handle resize drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

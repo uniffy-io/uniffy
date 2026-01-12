@@ -3,9 +3,9 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { defaultTheme } from './types';
 
 interface ThemeState {
-  currentTheme: string;
-  accentColor: string | null;
-  fontFamily: string | null; // 'inter', 'geist', 'system', or null for default
+  currentTheme: string; // Persisted theme mode (light/dark)
+  accentColor: string | null; // Persisted accent color, synced with user profile
+  fontFamily: string | null; // Persisted font family, synced with user profile ('inter', 'geist', 'system', or null for default)
 }
 
 const initialState: ThemeState = {

@@ -8,6 +8,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uwos.models import Note
+from uwos.models.shared import NodeType
 
 
 async def get_note_by_id(session: AsyncSession, note_id: UUID, organization_id: UUID) -> Note | None:
@@ -68,6 +69,7 @@ async def create_note(
     content: str,
     slug: str,
     visibility: Any | None = None,
+    node_type: Any | None = None,
     parent_id: UUID | None = None,
     tags: list[str] | None = None,
     metadata: dict | None = None,
@@ -91,6 +93,8 @@ async def create_note(
         URL-friendly slug.
     visibility : VisibilityScope | None
         Visibility scope (defaults to PRIVATE).
+    node_type : NodeType | None
+        Node type (defaults to NOTE).
     parent_id : UUID | None
         Optional parent note ID.
     tags : list[str] | None
@@ -104,12 +108,13 @@ async def create_note(
         Created note.
 
     """
-    from uwos.models.shared import VisibilityScope
+    from uwos.models.shared import NodeType, VisibilityScope
 
     note = Note(
         organization_id=organization_id,
         owner_id=owner_id,
         visibility=visibility or VisibilityScope.PRIVATE,
+        node_type=node_type or NodeType.NOTE,
         title=title,
         content=content,
         slug=slug,
@@ -189,7 +194,7 @@ async def update_note(
 
 async def soft_delete_note(session: AsyncSession, note: Note) -> Note:
     """
-    Soft delete a note.
+    Soft delete a note and all its children recursively.
 
     Parameters
     ----------
@@ -204,6 +209,16 @@ async def soft_delete_note(session: AsyncSession, note: Note) -> Note:
         Deleted note.
 
     """
+    # First, soft delete all children recursively
+    if note.node_type == NodeType.FOLDER:
+        result = await session.execute(
+            select(Note).where(Note.parent_id == note.id, Note.is_deleted == False)
+        )
+        children = result.scalars().all()
+        for child in children:
+            await soft_delete_note(session, child)
+
+    # Then soft delete the note itself
     note.is_deleted = True
     note.deleted_at = datetime.now(UTC)
     note.updated_at = datetime.now(UTC)
@@ -241,7 +256,7 @@ async def restore_note(session: AsyncSession, note: Note) -> Note:
 
 async def permanent_delete_note(session: AsyncSession, note: Note) -> None:
     """
-    Permanently delete a note from database.
+    Permanently delete a note and all its children recursively from database.
 
     Parameters
     ----------
@@ -255,8 +270,93 @@ async def permanent_delete_note(session: AsyncSession, note: Note) -> None:
     None
 
     """
+    # First, permanently delete all children recursively
+    if note.node_type == NodeType.FOLDER:
+        result = await session.execute(select(Note).where(Note.parent_id == note.id))
+        children = result.scalars().all()
+        for child in children:
+            await permanent_delete_note(session, child)
+
+    # Then permanently delete the note itself
     await session.delete(note)
     await session.commit()
+
+
+async def empty_trash(session: AsyncSession, organization_id: UUID) -> int:
+    """
+    Permanently delete all soft-deleted notes in an organization.
+    Handles hierarchies by deleting children before parents.
+
+    Parameters
+    ----------
+    session : AsyncSession
+        Database session.
+    organization_id : UUID
+        Organization ID.
+
+    Returns
+    -------
+    int
+        Number of notes permanently deleted.
+
+    """
+    # Get all soft-deleted notes
+    result = await session.execute(
+        select(Note).where(
+            and_(
+                Note.organization_id == organization_id,
+                Note.is_deleted == True,  # noqa: E712
+            )
+        )
+    )
+    deleted_notes = list(result.scalars().all())
+
+    count = len(deleted_notes)
+
+    if count == 0:
+        return 0
+
+    # Get IDs of all notes to be deleted
+    deleted_ids = {note.id for note in deleted_notes}
+
+    # Find all non-deleted notes that reference deleted notes as parents
+    # and set their parent_id to NULL
+    result = await session.execute(
+        select(Note).where(
+            and_(
+                Note.organization_id == organization_id,
+                Note.is_deleted == False,  # noqa: E712
+                Note.parent_id.in_(deleted_ids),
+            )
+        )
+    )
+    orphaned_children = result.scalars().all()
+
+    # Unlink orphaned children from deleted parents
+    for child in orphaned_children:
+        child.parent_id = None
+        session.add(child)
+
+    # Flush to commit the parent_id changes before deleting
+    await session.flush()
+
+    # ALSO set parent_id to NULL for ALL deleted notes that reference other deleted notes
+    # This breaks the FK chains within the trash itself
+    for note in deleted_notes:
+        if note.parent_id in deleted_ids:
+            note.parent_id = None
+            session.add(note)
+
+    # Flush again to commit these changes
+    await session.flush()
+
+    # Now delete all soft-deleted notes - order doesn't matter anymore
+    # since all FK references have been removed
+    for note in deleted_notes:
+        await session.delete(note)
+
+    await session.commit()
+    return count
 
 
 async def toggle_pin(session: AsyncSession, note: Note, pinned: bool) -> Note:

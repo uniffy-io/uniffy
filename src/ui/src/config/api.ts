@@ -11,11 +11,24 @@ import { ConnectError, Code } from '@connectrpc/connect';
 import { env } from './env';
 
 /**
- * Auth interceptor that handles token expiration and authentication errors.
+ * Auth interceptor that adds JWT token to requests and handles auth errors.
+ * Automatically includes the access token from localStorage in the Authorization header.
  * Redirects to login page when tokens expire or authentication fails.
  */
 const authInterceptor: Interceptor = (next) => async (req) => {
   try {
+    // Get the auth token from Redux persist storage
+    const persistedState = localStorage.getItem('persist:root');
+    if (persistedState) {
+      const rootState = JSON.parse(persistedState);
+      const authState = JSON.parse(rootState.auth || '{}');
+      const accessToken = authState.accessToken;
+
+      if (accessToken) {
+        req.header.set('Authorization', `Bearer ${accessToken}`);
+      }
+    }
+
     return await next(req);
   } catch (error) {
     // Check if error is a ConnectError with UNAUTHENTICATED code

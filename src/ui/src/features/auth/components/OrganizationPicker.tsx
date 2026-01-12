@@ -6,6 +6,7 @@ import { OrganizationInfo } from "@/gen/auth/v1/auth_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials, logout } from "../store/authSlice";
+import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
 import { transport } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
@@ -62,6 +63,14 @@ export default function OrganizationPicker() {
       // Update credentials with new token and organization ID
       // We assume user info is same, but we update tokens
       if (user) {
+        // Sync theme preferences from user profile
+        if (user.accentColor) {
+          dispatch(setAccentColor(user.accentColor));
+        }
+        if (user.fontFamily) {
+          dispatch(setFontFamily(user.fontFamily));
+        }
+        
         dispatch(setCredentials({
           user: user, // Keep existing user info
           accessToken: response.accessToken,

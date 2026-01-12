@@ -11,8 +11,11 @@ from uwos.db import close_db, init_db
 from uwos.db.seed import seed_initial_data
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
+from uwos.gen.search.v1.search_connect import SearchServiceASGIApplication
+from uwos.observability.crpc import LoggingInterceptor
 from uwos.services.auth_service import AuthServiceImpl
 from uwos.services.notes_service import NotesServiceImpl
+from uwos.services.search_service import SearchServiceImpl
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,7 @@ async def lifespan(app: FastAPI):
         await seed_initial_data()
         logger.info("Database initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+        logger.exception(f"Failed to initialize database: {e}")
         raise
 
     yield
@@ -49,6 +52,16 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    # Add middleware to log ALL requests
+    @app.middleware("http")
+    async def log_requests(request, call_next):
+        try:
+            response = await call_next(request)
+            return response
+        except Exception as e:
+            logger.exception(f"Unhandled exception in request {e}")
+            raise
 
     # Add CORS middleware
     app.add_middleware(
@@ -71,51 +84,6 @@ def create_app() -> FastAPI:
     async def health_check():
         return {"status": "ok", "service": "uwos"}
 
-    # API documentation endpoint
-    @app.get("/api/docs")
-    async def api_docs():
-        return {
-            "message": "UWOS API Documentation",
-            "version": "0.1.0",
-            "protocol": "ConnectRPC (gRPC)",
-            "services": {
-                "AuthService": {
-                    "path": "/auth.v1.AuthService",
-                    "methods": [
-                        "POST /auth.v1.AuthService/Register",
-                        "POST /auth.v1.AuthService/Login",
-                        "POST /auth.v1.AuthService/RefreshToken",
-                        "POST /auth.v1.AuthService/GetCurrentUser",
-                    ],
-                },
-                "NotesService": {
-                    "path": "/notes.v1.NotesService",
-                    "methods": [
-                        "POST /notes.v1.NotesService/CreateNote",
-                        "POST /notes.v1.NotesService/GetNote",
-                        "POST /notes.v1.NotesService/UpdateNote",
-                        "POST /notes.v1.NotesService/DeleteNote",
-                        "POST /notes.v1.NotesService/ListNotes",
-                        "POST /notes.v1.NotesService/SearchNotes",
-                        "POST /notes.v1.NotesService/GetBacklinks",
-                        "POST /notes.v1.NotesService/TogglePin",
-                        "POST /notes.v1.NotesService/RestoreNote",
-                        "POST /notes.v1.NotesService/AutosaveNote",
-                    ],
-                },
-                "RandomService": {
-                    "path": "/randomnum.v1.RandomService",
-                    "methods": ["POST /randomnum.v1.RandomService/GetRandomNumber"],
-                },
-            },
-            "proto_files": [
-                "proto/auth/v1/auth.proto",
-                "proto/notes/v1/notes.proto",
-                "proto/randomnum/v1/random.proto",
-            ],
-            "documentation": "/api/docs for this page, see proto files for full specs",
-        }
-
     return app
 
 
@@ -123,17 +91,35 @@ def _mount_connect_services(app: FastAPI) -> None:
     """Mount ConnectRPC services."""
     logger.info("Mounting ConnectRPC services")
 
-    # Create and mount the auth service
+    # Create logging interceptor for all services
+    logging_interceptor = LoggingInterceptor()
+
+    # Create and mount the auth service with logging interceptor
     auth_service = AuthServiceImpl()
-    auth_app = AuthServiceASGIApplication(auth_service)
+    auth_app = AuthServiceASGIApplication(
+        auth_service,
+        interceptors=[logging_interceptor],
+    )
     app.mount("/auth.v1.AuthService", auth_app)
     logger.info("Mounted AuthService at /auth.v1.AuthService")
 
     # Create and mount the notes service
     notes_service = NotesServiceImpl()
-    notes_app = NotesServiceASGIApplication(notes_service)
+    notes_app = NotesServiceASGIApplication(
+        notes_service,
+        interceptors=[logging_interceptor],
+    )
     app.mount("/notes.v1.NotesService", notes_app)
     logger.info("Mounted NotesService at /notes.v1.NotesService")
+
+    # Create and mount the search service
+    search_service = SearchServiceImpl()
+    search_app = SearchServiceASGIApplication(
+        search_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/search.v1.SearchService", search_app)
+    logger.info("Mounted SearchService at /search.v1.SearchService")
 
 
 def _mount_ui(app: FastAPI) -> None:

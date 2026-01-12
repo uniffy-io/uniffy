@@ -43,6 +43,9 @@ class NotesService(Protocol):
     async def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def empty_trash(self, request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def autosave_note(self, request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -162,6 +165,16 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.restore_note,
+                ),
+                "/notes.v1.NotesService/EmptyTrash": Endpoint.unary(
+                    method=MethodInfo(
+                        name="EmptyTrash",
+                        service_name="notes.v1.NotesService",
+                        input=notes_dot_v1_dot_notes__pb2.EmptyTrashRequest,
+                        output=notes_dot_v1_dot_notes__pb2.EmptyTrashResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.empty_trash,
                 ),
                 "/notes.v1.NotesService/AutosaveNote": Endpoint.unary(
                     method=MethodInfo(
@@ -435,6 +448,26 @@ class NotesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def empty_trash(
+        self,
+        request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="EmptyTrash",
+                service_name="notes.v1.NotesService",
+                input=notes_dot_v1_dot_notes__pb2.EmptyTrashRequest,
+                output=notes_dot_v1_dot_notes__pb2.EmptyTrashResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def autosave_note(
         self,
         request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest,
@@ -615,6 +648,8 @@ class NotesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def empty_trash(self, request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def autosave_note(self, request: notes_dot_v1_dot_notes__pb2.AutosaveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.AutosaveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
@@ -726,6 +761,16 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.restore_note,
+                ),
+                "/notes.v1.NotesService/EmptyTrash": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="EmptyTrash",
+                        service_name="notes.v1.NotesService",
+                        input=notes_dot_v1_dot_notes__pb2.EmptyTrashRequest,
+                        output=notes_dot_v1_dot_notes__pb2.EmptyTrashResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.empty_trash,
                 ),
                 "/notes.v1.NotesService/AutosaveNote": EndpointSync.unary(
                     method=MethodInfo(
@@ -993,6 +1038,26 @@ class NotesServiceClientSync(ConnectClientSync):
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.RestoreNoteRequest,
                 output=notes_dot_v1_dot_notes__pb2.NoteResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def empty_trash(
+        self,
+        request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="EmptyTrash",
+                service_name="notes.v1.NotesService",
+                input=notes_dot_v1_dot_notes__pb2.EmptyTrashRequest,
+                output=notes_dot_v1_dot_notes__pb2.EmptyTrashResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
