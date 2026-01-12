@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AutosaveNoteRequest, AutosaveNoteResponse, BacklinksResponse, CopyNoteRequest, CreateNoteRequest, DeleteNoteRequest, DeleteNoteResponse, GetBacklinksRequest, GetNoteRequest, GetNoteSharingRequest, GrantPermissionRequest, ListNotesRequest, ListNotesResponse, MoveNoteRequest, NoteResponse, NoteSharingResponse, PermissionResponse, RestoreNoteRequest, RevokePermissionRequest, SearchNotesRequest, SearchNotesResponse, ShareNoteResponse, ShareNoteWithGroupRequest, TogglePinRequest, UnshareNoteFromGroupRequest, UpdateNoteRequest } from "./notes_pb.js";
+import { AutosaveNoteRequest, AutosaveNoteResponse, BacklinksResponse, CopyNoteRequest, CreateNoteRequest, DeleteNoteRequest, DeleteNoteResponse, EmptyTrashRequest, EmptyTrashResponse, GetBacklinksRequest, GetNoteRequest, GetNoteSharingRequest, GrantPermissionRequest, ListNotesRequest, ListNotesResponse, MoveNoteRequest, NoteResponse, NoteSharingResponse, PermissionResponse, RestoreNoteRequest, RevokePermissionRequest, SearchNotesRequest, SearchNotesResponse, ShareNoteResponse, ShareNoteWithGroupRequest, TogglePinRequest, UnshareNoteFromGroupRequest, UpdateNoteRequest } from "./notes_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -111,6 +111,17 @@ export const NotesService = {
       name: "RestoreNote",
       I: RestoreNoteRequest,
       O: NoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Empty trash (permanently delete all soft-deleted notes)
+     *
+     * @generated from rpc notes.v1.NotesService.EmptyTrash
+     */
+    emptyTrash: {
+      name: "EmptyTrash",
+      I: EmptyTrashRequest,
+      O: EmptyTrashResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -103,6 +103,46 @@ proto3.util.setEnumType(PermissionLevel, "notes.v1.PermissionLevel", [
 ]);
 
 /**
+ * Node type for notes hierarchy
+ *
+ * @generated from enum notes.v1.NodeType
+ */
+export enum NodeType {
+  /**
+   * @generated from enum value: NODE_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Regular note with content
+   *
+   * @generated from enum value: NODE_TYPE_NOTE = 1;
+   */
+  NOTE = 1,
+
+  /**
+   * Folder for organizing notes (can also have content)
+   *
+   * @generated from enum value: NODE_TYPE_FOLDER = 2;
+   */
+  FOLDER = 2,
+
+  /**
+   * Template note (future use)
+   *
+   * @generated from enum value: NODE_TYPE_TEMPLATE = 3;
+   */
+  TEMPLATE = 3,
+}
+// Retrieve enum metadata with: proto3.getEnumType(NodeType)
+proto3.util.setEnumType(NodeType, "notes.v1.NodeType", [
+  { no: 0, name: "NODE_TYPE_UNSPECIFIED" },
+  { no: 1, name: "NODE_TYPE_NOTE" },
+  { no: 2, name: "NODE_TYPE_FOLDER" },
+  { no: 3, name: "NODE_TYPE_TEMPLATE" },
+]);
+
+/**
  * Request to create a new note
  *
  * @generated from message notes.v1.CreateNoteRequest
@@ -171,6 +211,13 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
    */
   groupIds: string[] = [];
 
+  /**
+   * Node type (defaults to NOTE)
+   *
+   * @generated from field: optional notes.v1.NodeType node_type = 10;
+   */
+  nodeType?: NodeType;
+
   constructor(data?: PartialMessage<CreateNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -188,6 +235,7 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
     { no: 7, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 8, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
     { no: 9, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 10, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNoteRequest {
@@ -1053,6 +1101,104 @@ export class RestoreNoteRequest extends Message<RestoreNoteRequest> {
 }
 
 /**
+ * Request to empty trash
+ *
+ * @generated from message notes.v1.EmptyTrashRequest
+ */
+export class EmptyTrashRequest extends Message<EmptyTrashRequest> {
+  /**
+   * Organization ID for access control
+   *
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<EmptyTrashRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.EmptyTrashRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EmptyTrashRequest {
+    return new EmptyTrashRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EmptyTrashRequest {
+    return new EmptyTrashRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EmptyTrashRequest {
+    return new EmptyTrashRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EmptyTrashRequest | PlainMessage<EmptyTrashRequest> | undefined, b: EmptyTrashRequest | PlainMessage<EmptyTrashRequest> | undefined): boolean {
+    return proto3.util.equals(EmptyTrashRequest, a, b);
+  }
+}
+
+/**
+ * Response for empty trash operation
+ *
+ * @generated from message notes.v1.EmptyTrashResponse
+ */
+export class EmptyTrashResponse extends Message<EmptyTrashResponse> {
+  /**
+   * Number of notes permanently deleted
+   *
+   * @generated from field: int32 deleted_count = 1;
+   */
+  deletedCount = 0;
+
+  /**
+   * Success flag
+   *
+   * @generated from field: bool success = 2;
+   */
+  success = false;
+
+  /**
+   * Message
+   *
+   * @generated from field: string message = 3;
+   */
+  message = "";
+
+  constructor(data?: PartialMessage<EmptyTrashResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.EmptyTrashResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deleted_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EmptyTrashResponse {
+    return new EmptyTrashResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EmptyTrashResponse {
+    return new EmptyTrashResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EmptyTrashResponse {
+    return new EmptyTrashResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EmptyTrashResponse | PlainMessage<EmptyTrashResponse> | undefined, b: EmptyTrashResponse | PlainMessage<EmptyTrashResponse> | undefined): boolean {
+    return proto3.util.equals(EmptyTrashResponse, a, b);
+  }
+}
+
+/**
  * Request to autosave note (lightweight, frequent updates)
  *
  * @generated from message notes.v1.AutosaveNoteRequest
@@ -1217,100 +1363,107 @@ export class Note extends Message<Note> {
   visibility = VisibilityScope.UNSPECIFIED;
 
   /**
+   * Node type (note, folder, template)
+   *
+   * @generated from field: notes.v1.NodeType node_type = 5;
+   */
+  nodeType = NodeType.UNSPECIFIED;
+
+  /**
    * Note title
    *
-   * @generated from field: string title = 5;
+   * @generated from field: string title = 6;
    */
   title = "";
 
   /**
    * Note content (markdown)
    *
-   * @generated from field: string content = 6;
+   * @generated from field: string content = 7;
    */
   content = "";
 
   /**
    * URL-friendly slug
    *
-   * @generated from field: string slug = 7;
+   * @generated from field: string slug = 8;
    */
   slug = "";
 
   /**
    * Is deleted flag
    *
-   * @generated from field: bool is_deleted = 8;
+   * @generated from field: bool is_deleted = 9;
    */
   isDeleted = false;
 
   /**
    * Is pinned flag
    *
-   * @generated from field: bool is_pinned = 9;
+   * @generated from field: bool is_pinned = 10;
    */
   isPinned = false;
 
   /**
    * Version number for conflict detection
    *
-   * @generated from field: int64 version = 10;
+   * @generated from field: int64 version = 11;
    */
   version = protoInt64.zero;
 
   /**
    * Optional parent note ID
    *
-   * @generated from field: optional string parent_id = 11;
+   * @generated from field: optional string parent_id = 12;
    */
   parentId?: string;
 
   /**
    * Tags
    *
-   * @generated from field: repeated string tags = 12;
+   * @generated from field: repeated string tags = 13;
    */
   tags: string[] = [];
 
   /**
    * Metadata
    *
-   * @generated from field: map<string, string> metadata = 13;
+   * @generated from field: map<string, string> metadata = 14;
    */
   metadata: { [key: string]: string } = {};
 
   /**
    * Created timestamp
    *
-   * @generated from field: google.protobuf.Timestamp created_at = 14;
+   * @generated from field: google.protobuf.Timestamp created_at = 15;
    */
   createdAt?: Timestamp;
 
   /**
    * Updated timestamp
    *
-   * @generated from field: google.protobuf.Timestamp updated_at = 15;
+   * @generated from field: google.protobuf.Timestamp updated_at = 16;
    */
   updatedAt?: Timestamp;
 
   /**
    * Deleted timestamp (if soft-deleted)
    *
-   * @generated from field: optional google.protobuf.Timestamp deleted_at = 16;
+   * @generated from field: optional google.protobuf.Timestamp deleted_at = 17;
    */
   deletedAt?: Timestamp;
 
   /**
    * Group IDs if shared with groups
    *
-   * @generated from field: repeated string group_ids = 17;
+   * @generated from field: repeated string group_ids = 18;
    */
   groupIds: string[] = [];
 
   /**
    * User's permission level on this note
    *
-   * @generated from field: notes.v1.PermissionLevel user_permission = 18;
+   * @generated from field: notes.v1.PermissionLevel user_permission = 19;
    */
   userPermission = PermissionLevel.UNSPECIFIED;
 
@@ -1326,20 +1479,21 @@ export class Note extends Message<Note> {
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
-    { no: 5, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 9, name: "is_pinned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 10, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 11, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 12, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 13, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 14, name: "created_at", kind: "message", T: Timestamp },
-    { no: 15, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 16, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
-    { no: 17, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 18, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 5, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType) },
+    { no: 6, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "is_pinned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 11, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 12, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 13, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 14, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 15, name: "created_at", kind: "message", T: Timestamp },
+    { no: 16, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 17, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
+    { no: 18, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 19, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {
@@ -1407,6 +1561,13 @@ export class NoteReference extends Message<NoteReference> {
    */
   visibility = VisibilityScope.UNSPECIFIED;
 
+  /**
+   * Node type
+   *
+   * @generated from field: notes.v1.NodeType node_type = 7;
+   */
+  nodeType = NodeType.UNSPECIFIED;
+
   constructor(data?: PartialMessage<NoteReference>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1421,6 +1582,7 @@ export class NoteReference extends Message<NoteReference> {
     { no: 4, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "updated_at", kind: "message", T: Timestamp },
     { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 7, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteReference {

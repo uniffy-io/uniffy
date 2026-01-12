@@ -22,6 +22,8 @@ proto: ## Generate all protobuf code (backend + UI)
 	touch src/uwos/gen/auth/v1/__init__.py
 	touch src/uwos/gen/notes/v1/__init__.py
 	touch src/uwos/gen/notes/__init__.py
+	touch src/uwos/gen/search/v1/__init__.py
+	touch src/uwos/gen/search/__init__.py
 	@echo "Protobuf code generated for backend and UI!"
 
 clean: ## Clean generated files
@@ -82,11 +84,11 @@ build-ui: ## Build frontend for production
 	cd src/ui && pnpm build
 
 lint: ## Run linters
-	uv run ruff check src/uwos/
+	uv run ruff check src/uwos/ --exclude src/uwos/gen --fix
 	cd src/ui && pnpm run lint
 
 format: ## Format code
-	uv run ruff format src/uwos/
+	uv run ruff format src/uwos/ --exclude src/uwos/gen
 
 test: ## Run tests
 	uv run pytest

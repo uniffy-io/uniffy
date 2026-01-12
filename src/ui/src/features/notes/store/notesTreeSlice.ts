@@ -1,6 +1,42 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { notesApi } from '../api/notesApi';
+import { organizeNotesByVisibility } from '../utils/notesTreeUtils';
+import type { RootState } from '@/app/store';
+import type { Note } from '@/gen/notes/v1/notes_pb';
+
+// Helper to convert proto Note to PlainMessage
+const noteToPlain = (note: Note) => ({
+    id: note.id,
+    organizationId: note.organizationId,
+    ownerId: note.ownerId,
+    visibility: note.visibility,
+    nodeType: note.nodeType,
+    title: note.title,
+    content: note.content,
+    slug: note.slug,
+    isDeleted: note.isDeleted,
+    isPinned: note.isPinned,
+    version: typeof note.version === 'bigint' ? Number(note.version) : note.version,
+    parentId: note.parentId,
+    tags: [...note.tags],
+    metadata: { ...note.metadata },
+    createdAt: note.createdAt ? {
+        seconds: typeof note.createdAt.seconds === 'bigint' ? Number(note.createdAt.seconds) : note.createdAt.seconds,
+        nanos: typeof note.createdAt.nanos === 'bigint' ? Number(note.createdAt.nanos) : note.createdAt.nanos
+    } : undefined,
+    updatedAt: note.updatedAt ? {
+        seconds: typeof note.updatedAt.seconds === 'bigint' ? Number(note.updatedAt.seconds) : note.updatedAt.seconds,
+        nanos: typeof note.updatedAt.nanos === 'bigint' ? Number(note.updatedAt.nanos) : note.updatedAt.nanos
+    } : undefined,
+    deletedAt: note.deletedAt ? {
+        seconds: typeof note.deletedAt.seconds === 'bigint' ? Number(note.deletedAt.seconds) : note.deletedAt.seconds,
+        nanos: typeof note.deletedAt.nanos === 'bigint' ? Number(note.deletedAt.nanos) : note.deletedAt.nanos
+    } : undefined,
+    groupIds: [...note.groupIds],
+    userPermission: note.userPermission,
+});
 
 export interface TreeNode {
     id: string;
@@ -49,87 +85,76 @@ interface NotesTreeState {
 
     // Loading state
     loading: boolean;
+    error: string | null;
 }
 
-// Mock data for development - showcases all visibility scopes
-const mockPinnedNodes: TreeNode[] = [
-    { id: 'fav-1', title: 'Quick Reference', type: 'note', noteId: 'fav-1', isPinned: true, visibility: VisibilityScope.PRIVATE },
-    { id: 'fav-2', title: 'Meeting Notes Template', type: 'note', noteId: 'fav-2', isPinned: true, visibility: VisibilityScope.ORGANIZATION },
-];
+/**
+ * Fetch and organize notes tree from API.
+ */
+export const fetchNotesTree = createAsyncThunk<
+    NotesTreeState['tree'],
+    { userGroups?: Array<{ groupId: string; groupName: string }> } | void,
+    { state: RootState; rejectValue: string }
+>('notesTree/fetchNotesTree', async (params, { getState, rejectWithValue }) => {
+    try {
+        const state = getState();
+        const organizationId = state.auth.currentOrganizationId;
+        const currentUserId = state.auth.user?.id || '';
 
-const mockPersonalNodes: TreeNode[] = [
-    { id: 'personal-1', title: 'My Ideas', type: 'note', noteId: 'personal-1', visibility: VisibilityScope.PRIVATE },
-    { id: 'personal-2', title: 'Personal Journal', type: 'note', noteId: 'personal-2', visibility: VisibilityScope.PRIVATE },
-    { id: 'personal-3', title: 'Learning Notes', type: 'note', noteId: 'personal-3', visibility: VisibilityScope.PRIVATE },
-];
+        if (!organizationId) {
+            return rejectWithValue('No organization selected');
+        }
 
-const mockSharedNodes: TreeNode[] = [
-    { id: 'shared-1', title: 'Project Brief (from Sarah)', type: 'note', noteId: 'shared-1', visibility: VisibilityScope.GROUP },
-    { id: 'shared-2', title: 'Design Specs (from Mike)', type: 'note', noteId: 'shared-2', visibility: VisibilityScope.GROUP },
-];
+        // Fetch all notes including deleted
+        const response = await notesApi.listNotes({
+            organizationId,
+            pageSize: 500, // Fetch all for tree
+            includeDeleted: true,
+        });
 
-const mockGroupSections: GroupTreeSection[] = [
-    {
-        groupId: 'eng',
-        groupName: 'Engineering',
-        isExpanded: true,
-        nodes: [
-            { id: 'eng-1', title: 'Q1 Roadmap', type: 'note', noteId: 'eng-1', visibility: VisibilityScope.GROUP },
-            { id: 'eng-2', title: 'Architecture Docs', type: 'note', noteId: 'eng-2', visibility: VisibilityScope.GROUP },
-            { id: 'eng-3', title: 'Sprint Planning', type: 'note', noteId: 'eng-3', visibility: VisibilityScope.GROUP },
-        ],
-    },
-    {
-        groupId: 'product',
-        groupName: 'Product',
-        isExpanded: false,
-        nodes: [
-            { id: 'prod-1', title: 'Feature Specs', type: 'note', noteId: 'prod-1', visibility: VisibilityScope.GROUP },
-            { id: 'prod-2', title: 'User Research', type: 'note', noteId: 'prod-2', visibility: VisibilityScope.GROUP },
-        ],
-    },
-    {
-        groupId: 'design',
-        groupName: 'Design',
-        isExpanded: false,
-        nodes: [
-            { id: 'design-1', title: 'Brand Guidelines', type: 'note', noteId: 'design-1', visibility: VisibilityScope.GROUP },
-        ],
-    },
-];
+        const notes = response.notes.map(noteToPlain);
+        const userGroups = params?.userGroups ?? [];
 
-const mockOrganizationNodes: TreeNode[] = [
-    { id: 'org-1', title: 'Company Handbook', type: 'note', noteId: 'org-1', visibility: VisibilityScope.ORGANIZATION },
-    { id: 'org-2', title: 'Onboarding Guide', type: 'note', noteId: 'org-2', visibility: VisibilityScope.ORGANIZATION },
-    { id: 'org-3', title: 'Engineering Standards', type: 'note', noteId: 'org-3', visibility: VisibilityScope.ORGANIZATION },
-];
+        // Organize into tree structure
+        const organized = organizeNotesByVisibility(notes, currentUserId, userGroups);
 
-const mockTrashNodes: TreeNode[] = [
-    { id: 'trash-1', title: 'Old Draft', type: 'note', noteId: 'trash-1', visibility: VisibilityScope.PRIVATE },
-];
+        return organized;
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to load notes tree');
+    }
+});
+
+// Empty initial state - will be populated from API
+const emptyTree: NotesTreeState['tree'] = {
+    pinned: [],
+    personal: [],
+    shared: [],
+    groups: [],
+    organization: [],
+    trash: [],
+};
 
 const initialState: NotesTreeState = {
-    tree: {
-        pinned: mockPinnedNodes,
-        personal: mockPersonalNodes,
-        shared: mockSharedNodes,
-        groups: mockGroupSections,
-        organization: mockOrganizationNodes,
-        trash: mockTrashNodes,
-    },
-    expandedNodes: ['personal', 'group-eng'], // Personal and Engineering expanded by default
+    tree: emptyTree,
+    expandedNodes: ['personal'], // Personal expanded by default
     selectedNodeId: null,
     draggedNodeId: null,
     dropTargetId: null,
     treeWidth: 280,
     isTreeCollapsed: false,
     loading: false,
+    error: null,
 };
 
 export const notesTreeSlice = createSlice({
     name: 'notesTree',
     initialState,
     reducers: {
+        // Set entire tree
+        setTree: (state, action: PayloadAction<NotesTreeState['tree']>) => {
+            state.tree = action.payload;
+        },
+
         // Set tree nodes for a specific section
         setPinnedNodes: (state, action: PayloadAction<TreeNode[]>) => {
             state.tree.pinned = action.payload;
@@ -155,6 +180,66 @@ export const notesTreeSlice = createSlice({
             state.tree.trash = action.payload;
         },
 
+        // Add a single node to a section
+        addNodeToSection: (state, action: PayloadAction<{
+            section: 'pinned' | 'personal' | 'shared' | 'organization' | 'trash';
+            node: TreeNode;
+            parentId?: string;
+        }>) => {
+            const { section, node, parentId } = action.payload;
+            if (parentId) {
+                // TODO: Add to specific parent within section
+                state.tree[section].push(node);
+            } else {
+                state.tree[section].push(node);
+            }
+        },
+
+        // Update a node title
+        updateNodeTitle: (state, action: PayloadAction<{ nodeId: string; title: string }>) => {
+            const { nodeId, title } = action.payload;
+            // Search all sections for the node
+            const updateInArray = (nodes: TreeNode[]): boolean => {
+                for (const node of nodes) {
+                    if (node.id === nodeId) {
+                        node.title = title;
+                        return true;
+                    }
+                    if (node.children && updateInArray(node.children)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
+                if (updateInArray(state.tree[section])) break;
+            }
+            for (const group of state.tree.groups) {
+                if (updateInArray(group.nodes)) break;
+            }
+        },
+
+        // Remove a node from tree
+        removeNode: (state, action: PayloadAction<string>) => {
+            const nodeId = action.payload;
+            const removeFromArray = (nodes: TreeNode[]): TreeNode[] => {
+                return nodes
+                    .filter(n => n.id !== nodeId)
+                    .map(n => ({
+                        ...n,
+                        children: n.children ? removeFromArray(n.children) : undefined,
+                    }));
+            };
+
+            for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
+                state.tree[section] = removeFromArray(state.tree[section]);
+            }
+            for (const group of state.tree.groups) {
+                group.nodes = removeFromArray(group.nodes);
+            }
+        },
+
         // Expand/collapse nodes
         toggleNodeExpanded: (state, action: PayloadAction<string>) => {
             const nodeId = action.payload;
@@ -177,12 +262,36 @@ export const notesTreeSlice = createSlice({
         },
 
         expandAll: (state) => {
+            // Helper to recursively collect all folder IDs
+            const collectFolderIds = (nodes: TreeNode[]): string[] => {
+                const ids: string[] = [];
+                for (const node of nodes) {
+                    if (node.type === 'folder') {
+                        ids.push(node.id);
+                        if (node.children) {
+                            ids.push(...collectFolderIds(node.children));
+                        }
+                    }
+                }
+                return ids;
+            };
+
             // Expand all sections
             state.expandedNodes = ['pinned', 'personal', 'shared', 'organization', 'trash'];
+
             // Expand all group sections
             state.tree.groups.forEach(group => {
                 state.expandedNodes.push(`group-${group.groupId}`);
+                // Also expand all folders in this group
+                state.expandedNodes.push(...collectFolderIds(group.nodes));
             });
+
+            // Expand all folders in each section
+            state.expandedNodes.push(...collectFolderIds(state.tree.pinned));
+            state.expandedNodes.push(...collectFolderIds(state.tree.personal));
+            state.expandedNodes.push(...collectFolderIds(state.tree.shared));
+            state.expandedNodes.push(...collectFolderIds(state.tree.organization));
+            state.expandedNodes.push(...collectFolderIds(state.tree.trash));
         },
 
         collapseAll: (state) => {
@@ -221,22 +330,47 @@ export const notesTreeSlice = createSlice({
             state.loading = action.payload;
         },
 
+        // Error
+        setTreeError: (state, action: PayloadAction<string | null>) => {
+            state.error = action.payload;
+        },
+
         // Clear tree
         clearTree: (state) => {
-            state.tree = initialState.tree;
-            state.expandedNodes = [];
+            state.tree = emptyTree;
+            state.expandedNodes = ['personal'];
             state.selectedNodeId = null;
+            state.error = null;
         },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchNotesTree.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchNotesTree.fulfilled, (state, action) => {
+                state.loading = false;
+                state.tree = action.payload;
+            })
+            .addCase(fetchNotesTree.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload ?? 'Failed to load notes tree';
+            });
     },
 });
 
 export const {
+    setTree,
     setPinnedNodes,
     setPersonalNodes,
     setSharedNodes,
     setGroupSections,
     setOrganizationNodes,
     setTrashNodes,
+    addNodeToSection,
+    updateNodeTitle,
+    removeNode,
     toggleNodeExpanded,
     expandNode,
     collapseNode,
@@ -249,6 +383,7 @@ export const {
     toggleTreeCollapsed,
     setTreeCollapsed,
     setTreeLoading,
+    setTreeError,
     clearTree,
 } = notesTreeSlice.actions;
 

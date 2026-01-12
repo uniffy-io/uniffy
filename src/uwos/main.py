@@ -1,31 +1,35 @@
-import logging
-import sys
-from pathlib import Path
-
 import uvicorn
 from dotenv import load_dotenv
-
-# Add the generated code directory to sys.path to allow imports like 'import auth.v1...'
-# This is required because buf generates code that assumes the output directory is the root
-gen_path = Path(__file__).parent / "gen"
-sys.path.append(str(gen_path))
+from loguru import logger
 
 from uwos.factory import create_app
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+from uwos.observability import ObservabilityConfig, setup_observability
+from uwos.observability.otel import instrument_fastapi
 
 
 def main() -> None:
+    setup_observability(
+        config=ObservabilityConfig(
+            app_name="uwos",
+            app_version="0.1.0",
+            environment="development",
+            console_log_level="INFO",
+        )
+    )
+    logger.info("Starting UWOS application...")
+
+    # Load environment variables from .env file
+    load_dotenv()
+
     """Run the UWOS application."""
     app = create_app()
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    instrument_fastapi(app=app, exclude_paths=["/health"])
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="debug",
+    )
 
 
 if __name__ == "__main__":

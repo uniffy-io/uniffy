@@ -63,6 +63,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentThemeName = useAppSelector((state) => state.theme.currentTheme);
   const accentColor = useAppSelector((state) => state.theme.accentColor);
   const fontFamily = useAppSelector((state) => state.theme.fontFamily);
+  const user = useAppSelector((state) => state.auth.user);
+  
+  // Sync theme values from user profile on mount/login
+  useEffect(() => {
+    if (user) {
+      // Only update if user has values and they differ from current theme state
+      if (user.accentColor && user.accentColor !== accentColor) {
+        dispatch(setAccentColor(user.accentColor));
+      }
+      if (user.fontFamily && user.fontFamily !== fontFamily) {
+        dispatch(setFontFamily(user.fontFamily));
+      }
+    }
+  }, [user?.accentColor, user?.fontFamily]); // Only sync when user values change
   
   // Resolve the actual theme object from the name in Redux
   const theme: Theme = {

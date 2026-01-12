@@ -13,12 +13,43 @@ export function NotesEditor() {
   
   const currentNoteId = notesState?.currentNoteId;
   const notes = notesState?.notes || {};
+  const loadingNoteId = notesState?.loadingNoteId;
   const settings = editorState?.settings;
   const editorMode = settings?.editorMode || 'crepe';
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
   
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
+  const isLoadingCurrentNote = loadingNoteId === currentNoteId;
   
+  // Show loading state when:
+  // 1. We're loading the current note AND
+  // 2. Either we don't have the note yet OR the note has no content (from tree preview)
+  const shouldShowLoading = isLoadingCurrentNote && (!currentNote || !currentNote.content);
+  
+  // Loading state - show spinner when fetching note
+  if (shouldShowLoading) {
+    return (
+      <div className="flex flex-col h-full bg-card">
+        {!isSidebarOpen && (
+          <div className="flex items-center px-4 py-2 border-b border-border">
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+              title="Show sidebar (⌘\\)"
+            >
+              <ChevronDoubleRightIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p className="text-sm">Loading note...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state - no note selected
   if (!currentNote) {
     return (
       <div className="flex flex-col h-full bg-card">

@@ -1,266 +1,124 @@
-import { useState, useRef, useEffect } from 'react';
-import { 
-  PlusIcon, 
+/**
+ * Notes Sidebar Component
+ *
+ * Displays the notes tree organized by visibility scope.
+ * Supports creating, renaming, and navigating notes.
+ */
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  PlusIcon,
   ClockIcon,
   StarIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ChevronUpIcon,
   DocumentTextIcon,
   ChevronDoubleLeftIcon,
   FolderIcon,
+  FolderPlusIcon,
   LockClosedIcon,
   UserGroupIcon,
   BuildingOfficeIcon,
   TrashIcon,
-  FolderPlusIcon,
+
   PencilIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setNote, setCurrentNote } from '../../store/notesSlice';
+import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote } from '../../store/notesSlice';
 import { toggleSidebar } from '../../store/editorSlice';
-import { VisibilityScope, PermissionLevel } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
-import type { Note } from '@/gen/notes/v1/notes_pb';
+import {
+  toggleNodeExpanded,
+  updateNodeTitle,
+  fetchNotesTree,
+  expandAll,
+  collapseAll,
+  type TreeNode,
+} from '../../store/notesTreeSlice';
+import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
+import { notesApi } from '../../api/notesApi';
 
-// Recursive tree node - can be a note or folder
-interface TreeItem {
-  id: string;
-  title: string;
-  type: 'note' | 'folder';
-  children?: TreeItem[];
-}
-
-interface Section {
-  id: string;
+// Section configuration
+interface SectionConfig {
+  id: 'pinned' | 'personal' | 'shared' | 'organization' | 'trash';
   name: string;
   icon: typeof FolderIcon;
-  items: TreeItem[];
-  scope: 'personal' | 'shared' | 'organization';
+  scope?: VisibilityScope;
 }
 
-// Generate large mock data for stress testing
-function generateMockData(): { sections: Section[], trash: TreeItem[] } {
-  const noteNames = [
-    'Meeting Notes', 'Project Plan', 'Research', 'Ideas', 'TODO List',
-    'Documentation', 'Specs', 'Requirements', 'Design Doc', 'Architecture',
-    'API Reference', 'User Guide', 'Release Notes', 'Changelog', 'Roadmap',
-    'Sprint Review', 'Retrospective', 'Planning', 'Strategy', 'Analysis',
-    'Report', 'Summary', 'Overview', 'Deep Dive', 'Investigation',
-  ];
-  
-  const folderNames = [
-    'Projects', 'Archive', 'Templates', 'Resources', 'References',
-    'Team', 'Clients', 'Internal', 'External', 'Drafts',
-    'Q1 2026', 'Q2 2026', 'Backlog', 'In Progress', 'Completed',
-    'Marketing', 'Sales', 'Engineering', 'Design', 'Product',
-  ];
+const SECTIONS: SectionConfig[] = [
+  { id: 'pinned', name: 'Favorites', icon: StarIcon },
+  { id: 'personal', name: 'Personal Space', icon: LockClosedIcon, scope: VisibilityScope.PRIVATE },
+  { id: 'shared', name: 'Shared With Me', icon: UserGroupIcon },
+  { id: 'organization', name: 'Organization', icon: BuildingOfficeIcon, scope: VisibilityScope.ORGANIZATION },
+];
 
-  let nodeId = 0;
-  const getId = (prefix: string) => `${prefix}-${++nodeId}`;
-
-  // Generate random notes
-  const generateNotes = (prefix: string, count: number): TreeItem[] => {
-    return Array.from({ length: count }, () => ({
-      id: getId(prefix),
-      title: `${noteNames[Math.floor(Math.random() * noteNames.length)]} ${nodeId}`,
-      type: 'note' as const,
-    }));
-  };
-
-  // Generate folder with notes and possible subfolders
-  const generateFolder = (prefix: string, depth: number = 0): TreeItem => {
-    const folderName = folderNames[Math.floor(Math.random() * folderNames.length)];
-    const children: TreeItem[] = [];
-    
-    // Add 2-5 notes per folder
-    children.push(...generateNotes(prefix, 2 + Math.floor(Math.random() * 4)));
-    
-    // Add 0-2 subfolders if not too deep
-    if (depth < 2) {
-      const subfolderCount = Math.floor(Math.random() * 3);
-      for (let i = 0; i < subfolderCount; i++) {
-        children.push(generateFolder(prefix, depth + 1));
-      }
-    }
-    
-    return {
-      id: getId(`${prefix}-folder`),
-      title: `${folderName} ${nodeId}`,
-      type: 'folder',
-      children,
-    };
-  };
-
-  // Personal Space: ~80 items (lots of notes, some folders)
-  const personalItems: TreeItem[] = [
-    ...generateNotes('personal', 15),
-    generateFolder('personal'),
-    generateFolder('personal'),
-    generateFolder('personal'),
-    ...generateNotes('personal', 10),
-    generateFolder('personal'),
-    generateFolder('personal'),
-  ];
-
-  // Shared: ~100 items (team collaboration)
-  const sharedItems: TreeItem[] = [
-    generateFolder('shared'), // Projects
-    generateFolder('shared'), // Team docs
-    ...generateNotes('shared', 8),
-    generateFolder('shared'),
-    generateFolder('shared'),
-    generateFolder('shared'),
-    ...generateNotes('shared', 5),
-    generateFolder('shared'),
-  ];
-
-  // Organization: ~120 items (company-wide docs)
-  const orgItems: TreeItem[] = [
-    generateFolder('org'), // Engineering
-    generateFolder('org'), // Product
-    generateFolder('org'), // Design
-    generateFolder('org'), // Marketing
-    ...generateNotes('org', 10),
-    generateFolder('org'),
-    generateFolder('org'),
-    generateFolder('org'),
-    ...generateNotes('org', 8),
-    generateFolder('org'),
-  ];
-
-  const sections: Section[] = [
-    {
-      id: 'personal',
-      name: 'Personal Space',
-      icon: LockClosedIcon,
-      scope: 'personal',
-      items: personalItems,
-    },
-    {
-      id: 'shared',
-      name: 'Shared',
-      icon: UserGroupIcon,
-      scope: 'shared',
-      items: sharedItems,
-    },
-    {
-      id: 'organization',
-      name: 'Organization',
-      icon: BuildingOfficeIcon,
-      scope: 'organization',
-      items: orgItems,
-    },
-  ];
-
-  const trash: TreeItem[] = generateNotes('trash', 5);
-
-  return { sections, trash };
-}
-
-// Generate mock data once
-const { sections: initialSections, trash: initialTrash } = generateMockData();
-
-const mockQuickAccess = {
-  recent: [
-    { id: 'recent-1', title: 'Sprint Planning 42' },
-    { id: 'recent-2', title: 'API Reference 15' },
-    { id: 'recent-3', title: 'Q1 Roadmap' },
-  ],
-  favorites: [
-    { id: 'fav-1', title: 'Quick Reference' },
-    { id: 'fav-2', title: 'Important Links' },
-    { id: 'fav-3', title: 'Team Directory' },
-    { id: 'fav-4', title: 'Project Templates' },
-  ],
-};
-
-const mockTags = ['#roadmap', '#q1-2026', '#launch', '#priority', '#meeting-notes', '#engineering', '#design', '#product', '#urgent', '#review'];
-
-// Helper to count all items recursively (notes only)
-function countItems(items: TreeItem[]): number {
-  return items.reduce((acc, item) => {
-    if (item.type === 'folder' && item.children) {
-      return acc + countItems(item.children);
-    }
-    return acc + 1;
-  }, 0);
-}
-
-// Helper to add item to tree at specific parent
-function addItemToTree(items: TreeItem[], parentId: string | null, newItem: TreeItem): TreeItem[] {
-  if (!parentId) {
-    return [...items, newItem];
-  }
-  
-  return items.map(item => {
-    if (item.id === parentId && item.type === 'folder') {
-      return {
-        ...item,
-        children: [...(item.children || []), newItem],
-      };
-    }
-    if (item.children) {
-      return {
-        ...item,
-        children: addItemToTree(item.children, parentId, newItem),
-      };
-    }
-    return item;
-  });
-}
-
-// Helper to rename item in tree
-function renameItemInTree(items: TreeItem[], itemId: string, newTitle: string): TreeItem[] {
-  return items.map(item => {
-    if (item.id === itemId) {
-      return { ...item, title: newTitle };
-    }
-    if (item.children) {
-      return {
-        ...item,
-        children: renameItemInTree(item.children, itemId, newTitle),
-      };
-    }
-    return item;
-  });
-}
-
-// Recursive TreeItem component
-function TreeItemComponent({ 
-  item, 
+/**
+ * Tree node component - renders a single node and its children recursively.
+ */
+function TreeNodeItem({
+  node,
   depth = 0,
-  expandedIds,
+  isExpanded,
+  isSelected,
   onToggle,
-  onNoteClick,
-  onNewNote,
-  onNewFolder,
+  onSelect,
   onRename,
+  onDelete,
+  onCreateSubfolder,
+  onCreateNoteInFolder,
   editingId,
   onStartEdit,
   onCancelEdit,
-  currentNoteId,
-  scope,
+  onDrop,
+  draggedNodeId,
+  onDragStart,
+  onDragEnd,
+  isNodeExpanded,
+  isNodeSelected,
 }: {
-  item: TreeItem;
+  node: TreeNode;
   depth?: number;
-  expandedIds: string[];
+  isExpanded: boolean;
+  isSelected: boolean;
   onToggle: (id: string) => void;
-  onNoteClick: (id: string) => void;
-  onNewNote: (parentId?: string) => void;
-  onNewFolder: (parentId?: string) => void;
-  onRename: (id: string, newTitle: string) => void;
+  onSelect: (id: string) => void;
+  onRename: (id: string, title: string) => void;
+  onDelete: (id: string) => void;
+  onCreateSubfolder: (parentId: string) => void;
+  onCreateNoteInFolder: (parentId: string) => void;
   editingId: string | null;
   onStartEdit: (id: string) => void;
   onCancelEdit: () => void;
-  currentNoteId: string | null;
-  scope: 'personal' | 'shared' | 'organization';
+  onDrop: (targetNodeId: string, droppedNodeId: string) => void;
+  draggedNodeId: string | null;
+  onDragStart: (nodeId: string) => void;
+  onDragEnd: () => void;
+  isNodeExpanded: (nodeId: string) => boolean;
+  isNodeSelected: (nodeId: string) => boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [editValue, setEditValue] = useState(item.title);
-  const isExpanded = expandedIds.includes(item.id);
-  const isFolder = item.type === 'folder';
-  const hasChildren = isFolder && item.children && item.children.length > 0;
-  const isEditing = editingId === item.id;
+  const [editValue, setEditValue] = useState(node.title);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const isFolder = node.type === 'folder';
+  const hasChildren = isFolder && node.children && node.children.length > 0;
+  const isEditing = editingId === node.id;
+  const isDragging = draggedNodeId === node.id;
+  
+  // Check if draggedNodeId is a descendant of this node (prevent dropping into own children)
+  const isDescendant = (nodeToCheck: TreeNode, targetId: string): boolean => {
+    if (nodeToCheck.id === targetId) return true;
+    if (!nodeToCheck.children) return false;
+    return nodeToCheck.children.some(child => isDescendant(child, targetId));
+  };
+  
+  // Can only drop here if:
+  // 1. This is a folder
+  // 2. Not dropping onto itself
+  // 3. Not dropping into its own descendant (would create circular reference)
+  const canDropHere = isFolder && draggedNodeId !== node.id && (!draggedNodeId || !isDescendant(node, draggedNodeId));
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -270,12 +128,12 @@ function TreeItemComponent({
   }, [isEditing]);
 
   useEffect(() => {
-    setEditValue(item.title);
-  }, [item.title]);
+    setEditValue(node.title);
+  }, [node.title]);
 
   const handleSubmitRename = () => {
-    if (editValue.trim() && editValue !== item.title) {
-      onRename(item.id, editValue.trim());
+    if (editValue.trim() && editValue !== node.title) {
+      onRename(node.id, editValue.trim());
     }
     onCancelEdit();
   };
@@ -284,7 +142,7 @@ function TreeItemComponent({
     if (e.key === 'Enter') {
       handleSubmitRename();
     } else if (e.key === 'Escape') {
-      setEditValue(item.title);
+      setEditValue(node.title);
       onCancelEdit();
     }
   };
@@ -292,10 +150,33 @@ function TreeItemComponent({
   if (isFolder) {
     return (
       <div>
-        <div
-          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group"
+        <div 
+          draggable={!isEditing}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            onDragStart(node.id);
+          }}
+          onDragEnd={onDragEnd}
+          className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group ${
+            isDragOver ? 'bg-primary/10 ring-2 ring-primary' : ''
+          } ${isDragging ? 'opacity-50' : ''}`}
+          onDragOver={(e) => {
+            if (canDropHere) {
+              e.preventDefault();
+              setIsDragOver(true);
+            }
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragOver(false);
+            if (canDropHere && draggedNodeId) {
+              onDrop(node.id, draggedNodeId);
+            }
+          }}
         >
-          <button onClick={() => onToggle(item.id)} className="flex items-center">
+          <button onClick={() => onToggle(node.id)} className="flex items-center">
             {isExpanded ? (
               <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
@@ -314,20 +195,40 @@ function TreeItemComponent({
               className="flex-1 bg-background border border-input rounded px-1 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
             />
           ) : (
-            <span 
+            <span
               className="flex-1 truncate cursor-pointer"
-              onDoubleClick={() => onStartEdit(item.id)}
+              onDoubleClick={() => onStartEdit(node.id)}
             >
-              {item.title}
+              {node.title}
             </span>
           )}
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
             <span
               onClick={(e) => {
                 e.stopPropagation();
-                onStartEdit(item.id);
+                onCreateNoteInFolder(node.id);
               }}
-              className="p-0.5 rounded hover:bg-muted"
+              className="p-0.5 rounded hover:bg-muted cursor-pointer"
+              title="New note inside"
+            >
+              <PlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            </span>
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onCreateSubfolder(node.id);
+              }}
+              className="p-0.5 rounded hover:bg-muted cursor-pointer"
+              title="New folder inside"
+            >
+              <FolderPlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            </span>
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartEdit(node.id);
+              }}
+              className="p-0.5 rounded hover:bg-muted cursor-pointer"
               title="Rename"
             >
               <PencilIcon className="h-3.5 w-3.5 text-muted-foreground" />
@@ -335,43 +236,39 @@ function TreeItemComponent({
             <span
               onClick={(e) => {
                 e.stopPropagation();
-                onNewNote(item.id);
+                onDelete(node.id);
               }}
-              className="p-0.5 rounded hover:bg-muted"
-              title="New note"
+              className="p-0.5 rounded hover:bg-destructive/10 cursor-pointer"
+              title="Delete"
             >
-              <PlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
-            </span>
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onNewFolder(item.id);
-              }}
-              className="p-0.5 rounded hover:bg-muted"
-              title="New folder"
-            >
-              <FolderPlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <TrashIcon className="h-3.5 w-3.5 text-destructive" />
             </span>
           </div>
         </div>
         {isExpanded && hasChildren && (
           <div className="ml-3 pl-2 border-l border-border space-y-0.5 mt-0.5">
-            {item.children!.map((child) => (
-              <TreeItemComponent
+            {node.children!.map((child) => (
+              <TreeNodeItem
                 key={child.id}
-                item={child}
+                node={child}
                 depth={depth + 1}
-                expandedIds={expandedIds}
+                isExpanded={isNodeExpanded(child.id)}
+                isSelected={isNodeSelected(child.id)}
                 onToggle={onToggle}
-                onNoteClick={onNoteClick}
-                onNewNote={onNewNote}
-                onNewFolder={onNewFolder}
+                onSelect={onSelect}
                 onRename={onRename}
+                onDelete={onDelete}
+                onCreateSubfolder={onCreateSubfolder}
+                onCreateNoteInFolder={onCreateNoteInFolder}
                 editingId={editingId}
                 onStartEdit={onStartEdit}
                 onCancelEdit={onCancelEdit}
-                currentNoteId={currentNoteId}
-                scope={scope}
+                onDrop={onDrop}
+                draggedNodeId={draggedNodeId}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                isNodeExpanded={isNodeExpanded}
+                isNodeSelected={isNodeSelected}
               />
             ))}
           </div>
@@ -383,11 +280,25 @@ function TreeItemComponent({
   // Note item
   return (
     <div
-      className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group ${
-        currentNoteId === item.id ? 'bg-accent text-accent-foreground' : ''
-      }`}
+      draggable={!isEditing}
+      onDragStart={(e) => {
+        e.stopPropagation();
+        onDragStart(node.id);
+      }}
+      onDragEnd={onDragEnd}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer ${
+        isSelected ? 'bg-accent text-accent-foreground' : ''
+      } ${isDragging ? 'opacity-50' : ''}`}
+      onClick={() => onSelect(node.id)}
     >
-      <DocumentTextIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      {node.type === 'folder' ? (
+        <FolderIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      ) : (
+        <DocumentTextIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      )}
+      {node.isPinned && (
+        <StarIconSolid className="h-3 w-3 text-amber-500 flex-shrink-0" />
+      )}
       {isEditing ? (
         <input
           ref={inputRef}
@@ -396,186 +307,616 @@ function TreeItemComponent({
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSubmitRename}
           onKeyDown={handleKeyDown}
+          onClick={(e) => e.stopPropagation()}
           className="flex-1 bg-background border border-input rounded px-1 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
         />
       ) : (
-        <span 
-          className="flex-1 truncate cursor-pointer"
-          onClick={() => onNoteClick(item.id)}
-          onDoubleClick={() => onStartEdit(item.id)}
+        <span
+          className="flex-1 truncate"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onStartEdit(node.id);
+          }}
         >
-          {item.title}
+          {node.title}
         </span>
       )}
-      <span
-        onClick={(e) => {
-          e.stopPropagation();
-          onStartEdit(item.id);
-        }}
-        className="p-0.5 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-all"
-        title="Rename"
-      >
-        <PencilIcon className="h-3.5 w-3.5 text-muted-foreground" />
-      </span>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            onStartEdit(node.id);
+          }}
+          className="p-0.5 rounded hover:bg-muted cursor-pointer"
+          title="Rename"
+        >
+          <PencilIcon className="h-3.5 w-3.5 text-muted-foreground" />
+        </span>
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(node.id);
+          }}
+          className="p-0.5 rounded hover:bg-destructive/10 cursor-pointer"
+          title="Delete"
+        >
+          <TrashIcon className="h-3.5 w-3.5 text-destructive" />
+        </span>
+      </div>
     </div>
   );
 }
 
+/**
+ * Main sidebar component.
+ */
 export function NotesSidebar() {
   const dispatch = useAppDispatch();
-  const notesState = useAppSelector((state) => state.notes);
-  const currentNoteId = notesState?.currentNoteId;
-  
-  // Local state for tree structure
-  const [sections, setSections] = useState<Section[]>(initialSections);
-  const [trash, setTrash] = useState<TreeItem[]>(initialTrash);
-  const [expandedIds, setExpandedIds] = useState<string[]>(['personal', 'personal-folder-1']);
-  const [showTrash, setShowTrash] = useState(false);
+
+  // Redux state
+  const currentNoteId = useAppSelector((state) => state.notes.currentNoteId);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const tree = useAppSelector((state) => state.notesTree.tree);
+  const expandedNodes = useAppSelector((state) => state.notesTree.expandedNodes);
+  const loading = useAppSelector((state) => state.notesTree.loading);
+  const error = useAppSelector((state) => state.notesTree.error);
+  const creatingNote = useAppSelector((state) => state.notes.creatingNote);
+
+  // Local UI state
   const [editingId, setEditingId] = useState<string | null>(null);
-  
-  const handleNewNote = (scope: 'personal' | 'shared' | 'organization' = 'personal', parentId?: string) => {
-    const now = Date.now();
-    const noteId = `note-${now}`;
-    
-    let visibility = VisibilityScope.PRIVATE;
-    if (scope === 'shared') {
-      visibility = VisibilityScope.GROUP;
-    } else if (scope === 'organization') {
-      visibility = VisibilityScope.ORGANIZATION;
-    }
-    
-    const mockNote: PlainMessage<Note> = {
-      id: noteId,
-      title: 'Untitled Note',
-      content: '# Untitled Note\n\nStart writing here...',
-      visibility,
-      ownerId: 'current-user',
-      organizationId: '',
-      slug: '',
-      createdAt: {
-        seconds: Math.floor(now / 1000) as any,
-        nanos: (now % 1000) * 1000000,
-      },
-      updatedAt: {
-        seconds: Math.floor(now / 1000) as any,
-        nanos: (now % 1000) * 1000000,
-      },
-      isPinned: false,
-      isDeleted: false,
-      tags: [],
-      metadata: {},
-      version: 1 as any,
-      groupIds: [],
-      userPermission: PermissionLevel.OWNER,
-    };
-    
-    // Add to tree
-    const newTreeItem: TreeItem = {
-      id: noteId,
-      title: 'Untitled Note',
-      type: 'note',
-    };
-    
-    setSections(prev => prev.map(section => {
-      if (section.scope === scope) {
-        return {
-          ...section,
-          items: addItemToTree(section.items, parentId || null, newTreeItem),
-        };
+  const [showTrash, setShowTrash] = useState(false);
+  const [emptyingTrash, setEmptyingTrash] = useState(false);
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+
+  // Check if a node is expanded
+  const isExpanded = useCallback(
+    (id: string) => expandedNodes.includes(id),
+    [expandedNodes]
+  );
+
+  // Toggle node expansion
+  const handleToggle = useCallback(
+    (id: string) => {
+      dispatch(toggleNodeExpanded(id));
+    },
+    [dispatch]
+  );
+
+  // Select a note
+  const handleSelectNote = useCallback(
+    async (noteId: string) => {
+      // Set as current note first (for UI selection feedback)
+      dispatch(setCurrentNote(noteId));
+
+      // Fetch full note content to ensure we have complete data
+      // The loading state will be shown while fetching
+      try {
+        await dispatch(fetchNote(noteId)).unwrap();
+      } catch (err) {
+        console.error('Failed to fetch note:', err);
+        // On error, clear current note to show error state
+        dispatch(setCurrentNote(null));
       }
-      return section;
-    }));
-    
-    // Expand parent if specified
-    if (parentId && !expandedIds.includes(parentId)) {
-      setExpandedIds(prev => [...prev, parentId]);
-    }
-    
-    dispatch(setNote(mockNote));
-    dispatch(setCurrentNote(noteId));
-    
-    // Start editing the new note name
-    setEditingId(noteId);
-  };
+    },
+    [dispatch]
+  );
 
-  const handleNewFolder = (scope: 'personal' | 'shared' | 'organization', parentId?: string) => {
-    const now = Date.now();
-    const folderId = `folder-${now}`;
-    
-    const newFolder: TreeItem = {
-      id: folderId,
-      title: 'New Folder',
-      type: 'folder',
-      children: [],
-    };
-    
-    setSections(prev => prev.map(section => {
-      if (section.scope === scope) {
-        return {
-          ...section,
-          items: addItemToTree(section.items, parentId || null, newFolder),
-        };
+  // Create a new note
+  const handleNewNote = useCallback(
+    async (visibility: VisibilityScope = VisibilityScope.PRIVATE) => {
+      try {
+        const result = await dispatch(
+          createNote({
+            title: 'Untitled Note',
+            content: '# Untitled Note\n\nStart writing here...',
+            visibility,
+            nodeType: NodeType.NOTE,
+          })
+        ).unwrap();
+
+        // Wait a bit for DB commit, then refresh tree to show new note
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await dispatch(fetchNotesTree()).unwrap();
+
+        // Start editing the title immediately
+        setEditingId(result.id);
+      } catch (err) {
+        console.error('Failed to create note:', err);
       }
-      return section;
-    }));
-    
-    // Expand parent if specified
-    if (parentId && !expandedIds.includes(parentId)) {
-      setExpandedIds(prev => [...prev, parentId]);
-    }
-    
-    // Start editing the new folder name
-    setEditingId(folderId);
+    },
+    [dispatch]
+  );
+
+  // Create a new folder
+  const handleNewFolder = useCallback(
+    async (visibility: VisibilityScope = VisibilityScope.PRIVATE, parentId?: string) => {
+      try {
+        const result = await dispatch(
+          createNote({
+            title: 'New Folder',
+            content: '',
+            visibility,
+            nodeType: NodeType.FOLDER,
+            parentId,
+          })
+        ).unwrap();
+
+        console.log('[handleNewFolder] Created result nodeType:', result.nodeType, 'Expected FOLDER:', NodeType.FOLDER);
+
+        // Wait a bit for DB commit, then refresh tree to show new folder
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await dispatch(fetchNotesTree()).unwrap();
+
+        // Start editing the title immediately
+        setEditingId(result.id);
+      } catch (err) {
+        console.error('Failed to create folder:', err);
+      }
+    },
+    [dispatch]
+  );
+
+  // Create subfolder inside a parent folder
+  const handleCreateSubfolder = useCallback(
+    async (parentId: string) => {
+      // Find the parent node to get its visibility
+      const allNotes = Object.values(tree.pinned)
+        .concat(Object.values(tree.personal))
+        .concat(Object.values(tree.shared))
+        .concat(Object.values(tree.organization))
+        .concat(Object.values(tree.trash));
+      
+      const parentNode = allNotes.find((n) => n.id === parentId);
+      const visibility = parentNode?.visibility || VisibilityScope.PRIVATE;
+
+      await handleNewFolder(visibility, parentId);
+    },
+    [tree, handleNewFolder]
+  );
+
+  // Create note inside a parent folder
+  const handleCreateNoteInFolder = useCallback(
+    async (parentId: string) => {
+      // Find the parent node to get its visibility
+      const allNotes = Object.values(tree.pinned)
+        .concat(Object.values(tree.personal))
+        .concat(Object.values(tree.shared))
+        .concat(Object.values(tree.organization))
+        .concat(Object.values(tree.trash));
+      
+      const parentNode = allNotes.find((n) => n.id === parentId);
+      const visibility = parentNode?.visibility || VisibilityScope.PRIVATE;
+
+      try {
+        const result = await dispatch(
+          createNote({
+            title: 'Untitled Note',
+            content: '# Untitled Note\n\nStart writing here...',
+            visibility,
+            nodeType: NodeType.NOTE,
+            parentId,
+          })
+        ).unwrap();
+
+        // Wait a bit for DB commit, then refresh tree to show new note
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await dispatch(fetchNotesTree()).unwrap();
+
+        // Start editing the title immediately
+        setEditingId(result.id);
+      } catch (err) {
+        console.error('Failed to create note:', err);
+      }
+    },
+    [tree, dispatch]
+  );
+
+  // Rename a note/folder
+  const handleRename = useCallback(
+    async (nodeId: string, newTitle: string) => {
+      if (!organizationId) return;
+
+      // Update tree UI immediately for instant feedback
+      dispatch(updateNodeTitle({ nodeId, title: newTitle }));
+
+      try {
+        // Update via thunk (which updates both API and notes state)
+        await dispatch(updateNote({
+          noteId: nodeId,
+          title: newTitle,
+        })).unwrap();
+      } catch (err) {
+        console.error('Failed to rename note/folder:', err);
+        // Refresh tree to revert to server state on error
+        dispatch(fetchNotesTree());
+      }
+    },
+    [dispatch, organizationId]
+  );
+
+  // Handle drop - move note into folder
+  const handleDrop = useCallback(
+    async (targetFolderId: string, droppedNodeId: string) => {
+      if (!organizationId) return;
+
+      try {
+        // Update via API to move note into folder
+        await notesApi.updateNote({
+          noteId: droppedNodeId,
+          organizationId,
+          parentId: targetFolderId,
+        });
+
+        // Refresh tree to show updated structure
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await dispatch(fetchNotesTree()).unwrap();
+      } catch (err) {
+        console.error('Failed to move note:', err);
+        // Refresh tree to revert to server state on error
+        dispatch(fetchNotesTree());
+      }
+    },
+    [dispatch, organizationId]
+  );
+
+  // Drag handlers
+  const handleDragStart = useCallback((nodeId: string) => {
+    setDraggedNodeId(nodeId);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedNodeId(null);
+  }, []);
+
+  // Delete a note or folder
+  const handleDelete = useCallback(
+    async (noteId: string) => {
+      // Find the node to check if it's a folder
+      const findNode = (nodes: TreeNode[]): TreeNode | null => {
+        for (const node of nodes) {
+          if (node.id === noteId) return node;
+          if (node.children) {
+            const found = findNode(node.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      let targetNode: TreeNode | null = null;
+      for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
+        targetNode = findNode(tree[section]);
+        if (targetNode) break;
+      }
+      if (!targetNode) {
+        for (const group of tree.groups) {
+          targetNode = findNode(group.nodes);
+          if (targetNode) break;
+        }
+      }
+
+      const isFolder = targetNode?.type === 'folder';
+      const hasChildren = isFolder && targetNode?.children && targetNode.children.length > 0;
+      
+      // Confirm deletion with appropriate message
+      const message = hasChildren
+        ? 'Are you sure you want to delete this folder and all its contents? This action cannot be undone.'
+        : 'Are you sure you want to delete this item? This action cannot be undone.';
+      
+      const confirmed = window.confirm(message);
+      if (!confirmed) return;
+
+      try {
+        await dispatch(deleteNote({ noteId })).unwrap();
+
+        // If we deleted the currently selected note, clear selection
+        if (currentNoteId === noteId) {
+          dispatch(setCurrentNote(null));
+        }
+
+        // Refresh tree to show updated structure
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await dispatch(fetchNotesTree()).unwrap();
+      } catch (err) {
+        console.error('Failed to delete item:', err);
+      }
+    },
+    [dispatch, currentNoteId, tree]
+  );
+
+  // Refresh tree
+  const handleRefresh = useCallback(() => {
+    dispatch(fetchNotesTree());
+  }, [dispatch]);
+
+  // Count nodes in a section
+  const countNodes = (nodes: TreeNode[]): number => {
+    return nodes.reduce((acc, node) => {
+      if (node.type === 'folder' && node.children) {
+        return acc + countNodes(node.children);
+      }
+      return acc + 1;
+    }, 0);
   };
 
-  const handleRename = (itemId: string, newTitle: string) => {
-    // Update in tree
-    setSections(prev => prev.map(section => ({
-      ...section,
-      items: renameItemInTree(section.items, itemId, newTitle),
-    })));
-    
-    // Update in trash if applicable
-    setTrash(prev => renameItemInTree(prev, itemId, newTitle));
-    
-    // TODO: Update in Redux notes store if it's a note
-  };
+  // Render a section
+  const renderSection = (config: SectionConfig) => {
+    const nodes = tree[config.id];
+    const nodeCount = countNodes(nodes);
+    const sectionExpanded = isExpanded(config.id);
+    const IconComponent = config.icon;
 
-  const toggleExpanded = (id: string) => {
-    setExpandedIds(prev => 
-      prev.includes(id) 
-        ? prev.filter(i => i !== id)
-        : [...prev, id]
+    // Use StarIconSolid for pinned section
+    const SectionIcon = config.id === 'pinned' ?
+      (sectionExpanded ? StarIconSolid : StarIcon) :
+      IconComponent;
+
+    return (
+      <div key={config.id}>
+        <button
+          onClick={() => handleToggle(config.id)}
+          className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group"
+        >
+          {sectionExpanded ? (
+            <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+          )}
+          <SectionIcon className={`h-4 w-4 ${config.id === 'pinned' ? 'text-amber-500' : 'text-muted-foreground'}`} />
+          <span className="flex-1">{config.name}</span>
+          <span className="text-xs text-muted-foreground">{nodeCount}</span>
+          {config.scope && (
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNewFolder(config.scope);
+                }}
+                className="p-0.5 rounded hover:bg-muted cursor-pointer"
+                title="New folder"
+              >
+                <FolderPlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              </span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNewNote(config.scope);
+                }}
+                className="p-0.5 rounded hover:bg-muted cursor-pointer"
+                title="New note"
+              >
+                <PlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              </span>
+            </div>
+          )}
+        </button>
+
+        {sectionExpanded && nodes.length > 0 && (
+          <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
+            {nodes.map((node) => (
+              <TreeNodeItem
+                key={node.id}
+                node={node}
+                isExpanded={isExpanded(node.id)}
+                isSelected={currentNoteId === node.id}
+                onToggle={handleToggle}
+                onSelect={handleSelectNote}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                onCreateSubfolder={handleCreateSubfolder}
+                onCreateNoteInFolder={handleCreateNoteInFolder}
+                editingId={editingId}
+                onStartEdit={setEditingId}
+                onCancelEdit={() => setEditingId(null)}
+                onDrop={handleDrop}
+                draggedNodeId={draggedNodeId}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                isNodeExpanded={isExpanded}
+                isNodeSelected={(nodeId) => currentNoteId === nodeId}
+              />
+            ))}
+          </div>
+        )}
+
+        {sectionExpanded && nodes.length === 0 && (
+          <div className="ml-8 py-2 text-xs text-muted-foreground">
+            No notes yet
+          </div>
+        )}
+      </div>
     );
   };
 
-  const isExpanded = (id: string) => expandedIds.includes(id);
-  
-  const handleNoteClick = (noteId: string) => {
-    dispatch(setCurrentNote(noteId));
+  // Render group sections
+  const renderGroups = () => {
+    if (tree.groups.length === 0) return null;
+
+    return (
+      <div className="mt-2 pt-2 border-t border-border">
+        <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Groups
+        </p>
+        {tree.groups.map((group) => {
+          const groupExpanded = isExpanded(`group-${group.groupId}`);
+          const nodeCount = countNodes(group.nodes);
+
+          return (
+            <div key={group.groupId}>
+              <button
+                onClick={() => handleToggle(`group-${group.groupId}`)}
+                className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group"
+              >
+                {groupExpanded ? (
+                  <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+                )}
+                <UserGroupIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{group.groupName}</span>
+                <span className="text-xs text-muted-foreground">{nodeCount}</span>
+              </button>
+
+              {groupExpanded && group.nodes.length > 0 && (
+                <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
+                  {group.nodes.map((node) => (
+                    <TreeNodeItem
+                      key={node.id}
+                      node={node}
+                      isExpanded={isExpanded(node.id)}
+                      isSelected={currentNoteId === node.id}
+                      onToggle={handleToggle}
+                      onSelect={handleSelectNote}
+                      onRename={handleRename}
+                      onDelete={handleDelete}
+                      onCreateSubfolder={handleCreateSubfolder}
+                      onCreateNoteInFolder={handleCreateNoteInFolder}
+                      editingId={editingId}
+                      onStartEdit={setEditingId}
+                      onCancelEdit={() => setEditingId(null)}
+                      onDrop={handleDrop}
+                      draggedNodeId={draggedNodeId}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      isNodeExpanded={isExpanded}
+                      isNodeSelected={(nodeId) => currentNoteId === nodeId}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
-  
+
+  // Handle emptying trash
+  const handleEmptyTrash = useCallback(async () => {
+    if (tree.trash.length === 0 || !organizationId) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete all ${tree.trash.length} item(s) in trash? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setEmptyingTrash(true);
+      await notesApi.emptyTrash({ organizationId });
+      dispatch(fetchNotesTree({}));
+
+      // If current note was in trash, clear selection
+      if (currentNoteId && tree.trash.some((n) => n.id === currentNoteId)) {
+        dispatch(setCurrentNote(null));
+      }
+    } catch (error) {
+      console.error('Failed to empty trash:', error);
+      alert('Failed to empty trash. Please try again.');
+    } finally {
+      setEmptyingTrash(false);
+    }
+  }, [tree.trash, organizationId, dispatch, currentNoteId]);
+
+  // Render trash section
+  const renderTrash = () => {
+    if (tree.trash.length === 0) return null;
+
+    return (
+      <div className="mt-2 pt-2 border-t border-border">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowTrash(!showTrash)}
+            className="flex-1 flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left"
+          >
+            {showTrash ? (
+              <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+            )}
+            <TrashIcon className="h-4 w-4 text-muted-foreground" />
+            <span className="flex-1">Trash</span>
+            <span className="text-xs text-muted-foreground">{tree.trash.length}</span>
+          </button>
+          <button
+            onClick={handleEmptyTrash}
+            disabled={emptyingTrash || tree.trash.length === 0}
+            className="px-2 py-1.5 text-xs rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Empty trash"
+          >
+            {emptyingTrash ? 'Emptying...' : 'Empty'}
+          </button>
+        </div>
+
+        {showTrash && (
+          <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
+            {tree.trash.map((node) => (
+              <div
+                key={node.id}
+                onClick={() => handleSelectNote(node.id)}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left opacity-60 cursor-pointer ${currentNoteId === node.id ? 'bg-accent text-accent-foreground' : ''
+                  }`}
+              >
+                <DocumentTextIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="truncate">{node.title}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header with New Note and Collapse */}
+      {/* Header */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <button
-          onClick={() => handleNewNote('personal')}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors"
+          onClick={() => handleNewNote()}
+          disabled={creatingNote}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors disabled:opacity-50"
         >
-          <PlusIcon className="h-4 w-4" />
+          {creatingNote ? (
+            <ArrowPathIcon className="h-4 w-4 animate-spin" />
+          ) : (
+            <PlusIcon className="h-4 w-4" />
+          )}
           <span>New Note</span>
         </button>
-        <button
-          onClick={() => dispatch(toggleSidebar())}
-          className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-          title="Toggle sidebar (⌘\\)"
-        >
-          <ChevronDoubleLeftIcon className="h-4 w-4 text-primary" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => dispatch(expandAll())}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
+            title="Expand all"
+          >
+            <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => dispatch(collapseAll())}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
+            title="Collapse all"
+          >
+            <ChevronUpIcon className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            <ArrowPathIcon className={`h-4 w-4 text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => dispatch(toggleSidebar())}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
+            title="Toggle sidebar (⌘\\)"
+          >
+            <ChevronDoubleLeftIcon className="h-4 w-4 text-primary" />
+          </button>
+        </div>
       </div>
-      
-      {/* Quick Access Section */}
+
+      {/* Quick Access */}
       <div className="px-3 py-2">
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Quick Access
@@ -584,142 +925,35 @@ export function NotesSidebar() {
           <button className="w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left">
             <ClockIcon className="h-4 w-4 text-muted-foreground" />
             <span>Recent</span>
-            <span className="ml-auto text-xs text-muted-foreground">{mockQuickAccess.recent.length}</span>
-          </button>
-          <button className="w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left">
-            <StarIcon className="h-4 w-4 text-amber-500" />
-            <span>Favorites</span>
-            <span className="ml-auto text-xs text-muted-foreground">{mockQuickAccess.favorites.length}</span>
           </button>
         </nav>
       </div>
-      
-      {/* Main Sections - Permission-based */}
+
+      {/* Error state */}
+      {error && (
+        <div className="px-3 py-2">
+          <div className="px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md">
+            {error}
+            <button
+              onClick={handleRefresh}
+              className="ml-2 underline hover:no-underline"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Sections */}
       <div className="flex-1 overflow-y-auto px-3 py-2">
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Spaces
         </p>
         <nav className="space-y-0.5 mt-1">
-          {sections.map((section) => {
-            const IconComponent = section.icon;
-            const itemCount = countItems(section.items);
-            return (
-              <div key={section.id}>
-                <button 
-                  onClick={() => toggleExpanded(section.id)}
-                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group"
-                >
-                  {isExpanded(section.id) ? (
-                    <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <IconComponent className="h-4 w-4 text-muted-foreground" />
-                  <span className="flex-1">{section.name}</span>
-                  <span className="text-xs text-muted-foreground">{itemCount}</span>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNewNote(section.scope);
-                      }}
-                      className="p-0.5 rounded hover:bg-muted"
-                      title="New note"
-                    >
-                      <PlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                    </span>
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNewFolder(section.scope);
-                      }}
-                      className="p-0.5 rounded hover:bg-muted"
-                      title="New folder"
-                    >
-                      <FolderPlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                    </span>
-                  </div>
-                </button>
-                
-                {/* Tree items in section */}
-                {isExpanded(section.id) && section.items.length > 0 && (
-                  <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
-                    {section.items.map((item) => (
-                      <TreeItemComponent
-                        key={item.id}
-                        item={item}
-                        expandedIds={expandedIds}
-                        onToggle={toggleExpanded}
-                        onNoteClick={handleNoteClick}
-                        onNewNote={(parentId) => handleNewNote(section.scope, parentId)}
-                        onNewFolder={(parentId) => handleNewFolder(section.scope, parentId)}
-                        onRename={handleRename}
-                        editingId={editingId}
-                        onStartEdit={setEditingId}
-                        onCancelEdit={() => setEditingId(null)}
-                        currentNoteId={currentNoteId ?? null}
-                        scope={section.scope}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          
-          {/* Trash Section */}
-          {trash.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-border">
-              <button 
-                onClick={() => setShowTrash(!showTrash)}
-                className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left"
-              >
-                {showTrash ? (
-                  <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
-                )}
-                <TrashIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="flex-1">Trash</span>
-                <span className="text-xs text-muted-foreground">{trash.length}</span>
-              </button>
-              
-              {showTrash && (
-                <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
-                  {trash.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleNoteClick(item.id)}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left opacity-60 ${
-                        currentNoteId === item.id ? 'bg-accent text-accent-foreground' : ''
-                      }`}
-                    >
-                      <DocumentTextIcon className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate">{item.title}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {SECTIONS.map(renderSection)}
+          {renderGroups()}
+          {renderTrash()}
         </nav>
-      </div>
-      
-      {/* Tags Section */}
-      <div className="px-3 py-3 border-t border-border">
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Tags
-        </p>
-        <div className="flex flex-wrap gap-1.5 mt-2 px-2">
-          {mockTags.map((tag) => (
-            <button
-              key={tag}
-              className="px-2 py-1 text-xs rounded-md bg-muted hover:bg-muted/80 transition-colors"
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
