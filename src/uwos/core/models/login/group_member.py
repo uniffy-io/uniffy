@@ -11,8 +11,8 @@ from sqlmodel import Field, SQLModel
 class GroupRole(str, Enum):
     """Group-level roles."""
 
-    ADMIN = "admin"  # Can manage group settings, members
-    MEMBER = "member"  # Regular group member
+    ADMIN = "ADMIN"  # Can manage group settings, members
+    MEMBER = "MEMBER"  # Regular group member
 
 
 class GroupMember(SQLModel, table=True):

@@ -74,6 +74,12 @@ export default function App() {
           </ProtectedRoute>
         } />
         
+        <Route path="/notes/:noteId" element={
+          <ProtectedRoute>
+            <NotesPage />
+          </ProtectedRoute>
+        } />
+        
         <Route path="/settings" element={
           <ProtectedRoute>
             <MainLayout>

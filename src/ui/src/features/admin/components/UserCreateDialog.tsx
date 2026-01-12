@@ -23,7 +23,7 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
   const [emailVerified, setEmailVerified] = useState(false);
   
   const [orgId, setOrgId] = useState('');
-  const [orgRole, setOrgRole] = useState('member');
+  const [orgRole, setOrgRole] = useState('MEMBER');
   
   const [organizations, setOrganizations] = useState<AdminOrganizationInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -219,9 +219,9 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
                   disabled={!orgId}
                   className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed capitalize"
                 >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                  <option value="owner">Owner</option>
+                  <option value="MEMBER">Member</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="OWNER">Owner</option>
                 </select>
               </div>
             </div>

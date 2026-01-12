@@ -13,11 +13,11 @@ from sqlmodel import Field, SQLModel
 class SSOProvider(str, Enum):
     """Supported SSO providers."""
 
-    SAML = "saml"  # SAML 2.0
-    OIDC = "oidc"  # OpenID Connect
-    GOOGLE = "google"  # Google Workspace
-    MICROSOFT = "microsoft"  # Microsoft Azure AD
-    OKTA = "okta"  # Okta
+    SAML = "SAML"  # SAML 2.0
+    OIDC = "OIDC"  # OpenID Connect
+    GOOGLE = "GOOGLE"  # Google Workspace
+    MICROSOFT = "MICROSOFT"  # Microsoft Azure AD
+    OKTA = "OKTA"  # Okta
 
 
 class SSOConfiguration(SQLModel, table=True):

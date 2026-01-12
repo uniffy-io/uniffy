@@ -20,7 +20,7 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [users, setUsers] = useState<UserInfoResponse[]>([]); // For adding new members
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedRole, setSelectedRole] = useState('member');
+  const [selectedRole, setSelectedRole] = useState('MEMBER');
   const [showAddForm, setShowAddForm] = useState(false);
   
   const { accessToken } = useAppSelector((state) => state.auth);
@@ -190,8 +190,8 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
                     onChange={(e) => setSelectedRole(e.target.value)}
                     className="w-full md:w-32 px-3 py-2.5 text-sm border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all capitalize"
                   >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
+                    <option value="MEMBER">Member</option>
+                    <option value="ADMIN">Admin</option>
                   </select>
                 </div>
                 <div className="flex items-end">
@@ -242,7 +242,7 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
                           <div className="flex items-center gap-3">
                             <div className={cn(
                               "h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold",
-                              member.role === 'admin'
+                              member.role === 'ADMIN'
                                 ? "bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-600 dark:text-purple-400"
                                 : "bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400"
                             )}>
@@ -251,7 +251,7 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
                             <div>
                               <div className="font-semibold text-foreground flex items-center gap-2">
                                 {member.username}
-                                {member.role === 'admin' && (
+                                {member.role === 'ADMIN' && (
                                   <ShieldCheckIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                                 )}
                               </div>
@@ -262,11 +262,11 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
                         <td className="px-6 py-4">
                           <span className={cn(
                             "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
-                            member.role === 'admin'
+                            member.role === 'ADMIN'
                               ? 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-950 dark:to-purple-900 dark:text-purple-300'
                               : 'bg-muted text-muted-foreground'
                           )}>
-                            {member.role}
+                            {member.role.toLowerCase()}
                           </span>
                         </td>
                         <td className="px-6 py-4">

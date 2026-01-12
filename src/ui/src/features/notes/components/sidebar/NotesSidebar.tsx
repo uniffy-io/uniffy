@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   PlusIcon,
   ClockIcon,
@@ -352,6 +353,7 @@ function TreeNodeItem({
  */
 export function NotesSidebar() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   // Redux state
   const currentNoteId = useAppSelector((state) => state.notes.currentNoteId);
@@ -385,8 +387,8 @@ export function NotesSidebar() {
   // Select a note
   const handleSelectNote = useCallback(
     async (noteId: string) => {
-      // Set as current note first (for UI selection feedback)
-      dispatch(setCurrentNote(noteId));
+      // Navigate to the note URL (this will also trigger setCurrentNote via useEffect in NotesPage)
+      navigate(`/notes/${noteId}`);
 
       // Fetch full note content to ensure we have complete data
       // The loading state will be shown while fetching
@@ -398,7 +400,7 @@ export function NotesSidebar() {
         dispatch(setCurrentNote(null));
       }
     },
-    [dispatch]
+    [dispatch, navigate]
   );
 
   // Create a new note

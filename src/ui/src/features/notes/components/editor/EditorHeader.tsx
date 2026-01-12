@@ -8,7 +8,6 @@ import {
   CodeBracketIcon,
   StarIcon,
   ChevronRightIcon,
-  PlusIcon,
   ChevronDoubleRightIcon,
   ChevronDoubleLeftIcon,
   ArrowPathIcon,
@@ -24,6 +23,7 @@ import { updateNote } from '../../store/notesSlice';
 import { useSaveStatus } from '../../hooks/useNotesHooks';
 import { buildBreadcrumbPath } from '../../utils/notesTreeUtils';
 import type { EditorMode } from '../../store/editorSlice';
+import { TagInput } from './TagInput';
 
 interface EditorHeaderProps {
   note: PlainMessage<Note>;
@@ -291,31 +291,12 @@ export function EditorHeader({ note }: EditorHeaderProps) {
         
         {/* Tags Row */}
         <div className="flex items-center gap-2 mt-4 ml-14">
-          {note.tags && note.tags.length > 0 ? (
-            note.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2.5 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
-              >
-                #{tag}
-              </span>
-            ))
-          ) : (
-            <>
-              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
-                #roadmap
-              </span>
-              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400">
-                #q1-2026
-              </span>
-              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400">
-                #priority
-              </span>
-            </>
-          )}
-          <button className="p-1 rounded-full hover:bg-muted transition-colors">
-            <PlusIcon className="h-4 w-4 text-muted-foreground" />
-          </button>
+          <TagInput
+            tags={note.tags || []}
+            onTagsChange={(newTags) => {
+              dispatch(updateNote({ noteId: note.id, tags: newTags }));
+            }}
+          />
         </div>
       </div>
     </div>

@@ -92,7 +92,7 @@ class AdminHandlers:
 
                 role = OrganizationRole.MEMBER
                 with contextlib.suppress(ValueError):
-                    role = OrganizationRole(request.role.lower())
+                    role = OrganizationRole(request.role.upper())
 
                 org_ops = OrganizationOperations(session)
                 membership = await org_ops.add_member(
@@ -440,7 +440,7 @@ class GroupHandlers:
 
                 role = GroupRole.MEMBER
                 with contextlib.suppress(ValueError):
-                    role = GroupRole(request.role.lower())
+                    role = GroupRole(request.role.upper())
 
                 await group_ops.add_member(
                     group_id=UUID(request.group_id),

@@ -147,9 +147,10 @@ class NoteOperations(BaseContentOperations[Note]):
 
         # Index for search
         await self._index_for_search(
-            content=note,
+            model=note,
             group_ids=group_ids if visibility == VisibilityScope.GROUP else None,
         )
+        await self.session.commit()
 
         return note
 
@@ -228,7 +229,8 @@ class NoteOperations(BaseContentOperations[Note]):
 
         # Update search index
         group_ids = await self._get_content_group_ids(note.id)
-        await self._index_for_search(content=note, group_ids=group_ids)
+        await self._index_for_search(model=note, group_ids=group_ids)
+        await self.session.commit()
 
         return note
 
@@ -394,6 +396,12 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self.session.commit()
         await self.session.refresh(note)
+
+        # Update search index with new content
+        group_ids = await self._get_content_group_ids(note.id)
+        await self._index_for_search(model=note, group_ids=group_ids)
+        await self.session.commit()
+
         return note
 
     async def get_backlinks(

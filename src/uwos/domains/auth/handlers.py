@@ -268,7 +268,7 @@ class AuthHandlers:
                     role = OrganizationRole.MEMBER
                     if request.HasField("organization_role"):
                         with contextlib.suppress(ValueError):
-                            role = OrganizationRole(request.organization_role.lower())
+                            role = OrganizationRole(request.organization_role.upper())
                     await org_ops.add_member(user.id, UUID(request.organization_id), role)
 
                 return user_to_proto(user)

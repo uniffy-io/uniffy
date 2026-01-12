@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { NotesLayout } from '../components/NotesLayout';
@@ -7,12 +8,13 @@ import { NotesEditor } from '../components/editor/NotesEditor';
 import { NotesMetadataPanel } from '../components/metadata/NotesMetadataPanel';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { toggleSidebar } from '../store/editorSlice';
-import { fetchNotes } from '../store/notesSlice';
+import { fetchNotes, setCurrentNote } from '../store/notesSlice';
 import { fetchNotesTree } from '../store/notesTreeSlice';
 
 export default function NotesPage() {
   useDocumentTitle('Notes');
   const dispatch = useAppDispatch();
+  const { noteId } = useParams<{ noteId: string }>();
   
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
@@ -43,6 +45,13 @@ export default function NotesPage() {
     dispatch(fetchNotes());
     dispatch(fetchNotesTree());
   }, [dispatch, organizationId]);
+  
+  // Select note from URL parameter
+  useEffect(() => {
+    if (noteId && noteId !== currentNoteId) {
+      dispatch(setCurrentNote(noteId));
+    }
+  }, [noteId, currentNoteId, dispatch]);
   
   return (
     <>

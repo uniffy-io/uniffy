@@ -25,7 +25,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
   const [orgs, setOrgs] = useState<AdminUserOrganizationInfo[]>([]);
   const [allOrgs, setAllOrgs] = useState<AdminOrganizationInfo[]>([]);
   const [newOrgId, setNewOrgId] = useState('');
-  const [newOrgRole, setNewOrgRole] = useState('member');
+  const [newOrgRole, setNewOrgRole] = useState('MEMBER');
   
   const [loading, setLoading] = useState(false);
   const { accessToken } = useAppSelector((state) => state.auth);
@@ -276,7 +276,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                             </div>
                             <div>
                               <div className="font-semibold text-sm">{org.name}</div>
-                              <div className="text-xs text-muted-foreground capitalize">{org.role}</div>
+                              <div className="text-xs text-muted-foreground capitalize">{org.role.toLowerCase()}</div>
                             </div>
                           </div>
                           <Button 
@@ -325,9 +325,9 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                         onChange={(e) => setNewOrgRole(e.target.value)}
                         className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all capitalize"
                       >
-                        <option value="member">Member</option>
-                        <option value="admin">Admin</option>
-                        <option value="owner">Owner</option>
+                        <option value="MEMBER">Member</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="OWNER">Owner</option>
                       </select>
                     </div>
                     <div className="flex items-end">

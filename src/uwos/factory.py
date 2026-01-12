@@ -8,8 +8,10 @@ from uwos.db import close_db, init_db
 from uwos.domains.auth.seed import seed_initial_data
 from uwos.domains.auth.service import AuthServiceImpl
 from uwos.domains.notes.service import NotesServiceImpl
+from uwos.domains.search.service import SearchServiceImpl
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
+from uwos.gen.search.v1.search_connect import SearchServiceASGIApplication
 from uwos.observability.crpc import LoggingInterceptor
 
 
@@ -100,3 +102,12 @@ def _mount_connect_services(app: FastAPI) -> None:
     )
     app.mount("/notes.v1.NotesService", notes_app)
     logger.info("Mounted NotesService at /notes.v1.NotesService")
+
+    # Create and mount the search service
+    search_service = SearchServiceImpl()
+    search_app = SearchServiceASGIApplication(
+        search_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/search.v1.SearchService", search_app)
+    logger.info("Mounted SearchService at /search.v1.SearchService")

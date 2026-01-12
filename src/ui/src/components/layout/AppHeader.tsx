@@ -9,6 +9,7 @@ import {
   Squares2X2Icon
 } from '@heroicons/react/24/outline';
 import { UserMenu } from './UserMenu';
+import { GlobalSearch } from '@/features/search';
 import { cn } from '@/utils/cn';
 
 const navItems = [
@@ -25,7 +26,7 @@ export function AppHeader() {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-background">
       <div className="container flex h-14 items-center mx-auto px-4 justify-between">
         <div className="flex items-center gap-6 md:gap-8">
           {/* Logo */}
@@ -64,6 +65,7 @@ export function AppHeader() {
 
         {/* Right Side */}
         <div className="flex items-center gap-4">
+          <GlobalSearch />
           <UserMenu />
         </div>
       </div>

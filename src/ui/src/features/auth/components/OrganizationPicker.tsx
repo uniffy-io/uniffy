@@ -124,7 +124,7 @@ export default function OrganizationPicker() {
             >
               <div>
                 <div className="font-semibold">{org.name}</div>
-                <div className="text-xs text-muted-foreground capitalize">{org.role}</div>
+                <div className="text-xs text-muted-foreground capitalize">{org.role.toLowerCase()}</div>
               </div>
               <div className="opacity-0 group-hover:opacity-100 transition-opacity text-primary">
                 →

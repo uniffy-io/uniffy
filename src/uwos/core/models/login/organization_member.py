@@ -11,9 +11,9 @@ from sqlmodel import Field, SQLModel
 class OrganizationRole(str, Enum):
     """Organization-level roles."""
 
-    OWNER = "owner"  # Full control, can delete org, manage billing
-    ADMIN = "admin"  # Can manage members, settings, but not billing/delete
-    MEMBER = "member"  # Regular member with default access
+    OWNER = "OWNER"  # Full control, can delete org, manage billing
+    ADMIN = "ADMIN"  # Can manage members, settings, but not billing/delete
+    MEMBER = "MEMBER"  # Regular member with default access
 
 
 class OrganizationMember(SQLModel, table=True):

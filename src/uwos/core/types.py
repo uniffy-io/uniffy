@@ -52,10 +52,10 @@ class PermissionLevel(str, Enum):
 
     """
 
-    VIEW = "view"
-    EDIT = "edit"
-    ADMIN = "admin"
-    OWNER = "owner"
+    VIEW = "VIEW"
+    EDIT = "EDIT"
+    ADMIN = "ADMIN"
+    OWNER = "OWNER"
 
 
 class NodeType(str, Enum):
@@ -107,14 +107,14 @@ class ContentType(str, Enum):
 
     """
 
-    NOTE = "note"
-    FILE = "file"
-    CALENDAR_EVENT = "calendar_event"
-    BOOK = "book"
-    PASSWORD = "password"
-    WORKFLOW = "workflow"
-    CHAT_MESSAGE = "chat_message"
-    SPACE = "space"
+    NOTE = "NOTE"
+    FILE = "FILE"
+    CALENDAR_EVENT = "CALENDAR_EVENT"
+    BOOK = "BOOK"
+    PASSWORD = "PASSWORD"
+    WORKFLOW = "WORKFLOW"
+    CHAT_MESSAGE = "CHAT_MESSAGE"
+    SPACE = "SPACE"
 
 
 class SubjectType(str, Enum):
@@ -134,6 +134,6 @@ class SubjectType(str, Enum):
 
     """
 
-    USER = "user"
-    GROUP = "group"
-    ORGANIZATION = "organization"
+    USER = "USER"
+    GROUP = "GROUP"
+    ORGANIZATION = "ORGANIZATION"
