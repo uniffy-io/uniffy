@@ -1,23 +1,16 @@
-import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 from uwos.db import close_db, init_db
-from uwos.db.seed import seed_initial_data
+from uwos.domains.auth.seed import seed_initial_data
+from uwos.domains.auth.service import AuthServiceImpl
+from uwos.domains.notes.service import NotesServiceImpl
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
-from uwos.gen.search.v1.search_connect import SearchServiceASGIApplication
 from uwos.observability.crpc import LoggingInterceptor
-from uwos.services.auth_service import AuthServiceImpl
-from uwos.services.notes_service import NotesServiceImpl
-from uwos.services.search_service import SearchServiceImpl
-
-logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -76,10 +69,6 @@ def create_app() -> FastAPI:
     # Mount ConnectRPC services
     _mount_connect_services(app)
 
-    # Mount static files for UI if available
-    _mount_ui(app)
-
-    # Health check endpoint
     @app.get("/api/health")
     async def health_check():
         return {"status": "ok", "service": "uwos"}
@@ -111,45 +100,3 @@ def _mount_connect_services(app: FastAPI) -> None:
     )
     app.mount("/notes.v1.NotesService", notes_app)
     logger.info("Mounted NotesService at /notes.v1.NotesService")
-
-    # Create and mount the search service
-    search_service = SearchServiceImpl()
-    search_app = SearchServiceASGIApplication(
-        search_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/search.v1.SearchService", search_app)
-    logger.info("Mounted SearchService at /search.v1.SearchService")
-
-
-def _mount_ui(app: FastAPI) -> None:
-    """Mount static files for UI if available."""
-    # Get the static files directory path
-    ui_build_dir = Path(__file__).parent.parent / "ui" / "dist"
-
-    if not ui_build_dir.exists():
-        logger.warning(f"UI build directory not found at {ui_build_dir}")
-        return
-
-    logger.info(f"Mounting UI static files from {ui_build_dir}")
-
-    # Mount static assets (JS, CSS, images, etc.)
-    app.mount(
-        "/assets",
-        StaticFiles(directory=ui_build_dir / "assets"),
-        name="static-assets",
-    )
-
-    # Serve index.html for root and all non-API routes (SPA routing)
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        # Don't intercept API routes
-        if full_path.startswith("api/"):
-            return {"error": "Not found"}
-
-        # Serve index.html for all other routes
-        index_file = ui_build_dir / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file)
-
-        return {"error": "UI not built"}

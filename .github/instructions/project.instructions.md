@@ -7,7 +7,7 @@ applyTo: ./**/**
 UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, books, passwords, and workflows exist in one application. Every piece of information can be referenced from anywhere else using universal @ mentions.
 
 **For detailed concept and vision, see `docs/uwos-concept.md`**
-**For multi-tenant architecture, see `docs/architecture-multi-tenant.md`**
+**For domain creation guide, see `.github/instructions/domain-creation.instructions.md`**
 
 ### Tech Stack
 
@@ -21,7 +21,7 @@ UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, b
 - **Frontend**: ReactJS, TypeScript
 - **API Communication**: Buf and ConnectRPC (Protocol Buffers with Connect protocol)
   - Use `.proto` files in the `proto/` directory to define services
-  - Generate code using `buf generate` (configured in `buf.gen.yaml`)
+  - Generate code using `make proto` (configured in `buf.gen.yaml`)
   - Frontend and backend communicate via ConnectRPC, not REST
 
 ---
@@ -68,4 +68,3 @@ You are a Senior Full-Stack Developer and an Expert in Python, FastAPI, SQLAlche
 - Always verify user has access to organization before accessing org resources
 - Support SSO via `sso_configurations` table (SAML, OIDC, etc.)
 - Password is optional (`hashed_password` nullable) for SSO-only users
-- See `docs/architecture-multi-tenant.md` for complete architecture details

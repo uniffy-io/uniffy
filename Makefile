@@ -84,11 +84,11 @@ build-ui: ## Build frontend for production
 	cd src/ui && pnpm build
 
 lint: ## Run linters
-	uv run ruff check src/uwos/
+	uv run ruff check src/uwos/ --exclude src/uwos/gen --fix
 	cd src/ui && pnpm run lint
 
 format: ## Format code
-	uv run ruff format src/uwos/
+	uv run ruff format src/uwos/ --exclude src/uwos/gen
 
 test: ## Run tests
 	uv run pytest

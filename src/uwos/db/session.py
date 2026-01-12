@@ -1,15 +1,13 @@
 """Database session management and initialization."""
 
-import logging
 import os
 from collections.abc import AsyncGenerator
 
 from alembic import command
 from alembic.config import Config
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.sql import text
-
-logger = logging.getLogger(__name__)
 
 # Global engine and session maker
 _engine: AsyncEngine | None = None

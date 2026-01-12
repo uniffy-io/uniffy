@@ -11,7 +11,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 
-from uwos.auth.context import get_user_id_from_context
+from uwos.domains.auth.context import get_user_id_from_context
 
 
 class LoggingInterceptor:
