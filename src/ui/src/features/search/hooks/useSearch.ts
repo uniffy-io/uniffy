@@ -32,7 +32,10 @@ export function useSearch(typeFilters?: SearchResultType[]): UseSearchResult {
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const performSearch = useCallback(async (searchQuery: string) => {
+        console.log('[useSearch] performSearch called with:', { searchQuery, organizationId, typeFilters });
+
         if (!searchQuery.trim() || !organizationId) {
+            console.log('[useSearch] Skipping search - empty query or no org');
             setResults([]);
             setIsLoading(false);
             return;
@@ -48,6 +51,7 @@ export function useSearch(typeFilters?: SearchResultType[]): UseSearchResult {
         setError(null);
 
         try {
+            console.log('[useSearch] Calling searchApi.search...');
             const response = await searchApi.search({
                 organizationId,
                 query: searchQuery,
@@ -55,6 +59,7 @@ export function useSearch(typeFilters?: SearchResultType[]): UseSearchResult {
                 limit: 20,
             });
 
+            console.log('[useSearch] Search response:', { itemCount: response.items.length, items: response.items });
             setResults(response.items);
         } catch (err) {
             // Ignore abort errors

@@ -33,6 +33,9 @@ export function NotesMetadataPanel() {
   const editorState = useAppSelector((state) => state.editor);
   const metadataPanelTab = editorState?.metadataPanelTab || 'links';
   
+  // State for showing copy feedback - must be declared before any conditional returns
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
   if (!currentNoteId) return null;
   
   const note = notes[currentNoteId];
@@ -67,9 +70,6 @@ export function NotesMetadataPanel() {
   const draftContent = editorState?.draftContent || {};
   const currentContent = draftContent[currentNoteId] ?? note.content;
   const headings = parseHeadings(currentContent);
-
-  // State for showing copy feedback
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Generate the anchor link URL for a heading
   const getHeadingAnchorUrl = (headingId: string) => {

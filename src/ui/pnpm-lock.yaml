@@ -56,6 +56,9 @@ importers:
       '@milkdown/ctx':
         specifier: ^7.18.0
         version: 7.18.0
+      '@milkdown/kit':
+        specifier: ^7.18.0
+        version: 7.18.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.9)(typescript@5.9.3)
       '@milkdown/plugin-highlight':
         specifier: ^7.18.0
         version: 7.18.0(@shikijs/types@3.21.0)(@types/hast@3.0.4)(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-transform@1.10.5)(prosemirror-view@1.41.4)

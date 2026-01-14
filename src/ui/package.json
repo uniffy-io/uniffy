@@ -26,6 +26,7 @@
     "@milkdown/core": "^7.18.0",
     "@milkdown/crepe": "^7.18.0",
     "@milkdown/ctx": "^7.18.0",
+    "@milkdown/kit": "^7.18.0",
     "@milkdown/plugin-highlight": "^7.18.0",
     "@milkdown/plugin-history": "^7.18.0",
     "@milkdown/plugin-listener": "^7.18.0",
