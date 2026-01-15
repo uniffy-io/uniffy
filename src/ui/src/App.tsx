@@ -88,6 +88,15 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        {/* User profile by ID - for @mentions linking */}
+        <Route path="/users/:userId" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <UserProfilePage />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+
         {/* Fallback for 404s */}
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">

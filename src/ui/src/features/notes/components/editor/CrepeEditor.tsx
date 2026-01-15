@@ -90,17 +90,6 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
   // Use provided content, or fall back to draft content, or note content
   // Check for both null and undefined in draft content
   const content = propContent ?? (currentDraft != null ? currentDraft : note.content);
-  
-  console.log('[CrepeEditor] Content calculation:', {
-    noteId: note.id,
-    noteContent: note.content,
-    noteContentLength: note.content?.length,
-    propContent,
-    currentDraft,
-    finalContent: content,
-    finalContentLength: content?.length,
-    readonly,
-  });
 
   // Handle content changes from the editor
   const handleContentChange = useCallback((markdown: string) => {
@@ -113,7 +102,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
   const handleMentionSelect = useCallback((result: SearchResultItem) => {
     if (!mentionPopup) return;
 
-    const { view, from, to } = mentionPopup;
+    const { view, from: storedFrom, query } = mentionPopup;
     const { state, dispatch } = view;
     const { schema } = state;
 
@@ -124,6 +113,11 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       setMentionPopup(null);
       return;
     }
+
+    // Use stored from position (@ symbol) and calculate to based on query length
+    // from = position of @, to = from + 1 (@) + query length
+    const from = storedFrom;
+    const to = storedFrom + 1 + query.length;
 
     // Create the mention node using URN from search result
     const mention = mentionType.create({
@@ -148,28 +142,21 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
 
   // Register mention trigger callback
   useEffect(() => {
-    console.log('[CrepeEditor] Registering mention trigger callback');
-    onMentionTrigger((event) => {
-      console.log('[CrepeEditor] Mention callback fired with event:', event);
+    // Only register callback for non-readonly editors (prevents duplicate popups)
+    if (readonly) return;
+
+    const unsubscribe = onMentionTrigger((event) => {
       setMentionPopup(event);
     });
+
     return () => {
-      console.log('[CrepeEditor] Unregistering mention trigger callback');
-      onMentionTrigger(() => {});
+      unsubscribe();
     };
-  }, []);
+  }, [readonly]);
 
   // Initialize Crepe editor
   useEffect(() => {
     if (!editorRef.current) return;
-
-    console.log('[CrepeEditor] Initializing with content:', {
-      noteId: note.id,
-      contentLength: content?.length,
-      contentPreview: content?.substring(0, 100),
-      hasEditorRef: !!editorRef.current,
-      readonly,
-    });
 
     const container = editorRef.current;
     let cancelled = false;
@@ -192,17 +179,12 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     // Access the underlying Milkdown editor and register our custom plugins
     try {
       const editor = crepe.editor;
-      console.log('[CrepeEditor] Registering custom plugins...');
-
       // Register mention plugins (includes view capture plugin)
       editor.use(mentionPlugins);
-
-      console.log('[CrepeEditor] Plugins registered successfully');
-
       // Store the editor reference globally so we can access it in plugins
       (window as any).__milkdownEditor = editor;
-    } catch (error) {
-      console.error('[CrepeEditor] Failed to register plugins:', error);
+    } catch {
+      // Plugin registration failed silently
     }
 
     // Listen for markdown changes (only if not readonly)
@@ -229,17 +211,14 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       try {
         const editor = crepe.editor;
         editor.action((ctx) => {
-          console.log('[CrepeEditor] Accessing editor view from context...');
           // Get the ProseMirror view from the context
           const view = ctx.get(editorViewCtx);
-          console.log('[CrepeEditor] Got editor view:', view);
           if (view) {
             (window as any).__milkdownEditorView = view;
-            console.log('[CrepeEditor] Stored editor view globally');
           }
         });
-      } catch (error) {
-        console.error('[CrepeEditor] Failed to access editor view:', error);
+      } catch {
+        // Editor view access failed silently
       }
 
       if (readonly) {
@@ -269,12 +248,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     
     // Check if content actually changed
     if (contentRef.current === content) return;
-    
-    console.log('[CrepeEditor] Updating readonly content', {
-      oldContent: contentRef.current?.substring(0, 50),
-      newContent: content?.substring(0, 50),
-    });
-    
+
     const container = editorRef.current;
     if (!container) return;
     
@@ -295,11 +269,9 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     // Register plugins before create (same as above)
     try {
       const editor = crepe.editor;
-      console.log('[CrepeEditor] Registering plugins in readonly mode...');
       editor.use(mentionPlugins);
-      console.log('[CrepeEditor] Plugins registered successfully in readonly mode');
-    } catch (error) {
-      console.error('[CrepeEditor] Failed to register plugins in readonly mode:', error);
+    } catch {
+      // Plugin registration failed silently
     }
 
     crepe.create().then(() => {
@@ -318,8 +290,8 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
             (window as any).__milkdownEditorView = view;
           }
         });
-      } catch (error) {
-        console.error('[CrepeEditor] Failed to access editor view in readonly mode:', error);
+      } catch {
+        // Editor view access failed silently
       }
 
       crepe.setReadonly(true);
@@ -329,8 +301,6 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       cancelled = true;
     };
   }, [content, readonly]);
-
-  console.log('[CrepeEditor] Render - mentionPopup state:', mentionPopup);
 
   return (
     <>
@@ -345,22 +315,18 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
         />
       </div>
 
-      {/* Mention search popup */}
-      {mentionPopup && (
-        <>
-          {console.log('[CrepeEditor] Rendering mention popup!', mentionPopup)}
-          {createPortal(
-            <MentionSearch
-              query={mentionPopup.query}
-              from={mentionPopup.from}
-              to={mentionPopup.to}
-              view={mentionPopup.view}
-              onSelect={handleMentionSelect}
-              onClose={() => setMentionPopup(null)}
-            />,
-            document.body
-          )}
-        </>
+      {/* Mention search popup - only for editable mode */}
+      {!readonly && mentionPopup && createPortal(
+        <MentionSearch
+          query={mentionPopup.query}
+          from={mentionPopup.from}
+          to={mentionPopup.to}
+          view={mentionPopup.view}
+          onSelect={handleMentionSelect}
+          onClose={() => setMentionPopup(null)}
+          onQueryChange={(newQuery) => setMentionPopup(prev => prev ? { ...prev, query: newQuery } : null)}
+        />,
+        document.body
       )}
     </>
   );

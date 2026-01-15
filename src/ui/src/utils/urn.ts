@@ -2,12 +2,15 @@
  * URN Utilities
  *
  * Utilities for parsing and working with URNs in the UWOS system.
- * URN format: urn:uwos:{type}:{id}
+ *
+ * Supported URN formats:
+ * - urn:uwos:{type}:{id} (legacy format)
+ * - urn:uwos:content:{TYPE}:{id} (new format with content namespace)
  *
  * Examples:
  * - urn:uwos:note:123e4567-e89b-12d3-a456-426614174000
- * - urn:uwos:file:456e7890-e89b-12d3-a456-426614174001
- * - urn:uwos:chat:789e0123-e89b-12d3-a456-426614174002
+ * - urn:uwos:content:NOTE:123e4567-e89b-12d3-a456-426614174000
+ * - urn:uwos:content:USER:456e7890-e89b-12d3-a456-426614174001
  */
 
 export enum UrnType {
@@ -35,6 +38,9 @@ export interface ParsedUrn {
 
 /**
  * Parse a URN string into its components
+ * Supports both formats:
+ * - urn:uwos:{type}:{id}
+ * - urn:uwos:content:{TYPE}:{id}
  */
 export function parseUrn(urn: string): ParsedUrn {
   // Basic validation
@@ -47,10 +53,10 @@ export function parseUrn(urn: string): ParsedUrn {
     };
   }
 
-  // URN format: urn:uwos:{type}:{id}
   const parts = urn.split(':');
 
-  if (parts.length !== 4 || parts[0] !== 'urn' || parts[1] !== 'uwos') {
+  // Must start with urn:uwos
+  if (parts.length < 4 || parts[0] !== 'urn' || parts[1] !== 'uwos') {
     return {
       urn,
       type: UrnType.UNKNOWN,
@@ -59,8 +65,28 @@ export function parseUrn(urn: string): ParsedUrn {
     };
   }
 
-  const typeStr = parts[2];
-  const id = parts[3];
+  let typeStr: string;
+  let id: string;
+
+  // Check for new format: urn:uwos:content:{TYPE}:{id}
+  if (parts[2] === 'content' && parts.length === 5) {
+    typeStr = parts[3].toLowerCase(); // TYPE is uppercase in new format
+    id = parts[4];
+  }
+  // Legacy format: urn:uwos:{type}:{id}
+  else if (parts.length === 4) {
+    typeStr = parts[2];
+    id = parts[3];
+  }
+  // Invalid format
+  else {
+    return {
+      urn,
+      type: UrnType.UNKNOWN,
+      id: '',
+      isValid: false,
+    };
+  }
 
   // Map type string to enum
   const type = Object.values(UrnType).includes(typeStr as UrnType)

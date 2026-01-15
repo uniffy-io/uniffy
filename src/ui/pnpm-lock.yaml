@@ -89,6 +89,9 @@ importers:
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
+      mdast-util-find-and-replace:
+        specifier: ^3.0.2
+        version: 3.0.2
       react:
         specifier: ^19.2.0
         version: 19.2.3
@@ -113,6 +116,9 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
+      unist-util-visit:
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       '@bufbuild/protoc-gen-es':
         specifier: 1.10.0
@@ -129,6 +135,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.3.1(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2))
+      '@types/mdast':
+        specifier: ^4.0.4
+        version: 4.0.4
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.4
@@ -138,6 +147,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.7)
+      '@types/unist':
+        specifier: ^3.0.3
+        version: 3.0.3
       '@vitejs/plugin-react':
         specifier: ^5.1.1
         version: 5.1.2(vite@7.3.1(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2))

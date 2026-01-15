@@ -443,8 +443,6 @@ export function NotesSidebar() {
           })
         ).unwrap();
 
-        console.log('[handleNewFolder] Created result nodeType:', result.nodeType, 'Expected FOLDER:', NodeType.FOLDER);
-
         // Wait a bit for DB commit, then refresh tree to show new folder
         await new Promise(resolve => setTimeout(resolve, 100));
         await dispatch(fetchNotesTree()).unwrap();

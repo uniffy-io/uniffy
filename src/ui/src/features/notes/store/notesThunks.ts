@@ -248,7 +248,7 @@ export const updateNote = createAsyncThunk<
  * Autosave note content (debounced calls should happen at component level).
  */
 export const autosaveNote = createAsyncThunk<
-    { noteId: string; version: bigint; savedAt: Date },
+    { noteId: string; version: number; savedAt: Date },
     {
         noteId: string;
         content: string;
@@ -270,7 +270,8 @@ export const autosaveNote = createAsyncThunk<
         }
         return {
             noteId: params.noteId,
-            version: response.version,
+            // Convert BigInt to Number for Redux serialization
+            version: typeof response.version === 'bigint' ? Number(response.version) : response.version,
             savedAt: response.savedAt?.toDate() ?? new Date(),
         };
     } catch (error) {
