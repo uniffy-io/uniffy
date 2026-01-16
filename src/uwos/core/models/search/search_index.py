@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, FLOAT
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import Field, SQLModel
@@ -16,12 +16,16 @@ class SearchIndex(SQLModel, table=True):
     This table is a 'phonebook' of all content in the system (notes, files, books, etc.).
     It is optimized for fuzzy search (trigrams) and fast permission filtering.
 
+    The primary key is composite (urn, organization_id) to allow:
+    - Content that is org-scoped (notes, files) to have one entry per org
+    - Global entities (users) to appear in search for each org they belong to
+
     Attributes
     ----------
     urn : str
-        Universal Resource Name (Primary Key). Format: `urn:uwos:<domain>:<type>:<id>`
+        Universal Resource Name. Format: `urn:uwos:content:<type>:<id>`
     organization_id : UUID
-        Tenant isolation.
+        Tenant isolation. Part of composite primary key.
     title : str
         Main display title and primary search target.
     description : str | None
@@ -29,11 +33,11 @@ class SearchIndex(SQLModel, table=True):
     keywords : str | None
         Aggregated text for indexing (Title + Tags + Filename + Snippet).
     entity_type : str
-        Type of content ('note', 'file', 'book', etc).
+        Type of content ('note', 'file', 'book', 'user', etc).
     url_path : str
         Frontend route to navigate to (e.g., '/notes/123').
     visibility : str
-        'private', 'group', 'organization', 'public'.
+        'PRIVATE', 'GROUP', 'ORGANIZATION', 'PUBLIC'.
     owner_id : UUID
         Owner of the content.
     shared_group_ids : list[UUID]
@@ -48,8 +52,9 @@ class SearchIndex(SQLModel, table=True):
     """
 
     __tablename__ = "search_index"
+    __table_args__ = (PrimaryKeyConstraint("urn", "organization_id"),)
 
-    urn: str = Field(primary_key=True, nullable=False)
+    urn: str = Field(nullable=False)
     organization_id: UUID = Field(nullable=False, index=True)
 
     title: str = Field(nullable=False)

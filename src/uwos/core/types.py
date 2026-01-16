@@ -104,6 +104,8 @@ class ContentType(str, Enum):
         Chat messages.
     SPACE : str
         AI-powered spaces.
+    USER : str
+        User profiles (for @mentions and references).
 
     """
 
@@ -115,6 +117,7 @@ class ContentType(str, Enum):
     WORKFLOW = "WORKFLOW"
     CHAT_MESSAGE = "CHAT_MESSAGE"
     SPACE = "SPACE"
+    USER = "USER"
 
 
 class SubjectType(str, Enum):

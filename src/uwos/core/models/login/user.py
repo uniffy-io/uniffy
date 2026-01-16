@@ -68,6 +68,19 @@ class User(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
 
+    @property
+    def urn(self) -> str:
+        """
+        Return the URN for this user.
+
+        Returns
+        -------
+        str
+            URN in format `urn:uwos:content:USER:{id}`
+
+        """
+        return f"urn:uwos:content:USER:{self.id}"
+
     def __repr__(self) -> str:
         """Return string representation of User."""
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"

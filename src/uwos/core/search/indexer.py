@@ -106,9 +106,9 @@ class SearchIndexer:
             rank_score=rank_score,
         )
 
-        # Upsert: update if URN exists
+        # Upsert: update if (URN, organization_id) exists
         stmt = stmt.on_conflict_do_update(
-            index_elements=["urn"],
+            index_elements=["urn", "organization_id"],
             set_={
                 "title": stmt.excluded.title,
                 "description": stmt.excluded.description,
@@ -125,7 +125,11 @@ class SearchIndexer:
 
         await self.session.execute(stmt)
 
-    async def remove(self, urn: str) -> None:
+    async def remove(
+        self,
+        urn: str,
+        organization_id: UUID | None = None,
+    ) -> None:
         """
         Remove content from the search index.
 
@@ -133,14 +137,28 @@ class SearchIndexer:
         ----------
         urn : str
             Universal Resource Name to remove.
+        organization_id : UUID | None
+            If provided, only remove for this organization.
+            If None, removes all entries for this URN across all orgs.
 
         """
-        await self.session.execute(delete(SearchIndex).where(SearchIndex.urn == urn))
+        if organization_id:
+            await self.session.execute(
+                delete(SearchIndex).where(
+                    SearchIndex.urn == urn,
+                    SearchIndex.organization_id == organization_id,
+                )
+            )
+        else:
+            await self.session.execute(
+                delete(SearchIndex).where(SearchIndex.urn == urn)
+            )
 
     async def remove_by_content(
         self,
         content_type: ContentType,
         content_id: UUID,
+        organization_id: UUID | None = None,
     ) -> None:
         """
         Remove content from the search index by type and ID.
@@ -151,10 +169,13 @@ class SearchIndexer:
             Type of content.
         content_id : UUID
             ID of the content.
+        organization_id : UUID | None
+            If provided, only remove for this organization.
+            If None, removes all entries across all orgs.
 
         """
         urn = build_content_urn(content_type, content_id)
-        await self.remove(urn)
+        await self.remove(urn, organization_id)
 
 
 def build_content_urn(content_type: ContentType, content_id: UUID) -> str:
