@@ -1,20 +1,22 @@
 /**
  * URN Preview Hook
  *
- * Fetches and caches preview data for URNs.
+ * Fetches and caches preview data for URNs using the unified search API.
  * Used for hover previews on mention chips.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { parseUrn, UrnType } from '@/utils/urn';
 import { useAppSelector } from '@/app/hooks';
-import { notesApi } from '@/features/notes/api/notesApi';
+import { searchApi } from '@/features/search';
+import { SearchResultType } from '@/gen/search/v1/search_pb';
 
 export interface UrnPreviewData {
   urn: string;
   title: string;
   description: string;
   type: UrnType;
+  url?: string;
   updatedAt?: string;
   createdAt?: string;
   metadata?: Record<string, string>;
@@ -30,8 +32,33 @@ interface UseUrnPreviewResult {
 // Global cache for preview data to avoid refetching
 const previewCache = new Map<string, UrnPreviewData>();
 
+// Map SearchResultType to UrnType
+function searchResultTypeToUrnType(type: SearchResultType): UrnType {
+  switch (type) {
+    case SearchResultType.NOTE:
+      return UrnType.NOTE;
+    case SearchResultType.FILE:
+      return UrnType.FILE;
+    case SearchResultType.CHAT:
+      return UrnType.CHAT;
+    case SearchResultType.USER:
+      return UrnType.USER;
+    case SearchResultType.BOOK:
+      return UrnType.BOOK;
+    case SearchResultType.CALENDAR_EVENT:
+      return UrnType.CALENDAR_EVENT;
+    case SearchResultType.PASSWORD:
+      return UrnType.PASSWORD;
+    case SearchResultType.SPACE:
+      return UrnType.SPACE;
+    default:
+      return UrnType.UNKNOWN;
+  }
+}
+
 /**
  * Hook for fetching URN preview data with caching.
+ * Uses the unified resolveUrns API to fetch metadata for any URN type.
  */
 export function useUrnPreview(): UseUrnPreviewResult {
   const [preview, setPreview] = useState<UrnPreviewData | null>(null);
@@ -71,66 +98,37 @@ export function useUrnPreview(): UseUrnPreviewResult {
     setError(null);
 
     try {
-      let previewData: UrnPreviewData | null = null;
+      // Use the unified resolveUrns API for all types
+      const response = await searchApi.resolveUrns({
+        organizationId,
+        urns: [urn],
+      });
 
-      // Fetch based on type
-      switch (parsed.type) {
-        case UrnType.NOTE: {
-          const response = await notesApi.getNote({
-            noteId: parsed.id,
-            organizationId,
-          });
-          if (response.note) {
-            const note = response.note;
-            // Get first 200 chars of content as description
-            const contentPreview = note.content
-              ? note.content
-                  .replace(/^#.*\n?/gm, '') // Remove headers
-                  .replace(/\[{3}[^\]]+\]{3}/g, '') // Remove mention syntax
-                  .replace(/[*_~`]/g, '') // Remove markdown formatting
-                  .trim()
-                  .substring(0, 200)
-              : '';
+      const resolved = response.resolved?.[urn];
+      let previewData: UrnPreviewData;
 
-            previewData = {
-              urn,
-              title: note.title || 'Untitled',
-              description: contentPreview + (contentPreview.length >= 200 ? '...' : ''),
-              type: parsed.type,
-              updatedAt: note.updatedAt?.toDate?.()?.toISOString() || undefined,
-              createdAt: note.createdAt?.toDate?.()?.toISOString() || undefined,
-            };
-          }
-          break;
-        }
-
-        case UrnType.USER: {
-          // For users, we'd need a user API - for now use placeholder
-          previewData = {
-            urn,
-            title: 'User',
-            description: 'User profile',
-            type: parsed.type,
-          };
-          break;
-        }
-
-        default: {
-          // Generic fallback - just show type info
-          previewData = {
-            urn,
-            title: parsed.type.charAt(0).toUpperCase() + parsed.type.slice(1),
-            description: `${parsed.type} content`,
-            type: parsed.type,
-          };
-        }
+      if (resolved) {
+        // Got metadata from the search index
+        previewData = {
+          urn,
+          title: resolved.title || getTypeLabel(parsed.type),
+          description: resolved.description || '',
+          type: searchResultTypeToUrnType(resolved.type),
+          url: resolved.url,
+        };
+      } else {
+        // Fallback for URNs not in search index
+        previewData = {
+          urn,
+          title: getTypeLabel(parsed.type),
+          description: `${parsed.type} content`,
+          type: parsed.type,
+        };
       }
 
-      if (previewData) {
-        // Cache the result
-        previewCache.set(urn, previewData);
-        setPreview(previewData);
-      }
+      // Cache the result
+      previewCache.set(urn, previewData);
+      setPreview(previewData);
     } catch (err) {
       // Ignore abort errors
       if (err instanceof Error && err.name === 'AbortError') {
@@ -157,6 +155,22 @@ export function useUrnPreview(): UseUrnPreviewResult {
     error,
     fetchPreview,
   };
+}
+
+/** Get a human-readable label for a URN type */
+function getTypeLabel(type: UrnType): string {
+  const labels: Record<UrnType, string> = {
+    [UrnType.NOTE]: 'Note',
+    [UrnType.FILE]: 'File',
+    [UrnType.CHAT]: 'Chat',
+    [UrnType.USER]: 'User',
+    [UrnType.BOOK]: 'Book',
+    [UrnType.CALENDAR_EVENT]: 'Event',
+    [UrnType.PASSWORD]: 'Password',
+    [UrnType.SPACE]: 'Space',
+    [UrnType.UNKNOWN]: 'Unknown',
+  };
+  return labels[type] || 'Unknown';
 }
 
 /**

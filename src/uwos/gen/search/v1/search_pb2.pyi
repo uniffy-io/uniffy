@@ -138,3 +138,36 @@ class GetReferencesResponse(_message.Message):
     items: _containers.RepeatedCompositeFieldContainer[SearchResultItem]
     total_count: int
     def __init__(self, items: _Optional[_Iterable[_Union[SearchResultItem, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
+
+class ResolveUrnsRequest(_message.Message):
+    __slots__ = ("organization_id", "urns")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    URNS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    urns: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., urns: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class ResolveUrnsResponse(_message.Message):
+    __slots__ = ("resolved",)
+    class ResolvedEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: UrnMetadata
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[UrnMetadata, _Mapping]] = ...) -> None: ...
+    RESOLVED_FIELD_NUMBER: _ClassVar[int]
+    resolved: _containers.MessageMap[str, UrnMetadata]
+    def __init__(self, resolved: _Optional[_Mapping[str, UrnMetadata]] = ...) -> None: ...
+
+class UrnMetadata(_message.Message):
+    __slots__ = ("title", "description", "type", "url")
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    description: str
+    type: SearchResultType
+    url: str
+    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ...) -> None: ...

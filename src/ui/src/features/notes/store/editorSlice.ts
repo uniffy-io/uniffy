@@ -61,7 +61,7 @@ const initialState: EditorState = {
         spellCheck: true,
     },
     isSidebarOpen: true,
-    isMetadataPanelOpen: true,
+    isMetadataPanelOpen: false,
     metadataPanelWidth: 320,
     metadataPanelTab: 'outline',
     starredNotes: {},

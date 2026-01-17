@@ -4,10 +4,12 @@ Search operations - business logic for unified search.
 Provides SearchOperations class that handles:
 - Fuzzy search with permission filtering
 - Search result ranking
+- URN metadata resolution
 """
 
 from uuid import UUID
 
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uwos.core.auth.permissions import ContentAccessQuery
@@ -268,3 +270,82 @@ class SearchOperations:
             )
 
         return search_results, total
+
+    async def resolve_urns(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        urns: list[str],
+    ) -> dict[str, SearchIndex]:
+        """
+        Resolve metadata for a batch of URNs.
+
+        Queries the search_index table for the given URNs with permission
+        filtering applied.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the resolution.
+        organization_id : UUID
+            Organization ID for tenant isolation.
+        urns : list[str]
+            List of URNs to resolve (max 100).
+
+        Returns
+        -------
+        dict[str, SearchIndex]
+            Mapping of URN -> SearchIndex for accessible items.
+            Missing or inaccessible URNs are omitted from the result.
+
+        """
+        if not urns:
+            return {}
+
+        # Limit to max 100 URNs
+        urns = urns[:100]
+
+        # Get user's group memberships for permission filtering
+        user_group_ids = await self.access_query.get_user_group_ids(
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+
+        # Query search_index for the given URNs
+        query = select(SearchIndex).where(
+            and_(
+                SearchIndex.organization_id == organization_id,
+                SearchIndex.urn.in_(urns),
+            )
+        )
+
+        # Permission filtering - user can see:
+        # 1. ORGANIZATION visibility items
+        # 2. Items they own
+        # 3. GROUP visibility items in groups they belong to
+        # 4. Items explicitly shared with them
+        permission_conditions = [
+            SearchIndex.visibility == "ORGANIZATION",
+            SearchIndex.owner_id == user_id,
+        ]
+
+        if user_group_ids:
+            permission_conditions.append(
+                and_(
+                    SearchIndex.visibility == "GROUP",
+                    SearchIndex.shared_group_ids.overlap(user_group_ids),
+                )
+            )
+
+        # Check if user is in shared_user_ids
+        permission_conditions.append(
+            SearchIndex.shared_user_ids.contains([user_id])
+        )
+
+        query = query.where(or_(*permission_conditions))
+
+        result = await self.session.execute(query)
+        items = list(result.scalars().all())
+
+        # Build result dict keyed by URN
+        return {item.urn: item for item in items}

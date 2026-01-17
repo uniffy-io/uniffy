@@ -7,7 +7,7 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import { SearchService } from '@/gen/search/v1/search_connect';
-import type { SearchRequest } from '@/gen/search/v1/search_pb';
+import type { SearchRequest, ResolveUrnsRequest } from '@/gen/search/v1/search_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**
@@ -24,5 +24,13 @@ export const searchApi = {
      */
     search: async (request: PartialMessage<SearchRequest>) => {
         return searchClient.search(request);
+    },
+
+    /**
+     * Resolve metadata for a batch of URNs.
+     * Returns a map of URN -> metadata for accessible items.
+     */
+    resolveUrns: async (request: PartialMessage<ResolveUrnsRequest>) => {
+        return searchClient.resolveUrns(request);
     },
 };

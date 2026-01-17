@@ -17,6 +17,9 @@ service SearchService {
 
   // Get all content that references a specific URN (universal backlinks)
   rpc GetReferences(GetReferencesRequest) returns (GetReferencesResponse) {}
+
+  // Resolve metadata for a batch of URNs
+  rpc ResolveUrns(ResolveUrnsRequest) returns (ResolveUrnsResponse) {}
 }
 
 enum SearchResultType {
@@ -93,4 +96,25 @@ message GetReferencesResponse {
   repeated SearchResultItem items = 1;
   // Total count of references
   int32 total_count = 2;
+}
+
+// Request with batch of URNs to resolve
+message ResolveUrnsRequest {
+  string organization_id = 1;
+  // URNs to resolve (max 100)
+  repeated string urns = 2;
+}
+
+// Response with resolved URN metadata
+message ResolveUrnsResponse {
+  // Map of URN -> resolved metadata (missing URNs omitted)
+  map<string, UrnMetadata> resolved = 1;
+}
+
+// Lightweight metadata for a URN
+message UrnMetadata {
+  string title = 1;
+  string description = 2;
+  SearchResultType type = 3;
+  string url = 4;
 }

@@ -28,6 +28,9 @@ class SearchService(Protocol):
     async def get_references(self, request: search_dot_v1_dot_search__pb2.GetReferencesRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.GetReferencesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def resolve_urns(self, request: search_dot_v1_dot_search__pb2.ResolveUrnsRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.ResolveUrnsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class SearchServiceASGIApplication(ConnectASGIApplication[SearchService]):
     def __init__(self, service: SearchService | AsyncGenerator[SearchService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -73,6 +76,16 @@ class SearchServiceASGIApplication(ConnectASGIApplication[SearchService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_references,
+                ),
+                "/search.v1.SearchService/ResolveUrns": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ResolveUrns",
+                        service_name="search.v1.SearchService",
+                        input=search_dot_v1_dot_search__pb2.ResolveUrnsRequest,
+                        output=search_dot_v1_dot_search__pb2.ResolveUrnsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.resolve_urns,
                 ),
             },
             interceptors=interceptors,
@@ -166,6 +179,26 @@ class SearchServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def resolve_urns(
+        self,
+        request: search_dot_v1_dot_search__pb2.ResolveUrnsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> search_dot_v1_dot_search__pb2.ResolveUrnsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResolveUrns",
+                service_name="search.v1.SearchService",
+                input=search_dot_v1_dot_search__pb2.ResolveUrnsRequest,
+                output=search_dot_v1_dot_search__pb2.ResolveUrnsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class SearchServiceSync(Protocol):
     def search(self, request: search_dot_v1_dot_search__pb2.SearchRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.SearchResponse:
@@ -175,6 +208,8 @@ class SearchServiceSync(Protocol):
     def delete_item(self, request: search_dot_v1_dot_search__pb2.DeleteItemRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.DeleteItemResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_references(self, request: search_dot_v1_dot_search__pb2.GetReferencesRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.GetReferencesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def resolve_urns(self, request: search_dot_v1_dot_search__pb2.ResolveUrnsRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.ResolveUrnsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -221,6 +256,16 @@ class SearchServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_references,
+                ),
+                "/search.v1.SearchService/ResolveUrns": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ResolveUrns",
+                        service_name="search.v1.SearchService",
+                        input=search_dot_v1_dot_search__pb2.ResolveUrnsRequest,
+                        output=search_dot_v1_dot_search__pb2.ResolveUrnsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.resolve_urns,
                 ),
             },
             interceptors=interceptors,
@@ -308,6 +353,26 @@ class SearchServiceClientSync(ConnectClientSync):
                 service_name="search.v1.SearchService",
                 input=search_dot_v1_dot_search__pb2.GetReferencesRequest,
                 output=search_dot_v1_dot_search__pb2.GetReferencesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def resolve_urns(
+        self,
+        request: search_dot_v1_dot_search__pb2.ResolveUrnsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> search_dot_v1_dot_search__pb2.ResolveUrnsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResolveUrns",
+                service_name="search.v1.SearchService",
+                input=search_dot_v1_dot_search__pb2.ResolveUrnsRequest,
+                output=search_dot_v1_dot_search__pb2.ResolveUrnsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

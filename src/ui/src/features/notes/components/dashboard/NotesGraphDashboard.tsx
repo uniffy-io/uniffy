@@ -28,12 +28,221 @@ import {
   LinkIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
-import { UrnType, urnToPath } from '@/utils/urn';
-import { URN_TYPE_HEX_COLORS, URN_TYPE_LEGEND } from '@/theme/urnColors';
+import { UrnType, urnToPath, parseUrn } from '@/utils/urn';
+import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
+import { useUrnResolution } from '@/features/search';
 
 /** Cast NodeObject to our GraphNode type */
 function asGraphNode(node: NodeObject): GraphNode {
   return node as unknown as GraphNode;
+}
+
+/**
+ * Draw a type-specific icon inside a node circle
+ * Icons match Heroicons 24/outline style - thin strokes, geometric shapes
+ */
+function drawNodeIcon(
+  ctx: CanvasRenderingContext2D,
+  type: UrnType | 'note',
+  x: number,
+  y: number,
+  size: number,
+  color: string
+) {
+  const s = size * 0.35; // Icon takes up ~35% of node radius
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = size * 0.05; // Very thin lines like Heroicons outline
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  switch (type) {
+    case 'note':
+    case UrnType.NOTE: {
+      // DocumentTextIcon - document with text lines
+      const w = s * 0.75;
+      const h = s;
+      const fold = s * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h / 2);
+      ctx.lineTo(w / 2 - fold, -h / 2);
+      ctx.lineTo(w / 2, -h / 2 + fold);
+      ctx.lineTo(w / 2, h / 2);
+      ctx.lineTo(-w / 2, h / 2);
+      ctx.closePath();
+      ctx.stroke();
+      // Fold line
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - fold, -h / 2);
+      ctx.lineTo(w / 2 - fold, -h / 2 + fold);
+      ctx.lineTo(w / 2, -h / 2 + fold);
+      ctx.stroke();
+      // Text lines
+      ctx.beginPath();
+      ctx.moveTo(-w / 3, h * 0.05);
+      ctx.lineTo(w / 3, h * 0.05);
+      ctx.moveTo(-w / 3, h * 0.25);
+      ctx.lineTo(w / 3, h * 0.25);
+      ctx.stroke();
+      break;
+    }
+
+    case UrnType.USER: {
+      // UserIcon - circle head + shoulders arc
+      const headR = s * 0.3;
+      ctx.beginPath();
+      ctx.arc(0, -s * 0.25, headR, 0, 2 * Math.PI);
+      ctx.stroke();
+      // Shoulders
+      ctx.beginPath();
+      ctx.arc(0, s * 0.85, s * 0.55, Math.PI * 1.2, Math.PI * 1.8);
+      ctx.stroke();
+      break;
+    }
+
+    case UrnType.CHAT: {
+      // ChatBubbleLeftIcon - speech bubble
+      const w = s * 0.9;
+      const h = s * 0.7;
+      const r = s * 0.15;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2 - s * 0.08, w, h, r);
+      ctx.stroke();
+      // Tail pointing down-left
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.25, h / 2 - s * 0.08);
+      ctx.lineTo(-w * 0.35, h / 2 + s * 0.18);
+      ctx.lineTo(-w * 0.05, h / 2 - s * 0.08);
+      ctx.stroke();
+      break;
+    }
+
+    case UrnType.FILE: {
+      // FolderIcon - folder shape
+      const w = s * 0.9;
+      const h = s * 0.7;
+      const tabW = w * 0.35;
+      const tabH = h * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h / 2 + tabH);
+      ctx.lineTo(-w / 2, h / 2);
+      ctx.lineTo(w / 2, h / 2);
+      ctx.lineTo(w / 2, -h / 2 + tabH);
+      ctx.lineTo(-w / 2 + tabW + tabH, -h / 2 + tabH);
+      ctx.lineTo(-w / 2 + tabW, -h / 2);
+      ctx.lineTo(-w / 2, -h / 2);
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    }
+
+    case UrnType.BOOK: {
+      // BookOpenIcon - open book shape
+      const w = s * 0.9;
+      const h = s * 0.65;
+      ctx.beginPath();
+      // Spine
+      ctx.moveTo(0, -h * 0.4);
+      ctx.lineTo(0, h * 0.5);
+      // Left page
+      ctx.moveTo(0, -h * 0.4);
+      ctx.quadraticCurveTo(-w * 0.25, -h * 0.5, -w / 2, -h * 0.35);
+      ctx.lineTo(-w / 2, h * 0.4);
+      ctx.quadraticCurveTo(-w * 0.25, h * 0.5, 0, h * 0.5);
+      // Right page
+      ctx.moveTo(0, -h * 0.4);
+      ctx.quadraticCurveTo(w * 0.25, -h * 0.5, w / 2, -h * 0.35);
+      ctx.lineTo(w / 2, h * 0.4);
+      ctx.quadraticCurveTo(w * 0.25, h * 0.5, 0, h * 0.5);
+      ctx.stroke();
+      break;
+    }
+
+    case UrnType.CALENDAR_EVENT: {
+      // CalendarIcon - calendar with top hooks
+      const w = s * 0.8;
+      const h = s * 0.85;
+      const r = s * 0.1;
+      // Main rectangle
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2 + h * 0.12, w, h * 0.8, r);
+      ctx.stroke();
+      // Top hooks
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.28, -h / 2 + h * 0.12);
+      ctx.lineTo(-w * 0.28, -h / 2);
+      ctx.moveTo(w * 0.28, -h / 2 + h * 0.12);
+      ctx.lineTo(w * 0.28, -h / 2);
+      ctx.stroke();
+      // Header line
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h * 0.08);
+      ctx.lineTo(w / 2, -h * 0.08);
+      ctx.stroke();
+      break;
+    }
+
+    case UrnType.PASSWORD: {
+      // KeyIcon - key shape
+      const ringR = s * 0.28;
+      // Ring
+      ctx.beginPath();
+      ctx.arc(-s * 0.2, 0, ringR, 0, 2 * Math.PI);
+      ctx.stroke();
+      // Shaft and teeth
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.2 + ringR, 0);
+      ctx.lineTo(s * 0.45, 0);
+      ctx.moveTo(s * 0.25, 0);
+      ctx.lineTo(s * 0.25, s * 0.18);
+      ctx.moveTo(s * 0.4, 0);
+      ctx.lineTo(s * 0.4, s * 0.14);
+      ctx.stroke();
+      break;
+    }
+
+    case UrnType.SPACE: {
+      // CubeIcon - 3D cube outline
+      const cs = s * 0.42;
+      ctx.beginPath();
+      // Top face
+      ctx.moveTo(0, -cs * 0.9);
+      ctx.lineTo(cs, -cs * 0.4);
+      ctx.lineTo(0, cs * 0.1);
+      ctx.lineTo(-cs, -cs * 0.4);
+      ctx.closePath();
+      ctx.stroke();
+      // Front edges
+      ctx.beginPath();
+      ctx.moveTo(-cs, -cs * 0.4);
+      ctx.lineTo(-cs, cs * 0.45);
+      ctx.lineTo(0, cs * 0.95);
+      ctx.lineTo(cs, cs * 0.45);
+      ctx.lineTo(cs, -cs * 0.4);
+      ctx.moveTo(0, cs * 0.1);
+      ctx.lineTo(0, cs * 0.95);
+      ctx.stroke();
+      break;
+    }
+
+    default: {
+      // LinkIcon - chain link for unknown types
+      const linkR = s * 0.22;
+      const gap = s * 0.15;
+      ctx.beginPath();
+      ctx.arc(-gap, -gap * 0.5, linkR, Math.PI * 0.75, Math.PI * 2.25);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(gap, gap * 0.5, linkR, Math.PI * 1.75, Math.PI * 1.25 + 2 * Math.PI);
+      ctx.stroke();
+      break;
+    }
+  }
+
+  ctx.restore();
 }
 
 /** Convert HSL string (from CSS var) to hex color */
@@ -96,7 +305,17 @@ function getThemeColors() {
 export function NotesGraphDashboard() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<ForceGraphMethods>();
+  const graphRef = useRef<ForceGraphMethods | null>(null);
+
+  // Store nodes by ID to preserve x/y positions across re-renders
+  // The d3-force simulation mutates these objects to add x/y coordinates
+  const nodeMapRef = useRef<Map<string, NodeObject>>(new Map());
+
+  // WORKAROUND: Custom hit detection to bypass react-force-graph-2d color-tracking bug
+  // The library's canvas-color-tracker has issues where certain node indices fail hit detection
+  // We implement coordinate-based hit detection instead
+  const lastHoveredNodeRef = useRef<string | null>(null);
+
 
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
@@ -119,21 +338,95 @@ export function NotesGraphDashboard() {
     return () => clearTimeout(timer);
   }, [accentColor, currentTheme]);
 
-  // Build graph data from notes
+  // Collect all external URNs from notes (non-NOTE types)
+  const externalUrns = useMemo(() => {
+    const notesList = Object.values(notes).filter((n) => !n.isDeleted);
+    const noteIds = new Set(notesList.map((n) => n.id));
+    const urns = new Set<string>();
+
+    for (const note of notesList) {
+      for (const urn of note.outgoingReferences || []) {
+        const parsed = parseUrn(urn);
+        // Only resolve URNs that aren't internal notes
+        if (parsed.isValid && !noteIds.has(parsed.id)) {
+          urns.add(urn);
+        }
+      }
+    }
+
+    return Array.from(urns);
+  }, [notes]);
+
+  // Resolve URN metadata for external references
+  const { resolved: urnMetadata } = useUrnResolution(externalUrns);
+
+  // Build graph data from notes with URN metadata for external references
   const graphData = useMemo(() => {
     const notesList = Object.values(notes).filter((n) => !n.isDeleted);
-    const data = buildGraphData(notesList);
+    if (notesList.length === 0) {
+      return { nodes: [] as NodeObject[], links: [] as LinkObject[] };
+    }
+
+    const data = buildGraphData(notesList, urnMetadata);
+
+    // Preserve node positions from previous render
+    // This ref access during render is intentional to maintain node positions
+    // when the graph data changes (e.g., when URN metadata updates)
+    /* eslint-disable react-hooks/refs */
+    const existingNodes = nodeMapRef.current;
+    const newNodeMap = new Map<string, NodeObject>();
+    for (const node of data.nodes) {
+      const existing = existingNodes.get(node.id);
+      if (existing && typeof existing.x === 'number' && typeof existing.y === 'number') {
+        node.x = existing.x;
+        node.y = existing.y;
+        node.vx = existing.vx;
+        node.vy = existing.vy;
+      }
+      newNodeMap.set(node.id, node as unknown as NodeObject);
+    }
+    nodeMapRef.current = newNodeMap;
+    /* eslint-enable react-hooks/refs */
+
     return {
-      nodes: data.nodes.map((node) => ({ ...node } as NodeObject)),
-      links: data.links.map((link) => ({ ...link } as LinkObject)),
+      nodes: data.nodes as unknown as NodeObject[],
+      links: data.links as unknown as LinkObject[],
     };
-  }, [notes]);
+  }, [notes, urnMetadata]);
 
   // Get graph statistics
   const stats = useMemo(() => {
     const notesList = Object.values(notes).filter((n) => !n.isDeleted);
-    return getGraphStats(buildGraphData(notesList));
-  }, [notes]);
+    if (notesList.length === 0) {
+      return { totalNodes: 0, internalNotes: 0, externalReferences: 0, totalLinks: 0, avgConnections: 0 };
+    }
+    const data = buildGraphData(notesList, urnMetadata);
+    return getGraphStats(data);
+  }, [notes, urnMetadata]);
+
+  // Track layout and calculate dimensions based on sidebar state
+  const isSidebarOpen = useAppSelector((state) => state.editor.isSidebarOpen);
+  
+  // Calculate dimensions based on viewport and sidebar
+  const calculateDimensions = useCallback(() => {
+    if (!containerRef.current) return { width: 800, height: 600 };
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      return { width: rect.width, height: rect.height };
+    }
+    
+    // Fallback: calculate based on viewport
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const headerHeight = 64; // 4rem
+    const sidebarWidth = isSidebarOpen ? 280 : 0;
+    
+    return {
+      width: Math.max(400, viewportWidth - sidebarWidth - 2), // -2 for separators
+      height: Math.max(400, viewportHeight - headerHeight),
+    };
+  }, [isSidebarOpen]);
 
   // Handle container resize with ResizeObserver
   useEffect(() => {
@@ -150,21 +443,50 @@ export function NotesGraphDashboard() {
 
     resizeObserver.observe(containerRef.current);
 
-    // Initial size
-    const rect = containerRef.current.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      setDimensions({ width: rect.width, height: rect.height });
-    }
+    // Set initial dimensions
+    const initialDimensions = calculateDimensions();
+    setDimensions(initialDimensions);
 
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [calculateDimensions]);
 
-  // Initial zoom to fit
+  // Update dimensions when sidebar state changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      graphRef.current?.zoomToFit(400, 80);
-    }, 800);
+      const newDimensions = calculateDimensions();
+      setDimensions(newDimensions);
+    }, 300); // Allow time for sidebar animation
     return () => clearTimeout(timer);
+  }, [isSidebarOpen, calculateDimensions]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const newDimensions = calculateDimensions();
+      setDimensions(newDimensions);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [calculateDimensions]);
+
+  // Initial zoom to fit and center
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      graphRef.current?.zoomToFit(400, 50);
+      // Center on origin after zoom
+      graphRef.current?.centerAt(0, 0, 500);
+    }, 800);
+    
+    // Additional zoomToFit after simulation settles
+    const timer2 = setTimeout(() => {
+      graphRef.current?.zoomToFit(300, 50);
+    }, 2000);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
   }, [graphData.nodes.length]);
 
   // Zoom controls
@@ -177,13 +499,14 @@ export function NotesGraphDashboard() {
   }, []);
 
   const handleZoomFit = useCallback(() => {
-    graphRef.current?.zoomToFit(400, 80);
+    graphRef.current?.zoomToFit(400, 50);
   }, []);
 
   // Node click handler - navigate to the appropriate page for any node type
   const handleNodeClick = useCallback(
     (node: NodeObject) => {
       const graphNode = asGraphNode(node);
+
       if (graphNode.isInternal) {
         // Internal notes - navigate directly
         navigate(`/notes/${graphNode.id}`);
@@ -198,13 +521,124 @@ export function NotesGraphDashboard() {
     [navigate]
   );
 
-  // Node hover handler
-  const handleNodeHover = useCallback((node: NodeObject | null) => {
-    setHoveredNode(node ? asGraphNode(node) : null);
-    if (containerRef.current) {
-      containerRef.current.style.cursor = node ? 'pointer' : 'grab';
+  // WORKAROUND: Custom hit detection to bypass library bug
+  // Find node at screen coordinates using graph's coordinate transformation
+  const findNodeAtPosition = useCallback(
+    (screenX: number, screenY: number): NodeObject | null => {
+      if (!graphRef.current || !containerRef.current) return null;
+
+      // Get container bounds
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = screenX - rect.left;
+      const y = screenY - rect.top;
+
+      // Convert screen coords to graph coords using the graph's transformation
+      const graphCoords = graphRef.current.screen2GraphCoords(x, y);
+      if (!graphCoords) return null;
+
+      const hitRadius = 15; // Pixels in graph coordinates for hit testing
+
+      // Find the closest node within hit radius
+      let closestNode: NodeObject | null = null;
+      let closestDist = Infinity;
+
+      for (const node of graphData.nodes) {
+        if (typeof node.x !== 'number' || typeof node.y !== 'number') continue;
+
+        const dx = graphCoords.x - node.x;
+        const dy = graphCoords.y - node.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < hitRadius && dist < closestDist) {
+          closestDist = dist;
+          closestNode = node;
+        }
+      }
+
+      return closestNode;
+    },
+    [graphData.nodes]
+  );
+
+  // Custom mouse move handler for hover detection
+  const handleCanvasMouseMove = useCallback(
+    (e: MouseEvent) => {
+      const node = findNodeAtPosition(e.clientX, e.clientY);
+      const nodeId = node ? asGraphNode(node).id : null;
+
+      // Only update if hover state changed
+      if (nodeId !== lastHoveredNodeRef.current) {
+        lastHoveredNodeRef.current = nodeId;
+
+        if (node) {
+          setHoveredNode(asGraphNode(node));
+          if (containerRef.current) {
+            containerRef.current.style.cursor = 'pointer';
+          }
+        } else {
+          setHoveredNode(null);
+          if (containerRef.current) {
+            containerRef.current.style.cursor = 'grab';
+          }
+        }
+      }
+    },
+    [findNodeAtPosition]
+  );
+
+  // Custom click handler
+  const handleCanvasClick = useCallback(
+    (e: MouseEvent) => {
+      const node = findNodeAtPosition(e.clientX, e.clientY);
+      if (node) {
+        handleNodeClick(node);
+      }
+    },
+    [findNodeAtPosition, handleNodeClick]
+  );
+
+  // Attach custom mouse handlers to bypass library's broken hit detection
+  useEffect(() => {
+    if (!containerRef.current || loading) return;
+
+    // Use MutationObserver to wait for canvas to be rendered
+    let canvas = containerRef.current.querySelector('canvas');
+
+    const attachHandlers = (canvasEl: HTMLCanvasElement) => {
+      canvasEl.addEventListener('mousemove', handleCanvasMouseMove);
+      canvasEl.addEventListener('click', handleCanvasClick);
+    };
+
+    const detachHandlers = (canvasEl: HTMLCanvasElement) => {
+      canvasEl.removeEventListener('mousemove', handleCanvasMouseMove);
+      canvasEl.removeEventListener('click', handleCanvasClick);
+    };
+
+    if (canvas) {
+      attachHandlers(canvas);
     }
-  }, []);
+
+    // Observe for canvas being added if not present yet
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node instanceof HTMLCanvasElement) {
+            canvas = node;
+            attachHandlers(canvas);
+          }
+        }
+      }
+    });
+
+    observer.observe(containerRef.current, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      if (canvas) {
+        detachHandlers(canvas);
+      }
+    };
+  }, [handleCanvasMouseMove, handleCanvasClick, loading]);
 
   // Get node color based on type
   const getNodeColor = useCallback(
@@ -265,23 +699,17 @@ export function NotesGraphDashboard() {
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
 
-      // Border ring
+      // Draw type icon inside the node
+      // Use white/light color for contrast against the node color
+      const iconColor = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.95)';
+      drawNodeIcon(ctx, graphNode.type, x, y, size, iconColor);
+
+      // Border ring (consistent for all nodes)
       ctx.beginPath();
       ctx.arc(x, y, size, 0, 2 * Math.PI);
       ctx.strokeStyle = isHovered ? themeColors.foreground : nodeColor;
       ctx.lineWidth = isHovered ? 2 / globalScale : 1 / globalScale;
       ctx.stroke();
-
-      // External reference indicator (dashed outer ring)
-      if (!graphNode.isInternal) {
-        ctx.beginPath();
-        ctx.arc(x, y, size + 4 / globalScale, 0, 2 * Math.PI);
-        ctx.setLineDash([4 / globalScale, 4 / globalScale]);
-        ctx.strokeStyle = nodeColor + '80';
-        ctx.lineWidth = 1.5 / globalScale;
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
 
       // Pinned indicator (star)
       if (graphNode.isPinned) {
@@ -412,44 +840,8 @@ export function NotesGraphDashboard() {
 
   return (
     <div className="h-full w-full flex flex-col bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/30 rounded-xl blur-lg" />
-              <div className="relative p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg">
-                <CubeTransparentIcon className="h-5 w-5 text-primary-foreground" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold">Knowledge Graph</h1>
-              <p className="text-xs text-muted-foreground">
-                {stats.totalNodes} nodes · {stats.totalLinks} connections
-              </p>
-            </div>
-          </div>
-
-          {/* Stats pills */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-              <DocumentTextIcon className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium">{stats.internalNotes}</span>
-            </div>
-            {stats.externalReferences > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <LinkIcon className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  {stats.externalReferences}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Graph container */}
-      <div ref={containerRef} className="flex-1 relative min-h-0">
+      <div ref={containerRef} className="flex-1 relative min-h-0 w-full">
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="relative">
@@ -459,42 +851,36 @@ export function NotesGraphDashboard() {
           </div>
         ) : (
           <ForceGraph2D
-            ref={graphRef as React.MutableRefObject<ForceGraphMethods | undefined>}
+            key={`graph-${graphData.nodes.length}`}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ref={graphRef as any}
             width={dimensions.width}
             height={dimensions.height}
             graphData={graphData}
             nodeId="id"
+            nodeLabel=""
             nodeCanvasObject={paintNode}
-            nodePointerAreaPaint={(node, color, ctx) => {
-              const graphNode = asGraphNode(node);
-              const size = getNodeSize(graphNode);
-              ctx.fillStyle = color;
-              ctx.beginPath();
-              ctx.arc(node.x || 0, node.y || 0, size + 8, 0, 2 * Math.PI);
-              ctx.fill();
-            }}
+            nodeCanvasObjectMode={() => 'replace'}
             linkColor={getLinkColor}
             linkWidth={getLinkWidth}
-            linkDirectionalArrowLength={5}
-            linkDirectionalArrowRelPos={0.9}
-            linkCurvature={0.15}
-            linkDirectionalParticles={hoveredNode ? 2 : 0}
+            linkDirectionalParticles={2}
             linkDirectionalParticleWidth={2}
-            linkDirectionalParticleColor={() => themeColors.primary}
-            onNodeClick={handleNodeClick}
-            onNodeHover={handleNodeHover}
-            backgroundColor="transparent"
-            cooldownTicks={100}
+            linkDirectionalParticleSpeed={0.005}
+            linkDirectionalParticleColor={(link) => getLinkColor(link) + '80'}
+            // WORKAROUND: Disable library's broken hover/click detection
+            // (canvas-color-tracker bug where certain node indices fail hit detection)
+            // We use our own coordinate-based hit detection instead
+            enablePointerInteraction={false}
+            warmupTicks={50}
+            cooldownTime={3000}
             d3AlphaDecay={0.02}
-            d3VelocityDecay={0.25}
-            enableNodeDrag={true}
-            enableZoomInteraction={true}
-            enablePanInteraction={true}
+            d3VelocityDecay={0.3}
+            backgroundColor="transparent"
           />
         )}
 
         {/* Zoom controls */}
-        <div className="absolute bottom-4 right-4 flex flex-col gap-1.5">
+        <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 pointer-events-auto">
           <button
             onClick={handleZoomIn}
             className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 hover:bg-muted hover:border-border transition-all shadow-lg"
@@ -520,7 +906,7 @@ export function NotesGraphDashboard() {
 
         {/* Hover card */}
         {hoveredNode && (
-          <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl p-4 max-w-xs animate-in fade-in slide-in-from-left-2 duration-200">
+          <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl p-4 max-w-xs animate-in fade-in slide-in-from-left-2 duration-200 pointer-events-none">
             <div className="flex items-start gap-3">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner"
@@ -567,24 +953,13 @@ export function NotesGraphDashboard() {
           </div>
         )}
 
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-card/80 backdrop-blur-md border border-border/50 rounded-xl shadow-xl p-3">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-            {URN_TYPE_LEGEND.slice(0, 6).map((item) => (
-              <div key={item.type} className="flex items-center gap-2">
-                <div
-                  className={`w-2.5 h-2.5 rounded-full ${item.tailwindBg}`}
-                  style={{ boxShadow: `0 1px 2px ${item.hexColor}80` }}
-                />
-                <span className="text-muted-foreground">{item.label}</span>
-              </div>
-            ))}
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-muted-foreground/50" />
-              <span className="text-muted-foreground">External</span>
-            </div>
-          </div>
+        {/* Stats */}
+        <div className="absolute top-4 left-4 flex items-center gap-2 text-xs text-muted-foreground pointer-events-none">
+          <span>{stats.totalNodes} nodes</span>
+          <span>·</span>
+          <span>{stats.totalLinks} links</span>
         </div>
+
       </div>
     </div>
   );
