@@ -90,7 +90,7 @@ class LoggingInterceptor:
             logger.info(
                 f"access {service_name}/{method_name}",
                 user_id=user_id,
-                duration_seconds=round(duration, 3),
+                duration_ms=round(duration * 1000),
             )
             return response
 
@@ -102,7 +102,7 @@ class LoggingInterceptor:
             logger.error(
                 f"error {service_name}/{method_name}",
                 user_id=user_id,
-                duration_seconds=round(duration, 3),
+                duration_ms=round(duration * 1000),
                 error_code=e.code.name,
                 error_message=e.message,
             )
@@ -114,7 +114,7 @@ class LoggingInterceptor:
             logger.error(
                 f"error {service_name}/{method_name}",
                 user_id=user_id,
-                duration_seconds=round(duration, 3),
+                duration_ms=round(duration * 1000),
                 error_type=type(e).__name__,
                 error_message=str(e),
             )

@@ -10,8 +10,6 @@ import { notesApi } from '../api/notesApi';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
 import { NodeType, type VisibilityScope } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
-
 // Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -21,8 +19,9 @@ const getOrganizationId = (state: RootState): string => {
     return orgId;
 };
 
-// Helper to convert proto Note to PlainMessage<Note>
-const noteToPlain = (note: Note): PlainMessage<Note> => ({
+// Helper to convert proto Note to serializable plain object
+// Note: bigint values are converted to number for Redux serialization
+const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
     ownerId: note.ownerId,
@@ -54,12 +53,15 @@ const noteToPlain = (note: Note): PlainMessage<Note> => ({
     outgoingReferences: [...note.outgoingReferences],
 });
 
+/** Serialized note type for Redux storage (bigints converted to numbers) */
+export type SerializedNote = ReturnType<typeof noteToPlain>;
+
 /**
  * Fetch all notes for the current organization.
  */
 export const fetchNotes = createAsyncThunk<
     {
-        notes: PlainMessage<Note>[];
+        notes: SerializedNote[];
         totalCount: number;
         page: number;
         pageSize: number;
@@ -113,7 +115,7 @@ export const fetchNotes = createAsyncThunk<
  * Fetch pinned notes only.
  */
 export const fetchPinnedNotes = createAsyncThunk<
-    PlainMessage<Note>[],
+    SerializedNote[],
     void,
     { state: RootState; rejectValue: string }
 >('notes/fetchPinnedNotes', async (_, { getState, rejectWithValue }) => {
@@ -134,7 +136,7 @@ export const fetchPinnedNotes = createAsyncThunk<
  * Fetch deleted notes (trash).
  */
 export const fetchDeletedNotes = createAsyncThunk<
-    PlainMessage<Note>[],
+    SerializedNote[],
     void,
     { state: RootState; rejectValue: string }
 >('notes/fetchDeletedNotes', async (_, { getState, rejectWithValue }) => {
@@ -156,7 +158,7 @@ export const fetchDeletedNotes = createAsyncThunk<
  * Fetch a single note by ID.
  */
 export const fetchNote = createAsyncThunk<
-    PlainMessage<Note>,
+    SerializedNote,
     string,
     { state: RootState; rejectValue: string }
 >('notes/fetchNote', async (noteId, { getState, rejectWithValue }) => {
@@ -179,7 +181,7 @@ export const fetchNote = createAsyncThunk<
  * Create a new note or folder.
  */
 export const createNote = createAsyncThunk<
-    PlainMessage<Note>,
+    SerializedNote,
     {
         title: string;
         content?: string;
@@ -216,7 +218,7 @@ export const createNote = createAsyncThunk<
  * Update a note.
  */
 export const updateNote = createAsyncThunk<
-    PlainMessage<Note>,
+    SerializedNote,
     {
         noteId: string;
         title?: string;
@@ -308,7 +310,7 @@ export const deleteNote = createAsyncThunk<
  * Restore a deleted note.
  */
 export const restoreNote = createAsyncThunk<
-    PlainMessage<Note>,
+    SerializedNote,
     string,
     { state: RootState; rejectValue: string }
 >('notes/restoreNote', async (noteId, { getState, rejectWithValue }) => {
@@ -331,7 +333,7 @@ export const restoreNote = createAsyncThunk<
  * Toggle pin status for a note.
  */
 export const togglePinNote = createAsyncThunk<
-    PlainMessage<Note>,
+    SerializedNote,
     { noteId: string; pinned: boolean },
     { state: RootState; rejectValue: string }
 >('notes/togglePinNote', async (params, { getState, rejectWithValue }) => {
@@ -355,7 +357,7 @@ export const togglePinNote = createAsyncThunk<
  * Search notes.
  */
 export const searchNotes = createAsyncThunk<
-    { notes: PlainMessage<Note>[]; totalCount: number },
+    { notes: SerializedNote[]; totalCount: number },
     { query: string; tags?: string[]; includeDeleted?: boolean },
     { state: RootState; rejectValue: string }
 >('notes/searchNotes', async (params, { getState, rejectWithValue }) => {
@@ -408,7 +410,7 @@ export const fetchBacklinks = createAsyncThunk<
  * Move note to a different space.
  */
 export const moveNote = createAsyncThunk<
-    PlainMessage<Note>,
+    SerializedNote,
     { noteId: string; targetVisibility: VisibilityScope; targetGroupIds?: string[] },
     { state: RootState; rejectValue: string }
 >('notes/moveNote', async (params, { getState, rejectWithValue }) => {
@@ -433,7 +435,7 @@ export const moveNote = createAsyncThunk<
  * Copy note to another space.
  */
 export const copyNote = createAsyncThunk<
-    PlainMessage<Note>,
+    SerializedNote,
     { noteId: string; targetVisibility: VisibilityScope; targetGroupIds?: string[]; title?: string },
     { state: RootState; rejectValue: string }
 >('notes/copyNote', async (params, { getState, rejectWithValue }) => {

@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,7 +13,32 @@ from uwos.domains.search.service import SearchServiceImpl
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uwos.gen.search.v1.search_connect import SearchServiceASGIApplication
+from uwos.observability import ObservabilityConfig, setup_observability
 from uwos.observability.crpc import LoggingInterceptor
+from uwos.observability.otel import instrument_fastapi
+
+
+def _setup_observability() -> None:
+    """Setup observability for the current process."""
+    environment = os.getenv("ENVIRONMENT", "development")
+    log_level = os.getenv("LOG_LEVEL", "info").upper()
+
+    setup_observability(
+        config=ObservabilityConfig(
+            app_name="uwos",
+            app_version="0.1.0",
+            environment=environment,
+            console_log_level=log_level,
+        )
+    )
+
+
+def _get_cors_origins() -> list[str]:
+    """Get CORS origins from environment variable."""
+    origins = os.getenv("CORS_ORIGINS", "*")
+    if origins == "*":
+        return ["*"]
+    return [origin.strip() for origin in origins.split(",") if origin.strip()]
 
 
 @asynccontextmanager
@@ -41,6 +67,9 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    # Setup observability for this process (important for multi-worker mode)
+    _setup_observability()
+
     app = FastAPI(
         title="UWOS - Unified Work Operating System",
         description="The Operating System for Work",
@@ -59,9 +88,10 @@ def create_app() -> FastAPI:
             raise
 
     # Add CORS middleware
+    cors_origins = _get_cors_origins()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # In production, replace with specific origins
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -75,6 +105,10 @@ def create_app() -> FastAPI:
     async def health_check():
         return {"status": "ok", "service": "uwos"}
 
+    # Instrument FastAPI for observability
+    instrument_fastapi(app=app, exclude_paths=["/health", "/api/health"])
+
+    logger.info(f"CORS allowed origins: {cors_origins}")
     return app
 
 

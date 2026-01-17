@@ -1,9 +1,8 @@
-import type { Note } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import { CrepeEditor } from './CrepeEditor';
+import type { SerializedNote } from '../../store/notesThunks';
 
 interface ReadOnlyViewerProps {
-  note: PlainMessage<Note>;
+  note: SerializedNote;
 }
 
 export function ReadOnlyViewer({ note }: ReadOnlyViewerProps) {

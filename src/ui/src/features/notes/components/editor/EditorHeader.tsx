@@ -15,9 +15,8 @@ import {
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
-import type { Note } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import type { SerializedNote } from '../../store/notesThunks';
 import { setEditorMode, toggleMetadataPanel, toggleStarredNote, toggleSidebar, toggleMarkdownPreview } from '../../store/editorSlice';
 import { updateNote } from '../../store/notesSlice';
 import { useSaveStatus } from '../../hooks/useNotesHooks';
@@ -26,7 +25,7 @@ import type { EditorMode } from '../../store/editorSlice';
 import { TagInput } from './TagInput';
 
 interface EditorHeaderProps {
-  note: PlainMessage<Note>;
+  note: SerializedNote;
 }
 
 // Mock collaborators for demo

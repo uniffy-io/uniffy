@@ -77,6 +77,9 @@ def run_migrations() -> None:
 
     alembic_cfg = Config(alembic_cfg_path)
 
+    # Tell env.py to skip fileConfig - we use our own logging (loguru)
+    alembic_cfg.attributes["configure_logger"] = False
+
     # Override the database URL to use synchronous driver for migrations
     db_host = os.getenv("POSTGRES_HOST", "localhost")
     db_port = os.getenv("POSTGRES_PORT", "5432")

@@ -5,10 +5,9 @@
  * organized by visibility scope.
  */
 
-import type { Note } from '@/gen/notes/v1/notes_pb';
 import { NodeType, VisibilityScope } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import type { TreeNode, GroupTreeSection } from '../store/notesTreeSlice';
+import type { SerializedNote } from '../store/notesThunks';
 
 /**
  * Convert NodeType enum to TreeNode type string.
@@ -20,7 +19,7 @@ function nodeTypeToTreeType(nodeType: NodeType): 'note' | 'folder' {
 /**
  * Convert a Note to a TreeNode.
  */
-export function noteToTreeNode(note: PlainMessage<Note>): TreeNode {
+export function noteToTreeNode(note: SerializedNote): TreeNode {
     return {
         id: note.id,
         title: note.title,
@@ -51,7 +50,7 @@ function sortTreeNodes(nodes: TreeNode[]): TreeNode[] {
  * Notes with parentId are nested under their parent.
  * Sorts folders first, then notes, alphabetically.
  */
-export function buildNoteHierarchy(notes: PlainMessage<Note>[]): TreeNode[] {
+export function buildNoteHierarchy(notes: SerializedNote[]): TreeNode[] {
     const nodeMap = new Map<string, TreeNode>();
     const rootNodes: TreeNode[] = [];
 
@@ -105,16 +104,16 @@ export interface OrganizedNotes {
  * Organize flat notes array into tree structure by visibility.
  */
 export function organizeNotesByVisibility(
-    notes: PlainMessage<Note>[],
+    notes: SerializedNote[],
     currentUserId: string,
     userGroups: Array<{ groupId: string; groupName: string }>
 ): OrganizedNotes {
-    const pinned: PlainMessage<Note>[] = [];
-    const personal: PlainMessage<Note>[] = [];
-    const shared: PlainMessage<Note>[] = [];
-    const organization: PlainMessage<Note>[] = [];
-    const trash: PlainMessage<Note>[] = [];
-    const groupNotes: Record<string, PlainMessage<Note>[]> = {};
+    const pinned: SerializedNote[] = [];
+    const personal: SerializedNote[] = [];
+    const shared: SerializedNote[] = [];
+    const organization: SerializedNote[] = [];
+    const trash: SerializedNote[] = [];
+    const groupNotes: Record<string, SerializedNote[]> = {};
 
     // Initialize group note arrays
     userGroups.forEach((g) => {
@@ -274,10 +273,10 @@ export function updateNodeInTree(
  * Returns array of folder titles from root to the note.
  */
 export function buildBreadcrumbPath(
-    notes: PlainMessage<Note>[],
+    notes: SerializedNote[],
     noteId: string
 ): string[] {
-    const noteMap = new Map<string, PlainMessage<Note>>();
+    const noteMap = new Map<string, SerializedNote>();
     notes.forEach(note => noteMap.set(note.id, note));
 
     const path: string[] = [];

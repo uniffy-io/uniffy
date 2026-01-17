@@ -19,8 +19,9 @@ from uwos.core.models import *  # noqa: F403
 config = context.config
 
 # Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
+# Skip if running programmatically with our own logging (loguru via observability).
+# When run via `alembic` CLI, configure_logger defaults to True.
+if config.attributes.get("configure_logger", True) and config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here

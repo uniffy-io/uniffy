@@ -5,10 +5,11 @@
  * Used by the NotesGraphDashboard to visualize note connections.
  */
 
-import { type Note, NodeType } from '@/gen/notes/v1/notes_pb';
+import { NodeType } from '@/gen/notes/v1/notes_pb';
 import type { UrnMetadata } from '@/gen/search/v1/search_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 import { parseUrn, UrnType } from '@/utils/urn';
+import type { SerializedNote } from '../store/notesThunks';
 import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
 
 /** Node in the graph representing a note or external resource */
@@ -29,6 +30,14 @@ export interface GraphNode {
   isPinned?: boolean;
   /** Color based on type */
   color: string;
+  /** X position (set by force simulation) */
+  x?: number;
+  /** Y position (set by force simulation) */
+  y?: number;
+  /** X velocity (set by force simulation) */
+  vx?: number;
+  /** Y velocity (set by force simulation) */
+  vy?: number;
 }
 
 /** Link between two nodes */
@@ -83,7 +92,7 @@ function getNodeColor(type: UrnType | 'note', isInternal: boolean): string {
  * @param urnMetadata - Optional map of URN -> metadata for resolving external node labels
  */
 export function buildGraphData(
-  notes: PlainMessage<Note>[],
+  notes: SerializedNote[],
   urnMetadata?: Map<string, PlainMessage<UrnMetadata>>
 ): GraphData {
   const nodes: GraphNode[] = [];

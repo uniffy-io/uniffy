@@ -4,14 +4,13 @@ import { editorViewCtx } from '@milkdown/core';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
-import type { Note } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import { useAppSelector } from '@/app/hooks';
 import { useAutosave } from '../../hooks/useNotesHooks';
 import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from './plugins/mention';
 import { MentionSearch } from './plugins/mention/MentionSearch';
 import { createPortal } from 'react-dom';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
+import type { SerializedNote } from '../../store/notesThunks';
 
 // Import only common Crepe styles - frame themes set global html/body styles that break our app
 import '@milkdown/crepe/theme/common/style.css';
@@ -20,7 +19,7 @@ import '@milkdown/crepe/theme/common/style.css';
 import '../../styles/notes-editor.css';
 
 interface CrepeEditorProps {
-  note: PlainMessage<Note>;
+  note: SerializedNote;
   /** When true, the editor is read-only (no editing, no toolbar, no slash commands) */
   readonly?: boolean;
   /** Content to display - if not provided, uses draft content or note content */

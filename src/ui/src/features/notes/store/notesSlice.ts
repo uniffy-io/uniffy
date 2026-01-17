@@ -1,7 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Note } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 import {
     fetchNotes,
@@ -17,22 +15,20 @@ import {
     searchNotes,
     moveNote,
     copyNote,
+    type SerializedNote,
 } from './notesThunks';
 
 /**
  * Normalize a note to ensure all values are serializable for Redux.
- * Converts BigInt values to numbers.
+ * The note is already serialized from the thunk, just return it.
  */
-function normalizeNote(note: PlainMessage<Note>): PlainMessage<Note> {
-    return {
-        ...note,
-        version: (typeof note.version === 'bigint' ? Number(note.version) : note.version) as any,
-    } as PlainMessage<Note>;
+function normalizeNote(note: SerializedNote): SerializedNote {
+    return note;
 }
 
 interface NotesState {
     // All notes indexed by ID
-    notes: Record<string, PlainMessage<Note>>;
+    notes: Record<string, SerializedNote>;
 
     // Pinned notes IDs (for quick access)
     pinnedNoteIds: string[];
@@ -118,7 +114,7 @@ export const notesSlice = createSlice({
     initialState,
     reducers: {
         // Set all notes
-        setNotes: (state, action: PayloadAction<PlainMessage<Note>[]>) => {
+        setNotes: (state, action: PayloadAction<SerializedNote[]>) => {
             state.notes = {};
             action.payload.forEach((note) => {
                 state.notes[note.id] = normalizeNote(note);
@@ -126,7 +122,7 @@ export const notesSlice = createSlice({
         },
 
         // Add or update a single note
-        setNote: (state, action: PayloadAction<PlainMessage<Note>>) => {
+        setNote: (state, action: PayloadAction<SerializedNote>) => {
             state.notes[action.payload.id] = normalizeNote(action.payload);
         },
 

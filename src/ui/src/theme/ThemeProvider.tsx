@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import type { Theme } from './types';
 import { defaultTheme, darkTheme } from './types';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setThemeName } from './themeSlice';
+import { setThemeName, setAccentColor, setFontFamily } from './themeSlice';
 
 interface ThemeContextType {
   theme: Theme;

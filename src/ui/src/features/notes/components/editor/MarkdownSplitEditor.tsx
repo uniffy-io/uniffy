@@ -6,14 +6,13 @@ import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { defaultKeymap } from '@codemirror/commands';
-import type { Note } from '@/gen/notes/v1/notes_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 import { useAppSelector } from '@/app/hooks';
 import { useAutosave } from '../../hooks/useNotesHooks';
 import { CrepeEditor } from './CrepeEditor';
+import type { SerializedNote } from '../../store/notesThunks';
 
 interface MarkdownSplitEditorProps {
-  note: PlainMessage<Note>;
+  note: SerializedNote;
 }
 
 const MIN_PANE_WIDTH = 200; // Minimum width in pixels

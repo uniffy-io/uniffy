@@ -366,13 +366,8 @@ def configure_loguru(config: "ObservabilityConfig") -> None:
 
     logger.remove()
     root_logger = logging.getLogger()
-    root_logger.addHandler(InterceptHandler())
+    root_logger.handlers = [InterceptHandler()]
     root_logger.setLevel(0)
-
-    logging.getLogger("uvicorn.access").handlers = [InterceptHandler()]
-    for _log in ["uvicorn", "uvicorn.error", "fastapi"]:
-        _logger = logging.getLogger(_log)
-        _logger.addHandler(InterceptHandler())
 
     log_level_table = {
         "INFO": logging.INFO,
@@ -389,6 +384,7 @@ def configure_loguru(config: "ObservabilityConfig") -> None:
 
     loggers_to_intercept = [
         "alembic",
+        "alembic.runtime.migration",
         "httpx",
         "primp",
         "sqlalchemy",
@@ -397,15 +393,21 @@ def configure_loguru(config: "ObservabilityConfig") -> None:
         "kafka.conn",
         "kafka",
         "uvicorn",
+        "uvicorn.error",
         "fastapi",
     ]
     for logger_name in loggers_to_intercept:
+        level = logging_level
         if "sql" in logger_name:
-            logging_level = log_level_table[config.sqlalchemy_level]
+            level = log_level_table[config.sqlalchemy_level]
 
         mod_logger = logging.getLogger(logger_name)
-        mod_logger.addHandler(InterceptHandler(level=logging_level))
+        mod_logger.handlers = [InterceptHandler(level=level)]
         mod_logger.propagate = False
+
+    # Disable uvicorn access logs - we have our own ConnectRPC access logging
+    logging.getLogger("uvicorn.access").handlers = []
+    logging.getLogger("uvicorn.access").propagate = False
 
     if config.console_log_type == "json":
         logger.add(

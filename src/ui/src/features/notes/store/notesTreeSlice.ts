@@ -37,6 +37,7 @@ const noteToPlain = (note: Note) => ({
     } : undefined,
     groupIds: [...note.groupIds],
     userPermission: note.userPermission,
+    outgoingReferences: [...note.outgoingReferences],
 });
 
 export interface TreeNode {

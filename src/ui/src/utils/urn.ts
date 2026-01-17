@@ -13,17 +13,19 @@
  * - urn:uwos:content:USER:456e7890-e89b-12d3-a456-426614174001
  */
 
-export enum UrnType {
-  NOTE = 'note',
-  FILE = 'file',
-  CHAT = 'chat',
-  USER = 'user',
-  BOOK = 'book',
-  CALENDAR_EVENT = 'calendar_event',
-  PASSWORD = 'password',
-  SPACE = 'space',
-  UNKNOWN = 'unknown',
-}
+export const UrnType = {
+  NOTE: 'note',
+  FILE: 'file',
+  CHAT: 'chat',
+  USER: 'user',
+  BOOK: 'book',
+  CALENDAR_EVENT: 'calendar_event',
+  PASSWORD: 'password',
+  SPACE: 'space',
+  UNKNOWN: 'unknown',
+} as const;
+
+export type UrnType = (typeof UrnType)[keyof typeof UrnType];
 
 export interface ParsedUrn {
   /** Full URN string */

@@ -231,16 +231,13 @@ class MentionNodeView implements NodeView {
     const { urn, label } = this.node.attrs as { urn: string; label: string };
 
     // Wrap with Redux Provider since this React root is outside the main app tree
+    const mentionElement = React.createElement(MentionChip, {
+      urn,
+      label,
+      selected,
+    });
     this.root.render(
-      React.createElement(
-        Provider,
-        { store },
-        React.createElement(MentionChip, {
-          urn,
-          label,
-          selected,
-        })
-      )
+      React.createElement(Provider, { store, children: mentionElement })
     );
   }
 
