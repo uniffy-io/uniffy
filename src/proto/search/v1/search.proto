@@ -8,12 +8,18 @@ import "google/protobuf/timestamp.proto";
 service SearchService {
   // Perform a global search across all entities (Spotlight-like)
   rpc Search(SearchRequest) returns (SearchResponse) {}
-  
+
   // Index an item (Internal use, or called by other services)
   rpc IndexItem(IndexItemRequest) returns (IndexItemResponse) {}
-  
+
   // Remove an item from the index
   rpc DeleteItem(DeleteItemRequest) returns (DeleteItemResponse) {}
+
+  // Get all content that references a specific URN (universal backlinks)
+  rpc GetReferences(GetReferencesRequest) returns (GetReferencesResponse) {}
+
+  // Resolve metadata for a batch of URNs
+  rpc ResolveUrns(ResolveUrnsRequest) returns (ResolveUrnsResponse) {}
 }
 
 enum SearchResultType {
@@ -71,4 +77,44 @@ message DeleteItemRequest {
 
 message DeleteItemResponse {
   bool success = 1;
+}
+
+// Request to get content that references a specific URN
+message GetReferencesRequest {
+  string organization_id = 1;
+  // URN to find references to (e.g., urn:uwos:content:NOTE:uuid)
+  string target_urn = 2;
+  // Optional: filter by content type
+  repeated SearchResultType type_filters = 3;
+  // Max results (default: 50)
+  int32 limit = 4;
+}
+
+// Response with content that references the target URN
+message GetReferencesResponse {
+  // Content items that reference the target URN
+  repeated SearchResultItem items = 1;
+  // Total count of references
+  int32 total_count = 2;
+}
+
+// Request with batch of URNs to resolve
+message ResolveUrnsRequest {
+  string organization_id = 1;
+  // URNs to resolve (max 100)
+  repeated string urns = 2;
+}
+
+// Response with resolved URN metadata
+message ResolveUrnsResponse {
+  // Map of URN -> resolved metadata (missing URNs omitted)
+  map<string, UrnMetadata> resolved = 1;
+}
+
+// Lightweight metadata for a URN
+message UrnMetadata {
+  string title = 1;
+  string description = 2;
+  SearchResultType type = 3;
+  string url = 4;
 }

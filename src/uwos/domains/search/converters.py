@@ -4,6 +4,7 @@ from uwos.core.models.search.search_index import SearchIndex
 from uwos.gen.search.v1.search_pb2 import (
     SearchResultItem,
     SearchResultType,
+    UrnMetadata,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -99,4 +100,32 @@ def search_result_to_proto(
         url=item.url_path,
         score=score,
         metadata={},  # Can be extended later
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SearchIndex -> UrnMetadata conversion
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def search_index_to_urn_metadata(item: SearchIndex) -> UrnMetadata:
+    """
+    Convert SearchIndex model to proto UrnMetadata.
+
+    Parameters
+    ----------
+    item : SearchIndex
+        Search index entry.
+
+    Returns
+    -------
+    UrnMetadata
+        Lightweight proto message with title, description, type, and URL.
+
+    """
+    return UrnMetadata(
+        title=item.title,
+        description=item.description or "",
+        type=entity_type_to_proto(item.entity_type),
+        url=item.url_path,
     )

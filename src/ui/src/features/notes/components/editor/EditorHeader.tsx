@@ -77,7 +77,6 @@ export function EditorHeader({ note }: EditorHeaderProps) {
   
   const handleShare = () => {
     // TODO: Open share modal
-    console.log('Share note');
   };
   
   const viewModes: Array<{

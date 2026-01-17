@@ -320,9 +320,7 @@ export const notesSlice = createSlice({
                 // Update version in the note if it exists
                 const note = state.notes[action.payload.noteId];
                 if (note) {
-                    note.version = typeof action.payload.version === 'bigint'
-                        ? Number(action.payload.version)
-                        : action.payload.version;
+                    note.version = action.payload.version;
                 }
             })
             .addCase(autosaveNote.rejected, (state, action) => {

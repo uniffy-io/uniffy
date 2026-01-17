@@ -118,6 +118,9 @@ class NoteOperations(BaseContentOperations[Note]):
         if existing:
             slug = f"{slug}-{int(datetime.now(UTC).timestamp())}"
 
+        # Extract URN references from content
+        outgoing_refs = queries.extract_urns_from_content(content) if content else None
+
         note = Note(
             organization_id=organization_id,
             owner_id=user_id,
@@ -129,6 +132,7 @@ class NoteOperations(BaseContentOperations[Note]):
             parent_id=parent_id,
             tags=tags,
             note_metadata=metadata,
+            outgoing_references=outgoing_refs,
         )
         self.session.add(note)
         await self.session.flush()
@@ -207,6 +211,8 @@ class NoteOperations(BaseContentOperations[Note]):
             note.title = title
         if content is not None:
             note.content = content
+            # Update outgoing references when content changes
+            note.outgoing_references = queries.extract_urns_from_content(content) or None
         if slug is not None:
             note.slug = slug
         if parent_id == "":
@@ -389,6 +395,8 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._require_edit(user_id, organization_id, note)
 
         note.content = content
+        # Update outgoing references when content changes
+        note.outgoing_references = queries.extract_urns_from_content(content) or None
         if title is not None:
             note.title = title
         note.version += 1

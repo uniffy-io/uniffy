@@ -1,42 +1,134 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { setMetadataPanelTab } from '../../store/editorSlice';
 import type { MetadataPanelTab } from '../../store/editorSlice';
-import { 
-  LinkIcon, 
-  Cog6ToothIcon, 
-  SparklesIcon, 
+import {
+  LinkIcon,
+  Cog6ToothIcon,
+  SparklesIcon,
   ClockIcon,
-  ArrowTopRightOnSquareIcon,
   DocumentTextIcon,
   ListBulletIcon,
   HashtagIcon,
+  FolderIcon,
+  ChatBubbleLeftRightIcon,
+  UserIcon,
+  BookOpenIcon,
+  CalendarIcon,
+  KeyIcon,
+  CubeIcon,
 } from '@heroicons/react/24/outline';
+import { parseUrn, urnToPath, UrnType } from '@/utils/urn';
+import { useNavigate } from 'react-router-dom';
 
-// Mock data for demonstration
-const mockBacklinks = [
-  { id: '1', title: 'Q1 Planning Meeting', preview: '...as outlined in [[Q1 Roadmap]]...', folder: 'Engineering', date: '3 days ago' },
-  { id: '2', title: 'Product Roadmap 2026', preview: '...references [[Q1 Roadmap]] for...', folder: 'Product', date: '1 week ago' },
-  { id: '3', title: 'Team Standup Notes', preview: '...discussed the [[Q1 Roadmap]]...', folder: 'Engineering', date: 'Yesterday' },
-];
+/** Parsed mention from content */
+interface ParsedMention {
+  label: string;
+  urn: string;
+  type: UrnType;
+}
 
-const mockOutgoingLinks = [
-  { id: '1', title: 'Technical Specs', type: 'note', icon: '📄' },
-  { id: '2', title: 'Dashboard Specs', type: 'note', icon: '📄' },
-  { id: '3', title: 'budget-2026.xlsx', type: 'file', icon: '📎' },
-  { id: '4', title: 'John Davis', type: 'person', icon: '👤' },
-];
+/** Parse mentions from markdown content using [[[label|urn]]] pattern */
+function parseMentionsFromContent(content: string): ParsedMention[] {
+  const mentionRegex = /\[\[\[([^\]|]+)\|([^\]]+)\]\]\]/g;
+  const mentions: ParsedMention[] = [];
+  const seenUrns = new Set<string>();
+
+  let match;
+  while ((match = mentionRegex.exec(content)) !== null) {
+    const [, label, urn] = match;
+    // Deduplicate by URN
+    if (!seenUrns.has(urn)) {
+      seenUrns.add(urn);
+      const parsed = parseUrn(urn);
+      mentions.push({
+        label,
+        urn,
+        type: parsed.type,
+      });
+    }
+  }
+
+  return mentions;
+}
+
+/** Get icon component for URN type */
+function getTypeIcon(type: UrnType) {
+  const iconMap: Record<UrnType, typeof DocumentTextIcon> = {
+    [UrnType.NOTE]: DocumentTextIcon,
+    [UrnType.FILE]: FolderIcon,
+    [UrnType.CHAT]: ChatBubbleLeftRightIcon,
+    [UrnType.USER]: UserIcon,
+    [UrnType.BOOK]: BookOpenIcon,
+    [UrnType.CALENDAR_EVENT]: CalendarIcon,
+    [UrnType.PASSWORD]: KeyIcon,
+    [UrnType.SPACE]: CubeIcon,
+    [UrnType.UNKNOWN]: LinkIcon,
+  };
+  return iconMap[type] || LinkIcon;
+}
+
+/** Get type-specific styling */
+function getTypeStyle(type: UrnType) {
+  const styleMap: Record<UrnType, { bg: string; text: string }> = {
+    [UrnType.NOTE]: { bg: 'bg-primary/10', text: 'text-primary' },
+    [UrnType.FILE]: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
+    [UrnType.CHAT]: { bg: 'bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400' },
+    [UrnType.USER]: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
+    [UrnType.BOOK]: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400' },
+    [UrnType.CALENDAR_EVENT]: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400' },
+    [UrnType.PASSWORD]: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400' },
+    [UrnType.SPACE]: { bg: 'bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400' },
+    [UrnType.UNKNOWN]: { bg: 'bg-muted', text: 'text-muted-foreground' },
+  };
+  return styleMap[type] || styleMap[UrnType.UNKNOWN];
+}
+
+/** Get initials from a name */
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export function NotesMetadataPanel() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { currentNoteId, notes } = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
+  const currentUser = useAppSelector((state) => state.auth.user);
   const metadataPanelTab = editorState?.metadataPanelTab || 'links';
-  
-  if (!currentNoteId) return null;
-  
-  const note = notes[currentNoteId];
-  if (!note) return null;
+
+  // State for showing copy feedback - must be declared before any conditional returns
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Get the note (may be undefined)
+  const note = currentNoteId ? notes[currentNoteId] : undefined;
+
+  // Get the actual content (draft or saved) - compute before useMemo to ensure consistent hook order
+  const draftContent = editorState?.draftContent || {};
+  const currentContent = currentNoteId && note
+    ? (draftContent[currentNoteId] ?? note.content)
+    : '';
+
+  // Parse outgoing links (mentions) from content - MUST be called before any returns
+  const outgoingLinks = useMemo(
+    () => parseMentionsFromContent(currentContent),
+    [currentContent]
+  );
+
+  // Early returns AFTER all hooks
+  if (!currentNoteId || !note) return null;
+
+  // Check if current user is the owner
+  const isOwner = currentUser && note.ownerId === currentUser.id;
+  const ownerName = isOwner
+    ? (currentUser.fullName || currentUser.username || 'You')
+    : 'Unknown';
+  const ownerInitials = getInitials(ownerName);
 
   const tabs: Array<{ id: MetadataPanelTab; label: string; icon: typeof LinkIcon }> = [
     { id: 'outline', label: 'Outline', icon: ListBulletIcon },
@@ -51,7 +143,7 @@ export function NotesMetadataPanel() {
     const headingRegex = /^(#{1,6})\s+(.+)$/gm;
     const headings: Array<{ level: number; text: string; id: string }> = [];
     let match;
-    
+
     while ((match = headingRegex.exec(content)) !== null) {
       const level = match[1].length;
       const text = match[2].trim();
@@ -59,17 +151,19 @@ export function NotesMetadataPanel() {
       const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       headings.push({ level, text, id });
     }
-    
+
     return headings;
   };
 
-  // Get the actual content (draft or saved)
-  const draftContent = editorState?.draftContent || {};
-  const currentContent = draftContent[currentNoteId] ?? note.content;
   const headings = parseHeadings(currentContent);
 
-  // State for showing copy feedback
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Handle clicking on an outgoing link
+  const handleLinkClick = (urn: string) => {
+    const path = urnToPath(urn);
+    if (path !== '#') {
+      navigate(path);
+    }
+  };
 
   // Generate the anchor link URL for a heading
   const getHeadingAnchorUrl = (headingId: string) => {
@@ -178,54 +272,64 @@ export function NotesMetadataPanel() {
 
   const renderLinksTab = () => (
     <div className="space-y-6">
-      {/* Backlinks Section */}
-      <div>
-        <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
-          <span className="uppercase tracking-wider text-muted-foreground">Backlinks</span>
-          <span className="px-1.5 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
-            {mockBacklinks.length} notes link here
-          </span>
-        </h4>
-        <div className="space-y-3">
-          {mockBacklinks.map((link) => (
-            <button
-              key={link.id}
-              className="w-full text-left p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 transition-colors"
-            >
-              <div className="flex items-start gap-2">
-                <DocumentTextIcon className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{link.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{link.preview}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{link.folder} · {link.date}</p>
-                </div>
-              </div>
-            </button>
-          ))}
-          <button className="text-sm text-primary hover:underline">
-            Show 4 more backlinks →
-          </button>
-        </div>
-      </div>
-
       {/* Outgoing Links Section */}
       <div>
         <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
           <span className="uppercase tracking-wider text-muted-foreground">Outgoing Links</span>
           <span className="px-1.5 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
-            {mockOutgoingLinks.length} references
+            {outgoingLinks.length} reference{outgoingLinks.length !== 1 ? 's' : ''}
           </span>
         </h4>
-        <div className="flex flex-wrap gap-2">
-          {mockOutgoingLinks.map((link) => (
-            <button
-              key={link.id}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 transition-colors text-sm"
-            >
-              <span>{link.icon}</span>
-              <span className="truncate max-w-[120px]">{link.title}</span>
-            </button>
-          ))}
+        {outgoingLinks.length === 0 ? (
+          <div className="text-center py-6">
+            <LinkIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">No outgoing links</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Use @ mentions to link to other content
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {outgoingLinks.map((link) => {
+              const Icon = getTypeIcon(link.type);
+              const style = getTypeStyle(link.type);
+              return (
+                <button
+                  key={link.urn}
+                  onClick={() => handleLinkClick(link.urn)}
+                  className={`
+                    flex items-center gap-2 px-3 py-1.5 rounded-lg
+                    border border-border hover:border-primary/50
+                    ${style.bg} hover:bg-accent/50
+                    transition-colors text-sm group
+                  `}
+                  title={`Open: ${link.label}`}
+                >
+                  <span className={`${style.text} transition-transform group-hover:scale-110`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="truncate max-w-[150px]">{link.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Backlinks Section */}
+      <div>
+        <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+          <span className="uppercase tracking-wider text-muted-foreground">Backlinks</span>
+          <span className="px-1.5 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
+            Coming soon
+          </span>
+        </h4>
+        <div className="text-center py-6 border border-dashed border-border rounded-lg">
+          <DocumentTextIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+          <p className="text-sm text-muted-foreground">Backlinks coming soon</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            See which notes link to this one
+          </p>
         </div>
       </div>
 
@@ -234,38 +338,12 @@ export function NotesMetadataPanel() {
         <h4 className="uppercase tracking-wider text-xs font-semibold text-muted-foreground mb-3">
           Graph View
         </h4>
-        <div className="aspect-square rounded-lg bg-muted/30 border border-border flex items-center justify-center relative overflow-hidden">
-          {/* Mini graph visualization placeholder */}
-          <div className="relative w-full h-full p-4">
-            {/* Center node */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-xs font-bold">Q1</span>
-            </div>
-            {/* Connected nodes */}
-            <div className="absolute top-[25%] left-[20%] w-4 h-4 rounded-full bg-emerald-500" />
-            <div className="absolute top-[20%] right-[25%] w-4 h-4 rounded-full bg-emerald-500" />
-            <div className="absolute bottom-[30%] left-[30%] w-4 h-4 rounded-full bg-emerald-500" />
-            <div className="absolute bottom-[25%] right-[20%] w-4 h-4 rounded-full bg-amber-500" />
-            <div className="absolute top-[40%] right-[15%] w-3 h-3 rounded-full bg-blue-500" />
-            
-            {/* Legend */}
-            <div className="absolute bottom-2 right-2 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" /> Notes
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-amber-500" /> Files
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-blue-500" /> People
-              </span>
-            </div>
+        <div className="aspect-square rounded-lg bg-muted/30 border border-dashed border-border flex items-center justify-center">
+          <div className="text-center p-4">
+            <CubeIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+            <p className="text-xs text-muted-foreground">Graph view coming soon</p>
           </div>
         </div>
-        <button className="w-full mt-2 py-2 text-sm text-primary hover:underline flex items-center justify-center gap-1">
-          Open Full Graph View
-          <ArrowTopRightOnSquareIcon className="h-3 w-3" />
-        </button>
       </div>
     </div>
   );
@@ -277,9 +355,12 @@ export function NotesMetadataPanel() {
         <label className="text-xs font-medium text-muted-foreground block mb-1">Owner</label>
         <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
           <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground font-medium">
-            SC
+            {ownerInitials}
           </div>
-          <span className="text-sm">Sarah Chen</span>
+          <span className="text-sm">
+            {ownerName}
+            {isOwner && <span className="text-muted-foreground ml-1">(you)</span>}
+          </span>
         </div>
       </div>
       
@@ -312,8 +393,8 @@ export function NotesMetadataPanel() {
       <div>
         <label className="text-xs font-medium text-muted-foreground block mb-1">Statistics</label>
         <div className="text-sm p-2 rounded-md bg-muted/50 space-y-1">
-          <p>{note.content.split(/\s+/).filter(Boolean).length} words</p>
-          <p>{note.content.length} characters</p>
+          <p>{currentContent.split(/\s+/).filter(Boolean).length} words</p>
+          <p>{currentContent.length} characters</p>
         </div>
       </div>
       
@@ -369,24 +450,27 @@ export function NotesMetadataPanel() {
   const renderHistoryTab = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Version history for this note</p>
-      <div className="space-y-2">
-        {[
-          { version: 'Current', date: '2 hours ago', author: 'Sarah Chen' },
-          { version: 'v3', date: 'Yesterday', author: 'John Davis' },
-          { version: 'v2', date: '3 days ago', author: 'Sarah Chen' },
-          { version: 'v1', date: 'Jan 5, 2026', author: 'Sarah Chen' },
-        ].map((item, index) => (
-          <button
-            key={index}
-            className="w-full text-left p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">{item.version}</span>
-              <span className="text-xs text-muted-foreground">{item.date}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">by {item.author}</p>
-          </button>
-        ))}
+
+      {/* Current version info */}
+      {note.updatedAt && (
+        <div className="p-3 rounded-lg border border-border bg-muted/30">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-sm">Current version</span>
+            <span className="text-xs text-muted-foreground">
+              {new Date(Number(note.updatedAt.seconds) * 1000).toLocaleString()}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">by {ownerName}</p>
+        </div>
+      )}
+
+      {/* Coming soon placeholder */}
+      <div className="text-center py-6 border border-dashed border-border rounded-lg">
+        <ClockIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+        <p className="text-sm text-muted-foreground">Full version history coming soon</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Track changes and restore previous versions
+        </p>
       </div>
     </div>
   );

@@ -358,6 +358,8 @@ message Note {
   repeated string group_ids = 18;
   // User's permission level on this note
   PermissionLevel user_permission = 19;
+  // URNs referenced in this note's content (outgoing links)
+  repeated string outgoing_references = 20;
 }
 
 // Note reference (lightweight representation for backlinks)

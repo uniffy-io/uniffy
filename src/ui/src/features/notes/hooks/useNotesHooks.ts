@@ -10,6 +10,7 @@ import {
     autosaveNote,
     fetchNote,
 } from '../store/notesSlice';
+import { invalidateNotePreviewCache } from '../components/editor/plugins/mention/useUrnPreview';
 import {
     setDraftContent,
     setAutosaveSaving,
@@ -59,6 +60,9 @@ export function useAutosave(noteId: string | null) {
 
                 dispatch(setAutosaveLastSaved({ noteId, timestamp: Date.now() }));
                 dispatch(markSaved(noteId));
+
+                // Invalidate preview cache so hover previews show fresh content
+                invalidateNotePreviewCache(noteId);
             } catch (err) {
                 dispatch(
                     setAutosaveError({

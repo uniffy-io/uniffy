@@ -33,33 +33,6 @@ clean: ## Clean generated files
 	rm -rf src/ui/dist src/ui/node_modules/.vite
 	@echo "Cleaned!"
 
-db-up: ## Start PostgreSQL database
-	@echo "Starting PostgreSQL 18..."
-	docker-compose up -d postgres
-	@echo "Waiting for database to be ready..."
-	@sleep 3
-	docker-compose ps postgres
-	@echo "Database ready at localhost:5432"
-
-db-down: ## Stop PostgreSQL database
-	@echo "Stopping PostgreSQL..."
-	docker-compose down
-
-db-reset: ## Reset database (removes all data!)
-	@echo "⚠️  This will delete all database data!"
-	@read -p "Are you sure? [y/N] " -n 1 -r; \
-	echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		docker-compose down -v; \
-		docker-compose up -d postgres; \
-		echo "Database reset complete"; \
-	else \
-		echo "Cancelled"; \
-	fi
-
-db-logs: ## Show database logs
-	docker-compose logs -f postgres
-
 db-shell: ## Connect to database shell
 	docker-compose exec postgres psql -U uwos -d uwos
 

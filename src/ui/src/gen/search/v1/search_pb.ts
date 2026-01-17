@@ -441,3 +441,260 @@ export class DeleteItemResponse extends Message<DeleteItemResponse> {
   }
 }
 
+/**
+ * Request to get content that references a specific URN
+ *
+ * @generated from message search.v1.GetReferencesRequest
+ */
+export class GetReferencesRequest extends Message<GetReferencesRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * URN to find references to (e.g., urn:uwos:content:NOTE:uuid)
+   *
+   * @generated from field: string target_urn = 2;
+   */
+  targetUrn = "";
+
+  /**
+   * Optional: filter by content type
+   *
+   * @generated from field: repeated search.v1.SearchResultType type_filters = 3;
+   */
+  typeFilters: SearchResultType[] = [];
+
+  /**
+   * Max results (default: 50)
+   *
+   * @generated from field: int32 limit = 4;
+   */
+  limit = 0;
+
+  constructor(data?: PartialMessage<GetReferencesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "search.v1.GetReferencesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "target_urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "type_filters", kind: "enum", T: proto3.getEnumType(SearchResultType), repeated: true },
+    { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetReferencesRequest {
+    return new GetReferencesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetReferencesRequest {
+    return new GetReferencesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetReferencesRequest {
+    return new GetReferencesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetReferencesRequest | PlainMessage<GetReferencesRequest> | undefined, b: GetReferencesRequest | PlainMessage<GetReferencesRequest> | undefined): boolean {
+    return proto3.util.equals(GetReferencesRequest, a, b);
+  }
+}
+
+/**
+ * Response with content that references the target URN
+ *
+ * @generated from message search.v1.GetReferencesResponse
+ */
+export class GetReferencesResponse extends Message<GetReferencesResponse> {
+  /**
+   * Content items that reference the target URN
+   *
+   * @generated from field: repeated search.v1.SearchResultItem items = 1;
+   */
+  items: SearchResultItem[] = [];
+
+  /**
+   * Total count of references
+   *
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<GetReferencesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "search.v1.GetReferencesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "items", kind: "message", T: SearchResultItem, repeated: true },
+    { no: 2, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetReferencesResponse {
+    return new GetReferencesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetReferencesResponse {
+    return new GetReferencesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetReferencesResponse {
+    return new GetReferencesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetReferencesResponse | PlainMessage<GetReferencesResponse> | undefined, b: GetReferencesResponse | PlainMessage<GetReferencesResponse> | undefined): boolean {
+    return proto3.util.equals(GetReferencesResponse, a, b);
+  }
+}
+
+/**
+ * Request with batch of URNs to resolve
+ *
+ * @generated from message search.v1.ResolveUrnsRequest
+ */
+export class ResolveUrnsRequest extends Message<ResolveUrnsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * URNs to resolve (max 100)
+   *
+   * @generated from field: repeated string urns = 2;
+   */
+  urns: string[] = [];
+
+  constructor(data?: PartialMessage<ResolveUrnsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "search.v1.ResolveUrnsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResolveUrnsRequest {
+    return new ResolveUrnsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResolveUrnsRequest {
+    return new ResolveUrnsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResolveUrnsRequest {
+    return new ResolveUrnsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ResolveUrnsRequest | PlainMessage<ResolveUrnsRequest> | undefined, b: ResolveUrnsRequest | PlainMessage<ResolveUrnsRequest> | undefined): boolean {
+    return proto3.util.equals(ResolveUrnsRequest, a, b);
+  }
+}
+
+/**
+ * Response with resolved URN metadata
+ *
+ * @generated from message search.v1.ResolveUrnsResponse
+ */
+export class ResolveUrnsResponse extends Message<ResolveUrnsResponse> {
+  /**
+   * Map of URN -> resolved metadata (missing URNs omitted)
+   *
+   * @generated from field: map<string, search.v1.UrnMetadata> resolved = 1;
+   */
+  resolved: { [key: string]: UrnMetadata } = {};
+
+  constructor(data?: PartialMessage<ResolveUrnsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "search.v1.ResolveUrnsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "resolved", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: UrnMetadata} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResolveUrnsResponse {
+    return new ResolveUrnsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResolveUrnsResponse {
+    return new ResolveUrnsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResolveUrnsResponse {
+    return new ResolveUrnsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ResolveUrnsResponse | PlainMessage<ResolveUrnsResponse> | undefined, b: ResolveUrnsResponse | PlainMessage<ResolveUrnsResponse> | undefined): boolean {
+    return proto3.util.equals(ResolveUrnsResponse, a, b);
+  }
+}
+
+/**
+ * Lightweight metadata for a URN
+ *
+ * @generated from message search.v1.UrnMetadata
+ */
+export class UrnMetadata extends Message<UrnMetadata> {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title = "";
+
+  /**
+   * @generated from field: string description = 2;
+   */
+  description = "";
+
+  /**
+   * @generated from field: search.v1.SearchResultType type = 3;
+   */
+  type = SearchResultType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string url = 4;
+   */
+  url = "";
+
+  constructor(data?: PartialMessage<UrnMetadata>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "search.v1.UrnMetadata";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "type", kind: "enum", T: proto3.getEnumType(SearchResultType) },
+    { no: 4, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UrnMetadata {
+    return new UrnMetadata().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UrnMetadata {
+    return new UrnMetadata().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UrnMetadata {
+    return new UrnMetadata().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UrnMetadata | PlainMessage<UrnMetadata> | undefined, b: UrnMetadata | PlainMessage<UrnMetadata> | undefined): boolean {
+    return proto3.util.equals(UrnMetadata, a, b);
+  }
+}
+

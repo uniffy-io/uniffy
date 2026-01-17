@@ -11,14 +11,19 @@ from uwos.db import get_async_session
 from uwos.domains.auth.context import get_user_id_from_context
 from uwos.domains.search.converters import (
     proto_to_entity_type,
+    search_index_to_urn_metadata,
     search_result_to_proto,
 )
 from uwos.domains.search.operations import SearchOperations
 from uwos.gen.search.v1.search_pb2 import (
     DeleteItemRequest,
     DeleteItemResponse,
+    GetReferencesRequest,
+    GetReferencesResponse,
     IndexItemRequest,
     IndexItemResponse,
+    ResolveUrnsRequest,
+    ResolveUrnsResponse,
     SearchRequest,
     SearchResponse,
 )
@@ -166,4 +171,110 @@ class SearchHandlers:
 
         except Exception as e:
             logger.exception(f"Error deleting item: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def get_references(
+        self,
+        request: GetReferencesRequest,
+        ctx: RequestContext,
+    ) -> GetReferencesResponse:
+        """
+        Get all content that references a specific URN.
+
+        Returns content items that have the target URN in their
+        outgoing_references, effectively providing universal backlinks.
+        """
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        if not request.target_urn:
+            raise ConnectError(Code.INVALID_ARGUMENT, "target_urn is required")
+
+        user_id = get_user_id_from_context(ctx)
+
+        # Parse type filters
+        type_filters: list[str] | None = None
+        if request.type_filters:
+            type_filters = [
+                entity_type
+                for tf in request.type_filters
+                if (entity_type := proto_to_entity_type(tf)) is not None
+            ]
+
+        # Set limit with bounds
+        limit = min(max(request.limit or 50, 1), 100)
+
+        try:
+            async for session in get_async_session():
+                ops = SearchOperations(session)
+                results, total = await ops.get_references(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    target_urn=request.target_urn,
+                    type_filters=type_filters,
+                    limit=limit,
+                )
+
+                # Convert to proto
+                items = [search_result_to_proto(item, 1.0) for item in results]
+
+                return GetReferencesResponse(items=items, total_count=total)
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error getting references: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def resolve_urns(
+        self,
+        request: ResolveUrnsRequest,
+        ctx: RequestContext,
+    ) -> ResolveUrnsResponse:
+        """
+        Resolve metadata for a batch of URNs.
+
+        Returns metadata for URNs the user has permission to view.
+        Missing or inaccessible URNs are omitted from the response.
+        """
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        # Validate URNs list
+        if not request.urns:
+            return ResolveUrnsResponse(resolved={})
+
+        if len(request.urns) > 100:
+            raise ConnectError(
+                Code.INVALID_ARGUMENT,
+                "Maximum 100 URNs allowed per request"
+            )
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = SearchOperations(session)
+                results = await ops.resolve_urns(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    urns=list(request.urns),
+                )
+
+                # Convert to proto map
+                resolved = {
+                    urn: search_index_to_urn_metadata(item)
+                    for urn, item in results.items()
+                }
+
+                return ResolveUrnsResponse(resolved=resolved)
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error resolving URNs: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")

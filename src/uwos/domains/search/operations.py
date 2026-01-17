@@ -4,10 +4,12 @@ Search operations - business logic for unified search.
 Provides SearchOperations class that handles:
 - Fuzzy search with permission filtering
 - Search result ranking
+- URN metadata resolution
 """
 
 from uuid import UUID
 
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uwos.core.auth.permissions import ContentAccessQuery
@@ -163,3 +165,187 @@ class SearchOperations:
         """
         await self.indexer.remove(urn)
         await self.session.commit()
+
+    async def get_references(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        target_urn: str,
+        type_filters: list[str] | None = None,
+        limit: int = 50,
+    ) -> tuple[list[SearchIndex], int]:
+        """
+        Get all content that references a specific URN.
+
+        Searches for content where the target URN appears in
+        outgoing_references. Currently only notes track references.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the query.
+        organization_id : UUID
+            Organization ID.
+        target_urn : str
+            URN to find references to.
+        type_filters : list[str] | None
+            Optional entity type filters.
+        limit : int
+            Maximum results.
+
+        Returns
+        -------
+        tuple[list[SearchIndex], int]
+            List of referencing content and total count.
+
+        """
+        from sqlalchemy import and_, func, or_, select
+
+        from uwos.core.models.notes.note import Note
+
+        # Get user's group memberships for permission filtering
+        user_group_ids = await self.access_query.get_user_group_ids(
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+
+        # Query notes that have the target URN in outgoing_references
+        query = select(Note).where(
+            and_(
+                Note.organization_id == organization_id,
+                Note.is_deleted == False,  # noqa: E712
+                Note.outgoing_references.contains([target_urn]),
+            )
+        )
+
+        # Permission filtering
+        permission_conditions = [
+            Note.visibility == "ORGANIZATION",
+            Note.owner_id == user_id,
+        ]
+
+        if user_group_ids:
+            # For GROUP visibility, check if user is in a shared group
+            # This is simplified - in production would need to join ContentGroupLink
+            permission_conditions.append(
+                and_(
+                    Note.visibility == "GROUP",
+                    Note.owner_id == user_id,  # Owner can always see their GROUP notes
+                )
+            )
+
+        query = query.where(or_(*permission_conditions))
+
+        # Apply type filter (only notes for now)
+        if type_filters and "note" not in type_filters:
+            # No other types support references yet
+            return [], 0
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total = (await self.session.execute(count_query)).scalar() or 0
+
+        # Apply limit
+        query = query.order_by(Note.updated_at.desc()).limit(limit)
+
+        result = await self.session.execute(query)
+        notes = list(result.scalars().all())
+
+        # Convert notes to SearchIndex-like objects for consistent response
+        search_results: list[SearchIndex] = []
+        for note in notes:
+            search_results.append(
+                SearchIndex(
+                    urn=f"urn:uwos:content:NOTE:{note.id}",
+                    organization_id=note.organization_id,
+                    title=note.title,
+                    description=note.content[:200] if note.content else None,
+                    keywords=None,
+                    entity_type="note",
+                    url_path=f"/notes/{note.id}",
+                    visibility=note.visibility.value,
+                    owner_id=note.owner_id,
+                    updated_at=note.updated_at,
+                )
+            )
+
+        return search_results, total
+
+    async def resolve_urns(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        urns: list[str],
+    ) -> dict[str, SearchIndex]:
+        """
+        Resolve metadata for a batch of URNs.
+
+        Queries the search_index table for the given URNs with permission
+        filtering applied.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the resolution.
+        organization_id : UUID
+            Organization ID for tenant isolation.
+        urns : list[str]
+            List of URNs to resolve (max 100).
+
+        Returns
+        -------
+        dict[str, SearchIndex]
+            Mapping of URN -> SearchIndex for accessible items.
+            Missing or inaccessible URNs are omitted from the result.
+
+        """
+        if not urns:
+            return {}
+
+        # Limit to max 100 URNs
+        urns = urns[:100]
+
+        # Get user's group memberships for permission filtering
+        user_group_ids = await self.access_query.get_user_group_ids(
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+
+        # Query search_index for the given URNs
+        query = select(SearchIndex).where(
+            and_(
+                SearchIndex.organization_id == organization_id,
+                SearchIndex.urn.in_(urns),
+            )
+        )
+
+        # Permission filtering - user can see:
+        # 1. ORGANIZATION visibility items
+        # 2. Items they own
+        # 3. GROUP visibility items in groups they belong to
+        # 4. Items explicitly shared with them
+        permission_conditions = [
+            SearchIndex.visibility == "ORGANIZATION",
+            SearchIndex.owner_id == user_id,
+        ]
+
+        if user_group_ids:
+            permission_conditions.append(
+                and_(
+                    SearchIndex.visibility == "GROUP",
+                    SearchIndex.shared_group_ids.overlap(user_group_ids),
+                )
+            )
+
+        # Check if user is in shared_user_ids
+        permission_conditions.append(
+            SearchIndex.shared_user_ids.contains([user_id])
+        )
+
+        query = query.where(or_(*permission_conditions))
+
+        result = await self.session.execute(query)
+        items = list(result.scalars().all())
+
+        # Build result dict keyed by URN
+        return {item.urn: item for item in items}

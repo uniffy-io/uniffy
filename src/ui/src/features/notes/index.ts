@@ -16,6 +16,7 @@ export { CrepeEditor } from './components/editor/CrepeEditor';
 export { MarkdownSplitEditor } from './components/editor/MarkdownSplitEditor';
 export { ReadOnlyViewer } from './components/editor/ReadOnlyViewer';
 export { EditorHeader } from './components/editor/EditorHeader';
+export { NotesGraphDashboard } from './components/dashboard/NotesGraphDashboard';
 
 // Pages
 export { default as NotesPage } from './pages/NotesPage';
@@ -126,6 +127,15 @@ export {
     useSaveStatus,
 } from './hooks/useNotesHooks';
 
+// Utils
+export {
+    buildGraphData,
+    parseMentionsFromContent,
+    getNodeSize,
+    getGraphStats,
+} from './utils/notesGraphUtils';
+
 // Types
 export type { TreeNode, GroupTreeSection } from './store/notesTreeSlice';
 export type { EditorMode, MetadataPanelTab } from './store/editorSlice';
+export type { GraphNode, GraphLink, GraphData } from './utils/notesGraphUtils';

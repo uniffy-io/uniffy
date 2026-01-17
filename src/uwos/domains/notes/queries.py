@@ -10,6 +10,40 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uwos.core.models.notes.note import Note
 from uwos.core.models.shared import NodeType
 
+# Regex pattern for URN mentions in markdown: [[[label|urn]]]
+# Also handles escaped brackets/pipes from some editors: \[\[\[label\|urn\]\]\]
+MENTION_PATTERN = re.compile(r"\\?\[\\?\[\\?\[(.+?)\\?\|(.+?)\\?\]\\?\]\\?\]")
+
+
+def extract_urns_from_content(content: str) -> list[str]:
+    """
+    Extract all unique URNs from markdown content.
+
+    Parses the [[[label|urn]]] mention pattern and returns
+    a deduplicated list of URNs.
+
+    Parameters
+    ----------
+    content : str
+        Markdown content to parse.
+
+    Returns
+    -------
+    list[str]
+        Unique URNs found in the content.
+
+    """
+    if not content:
+        return []
+
+    urns: set[str] = set()
+    for match in MENTION_PATTERN.finditer(content):
+        urn = match.group(2)  # Second capture group is the URN
+        if urn and urn.startswith("urn:uwos:"):
+            urns.add(urn)
+
+    return list(urns)
+
 
 def slugify(text: str) -> str:
     """
@@ -90,7 +124,7 @@ async def get_backlinks(
 
     """
     # Search for notes that have the target note in their outgoing_references
-    target_urn = f"urn:uwos:content:note:{note_id}"
+    target_urn = f"urn:uwos:content:NOTE:{note_id}"
     result = await session.execute(
         select(Note).where(
             and_(

@@ -5,6 +5,7 @@ import { notesApi } from '../api/notesApi';
 import { organizeNotesByVisibility } from '../utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
+import { updateNote } from './notesThunks';
 
 // Helper to convert proto Note to PlainMessage
 const noteToPlain = (note: Note) => ({
@@ -356,6 +357,30 @@ export const notesTreeSlice = createSlice({
             .addCase(fetchNotesTree.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload ?? 'Failed to load notes tree';
+            })
+            // Sync tree when a note is updated (e.g., title change from editor)
+            .addCase(updateNote.fulfilled, (state, action) => {
+                const { id, title } = action.payload;
+                // Update the node title in all sections
+                const updateInArray = (nodes: TreeNode[]): boolean => {
+                    for (const node of nodes) {
+                        if (node.id === id) {
+                            node.title = title;
+                            return true;
+                        }
+                        if (node.children && updateInArray(node.children)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
+                    if (updateInArray(state.tree[section])) break;
+                }
+                for (const group of state.tree.groups) {
+                    if (updateInArray(group.nodes)) break;
+                }
             });
     },
 });

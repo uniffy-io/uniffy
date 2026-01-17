@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeleteItemRequest, DeleteItemResponse, IndexItemRequest, IndexItemResponse, SearchRequest, SearchResponse } from "./search_pb.js";
+import { DeleteItemRequest, DeleteItemResponse, GetReferencesRequest, GetReferencesResponse, IndexItemRequest, IndexItemResponse, ResolveUrnsRequest, ResolveUrnsResponse, SearchRequest, SearchResponse } from "./search_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -45,6 +45,28 @@ export const SearchService = {
       name: "DeleteItem",
       I: DeleteItemRequest,
       O: DeleteItemResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get all content that references a specific URN (universal backlinks)
+     *
+     * @generated from rpc search.v1.SearchService.GetReferences
+     */
+    getReferences: {
+      name: "GetReferences",
+      I: GetReferencesRequest,
+      O: GetReferencesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Resolve metadata for a batch of URNs
+     *
+     * @generated from rpc search.v1.SearchService.ResolveUrns
+     */
+    resolveUrns: {
+      name: "ResolveUrns",
+      I: ResolveUrnsRequest,
+      O: ResolveUrnsResponse,
       kind: MethodKind.Unary,
     },
   }

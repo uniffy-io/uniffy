@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uwos.core.errors import NotFoundError
 from uwos.core.models.login.user import User
+from uwos.domains.auth.users.search import UserSearchIndexer
 
 
 class UserOperations:
@@ -23,6 +24,7 @@ class UserOperations:
 
         """
         self._session = session
+        self._user_indexer = UserSearchIndexer(session)
 
     async def get_by_id(self, user_id: UUID) -> User:
         """
@@ -97,6 +99,9 @@ class UserOperations:
         """
         user = await self.get_by_id(user_id)
 
+        # Track if searchable fields changed
+        searchable_changed = full_name is not None
+
         if full_name is not None:
             user.full_name = full_name
         if accent_color is not None:
@@ -106,6 +111,12 @@ class UserOperations:
 
         await self._session.commit()
         await self._session.refresh(user)
+
+        # Re-index for all orgs if searchable fields changed
+        if searchable_changed:
+            await self._user_indexer.index_for_all_organizations(user)
+            await self._session.commit()
+
         return user
 
     async def admin_update(
@@ -152,6 +163,16 @@ class UserOperations:
         """
         user = await self.get_by_id(user_id)
 
+        # Track if searchable fields changed
+        searchable_changed = any([
+            full_name is not None,
+            username is not None,
+            email is not None,
+        ])
+
+        # Track if user was deactivated
+        was_deactivated = is_active is False and user.is_active is True
+
         if full_name is not None:
             user.full_name = full_name
         if username is not None:
@@ -171,6 +192,17 @@ class UserOperations:
 
         await self._session.commit()
         await self._session.refresh(user)
+
+        # Handle search index updates
+        if was_deactivated:
+            # Remove from search index when deactivated
+            await self._user_indexer.remove_completely(user.id)
+            await self._session.commit()
+        elif searchable_changed:
+            # Re-index for all orgs if searchable fields changed
+            await self._user_indexer.index_for_all_organizations(user)
+            await self._session.commit()
+
         return user
 
     async def admin_create(

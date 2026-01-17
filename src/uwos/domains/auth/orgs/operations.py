@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uwos.core.errors import NotFoundError, PermissionDeniedError
 from uwos.core.models.login.organization import Organization
 from uwos.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uwos.core.models.login.user import User
+from uwos.domains.auth.users.search import UserSearchIndexer
 
 
 class OrganizationOperations:
@@ -24,6 +26,7 @@ class OrganizationOperations:
 
         """
         self._session = session
+        self._user_indexer = UserSearchIndexer(session)
 
     async def get_by_id(self, org_id: UUID) -> Organization:
         """
@@ -118,6 +121,14 @@ class OrganizationOperations:
 
         await self._session.commit()
         await self._session.refresh(org)
+
+        # Index owner user for search in this organization
+        result = await self._session.execute(select(User).where(User.id == owner_user_id))
+        owner = result.scalar_one_or_none()
+        if owner:
+            await self._user_indexer.index_for_organization(owner, org.id)
+            await self._session.commit()
+
         return org
 
     async def update(
@@ -312,6 +323,14 @@ class OrganizationOperations:
         self._session.add(membership)
         await self._session.commit()
         await self._session.refresh(membership)
+
+        # Index user for search in this organization
+        result = await self._session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if user:
+            await self._user_indexer.index_for_organization(user, org_id)
+            await self._session.commit()
+
         return membership
 
     async def remove_member(self, user_id: UUID, org_id: UUID) -> None:
@@ -335,6 +354,10 @@ class OrganizationOperations:
         membership = result.scalar_one_or_none()
         if membership:
             await self._session.delete(membership)
+            await self._session.commit()
+
+            # Remove user from search index for this organization
+            await self._user_indexer.remove_from_organization(user_id, org_id)
             await self._session.commit()
 
     async def require_org_admin(

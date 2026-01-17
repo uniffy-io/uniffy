@@ -11,7 +11,7 @@ class Empty(_message.Message):
     def __init__(self) -> None: ...
 
 class ListOrganizationUsersRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "page", "page_size", "query")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
@@ -23,7 +23,7 @@ class ListOrganizationUsersRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., query: _Optional[str] = ...) -> None: ...
 
 class OrganizationUserListResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("users", "total_count")
     USERS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     users: _containers.RepeatedCompositeFieldContainer[UserInfoResponse]
@@ -31,7 +31,7 @@ class OrganizationUserListResponse(_message.Message):
     def __init__(self, users: _Optional[_Iterable[_Union[UserInfoResponse, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class GroupInfo(_message.Message):
-    __slots__ = ()
+    __slots__ = ("id", "organization_id", "name", "slug", "description", "is_private", "is_default", "created_at", "member_count")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -53,7 +53,7 @@ class GroupInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., is_default: _Optional[bool] = ..., created_at: _Optional[str] = ..., member_count: _Optional[int] = ...) -> None: ...
 
 class ListGroupsRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "page", "page_size", "query")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
@@ -65,7 +65,7 @@ class ListGroupsRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., query: _Optional[str] = ...) -> None: ...
 
 class GroupListResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("groups", "total_count")
     GROUPS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     groups: _containers.RepeatedCompositeFieldContainer[GroupInfo]
@@ -73,7 +73,7 @@ class GroupListResponse(_message.Message):
     def __init__(self, groups: _Optional[_Iterable[_Union[GroupInfo, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class CreateGroupRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "name", "slug", "description", "is_private", "is_default")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -89,7 +89,7 @@ class CreateGroupRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., is_default: _Optional[bool] = ...) -> None: ...
 
 class UpdateGroupRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("group_id", "name", "description", "is_private", "is_default")
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -103,13 +103,13 @@ class UpdateGroupRequest(_message.Message):
     def __init__(self, group_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., is_default: _Optional[bool] = ...) -> None: ...
 
 class DeleteGroupRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("group_id",)
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     group_id: str
     def __init__(self, group_id: _Optional[str] = ...) -> None: ...
 
 class ListGroupMembersRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("group_id", "page", "page_size", "query")
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
@@ -121,7 +121,7 @@ class ListGroupMembersRequest(_message.Message):
     def __init__(self, group_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., query: _Optional[str] = ...) -> None: ...
 
 class GroupMemberInfo(_message.Message):
-    __slots__ = ()
+    __slots__ = ("user_id", "email", "username", "full_name", "role", "joined_at")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
@@ -137,7 +137,7 @@ class GroupMemberInfo(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., role: _Optional[str] = ..., joined_at: _Optional[str] = ...) -> None: ...
 
 class GroupMemberListResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("members", "total_count")
     MEMBERS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     members: _containers.RepeatedCompositeFieldContainer[GroupMemberInfo]
@@ -145,7 +145,7 @@ class GroupMemberListResponse(_message.Message):
     def __init__(self, members: _Optional[_Iterable[_Union[GroupMemberInfo, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class AddGroupMemberRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("group_id", "user_id", "role")
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
@@ -155,7 +155,7 @@ class AddGroupMemberRequest(_message.Message):
     def __init__(self, group_id: _Optional[str] = ..., user_id: _Optional[str] = ..., role: _Optional[str] = ...) -> None: ...
 
 class RemoveGroupMemberRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("group_id", "user_id")
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     group_id: str
@@ -163,7 +163,7 @@ class RemoveGroupMemberRequest(_message.Message):
     def __init__(self, group_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
 
 class RegisterRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("email", "username", "password", "full_name", "organization_slug")
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
     PASSWORD_FIELD_NUMBER: _ClassVar[int]
@@ -177,7 +177,7 @@ class RegisterRequest(_message.Message):
     def __init__(self, email: _Optional[str] = ..., username: _Optional[str] = ..., password: _Optional[str] = ..., full_name: _Optional[str] = ..., organization_slug: _Optional[str] = ...) -> None: ...
 
 class LoginRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("email", "password", "organization_slug")
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     PASSWORD_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -187,7 +187,7 @@ class LoginRequest(_message.Message):
     def __init__(self, email: _Optional[str] = ..., password: _Optional[str] = ..., organization_slug: _Optional[str] = ...) -> None: ...
 
 class RefreshTokenRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("refresh_token", "organization_slug")
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
     refresh_token: str
@@ -199,7 +199,7 @@ class GetCurrentUserRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class UpdateMyProfileRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("full_name", "accent_color", "font_family")
     FULL_NAME_FIELD_NUMBER: _ClassVar[int]
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
     FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
@@ -213,7 +213,7 @@ class ListMyOrganizationsRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class OrganizationInfo(_message.Message):
-    __slots__ = ()
+    __slots__ = ("id", "name", "slug", "role")
     ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -225,13 +225,13 @@ class OrganizationInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., role: _Optional[str] = ...) -> None: ...
 
 class OrganizationListResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organizations",)
     ORGANIZATIONS_FIELD_NUMBER: _ClassVar[int]
     organizations: _containers.RepeatedCompositeFieldContainer[OrganizationInfo]
     def __init__(self, organizations: _Optional[_Iterable[_Union[OrganizationInfo, _Mapping]]] = ...) -> None: ...
 
 class AuthResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -245,7 +245,7 @@ class AuthResponse(_message.Message):
     def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UserInfoResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("id", "email", "username", "full_name", "is_active", "is_system_admin", "email_verified", "accent_color", "font_family")
     ID_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
@@ -267,7 +267,7 @@ class UserInfoResponse(_message.Message):
     def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ...) -> None: ...
 
 class ListAllOrganizationsRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("page", "page_size", "query")
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
@@ -277,7 +277,7 @@ class ListAllOrganizationsRequest(_message.Message):
     def __init__(self, page: _Optional[int] = ..., page_size: _Optional[int] = ..., query: _Optional[str] = ...) -> None: ...
 
 class AdminOrganizationInfo(_message.Message):
-    __slots__ = ()
+    __slots__ = ("id", "name", "slug", "domain", "plan", "is_active", "created_at", "member_count")
     ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -297,7 +297,7 @@ class AdminOrganizationInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., domain: _Optional[str] = ..., plan: _Optional[str] = ..., is_active: _Optional[bool] = ..., created_at: _Optional[str] = ..., member_count: _Optional[int] = ...) -> None: ...
 
 class AdminOrganizationListResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organizations", "total_count")
     ORGANIZATIONS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     organizations: _containers.RepeatedCompositeFieldContainer[AdminOrganizationInfo]
@@ -305,7 +305,7 @@ class AdminOrganizationListResponse(_message.Message):
     def __init__(self, organizations: _Optional[_Iterable[_Union[AdminOrganizationInfo, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class AdminCreateOrganizationRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("name", "slug", "domain", "plan")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_FIELD_NUMBER: _ClassVar[int]
@@ -317,7 +317,7 @@ class AdminCreateOrganizationRequest(_message.Message):
     def __init__(self, name: _Optional[str] = ..., slug: _Optional[str] = ..., domain: _Optional[str] = ..., plan: _Optional[str] = ...) -> None: ...
 
 class UpdateOrganizationRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "name", "domain", "plan", "is_active")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_FIELD_NUMBER: _ClassVar[int]
@@ -331,7 +331,7 @@ class UpdateOrganizationRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., domain: _Optional[str] = ..., plan: _Optional[str] = ..., is_active: _Optional[bool] = ...) -> None: ...
 
 class ListAllUsersRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("page", "page_size", "query")
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
@@ -341,7 +341,7 @@ class ListAllUsersRequest(_message.Message):
     def __init__(self, page: _Optional[int] = ..., page_size: _Optional[int] = ..., query: _Optional[str] = ...) -> None: ...
 
 class AdminUserListResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("users", "total_count")
     USERS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     users: _containers.RepeatedCompositeFieldContainer[UserInfoResponse]
@@ -349,7 +349,7 @@ class AdminUserListResponse(_message.Message):
     def __init__(self, users: _Optional[_Iterable[_Union[UserInfoResponse, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class AdminCreateUserRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("email", "username", "password", "full_name", "is_active", "is_system_admin", "email_verified", "organization_id", "organization_role")
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
     PASSWORD_FIELD_NUMBER: _ClassVar[int]
@@ -371,7 +371,7 @@ class AdminCreateUserRequest(_message.Message):
     def __init__(self, email: _Optional[str] = ..., username: _Optional[str] = ..., password: _Optional[str] = ..., full_name: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ...) -> None: ...
 
 class UpdateUserRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("user_id", "full_name", "username", "email", "is_active", "is_system_admin", "email_verified", "accent_color", "font_family")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     FULL_NAME_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
@@ -393,13 +393,13 @@ class UpdateUserRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., full_name: _Optional[str] = ..., username: _Optional[str] = ..., email: _Optional[str] = ..., is_active: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ...) -> None: ...
 
 class AdminListUserOrganizationsRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("user_id",)
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     def __init__(self, user_id: _Optional[str] = ...) -> None: ...
 
 class AdminUserOrganizationInfo(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "name", "slug", "role", "is_active", "joined_at")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -415,13 +415,13 @@ class AdminUserOrganizationInfo(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., role: _Optional[str] = ..., is_active: _Optional[bool] = ..., joined_at: _Optional[str] = ...) -> None: ...
 
 class AdminUserOrganizationListResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organizations",)
     ORGANIZATIONS_FIELD_NUMBER: _ClassVar[int]
     organizations: _containers.RepeatedCompositeFieldContainer[AdminUserOrganizationInfo]
     def __init__(self, organizations: _Optional[_Iterable[_Union[AdminUserOrganizationInfo, _Mapping]]] = ...) -> None: ...
 
 class AdminAddUserToOrganizationRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("user_id", "organization_id", "role")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
@@ -431,7 +431,7 @@ class AdminAddUserToOrganizationRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., role: _Optional[str] = ...) -> None: ...
 
 class AdminRemoveUserFromOrganizationRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("user_id", "organization_id")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     user_id: str

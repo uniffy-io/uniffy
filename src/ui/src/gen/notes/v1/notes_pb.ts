@@ -1467,6 +1467,13 @@ export class Note extends Message<Note> {
    */
   userPermission = PermissionLevel.UNSPECIFIED;
 
+  /**
+   * URNs referenced in this note's content (outgoing links)
+   *
+   * @generated from field: repeated string outgoing_references = 20;
+   */
+  outgoingReferences: string[] = [];
+
   constructor(data?: PartialMessage<Note>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1494,6 +1501,7 @@ export class Note extends Message<Note> {
     { no: 17, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 18, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 19, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 20, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {
