@@ -8,7 +8,7 @@ UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, a
 
 ## Commands
 
-All commands are run from the repository root (`/home/user/src/uwos`):
+All commands are run from the repository root:
 
 ```bash
 # Setup
@@ -20,23 +20,8 @@ make dev              # Run backend + frontend concurrently
 make run              # Backend only (localhost:8000)
 make ui               # Frontend only (localhost:5173)
 
-# Database
-make db-up            # Start PostgreSQL 18 in Docker
-make db-down          # Stop PostgreSQL
-make db-reset         # Full reset (deletes all data)
-make db-shell         # Connect to psql
-
 # Code Quality
-make lint             # Run ruff (Python) + ESLint (TypeScript)
-make format           # Format Python code
 make test             # Run pytest
-```
-
-### Creating Migrations
-
-```bash
-cd src/uwos
-uv run alembic revision --autogenerate -m "description"
 ```
 
 Migrations run automatically on startup.
@@ -49,6 +34,25 @@ Migrations run automatically on startup.
 - **Frontend**: React 19, TypeScript, Vite, Redux Toolkit, Tailwind CSS 4
 - **API**: ConnectRPC (Protocol Buffers + Connect) - not REST
 - **Database**: PostgreSQL 18 with pg_trgm extension
+
+### BackendTree Structure
+
+```
+┌──[~/src/uwos/src/uwos]
+└─$ tree -L 1
+|
+|-- __init__.py
+|-- alembic.ini
+|-- core # Core models and utilities
+|-- db # Database session and migrations
+|   |-- migrations # Alembic migration scripts
+|   `-- session.py
+|-- domains # Domain modules, see below
+|-- factory.py # App factory mounting services
+|-- gen # Generated ConnectRPC code from .proto files at src/proto/
+|-- main.py # App entrypoint
+|-- observability # Logging, tracing, metrics
+```
 
 ### Domain-Driven Vertical Slices
 
@@ -286,12 +290,42 @@ The theme system (`src/theme/`) provides user-customizable accent colors with au
 - Error: `bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400`
 - Warning: `bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400`
 
-**Type-specific accent colors (for URN types, badges, etc.):**
-These are allowed as they represent semantic meaning:
-- Notes: `bg-primary` (uses user's accent)
-- Files: `border-blue-500`, `bg-blue-50 dark:bg-blue-950/30`
-- Chat: `border-violet-500`, `bg-violet-50 dark:bg-violet-950/30`
-- Users: `border-emerald-500`, `bg-emerald-50 dark:bg-emerald-950/30`
+**URN Type Colors** (`@/theme/urnColors.ts`):
+
+Each URN type has a consistent color used across the app for badges, icons, graphs, and highlights. These are centralized in the theme engine - **never define URN colors inline**.
+
+```typescript
+import {
+  UrnType,
+  getUrnTypeHexColor,    // For canvas/SVG (returns hex string)
+  getUrnTypeTheme,       // For components (returns Tailwind classes)
+  URN_TYPE_LEGEND,       // For legends/filters
+} from '@/theme/urnColors';
+
+// Get hex color for canvas rendering
+const color = getUrnTypeHexColor(UrnType.USER); // '#10b981'
+
+// Get Tailwind theme for component styling
+const theme = getUrnTypeTheme(UrnType.FILE);
+// { gradient, iconBg, accentText, badgeBg, border, shadow }
+```
+
+**URN Type Color Assignments:**
+| Type | Color | Hex | Tailwind |
+|------|-------|-----|----------|
+| NOTE | Primary | (user accent) | `bg-primary` |
+| FILE | Blue | `#3b82f6` | `bg-blue-500` |
+| CHAT | Violet | `#8b5cf6` | `bg-violet-500` |
+| USER | Emerald | `#10b981` | `bg-emerald-500` |
+| BOOK | Amber | `#f59e0b` | `bg-amber-500` |
+| CALENDAR_EVENT | Rose | `#f43f5e` | `bg-rose-500` |
+| PASSWORD | Red | `#ef4444` | `bg-red-500` |
+| SPACE | Indigo | `#6366f1` | `bg-indigo-500` |
+
+**When to use which:**
+- `getUrnTypeHexColor()`: Canvas rendering, SVG, force-directed graphs
+- `getUrnTypeTheme()`: React components with Tailwind (provides gradient, iconBg, accentText, etc.)
+- `URN_TYPE_LEGEND`: Building filter lists or graph legends
 
 ### Icons
 
@@ -363,3 +397,4 @@ const { setQuery, results, isLoading } = useSearch();
 7. All user-editable text MUST be stored as Markdown with `[[[label|urn]]]` mention support
 8. Use shared URN utilities (`@/utils/urn.ts`) for parsing and displaying URNs
 9. Use shared mention components for any feature that displays or edits content with mentions
+10. Use centralized URN type colors from `@/theme/urnColors.ts` - never define URN colors inline

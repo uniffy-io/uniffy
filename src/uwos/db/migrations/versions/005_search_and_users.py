@@ -1,8 +1,13 @@
-"""Create search index with pg_trgm extension.
+"""Create search index with composite primary key.
 
 Revision ID: 005
 Revises: 004
-Create Date: 2026-01-12
+Create Date: 2026-01-17
+
+This migration creates the search_index table with:
+1. Proper composite primary key (urn, organization_id) from the start
+2. All necessary indexes for search functionality
+3. pg_trgm extension for fuzzy search support
 
 """
 
@@ -20,11 +25,11 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Create search index table and pg_trgm indexes."""
+    """Create search index table with proper composite primary key."""
     # Enable pg_trgm extension for fuzzy search
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
 
-    # Search Index table
+    # Search Index table with proper composite primary key from the start
     op.create_table(
         "search_index",
         sa.Column("urn", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -40,8 +45,10 @@ def upgrade() -> None:
         sa.Column("shared_user_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("rank_score", sa.FLOAT(), server_default="1.0", nullable=True),
-        sa.PrimaryKeyConstraint("urn"),
+        sa.PrimaryKeyConstraint("urn", "organization_id"),
     )
+
+    # Create indexes for search functionality
     op.create_index(
         "ix_search_index_organization_id", "search_index", ["organization_id"], unique=False
     )
@@ -66,7 +73,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Drop search index table."""
+    """Drop search index table and extension."""
     op.drop_index("ix_search_perm", table_name="search_index")
     op.drop_index("ix_search_trgm", table_name="search_index")
     op.drop_index("ix_search_index_visibility", table_name="search_index")

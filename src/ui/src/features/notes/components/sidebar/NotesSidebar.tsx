@@ -22,9 +22,9 @@ import {
   UserGroupIcon,
   BuildingOfficeIcon,
   TrashIcon,
-
   PencilIcon,
   ArrowPathIcon,
+  CubeTransparentIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -416,6 +416,9 @@ export function NotesSidebar() {
           })
         ).unwrap();
 
+        // Navigate to the new note immediately
+        navigate(`/notes/${result.id}`);
+
         // Wait a bit for DB commit, then refresh tree to show new note
         await new Promise(resolve => setTimeout(resolve, 100));
         await dispatch(fetchNotesTree()).unwrap();
@@ -426,7 +429,7 @@ export function NotesSidebar() {
         console.error('Failed to create note:', err);
       }
     },
-    [dispatch]
+    [dispatch, navigate]
   );
 
   // Create a new folder
@@ -483,7 +486,7 @@ export function NotesSidebar() {
         .concat(Object.values(tree.shared))
         .concat(Object.values(tree.organization))
         .concat(Object.values(tree.trash));
-      
+
       const parentNode = allNotes.find((n) => n.id === parentId);
       const visibility = parentNode?.visibility || VisibilityScope.PRIVATE;
 
@@ -498,6 +501,9 @@ export function NotesSidebar() {
           })
         ).unwrap();
 
+        // Navigate to the new note immediately
+        navigate(`/notes/${result.id}`);
+
         // Wait a bit for DB commit, then refresh tree to show new note
         await new Promise(resolve => setTimeout(resolve, 100));
         await dispatch(fetchNotesTree()).unwrap();
@@ -508,7 +514,7 @@ export function NotesSidebar() {
         console.error('Failed to create note:', err);
       }
     },
-    [tree, dispatch]
+    [tree, dispatch, navigate]
   );
 
   // Rename a note/folder
@@ -922,6 +928,15 @@ export function NotesSidebar() {
           Quick Access
         </p>
         <nav className="space-y-0.5 mt-1">
+          <button
+            onClick={() => navigate('/notes')}
+            className={`w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
+              !currentNoteId ? 'bg-primary/10 text-primary' : ''
+            }`}
+          >
+            <CubeTransparentIcon className={`h-4 w-4 ${!currentNoteId ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span>Knowledge Graph</span>
+          </button>
           <button className="w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left">
             <ClockIcon className="h-4 w-4 text-muted-foreground" />
             <span>Recent</span>

@@ -20,74 +20,48 @@ import {
 import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import { cn } from '@/utils/cn';
+import { UrnType } from '@/utils/urn';
+import { getUrnTypeTheme, type UrnTypeTheme } from '@/theme/urnColors';
 
-interface TypeTheme {
+/** Icon mapping for search result types */
+const RESULT_TYPE_ICONS: Record<number, typeof DocumentTextIcon> = {
+  [SearchResultType.NOTE]: DocumentTextIcon,
+  [SearchResultType.FILE]: FolderIcon,
+  [SearchResultType.CHAT]: ChatBubbleLeftRightIcon,
+  [SearchResultType.USER]: UserIcon,
+  [SearchResultType.BOOK]: BookOpenIcon,
+  [SearchResultType.CALENDAR_EVENT]: CalendarIcon,
+  [SearchResultType.PASSWORD]: KeyIcon,
+  [SearchResultType.SPACE]: CubeIcon,
+};
+
+/** Map SearchResultType to UrnType for theme lookup */
+const RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
+  [SearchResultType.NOTE]: UrnType.NOTE,
+  [SearchResultType.FILE]: UrnType.FILE,
+  [SearchResultType.CHAT]: UrnType.CHAT,
+  [SearchResultType.USER]: UrnType.USER,
+  [SearchResultType.BOOK]: UrnType.BOOK,
+  [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
+  [SearchResultType.PASSWORD]: UrnType.PASSWORD,
+  [SearchResultType.SPACE]: UrnType.SPACE,
+};
+
+interface ResultTheme extends UrnTypeTheme {
   icon: typeof DocumentTextIcon;
-  gradient: string;
-  iconBg: string;
-  accentText: string;
 }
 
 /**
  * Get theme for search result type
  */
-function getResultTheme(type: SearchResultType): TypeTheme {
-  const themeMap: Record<number, TypeTheme> = {
-    [SearchResultType.NOTE]: {
-      icon: DocumentTextIcon,
-      gradient: 'from-primary/10 via-primary/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-primary to-primary/80',
-      accentText: 'text-primary',
-    },
-    [SearchResultType.FILE]: {
-      icon: FolderIcon,
-      gradient: 'from-blue-500/10 via-blue-500/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
-      accentText: 'text-blue-600 dark:text-blue-400',
-    },
-    [SearchResultType.CHAT]: {
-      icon: ChatBubbleLeftRightIcon,
-      gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
-      accentText: 'text-violet-600 dark:text-violet-400',
-    },
-    [SearchResultType.USER]: {
-      icon: UserIcon,
-      gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-      accentText: 'text-emerald-600 dark:text-emerald-400',
-    },
-    [SearchResultType.BOOK]: {
-      icon: BookOpenIcon,
-      gradient: 'from-amber-500/10 via-amber-500/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
-      accentText: 'text-amber-600 dark:text-amber-400',
-    },
-    [SearchResultType.CALENDAR_EVENT]: {
-      icon: CalendarIcon,
-      gradient: 'from-rose-500/10 via-rose-500/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
-      accentText: 'text-rose-600 dark:text-rose-400',
-    },
-    [SearchResultType.PASSWORD]: {
-      icon: KeyIcon,
-      gradient: 'from-red-500/10 via-red-500/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
-      accentText: 'text-red-600 dark:text-red-400',
-    },
-    [SearchResultType.SPACE]: {
-      icon: CubeIcon,
-      gradient: 'from-indigo-500/10 via-indigo-500/5 to-transparent',
-      iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
-      accentText: 'text-indigo-600 dark:text-indigo-400',
-    },
-  };
+function getResultTheme(type: SearchResultType): ResultTheme {
+  const urnType = RESULT_TYPE_TO_URN_TYPE[type] || UrnType.UNKNOWN;
+  const theme = getUrnTypeTheme(urnType);
+  const icon = RESULT_TYPE_ICONS[type] || DocumentTextIcon;
 
-  return themeMap[type] || {
-    icon: DocumentTextIcon,
-    gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
-    iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
-    accentText: 'text-muted-foreground',
+  return {
+    ...theme,
+    icon,
   };
 }
 

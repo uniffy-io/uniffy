@@ -163,3 +163,108 @@ class SearchOperations:
         """
         await self.indexer.remove(urn)
         await self.session.commit()
+
+    async def get_references(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        target_urn: str,
+        type_filters: list[str] | None = None,
+        limit: int = 50,
+    ) -> tuple[list[SearchIndex], int]:
+        """
+        Get all content that references a specific URN.
+
+        Searches for content where the target URN appears in
+        outgoing_references. Currently only notes track references.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the query.
+        organization_id : UUID
+            Organization ID.
+        target_urn : str
+            URN to find references to.
+        type_filters : list[str] | None
+            Optional entity type filters.
+        limit : int
+            Maximum results.
+
+        Returns
+        -------
+        tuple[list[SearchIndex], int]
+            List of referencing content and total count.
+
+        """
+        from sqlalchemy import and_, func, or_, select
+
+        from uwos.core.models.notes.note import Note
+
+        # Get user's group memberships for permission filtering
+        user_group_ids = await self.access_query.get_user_group_ids(
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+
+        # Query notes that have the target URN in outgoing_references
+        query = select(Note).where(
+            and_(
+                Note.organization_id == organization_id,
+                Note.is_deleted == False,  # noqa: E712
+                Note.outgoing_references.contains([target_urn]),
+            )
+        )
+
+        # Permission filtering
+        permission_conditions = [
+            Note.visibility == "ORGANIZATION",
+            Note.owner_id == user_id,
+        ]
+
+        if user_group_ids:
+            # For GROUP visibility, check if user is in a shared group
+            # This is simplified - in production would need to join ContentGroupLink
+            permission_conditions.append(
+                and_(
+                    Note.visibility == "GROUP",
+                    Note.owner_id == user_id,  # Owner can always see their GROUP notes
+                )
+            )
+
+        query = query.where(or_(*permission_conditions))
+
+        # Apply type filter (only notes for now)
+        if type_filters and "note" not in type_filters:
+            # No other types support references yet
+            return [], 0
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total = (await self.session.execute(count_query)).scalar() or 0
+
+        # Apply limit
+        query = query.order_by(Note.updated_at.desc()).limit(limit)
+
+        result = await self.session.execute(query)
+        notes = list(result.scalars().all())
+
+        # Convert notes to SearchIndex-like objects for consistent response
+        search_results: list[SearchIndex] = []
+        for note in notes:
+            search_results.append(
+                SearchIndex(
+                    urn=f"urn:uwos:content:NOTE:{note.id}",
+                    organization_id=note.organization_id,
+                    title=note.title,
+                    description=note.content[:200] if note.content else None,
+                    keywords=None,
+                    entity_type="note",
+                    url_path=f"/notes/{note.id}",
+                    visibility=note.visibility.value,
+                    owner_id=note.owner_id,
+                    updated_at=note.updated_at,
+                )
+            )
+
+        return search_results, total

@@ -90,6 +90,7 @@ def note_to_proto(note: Note, permission_level: str | None = None) -> ProtoNote:
         metadata=note.note_metadata or {},
         created_at=datetime_to_timestamp(note.created_at),
         updated_at=datetime_to_timestamp(note.updated_at),
+        outgoing_references=note.outgoing_references or [],
     )
 
     if note.parent_id:

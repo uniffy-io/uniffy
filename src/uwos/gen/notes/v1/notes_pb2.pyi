@@ -48,9 +48,9 @@ NODE_TYPE_FOLDER: NodeType
 NODE_TYPE_TEMPLATE: NodeType
 
 class CreateNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "title", "content", "slug", "parent_id", "tags", "metadata", "visibility", "group_ids", "node_type")
     class MetadataEntry(_message.Message):
-        __slots__ = ()
+        __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
@@ -79,7 +79,7 @@ class CreateNoteRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ...) -> None: ...
 
 class GetNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     note_id: str
@@ -87,9 +87,9 @@ class GetNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UpdateNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "title", "content", "slug", "parent_id", "tags", "metadata")
     class MetadataEntry(_message.Message):
-        __slots__ = ()
+        __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
@@ -114,7 +114,7 @@ class UpdateNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class DeleteNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "permanent")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PERMANENT_FIELD_NUMBER: _ClassVar[int]
@@ -124,7 +124,7 @@ class DeleteNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., permanent: _Optional[bool] = ...) -> None: ...
 
 class DeleteNoteResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("success", "message")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     success: bool
@@ -132,13 +132,13 @@ class DeleteNoteResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
 class NoteResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note",)
     NOTE_FIELD_NUMBER: _ClassVar[int]
     note: Note
     def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
 
 class ListNotesRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "parent_id", "tags", "include_deleted", "pinned_only", "page", "page_size", "sort_by", "sort_order", "visibility", "group_id", "personal_only")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
@@ -166,7 +166,7 @@ class ListNotesRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., pinned_only: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ...) -> None: ...
 
 class ListNotesResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("notes", "total_count", "page", "page_size", "total_pages")
     NOTES_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
@@ -180,7 +180,7 @@ class ListNotesResponse(_message.Message):
     def __init__(self, notes: _Optional[_Iterable[_Union[Note, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., total_pages: _Optional[int] = ...) -> None: ...
 
 class SearchNotesRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "query", "tags", "include_deleted", "page", "page_size")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
@@ -196,7 +196,7 @@ class SearchNotesRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
 
 class SearchNotesResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("notes", "total_count", "page", "page_size")
     NOTES_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
@@ -208,7 +208,7 @@ class SearchNotesResponse(_message.Message):
     def __init__(self, notes: _Optional[_Iterable[_Union[Note, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
 
 class GetBacklinksRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     note_id: str
@@ -216,7 +216,7 @@ class GetBacklinksRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class BacklinksResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("backlinks", "total_count")
     BACKLINKS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     backlinks: _containers.RepeatedCompositeFieldContainer[NoteReference]
@@ -224,7 +224,7 @@ class BacklinksResponse(_message.Message):
     def __init__(self, backlinks: _Optional[_Iterable[_Union[NoteReference, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class TogglePinRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "pinned")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PINNED_FIELD_NUMBER: _ClassVar[int]
@@ -234,7 +234,7 @@ class TogglePinRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., pinned: _Optional[bool] = ...) -> None: ...
 
 class RestoreNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     note_id: str
@@ -242,13 +242,13 @@ class RestoreNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class EmptyTrashRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id",)
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
 class EmptyTrashResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("deleted_count", "success", "message")
     DELETED_COUNT_FIELD_NUMBER: _ClassVar[int]
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
@@ -258,7 +258,7 @@ class EmptyTrashResponse(_message.Message):
     def __init__(self, deleted_count: _Optional[int] = ..., success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
 class AutosaveNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "content", "title", "client_timestamp")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
@@ -272,7 +272,7 @@ class AutosaveNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., content: _Optional[str] = ..., title: _Optional[str] = ..., client_timestamp: _Optional[int] = ...) -> None: ...
 
 class AutosaveNoteResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("success", "saved_at", "version")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     SAVED_AT_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -282,9 +282,9 @@ class AutosaveNoteResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ..., saved_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., version: _Optional[int] = ...) -> None: ...
 
 class Note(_message.Message):
-    __slots__ = ()
+    __slots__ = ("id", "organization_id", "owner_id", "visibility", "node_type", "title", "content", "slug", "is_deleted", "is_pinned", "version", "parent_id", "tags", "metadata", "created_at", "updated_at", "deleted_at", "group_ids", "user_permission", "outgoing_references")
     class MetadataEntry(_message.Message):
-        __slots__ = ()
+        __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
@@ -309,6 +309,7 @@ class Note(_message.Message):
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
     USER_PERMISSION_FIELD_NUMBER: _ClassVar[int]
+    OUTGOING_REFERENCES_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -328,10 +329,11 @@ class Note(_message.Message):
     deleted_at: _timestamp_pb2.Timestamp
     group_ids: _containers.RepeatedScalarFieldContainer[str]
     user_permission: PermissionLevel
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ...) -> None: ...
+    outgoing_references: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class NoteReference(_message.Message):
-    __slots__ = ()
+    __slots__ = ("id", "title", "slug", "owner_id", "updated_at", "visibility", "node_type")
     ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
@@ -349,7 +351,7 @@ class NoteReference(_message.Message):
     def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., slug: _Optional[str] = ..., owner_id: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ...) -> None: ...
 
 class MoveNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "target_visibility", "target_group_ids")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TARGET_VISIBILITY_FIELD_NUMBER: _ClassVar[int]
@@ -361,7 +363,7 @@ class MoveNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., target_visibility: _Optional[_Union[VisibilityScope, str]] = ..., target_group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CopyNoteRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "target_visibility", "target_group_ids", "title")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TARGET_VISIBILITY_FIELD_NUMBER: _ClassVar[int]
@@ -375,7 +377,7 @@ class CopyNoteRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., target_visibility: _Optional[_Union[VisibilityScope, str]] = ..., target_group_ids: _Optional[_Iterable[str]] = ..., title: _Optional[str] = ...) -> None: ...
 
 class ShareNoteWithGroupRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "group_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
@@ -385,7 +387,7 @@ class ShareNoteWithGroupRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., group_id: _Optional[str] = ...) -> None: ...
 
 class UnshareNoteFromGroupRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "group_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
@@ -395,7 +397,7 @@ class UnshareNoteFromGroupRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., group_id: _Optional[str] = ...) -> None: ...
 
 class ShareNoteResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("success", "message", "group_ids")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
@@ -405,7 +407,7 @@ class ShareNoteResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ..., group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetNoteSharingRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     note_id: str
@@ -413,7 +415,7 @@ class GetNoteSharingRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class NoteSharingResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("visibility", "owner_id", "group_ids", "permissions")
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
@@ -425,7 +427,7 @@ class NoteSharingResponse(_message.Message):
     def __init__(self, visibility: _Optional[_Union[VisibilityScope, str]] = ..., owner_id: _Optional[str] = ..., group_ids: _Optional[_Iterable[str]] = ..., permissions: _Optional[_Iterable[_Union[ContentPermission, _Mapping]]] = ...) -> None: ...
 
 class GrantPermissionRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "subject_type", "subject_id", "permission_level", "can_view", "can_edit", "can_delete", "can_share", "can_move")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -449,7 +451,7 @@ class GrantPermissionRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., subject_type: _Optional[str] = ..., subject_id: _Optional[str] = ..., permission_level: _Optional[_Union[PermissionLevel, str]] = ..., can_view: _Optional[bool] = ..., can_edit: _Optional[bool] = ..., can_delete: _Optional[bool] = ..., can_share: _Optional[bool] = ..., can_move: _Optional[bool] = ...) -> None: ...
 
 class RevokePermissionRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("note_id", "organization_id", "subject_type", "subject_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -461,7 +463,7 @@ class RevokePermissionRequest(_message.Message):
     def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., subject_type: _Optional[str] = ..., subject_id: _Optional[str] = ...) -> None: ...
 
 class PermissionResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("success", "message")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     success: bool
@@ -469,7 +471,7 @@ class PermissionResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
 class ContentPermission(_message.Message):
-    __slots__ = ()
+    __slots__ = ("id", "subject_type", "subject_id", "permission_level", "can_view", "can_edit", "can_delete", "can_share", "can_move", "granted_by_user_id", "granted_at", "expires_at")
     ID_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_TYPE_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]

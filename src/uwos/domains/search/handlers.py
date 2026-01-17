@@ -17,6 +17,8 @@ from uwos.domains.search.operations import SearchOperations
 from uwos.gen.search.v1.search_pb2 import (
     DeleteItemRequest,
     DeleteItemResponse,
+    GetReferencesRequest,
+    GetReferencesResponse,
     IndexItemRequest,
     IndexItemResponse,
     SearchRequest,
@@ -166,4 +168,59 @@ class SearchHandlers:
 
         except Exception as e:
             logger.exception(f"Error deleting item: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def get_references(
+        self,
+        request: GetReferencesRequest,
+        ctx: RequestContext,
+    ) -> GetReferencesResponse:
+        """
+        Get all content that references a specific URN.
+
+        Returns content items that have the target URN in their
+        outgoing_references, effectively providing universal backlinks.
+        """
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        if not request.target_urn:
+            raise ConnectError(Code.INVALID_ARGUMENT, "target_urn is required")
+
+        user_id = get_user_id_from_context(ctx)
+
+        # Parse type filters
+        type_filters: list[str] | None = None
+        if request.type_filters:
+            type_filters = [
+                entity_type
+                for tf in request.type_filters
+                if (entity_type := proto_to_entity_type(tf)) is not None
+            ]
+
+        # Set limit with bounds
+        limit = min(max(request.limit or 50, 1), 100)
+
+        try:
+            async for session in get_async_session():
+                ops = SearchOperations(session)
+                results, total = await ops.get_references(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    target_urn=request.target_urn,
+                    type_filters=type_filters,
+                    limit=limit,
+                )
+
+                # Convert to proto
+                items = [search_result_to_proto(item, 1.0) for item in results]
+
+                return GetReferencesResponse(items=items, total_count=total)
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error getting references: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")

@@ -32,7 +32,7 @@ SEARCH_RESULT_TYPE_WORKFLOW: SearchResultType
 SEARCH_RESULT_TYPE_SPACE: SearchResultType
 
 class SearchRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "query", "type_filters", "limit")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TYPE_FILTERS_FIELD_NUMBER: _ClassVar[int]
@@ -44,15 +44,15 @@ class SearchRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ...) -> None: ...
 
 class SearchResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("items",)
     ITEMS_FIELD_NUMBER: _ClassVar[int]
     items: _containers.RepeatedCompositeFieldContainer[SearchResultItem]
     def __init__(self, items: _Optional[_Iterable[_Union[SearchResultItem, _Mapping]]] = ...) -> None: ...
 
 class SearchResultItem(_message.Message):
-    __slots__ = ()
+    __slots__ = ("urn", "title", "description", "type", "url", "score", "metadata")
     class MetadataEntry(_message.Message):
-        __slots__ = ()
+        __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
@@ -75,9 +75,9 @@ class SearchResultItem(_message.Message):
     def __init__(self, urn: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., score: _Optional[float] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class IndexItemRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("organization_id", "urn", "type", "title", "content", "url", "metadata")
     class MetadataEntry(_message.Message):
-        __slots__ = ()
+        __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
@@ -100,13 +100,13 @@ class IndexItemRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., urn: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class IndexItemResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("success",)
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
 
 class DeleteItemRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("urn", "organization_id")
     URN_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     urn: str
@@ -114,7 +114,27 @@ class DeleteItemRequest(_message.Message):
     def __init__(self, urn: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class DeleteItemResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("success",)
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class GetReferencesRequest(_message.Message):
+    __slots__ = ("organization_id", "target_urn", "type_filters", "limit")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_URN_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FILTERS_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    target_urn: str
+    type_filters: _containers.RepeatedScalarFieldContainer[SearchResultType]
+    limit: int
+    def __init__(self, organization_id: _Optional[str] = ..., target_urn: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ...) -> None: ...
+
+class GetReferencesResponse(_message.Message):
+    __slots__ = ("items", "total_count")
+    ITEMS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    items: _containers.RepeatedCompositeFieldContainer[SearchResultItem]
+    total_count: int
+    def __init__(self, items: _Optional[_Iterable[_Union[SearchResultItem, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...

@@ -51,6 +51,7 @@ const noteToPlain = (note: Note): PlainMessage<Note> => ({
     } : undefined,
     groupIds: [...note.groupIds],
     userPermission: note.userPermission,
+    outgoingReferences: [...note.outgoingReferences],
 });
 
 /**
