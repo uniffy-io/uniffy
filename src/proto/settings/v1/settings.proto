@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package settings.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// SettingsService provides user settings management functionality
+service SettingsService {
+  // Create a new settings profile
+  rpc CreateProfile(CreateProfileRequest) returns (ProfileResponse) {}
+
+  // Get a settings profile by ID
+  rpc GetProfile(GetProfileRequest) returns (ProfileResponse) {}
+
+  // Update an existing settings profile (sparse update - only changed values)
+  rpc UpdateProfile(UpdateProfileRequest) returns (ProfileResponse) {}
+
+  // Delete a settings profile
+  rpc DeleteProfile(DeleteProfileRequest) returns (DeleteProfileResponse) {}
+
+  // List all profiles for the current user
+  rpc ListProfiles(ListProfilesRequest) returns (ListProfilesResponse) {}
+
+  // Get the effective settings for a profile (defaults merged with overrides)
+  rpc GetEffectiveSettings(GetEffectiveSettingsRequest) returns (EffectiveSettingsResponse) {}
+
+  // Get the schema of available settings with their defaults
+  rpc GetSettingsSchema(GetSettingsSchemaRequest) returns (SettingsSchemaResponse) {}
+
+  // Set a profile as the default for the user
+  rpc SetDefaultProfile(SetDefaultProfileRequest) returns (ProfileResponse) {}
+}
+
+// Request to create a new settings profile
+message CreateProfileRequest {
+  // Profile name (e.g., "Default", "Work", "Home")
+  string name = 1;
+  // Initial appearance overrides (optional)
+  AppearanceSettings appearance = 2;
+  // Initial keyboard shortcut overrides (optional)
+  KeyboardShortcutsSettings keyboard_shortcuts = 3;
+  // Initial notification overrides (optional)
+  NotificationsSettings notifications = 4;
+  // Set as default profile
+  bool is_default = 5;
+}
+
+// Request to get a profile
+message GetProfileRequest {
+  // Profile ID
+  string profile_id = 1;
+}
+
+// Request to update a profile (sparse update - only include changed values)
+message UpdateProfileRequest {
+  // Profile ID
+  string profile_id = 1;
+  // Updated profile name (optional)
+  optional string name = 2;
+  // Updated appearance settings (only include changed values)
+  AppearanceSettings appearance = 3;
+  // Updated keyboard shortcuts (only include changed values)
+  KeyboardShortcutsSettings keyboard_shortcuts = 4;
+  // Updated notification settings (only include changed values)
+  NotificationsSettings notifications = 5;
+  // Set as default profile (optional)
+  optional bool is_default = 6;
+}
+
+// Request to delete a profile
+message DeleteProfileRequest {
+  // Profile ID
+  string profile_id = 1;
+}
+
+// Response for delete operation
+message DeleteProfileResponse {
+  // Success flag
+  bool success = 1;
+  // Message
+  string message = 2;
+}
+
+// Response containing a single profile
+message ProfileResponse {
+  // The profile data
+  SettingsProfile profile = 1;
+}
+
+// Request to list profiles
+message ListProfilesRequest {
+  // No parameters needed - returns all profiles for current user
+}
+
+// Response for listing profiles
+message ListProfilesResponse {
+  // List of profiles
+  repeated SettingsProfile profiles = 1;
+  // Total count
+  int32 total_count = 2;
+}
+
+// Request to get effective settings
+message GetEffectiveSettingsRequest {
+  // Profile ID (optional - uses default profile if not specified)
+  optional string profile_id = 1;
+}
+
+// Response with effective settings (defaults merged with overrides)
+message EffectiveSettingsResponse {
+  // The profile used
+  SettingsProfile profile = 1;
+  // Merged effective settings
+  EffectiveSettings effective_settings = 2;
+}
+
+// Request to get settings schema
+message GetSettingsSchemaRequest {
+  // No parameters needed
+}
+
+// Response with settings schema
+message SettingsSchemaResponse {
+  // Default appearance settings
+  AppearanceSettings appearance_defaults = 1;
+  // Default keyboard shortcuts
+  KeyboardShortcutsSettings keyboard_shortcuts_defaults = 2;
+  // Default notification settings
+  NotificationsSettings notifications_defaults = 3;
+}
+
+// Request to set default profile
+message SetDefaultProfileRequest {
+  // Profile ID to set as default
+  string profile_id = 1;
+}
+
+// Settings profile model
+message SettingsProfile {
+  // Profile ID
+  string id = 1;
+  // User ID (owner)
+  string user_id = 2;
+  // Profile name
+  string name = 3;
+  // Appearance overrides (sparse - only user-changed values)
+  AppearanceSettings appearance = 4;
+  // Keyboard shortcut overrides (sparse - only user-changed values)
+  KeyboardShortcutsSettings keyboard_shortcuts = 5;
+  // Notification overrides (sparse - only user-changed values)
+  NotificationsSettings notifications = 6;
+  // Is this the default profile for the user
+  bool is_default = 7;
+  // Created timestamp
+  google.protobuf.Timestamp created_at = 8;
+  // Updated timestamp
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// Effective settings (fully resolved with defaults)
+message EffectiveSettings {
+  // Full appearance settings
+  AppearanceSettings appearance = 1;
+  // Full keyboard shortcuts
+  KeyboardShortcutsSettings keyboard_shortcuts = 2;
+  // Full notification settings
+  NotificationsSettings notifications = 3;
+}
+
+// Appearance settings
+message AppearanceSettings {
+  // Theme mode: "system", "light", "dark"
+  optional string theme = 1;
+  // Accent color in HSL format (e.g., "221.2 83.2% 53.3%")
+  optional string accent_color = 2;
+  // Font family: "inter", "geist", "system"
+  optional string font_family = 3;
+  // Sidebar collapsed state
+  optional bool sidebar_collapsed = 4;
+  // Enable compact mode
+  optional bool compact_mode = 5;
+}
+
+// Keyboard shortcuts settings
+message KeyboardShortcutsSettings {
+  // Map of action name to key binding
+  // Key: action identifier (e.g., "editor.save", "nav.search")
+  // Value: keyboard shortcut (e.g., "Ctrl+S", "Cmd+K")
+  map<string, string> bindings = 1;
+}
+
+// Notification settings
+message NotificationsSettings {
+  // Enable desktop notifications
+  optional bool desktop_enabled = 1;
+  // Enable email notifications
+  optional bool email_enabled = 2;
+  // Enable sound for notifications
+  optional bool sound_enabled = 3;
+  // Notification frequency: "instant", "hourly", "daily"
+  optional string email_frequency = 4;
+  // Quiet hours start (24h format, e.g., "22:00")
+  optional string quiet_hours_start = 5;
+  // Quiet hours end (24h format, e.g., "08:00")
+  optional string quiet_hours_end = 6;
+}

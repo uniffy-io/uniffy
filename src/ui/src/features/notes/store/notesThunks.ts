@@ -79,6 +79,7 @@ export const fetchNotes = createAsyncThunk<
         tags?: string[];
         sortBy?: string;
         sortOrder?: string;
+        excludeContent?: boolean;
     } | void,
     { state: RootState; rejectValue: string }
 >('notes/fetchNotes', async (params, { getState, rejectWithValue }) => {
@@ -87,16 +88,17 @@ export const fetchNotes = createAsyncThunk<
         const response = await notesApi.listNotes({
             organizationId,
             page: params?.page ?? 1,
-            pageSize: params?.pageSize ?? 100,
+            pageSize: params?.pageSize ?? 500,
             parentId: params?.parentId,
             visibility: params?.visibility,
             personalOnly: params?.personalOnly ?? false,
             pinnedOnly: params?.pinnedOnly ?? false,
-            includeDeleted: params?.includeDeleted ?? false,
+            includeDeleted: params?.includeDeleted ?? true,
             groupId: params?.groupId,
             tags: params?.tags ?? [],
             sortBy: params?.sortBy ?? 'updated_at',
             sortOrder: params?.sortOrder ?? 'desc',
+            excludeContent: params?.excludeContent ?? true,
         });
 
         return {
@@ -251,7 +253,7 @@ export const updateNote = createAsyncThunk<
  * Autosave note content (debounced calls should happen at component level).
  */
 export const autosaveNote = createAsyncThunk<
-    { noteId: string; version: number; savedAt: Date },
+    { noteId: string; version: number; savedAt: string },
     {
         noteId: string;
         content: string;
@@ -275,7 +277,8 @@ export const autosaveNote = createAsyncThunk<
             noteId: params.noteId,
             // Convert BigInt to Number for Redux serialization
             version: typeof response.version === 'bigint' ? Number(response.version) : response.version,
-            savedAt: response.savedAt?.toDate() ?? new Date(),
+            // Convert Date to ISO string for Redux serialization
+            savedAt: (response.savedAt?.toDate() ?? new Date()).toISOString(),
         };
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Autosave failed');

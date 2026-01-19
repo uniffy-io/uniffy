@@ -5,7 +5,15 @@ import os
 from loguru import logger
 from sqlalchemy import select
 
-from uwos.core.models import Organization, OrganizationMember, OrganizationRole, User
+from uwos.core.models import (
+    Note,
+    Organization,
+    OrganizationMember,
+    OrganizationRole,
+    User,
+    VisibilityScope,
+)
+from uwos.core.models.shared import NodeType
 from uwos.db.session import get_async_session
 from uwos.domains.auth.passwords import hash_password
 
@@ -70,6 +78,22 @@ async def seed_initial_data() -> None:
                 is_active=True,
             )
             session.add(member)
+
+            # 4. Create Docs folder
+            docs_folder = Note(
+                organization_id=default_org.id,
+                owner_id=admin_user.id,
+                visibility=VisibilityScope.ORGANIZATION,
+                node_type=NodeType.FOLDER,
+                title="Docs",
+                content="Welcome to UWOS! This folder contains documentation.",
+                slug="docs",
+                is_pinned=True,
+                tags=["documentation", "getting-started"],
+                note_metadata={"system_generated": "true"},
+            )
+            session.add(docs_folder)
+            logger.info("Created Docs folder")
 
             await session.commit()
             logger.info("Initial data seeding completed successfully.")

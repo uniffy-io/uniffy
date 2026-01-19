@@ -5,15 +5,21 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config/api';
 import { SearchService } from '@/gen/search/v1/search_connect';
 import type { SearchRequest, ResolveUrnsRequest } from '@/gen/search/v1/search_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
+import type { Client } from '@connectrpc/connect';
 
-/**
- * Create a search service client with the shared transport.
- */
-const searchClient = createClient(SearchService, transport);
+// Lazy client initialization to avoid circular dependency with api.ts
+let searchClient: Client<typeof SearchService> | null = null;
+
+async function getSearchClient(): Promise<Client<typeof SearchService>> {
+    if (!searchClient) {
+        const { transport } = await import('@/config/api');
+        searchClient = createClient(SearchService, transport);
+    }
+    return searchClient;
+}
 
 /**
  * Search API service with typed methods.
@@ -23,7 +29,8 @@ export const searchApi = {
      * Perform a global fuzzy search across all entities.
      */
     search: async (request: PartialMessage<SearchRequest>) => {
-        return searchClient.search(request);
+        const client = await getSearchClient();
+        return client.search(request);
     },
 
     /**
@@ -31,6 +38,7 @@ export const searchApi = {
      * Returns a map of URN -> metadata for accessible items.
      */
     resolveUrns: async (request: PartialMessage<ResolveUrnsRequest>) => {
-        return searchClient.resolveUrns(request);
+        const client = await getSearchClient();
+        return client.resolveUrns(request);
     },
 };

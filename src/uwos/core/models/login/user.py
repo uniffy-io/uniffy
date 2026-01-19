@@ -32,6 +32,9 @@ class User(SQLModel, table=True):
         Whether the user has system-wide admin privileges (platform admin).
     email_verified : bool
         Whether the user's email has been verified.
+    token_version : int
+        Token version for immediate revocation. Incremented on security events
+        (deactivation, password change, etc.). Tokens with old version are rejected.
     created_at : datetime
         Timestamp when the user was created.
     updated_at : datetime
@@ -49,6 +52,11 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True, nullable=False)
     is_system_admin: bool = Field(default=False, nullable=False)
     email_verified: bool = Field(default=False, nullable=False)
+    token_version: int = Field(
+        default=1,
+        nullable=False,
+        description="Token version for immediate token revocation. Incremented on security events.",
+    )
     accent_color: str | None = Field(
         default=None,
         max_length=50,

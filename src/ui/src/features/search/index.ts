@@ -10,5 +10,10 @@ export {
   invalidateUrnMetadataCache,
   hydrateUrnMetadataCache,
 } from './hooks/useUrnResolution';
+export {
+  openSpotlightSearch,
+  useOpenSpotlight,
+} from './hooks/useSpotlightTrigger';
 export { GlobalSearch } from './components/GlobalSearch';
 export { SearchResultsList } from './components/SearchResultsList';
+export { SpotlightSearch } from './components/SpotlightSearch';

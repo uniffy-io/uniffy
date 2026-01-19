@@ -24,11 +24,12 @@ import {
   TrashIcon,
   PencilIcon,
   ArrowPathIcon,
+  ArrowUturnLeftIcon,
   CubeTransparentIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote } from '../../store/notesSlice';
+import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote } from '../../store/notesSlice';
 import { toggleSidebar } from '../../store/editorSlice';
 import {
   toggleNodeExpanded,
@@ -40,6 +41,7 @@ import {
 } from '../../store/notesTreeSlice';
 import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
 import { notesApi } from '../../api/notesApi';
+import { Button } from '@/components/ui/button';
 
 // Section configuration
 interface SectionConfig {
@@ -101,36 +103,37 @@ function TreeNodeItem({
   isNodeSelected: (nodeId: string) => boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  // Start with node.title, user edits update this
   const [editValue, setEditValue] = useState(node.title);
   const [isDragOver, setIsDragOver] = useState(false);
   const isFolder = node.type === 'folder';
   const hasChildren = isFolder && node.children && node.children.length > 0;
   const isEditing = editingId === node.id;
   const isDragging = draggedNodeId === node.id;
-  
+
   // Check if draggedNodeId is a descendant of this node (prevent dropping into own children)
   const isDescendant = (nodeToCheck: TreeNode, targetId: string): boolean => {
     if (nodeToCheck.id === targetId) return true;
     if (!nodeToCheck.children) return false;
     return nodeToCheck.children.some(child => isDescendant(child, targetId));
   };
-  
+
   // Can only drop here if:
   // 1. This is a folder
   // 2. Not dropping onto itself
   // 3. Not dropping into its own descendant (would create circular reference)
   const canDropHere = isFolder && draggedNodeId !== node.id && (!draggedNodeId || !isDescendant(node, draggedNodeId));
 
+  // Focus input when editing starts (useEffect is needed for DOM focus)
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
+      // Reset edit value to current title when starting edit
+      setEditValue(node.title);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only run when isEditing changes
   }, [isEditing]);
-
-  useEffect(() => {
-    setEditValue(node.title);
-  }, [node.title]);
 
   const handleSubmitRename = () => {
     if (editValue.trim() && editValue !== node.title) {
@@ -368,6 +371,8 @@ export function NotesSidebar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showTrash, setShowTrash] = useState(false);
   const [emptyingTrash, setEmptyingTrash] = useState(false);
+  const [showEmptyTrashConfirm, setShowEmptyTrashConfirm] = useState(false);
+  const [restoringNoteId, setRestoringNoteId] = useState<string | null>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
 
   // Check if a node is expanded
@@ -574,44 +579,9 @@ export function NotesSidebar() {
     setDraggedNodeId(null);
   }, []);
 
-  // Delete a note or folder
+  // Delete a note or folder (moves to trash)
   const handleDelete = useCallback(
     async (noteId: string) => {
-      // Find the node to check if it's a folder
-      const findNode = (nodes: TreeNode[]): TreeNode | null => {
-        for (const node of nodes) {
-          if (node.id === noteId) return node;
-          if (node.children) {
-            const found = findNode(node.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
-      let targetNode: TreeNode | null = null;
-      for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
-        targetNode = findNode(tree[section]);
-        if (targetNode) break;
-      }
-      if (!targetNode) {
-        for (const group of tree.groups) {
-          targetNode = findNode(group.nodes);
-          if (targetNode) break;
-        }
-      }
-
-      const isFolder = targetNode?.type === 'folder';
-      const hasChildren = isFolder && targetNode?.children && targetNode.children.length > 0;
-      
-      // Confirm deletion with appropriate message
-      const message = hasChildren
-        ? 'Are you sure you want to delete this folder and all its contents? This action cannot be undone.'
-        : 'Are you sure you want to delete this item? This action cannot be undone.';
-      
-      const confirmed = window.confirm(message);
-      if (!confirmed) return;
-
       try {
         await dispatch(deleteNote({ noteId })).unwrap();
 
@@ -627,7 +597,7 @@ export function NotesSidebar() {
         console.error('Failed to delete item:', err);
       }
     },
-    [dispatch, currentNoteId, tree]
+    [dispatch, currentNoteId]
   );
 
   // Refresh tree
@@ -797,15 +767,15 @@ export function NotesSidebar() {
     );
   };
 
-  // Handle emptying trash
-  const handleEmptyTrash = useCallback(async () => {
+  // Show empty trash confirmation modal
+  const handleEmptyTrashClick = useCallback(() => {
     if (tree.trash.length === 0 || !organizationId) return;
+    setShowEmptyTrashConfirm(true);
+  }, [tree.trash.length, organizationId]);
 
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete all ${tree.trash.length} item(s) in trash? This action cannot be undone.`
-    );
-
-    if (!confirmed) return;
+  // Handle confirmed empty trash
+  const handleEmptyTrashConfirm = useCallback(async () => {
+    if (!organizationId) return;
 
     try {
       setEmptyingTrash(true);
@@ -818,11 +788,25 @@ export function NotesSidebar() {
       }
     } catch (error) {
       console.error('Failed to empty trash:', error);
-      alert('Failed to empty trash. Please try again.');
     } finally {
       setEmptyingTrash(false);
+      setShowEmptyTrashConfirm(false);
     }
-  }, [tree.trash, organizationId, dispatch, currentNoteId]);
+  }, [organizationId, dispatch, currentNoteId, tree.trash]);
+
+  // Handle restoring a note from trash
+  const handleRestore = useCallback(async (noteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setRestoringNoteId(noteId);
+      await dispatch(restoreNote(noteId)).unwrap();
+      await dispatch(fetchNotesTree({}));
+    } catch (error) {
+      console.error('Failed to restore note:', error);
+    } finally {
+      setRestoringNoteId(null);
+    }
+  }, [dispatch]);
 
   // Render trash section
   const renderTrash = () => {
@@ -845,7 +829,7 @@ export function NotesSidebar() {
             <span className="text-xs text-muted-foreground">{tree.trash.length}</span>
           </button>
           <button
-            onClick={handleEmptyTrash}
+            onClick={handleEmptyTrashClick}
             disabled={emptyingTrash || tree.trash.length === 0}
             className="px-2 py-1.5 text-xs rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Empty trash"
@@ -860,11 +844,23 @@ export function NotesSidebar() {
               <div
                 key={node.id}
                 onClick={() => handleSelectNote(node.id)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left opacity-60 cursor-pointer ${currentNoteId === node.id ? 'bg-accent text-accent-foreground' : ''
+                className={`group w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left opacity-60 cursor-pointer ${currentNoteId === node.id ? 'bg-accent text-accent-foreground' : ''
                   }`}
               >
-                <DocumentTextIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="truncate">{node.title}</span>
+                <DocumentTextIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="truncate flex-1">{node.title}</span>
+                <button
+                  onClick={(e) => handleRestore(node.id, e)}
+                  disabled={restoringNoteId === node.id}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-primary/10 hover:text-primary transition-all disabled:opacity-50"
+                  title="Restore"
+                >
+                  {restoringNoteId === node.id ? (
+                    <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
+                  )}
+                </button>
               </div>
             ))}
           </div>
@@ -970,6 +966,53 @@ export function NotesSidebar() {
           {renderTrash()}
         </nav>
       </div>
+
+      {/* Empty Trash Confirmation Modal */}
+      {showEmptyTrashConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-background w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
+              <div className="rounded-lg bg-destructive/10 p-2">
+                <TrashIcon className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Empty Trash</h2>
+                <p className="text-xs text-muted-foreground">This action cannot be undone</p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to permanently delete{' '}
+                <span className="font-medium text-foreground">{tree.trash.length} item{tree.trash.length !== 1 ? 's' : ''}</span>{' '}
+                from the trash? This will free up space but the items cannot be recovered.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setShowEmptyTrashConfirm(false)}
+                disabled={emptyingTrash}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="md"
+                onClick={handleEmptyTrashConfirm}
+                disabled={emptyingTrash}
+              >
+                {emptyingTrash ? 'Deleting...' : 'Delete Permanently'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

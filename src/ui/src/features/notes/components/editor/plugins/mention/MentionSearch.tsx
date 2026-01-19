@@ -2,13 +2,15 @@
  * Mention Search Component
  *
  * Displays a centered Spotlight-style search popup when "@" is typed.
- * Uses the shared SearchResultsList component.
+ * Uses the same styling as SpotlightSearch for consistency.
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import type { EditorView } from '@milkdown/kit/prose/view';
+import { XMarkIcon, AtSymbolIcon } from '@heroicons/react/24/outline';
 import { SearchResultsList, useSearch } from '@/features/search';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
+import { cn } from '@/utils/cn';
 
 interface MentionSearchProps {
   query: string;
@@ -26,18 +28,17 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
 
   // Manage query state locally to handle backspace properly
   const [localQuery, setLocalQuery] = useState(initialQuery);
+  // Track previous query length for accurate replacement
+  const prevQueryLengthRef = useRef(localQuery.length);
 
   // Search for all content types (no filters)
-  const { setQuery, results, isLoading, query: currentSearchQuery } = useSearch();
+  const { setQuery, results, isLoading, query: currentSearchQuery, clearResults } = useSearch();
 
   // Update search query when local query changes
   const trimmedQuery = localQuery.trim();
   if (trimmedQuery !== currentSearchQuery) {
     setQuery(trimmedQuery);
   }
-
-  // Track previous query length for accurate replacement
-  const prevQueryLengthRef = useRef(localQuery.length);
 
   // Sync editor content with local query
   const syncEditorContent = useCallback((newQuery: string, oldLength: number) => {
@@ -59,7 +60,7 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
     dispatch(tr);
   }, [view, from]);
 
-  // Handle input changes from the hidden input
+  // Handle input changes from the visible input
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     const oldLength = prevQueryLengthRef.current;
@@ -100,7 +101,18 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
     // These need to bubble to the document listener
   }, [view, from, localQuery, onClose]);
 
-  // Focus the hidden input when popup opens
+  // Handle clear button
+  const handleClear = useCallback(() => {
+    const oldLength = prevQueryLengthRef.current;
+    setLocalQuery('');
+    syncEditorContent('', oldLength);
+    onQueryChange?.('');
+    prevQueryLengthRef.current = 0;
+    clearResults();
+    inputRef.current?.focus();
+  }, [syncEditorContent, onQueryChange, clearResults]);
+
+  // Focus the input when popup opens
   useEffect(() => {
     // Small delay to ensure the input is rendered
     const timer = setTimeout(() => {
@@ -108,14 +120,6 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
     }, 10);
     return () => clearTimeout(timer);
   }, []);
-
-  // Update local query if initial query changes (e.g., from continued typing before popup fully initialized)
-  useEffect(() => {
-    if (initialQuery !== localQuery && initialQuery.length > localQuery.length) {
-      setLocalQuery(initialQuery);
-      prevQueryLengthRef.current = initialQuery.length;
-    }
-  }, [initialQuery, localQuery]);
 
   // Close on click outside (on the backdrop)
   useEffect(() => {
@@ -131,35 +135,78 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
 
   return (
     <>
-      {/* Backdrop overlay */}
-      <div className="fixed inset-0 bg-background/50 z-[999] animate-in fade-in-0 duration-150" />
+      {/* Backdrop overlay - same as SpotlightSearch */}
+      <div className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[999] animate-in fade-in-0 duration-150" />
 
-      {/* Hidden input to capture keyboard input */}
-      <input
-        ref={inputRef}
-        type="text"
-        value={localQuery}
-        onChange={handleInputChange}
-        onKeyDown={handleInputKeyDown}
-        className="sr-only"
-        aria-label="Search mentions"
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-      />
-
-      {/* Centered popup container */}
+      {/* Centered popup container - same as SpotlightSearch */}
       <div className="fixed inset-0 z-[1000] flex items-start justify-center pt-[15vh]">
-        <div ref={popupRef} className="mention-popup w-full max-w-2xl mx-4">
-          <SearchResultsList
-            results={results}
-            isLoading={isLoading}
-            query={localQuery}
-            onSelect={onSelect}
-            onClose={onClose}
-            emptyMessage="No notes or files found"
-          />
+        <div
+          ref={popupRef}
+          className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
+        >
+          {/* Search input card - same styling as SpotlightSearch */}
+          <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
+            {/* Search input */}
+            <div className="relative flex items-center border-b border-border/50">
+              <div className="absolute left-4 flex items-center gap-1">
+                <AtSymbolIcon className="h-5 w-5 text-primary" />
+              </div>
+              <input
+                ref={inputRef}
+                type="text"
+                value={localQuery}
+                onChange={handleInputChange}
+                onKeyDown={handleInputKeyDown}
+                placeholder="Search to mention..."
+                className={cn(
+                  "w-full h-14 bg-transparent pl-12 pr-20 text-lg",
+                  "placeholder:text-muted-foreground/60",
+                  "focus:outline-none"
+                )}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+              />
+              <div className="absolute right-4 flex items-center gap-2">
+                {localQuery && (
+                  <button
+                    onClick={handleClear}
+                    className="p-1 rounded-md hover:bg-muted transition-colors"
+                  >
+                    <XMarkIcon className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
+                <kbd className="hidden sm:inline-flex px-2 py-1 rounded-md bg-muted border border-border/50 text-xs text-muted-foreground font-mono">
+                  esc
+                </kbd>
+              </div>
+            </div>
+
+            {/* Results or empty prompt */}
+            {localQuery.trim() || isLoading ? (
+              <SearchResultsList
+                results={results}
+                isLoading={isLoading}
+                query={localQuery}
+                onSelect={onSelect}
+                onClose={onClose}
+                className="border-0 shadow-none ring-0 rounded-none max-h-[60vh]"
+                showHeader={false}
+                showFooter={true}
+                emptyMessage="No content found"
+              />
+            ) : (
+              <div className="py-8 px-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Type to search for content to mention
+                </p>
+                <p className="text-xs text-muted-foreground/60 mt-2">
+                  Use <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">@</kbd> to reference notes, files, users, and more
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

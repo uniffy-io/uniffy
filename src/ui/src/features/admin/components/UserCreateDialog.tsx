@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
@@ -27,15 +27,9 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
   
   const [organizations, setOrganizations] = useState<AdminOrganizationInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  const { accessToken } = useAppSelector((state) => state.auth);
+  const accessToken = useAppSelector((state) => state.auth?.accessToken);
 
-  useEffect(() => {
-    if (isOpen && accessToken) {
-      fetchOrganizations();
-    }
-  }, [isOpen, accessToken]);
-
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = useCallback(async () => {
     try {
       const client = createClient(AuthService, transport);
       const response = await client.listAllOrganizations(
@@ -46,7 +40,13 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
     } catch (err) {
       console.error('Failed to fetch organizations:', err);
     }
-  };
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (isOpen && accessToken) {
+      fetchOrganizations();
+    }
+  }, [isOpen, accessToken, fetchOrganizations]);
 
   if (!isOpen) return null;
 
@@ -83,9 +83,10 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
       setEmailVerified(false);
       setOrgId('');
       setOrgRole('member');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create user:', err);
-      alert(`Failed to create user: ${err.message || 'Unknown error'}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(`Failed to create user: ${message}`);
     } finally {
       setLoading(false);
     }

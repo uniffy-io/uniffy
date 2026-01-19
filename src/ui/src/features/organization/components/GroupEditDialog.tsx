@@ -53,9 +53,10 @@ export function GroupEditDialog({ group, isOpen, onClose, onSave }: GroupEditDia
       );
       onSave();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update group:', err);
-      alert(`Failed to update group: ${err.message || 'Unknown error'}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(`Failed to update group: ${message}`);
     } finally {
       setLoading(false);
     }

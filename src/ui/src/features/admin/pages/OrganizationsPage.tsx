@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
@@ -21,11 +21,7 @@ export default function OrganizationsPage() {
   
   const { accessToken } = useAppSelector((state) => state.auth);
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, [accessToken]);
-
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
     try {
@@ -35,13 +31,17 @@ export default function OrganizationsPage() {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setOrganizations(response.organizations);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to list organizations:', err);
       setError('Failed to load organizations');
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken]);
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
 
   const handleCreate = () => {
     setSelectedOrg(null);

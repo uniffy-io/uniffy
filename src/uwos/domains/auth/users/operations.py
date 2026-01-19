@@ -181,6 +181,9 @@ class UserOperations:
             user.email = email
         if is_active is not None:
             user.is_active = is_active
+            # Increment token_version on deactivation to immediately revoke all tokens
+            if was_deactivated:
+                user.token_version += 1
         if is_system_admin is not None:
             user.is_system_admin = is_system_admin
         if email_verified is not None:

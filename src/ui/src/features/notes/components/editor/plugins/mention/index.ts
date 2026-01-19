@@ -7,8 +7,23 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import React from 'react';
 import { Provider } from 'react-redux';
-import { store } from '@/app/store';
+import type { Store } from '@reduxjs/toolkit';
 import { MentionChip } from './MentionChip';
+
+// Lazy store getter to avoid circular dependency with api.ts
+let _store: Store | null = null;
+async function getStore(): Promise<Store> {
+  if (!_store) {
+    const { store } = await import('@/app/store');
+    _store = store;
+  }
+  return _store;
+}
+
+// Synchronous store getter - returns cached store or null
+function getStoreCached(): Store | null {
+  return _store;
+}
 import { urnToPath } from '@/utils/urn';
 import { navigateTo, openInNewTab } from '@/utils/navigation';
 import { visit, SKIP } from 'unist-util-visit';
@@ -69,7 +84,8 @@ export const mentionNode = $node('mention', () => ({
     `@${node.attrs.label}`,
   ],
   parseMarkdown: {
-    match: ({ type }: any) => type === 'mention',
+    match: ({ type }: { type: string }) => type === 'mention',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runner: (state: any, node: any, type: any) => {
       state.addNode(type, {
         urn: node.urn || '',
@@ -79,8 +95,9 @@ export const mentionNode = $node('mention', () => ({
   },
   toMarkdown: {
     match: (node: Node) => node.type.name === 'mention',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runner: (state: any, node: Node) => {
-      const attrs = node.attrs as any;
+      const attrs = node.attrs as { label: string; urn: string };
       // Export as [[[label|urn]]] format for markdown (unique, won't confuse with regular links)
       state.addNode('text', undefined, `[[[${attrs.label}|${attrs.urn}]]]`);
     },
@@ -153,7 +170,7 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => () => (t
 
 // 2. Input rule to detect "@" and trigger search
 // Store the view reference when the plugin is created
-let editorViewRef: EditorView | null = null;
+const editorViewRef: EditorView | null = null;
 
 export const mentionInputRule = $inputRule(() => {
   // Create a custom InputRule that captures the view
@@ -162,7 +179,7 @@ export const mentionInputRule = $inputRule(() => {
     const query = match[1] || '';
 
     // Get view from global reference
-    const view = editorViewRef || (window as any).__milkdownEditorView;
+    const view = editorViewRef || (window as Window & { __milkdownEditorView?: EditorView }).__milkdownEditorView;
 
     if (view) {
       triggerMentionSearch({
@@ -236,9 +253,21 @@ class MentionNodeView implements NodeView {
       label,
       selected,
     });
-    this.root.render(
-      React.createElement(Provider, { store, children: mentionElement })
-    );
+
+    // Use cached store if available, otherwise load it
+    const cachedStore = getStoreCached();
+    if (cachedStore) {
+      this.root.render(
+        React.createElement(Provider, { store: cachedStore, children: mentionElement })
+      );
+    } else {
+      // Load store async and then render
+      getStore().then((loadedStore) => {
+        this.root.render(
+          React.createElement(Provider, { store: loadedStore, children: mentionElement })
+        );
+      });
+    }
   }
 
   update(node: Node) {
@@ -262,7 +291,7 @@ class MentionNodeView implements NodeView {
     this.root.unmount();
   }
 
-  stopEvent(_event: Event) {
+  stopEvent() {
     // Return true to stop ProseMirror from handling the event
     // This allows our click handler to work
     return true;

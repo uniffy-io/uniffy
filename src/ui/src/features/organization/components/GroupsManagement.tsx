@@ -26,6 +26,7 @@ export function GroupsManagement() {
     if (accessToken && currentOrganizationId) {
       fetchGroups();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, currentOrganizationId]);
 
   const fetchGroups = async () => {
@@ -39,10 +40,11 @@ export function GroupsManagement() {
       );
       setGroups(response.groups);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to list groups:', err);
       // Simple check for permission denied
-      if (err.message?.includes("Requires organization admin")) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes("Requires organization admin")) {
           setError("You do not have permission to manage groups for this organization.");
       } else {
           setError('Failed to load groups');
@@ -62,9 +64,10 @@ export function GroupsManagement() {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       await fetchGroups();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete group:', err);
-      alert(`Failed to delete group: ${err.message}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(`Failed to delete group: ${message}`);
     }
   };
 

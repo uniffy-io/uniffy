@@ -48,7 +48,11 @@ NODE_TYPE_FROM_PROTO = {
 }
 
 
-def note_to_proto(note: Note, permission_level: str | None = None) -> ProtoNote:
+def note_to_proto(
+    note: Note,
+    permission_level: str | None = None,
+    exclude_content: bool = False,
+) -> ProtoNote:
     """
     Convert Note model to proto Note.
 
@@ -58,6 +62,8 @@ def note_to_proto(note: Note, permission_level: str | None = None) -> ProtoNote:
         Note model instance.
     permission_level : str | None
         User's permission level on this note.
+    exclude_content : bool
+        If True, return empty string for content field (for tree/list views).
 
     Returns
     -------
@@ -81,7 +87,7 @@ def note_to_proto(note: Note, permission_level: str | None = None) -> ProtoNote:
         visibility=proto_visibility,
         node_type=proto_node_type,
         title=note.title,
-        content=note.content,
+        content="" if exclude_content else note.content,
         slug=note.slug,
         is_deleted=note.is_deleted,
         is_pinned=note.is_pinned,

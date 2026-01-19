@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { UserInfoResponse } from "@/gen/auth/v1/auth_pb";
@@ -21,11 +21,7 @@ export default function UsersPage() {
   
   const { accessToken } = useAppSelector((state) => state.auth);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [accessToken]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
     try {
@@ -35,13 +31,17 @@ export default function UsersPage() {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setUsers(response.users);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to list users:', err);
       setError('Failed to load users');
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleEdit = (user: UserInfoResponse) => {
     setEditingUser(user);

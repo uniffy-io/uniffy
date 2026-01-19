@@ -10,9 +10,11 @@ from uwos.domains.auth.seed import seed_initial_data
 from uwos.domains.auth.service import AuthServiceImpl
 from uwos.domains.notes.service import NotesServiceImpl
 from uwos.domains.search.service import SearchServiceImpl
+from uwos.domains.settings.service import SettingsServiceImpl
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uwos.gen.search.v1.search_connect import SearchServiceASGIApplication
+from uwos.gen.settings.v1.settings_connect import SettingsServiceASGIApplication
 from uwos.observability import ObservabilityConfig, setup_observability
 from uwos.observability.crpc import LoggingInterceptor
 from uwos.observability.otel import instrument_fastapi
@@ -145,3 +147,12 @@ def _mount_connect_services(app: FastAPI) -> None:
     )
     app.mount("/search.v1.SearchService", search_app)
     logger.info("Mounted SearchService at /search.v1.SearchService")
+
+    # Create and mount the settings service
+    settings_service = SettingsServiceImpl()
+    settings_app = SettingsServiceASGIApplication(
+        settings_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/settings.v1.SettingsService", settings_app)
+    logger.info("Mounted SettingsService at /settings.v1.SettingsService")

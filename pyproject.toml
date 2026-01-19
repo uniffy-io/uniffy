@@ -36,7 +36,11 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["grpcio-tools>=1.76.0", "ty>=0.0.10"]
+dev = [
+    "grpcio-tools>=1.76.0",
+    "ruff>=0.14.13",
+    "ty>=0.0.10",
+]
 
 # Relax rules for test files
 [[tool.ty.overrides]]

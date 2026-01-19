@@ -7,7 +7,7 @@ and search indexing. All domain operations classes should extend this.
 
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Any, Generic, TypeVar
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -19,11 +19,8 @@ from uwos.core.errors import NotFoundError, PermissionDeniedError
 from uwos.core.search.indexer import SearchIndexer, build_content_urn
 from uwos.core.types import ContentType, VisibilityScope
 
-# TypeVar for the model - unbound to work with Generic
-TModel = TypeVar("TModel")
 
-
-class BaseContentOperations(ABC, Generic[TModel]):
+class BaseContentOperations[TModel](ABC):
     """
     Base class for content CRUD operations.
 

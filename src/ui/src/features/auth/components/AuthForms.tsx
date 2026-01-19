@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "../store/authSlice";
 import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
-import { transport } from "@/config";
+import { transport, setMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const authClient = createClient(AuthService, transport);
@@ -19,7 +19,8 @@ export default function AuthForms() {
   
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isAuthenticated, currentOrganizationId } = useAppSelector((state) => state.auth);
+  const isAuthenticated = useAppSelector((state) => state.auth?.isAuthenticated ?? false);
+  const currentOrganizationId = useAppSelector((state) => state.auth?.currentOrganizationId);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -40,9 +41,12 @@ export default function AuthForms() {
 
   const fetchUserAndDispatch = async (accessToken: string, refreshToken: string, organizationId?: string) => {
     try {
+      // Store access token in memory (security: not persisted to localStorage)
+      setMemoryAccessToken(accessToken);
+
       // Create a temporary client with the auth token
       const authenticatedClient = createClient(AuthService, transport);
-      
+
       const userResponse = await authenticatedClient.getCurrentUser(
         {},
         {
@@ -79,7 +83,7 @@ export default function AuthForms() {
         organizationId
       }));
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching user details:', err);
       throw new Error('Failed to fetch user details');
     }
@@ -101,8 +105,9 @@ export default function AuthForms() {
       await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId);
       
       // Navigation will be handled by the useEffect above
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration failed';
+      setError(message);
       console.error('Registration error:', err);
     } finally {
       setLoading(false);
@@ -123,8 +128,9 @@ export default function AuthForms() {
       await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId);
 
       // Navigation will be handled by the useEffect above
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed';
+      setError(message);
       console.error('Login error:', err);
     } finally {
       setLoading(false);

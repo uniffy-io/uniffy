@@ -1,11 +1,36 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
+import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER, createMigrate, createTransform } from 'redux-persist';
+import type { PersistedState, MigrationManifest } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import authReducer from '@/features/auth/store/authSlice';
+import type { AuthState } from '@/features/auth/store/authSlice';
 import themeReducer from '@/theme/themeSlice';
 import notesReducer from '@/features/notes/store/notesSlice';
 import notesTreeReducer from '@/features/notes/store/notesTreeSlice';
 import editorReducer from '@/features/notes/store/editorSlice';
+import settingsReducer from '@/features/settings/store/settingsSlice';
+
+/**
+ * Security transform: Remove access token from persistence.
+ *
+ * Access tokens are stored in memory only to reduce XSS attack surface.
+ * On page reload, the app uses the refresh token to get a new access token.
+ * This is an industry-standard security practice.
+ */
+const authSecurityTransform = createTransform(
+  // Transform state before persisting (outbound)
+  (inboundState: AuthState) => ({
+    ...inboundState,
+    accessToken: null, // Never persist access token
+  }),
+  // Transform state when rehydrating (inbound)
+  (outboundState: AuthState) => ({
+    ...outboundState,
+    accessToken: null, // Ensure no stale access token
+    isAuthenticated: false, // Will be set true after refresh
+  }),
+  { whitelist: ['auth'] }
+);
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -13,13 +38,61 @@ const rootReducer = combineReducers({
   notes: notesReducer,
   notesTree: notesTreeReducer,
   editor: editorReducer,
+  settings: settingsReducer,
 });
+
+// Migrations to handle state shape changes across versions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const migrations: MigrationManifest = {
+  // Version 2: Migrate from currentTheme (string) to themeMode ('system' | 'light' | 'dark')
+  2: (state: PersistedState) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = state as any;
+    if (s?.theme?.currentTheme && !s.theme.themeMode) {
+      const oldTheme = s.theme.currentTheme;
+      let newMode: 'system' | 'light' | 'dark' = 'system';
+      if (oldTheme === 'dark') {
+        newMode = 'dark';
+      } else if (oldTheme === 'default' || oldTheme === 'light') {
+        newMode = 'light';
+      }
+      return {
+        ...s,
+        theme: {
+          ...s.theme,
+          themeMode: newMode,
+          currentTheme: undefined,
+        },
+      };
+    }
+    return state;
+  },
+  // Version 3: Security - Remove access token from persistence
+  // Access tokens are now stored in memory only to reduce XSS attack surface
+  3: (state: PersistedState) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = state as any;
+    if (s?.auth) {
+      return {
+        ...s,
+        auth: {
+          ...s.auth,
+          accessToken: null,
+          isAuthenticated: false,
+        },
+      };
+    }
+    return state;
+  },
+};
 
 const persistConfig = {
   key: 'root',
-  version: 1,
+  version: 3, // Bumped to trigger security migration (access token removal)
   storage,
   whitelist: ['auth', 'theme', 'editor'], // Persist auth, theme, and editor settings
+  transforms: [authSecurityTransform], // Security: don't persist access tokens
+  migrate: createMigrate(migrations, { debug: false }),
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

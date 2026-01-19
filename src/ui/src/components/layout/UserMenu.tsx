@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowRightStartOnRectangleIcon, Cog6ToothIcon, MoonIcon, ShieldCheckIcon, SunIcon, UserCircleIcon } from "@heroicons/react/24/outline";
+import { ArrowRightStartOnRectangleIcon, Cog6ToothIcon, MoonIcon, ShieldCheckIcon, SunIcon, ComputerDesktopIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { logout } from "@/features/auth/store/authSlice";
+import { resetSettings } from "@/features/settings/store/settingsSlice";
+import { clearNotes } from "@/features/notes/store/notesSlice";
+import { clearTree } from "@/features/notes/store/notesTreeSlice";
+import { clearMemoryAccessToken } from "@/config/api";
 import { useTheme } from "@/theme/ThemeProvider";
 import { cn } from "@/utils/cn";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +14,7 @@ export function UserMenu() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
-  const { theme, setTheme, availableThemes } = useTheme();
+  const { themeMode, setTheme, availableModes } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +33,14 @@ export function UserMenu() {
   if (!user) return null;
 
   const handleLogout = () => {
+    // Clear memory access token (security: remove from memory)
+    clearMemoryAccessToken();
+    // Clear all user/org-specific state
     dispatch(logout());
+    dispatch(resetSettings());
+    dispatch(clearNotes());
+    dispatch(clearTree());
+    // Navigate to auth page
     navigate('/auth');
   };
 
@@ -70,18 +81,18 @@ export function UserMenu() {
 
           <div className="py-1">
             <button
-              onClick={() => navigate('/profile')}
-              className="group flex w-full items-center px-4 py-2 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
-            >
-              <UserCircleIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
-              Your Profile
-            </button>
-            <button
               onClick={() => navigate('/settings')}
               className="group flex w-full items-center px-4 py-2 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
             >
+              <UserCircleIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
+              Profile
+            </button>
+            <button
+              onClick={() => navigate('/organization')}
+              className="group flex w-full items-center px-4 py-2 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
+            >
               <Cog6ToothIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
-              Settings
+              Organization
             </button>
             
             {user.isSystemAdmin && (
@@ -99,21 +110,23 @@ export function UserMenu() {
             <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Theme
             </div>
-            {availableThemes.map((t) => (
+            {availableModes.map((mode) => (
               <button
-                key={t.name}
-                onClick={() => setTheme(t)}
+                key={mode}
+                onClick={() => setTheme(mode)}
                 className={cn(
                   'group flex w-full items-center px-4 py-2 text-sm hover:bg-muted hover:text-foreground',
-                  theme.name === t.name ? 'text-primary font-medium' : 'text-foreground/80'
+                  themeMode === mode ? 'text-primary font-medium' : 'text-foreground/80'
                 )}
               >
-                {t.name === 'dark' ? (
+                {mode === 'dark' ? (
                   <MoonIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
-                ) : (
+                ) : mode === 'light' ? (
                   <SunIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
+                ) : (
+                  <ComputerDesktopIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
                 )}
-                {t.name.charAt(0).toUpperCase() + t.name.slice(1)} Mode
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
               </button>
             ))}
           </div>

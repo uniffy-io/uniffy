@@ -26,11 +26,11 @@ import {
   FolderIcon,
   ChatBubbleLeftIcon,
   LinkIcon,
-  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { UrnType, urnToPath, parseUrn } from '@/utils/urn';
 import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
 import { useUrnResolution } from '@/features/search';
+import { useTheme } from '@/theme/ThemeProvider';
 
 /** Cast NodeObject to our GraphNode type */
 function asGraphNode(node: NodeObject): GraphNode {
@@ -321,14 +321,14 @@ export function NotesGraphDashboard() {
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [themeColors, setThemeColors] = useState(getThemeColors);
 
-  // Get notes from Redux store
-  const notes = useAppSelector((state) => state.notes.notes);
-  const loading = useAppSelector((state) => state.notes.loading);
+  // Get notes from Redux store (populated by NotesPage's fetchNotes dispatch)
+  const notes = useAppSelector((state) => state.notes?.notes ?? {});
+  const loading = useAppSelector((state) => state.notes?.loading ?? false);
 
   // Track theme changes
-  const accentColor = useAppSelector((state) => state.theme.accentColor);
-  const currentTheme = useAppSelector((state) => state.theme.currentTheme);
-  const isDark = currentTheme === 'dark';
+  const accentColor = useAppSelector((state) => state.theme?.accentColor);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   // Update theme colors when theme changes
   useEffect(() => {
@@ -336,7 +336,7 @@ export function NotesGraphDashboard() {
       setThemeColors(getThemeColors());
     }, 50);
     return () => clearTimeout(timer);
-  }, [accentColor, currentTheme]);
+  }, [accentColor, resolvedTheme]);
 
   // Collect all external URNs from notes (non-NOTE types)
   const externalUrns = useMemo(() => {
@@ -405,7 +405,7 @@ export function NotesGraphDashboard() {
   }, [notes, urnMetadata]);
 
   // Track layout and calculate dimensions based on sidebar state
-  const isSidebarOpen = useAppSelector((state) => state.editor.isSidebarOpen);
+  const isSidebarOpen = useAppSelector((state) => state.editor?.isSidebarOpen ?? true);
   
   // Calculate dimensions based on viewport and sidebar
   const calculateDimensions = useCallback(() => {
@@ -829,10 +829,6 @@ export function NotesGraphDashboard() {
           <p className="text-muted-foreground mb-6 leading-relaxed">
             Create notes and link them together using @mentions to build your personal knowledge network.
           </p>
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <SparklesIcon className="h-4 w-4" />
-            <span>Use @mention to link content</span>
-          </div>
         </div>
       </div>
     );
@@ -866,7 +862,7 @@ export function NotesGraphDashboard() {
             linkDirectionalParticles={2}
             linkDirectionalParticleWidth={2}
             linkDirectionalParticleSpeed={0.005}
-            linkDirectionalParticleColor={(link) => getLinkColor(link) + '80'}
+            linkDirectionalParticleColor={() => themeColors.primary + 'cc'}
             // WORKAROUND: Disable library's broken hover/click detection
             // (canvas-color-tracker bug where certain node indices fail hit detection)
             // We use our own coordinate-based hit detection instead

@@ -1,5 +1,5 @@
 declare module 'react-force-graph-2d' {
-  import type { Component, MutableRefObject } from 'react';
+  import type { MutableRefObject } from 'react';
 
   export interface NodeObject {
     id: string | number;

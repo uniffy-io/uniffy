@@ -107,11 +107,12 @@ export const fetchNotesTree = createAsyncThunk<
             return rejectWithValue('No organization selected');
         }
 
-        // Fetch all notes including deleted
+        // Fetch all notes including deleted (exclude content for performance)
         const response = await notesApi.listNotes({
             organizationId,
             pageSize: 500, // Fetch all for tree
             includeDeleted: true,
+            excludeContent: true,
         });
 
         const notes = response.notes.map(noteToPlain);

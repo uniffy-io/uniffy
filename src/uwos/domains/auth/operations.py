@@ -84,9 +84,11 @@ class AuthOperations:
         if organization_slug:
             organization_id = await self._verify_org_membership(user.id, organization_slug)
 
-        # Create tokens
-        access_token = create_access_token(user.id, organization_id)
-        refresh_token = create_refresh_token(user.id)
+        # Create tokens with token_version for revocation support
+        access_token = create_access_token(
+            user.id, organization_id, token_version=user.token_version
+        )
+        refresh_token = create_refresh_token(user.id, token_version=user.token_version)
 
         logger.info(f"User {user.email} authenticated successfully")
 
@@ -154,9 +156,11 @@ class AuthOperations:
 
         logger.info(f"User {user.email} registered successfully")
 
-        # Create tokens
-        access_token = create_access_token(user.id)
-        refresh_token = create_refresh_token(user.id)
+        # Create tokens with token_version for revocation support
+        access_token = create_access_token(
+            user.id, token_version=user.token_version
+        )
+        refresh_token = create_refresh_token(user.id, token_version=user.token_version)
 
         return AuthResult(
             access_token=access_token,
@@ -171,6 +175,9 @@ class AuthOperations:
     ) -> AuthResult:
         """
         Refresh an access token.
+
+        Validates that the user still exists, is active, and the token version
+        matches. This is the security checkpoint for token revocation.
 
         Parameters
         ----------
@@ -187,7 +194,7 @@ class AuthOperations:
         Raises
         ------
         TokenError
-            If refresh fails.
+            If refresh fails (invalid token, user deactivated, or token revoked).
 
         """
         try:
@@ -199,15 +206,36 @@ class AuthOperations:
             raise TokenError("Invalid token type")
 
         user_id = UUID(payload["sub"])
+        token_version_in_jwt = payload.get("tkv")
+
+        # Verify user exists and is active (security checkpoint)
+        user = await self._get_user_by_id(user_id)
+        if not user:
+            raise TokenError("User not found")
+
+        if not user.is_active:
+            raise TokenError("User account is deactivated")
+
+        # Verify token version matches (for immediate revocation)
+        if token_version_in_jwt is not None and token_version_in_jwt != user.token_version:
+            logger.warning(
+                f"Token version mismatch for user {user_id}: "
+                f"token has {token_version_in_jwt}, user has {user.token_version}"
+            )
+            raise TokenError("Token has been revoked")
 
         # Handle organization context
         organization_id = None
         if organization_slug:
             organization_id = await self._verify_org_membership(user_id, organization_slug)
 
-        # Create new tokens
-        access_token = create_access_token(user_id, organization_id)
-        new_refresh_token = create_refresh_token(user_id)
+        # Create new tokens with current token_version
+        access_token = create_access_token(
+            user_id, organization_id, token_version=user.token_version
+        )
+        new_refresh_token = create_refresh_token(
+            user_id, token_version=user.token_version
+        )
 
         return AuthResult(
             access_token=access_token,
@@ -219,6 +247,11 @@ class AuthOperations:
     # -------------------------------------------------------------------------
     # Private helpers
     # -------------------------------------------------------------------------
+
+    async def _get_user_by_id(self, user_id: UUID) -> User | None:
+        """Get user by ID."""
+        result = await self._session.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
 
     async def _get_user_by_email(self, email: str) -> User | None:
         """Get user by email address."""

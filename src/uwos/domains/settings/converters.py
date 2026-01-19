@@ -1,0 +1,294 @@
+"""Proto <-> domain converters for settings domain."""
+
+from typing import Any
+
+from uwos.core.converters import datetime_to_timestamp
+from uwos.core.models.settings.settings_profile import SettingsProfile
+from uwos.gen.settings.v1.settings_pb2 import (
+    AppearanceSettings as ProtoAppearance,
+)
+from uwos.gen.settings.v1.settings_pb2 import (
+    EffectiveSettings as ProtoEffectiveSettings,
+)
+from uwos.gen.settings.v1.settings_pb2 import (
+    KeyboardShortcutsSettings as ProtoKeyboardShortcuts,
+)
+from uwos.gen.settings.v1.settings_pb2 import (
+    NotificationsSettings as ProtoNotifications,
+)
+from uwos.gen.settings.v1.settings_pb2 import (
+    SettingsProfile as ProtoSettingsProfile,
+)
+
+
+def profile_to_proto(profile: SettingsProfile) -> ProtoSettingsProfile:
+    """
+    Convert SettingsProfile model to proto SettingsProfile.
+
+    Parameters
+    ----------
+    profile : SettingsProfile
+        Settings profile model instance.
+
+    Returns
+    -------
+    ProtoSettingsProfile
+        Proto message.
+
+    """
+    proto_profile = ProtoSettingsProfile(
+        id=str(profile.id),
+        user_id=str(profile.user_id),
+        name=profile.name,
+        is_default=profile.is_default,
+        created_at=datetime_to_timestamp(profile.created_at),
+        updated_at=datetime_to_timestamp(profile.updated_at),
+    )
+
+    if profile.appearance:
+        proto_profile.appearance.CopyFrom(appearance_dict_to_proto(profile.appearance))
+
+    if profile.keyboard_shortcuts:
+        proto_profile.keyboard_shortcuts.CopyFrom(
+            keyboard_shortcuts_dict_to_proto(profile.keyboard_shortcuts)
+        )
+
+    if profile.notifications:
+        proto_profile.notifications.CopyFrom(notifications_dict_to_proto(profile.notifications))
+
+    return proto_profile
+
+
+def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance:
+    """
+    Convert appearance dict to proto AppearanceSettings.
+
+    Parameters
+    ----------
+    settings : dict | None
+        Appearance settings dictionary.
+
+    Returns
+    -------
+    ProtoAppearance
+        Proto message.
+
+    """
+    if not settings:
+        return ProtoAppearance()
+
+    proto = ProtoAppearance()
+
+    if settings.get("theme") is not None:
+        proto.theme = settings["theme"]
+
+    if settings.get("accent_color") is not None:
+        proto.accent_color = settings["accent_color"]
+
+    if settings.get("font_family") is not None:
+        proto.font_family = settings["font_family"]
+
+    if settings.get("sidebar_collapsed") is not None:
+        proto.sidebar_collapsed = settings["sidebar_collapsed"]
+
+    if settings.get("compact_mode") is not None:
+        proto.compact_mode = settings["compact_mode"]
+
+    return proto
+
+
+def keyboard_shortcuts_dict_to_proto(settings: dict[str, Any] | None) -> ProtoKeyboardShortcuts:
+    """
+    Convert keyboard shortcuts dict to proto KeyboardShortcutsSettings.
+
+    Parameters
+    ----------
+    settings : dict | None
+        Keyboard shortcuts settings dictionary.
+
+    Returns
+    -------
+    ProtoKeyboardShortcuts
+        Proto message.
+
+    """
+    if not settings:
+        return ProtoKeyboardShortcuts()
+
+    proto = ProtoKeyboardShortcuts()
+
+    bindings = settings.get("bindings", {})
+    for action, shortcut in bindings.items():
+        proto.bindings[action] = shortcut
+
+    return proto
+
+
+def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotifications:
+    """
+    Convert notifications dict to proto NotificationsSettings.
+
+    Parameters
+    ----------
+    settings : dict | None
+        Notifications settings dictionary.
+
+    Returns
+    -------
+    ProtoNotifications
+        Proto message.
+
+    """
+    if not settings:
+        return ProtoNotifications()
+
+    proto = ProtoNotifications()
+
+    if settings.get("desktop_enabled") is not None:
+        proto.desktop_enabled = settings["desktop_enabled"]
+
+    if settings.get("email_enabled") is not None:
+        proto.email_enabled = settings["email_enabled"]
+
+    if settings.get("sound_enabled") is not None:
+        proto.sound_enabled = settings["sound_enabled"]
+
+    if settings.get("email_frequency") is not None:
+        proto.email_frequency = settings["email_frequency"]
+
+    if settings.get("quiet_hours_start") is not None:
+        proto.quiet_hours_start = settings["quiet_hours_start"]
+
+    if settings.get("quiet_hours_end") is not None:
+        proto.quiet_hours_end = settings["quiet_hours_end"]
+
+    return proto
+
+
+def effective_settings_to_proto(settings: dict[str, Any]) -> ProtoEffectiveSettings:
+    """
+    Convert effective settings dict to proto EffectiveSettings.
+
+    Parameters
+    ----------
+    settings : dict
+        Effective settings with all defaults merged.
+
+    Returns
+    -------
+    ProtoEffectiveSettings
+        Proto message.
+
+    """
+    return ProtoEffectiveSettings(
+        appearance=appearance_dict_to_proto(settings.get("appearance")),
+        keyboard_shortcuts=keyboard_shortcuts_dict_to_proto(settings.get("keyboard_shortcuts")),
+        notifications=notifications_dict_to_proto(settings.get("notifications")),
+    )
+
+
+def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | None:
+    """
+    Convert proto AppearanceSettings to dict.
+
+    Returns only explicitly set fields (sparse).
+
+    Parameters
+    ----------
+    proto : ProtoAppearance | None
+        Proto appearance settings.
+
+    Returns
+    -------
+    dict | None
+        Appearance settings dictionary (sparse).
+
+    """
+    if not proto:
+        return None
+
+    result: dict[str, Any] = {}
+
+    if proto.HasField("theme"):
+        result["theme"] = proto.theme
+
+    if proto.HasField("accent_color"):
+        result["accent_color"] = proto.accent_color
+
+    if proto.HasField("font_family"):
+        result["font_family"] = proto.font_family
+
+    if proto.HasField("sidebar_collapsed"):
+        result["sidebar_collapsed"] = proto.sidebar_collapsed
+
+    if proto.HasField("compact_mode"):
+        result["compact_mode"] = proto.compact_mode
+
+    return result if result else None
+
+
+def keyboard_shortcuts_from_proto(proto: ProtoKeyboardShortcuts | None) -> dict[str, Any] | None:
+    """
+    Convert proto KeyboardShortcutsSettings to dict.
+
+    Parameters
+    ----------
+    proto : ProtoKeyboardShortcuts | None
+        Proto keyboard shortcuts settings.
+
+    Returns
+    -------
+    dict | None
+        Keyboard shortcuts dictionary.
+
+    """
+    if not proto:
+        return None
+
+    if not proto.bindings:
+        return None
+
+    return {"bindings": dict(proto.bindings)}
+
+
+def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any] | None:
+    """
+    Convert proto NotificationsSettings to dict.
+
+    Returns only explicitly set fields (sparse).
+
+    Parameters
+    ----------
+    proto : ProtoNotifications | None
+        Proto notifications settings.
+
+    Returns
+    -------
+    dict | None
+        Notifications settings dictionary (sparse).
+
+    """
+    if not proto:
+        return None
+
+    result: dict[str, Any] = {}
+
+    if proto.HasField("desktop_enabled"):
+        result["desktop_enabled"] = proto.desktop_enabled
+
+    if proto.HasField("email_enabled"):
+        result["email_enabled"] = proto.email_enabled
+
+    if proto.HasField("sound_enabled"):
+        result["sound_enabled"] = proto.sound_enabled
+
+    if proto.HasField("email_frequency"):
+        result["email_frequency"] = proto.email_frequency
+
+    if proto.HasField("quiet_hours_start"):
+        result["quiet_hours_start"] = proto.quiet_hours_start
+
+    if proto.HasField("quiet_hours_end"):
+        result["quiet_hours_end"] = proto.quiet_hours_end
+
+    return result if result else None

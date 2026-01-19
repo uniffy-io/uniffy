@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { UserInfoResponse, AdminUserOrganizationInfo, AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
@@ -28,16 +28,9 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
   const [newOrgRole, setNewOrgRole] = useState('MEMBER');
   
   const [loading, setLoading] = useState(false);
-  const { accessToken } = useAppSelector((state) => state.auth);
+  const accessToken = useAppSelector((state) => state.auth?.accessToken);
 
-  useEffect(() => {
-    if (isOpen && accessToken) {
-      fetchUserOrgs();
-      fetchAllOrgs();
-    }
-  }, [isOpen, accessToken, user.id]);
-
-  const fetchUserOrgs = async () => {
+  const fetchUserOrgs = useCallback(async () => {
     try {
       const client = createClient(AuthService, transport);
       const response = await client.adminListUserOrganizations(
@@ -48,9 +41,9 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
     } catch (err) {
       console.error('Failed to fetch user organizations:', err);
     }
-  };
+  }, [accessToken, user.id]);
 
-  const fetchAllOrgs = async () => {
+  const fetchAllOrgs = useCallback(async () => {
     try {
       const client = createClient(AuthService, transport);
       const response = await client.listAllOrganizations(
@@ -61,7 +54,14 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
     } catch (err) {
       console.error('Failed to fetch organizations:', err);
     }
-  };
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (isOpen && accessToken) {
+      fetchUserOrgs();
+      fetchAllOrgs();
+    }
+  }, [isOpen, accessToken, user.id, fetchUserOrgs, fetchAllOrgs]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

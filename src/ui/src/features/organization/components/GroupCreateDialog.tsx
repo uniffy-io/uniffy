@@ -60,9 +60,10 @@ export function GroupCreateDialog({ isOpen, onClose, onSave, organizationId }: G
       setDescription('');
       setIsPrivate(false);
       setIsDefault(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create group:', err);
-      alert(`Failed to create group: ${err.message || 'Unknown error'}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(`Failed to create group: ${message}`);
     } finally {
       setLoading(false);
     }

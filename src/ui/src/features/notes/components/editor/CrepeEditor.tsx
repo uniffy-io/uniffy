@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Crepe } from '@milkdown/crepe';
 import { editorViewCtx } from '@milkdown/core';
+import { Selection } from '@milkdown/prose/state';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
@@ -9,6 +10,8 @@ import { useAutosave } from '../../hooks/useNotesHooks';
 import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from './plugins/mention';
 import { MentionSearch } from './plugins/mention/MentionSearch';
 import { createPortal } from 'react-dom';
+import { openSpotlightSearch } from '@/features/search';
+import { useGlobalShortcuts } from '@/features/settings';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import type { SerializedNote } from '../../store/notesThunks';
 
@@ -69,9 +72,11 @@ function createCrepeConfig(root: HTMLElement, content: string, readonly: boolean
   };
 }
 
+const defaultSettings = { editorMode: 'crepe' as const, showMarkdownPreview: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
+
 export function CrepeEditor({ note, readonly = false, content: propContent, className }: CrepeEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
-  const settings = editorState?.settings || {};
+  const settings = editorState?.settings ?? defaultSettings;
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeRef = useRef<Crepe | null>(null);
   const contentRef = useRef<string>('');
@@ -82,9 +87,9 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
 
   // Autosave hook - handles debounced saving (only active in edit mode)
   const { scheduleAutosave } = useAutosave(readonly ? null : note.id);
-  
+
   // Get draft content directly from Redux (works in both edit and readonly modes)
-  const currentDraft = useAppSelector((state) => state.editor.draftContent[note.id]);
+  const currentDraft = useAppSelector((state) => state.editor?.draftContent[note.id]);
 
   // Use provided content, or fall back to draft content, or note content
   // Check for both null and undefined in draft content
@@ -132,7 +137,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     tr.insertText(' ', spacePos);
 
     // Set cursor after the space
-    tr.setSelection((state.selection.constructor as any).near(tr.doc.resolve(spacePos + 1)));
+    tr.setSelection(Selection.near(tr.doc.resolve(spacePos + 1)));
 
     dispatch(tr);
     view.focus();
@@ -181,20 +186,9 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       // Register mention plugins (includes view capture plugin)
       editor.use(mentionPlugins);
       // Store the editor reference globally so we can access it in plugins
-      (window as any).__milkdownEditor = editor;
+      (window as Window & { __milkdownEditor?: unknown }).__milkdownEditor = editor;
     } catch {
       // Plugin registration failed silently
-    }
-
-    // Listen for markdown changes (only if not readonly)
-    if (!readonly) {
-      crepe.on((listener) => {
-        listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
-          if (markdown !== prevMarkdown) {
-            handleContentChange(markdown);
-          }
-        });
-      });
     }
 
     // Now create the editor with plugins already registered
@@ -213,11 +207,25 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
           // Get the ProseMirror view from the context
           const view = ctx.get(editorViewCtx);
           if (view) {
-            (window as any).__milkdownEditorView = view;
+            (window as Window & { __milkdownEditorView?: unknown }).__milkdownEditorView = view;
           }
         });
       } catch {
         // Editor view access failed silently
+      }
+
+      // Listen for markdown changes AFTER editor is fully created (only if not readonly)
+      // This ensures editorViewCtx is available during serialization
+      if (!readonly) {
+        crepe.on((listener) => {
+          listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
+            // Guard against callbacks firing after editor is destroyed
+            if (cancelled || !crepeRef.current) return;
+            if (markdown !== prevMarkdown) {
+              handleContentChange(markdown);
+            }
+          });
+        });
       }
 
       if (readonly) {
@@ -286,7 +294,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
         editor.action((ctx) => {
           const view = ctx.get(editorViewCtx);
           if (view) {
-            (window as any).__milkdownEditorView = view;
+            (window as Window & { __milkdownEditorView?: unknown }).__milkdownEditorView = view;
           }
         });
       } catch {
@@ -300,6 +308,27 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       cancelled = true;
     };
   }, [content, readonly]);
+
+  // Get shortcut matching function from settings
+  const { matches } = useGlobalShortcuts();
+
+  // Handle keyboard shortcuts within the editor (where global shortcuts don't work)
+  useEffect(() => {
+    const container = editorRef.current;
+    if (!container) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if this matches the nav.search shortcut
+      if (matches('nav.search', e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        openSpotlightSearch();
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => container.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [matches]);
 
   return (
     <>

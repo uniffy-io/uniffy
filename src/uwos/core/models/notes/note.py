@@ -122,4 +122,7 @@ class Note(SQLModel, table=True):
 
     def __repr__(self) -> str:
         """Return string representation of Note."""
-        return f"<Note(id={self.id}, title={self.title!r}, visibility={self.visibility}, organization_id={self.organization_id})>"
+        return (
+            f"<Note(id={self.id}, title={self.title!r}, "
+            f"visibility={self.visibility}, organization_id={self.organization_id})>"
+        )

@@ -11,6 +11,7 @@ from uwos.core.content.base_operations import BaseContentOperations
 from uwos.core.errors import NotFoundError
 from uwos.core.models.notes.note import Note
 from uwos.core.models.shared import NodeType
+from uwos.core.search.indexer import build_content_urn
 from uwos.core.types import ContentType, VisibilityScope
 from uwos.domains.notes import queries
 
@@ -273,12 +274,48 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_delete(user_id, organization_id, note)
 
+        # Collect all note IDs that will be deleted (including children)
+        note_ids_to_remove = await self._collect_descendant_ids(note)
+
         if permanent:
             await queries.permanent_delete_recursive(self.session, note)
         else:
             await queries.soft_delete_recursive(self.session, note)
 
+        # Remove all deleted notes from search index
+        for nid in note_ids_to_remove:
+            await self.search_indexer.remove(build_content_urn(self.content_type, nid))
+        await self.session.commit()
+
         return True
+
+    async def _collect_descendant_ids(self, note: Note) -> list[UUID]:
+        """
+        Collect IDs of a note and all its descendants.
+
+        Parameters
+        ----------
+        note : Note
+            Root note to start from.
+
+        Returns
+        -------
+        list[UUID]
+            List of note IDs including the root and all descendants.
+
+        """
+        ids = [note.id]
+        if note.node_type == NodeType.FOLDER:
+            result = await self.session.execute(
+                select(Note).where(
+                    Note.parent_id == note.id,
+                    Note.is_deleted == False,  # noqa: E712
+                )
+            )
+            children = result.scalars().all()
+            for child in children:
+                ids.extend(await self._collect_descendant_ids(child))
+        return ids
 
     async def restore(
         self,
@@ -316,6 +353,12 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self.session.commit()
         await self.session.refresh(note)
+
+        # Re-index for search
+        group_ids = await self._get_content_group_ids(note.id)
+        await self._index_for_search(model=note, group_ids=group_ids)
+        await self.session.commit()
+
         return note
 
     async def toggle_pin(
@@ -483,8 +526,24 @@ class NoteOperations(BaseContentOperations[Note]):
             Number of notes deleted.
 
         """
-        # Note: Could add admin check here if needed
-        return await queries.empty_trash(self.session, organization_id)
+        # Collect IDs of all soft-deleted notes before deleting
+        result = await self.session.execute(
+            select(Note.id).where(
+                Note.organization_id == organization_id,
+                Note.is_deleted == True,  # noqa: E712
+            )
+        )
+        deleted_note_ids = list(result.scalars().all())
+
+        # Permanently delete all trash notes
+        count = await queries.empty_trash(self.session, organization_id)
+
+        # Remove all deleted notes from search index
+        for nid in deleted_note_ids:
+            await self.search_indexer.remove(build_content_urn(self.content_type, nid))
+        await self.session.commit()
+
+        return count
 
     async def list_notes(
         self,

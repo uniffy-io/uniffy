@@ -281,7 +281,10 @@ class NotesHandlers:
                 total_pages = (total + (request.page_size or 50) - 1) // (request.page_size or 50)
 
                 return ListNotesResponse(
-                    notes=[note_to_proto(n) for n in notes],
+                    notes=[
+                        note_to_proto(n, exclude_content=request.exclude_content)
+                        for n in notes
+                    ],
                     total_count=total,
                     page=request.page or 1,
                     page_size=request.page_size or 50,

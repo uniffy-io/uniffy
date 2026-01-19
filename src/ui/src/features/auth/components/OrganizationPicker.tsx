@@ -6,8 +6,11 @@ import { OrganizationInfo } from "@/gen/auth/v1/auth_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials, logout } from "../store/authSlice";
+import { resetSettings } from "@/features/settings/store/settingsSlice";
+import { clearNotes } from "@/features/notes/store/notesSlice";
+import { clearTree } from "@/features/notes/store/notesTreeSlice";
 import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
-import { transport } from "@/config";
+import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function OrganizationPicker() {
@@ -18,7 +21,9 @@ export default function OrganizationPicker() {
   
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { accessToken, refreshToken, user } = useAppSelector((state) => state.auth);
+  const accessToken = useAppSelector((state) => state.auth?.accessToken);
+  const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
+  const user = useAppSelector((state) => state.auth?.user);
 
   useEffect(() => {
     if (!accessToken) {
@@ -34,7 +39,7 @@ export default function OrganizationPicker() {
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         setOrganizations(response.organizations);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to list organizations:', err);
         setError('Failed to load organizations.');
       } finally {
@@ -60,6 +65,9 @@ export default function OrganizationPicker() {
         organizationSlug: orgSlug,
       });
 
+      // Store access token in memory (security: not persisted to localStorage)
+      setMemoryAccessToken(response.accessToken);
+
       // Update credentials with new token and organization ID
       // We assume user info is same, but we update tokens
       if (user) {
@@ -70,7 +78,7 @@ export default function OrganizationPicker() {
         if (user.fontFamily) {
           dispatch(setFontFamily(user.fontFamily));
         }
-        
+
         dispatch(setCredentials({
           user: user, // Keep existing user info
           accessToken: response.accessToken,
@@ -80,7 +88,7 @@ export default function OrganizationPicker() {
       }
 
       navigate('/');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to select organization:', err);
       setError('Failed to switch to organization.');
       setLoading(false);
@@ -88,7 +96,14 @@ export default function OrganizationPicker() {
   };
 
   const handleLogout = () => {
+    // Clear memory access token (security: remove from memory)
+    clearMemoryAccessToken();
+    // Clear all user/org-specific state
     dispatch(logout());
+    dispatch(resetSettings());
+    dispatch(clearNotes());
+    dispatch(clearTree());
+    // Navigate to auth page
     navigate('/auth');
   };
 

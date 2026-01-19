@@ -3,12 +3,20 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import type { UserInfoResponse } from '@/gen/auth/v1/auth_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 
-interface AuthState {
+/**
+ * Auth state shape.
+ *
+ * Security note: accessToken is stored in memory only (not persisted to localStorage)
+ * to reduce XSS attack surface. On page reload, the app uses refreshToken to get
+ * a new accessToken via the rehydrateAuth() function.
+ */
+export interface AuthState {
   user: PlainMessage<UserInfoResponse> | null;
-  accessToken: string | null;
-  refreshToken: string | null;
+  accessToken: string | null; // Memory only - never persisted
+  refreshToken: string | null; // Persisted for session continuity
   currentOrganizationId: string | null;
   isAuthenticated: boolean;
+  isRehydrating: boolean; // True while refreshing token on app startup
 }
 
 const initialState: AuthState = {
@@ -17,6 +25,7 @@ const initialState: AuthState = {
   refreshToken: null,
   currentOrganizationId: null,
   isAuthenticated: false,
+  isRehydrating: false,
 };
 
 export const authSlice = createSlice({
@@ -25,8 +34,8 @@ export const authSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ 
-        user: PlainMessage<UserInfoResponse>; 
+      action: PayloadAction<{
+        user: PlainMessage<UserInfoResponse>;
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
@@ -37,6 +46,41 @@ export const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || null;
       state.isAuthenticated = true;
+      state.isRehydrating = false;
+    },
+    /**
+     * Start rehydrating auth state (refreshing access token on app startup).
+     */
+    startRehydrating: (state) => {
+      state.isRehydrating = true;
+    },
+    /**
+     * Rehydration complete - set tokens from refresh response.
+     */
+    rehydrateComplete: (
+      state,
+      action: PayloadAction<{
+        accessToken: string;
+        refreshToken: string;
+        organizationId?: string;
+      }>
+    ) => {
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;
+      state.isAuthenticated = true;
+      state.isRehydrating = false;
+    },
+    /**
+     * Rehydration failed - clear auth state.
+     */
+    rehydrateFailed: (state) => {
+      state.user = null;
+      state.accessToken = null;
+      state.refreshToken = null;
+      state.currentOrganizationId = null;
+      state.isAuthenticated = false;
+      state.isRehydrating = false;
     },
     logout: (state) => {
       state.user = null;
@@ -44,10 +88,11 @@ export const authSlice = createSlice({
       state.refreshToken = null;
       state.currentOrganizationId = null;
       state.isAuthenticated = false;
+      state.isRehydrating = false;
     },
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, startRehydrating, rehydrateComplete, rehydrateFailed, logout } = authSlice.actions;
 
 export default authSlice.reducer;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   EllipsisHorizontalIcon, 
   ShareIcon, 
@@ -44,7 +44,10 @@ export function EditorHeader({ note }: EditorHeaderProps) {
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
   const starredNotes = editorState?.starredNotes || {};
-  const [title, setTitle] = useState(note.title);
+  // Track local edits separately from note title
+  const [localTitle, setLocalTitle] = useState<string | null>(null);
+  // Use localTitle if editing, otherwise use note.title directly
+  const title = localTitle ?? note.title;
   
   // Save status
   const { isSaving, hasUnsavedChanges, error: saveError, statusText } = useSaveStatus(note.id);
@@ -57,21 +60,19 @@ export function EditorHeader({ note }: EditorHeaderProps) {
     return buildBreadcrumbPath(notesArray, note.id);
   }, [allNotes, note.id]);
 
-  // Sync title with note when note changes
-  useEffect(() => {
-    setTitle(note.title);
-  }, [note.title, note.id]);
   
   const handleTitleChange = (value: string) => {
-    setTitle(value);
+    setLocalTitle(value);
     // Title change will be saved via autosave
   };
 
   const handleTitleBlur = () => {
     // Save title on blur if changed
-    if (title !== note.title && title.trim()) {
-      dispatch(updateNote({ noteId: note.id, title: title.trim() }));
+    if (localTitle !== null && localTitle !== note.title && localTitle.trim()) {
+      dispatch(updateNote({ noteId: note.id, title: localTitle.trim() }));
     }
+    // Reset local state after save
+    setLocalTitle(null);
   };
   
   const handleShare = () => {

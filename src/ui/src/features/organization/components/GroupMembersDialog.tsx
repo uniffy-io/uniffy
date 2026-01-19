@@ -30,7 +30,8 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
       fetchMembers();
       fetchOrgUsers();
     }
-  }, [group, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, isOpen, accessToken]);
 
   const fetchMembers = async () => {
     if (!accessToken) return;
@@ -83,9 +84,10 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
       await fetchMembers();
       setSelectedUserId('');
       setShowAddForm(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to add member:', err);
-      alert(`Failed to add member: ${err.message}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(`Failed to add member: ${message}`);
     }
   };
 
@@ -99,9 +101,10 @@ export function GroupMembersDialog({ group, isOpen, onClose }: GroupMembersDialo
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       await fetchMembers();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to remove member:', err);
-      alert(`Failed to remove member: ${err.message}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(`Failed to remove member: ${message}`);
     }
   };
 

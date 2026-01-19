@@ -10,6 +10,7 @@ from uwos.core.models.notes.note import Note
 from uwos.core.models.permissions.content_group_link import ContentGroupLink
 from uwos.core.models.permissions.content_permission import ContentPermission
 from uwos.core.models.search.search_index import SearchIndex
+from uwos.core.models.settings.settings_profile import SettingsProfile
 from uwos.core.models.shared import ContentType, PermissionLevel, SubjectType, VisibilityScope
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "ContentType",
     "PermissionLevel",
     "SubjectType",
+    "SettingsProfile",
 ]

@@ -137,6 +137,80 @@ Contact [[[John Doe|urn:uwos:content:USER:uuid]]] for questions.
 - Users are global, memberships are org-scoped
 - Always verify user has access to organization before accessing resources
 
+### Authentication System
+
+JWT-based authentication with access/refresh token pattern. Users authenticate globally, then select an organization context.
+
+**Key Files:**
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Proto | `src/proto/auth/v1/auth.proto` | API contract (Login, Register, RefreshToken, etc.) |
+| Backend | `src/uwos/domains/auth/operations.py` | Auth business logic (login, refresh, token validation) |
+| Backend | `src/uwos/domains/auth/tokens.py` | JWT creation/validation (access + refresh tokens) |
+| Backend | `src/uwos/domains/auth/handlers.py` | RPC handlers |
+| Backend | `src/uwos/core/models/login/user.py` | User model with `token_version` for revocation |
+| Frontend | `src/ui/src/config/api.ts` | Token storage, refresh, rehydration, auth interceptor |
+| Frontend | `src/ui/src/features/auth/store/authSlice.ts` | Auth state (user, tokens, org ID) |
+| Frontend | `src/ui/src/components/auth/ProtectedRoute.tsx` | Route guard (redirects unauthenticated users) |
+
+**Token Flow:**
+
+1. **Login**: User authenticates → receives `access_token` (short-lived) + `refresh_token` (long-lived)
+2. **Access token**: Stored in memory only (security - not in localStorage). Contains `user_id`, `org_id`, `token_version`
+3. **Refresh token**: Persisted via redux-persist. Contains `user_id`, `token_version` (no org context)
+4. **Organization context**: Stored separately in Redux state (`currentOrganizationId`), persisted to localStorage
+
+**Page Refresh / Rehydration:**
+
+On page load, `rehydrateAuth()` in `api.ts`:
+1. Reads `refreshToken` and `currentOrganizationId` from localStorage (via `getAuthState()`)
+2. Calls backend `RefreshToken` RPC to get new access token
+3. Restores org context from localStorage (backend doesn't return org ID on refresh)
+4. Updates Redux state via `rehydrateComplete` action
+
+**Route Protection:**
+
+`ProtectedRoute` component checks:
+1. `isRehydrating` - shows loading while refreshing token
+2. `isAuthenticated` - redirects to `/auth` if not logged in
+3. `currentOrganizationId` - redirects to `/select-org` if no org selected
+
+**Token Revocation:**
+
+- `User.token_version` field enables immediate token revocation
+- Incrementing `token_version` invalidates all existing tokens for that user
+- Backend validates `token_version` on every refresh
+
+**Important Patterns:**
+
+- Access tokens are NEVER persisted (memory only via `memoryAccessToken` in `api.ts`)
+- Auth interceptor in `api.ts` auto-refreshes expiring tokens before API calls
+- Organization context must be preserved separately from tokens (tokens don't carry org on refresh)
+
+**Logout Cleanup:**
+
+On logout, ALL user/org-specific state must be cleared. See `UserMenu.tsx` and `OrganizationPicker.tsx` for reference:
+
+```typescript
+import { clearMemoryAccessToken } from "@/config";
+import { logout } from "@/features/auth/store/authSlice";
+import { resetSettings } from "@/features/settings/store/settingsSlice";
+import { clearNotes } from "@/features/notes/store/notesSlice";
+import { clearTree } from "@/features/notes/store/notesTreeSlice";
+
+const handleLogout = () => {
+  clearMemoryAccessToken();  // Security: clear JWT from memory
+  dispatch(logout());        // Clear auth state (user, tokens, org ID)
+  dispatch(resetSettings()); // Clear user settings
+  dispatch(clearNotes());    // Clear org-specific notes
+  dispatch(clearTree());     // Clear org-specific note tree
+  navigate('/auth');
+};
+```
+
+When adding new features with user/org-specific state, add a reset action and include it in logout handlers.
+
 ### Permission System
 
 Three-layer system:
@@ -386,6 +460,159 @@ import { useSearch, SearchResultsList } from '@/features/search';
 const { setQuery, results, isLoading } = useSearch();
 ```
 
+### Keyboard Shortcuts Framework
+
+UWOS provides a centralized keyboard shortcuts system that all domains should use for consistent, user-customizable keybindings.
+
+**Available Hooks** (`@/features/settings`):
+
+```typescript
+import {
+  useShortcutHandler,      // Register a single shortcut handler
+  useShortcutHandlers,     // Register multiple handlers at once
+  useKeybinding,           // Get the shortcut string for an action
+  useFormattedKeybinding,  // Get platform-formatted string (⌘K on Mac)
+  useKeyboardBindings,     // Get all bindings
+  formatShortcut,          // Format any shortcut for display
+} from '@/features/settings';
+```
+
+**Registering Shortcut Handlers:**
+
+```typescript
+// Single handler
+useShortcutHandler('editor.save', () => {
+  saveDocument();
+});
+
+// Multiple handlers
+useShortcutHandlers({
+  'editor.bold': () => applyBold(),
+  'editor.italic': () => applyItalic(),
+  'nav.search': () => openSearch(),
+});
+
+// With options
+useShortcutHandler('editor.save', handleSave, {
+  enabled: isEditing,        // Conditionally enable
+  preventDefault: true,      // Prevent browser default (default: true)
+});
+```
+
+**Displaying Shortcuts in UI:**
+
+```typescript
+// In a button or tooltip
+const shortcut = useFormattedKeybinding('editor.save');
+// Returns "⌘S" on Mac, "Ctrl+S" on Windows
+
+<button>
+  Save <span className="text-muted-foreground">{shortcut}</span>
+</button>
+```
+
+**Adding New Shortcuts (Developer Checklist):**
+
+Shortcuts must be defined in **3 places** to work correctly:
+
+| Location | Purpose |
+|----------|---------|
+| Backend `defaults.py` | Source of truth, sent to frontend via API |
+| Frontend `useKeyboardShortcuts.ts` | Fallback before settings load |
+| Frontend `KeyboardShortcutsSection.tsx` | Settings UI for user customization |
+
+**Step 1: Backend defaults** (source of truth)
+
+`src/uwos/domains/settings/defaults.py`:
+```python
+DEFAULT_KEYBOARD_SHORTCUTS = {
+    # ... existing shortcuts
+
+    # Calendar
+    "calendar.newEvent": "Ctrl+E",
+    "calendar.today": "T",
+    "calendar.weekView": "W",
+}
+```
+
+**Step 2: Frontend fallback** (used before API loads)
+
+`src/ui/src/features/settings/hooks/useKeyboardShortcuts.ts`:
+```typescript
+const DEFAULT_SHORTCUTS: Record<string, string> = {
+    // ... existing shortcuts
+
+    // Calendar
+    'calendar.newEvent': 'Ctrl+E',
+    'calendar.today': 'T',
+    'calendar.weekView': 'W',
+};
+```
+
+> **Note:** Keep frontend defaults in sync with backend. The frontend defaults are only used as fallback before settings API responds.
+
+**Step 3: Settings UI** (for user customization)
+
+`src/ui/src/features/settings/components/KeyboardShortcutsSection.tsx`:
+```typescript
+const SHORTCUT_CATEGORIES = [
+    // ... existing categories
+    {
+        id: 'calendar',
+        label: 'Calendar',
+        shortcuts: [
+            { action: 'calendar.newEvent', label: 'New Event' },
+            { action: 'calendar.today', label: 'Go to Today' },
+            { action: 'calendar.weekView', label: 'Week View' },
+        ],
+    },
+];
+```
+
+**Step 4: Use in your domain**
+
+```typescript
+// In CalendarPage.tsx or a layout component
+import { useShortcutHandlers } from '@/features/settings';
+
+function CalendarPage() {
+    const navigate = useNavigate();
+
+    useShortcutHandlers({
+        'calendar.newEvent': () => setShowNewEventModal(true),
+        'calendar.today': () => goToToday(),
+        'calendar.weekView': () => setView('week'),
+    });
+
+    // ... rest of component
+}
+```
+
+**Step 5: Display in UI** (optional, for tooltips/buttons)
+
+```typescript
+import { useFormattedKeybinding } from '@/features/settings';
+
+function NewEventButton() {
+    const shortcut = useFormattedKeybinding('calendar.newEvent');
+
+    return (
+        <button title={`New Event (${shortcut})`}>
+            New Event <kbd className="text-xs text-muted-foreground ml-2">{shortcut}</kbd>
+        </button>
+    );
+}
+```
+
+**Action Naming Convention:**
+- Use `{domain}.{action}` format (e.g., `editor.save`, `nav.search`, `calendar.newEvent`)
+- Domains: `editor`, `nav`, `app`, `calendar`, `chat`, `files`, etc.
+
+**Platform Handling:**
+- The framework automatically converts `Ctrl` to `⌘` (Cmd) on Mac
+- Users see platform-appropriate symbols in the UI
+- Shortcuts work correctly on both platforms
+
 ## Critical Rules
 
 1. Run `make proto` after editing `.proto` files
@@ -398,3 +625,4 @@ const { setQuery, results, isLoading } = useSearch();
 8. Use shared URN utilities (`@/utils/urn.ts`) for parsing and displaying URNs
 9. Use shared mention components for any feature that displays or edits content with mentions
 10. Use centralized URN type colors from `@/theme/urnColors.ts` - never define URN colors inline
+11. Use the keyboard shortcuts framework from `@/features/settings` - never hardcode keyboard handlers

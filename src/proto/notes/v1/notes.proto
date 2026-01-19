@@ -200,6 +200,8 @@ message ListNotesRequest {
   optional string group_id = 11;
   // Show only my personal notes
   bool personal_only = 12;
+  // Exclude content field from response (for tree/list views)
+  bool exclude_content = 13;
 }
 
 // Response for listing notes

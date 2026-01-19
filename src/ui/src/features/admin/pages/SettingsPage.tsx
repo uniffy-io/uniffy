@@ -11,6 +11,9 @@ import {
   PaintBrushIcon,
   EnvelopeIcon,
   KeyIcon,
+  ComputerDesktopIcon,
+  SunIcon,
+  MoonIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from "@/utils/cn";
 
@@ -83,7 +86,7 @@ function SettingItem({ icon: Icon, title, description, enabled, onChange, badge 
 
 export default function SettingsPage() {
   useDocumentTitle('System Settings');
-  const { theme, availableThemes, setTheme } = useTheme();
+  const { themeMode, availableModes, setTheme } = useTheme();
 
   // Settings state
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -125,39 +128,29 @@ export default function SettingsPage() {
         </div>
         <div className="p-6">
           <div className="flex gap-3">
-            {availableThemes.map((t) => (
-              <button
-                key={t.name}
-                onClick={() => setTheme(t)}
-                className={cn(
-                  "flex-1 rounded-lg border-2 p-4 transition-all duration-300 hover:scale-[1.02]",
-                  theme.name === t.name
-                    ? "border-primary bg-primary/10 shadow-md shadow-primary/20"
-                    : "border-border bg-card hover:border-primary/30 hover:bg-accent/50"
-                )}
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <div className="flex gap-1.5">
-                    <div className={cn(
-                      "h-4 w-4 rounded-full border-2",
-                      t.name === 'dark' ? "bg-slate-900 border-slate-700" : "bg-white border-gray-300"
-                    )} />
-                    <div className={cn(
-                      "h-4 w-4 rounded-full",
-                      t.name === 'dark' ? "bg-blue-500" : "bg-blue-600"
-                    )} />
-                    <div className={cn(
-                      "h-4 w-4 rounded-full",
-                      t.name === 'dark' ? "bg-slate-700" : "bg-gray-200"
-                    )} />
-                  </div>
-                  <span className="text-sm font-medium capitalize">{t.name}</span>
-                  {theme.name === t.name && (
-                    <span className="text-xs text-primary font-medium">Active</span>
+            {availableModes.map((mode) => {
+              const Icon = mode === 'dark' ? MoonIcon : mode === 'light' ? SunIcon : ComputerDesktopIcon;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => setTheme(mode)}
+                  className={cn(
+                    "flex-1 rounded-lg border-2 p-4 transition-all duration-300 hover:scale-[1.02]",
+                    themeMode === mode
+                      ? "border-primary bg-primary/10 shadow-md shadow-primary/20"
+                      : "border-border bg-card hover:border-primary/30 hover:bg-accent/50"
                   )}
-                </div>
-              </button>
-            ))}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Icon className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm font-medium capitalize">{mode}</span>
+                    {themeMode === mode && (
+                      <span className="text-xs text-primary font-medium">Active</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -17,10 +17,12 @@ interface MarkdownSplitEditorProps {
 
 const MIN_PANE_WIDTH = 200; // Minimum width in pixels
 
+const defaultSettings = { editorMode: 'markdown' as const, showMarkdownPreview: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
+
 export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
-  const settings = editorState?.settings || {};
-  const showMarkdownPreview = settings?.showMarkdownPreview ?? true;
+  const settings = editorState?.settings ?? defaultSettings;
+  const showMarkdownPreview = settings.showMarkdownPreview ?? true;
 
   // Autosave hook
   const { scheduleAutosave, draftContent } = useAutosave(note.id);
@@ -128,12 +130,16 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
         codemirrorViewRef.current = null;
       }
     };
+    // Note: We intentionally omit `content` and `handleContentChange` from deps.
+    // This effect only re-initializes the editor when note.id or settings change.
+    // Content sync is handled by the separate useEffect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id, settings?.fontSize, settings?.lineHeight]);
 
   // Update CodeMirror content when external changes happen
   useEffect(() => {
     if (!codemirrorViewRef.current) return;
-    
+
     const currentContent = codemirrorViewRef.current.state.doc.toString();
     if (currentContent !== content) {
       codemirrorViewRef.current.dispatch({

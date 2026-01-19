@@ -638,6 +638,13 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
    */
   personalOnly = false;
 
+  /**
+   * Exclude content field from response (for tree/list views)
+   *
+   * @generated from field: bool exclude_content = 13;
+   */
+  excludeContent = false;
+
   constructor(data?: PartialMessage<ListNotesRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -658,6 +665,7 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
     { no: 10, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
     { no: 11, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 12, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "exclude_content", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListNotesRequest {

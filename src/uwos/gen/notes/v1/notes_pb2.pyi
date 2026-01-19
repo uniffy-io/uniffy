@@ -138,7 +138,7 @@ class NoteResponse(_message.Message):
     def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
 
 class ListNotesRequest(_message.Message):
-    __slots__ = ("organization_id", "parent_id", "tags", "include_deleted", "pinned_only", "page", "page_size", "sort_by", "sort_order", "visibility", "group_id", "personal_only")
+    __slots__ = ("organization_id", "parent_id", "tags", "include_deleted", "pinned_only", "page", "page_size", "sort_by", "sort_order", "visibility", "group_id", "personal_only", "exclude_content")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
@@ -151,6 +151,7 @@ class ListNotesRequest(_message.Message):
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     PERSONAL_ONLY_FIELD_NUMBER: _ClassVar[int]
+    EXCLUDE_CONTENT_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     parent_id: str
     tags: _containers.RepeatedScalarFieldContainer[str]
@@ -163,7 +164,8 @@ class ListNotesRequest(_message.Message):
     visibility: VisibilityScope
     group_id: str
     personal_only: bool
-    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., pinned_only: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ...) -> None: ...
+    exclude_content: bool
+    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., pinned_only: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ..., exclude_content: _Optional[bool] = ...) -> None: ...
 
 class ListNotesResponse(_message.Message):
     __slots__ = ("notes", "total_count", "page", "page_size", "total_pages")

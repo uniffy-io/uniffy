@@ -1,0 +1,97 @@
+name: Run Linters & Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  checks: write
+  # pull-requests: write # uncomment if enabling PR comments in the JUnit report action
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: install dependencies
+        shell: bash
+        run: uv sync --all-extras --all-groups --frozen
+
+      - name: prepare reports dir
+        shell: bash
+        run: mkdir -p reports
+
+      - name: run python linters
+        shell: bash
+        run: |
+          uv run ruff check src/uwos/ --exclude src/uwos/gen
+
+  lint-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: src/ui/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: src/ui
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        working-directory: src/ui
+        run: pnpm lint
+
+      # - name: run tests
+      #   shell: bash
+      #   run: |
+      #     # Run pytest via uv producing a JUnit XML report for later analysis
+      #     # Pass extra args to pytest after the double dash
+      #     uv run pytest . --junitxml=reports/pytest-report.xml --color=yes -vv
+
+      # - name: Upload pytest JUnit report
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: pytest-report
+      #     path: reports/pytest-report.xml
+      #     if-no-files-found: warn
+      #     retention-days: 14
+
+      # - name: Publish test report (native)
+      #   if: success() || failure()
+      #   uses: mikepenz/action-junit-report@v5
+      #   with:
+      #     report_paths: reports/pytest-report.xml
+      #     check_name: Pytest Results
+      #     require_tests: true
+      #     detailed_summary: true
+      #     # fail_on_failure: true # optional; the pytest step already fails the job
+      #     # comment: true        # enable (and add pull-requests: write above) to have a PR comment

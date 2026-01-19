@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -11,6 +11,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { toggleSidebar } from '../store/editorSlice';
 import { fetchNotes, setCurrentNote } from '../store/notesSlice';
 import { fetchNotesTree } from '../store/notesTreeSlice';
+import { useShortcutHandler } from '@/features/settings';
 
 export default function NotesPage() {
   useDocumentTitle('Notes');
@@ -28,25 +29,22 @@ export default function NotesPage() {
   // Determine if we should show the dashboard (no note selected from URL)
   const showDashboard = !noteId;
 
-  // Keyboard shortcut for toggling sidebar (Cmd/Ctrl + \)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
-        e.preventDefault();
-        dispatch(toggleSidebar());
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+  // Keyboard shortcut for toggling sidebar
+  const handleToggleSidebar = useCallback(() => {
+    dispatch(toggleSidebar());
   }, [dispatch]);
 
-  // Load initial notes on mount when we have an organization
+  useShortcutHandler('notes.toggleSidebar', handleToggleSidebar);
+
+  // Load notes on mount when we have an organization
+  // Uses excludeContent=true for performance - full content fetched when note is opened
   useEffect(() => {
     if (!organizationId) return;
 
-    // Fetch all notes and populate both the list and tree
+    // Fetch notes for the flat store (used by Knowledge Graph)
+    // excludeContent=true by default now
     dispatch(fetchNotes());
+    // Fetch tree structure for sidebar
     dispatch(fetchNotesTree());
   }, [dispatch, organizationId]);
 

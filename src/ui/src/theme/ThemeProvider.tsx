@@ -1,21 +1,19 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import type { Theme } from './types';
 import { defaultTheme, darkTheme } from './types';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setThemeName, setAccentColor, setFontFamily } from './themeSlice';
+import { setThemeMode, setAccentColor, setFontFamily, type ThemeMode } from './themeSlice';
+import { updateEffectiveSettingsLocal } from '@/features/settings/store/settingsSlice';
 
 interface ThemeContextType {
   theme: Theme;
-  setTheme: (theme: Theme) => void;
-  availableThemes: Theme[];
+  themeMode: ThemeMode;
+  resolvedTheme: 'light' | 'dark'; // The actual theme being applied (resolves 'system')
+  setTheme: (mode: ThemeMode) => void;
+  availableModes: ThemeMode[];
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-const themes: Record<string, Theme> = {
-  [defaultTheme.name]: defaultTheme,
-  [darkTheme.name]: darkTheme,
-};
 
 /**
  * Calculate luminance from HSL color to determine if text should be light or dark
@@ -25,11 +23,11 @@ const themes: Record<string, Theme> = {
 function getLuminance(hsl: string): number {
   const parts = hsl.split(' ');
   if (parts.length !== 3) return 0.5; // fallback
-  
+
   const h = parseFloat(parts[0]) / 360;
   const s = parseFloat(parts[1]) / 100;
   const l = parseFloat(parts[2]) / 100;
-  
+
   // Convert HSL to RGB
   let r, g, b;
   if (s === 0) {
@@ -49,54 +47,140 @@ function getLuminance(hsl: string): number {
     g = hue2rgb(p, q, h);
     b = hue2rgb(p, q, h - 1/3);
   }
-  
+
   // Calculate relative luminance using sRGB formula
   const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
   const gsRGB = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
   const bsRGB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-  
+
   return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
+}
+
+/**
+ * Get the system preference for dark/light mode
+ */
+function getSystemTheme(): 'light' | 'dark' {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'light';
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useAppDispatch();
-  const currentThemeName = useAppSelector((state) => state.theme.currentTheme);
-  const accentColor = useAppSelector((state) => state.theme.accentColor);
-  const fontFamily = useAppSelector((state) => state.theme.fontFamily);
-  const user = useAppSelector((state) => state.auth.user);
-  
-  // Sync theme values from user profile on mount/login
+
+  // Read from theme slice (legacy/fallback)
+  const themeSliceMode = useAppSelector((state) => state.theme?.themeMode);
+  const themeSliceAccentColor = useAppSelector((state) => state.theme?.accentColor);
+  const themeSliceFontFamily = useAppSelector((state) => state.theme?.fontFamily);
+
+  // Read from settings store (new settings framework)
+  const settingsInitialized = useAppSelector((state) => state.settings?.initialized);
+  const effectiveSettings = useAppSelector((state) => state.settings?.effectiveSettings);
+
+  // Read from user profile (legacy fallback)
+  const user = useAppSelector((state) => state.auth?.user);
+
+  // Track system preference changes
+  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(getSystemTheme);
+
+  // Listen for system theme changes
   useEffect(() => {
-    if (user) {
-      // Only update if user has values and they differ from current theme state
-      if (user.accentColor && user.accentColor !== accentColor) {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setSystemTheme(e.matches ? 'dark' : 'light');
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  // Determine final values with priority:
+  // 1. Settings framework (if initialized)
+  // 2. Theme slice (persisted local state)
+  // 3. User profile (legacy)
+  // 4. Defaults
+  const themeMode: ThemeMode = useMemo(() => {
+    if (settingsInitialized && effectiveSettings?.appearance.theme) {
+      return effectiveSettings.appearance.theme as ThemeMode;
+    }
+    return themeSliceMode ?? 'system';
+  }, [settingsInitialized, effectiveSettings?.appearance.theme, themeSliceMode]);
+
+  const accentColor = useMemo(() => {
+    if (settingsInitialized && effectiveSettings?.appearance.accentColor) {
+      return effectiveSettings.appearance.accentColor;
+    }
+    return themeSliceAccentColor || user?.accentColor || null;
+  }, [settingsInitialized, effectiveSettings, themeSliceAccentColor, user]);
+
+  const fontFamily = useMemo(() => {
+    if (settingsInitialized && effectiveSettings?.appearance.fontFamily) {
+      return effectiveSettings.appearance.fontFamily;
+    }
+    return themeSliceFontFamily || user?.fontFamily || null;
+  }, [settingsInitialized, effectiveSettings, themeSliceFontFamily, user]);
+
+  // Sync settings to theme slice when settings change (for components using themeSlice directly)
+  useEffect(() => {
+    if (settingsInitialized && effectiveSettings) {
+      const settingsTheme = effectiveSettings.appearance.theme as ThemeMode;
+      const settingsAccent = effectiveSettings.appearance.accentColor || null;
+      const settingsFont = effectiveSettings.appearance.fontFamily || null;
+
+      if (settingsTheme && settingsTheme !== themeSliceMode) {
+        dispatch(setThemeMode(settingsTheme));
+      }
+      if (settingsAccent !== themeSliceAccentColor) {
+        dispatch(setAccentColor(settingsAccent));
+      }
+      if (settingsFont !== themeSliceFontFamily) {
+        dispatch(setFontFamily(settingsFont));
+      }
+    }
+  }, [settingsInitialized, effectiveSettings, dispatch, themeSliceMode, themeSliceAccentColor, themeSliceFontFamily]);
+
+  // Legacy sync from user profile (only if settings not initialized)
+  useEffect(() => {
+    if (!settingsInitialized && user) {
+      if (user.accentColor && user.accentColor !== themeSliceAccentColor) {
         dispatch(setAccentColor(user.accentColor));
       }
-      if (user.fontFamily && user.fontFamily !== fontFamily) {
+      if (user.fontFamily && user.fontFamily !== themeSliceFontFamily) {
         dispatch(setFontFamily(user.fontFamily));
       }
     }
-  }, [user?.accentColor, user?.fontFamily]); // Only sync when user values change
-  
-  // Resolve the actual theme object from the name in Redux
-  const theme: Theme = {
-    ...themes[currentThemeName] || defaultTheme,
+  }, [settingsInitialized, user, themeSliceAccentColor, themeSliceFontFamily, dispatch]);
+
+  // Resolve 'system' to actual theme
+  const resolvedTheme: 'light' | 'dark' = themeMode === 'system' ? systemTheme : themeMode;
+
+  // Get the theme colors based on resolved theme
+  const baseTheme = resolvedTheme === 'dark' ? darkTheme : defaultTheme;
+
+  const theme: Theme = useMemo(() => ({
+    ...baseTheme,
     accentColor: accentColor || undefined,
     fontFamily: fontFamily || undefined,
-  };
+  }), [baseTheme, accentColor, fontFamily]);
 
-  const setTheme = (newTheme: Theme) => {
-    dispatch(setThemeName(newTheme.name));
-  };
+  const setTheme = useCallback((mode: ThemeMode) => {
+    // Update theme slice (for persistence and immediate effect)
+    dispatch(setThemeMode(mode));
+    // Also update settings store if initialized (so computed themeMode updates)
+    if (settingsInitialized) {
+      dispatch(updateEffectiveSettingsLocal({ appearance: { theme: mode } }));
+    }
+  }, [dispatch, settingsInitialized]);
 
   // Apply theme variables to root
   useEffect(() => {
     const root = window.document.documentElement;
-    
+
     // Remove old classes
     root.classList.remove('dark');
-    
-    if (theme.name === 'dark') {
+
+    if (resolvedTheme === 'dark') {
       root.classList.add('dark');
     }
 
@@ -111,14 +195,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (theme.accentColor) {
       root.style.setProperty('--primary', theme.accentColor);
       root.style.setProperty('--ring', theme.accentColor);
-      
+
       // Calculate luminance to determine if we need light or dark text
       const luminance = getLuminance(theme.accentColor);
       // Use dark text for light backgrounds (luminance > 0.5), light text for dark backgrounds
-      const foregroundColor = luminance > 0.5 
+      const foregroundColor = luminance > 0.5
         ? '222.2 84% 4.9%'  // Dark text for light accent colors
         : '210 40% 98%';     // Light text for dark accent colors
-      
+
       root.style.setProperty('--primary-foreground', foregroundColor);
     } else {
       // Reset to theme defaults when no accent color is set
@@ -129,7 +213,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Apply custom font family
     if (theme.fontFamily) {
-      const fontVar = theme.fontFamily === 'inter' ? 'var(--font-inter)' 
+      const fontVar = theme.fontFamily === 'inter' ? 'var(--font-inter)'
                     : theme.fontFamily === 'geist' ? 'var(--font-geist)'
                     : theme.fontFamily === 'system' ? 'var(--font-system)'
                     : 'var(--font-inter)'; // default fallback
@@ -138,13 +222,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Reset to Inter as default
       root.style.setProperty('--font-sans', 'var(--font-inter)');
     }
-  }, [theme]);
+  }, [theme, resolvedTheme]);
 
-  const value = {
+  const availableModes = useMemo(() => ['system', 'light', 'dark'] as ThemeMode[], []);
+
+  const value = useMemo(() => ({
     theme,
+    themeMode,
+    resolvedTheme,
     setTheme,
-    availableThemes: [defaultTheme, darkTheme],
-  };
+    availableModes,
+  }), [theme, themeMode, resolvedTheme, setTheme, availableModes]);
 
   return (
     <ThemeContext.Provider value={value}>
@@ -153,6 +241,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {

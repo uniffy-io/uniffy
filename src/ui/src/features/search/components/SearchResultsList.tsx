@@ -98,8 +98,15 @@ interface SearchResultsListProps {
   onSelect: (result: SearchResultItem) => void;
   onClose?: () => void;
   className?: string;
+  showHeader?: boolean;
   showFooter?: boolean;
   emptyMessage?: string;
+  /** Controlled selected index */
+  selectedIndex?: number;
+  /** Callback when selected index changes */
+  onSelectedIndexChange?: (index: number) => void;
+  /** Whether URN was just copied (for feedback) */
+  copiedUrn?: boolean;
 }
 
 export function SearchResultsList({
@@ -109,17 +116,25 @@ export function SearchResultsList({
   onSelect,
   onClose,
   className,
+  showHeader = true,
   showFooter = true,
   emptyMessage = 'No results found',
+  selectedIndex: controlledIndex,
+  onSelectedIndexChange,
+  copiedUrn = false,
 }: SearchResultsListProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [internalIndex, setInternalIndex] = useState(0);
+
+  // Use controlled index if provided, otherwise internal state
+  const selectedIndex = controlledIndex ?? internalIndex;
+  const setSelectedIndex = onSelectedIndexChange ?? setInternalIndex;
 
   // Reset selected index when results change
   useEffect(() => {
     setSelectedIndex(0);
-  }, [results]);
+  }, [results.length, setSelectedIndex]);
 
-  // Keyboard navigation
+  // Keyboard navigation (only arrow keys, enter, escape - copy handled by parent)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (results.length === 0) return;
@@ -127,11 +142,11 @@ export function SearchResultsList({
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex((prev) => (prev + 1) % results.length);
+          setSelectedIndex((prev: number) => (prev + 1) % results.length);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setSelectedIndex((prev) => (prev - 1 + results.length) % results.length);
+          setSelectedIndex((prev: number) => (prev - 1 + results.length) % results.length);
           break;
         case 'Enter':
           e.preventDefault();
@@ -148,7 +163,7 @@ export function SearchResultsList({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [results, selectedIndex, onSelect, onClose]);
+  }, [results, selectedIndex, onSelect, onClose, setSelectedIndex]);
 
   return (
     <div
@@ -161,19 +176,21 @@ export function SearchResultsList({
       )}
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border/50 bg-gradient-to-r from-muted/50 to-transparent">
-        <div className="flex items-center gap-2">
-          <MagnifyingGlassIcon className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-foreground">
-            {query ? `Search: "${query}"` : 'Search'}
-          </span>
-          {results.length > 0 && (
-            <span className="text-xs text-muted-foreground ml-auto">
-              {results.length} result{results.length !== 1 ? 's' : ''}
+      {showHeader && (
+        <div className="px-4 py-3 border-b border-border/50 bg-gradient-to-r from-muted/50 to-transparent">
+          <div className="flex items-center gap-2">
+            <MagnifyingGlassIcon className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">
+              {query ? `Search: "${query}"` : 'Search'}
             </span>
-          )}
+            {results.length > 0 && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                {results.length} result{results.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Loading state */}
       {isLoading && (
@@ -274,6 +291,14 @@ export function SearchResultsList({
               <span className="flex items-center gap-1.5">
                 <kbd className="px-1.5 py-0.5 rounded-md bg-card border border-border/50 font-mono text-[10px]">↵</kbd>
                 <span>select</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 rounded-md bg-card border border-border/50 font-mono text-[10px]">⌘C</kbd>
+                {copiedUrn ? (
+                  <span className="text-green-600 dark:text-green-400">copied!</span>
+                ) : (
+                  <span>copy URN</span>
+                )}
               </span>
               <span className="flex items-center gap-1.5">
                 <kbd className="px-1.5 py-0.5 rounded-md bg-card border border-border/50 font-mono text-[10px]">esc</kbd>
