@@ -35,6 +35,7 @@ class AppearanceDefaults:
     font_family: str = "inter"
     sidebar_collapsed: bool = False
     compact_mode: bool = False
+    default_editor: str = "crepe"  # Default editor for notes: "crepe", "markdown", "readonly"
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ def get_appearance_defaults_dict() -> dict[str, Any]:
         "font_family": APPEARANCE_DEFAULTS.font_family,
         "sidebar_collapsed": APPEARANCE_DEFAULTS.sidebar_collapsed,
         "compact_mode": APPEARANCE_DEFAULTS.compact_mode,
+        "default_editor": APPEARANCE_DEFAULTS.default_editor,
     }
 
 

@@ -1,36 +1,95 @@
 """
-Search query utilities with pg_trgm fuzzy matching.
+Search query utilities using Meilisearch.
 
-This module provides the core search query builder that:
-1. Uses trigram similarity for typo-tolerant matching
-2. Applies permission filtering based on visibility
-3. Supports type filtering
+This module provides search execution via Meilisearch with:
+1. Typo-tolerant fuzzy matching
+2. Permission filtering based on visibility
+3. Type and tag filtering
 """
 
+import contextlib
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, func, literal_column, or_, select
-from sqlalchemy.dialects.postgresql import ARRAY, array
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from uwos.core.models.search.search_index import SearchIndex
+from uwos.core.search import get_meilisearch_client
 
 
-def build_search_query(
+@dataclass
+class SearchResult:
+    """
+    Search result from Meilisearch.
+
+    Lightweight dataclass representing a search hit with all
+    necessary fields for display and navigation.
+    """
+
+    urn: str
+    organization_id: UUID
+    title: str
+    description: str | None
+    entity_type: str
+    url_path: str
+    visibility: str
+    owner_id: UUID
+    tags: list[str] | None
+    updated_at: datetime | None
+    rank_score: float
+    search_score: float | None  # Meilisearch ranking score
+
+    @classmethod
+    def from_meilisearch_hit(cls, hit: dict[str, Any]) -> "SearchResult":
+        """
+        Create SearchResult from Meilisearch hit document.
+
+        Parameters
+        ----------
+        hit : dict
+            Meilisearch search hit.
+
+        Returns
+        -------
+        SearchResult
+            Parsed search result.
+
+        """
+        # Parse updated_at from timestamp if present
+        updated_at = None
+        if hit.get("updated_at"):
+            with contextlib.suppress(ValueError, TypeError):
+                updated_at = datetime.fromtimestamp(hit["updated_at"])
+
+        return cls(
+            urn=hit.get("urn", ""),
+            organization_id=UUID(hit["organization_id"]),
+            title=hit.get("title", ""),
+            description=hit.get("description"),
+            entity_type=hit.get("entity_type", ""),
+            url_path=hit.get("url_path", ""),
+            visibility=hit.get("visibility", "PRIVATE"),
+            owner_id=UUID(hit["owner_id"]),
+            tags=hit.get("tags"),
+            updated_at=updated_at,
+            rank_score=hit.get("rank_score", 1.0),
+            search_score=hit.get("_rankingScore"),
+        )
+
+
+async def execute_search(
     query_text: str,
     organization_id: UUID,
     user_id: UUID,
     user_group_ids: list[UUID],
     type_filters: list[str] | None = None,
+    tag_filters: list[str] | None = None,
+    my_content_only: bool = False,
+    owner_filter: UUID | None = None,
     limit: int = 20,
-    similarity_threshold: float = 0.1,
-) -> Select:
+    offset: int = 0,
+) -> tuple[list[SearchResult], int]:
     """
-    Build the fuzzy search query with permission filtering.
-
-    Uses pg_trgm for trigram-based fuzzy matching on the keywords column.
-    Results are filtered by visibility permissions and sorted by relevance.
+    Execute a fuzzy search via Meilisearch.
 
     Parameters
     ----------
@@ -44,147 +103,74 @@ def build_search_query(
         Group IDs the user belongs to.
     type_filters : list[str] | None
         Optional entity types to filter by (e.g., ['note', 'file']).
+    tag_filters : list[str] | None
+        Optional tag filters.
+    my_content_only : bool
+        If True, only return content owned by the user.
+    owner_filter : UUID | None
+        Filter by specific owner ID.
     limit : int
         Maximum number of results.
-    similarity_threshold : float
-        Minimum similarity score (0.0 to 1.0).
+    offset : int
+        Offset for pagination.
 
     Returns
     -------
-    Select
-        SQLAlchemy select query ready for execution.
+    tuple[list[SearchResult], int]
+        List of search results and estimated total hits.
 
     """
-    # Calculate similarity score using pg_trgm
-    # We use COALESCE to handle NULL keywords
-    similarity_score = func.coalesce(
-        func.similarity(SearchIndex.keywords, query_text),
-        literal_column("0.0"),
-    ).label("score")
+    client = get_meilisearch_client()
 
-    # Build the base query with score
-    query = select(SearchIndex, similarity_score).where(
-        SearchIndex.organization_id == organization_id
-    )
-
-    # ─────────────────────────────────────────────────────────────
-    # Fuzzy matching condition
-    # Match if:
-    # 1. Trigram similarity on keywords meets threshold (% operator)
-    # 2. OR title contains the query (case-insensitive)
-    # 3. OR keywords contain the query (case-insensitive)
-    # ─────────────────────────────────────────────────────────────
-    search_pattern = f"%{query_text}%"
-    fuzzy_condition = or_(
-        # pg_trgm similarity operator (requires index)
-        SearchIndex.keywords.op("%")(query_text),
-        # Fallback: title ILIKE
-        SearchIndex.title.ilike(search_pattern),
-        # Fallback: keywords ILIKE
-        SearchIndex.keywords.ilike(search_pattern),
-    )
-    query = query.where(fuzzy_condition)
-
-    # ─────────────────────────────────────────────────────────────
-    # Permission filtering
-    # User can see content if:
-    # 1. Visibility is ORGANIZATION (everyone in org can see)
-    # 2. They own it
-    # 3. Visibility is GROUP and they're in a shared group
-    # 4. They're explicitly shared with (shared_user_ids)
-    # ─────────────────────────────────────────────────────────────
-    permission_conditions = [
-        # Organization-wide visibility
-        SearchIndex.visibility == "ORGANIZATION",
-        # Owner access
-        SearchIndex.owner_id == user_id,
-    ]
-
-    # Group access (if user is in any groups)
-    if user_group_ids:
-        # Use array overlap operator (&&) for group membership check
-        # Cast to UUID[] to match column type
-        user_groups_array = func.cast(
-            array(user_group_ids),
-            type_=ARRAY(PG_UUID()),
-        )
-        permission_conditions.append(
-            (SearchIndex.visibility == "GROUP")
-            & (SearchIndex.shared_group_ids.op("&&")(user_groups_array))
-        )
-
-    # Direct user sharing - cast to UUID[] to match column type
-    user_id_array = func.cast(
-        array([user_id]),
-        type_=ARRAY(PG_UUID()),
-    )
-    permission_conditions.append(SearchIndex.shared_user_ids.op("@>")(user_id_array))
-
-    query = query.where(or_(*permission_conditions))
-
-    # ─────────────────────────────────────────────────────────────
-    # Type filtering (optional)
-    # ─────────────────────────────────────────────────────────────
-    if type_filters:
-        query = query.where(SearchIndex.entity_type.in_(type_filters))
-
-    # ─────────────────────────────────────────────────────────────
-    # Ordering and limit
-    # Sort by: score DESC, then updated_at DESC, then rank_score DESC
-    # ─────────────────────────────────────────────────────────────
-    query = query.order_by(
-        similarity_score.desc(),
-        SearchIndex.updated_at.desc(),
-        SearchIndex.rank_score.desc(),
-    )
-    query = query.limit(limit)
-
-    return query
-
-
-async def execute_search(
-    session: AsyncSession,
-    query_text: str,
-    organization_id: UUID,
-    user_id: UUID,
-    user_group_ids: list[UUID],
-    type_filters: list[str] | None = None,
-    limit: int = 20,
-) -> list[tuple[SearchIndex, float]]:
-    """
-    Execute a fuzzy search and return results with scores.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    query_text : str
-        The search query string.
-    organization_id : UUID
-        Organization ID.
-    user_id : UUID
-        User performing the search.
-    user_group_ids : list[UUID]
-        Group IDs the user belongs to.
-    type_filters : list[str] | None
-        Optional entity types to filter by.
-    limit : int
-        Maximum number of results.
-
-    Returns
-    -------
-    list[tuple[SearchIndex, float]]
-        List of (SearchIndex, score) tuples.
-
-    """
-    query = build_search_query(
-        query_text=query_text,
+    results = await client.search(
+        query=query_text,
         organization_id=organization_id,
         user_id=user_id,
         user_group_ids=user_group_ids,
         type_filters=type_filters,
+        tag_filters=tag_filters,
+        my_content_only=my_content_only,
+        owner_filter=owner_filter,
         limit=limit,
+        offset=offset,
     )
 
-    result = await session.execute(query)
-    return [(row.SearchIndex, row.score) for row in result.all()]
+    # Convert hits to SearchResult objects
+    search_results = [
+        SearchResult.from_meilisearch_hit(hit)
+        for hit in results.hits
+    ]
+
+    return search_results, results.estimated_total_hits or len(search_results)
+
+
+async def get_documents_by_urns(
+    urns: list[str],
+    organization_id: UUID,
+) -> dict[str, SearchResult]:
+    """
+    Fetch documents by URNs from Meilisearch.
+
+    Parameters
+    ----------
+    urns : list[str]
+        List of URNs to fetch.
+    organization_id : UUID
+        Organization ID.
+
+    Returns
+    -------
+    dict[str, SearchResult]
+        Mapping of URN to SearchResult.
+
+    """
+    if not urns:
+        return {}
+
+    client = get_meilisearch_client()
+    docs = await client.get_documents_by_urns(urns, organization_id)
+
+    return {
+        urn: SearchResult.from_meilisearch_hit(doc)
+        for urn, doc in docs.items()
+    }

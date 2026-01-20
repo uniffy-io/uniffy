@@ -21,6 +21,7 @@ import {
   ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
 import type { UrnPreviewData } from './useUrnPreview';
+import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 
 interface MentionPreviewProps {
   preview: UrnPreviewData | null;
@@ -276,7 +277,7 @@ export function MentionPreview({
           {preview.description && (
             <div className="px-4 pb-3">
               <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
-                {preview.description}
+                {stripMarkdown(preview.description)}
               </p>
             </div>
           )}

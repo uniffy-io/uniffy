@@ -39,7 +39,8 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
     };
 
     initAuth();
-  }, []); // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only run once on mount, using initial refreshToken value
+  }, []);
 
   // Show loading while initializing auth
   if (!isInitialized || isRehydrating) {

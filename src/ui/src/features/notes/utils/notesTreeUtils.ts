@@ -18,6 +18,7 @@ function nodeTypeToTreeType(nodeType: NodeType): 'note' | 'folder' {
 
 /**
  * Convert a Note to a TreeNode.
+ * Note: Bookmark status is managed separately in the bookmarks store.
  */
 export function noteToTreeNode(note: SerializedNote): TreeNode {
     return {
@@ -25,7 +26,6 @@ export function noteToTreeNode(note: SerializedNote): TreeNode {
         title: note.title,
         type: nodeTypeToTreeType(note.nodeType),
         noteId: note.id,
-        isPinned: note.isPinned,
         visibility: note.visibility,
         updatedAt: note.updatedAt?.seconds?.toString(),
     };
@@ -90,9 +90,10 @@ export function buildNoteHierarchy(notes: SerializedNote[]): TreeNode[] {
 
 /**
  * Organize notes by visibility scope.
+ * Note: The bookmarked section is populated separately by the component using the bookmarks API.
  */
 export interface OrganizedNotes {
-    pinned: TreeNode[];
+    bookmarked: TreeNode[];
     personal: TreeNode[];
     shared: TreeNode[];
     groups: GroupTreeSection[];
@@ -103,12 +104,16 @@ export interface OrganizedNotes {
 /**
  * Organize flat notes array into tree structure by visibility.
  */
+/**
+ * Organize flat notes array into tree structure by visibility.
+ * Note: The bookmarked section is empty here - it's populated separately by the
+ * NotesSidebar component using the bookmarks API since bookmarks are user-scoped.
+ */
 export function organizeNotesByVisibility(
     notes: SerializedNote[],
     currentUserId: string,
     userGroups: Array<{ groupId: string; groupName: string }>
 ): OrganizedNotes {
-    const pinned: SerializedNote[] = [];
     const personal: SerializedNote[] = [];
     const shared: SerializedNote[] = [];
     const organization: SerializedNote[] = [];
@@ -125,10 +130,6 @@ export function organizeNotesByVisibility(
         if (note.isDeleted) {
             trash.push(note);
             return;
-        }
-
-        if (note.isPinned) {
-            pinned.push(note);
         }
 
         switch (note.visibility) {
@@ -166,8 +167,9 @@ export function organizeNotesByVisibility(
     });
 
     // Build hierarchies for each section
+    // Note: bookmarked is empty - populated separately by component using bookmarks API
     const result: OrganizedNotes = {
-        pinned: buildNoteHierarchy(pinned),
+        bookmarked: [],
         personal: buildNoteHierarchy(personal),
         shared: buildNoteHierarchy(shared),
         groups: userGroups.map((g) => ({

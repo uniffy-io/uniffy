@@ -16,12 +16,14 @@ import {
   CalendarIcon,
   KeyIcon,
   CubeIcon,
+  TagIcon,
 } from '@heroicons/react/24/outline';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import { cn } from '@/utils/cn';
 import { UrnType } from '@/utils/urn';
 import { getUrnTypeTheme, type UrnTypeTheme } from '@/theme/urnColors';
+import { stripMarkdown } from '../utils/stripMarkdown';
 
 /** Icon mapping for search result types */
 const RESULT_TYPE_ICONS: Record<number, typeof DocumentTextIcon> = {
@@ -269,9 +271,32 @@ export function SearchResultsList({
                           {getResultTypeLabel(result.type)}
                         </span>
                       </div>
+                      {/* Tags */}
+                      {result.tags && result.tags.length > 0 && (
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                          <TagIcon className="w-3 h-3 text-muted-foreground shrink-0" />
+                          {result.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className={cn(
+                                'text-[10px] px-1.5 py-0.5 rounded-full',
+                                'bg-muted/50 text-muted-foreground',
+                                isSelected && 'bg-primary/10 text-primary'
+                              )}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {result.tags.length > 3 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              +{result.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {result.description && (
                         <p className="text-sm text-muted-foreground truncate mt-0.5">
-                          {result.description}
+                          {stripMarkdown(result.description)}
                         </p>
                       )}
                     </div>

@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package bookmarks.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// BookmarksService provides user-scoped bookmark management
+service BookmarksService {
+  // Toggle a bookmark on a URN (add if not bookmarked, remove if bookmarked)
+  rpc ToggleBookmark(ToggleBookmarkRequest) returns (ToggleBookmarkResponse) {}
+
+  // List all bookmarks for the current user in an organization
+  rpc ListBookmarks(ListBookmarksRequest) returns (ListBookmarksResponse) {}
+
+  // Check if multiple URNs are bookmarked (bulk operation)
+  rpc BulkCheckBookmarks(BulkCheckBookmarksRequest) returns (BulkCheckBookmarksResponse) {}
+}
+
+// Request to toggle a bookmark
+message ToggleBookmarkRequest {
+  // Organization context
+  string organization_id = 1;
+  // URN of the content to bookmark (e.g., "urn:uwos:content:NOTE:uuid")
+  string urn = 2;
+}
+
+// Response for toggle operation
+message ToggleBookmarkResponse {
+  // True if the URN is now bookmarked, false if unbookmarked
+  bool is_bookmarked = 1;
+  // The bookmark object (present only if is_bookmarked is true)
+  Bookmark bookmark = 2;
+}
+
+// Request to list bookmarks
+message ListBookmarksRequest {
+  // Organization context
+  string organization_id = 1;
+  // Page number (1-indexed)
+  int32 page = 2;
+  // Page size (default 50)
+  int32 page_size = 3;
+}
+
+// Response for listing bookmarks
+message ListBookmarksResponse {
+  // List of bookmarks
+  repeated Bookmark bookmarks = 1;
+  // Total count of bookmarks
+  int32 total_count = 2;
+}
+
+// Request to check multiple URNs for bookmark status
+message BulkCheckBookmarksRequest {
+  // Organization context
+  string organization_id = 1;
+  // List of URNs to check
+  repeated string urns = 2;
+}
+
+// Response for bulk check operation
+message BulkCheckBookmarksResponse {
+  // Map of URN to bookmark status (true if bookmarked, false if not)
+  map<string, bool> bookmarked_urns = 1;
+}
+
+// Bookmark model
+message Bookmark {
+  // Unique identifier
+  string id = 1;
+  // User who created the bookmark
+  string user_id = 2;
+  // Organization context
+  string organization_id = 3;
+  // URN of the bookmarked content
+  string urn = 4;
+  // Timestamp when the bookmark was created
+  google.protobuf.Timestamp created_at = 5;
+}

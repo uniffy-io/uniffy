@@ -26,8 +26,6 @@ export interface GraphNode {
   isInternal: boolean;
   /** Number of connections (for sizing) */
   connections: number;
-  /** Whether the note is pinned */
-  isPinned?: boolean;
   /** Color based on type */
   color: string;
   /** X position (set by force simulation) */
@@ -134,7 +132,6 @@ export function buildGraphData(
       urn: noteUrn,
       isInternal: true,
       connections: connectionCount.get(note.id) || 0,
-      isPinned: note.isPinned,
       color: getNodeColor('note', true),
     };
 
@@ -226,8 +223,7 @@ function getTypeLabel(type: UrnType): string {
 export function getNodeSize(node: GraphNode): number {
   const baseSize = 6;
   const connectionBonus = Math.min(node.connections * 1.5, 10);
-  const pinnedBonus = node.isPinned ? 2 : 0;
-  return baseSize + connectionBonus + pinnedBonus;
+  return baseSize + connectionBonus;
 }
 
 /**

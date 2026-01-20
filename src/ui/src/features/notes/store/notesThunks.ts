@@ -21,6 +21,7 @@ const getOrganizationId = (state: RootState): string => {
 
 // Helper to convert proto Note to serializable plain object
 // Note: bigint values are converted to number for Redux serialization
+// Note: Bookmark status is managed separately in the bookmarks store
 const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
@@ -31,7 +32,6 @@ const noteToPlain = (note: Note) => ({
     content: note.content,
     slug: note.slug,
     isDeleted: note.isDeleted,
-    isPinned: note.isPinned,
     version: typeof note.version === 'bigint' ? Number(note.version) : note.version,
     parentId: note.parentId,
     tags: [...note.tags],
@@ -73,7 +73,6 @@ export const fetchNotes = createAsyncThunk<
         parentId?: string;
         visibility?: VisibilityScope;
         personalOnly?: boolean;
-        pinnedOnly?: boolean;
         includeDeleted?: boolean;
         groupId?: string;
         tags?: string[];
@@ -92,7 +91,6 @@ export const fetchNotes = createAsyncThunk<
             parentId: params?.parentId,
             visibility: params?.visibility,
             personalOnly: params?.personalOnly ?? false,
-            pinnedOnly: params?.pinnedOnly ?? false,
             includeDeleted: params?.includeDeleted ?? true,
             groupId: params?.groupId,
             tags: params?.tags ?? [],
@@ -110,27 +108,6 @@ export const fetchNotes = createAsyncThunk<
         };
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch notes');
-    }
-});
-
-/**
- * Fetch pinned notes only.
- */
-export const fetchPinnedNotes = createAsyncThunk<
-    SerializedNote[],
-    void,
-    { state: RootState; rejectValue: string }
->('notes/fetchPinnedNotes', async (_, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await notesApi.listNotes({
-            organizationId,
-            pinnedOnly: true,
-            pageSize: 50,
-        });
-        return response.notes.map(noteToPlain);
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch pinned notes');
     }
 });
 
@@ -329,30 +306,6 @@ export const restoreNote = createAsyncThunk<
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to restore note');
-    }
-});
-
-/**
- * Toggle pin status for a note.
- */
-export const togglePinNote = createAsyncThunk<
-    SerializedNote,
-    { noteId: string; pinned: boolean },
-    { state: RootState; rejectValue: string }
->('notes/togglePinNote', async (params, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await notesApi.togglePin({
-            noteId: params.noteId,
-            organizationId,
-            pinned: params.pinned,
-        });
-        if (!response.note) {
-            return rejectWithValue('Failed to toggle pin');
-        }
-        return noteToPlain(response.note);
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to toggle pin');
     }
 });
 

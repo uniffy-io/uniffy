@@ -21,6 +21,42 @@ services:
     networks:
       - uwos-network
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.33
+    container_name: uwos-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: uwos-dev-master-key
+      MEILI_ENV: production
+      MEILI_DB_PATH: /meili_data/data.ms
+      MEILI_HTTP_ADDR: 0.0.0.0:7700
+      # Disable telemetry (Amplitude analytics + Sentry error tracking)
+      MEILI_NO_ANALYTICS: true
+      # Max RAM for indexing (default: 2/3 of available RAM)
+      MEILI_MAX_INDEXING_MEMORY: 3GiB
+      # Max OS threads for indexing (default: half of available CPU cores)
+      MEILI_MAX_INDEXING_THREADS: 4
+      # Max HTTP payload size (default: ~100MB)
+      MEILI_HTTP_PAYLOAD_SIZE_LIMIT: 104857600
+      # Max concurrent search requests (default: 1000)
+      # MEILI_EXPERIMENTAL_SEARCH_QUEUE_SIZE: 1000
+      MEILI_LOG_LEVEL: INFO
+      MEILI_EXPERIMENTAL_LOGS_MODE: human
+      # MEILI_DUMP_DIR: /meili_data/dumps
+      # MEILI_SNAPSHOT_DIR: /meili_data/snapshots
+      # MEILI_SCHEDULE_SNAPSHOT: 86400
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uwos-network
+
   # Uncomment to add pgAdmin for database management
   # pgadmin:
   #   image: dpage/pgadmin4:latest
@@ -41,6 +77,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  meilisearch_data:
     driver: local
   # pgadmin_data:
   #   driver: local

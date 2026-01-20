@@ -66,4 +66,13 @@ format: ## Format code
 test: ## Run tests
 	uv run pytest
 
+licenses: ## Generate third-party license files
+	@echo "Generating third-party licenses..."
+	@mkdir -p LICENSES
+	@echo "Generating Python licenses..."
+	uv run pip-licenses --format=markdown --with-urls --with-license-file --no-license-path --output-file=LICENSES/PYTHON_LICENSES.md
+	@echo "Generating Node.js licenses..."
+	cd src/ui && npx license-checker --markdown > ../../LICENSES/NODE_LICENSES.md
+	@echo "Third-party licenses generated in LICENSES/"
+
 .DEFAULT_GOAL := help

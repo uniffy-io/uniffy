@@ -179,6 +179,8 @@ message AppearanceSettings {
   optional bool sidebar_collapsed = 4;
   // Enable compact mode
   optional bool compact_mode = 5;
+  // Default editor mode for notes: "crepe", "markdown", "readonly"
+  optional string default_editor = 6;
 }
 
 // Keyboard shortcuts settings

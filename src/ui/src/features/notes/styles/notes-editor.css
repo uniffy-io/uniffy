@@ -287,6 +287,19 @@
   font-size: 0.875em;
 }
 
+/*
+ * Disable Tailwind Typography's backtick pseudo-elements for inline code
+ * Typography adds ::before and ::after with content: "`" which shows
+ * literal backticks around code elements. Milkdown handles rendering properly,
+ * so we disable these decorations.
+ */
+.crepe-editor.prose code::before,
+.crepe-editor.prose code::after,
+.crepe-editor .prose code::before,
+.crepe-editor .prose code::after {
+  content: none !important;
+}
+
 /* Blockquote */
 .crepe-editor .milkdown blockquote {
   border-left: 4px solid hsl(var(--primary));

@@ -470,36 +470,45 @@ export function NotesGraphDashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, [calculateDimensions]);
 
-  // Initial zoom to fit and center
+  // Default zoom level
+  const DEFAULT_ZOOM = 3;
+
+  // Set initial zoom and center once on mount
+  const hasInitialized = useRef(false);
   useEffect(() => {
+    if (hasInitialized.current || !graphRef.current || graphData.nodes.length === 0) return;
+    hasInitialized.current = true;
+
+    // Wait for graph to render, then set default zoom centered at origin
     const timer = setTimeout(() => {
-      graphRef.current?.zoomToFit(400, 50);
-      // Center on origin after zoom
-      graphRef.current?.centerAt(0, 0, 500);
-    }, 800);
-    
-    // Additional zoomToFit after simulation settles
-    const timer2 = setTimeout(() => {
-      graphRef.current?.zoomToFit(300, 50);
-    }, 2000);
-    
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(timer2);
-    };
+      graphRef.current?.zoom(DEFAULT_ZOOM, 0);
+      graphRef.current?.centerAt(0, 0, 0);
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [graphData.nodes.length]);
 
-  // Zoom controls
+  // Zoom controls - get current zoom and multiply
   const handleZoomIn = useCallback(() => {
-    graphRef.current?.zoom(1.5, 300);
+    if (!graphRef.current) return;
+    const p1 = graphRef.current.screen2GraphCoords(0, 0);
+    const p2 = graphRef.current.screen2GraphCoords(100, 0);
+    if (!p1 || !p2) return;
+    const currentZoom = 100 / Math.abs(p2.x - p1.x);
+    graphRef.current.zoom(currentZoom * 1.5, 300);
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    graphRef.current?.zoom(0.67, 300);
+    if (!graphRef.current) return;
+    const p1 = graphRef.current.screen2GraphCoords(0, 0);
+    const p2 = graphRef.current.screen2GraphCoords(100, 0);
+    if (!p1 || !p2) return;
+    const currentZoom = 100 / Math.abs(p2.x - p1.x);
+    graphRef.current.zoom(currentZoom * 0.67, 300);
   }, []);
 
   const handleZoomFit = useCallback(() => {
-    graphRef.current?.zoomToFit(400, 50);
+    graphRef.current?.zoomToFit(400, 100);
   }, []);
 
   // Node click handler - navigate to the appropriate page for any node type
@@ -711,14 +720,6 @@ export function NotesGraphDashboard() {
       ctx.lineWidth = isHovered ? 2 / globalScale : 1 / globalScale;
       ctx.stroke();
 
-      // Pinned indicator (star)
-      if (graphNode.isPinned) {
-        ctx.beginPath();
-        ctx.arc(x + size * 0.7, y - size * 0.7, 3 / globalScale, 0, 2 * Math.PI);
-        ctx.fillStyle = '#fbbf24';
-        ctx.fill();
-      }
-
       // Label (only when zoomed in enough or hovered)
       if (globalScale > 0.6 || isHovered) {
         const fontSize = Math.max(11 / globalScale, 4);
@@ -731,31 +732,9 @@ export function NotesGraphDashboard() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
-        const textWidth = ctx.measureText(truncatedLabel).width;
-        const padding = 4 / globalScale;
         const labelY = y + size + 6 / globalScale;
 
-        // Label background pill
-        const bgColor = isDark ? 'rgba(23, 23, 23, 0.9)' : 'rgba(255, 255, 255, 0.95)';
-        const borderColor = isDark ? 'rgba(63, 63, 70, 0.5)' : 'rgba(212, 212, 216, 0.8)';
-
-        ctx.beginPath();
-        const pillRadius = (fontSize + padding * 2) / 2;
-        const pillWidth = textWidth + padding * 3;
-        ctx.roundRect(
-          x - pillWidth / 2,
-          labelY - padding,
-          pillWidth,
-          fontSize + padding * 2,
-          pillRadius
-        );
-        ctx.fillStyle = bgColor;
-        ctx.fill();
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 0.5 / globalScale;
-        ctx.stroke();
-
-        // Label text
+        // Label text - white on dark, dark on light
         ctx.fillStyle = isDark ? themeColors.foreground : '#18181b';
         ctx.fillText(truncatedLabel, x, labelY);
       }
@@ -871,6 +850,8 @@ export function NotesGraphDashboard() {
             cooldownTime={3000}
             d3AlphaDecay={0.02}
             d3VelocityDecay={0.3}
+            minZoom={0.1}
+            maxZoom={10}
             backgroundColor="transparent"
           />
         )}
@@ -929,11 +910,6 @@ export function NotesGraphDashboard() {
                   >
                     {hoveredNode.isInternal ? 'Note' : hoveredNode.type.replace('_', ' ')}
                   </span>
-                  {hoveredNode.isPinned && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                      Pinned
-                    </span>
-                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   {hoveredNode.connections} connection{hoveredNode.connections !== 1 ? 's' : ''}

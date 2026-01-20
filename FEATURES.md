@@ -19,11 +19,11 @@
 - [x] Search Indexing System
 - [x] Global Search Functionality
 - [x] Advanced Filtering Options
+- [x] Keyword like search, like google does e.g note: "how to" tag:work project:xyz
 - [ ] Search History and Suggestions
 - [ ] Synonym Support in Search
 - [ ] Search Result Ranking Customization
 - [ ] Boolean Search Operators
-- [ ] Keyword like search, like google does e.g note: "how to" tag:work project:xyz
 
 ## Notes
 

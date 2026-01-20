@@ -2,7 +2,7 @@
 
 Revision ID: 004
 Revises: 003
-Create Date: 2026-01-12
+Create Date: 2026-01-20
 
 """
 
@@ -50,7 +50,6 @@ def upgrade() -> None:
         ),
         sa.Column("slug", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("is_pinned", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("parent_id", sa.Uuid(), nullable=True),
         sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),

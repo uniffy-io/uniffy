@@ -583,13 +583,6 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
   includeDeleted = false;
 
   /**
-   * Only pinned notes
-   *
-   * @generated from field: bool pinned_only = 5;
-   */
-  pinnedOnly = false;
-
-  /**
    * Pagination: page number (1-indexed)
    *
    * @generated from field: int32 page = 6;
@@ -657,7 +650,6 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
     { no: 2, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "pinned_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 7, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 8, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -999,63 +991,6 @@ export class BacklinksResponse extends Message<BacklinksResponse> {
 
   static equals(a: BacklinksResponse | PlainMessage<BacklinksResponse> | undefined, b: BacklinksResponse | PlainMessage<BacklinksResponse> | undefined): boolean {
     return proto3.util.equals(BacklinksResponse, a, b);
-  }
-}
-
-/**
- * Request to toggle pin status
- *
- * @generated from message notes.v1.TogglePinRequest
- */
-export class TogglePinRequest extends Message<TogglePinRequest> {
-  /**
-   * Note ID
-   *
-   * @generated from field: string note_id = 1;
-   */
-  noteId = "";
-
-  /**
-   * Organization ID for access control
-   *
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId = "";
-
-  /**
-   * Pin status (true = pin, false = unpin)
-   *
-   * @generated from field: bool pinned = 3;
-   */
-  pinned = false;
-
-  constructor(data?: PartialMessage<TogglePinRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "notes.v1.TogglePinRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "pinned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TogglePinRequest {
-    return new TogglePinRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TogglePinRequest {
-    return new TogglePinRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TogglePinRequest {
-    return new TogglePinRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: TogglePinRequest | PlainMessage<TogglePinRequest> | undefined, b: TogglePinRequest | PlainMessage<TogglePinRequest> | undefined): boolean {
-    return proto3.util.equals(TogglePinRequest, a, b);
   }
 }
 
@@ -1406,13 +1341,6 @@ export class Note extends Message<Note> {
   isDeleted = false;
 
   /**
-   * Is pinned flag
-   *
-   * @generated from field: bool is_pinned = 10;
-   */
-  isPinned = false;
-
-  /**
    * Version number for conflict detection
    *
    * @generated from field: int64 version = 11;
@@ -1499,7 +1427,6 @@ export class Note extends Message<Note> {
     { no: 7, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 10, name: "is_pinned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 11, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 12, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },

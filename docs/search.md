@@ -1,164 +1,278 @@
-# Unified Search & Tagging Implementation Plan
+# Unified Search Architecture
 
-## 1. Overview
-This document outlines the architecture for the **Universal Search** (Spotlight-like experience) and **Unified Tagging/Referencing** system (using `@` mentions).
+## Overview
 
-**The Vision:** "Everything is Referenceable." Users must be able to find and reference any entity (Note, File, external Book, etc.) instantly from anywhere in the platform.
+UWOS provides a unified search experience powered by [Meilisearch](https://www.meilisearch.com/), a fast, typo-tolerant full-text search engine. Users can find any content across their workspace instantly using the Spotlight-style search (`Ctrl+K` / `Cmd+K`).
 
-## 2. Core Concepts
+**The Vision:** "Everything is Referenceable." Users can find and reference any entity (Note, File, User, etc.) from anywhere in the platform.
 
-### 2.1 Universal Resource Names (URNs)
-To reference distinct entities uniformly, we use a URN schema. This is the **Primary Key** for the search system.
+## Core Concepts
 
-**Format:** `urn:uwos:<domain>:<entity_type>:<uuid>`
+### Universal Resource Names (URNs)
+
+Every piece of content has a unique URN that serves as its global identifier:
+
+**Format:** `urn:uwos:content:{TYPE}:{uuid}`
 
 **Examples:**
-- Note: `urn:uwos:content:note:a1b2-c3d4...`
-- File: `urn:uwos:storage:file:e5f6...`
-- User: `urn:uwos:system:user:1234...`
+- Note: `urn:uwos:content:NOTE:a1b2c3d4...`
+- File: `urn:uwos:content:FILE:e5f6...`
+- User: `urn:uwos:content:USER:1234...`
 
-### 2.2 The Search Projection (Performance)
-Instead of federated queries (joining multiple tables at query time), we maintain a **single optimized `search_index` table**.
-- **Write Path:** When a Note/File is saved, a background task/trigger updates the `search_index`.
-- **Read Path:** Search queries hit *only* this table.
-- **Fuzziness:** We use Postgres `pg_trgm` (Trigrams) for typo-tolerant matching.
+### Search Architecture
 
-## 3. Architecture Layers
-
-### 3.1 Database Layer (Postgres)
-
-**Extension:**
-- Enable `pg_trgm` extension for fuzzy matching.
-
-**Table: `search_index`**
-This table acts as a global phonebook.
-
-```sql
-CREATE TABLE search_index (
-    urn TEXT PRIMARY KEY,               -- The Global ID
-    organization_id UUID NOT NULL,      -- Multi-tenant isolation
-    
-    title TEXT NOT NULL,                -- Main matching target
-    description TEXT,                   -- Snippet / Subtitle
-    keywords TEXT,                      -- Combined text (Title + Tags + Filename) for heavy indexing
-    
-    entity_type TEXT NOT NULL,          -- 'note', 'file', 'book', 'chat'
-    url_path TEXT NOT NULL,             -- Where the UI should route to (e.g., "/notes/123")
-    
-    -- Permissions (Denormalized)
-    -- Simplified approach aligned with `architecture-content-permissions.md`
-    -- 1. visibility: 'private', 'group', 'organization'
-    -- 2. owner_id: UUID
-    -- 3. shared_group_ids: UUID[] (List of Group IDs this is shared with)
-    -- 4. shared_user_ids: UUID[] (List of User IDs granted explicit permission)
-    
-    visibility TEXT NOT NULL,
-    owner_id UUID NOT NULL,
-    shared_group_ids UUID[],
-    shared_user_ids UUID[],
-
-    updated_at TIMESTAMPTZ,
-    rank_score FLOAT DEFAULT 1.0        -- Boost recently updated items
-);
-
--- Indexes
-CREATE INDEX ix_search_trgm ON search_index USING GIN (keywords gin_trgm_ops);
-CREATE INDEX ix_search_visibility ON search_index (visibility);
-CREATE INDEX ix_search_perm ON search_index USING GIN (shared_group_ids, shared_user_ids);
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Frontend  │────▶│   Backend    │────▶│   Meilisearch   │
+│  (React)    │     │  (FastAPI)   │     │   (Search DB)   │
+└─────────────┘     └──────────────┘     └─────────────────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  PostgreSQL  │
+                    │ (Source of   │
+                    │   Truth)     │
+                    └──────────────┘
 ```
 
-### 3.2 Backend Layer (Python/FastAPI/ConnectRPC)
+- **PostgreSQL**: Source of truth for all content
+- **Meilisearch**: Optimized search index with real-time sync
+- **Backend**: Handles permission filtering and index management
 
-**Service: `SearchService`**
-- **RPC `Search(query)`**:
-  - Accepts text query.
-  - Generates SQL with Trigram similarity (`%`) on `keywords`.
-  - **Permission Filter Logic:**
-    ```sql
-    WHERE organization_id = :org_id
-      AND (
-        -- 1. Optimization: Public Organization Content
-        visibility = 'organization'
-        OR
-        -- 2. Optimization: Owner Access
-        owner_id = :user_id
-        OR
-        -- 3. Group Access (If user is in these groups)
-        (visibility = 'group' AND shared_group_ids && :user_group_ids)
-        OR
-        -- 4. Direct Sharing
-        (shared_user_ids @> ARRAY[:user_id])
-      )
-    ```
-  - Returns `SearchResponse` (list of results).
-- **RPC `IndexItem` / Background Events**:
-  - Listen for "Note Created/Updated" events.
-  - UPSERT into `search_index`.
+## Meilisearch Configuration
 
-**Referencing Logic (Tagging):**
-- When content (like a Note) is saved, we parse strict references.
-- **Note Model Update:** Add `outgoing_references` column (`JSONB`).
-- Store URNs: `['urn:uwos:note:123', 'urn:uwos:file:456']`.
-- This allows generic "Backlink" queries: `SELECT * FROM notes WHERE outgoing_references @> '["urn:..."]'`.
+### Index Settings
 
-### 3.3 Frontend Layer (React/TypeScript)
+The search index (`search_index`) is configured with:
 
-**Command Palette (`Cmd+K`) & Mentions (`@`)**
-- **State Machine:**
-  - `Idle` -> `Debounce (150ms)` -> `Fetching` -> `Results`.
-- **Debouncing:**
-  - Prevents network flood. Only fire request after user pauses typing.
-- **Optimistic UI:**
-  - Show "Recent Items" instantly before search results arrive.
-- **Result Handling:**
-  - Clicking a result inserts a "Smart Chip" into the editor: `@[Title](urn:...)`.
+```python
+{
+    "searchableAttributes": ["title", "keywords", "description"],
+    "filterableAttributes": [
+        "organization_id",
+        "entity_type",
+        "visibility",
+        "owner_id",
+        "tags"
+    ],
+    "sortableAttributes": ["updated_at"],
+    "rankingRules": [
+        "words",
+        "typo",
+        "proximity",
+        "attribute",
+        "sort",
+        "exactness"
+    ]
+}
+```
 
----
+### Document Structure
 
-## 4. Implementation Tasks (Agent Split)
+Each indexed document contains:
 
-### 🤖 Task 1: Database & Models Agent
-**Objective:** Set up the foundation data structures.
-1.  **Migration:** Create migration for `pg_trgm` extension.
-2.  **Schema:** Create `search_index` table (SQLModel) in `src/uwos/models/search.py`.
-    - Align fields with Permission System: `visibility`, `owner_id`, `shared_group_ids`, `shared_user_ids`.
-3.  **Update Content Models:** Add `outgoing_references` (JSONB) to `Note` model (and future File model).
-4.  **Triggers (Optional but recommended):** Or prepared SQL statements for efficient UPSERT into index.
+| Field | Type | Purpose |
+|-------|------|---------|
+| `id` | string | Document ID (URN with hyphens instead of colons) |
+| `urn` | string | Original URN for the content |
+| `organization_id` | string | Multi-tenant isolation |
+| `title` | string | Primary search target |
+| `description` | string | Snippet/subtitle |
+| `keywords` | string | Combined searchable text |
+| `entity_type` | string | Content type (note, file, user, etc.) |
+| `url_path` | string | Frontend route for navigation |
+| `visibility` | string | Permission scope |
+| `owner_id` | string | Content owner |
+| `tags` | array | Content tags for filtering |
+| `updated_at` | timestamp | For recency ranking |
 
-### 🤖 Task 2: Backend Services Agent
-**Objective:** Implement the Search Logic and Ingestion.
-1.  **Service Skeleton:** Implement `SearchService` in `src/uwos/services/search_service.py`.
-2.  **Query Logic:** Write the complex SQLAlchemy select statement:
-    - Trigram similarity on `title`/`keywords`.
-    - **Permission Logic:** Replicate the OR condition (Org vs Owner vs Group vs Explicit).
-    - Ranking/Sorting.
-3.  **Ingestion/Sync:**
-    - Create a utility function `index_entity(entity, type)`.
-    - Hook into `NotesService.CreateNote` and `UpdateNote` to call `index_entity`.
-    - *Constraint:* Ensure this happens asynchronously or after commit to not block the UI.
+## Search Features
 
-### 🤖 Task 3: Frontend Interface Agent
-**Objective:** The user experience.
-1.  **Client Generation:** Run `buf generate` to get the new Search client.
-2.  **Hook:** Create `useUnifiedSearch(query)` hook with internal debouncing (use `useDebounce` from a library or custom).
-3.  **UI Component (`CommandPalette`):**
-    - A modal dialog (like helper kit or cmdk).
-    - Input field with auto-focus.
-    - List rendering of `SearchResultItem`.
-    - Keyboard navigation (Arrow keys).
-4.  **Editor Integration:**
-    - Detect `@` keypress.
-    - Anchor the palette to the cursor.
-    - On select, insert Markdown link: `[Title](urn:...)`.
+### Basic Search
 
-### 🤖 Task 4: Content Linkage Agent (Data Integrity)
-**Objective:** Ensure references are robust.
-1.  **Reference Parsing:** Create a Backend utility that scans Note content for `(urn:...)` patterns on save.
-2.  **Storage:** Populate the `outgoing_references` column automatically based on parsed URNs.
-3.  **Resolution Endpoint:** Implement `ResolveReferences` RPC that takes a list of URNs and returns current Titles/Metadata (so old links update their display text).
+Fuzzy, typo-tolerant search across all content:
 
----
+```
+meeting notes
+docker setup
+project plan
+```
 
-## 5. Security & Multi-Tenancy
-- **Strict Rule:** Every query to `search_index` MUST include `organization_id`.
-- **ACLs:** `acl` logic relies on accurate `shared_group_ids` replication from `ContentGroupLink` table.
+### Exact Phrase Search
+
+Wrap phrases in double quotes for exact matching:
+
+```
+"docker --platform"
+"npm install"
+"connection refused"
+```
+
+### Type Filters
+
+Filter by content type using prefix syntax:
+
+| Filter | Description |
+|--------|-------------|
+| `note:` | Search only notes |
+| `file:` | Search only files |
+| `user:` | Search users |
+| `calendar:` | Search calendar events |
+| `chat:` | Search chat messages |
+| `book:` | Search library books |
+| `password:` | Search vault entries |
+| `space:` | Search spaces |
+
+### Tag Filters
+
+Filter by tags:
+
+```
+tag:work
+tag:urgent
+tag:"project alpha"
+```
+
+### Ownership Filters
+
+```
+my:              # Only your content
+owner:username   # Content by specific user
+```
+
+### Combined Filters
+
+Mix and match for precise searches:
+
+```
+note: "kubernetes deploy" tag:production my:
+```
+
+## Backend Implementation
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/uwos/core/search/meilisearch.py` | Meilisearch client wrapper |
+| `src/uwos/core/search/indexer.py` | SearchIndexer for CRUD operations |
+| `src/uwos/domains/search/operations.py` | Search business logic |
+| `src/uwos/domains/search/handlers.py` | RPC handlers |
+| `src/uwos/domains/search/parser.py` | Query parser for keyword filters |
+
+### SearchIndexer API
+
+```python
+from uwos.core.search.indexer import SearchIndexer, build_content_urn
+from uwos.core.types import ContentType
+
+# Index content
+indexer = SearchIndexer(session)
+await indexer.index(
+    urn=build_content_urn(ContentType.NOTE, note.id),
+    organization_id=org_id,
+    title=note.title,
+    entity_type=ContentType.NOTE.value,
+    url_path=f"/notes/{note.id}",
+    visibility=note.visibility.value,
+    owner_id=note.owner_id,
+    keywords=" ".join([note.title] + note.tags),
+    description=note.content[:200],
+    tags=note.tags,
+)
+
+# Remove from index
+await indexer.remove(urn)
+```
+
+### Permission Filtering
+
+Meilisearch queries include permission filters:
+
+```python
+filter_parts = [f'organization_id = "{org_id}"']
+
+# Apply visibility and ownership filters
+filter_parts.append(
+    f'(visibility = "organization" OR owner_id = "{user_id}")'
+)
+
+# Apply type filters if specified
+if type_filters:
+    types = " OR ".join(f'entity_type = "{t}"' for t in type_filters)
+    filter_parts.append(f"({types})")
+
+# Apply tag filters
+for tag in tag_filters:
+    filter_parts.append(f'tags = "{tag}"')
+```
+
+## Frontend Implementation
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/features/search/hooks/useSearch.ts` | Search hook with debouncing |
+| `src/ui/src/features/search/utils/queryParser.ts` | Client-side query parser |
+| `src/ui/src/features/search/components/SpotlightSearch.tsx` | Spotlight UI |
+| `src/ui/src/features/search/components/SearchResultsList.tsx` | Results rendering |
+| `src/ui/src/features/search/components/FilterChip.tsx` | Active filter chips |
+
+### useSearch Hook
+
+```typescript
+import { useSearch } from '@/features/search';
+
+const {
+    query,
+    setQuery,
+    results,
+    isLoading,
+    parsedQuery,
+    hasFilters
+} = useSearch();
+```
+
+### Query Parser
+
+The frontend parses queries to:
+1. Extract filter keywords (`note:`, `tag:`, `my:`, etc.)
+2. Detect exact phrases in quotes
+3. Display active filters as chips
+4. Send structured query to backend
+
+## Adding New Content Types
+
+When adding a new searchable content type:
+
+1. **Index on create/update**: Call `SearchIndexer.index()` in your domain's operations
+2. **Remove on delete**: Call `SearchIndexer.remove()`
+3. **Update enums**: See CLAUDE.md "Search Integration Checklist"
+
+## Docker Configuration
+
+Meilisearch runs as a service in Docker Compose:
+
+```yaml
+meilisearch:
+  image: getmeili/meilisearch:v1.12
+  ports:
+    - "7700:7700"
+  environment:
+    - MEILI_ENV=development
+    - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY:-meilisearch-dev-key}
+  volumes:
+    - meilisearch_data:/meili_data
+```
+
+Environment variables:
+- `MEILISEARCH_URL`: Meilisearch server URL (default: `http://localhost:7700`)
+- `MEILISEARCH_MASTER_KEY`: API key for authentication
+
+## Performance Characteristics
+
+- **Instant search**: Results typically in <50ms
+- **Typo tolerance**: Handles misspellings automatically
+- **Real-time indexing**: Changes reflected immediately
+- **Scalable**: Handles millions of documents efficiently

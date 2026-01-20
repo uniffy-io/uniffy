@@ -15,11 +15,6 @@ All commands are run from the repository root:
 make install          # Install Python (uv) + Node (pnpm) dependencies
 make proto            # Generate protobuf code (run after editing .proto files)
 
-# Development
-make dev              # Run backend + frontend concurrently
-make run              # Backend only (localhost:8000)
-make ui               # Frontend only (localhost:5173)
-
 # Code Quality
 make test             # Run pytest
 ```
@@ -33,25 +28,34 @@ Migrations run automatically on startup.
 - **Backend**: Python 3.13+, FastAPI, SQLModel, asyncpg (async only)
 - **Frontend**: React 19, TypeScript, Vite, Redux Toolkit, Tailwind CSS 4
 - **API**: ConnectRPC (Protocol Buffers + Connect) - not REST
-- **Database**: PostgreSQL 18 with pg_trgm extension
+- **Database**: PostgreSQL 18
+- **Search**: Meilisearch (typo-tolerant full-text search)
 
 ### BackendTree Structure
 
+`src/uwos/` is the root backend dir:
+
 ```
-┌──[~/src/uwos/src/uwos]
-└─$ tree -L 1
-|
 |-- __init__.py
 |-- alembic.ini
-|-- core # Core models and utilities
-|-- db # Database session and migrations
-|   |-- migrations # Alembic migration scripts
-|   `-- session.py
-|-- domains # Domain modules, see below
-|-- factory.py # App factory mounting services
-|-- gen # Generated ConnectRPC code from .proto files at src/proto/
-|-- main.py # App entrypoint
-|-- observability # Logging, tracing, metrics
+|-- core            # Core models and utilities
+|   |- models/      # Application Database Models (User, Organization, BaseContent, etc.)
+|   |- content/     # Content module for base content operations.
+|   |- auth/        # Authentication and Permission base models.
+|   |- search/      # SearchIndexer class for indexing content to Meilisearch.
+|   |- types.py     # Shared enums and types
+|   |- errors.py    # Shared error classes
+|-- db              # Database session and migrations
+|   |-- migrations/ # Alembic migration scripts
+|   |-- seed_data/  # Initial seed data files
+|   |-- session.py  # AsyncSession factory
+|   |-- seed.py     # Seed data runner
+|   |-- __init__.py # DB package init
+|-- domains         # Domain modules, see below
+|-- factory.py      # App factory mounting services
+|-- gen             # Generated ConnectRPC code from .proto files at src/proto/
+|-- main.py         # App entrypoint
+|-- observability   # Logging, tracing, metrics
 ```
 
 ### Domain-Driven Vertical Slices
@@ -83,6 +87,106 @@ domains/{feature}/
    app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))
    ```
 6. Create Alembic migration if model added
+7. **If adding searchable content type**: Complete the Search Integration Checklist below
+
+### Search Integration Checklist
+
+When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these hardcoded enums/mappings:
+
+**Proto (regenerate after editing):**
+| File | What to update |
+|------|----------------|
+| `src/proto/search/v1/search.proto` | Add `SEARCH_RESULT_TYPE_{TYPE}` to `SearchResultType` enum |
+
+**Backend:**
+| File | What to update |
+|------|----------------|
+| `src/uwos/domains/search/converters.py` | Add mapping in `ENTITY_TYPE_TO_PROTO` dict |
+| `src/uwos/core/types.py` | Add to `ContentType` enum (if applicable) |
+
+**Frontend (all files have switch statements or Record mappings):**
+| File | What to update |
+|------|----------------|
+| `src/ui/src/utils/urn.ts` | Add to `UrnType` const, `urnToPath()` route map, `getUrnIcon()`, `getUrnTypeLabel()` |
+| `src/ui/src/theme/urnColors.ts` | Add to `URN_TYPE_HEX_COLORS`, `URN_TYPE_THEMES`, and `URN_TYPE_LEGEND` |
+| `src/ui/src/features/search/utils/queryParser.ts` | Add to `TYPE_KEYWORD_MAP`, `FILTER_PREFIXES`, `getTypeFilterLabel()`, `getTypeFilterKeyword()` |
+| `src/ui/src/features/search/components/SearchResultsList.tsx` | Add to `RESULT_TYPE_ICONS`, `RESULT_TYPE_TO_URN_TYPE`, `getResultTypeLabel()` |
+
+**Example - Adding a TASK type:**
+
+1. **Proto** (`search.proto`):
+   ```protobuf
+   enum SearchResultType {
+     // ... existing types
+     SEARCH_RESULT_TYPE_TASK = 10;
+   }
+   ```
+
+2. **Backend converters** (`converters.py`):
+   ```python
+   ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
+       # ... existing mappings
+       "task": SearchResultType.SEARCH_RESULT_TYPE_TASK,
+   }
+   ```
+
+3. **Frontend URN utils** (`urn.ts`):
+   ```typescript
+   export const UrnType = {
+     // ... existing types
+     TASK: 'task',
+   } as const;
+
+   // Add to routeMap in urnToPath()
+   [UrnType.TASK]: 'tasks',
+
+   // Add to iconMap in getUrnIcon()
+   [UrnType.TASK]: 'ClipboardDocumentListIcon',
+
+   // Add to labelMap in getUrnTypeLabel()
+   [UrnType.TASK]: 'Task',
+   ```
+
+4. **Frontend theme colors** (`urnColors.ts`):
+   ```typescript
+   [UrnType.TASK]: '#14b8a6', // teal-500
+
+   [UrnType.TASK]: {
+     gradient: 'from-teal-500/10 via-teal-500/5 to-transparent',
+     iconBg: 'bg-gradient-to-br from-teal-500 to-teal-600',
+     accentText: 'text-teal-600 dark:text-teal-400',
+     badgeBg: 'bg-teal-500/10',
+     border: 'border-teal-500/20',
+     shadow: 'shadow-teal-500/50',
+   },
+   ```
+
+5. **Frontend query parser** (`queryParser.ts`):
+   ```typescript
+   const TYPE_KEYWORD_MAP = {
+     // ... existing mappings
+     'task': SearchResultType.TASK,
+     'tasks': SearchResultType.TASK,
+   };
+
+   const FILTER_PREFIXES = [
+     // ... existing prefixes
+     'task', 'tasks',
+   ];
+   ```
+
+6. **Frontend search results** (`SearchResultsList.tsx`):
+   ```typescript
+   const RESULT_TYPE_ICONS = {
+     [SearchResultType.TASK]: ClipboardDocumentListIcon,
+   };
+
+   const RESULT_TYPE_TO_URN_TYPE = {
+     [SearchResultType.TASK]: UrnType.TASK,
+   };
+   ```
+
+Run `make proto` after updating the proto file to regenerate TypeScript and Python bindings.
 
 ### Key Backend Patterns
 
@@ -198,6 +302,7 @@ import { logout } from "@/features/auth/store/authSlice";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree } from "@/features/notes/store/notesTreeSlice";
+import { clearBookmarks } from "@/features/bookmarks";
 
 const handleLogout = () => {
   clearMemoryAccessToken();  // Security: clear JWT from memory
@@ -205,6 +310,7 @@ const handleLogout = () => {
   dispatch(resetSettings()); // Clear user settings
   dispatch(clearNotes());    // Clear org-specific notes
   dispatch(clearTree());     // Clear org-specific note tree
+  dispatch(clearBookmarks()); // Clear user bookmarks
   navigate('/auth');
 };
 ```
@@ -219,6 +325,99 @@ Three-layer system:
 3. **ContentPermission**: Fine-grained grants (VIEW, EDIT, ADMIN, OWNER)
 
 Use `PermissionChecker` or `BaseContentOperations` (handles it automatically).
+
+### Bookmarks System
+
+UWOS provides a unified bookmarks system for users to save and quick-access any content. **Do NOT implement domain-specific favorites, pinned, or starred functionality** - use the shared bookmarks feature instead.
+
+**Key Characteristics:**
+- **User-scoped**: Each user has their own personal bookmarks (not shared)
+- **URN-based**: Can bookmark any content type via its URN
+- **Unified UI**: Single "Bookmark" action with `BookmarkIcon` across all domains
+- **Centralized storage**: All bookmarks stored in `bookmarks` table with unique constraint on `(user_id, urn)`
+
+**Key Files:**
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Proto | `src/proto/bookmarks/v1/bookmarks.proto` | API contract (Toggle, List, BulkCheck) |
+| Backend | `src/uwos/core/models/bookmarks/bookmark.py` | Bookmark model |
+| Backend | `src/uwos/domains/bookmarks/operations.py` | Business logic |
+| Backend | `src/uwos/domains/bookmarks/handlers.py` | RPC handlers |
+| Frontend | `src/ui/src/features/bookmarks/` | Complete bookmarks feature |
+
+**Frontend Integration:**
+
+```typescript
+import { useBookmarks, useIsBookmarked, useToggleBookmark } from '@/features/bookmarks';
+
+// Check if a specific URN is bookmarked
+const isBookmarked = useIsBookmarked(urn);
+
+// Toggle bookmark for a URN
+const { toggle, isLoading } = useToggleBookmark();
+const handleClick = () => toggle(urn);
+
+// Get all bookmarks and actions
+const { bookmarks, bookmarkedUrns, toggle, refresh } = useBookmarks();
+```
+
+**Adding Bookmark Button to a Domain:**
+
+```typescript
+import { BookmarkIcon } from '@heroicons/react/24/outline';
+import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
+import { useIsBookmarked, useToggleBookmark } from '@/features/bookmarks';
+
+function ContentHeader({ urn }: { urn: string }) {
+    const isBookmarked = useIsBookmarked(urn);
+    const { toggle, isLoading } = useToggleBookmark();
+
+    return (
+        <button
+            onClick={() => toggle(urn)}
+            disabled={isLoading}
+            className="p-2 rounded-md hover:bg-muted"
+            title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+        >
+            {isBookmarked ? (
+                <BookmarkIconSolid className="h-5 w-5 text-primary" />
+            ) : (
+                <BookmarkIcon className="h-5 w-5 text-muted-foreground" />
+            )}
+        </button>
+    );
+}
+```
+
+**Displaying Bookmarked Items:**
+
+```typescript
+import { useBookmarks } from '@/features/bookmarks';
+import { parseUrn } from '@/utils/urn';
+
+function BookmarksList() {
+    const { bookmarks, isLoading } = useBookmarks();
+
+    // Filter bookmarks by type if needed
+    const noteBookmarks = bookmarks.filter(b => parseUrn(b.urn).type === 'note');
+
+    return (
+        <ul>
+            {noteBookmarks.map(bookmark => (
+                <li key={bookmark.urn}>{bookmark.urn}</li>
+            ))}
+        </ul>
+    );
+}
+```
+
+**Important Rules:**
+1. **Never add `is_pinned`, `is_starred`, or `is_favorite` fields** to content models
+2. **Always use `BookmarkIcon`** from heroicons (not StarIcon, HeartIcon, etc.)
+3. **Use the shared hooks** - don't create domain-specific bookmark state
+4. **Clear bookmarks on logout** - include `clearBookmarks()` in logout handlers
+5. **Auto-fetch on mount** - `useBookmarks()` automatically fetches when organization changes
 
 ## Frontend
 
@@ -626,3 +825,4 @@ function NewEventButton() {
 9. Use shared mention components for any feature that displays or edits content with mentions
 10. Use centralized URN type colors from `@/theme/urnColors.ts` - never define URN colors inline
 11. Use the keyboard shortcuts framework from `@/features/settings` - never hardcode keyboard handlers
+12. Use the shared bookmarks system (`@/features/bookmarks`) - never add `is_pinned`/`is_starred`/`is_favorite` fields to content models

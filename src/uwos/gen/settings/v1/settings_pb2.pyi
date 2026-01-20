@@ -144,18 +144,20 @@ class EffectiveSettings(_message.Message):
     def __init__(self, appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ...) -> None: ...
 
 class AppearanceSettings(_message.Message):
-    __slots__ = ("theme", "accent_color", "font_family", "sidebar_collapsed", "compact_mode")
+    __slots__ = ("theme", "accent_color", "font_family", "sidebar_collapsed", "compact_mode", "default_editor")
     THEME_FIELD_NUMBER: _ClassVar[int]
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
     FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
     SIDEBAR_COLLAPSED_FIELD_NUMBER: _ClassVar[int]
     COMPACT_MODE_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_EDITOR_FIELD_NUMBER: _ClassVar[int]
     theme: str
     accent_color: str
     font_family: str
     sidebar_collapsed: bool
     compact_mode: bool
-    def __init__(self, theme: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., sidebar_collapsed: _Optional[bool] = ..., compact_mode: _Optional[bool] = ...) -> None: ...
+    default_editor: str
+    def __init__(self, theme: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., sidebar_collapsed: _Optional[bool] = ..., compact_mode: _Optional[bool] = ..., default_editor: _Optional[str] = ...) -> None: ...
 
 class KeyboardShortcutsSettings(_message.Message):
     __slots__ = ("bindings",)

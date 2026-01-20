@@ -44,8 +44,6 @@ class Note(SQLModel, table=True):
         URL-friendly slug, unique within organization.
     is_deleted : bool
         Soft delete flag.
-    is_pinned : bool
-        Whether note is pinned for quick access.
     version : int
         Version number for optimistic locking and conflict resolution.
     parent_id : UUID | None
@@ -64,6 +62,8 @@ class Note(SQLModel, table=True):
         Timestamp when the note was last updated.
     deleted_at : datetime | None
         Timestamp when the note was soft-deleted.
+
+    Note: Bookmark status is managed by the BookmarksService (user-scoped).
 
     """
 
@@ -96,7 +96,6 @@ class Note(SQLModel, table=True):
     content: str = Field(default="", nullable=False)
     slug: str = Field(max_length=500, nullable=False, index=True)
     is_deleted: bool = Field(default=False, nullable=False)
-    is_pinned: bool = Field(default=False, nullable=False)
     version: int = Field(default=1, nullable=False)
     parent_id: UUID | None = Field(default=None, foreign_key="notes_notes.id", index=True)
     tags: list[str] | None = Field(default=None, sa_column=Column(JSONB))

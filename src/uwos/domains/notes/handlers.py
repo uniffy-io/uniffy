@@ -34,7 +34,6 @@ from uwos.gen.notes.v1.notes_pb2 import (
     NoteResponse,
     RestoreNoteRequest,
     SearchNotesRequest,
-    TogglePinRequest,
     UpdateNoteRequest,
 )
 from uwos.gen.notes.v1.notes_pb2 import (
@@ -270,7 +269,6 @@ class NotesHandlers:
                     group_id=group_id,
                     personal_only=request.personal_only,
                     include_deleted=request.include_deleted,
-                    pinned_only=request.pinned_only,
                     tags=list(request.tags) if request.tags else None,
                     page=max(1, request.page or 1),
                     page_size=min(100, max(1, request.page_size or 50)),
@@ -296,41 +294,6 @@ class NotesHandlers:
         except Exception as e:
             logger.error(f"Error listing notes: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
-
-    async def toggle_pin(
-        self,
-        request: TogglePinRequest,
-        ctx: RequestContext,
-    ) -> NoteResponse:
-        """Pin or unpin a note."""
-        try:
-            note_id = UUID(request.note_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                ops = NoteOperations(session)
-                note = await ops.toggle_pin(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    note_id=note_id,
-                    pinned=request.pinned,
-                )
-                return NoteResponse(note=note_to_proto(note))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Note not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error toggling pin: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def restore_note(
         self,

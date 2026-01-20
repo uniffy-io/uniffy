@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   PlusIcon,
   ClockIcon,
-  StarIcon,
+  BookmarkIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronUpIcon,
@@ -27,7 +27,7 @@ import {
   ArrowUturnLeftIcon,
   CubeTransparentIcon,
 } from '@heroicons/react/24/outline';
-import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote } from '../../store/notesSlice';
 import { toggleSidebar } from '../../store/editorSlice';
@@ -37,22 +37,24 @@ import {
   fetchNotesTree,
   expandAll,
   collapseAll,
+  setBookmarkedNodes,
   type TreeNode,
 } from '../../store/notesTreeSlice';
 import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
 import { notesApi } from '../../api/notesApi';
 import { Button } from '@/components/ui/button';
+import { useBookmarks, useIsBookmarked } from '@/features/bookmarks';
 
 // Section configuration
 interface SectionConfig {
-  id: 'pinned' | 'personal' | 'shared' | 'organization' | 'trash';
+  id: 'bookmarked' | 'personal' | 'shared' | 'organization' | 'trash';
   name: string;
   icon: typeof FolderIcon;
   scope?: VisibilityScope;
 }
 
 const SECTIONS: SectionConfig[] = [
-  { id: 'pinned', name: 'Favorites', icon: StarIcon },
+  { id: 'bookmarked', name: 'Bookmarks', icon: BookmarkIcon },
   { id: 'personal', name: 'Personal Space', icon: LockClosedIcon, scope: VisibilityScope.PRIVATE },
   { id: 'shared', name: 'Shared With Me', icon: UserGroupIcon },
   { id: 'organization', name: 'Organization', icon: BuildingOfficeIcon, scope: VisibilityScope.ORGANIZATION },
@@ -110,6 +112,10 @@ function TreeNodeItem({
   const hasChildren = isFolder && node.children && node.children.length > 0;
   const isEditing = editingId === node.id;
   const isDragging = draggedNodeId === node.id;
+
+  // Check if this note is bookmarked (via URN) - must be called unconditionally
+  const noteUrn = node.noteId ? `urn:uwos:content:NOTE:${node.noteId}` : '';
+  const isBookmarked = useIsBookmarked(noteUrn);
 
   // Check if draggedNodeId is a descendant of this node (prevent dropping into own children)
   const isDescendant = (nodeToCheck: TreeNode, targetId: string): boolean => {
@@ -300,8 +306,8 @@ function TreeNodeItem({
       ) : (
         <DocumentTextIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       )}
-      {node.isPinned && (
-        <StarIconSolid className="h-3 w-3 text-amber-500 flex-shrink-0" />
+      {isBookmarked && (
+        <BookmarkIconSolid className="h-3 w-3 text-primary flex-shrink-0" />
       )}
       {isEditing ? (
         <input
@@ -366,6 +372,45 @@ export function NotesSidebar() {
   const loading = useAppSelector((state) => state.notesTree.loading);
   const error = useAppSelector((state) => state.notesTree.error);
   const creatingNote = useAppSelector((state) => state.notes.creatingNote);
+  // Bookmarks state - useBookmarks() auto-fetches when organization changes
+  useBookmarks();
+  const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);
+
+  // Populate bookmarked section from bookmarks store
+  // Use tree data instead of notes slice since tree is always populated after fetchNotesTree
+  useEffect(() => {
+    // Find all notes whose URNs are bookmarked
+    const bookmarkedNoteIds = Object.keys(bookmarkedUrns)
+      .filter(urn => bookmarkedUrns[urn] && urn.includes(':NOTE:'))
+      .map(urn => urn.split(':NOTE:')[1]);
+
+    // Helper to find a node by ID in any tree section
+    const findNodeById = (nodes: TreeNode[], id: string): TreeNode | null => {
+      for (const node of nodes) {
+        if (node.id === id) return node;
+        if (node.children) {
+          const found = findNodeById(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    // Search all tree sections (personal, shared, organization, groups) for bookmarked nodes
+    const allTreeNodes = [
+      ...tree.personal,
+      ...tree.shared,
+      ...tree.organization,
+      ...tree.groups.flatMap(g => g.nodes),
+    ];
+
+    // Build tree nodes for bookmarked notes by finding them in the existing tree
+    const bookmarkedNodes: TreeNode[] = bookmarkedNoteIds
+      .map(noteId => findNodeById(allTreeNodes, noteId))
+      .filter((node): node is TreeNode => node !== null);
+
+    dispatch(setBookmarkedNodes(bookmarkedNodes));
+  }, [bookmarkedUrns, tree.personal, tree.shared, tree.organization, tree.groups, dispatch]);
 
   // Local UI state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -468,7 +513,7 @@ export function NotesSidebar() {
   const handleCreateSubfolder = useCallback(
     async (parentId: string) => {
       // Find the parent node to get its visibility
-      const allNotes = Object.values(tree.pinned)
+      const allNotes = Object.values(tree.bookmarked)
         .concat(Object.values(tree.personal))
         .concat(Object.values(tree.shared))
         .concat(Object.values(tree.organization))
@@ -486,7 +531,7 @@ export function NotesSidebar() {
   const handleCreateNoteInFolder = useCallback(
     async (parentId: string) => {
       // Find the parent node to get its visibility
-      const allNotes = Object.values(tree.pinned)
+      const allNotes = Object.values(tree.bookmarked)
         .concat(Object.values(tree.personal))
         .concat(Object.values(tree.shared))
         .concat(Object.values(tree.organization))
@@ -622,9 +667,9 @@ export function NotesSidebar() {
     const sectionExpanded = isExpanded(config.id);
     const IconComponent = config.icon;
 
-    // Use StarIconSolid for pinned section
-    const SectionIcon = config.id === 'pinned' ?
-      (sectionExpanded ? StarIconSolid : StarIcon) :
+    // Use BookmarkIconSolid for bookmarked section
+    const SectionIcon = config.id === 'bookmarked' ?
+      (sectionExpanded ? BookmarkIconSolid : BookmarkIcon) :
       IconComponent;
 
     return (
@@ -638,7 +683,7 @@ export function NotesSidebar() {
           ) : (
             <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
           )}
-          <SectionIcon className={`h-4 w-4 ${config.id === 'pinned' ? 'text-amber-500' : 'text-muted-foreground'}`} />
+          <SectionIcon className={`h-4 w-4 ${config.id === 'bookmarked' ? 'text-primary' : 'text-muted-foreground'}`} />
           <span className="flex-1">{config.name}</span>
           <span className="text-xs text-muted-foreground">{nodeCount}</span>
           {config.scope && (

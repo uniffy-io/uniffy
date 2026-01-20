@@ -16,7 +16,6 @@ import type {
     ListNotesRequest,
     SearchNotesRequest,
     GetBacklinksRequest,
-    TogglePinRequest,
     RestoreNoteRequest,
     AutosaveNoteRequest,
     MoveNoteRequest,
@@ -84,13 +83,6 @@ export const notesApi = {
      */
     getBacklinks: async (request: PartialMessage<GetBacklinksRequest>) => {
         return notesClient.getBacklinks(request);
-    },
-
-    /**
-     * Toggle pin status for a note.
-     */
-    togglePin: async (request: PartialMessage<TogglePinRequest>) => {
-        return notesClient.togglePin(request);
     },
 
     /**

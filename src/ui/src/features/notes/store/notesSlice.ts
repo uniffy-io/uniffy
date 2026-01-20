@@ -3,7 +3,6 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 import {
     fetchNotes,
-    fetchPinnedNotes,
     fetchDeletedNotes,
     fetchNote,
     createNote,
@@ -11,7 +10,6 @@ import {
     autosaveNote,
     deleteNote,
     restoreNote,
-    togglePinNote,
     searchNotes,
     moveNote,
     copyNote,
@@ -29,9 +27,6 @@ function normalizeNote(note: SerializedNote): SerializedNote {
 interface NotesState {
     // All notes indexed by ID
     notes: Record<string, SerializedNote>;
-
-    // Pinned notes IDs (for quick access)
-    pinnedNoteIds: string[];
 
     // Deleted notes IDs (trash)
     deletedNoteIds: string[];
@@ -81,7 +76,6 @@ interface NotesState {
 
 const initialState: NotesState = {
     notes: {},
-    pinnedNoteIds: [],
     deletedNoteIds: [],
     currentNoteId: null,
     openTabs: [],
@@ -202,10 +196,9 @@ export const notesSlice = createSlice({
             state.pagination = { ...state.pagination, ...action.payload };
         },
 
-        // Clear all notes
+        // Clear all notes (bookmarks are managed separately in bookmarks store)
         clearNotes: (state) => {
             state.notes = {};
-            state.pinnedNoteIds = [];
             state.deletedNoteIds = [];
             state.currentNoteId = null;
             state.openTabs = [];
@@ -242,15 +235,6 @@ export const notesSlice = createSlice({
             .addCase(fetchNotes.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload ?? 'Failed to fetch notes';
-            });
-
-        // fetchPinnedNotes
-        builder
-            .addCase(fetchPinnedNotes.fulfilled, (state, action) => {
-                state.pinnedNoteIds = action.payload.map(n => n.id);
-                action.payload.forEach((note) => {
-                    state.notes[note.id] = normalizeNote(note);
-                });
             });
 
         // fetchDeletedNotes
@@ -352,19 +336,6 @@ export const notesSlice = createSlice({
                 state.deletedNoteIds = state.deletedNoteIds.filter(id => id !== action.payload.id);
             });
 
-        // togglePinNote
-        builder
-            .addCase(togglePinNote.fulfilled, (state, action) => {
-                state.notes[action.payload.id] = normalizeNote(action.payload);
-                if (action.payload.isPinned) {
-                    if (!state.pinnedNoteIds.includes(action.payload.id)) {
-                        state.pinnedNoteIds.push(action.payload.id);
-                    }
-                } else {
-                    state.pinnedNoteIds = state.pinnedNoteIds.filter(id => id !== action.payload.id);
-                }
-            });
-
         // searchNotes
         builder
             .addCase(searchNotes.pending, (state) => {
@@ -420,9 +391,9 @@ export const {
 export default notesSlice.reducer;
 
 // Re-export thunks for convenience
+// Note: Bookmark functionality is now in the bookmarks feature
 export {
     fetchNotes,
-    fetchPinnedNotes,
     fetchDeletedNotes,
     fetchNote,
     createNote,
@@ -430,7 +401,6 @@ export {
     autosaveNote,
     deleteNote,
     restoreNote,
-    togglePinNote,
     searchNotes,
     moveNote,
     copyNote,

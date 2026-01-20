@@ -5,6 +5,7 @@ import { logout } from "@/features/auth/store/authSlice";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree } from "@/features/notes/store/notesTreeSlice";
+import { clearBookmarks } from "@/features/bookmarks";
 import { clearMemoryAccessToken } from "@/config/api";
 import { useTheme } from "@/theme/ThemeProvider";
 import { cn } from "@/utils/cn";
@@ -40,6 +41,7 @@ export function UserMenu() {
     dispatch(resetSettings());
     dispatch(clearNotes());
     dispatch(clearTree());
+    dispatch(clearBookmarks());
     // Navigate to auth page
     navigate('/auth');
   };

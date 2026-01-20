@@ -119,6 +119,44 @@ class BaseContentOperations[TModel](ABC):
         """
         raise NotImplementedError
 
+    def _get_search_description(self, model: TModel) -> str | None:
+        """
+        Get description for search index.
+
+        Override in subclass to provide a description/snippet.
+
+        Parameters
+        ----------
+        model : TModel
+            The content model.
+
+        Returns
+        -------
+        str | None
+            Description for search results, or None.
+
+        """
+        return None
+
+    def _get_search_tags(self, model: TModel) -> list[str] | None:
+        """
+        Get tags for search index.
+
+        Override in subclass to provide tags.
+
+        Parameters
+        ----------
+        model : TModel
+            The content model.
+
+        Returns
+        -------
+        list[str] | None
+            Tags for the content, or None.
+
+        """
+        return None
+
     # ─────────────────────────────────────────────────────────────
     # Core CRUD operations
     # ─────────────────────────────────────────────────────────────
@@ -432,7 +470,9 @@ class BaseContentOperations[TModel](ABC):
             visibility=model.visibility.value,
             owner_id=model.owner_id,
             keywords=self._build_search_keywords(model),
+            description=self._get_search_description(model),
             shared_group_ids=group_ids if group_ids else None,
+            tags=self._get_search_tags(model),
         )
 
     # ─────────────────────────────────────────────────────────────

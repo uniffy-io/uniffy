@@ -1,5 +1,6 @@
 """Search RPC handlers - thin layer delegating to operations."""
 
+import contextlib
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -11,10 +12,11 @@ from uwos.db import get_async_session
 from uwos.domains.auth.context import get_user_id_from_context
 from uwos.domains.search.converters import (
     proto_to_entity_type,
-    search_index_to_urn_metadata,
     search_result_to_proto,
+    search_result_to_urn_metadata,
 )
 from uwos.domains.search.operations import SearchOperations
+from uwos.domains.search.parser import parse_search_query
 from uwos.gen.search.v1.search_pb2 import (
     DeleteItemRequest,
     DeleteItemResponse,
@@ -38,7 +40,13 @@ class SearchHandlers:
         ctx: RequestContext,
     ) -> SearchResponse:
         """
-        Perform a global fuzzy search.
+        Perform a global fuzzy search with keyword filters.
+
+        Supports Google-style filter syntax in the query:
+        - Type filters: note:, file:, user:, calendar:
+        - Tag filters: tag:work
+        - Project filters: project:xyz
+        - Ownership: my: (current user's content)
 
         Returns content the user has permission to see, ranked by relevance.
         """
@@ -49,19 +57,55 @@ class SearchHandlers:
 
         user_id = get_user_id_from_context(ctx)
 
-        # Validate query
-        query_text = request.query.strip()
-        if not query_text:
+        # Parse the query to extract filters
+        parsed = parse_search_query(request.query)
+
+        # Get the free text portion (after removing filter keywords)
+        query_text = parsed.text
+
+        # Check if we have any search criteria (text or filters)
+        has_filters = (
+            parsed.type_filters
+            or parsed.tags
+            or parsed.my_content_only
+            or parsed.owner
+            or request.type_filters
+            or request.tag_filters
+            or request.my_content_only
+            or request.owner_filter
+        )
+
+        # If no query text and no filters, return empty
+        if not query_text and not has_filters:
             return SearchResponse(items=[])
 
-        # Parse type filters
-        type_filters: list[str] | None = None
+        # Merge type filters from parsed query and explicit request
+        type_filters: list[str] = []
+        if parsed.type_filters:
+            type_filters.extend(parsed.type_filters)
         if request.type_filters:
-            type_filters = [
-                entity_type
-                for tf in request.type_filters
-                if (entity_type := proto_to_entity_type(tf)) is not None
-            ]
+            for tf in request.type_filters:
+                entity_type = proto_to_entity_type(tf)
+                if entity_type and entity_type not in type_filters:
+                    type_filters.append(entity_type)
+
+        # Merge tag filters
+        tag_filters: list[str] = list(parsed.tags)
+        if request.tag_filters:
+            for tag in request.tag_filters:
+                if tag not in tag_filters:
+                    tag_filters.append(tag)
+
+        # Ownership filters
+        my_content_only = parsed.my_content_only or request.my_content_only
+
+        # Owner filter (parsed owner username would need lookup, for now use explicit)
+        owner_filter: UUID | None = None
+        if request.owner_filter:
+            # Owner filter might be a username - would need user lookup
+            # For now, skip invalid UUIDs
+            with contextlib.suppress(ValueError):
+                owner_filter = UUID(request.owner_filter)
 
         # Set limit with bounds
         limit = min(max(request.limit or 20, 1), 100)
@@ -69,16 +113,19 @@ class SearchHandlers:
         try:
             async for session in get_async_session():
                 ops = SearchOperations(session)
-                results = await ops.search(
+                results, _total = await ops.search(
                     user_id=user_id,
                     organization_id=organization_id,
                     query_text=query_text,
-                    type_filters=type_filters,
+                    type_filters=type_filters if type_filters else None,
+                    tag_filters=tag_filters if tag_filters else None,
+                    my_content_only=my_content_only,
+                    owner_filter=owner_filter,
                     limit=limit,
                 )
 
-                # Convert to proto
-                items = [search_result_to_proto(item, score) for item, score in results]
+                # Convert to proto (score is in SearchResult.search_score)
+                items = [search_result_to_proto(item) for item in results]
 
                 return SearchResponse(items=items)
 
@@ -267,7 +314,7 @@ class SearchHandlers:
 
                 # Convert to proto map
                 resolved = {
-                    urn: search_index_to_urn_metadata(item)
+                    urn: search_result_to_urn_metadata(item)
                     for urn, item in results.items()
                 }
 

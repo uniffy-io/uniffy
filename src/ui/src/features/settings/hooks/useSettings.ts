@@ -190,6 +190,7 @@ export function useAppearanceSettings() {
         fontFamily: effectiveSettings?.appearance.fontFamily ?? 'inter',
         sidebarCollapsed: effectiveSettings?.appearance.sidebarCollapsed ?? false,
         compactMode: effectiveSettings?.appearance.compactMode ?? false,
+        defaultEditor: effectiveSettings?.appearance.defaultEditor ?? 'crepe',
     };
 }
 

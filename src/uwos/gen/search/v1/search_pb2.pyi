@@ -32,16 +32,24 @@ SEARCH_RESULT_TYPE_WORKFLOW: SearchResultType
 SEARCH_RESULT_TYPE_SPACE: SearchResultType
 
 class SearchRequest(_message.Message):
-    __slots__ = ("organization_id", "query", "type_filters", "limit")
+    __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TYPE_FILTERS_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
+    TAG_FILTERS_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_FILTERS_FIELD_NUMBER: _ClassVar[int]
+    MY_CONTENT_ONLY_FIELD_NUMBER: _ClassVar[int]
+    OWNER_FILTER_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     query: str
     type_filters: _containers.RepeatedScalarFieldContainer[SearchResultType]
     limit: int
-    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ...) -> None: ...
+    tag_filters: _containers.RepeatedScalarFieldContainer[str]
+    project_filters: _containers.RepeatedScalarFieldContainer[str]
+    my_content_only: bool
+    owner_filter: str
+    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ...) -> None: ...
 
 class SearchResponse(_message.Message):
     __slots__ = ("items",)
@@ -50,7 +58,7 @@ class SearchResponse(_message.Message):
     def __init__(self, items: _Optional[_Iterable[_Union[SearchResultItem, _Mapping]]] = ...) -> None: ...
 
 class SearchResultItem(_message.Message):
-    __slots__ = ("urn", "title", "description", "type", "url", "score", "metadata")
+    __slots__ = ("urn", "title", "description", "type", "url", "score", "metadata", "tags")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -65,6 +73,7 @@ class SearchResultItem(_message.Message):
     URL_FIELD_NUMBER: _ClassVar[int]
     SCORE_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
     urn: str
     title: str
     description: str
@@ -72,7 +81,8 @@ class SearchResultItem(_message.Message):
     url: str
     score: float
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, urn: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., score: _Optional[float] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, urn: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., score: _Optional[float] = ..., metadata: _Optional[_Mapping[str, str]] = ..., tags: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class IndexItemRequest(_message.Message):
     __slots__ = ("organization_id", "urn", "type", "title", "content", "url", "metadata")

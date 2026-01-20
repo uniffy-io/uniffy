@@ -1,6 +1,6 @@
 """Proto <-> domain conversions for search."""
 
-from uwos.core.models.search.search_index import SearchIndex
+from uwos.domains.search.queries import SearchResult
 from uwos.gen.search.v1.search_pb2 import (
     SearchResultItem,
     SearchResultType,
@@ -68,23 +68,23 @@ def proto_to_entity_type(proto_type: SearchResultType) -> str | None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SearchIndex -> Proto conversion
+# SearchResult -> Proto conversion
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def search_result_to_proto(
-    item: SearchIndex,
-    score: float = 0.0,
+    item: SearchResult,
+    score: float | None = None,
 ) -> SearchResultItem:
     """
-    Convert SearchIndex model to proto SearchResultItem.
+    Convert SearchResult to proto SearchResultItem.
 
     Parameters
     ----------
-    item : SearchIndex
-        Search index entry.
-    score : float
-        Relevance score from similarity calculation.
+    item : SearchResult
+        Search result from Meilisearch.
+    score : float | None
+        Optional relevance score override.
 
     Returns
     -------
@@ -92,30 +92,34 @@ def search_result_to_proto(
         Proto message.
 
     """
+    # Use provided score, search_score from Meilisearch, or 0.0
+    final_score = score if score is not None else (item.search_score or 0.0)
+
     return SearchResultItem(
         urn=item.urn,
         title=item.title,
         description=item.description or "",
         type=entity_type_to_proto(item.entity_type),
         url=item.url_path,
-        score=score,
+        score=final_score,
         metadata={},  # Can be extended later
+        tags=item.tags or [],
     )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SearchIndex -> UrnMetadata conversion
+# SearchResult -> UrnMetadata conversion
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def search_index_to_urn_metadata(item: SearchIndex) -> UrnMetadata:
+def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
     """
-    Convert SearchIndex model to proto UrnMetadata.
+    Convert SearchResult to proto UrnMetadata.
 
     Parameters
     ----------
-    item : SearchIndex
-        Search index entry.
+    item : SearchResult
+        Search result from Meilisearch.
 
     Returns
     -------

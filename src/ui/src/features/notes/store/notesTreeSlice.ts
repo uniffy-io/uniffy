@@ -18,7 +18,6 @@ const noteToPlain = (note: Note) => ({
     content: note.content,
     slug: note.slug,
     isDeleted: note.isDeleted,
-    isPinned: note.isPinned,
     version: typeof note.version === 'bigint' ? Number(note.version) : note.version,
     parentId: note.parentId,
     tags: [...note.tags],
@@ -47,7 +46,6 @@ export interface TreeNode {
     children?: TreeNode[];
     noteId?: string;
     folderId?: string;
-    isPinned?: boolean;
     isExpanded?: boolean;
     visibility?: VisibilityScope;
     updatedAt?: string;
@@ -63,12 +61,12 @@ export interface GroupTreeSection {
 interface NotesTreeState {
     // Tree structure organized by visibility
     tree: {
-        pinned: TreeNode[];      // Favorited/pinned notes (any visibility)
-        personal: TreeNode[];    // PRIVATE - only owner can see
-        shared: TreeNode[];      // Notes shared with the user (GROUP visibility, not owned)
+        bookmarked: TreeNode[];   // User's bookmarked notes (populated from bookmarks store)
+        personal: TreeNode[];     // PRIVATE - only owner can see
+        shared: TreeNode[];       // Notes shared with the user (GROUP visibility, not owned)
         groups: GroupTreeSection[]; // GROUP - organized by group
         organization: TreeNode[]; // ORGANIZATION - visible to all org members
-        trash: TreeNode[];       // Deleted notes
+        trash: TreeNode[];        // Deleted notes
     };
 
     // Expanded/collapsed state (note IDs and folder IDs)
@@ -129,7 +127,7 @@ export const fetchNotesTree = createAsyncThunk<
 
 // Empty initial state - will be populated from API
 const emptyTree: NotesTreeState['tree'] = {
-    pinned: [],
+    bookmarked: [],
     personal: [],
     shared: [],
     groups: [],
@@ -159,8 +157,8 @@ export const notesTreeSlice = createSlice({
         },
 
         // Set tree nodes for a specific section
-        setPinnedNodes: (state, action: PayloadAction<TreeNode[]>) => {
-            state.tree.pinned = action.payload;
+        setBookmarkedNodes: (state, action: PayloadAction<TreeNode[]>) => {
+            state.tree.bookmarked = action.payload;
         },
 
         setPersonalNodes: (state, action: PayloadAction<TreeNode[]>) => {
@@ -185,7 +183,7 @@ export const notesTreeSlice = createSlice({
 
         // Add a single node to a section
         addNodeToSection: (state, action: PayloadAction<{
-            section: 'pinned' | 'personal' | 'shared' | 'organization' | 'trash';
+            section: 'bookmarked' | 'personal' | 'shared' | 'organization' | 'trash';
             node: TreeNode;
             parentId?: string;
         }>) => {
@@ -215,7 +213,7 @@ export const notesTreeSlice = createSlice({
                 return false;
             };
 
-            for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
+            for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                 if (updateInArray(state.tree[section])) break;
             }
             for (const group of state.tree.groups) {
@@ -235,7 +233,7 @@ export const notesTreeSlice = createSlice({
                     }));
             };
 
-            for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
+            for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                 state.tree[section] = removeFromArray(state.tree[section]);
             }
             for (const group of state.tree.groups) {
@@ -280,7 +278,7 @@ export const notesTreeSlice = createSlice({
             };
 
             // Expand all sections
-            state.expandedNodes = ['pinned', 'personal', 'shared', 'organization', 'trash'];
+            state.expandedNodes = ['bookmarked', 'personal', 'shared', 'organization', 'trash'];
 
             // Expand all group sections
             state.tree.groups.forEach(group => {
@@ -290,7 +288,7 @@ export const notesTreeSlice = createSlice({
             });
 
             // Expand all folders in each section
-            state.expandedNodes.push(...collectFolderIds(state.tree.pinned));
+            state.expandedNodes.push(...collectFolderIds(state.tree.bookmarked));
             state.expandedNodes.push(...collectFolderIds(state.tree.personal));
             state.expandedNodes.push(...collectFolderIds(state.tree.shared));
             state.expandedNodes.push(...collectFolderIds(state.tree.organization));
@@ -377,7 +375,7 @@ export const notesTreeSlice = createSlice({
                     return false;
                 };
 
-                for (const section of ['pinned', 'personal', 'shared', 'organization', 'trash'] as const) {
+                for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                     if (updateInArray(state.tree[section])) break;
                 }
                 for (const group of state.tree.groups) {
@@ -389,7 +387,7 @@ export const notesTreeSlice = createSlice({
 
 export const {
     setTree,
-    setPinnedNodes,
+    setBookmarkedNodes,
     setPersonalNodes,
     setSharedNodes,
     setGroupSections,

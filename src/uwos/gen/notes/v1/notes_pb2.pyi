@@ -138,12 +138,11 @@ class NoteResponse(_message.Message):
     def __init__(self, note: _Optional[_Union[Note, _Mapping]] = ...) -> None: ...
 
 class ListNotesRequest(_message.Message):
-    __slots__ = ("organization_id", "parent_id", "tags", "include_deleted", "pinned_only", "page", "page_size", "sort_by", "sort_order", "visibility", "group_id", "personal_only", "exclude_content")
+    __slots__ = ("organization_id", "parent_id", "tags", "include_deleted", "page", "page_size", "sort_by", "sort_order", "visibility", "group_id", "personal_only", "exclude_content")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
-    PINNED_ONLY_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     SORT_BY_FIELD_NUMBER: _ClassVar[int]
@@ -156,7 +155,6 @@ class ListNotesRequest(_message.Message):
     parent_id: str
     tags: _containers.RepeatedScalarFieldContainer[str]
     include_deleted: bool
-    pinned_only: bool
     page: int
     page_size: int
     sort_by: str
@@ -165,7 +163,7 @@ class ListNotesRequest(_message.Message):
     group_id: str
     personal_only: bool
     exclude_content: bool
-    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., pinned_only: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ..., exclude_content: _Optional[bool] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., group_id: _Optional[str] = ..., personal_only: _Optional[bool] = ..., exclude_content: _Optional[bool] = ...) -> None: ...
 
 class ListNotesResponse(_message.Message):
     __slots__ = ("notes", "total_count", "page", "page_size", "total_pages")
@@ -225,16 +223,6 @@ class BacklinksResponse(_message.Message):
     total_count: int
     def __init__(self, backlinks: _Optional[_Iterable[_Union[NoteReference, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
 
-class TogglePinRequest(_message.Message):
-    __slots__ = ("note_id", "organization_id", "pinned")
-    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    PINNED_FIELD_NUMBER: _ClassVar[int]
-    note_id: str
-    organization_id: str
-    pinned: bool
-    def __init__(self, note_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., pinned: _Optional[bool] = ...) -> None: ...
-
 class RestoreNoteRequest(_message.Message):
     __slots__ = ("note_id", "organization_id")
     NOTE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -284,7 +272,7 @@ class AutosaveNoteResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ..., saved_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., version: _Optional[int] = ...) -> None: ...
 
 class Note(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "visibility", "node_type", "title", "content", "slug", "is_deleted", "is_pinned", "version", "parent_id", "tags", "metadata", "created_at", "updated_at", "deleted_at", "group_ids", "user_permission", "outgoing_references")
+    __slots__ = ("id", "organization_id", "owner_id", "visibility", "node_type", "title", "content", "slug", "is_deleted", "version", "parent_id", "tags", "metadata", "created_at", "updated_at", "deleted_at", "group_ids", "user_permission", "outgoing_references")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -301,7 +289,6 @@ class Note(_message.Message):
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
     IS_DELETED_FIELD_NUMBER: _ClassVar[int]
-    IS_PINNED_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
@@ -321,7 +308,6 @@ class Note(_message.Message):
     content: str
     slug: str
     is_deleted: bool
-    is_pinned: bool
     version: int
     parent_id: str
     tags: _containers.RepeatedScalarFieldContainer[str]
@@ -332,7 +318,7 @@ class Note(_message.Message):
     group_ids: _containers.RepeatedScalarFieldContainer[str]
     user_permission: PermissionLevel
     outgoing_references: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class NoteReference(_message.Message):
     __slots__ = ("id", "title", "slug", "owner_id", "updated_at", "visibility", "node_type")

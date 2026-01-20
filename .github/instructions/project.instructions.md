@@ -16,8 +16,10 @@ UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, b
   - Use SQLModel for models (combines SQLAlchemy ORM + Pydantic validation)
   - All database I/O must be async with AsyncSession
   - Alembic for schema migrations (runs on startup)
-  - Custom Postgres extensions (pg_trgm, pgvector, etc.) managed via startup scripts
   - Alembic handles all schema changes (tables, columns, indexes, constraints)
+- **Search**: Meilisearch (typo-tolerant full-text search)
+  - Separate search index with real-time sync from PostgreSQL
+  - Supports keyword filters, exact phrase matching, and fuzzy search
 - **Frontend**: ReactJS, TypeScript
 - **API Communication**: Buf and ConnectRPC (Protocol Buffers with Connect protocol)
   - Use `.proto` files in the `proto/` directory to define services
@@ -57,7 +59,7 @@ You are a Senior Full-Stack Developer and an Expert in Python, FastAPI, SQLAlche
 - SQLModel provides both ORM functionality and Pydantic validation automatically
 - Use `select()` from SQLModel/SQLAlchemy for queries
 - Alembic migrations handle schema changes (tables, columns, indexes, constraints)
-- Custom Postgres extensions and functions created in startup scripts before migrations
+- Custom Postgres extensions (pgvector, etc.) created in startup scripts before migrations
 - Migrations execute programmatically on application startup
 
 ### Multi-Tenancy Rules

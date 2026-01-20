@@ -90,7 +90,6 @@ def note_to_proto(
         content="" if exclude_content else note.content,
         slug=note.slug,
         is_deleted=note.is_deleted,
-        is_pinned=note.is_pinned,
         version=note.version,
         tags=note.tags or [],
         metadata=note.note_metadata or {},

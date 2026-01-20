@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AutosaveNoteRequest, AutosaveNoteResponse, BacklinksResponse, CopyNoteRequest, CreateNoteRequest, DeleteNoteRequest, DeleteNoteResponse, EmptyTrashRequest, EmptyTrashResponse, GetBacklinksRequest, GetNoteRequest, GetNoteSharingRequest, GrantPermissionRequest, ListNotesRequest, ListNotesResponse, MoveNoteRequest, NoteResponse, NoteSharingResponse, PermissionResponse, RestoreNoteRequest, RevokePermissionRequest, SearchNotesRequest, SearchNotesResponse, ShareNoteResponse, ShareNoteWithGroupRequest, TogglePinRequest, UnshareNoteFromGroupRequest, UpdateNoteRequest } from "./notes_pb.js";
+import { AutosaveNoteRequest, AutosaveNoteResponse, BacklinksResponse, CopyNoteRequest, CreateNoteRequest, DeleteNoteRequest, DeleteNoteResponse, EmptyTrashRequest, EmptyTrashResponse, GetBacklinksRequest, GetNoteRequest, GetNoteSharingRequest, GrantPermissionRequest, ListNotesRequest, ListNotesResponse, MoveNoteRequest, NoteResponse, NoteSharingResponse, PermissionResponse, RestoreNoteRequest, RevokePermissionRequest, SearchNotesRequest, SearchNotesResponse, ShareNoteResponse, ShareNoteWithGroupRequest, UnshareNoteFromGroupRequest, UpdateNoteRequest } from "./notes_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -89,17 +89,6 @@ export const NotesService = {
       name: "GetBacklinks",
       I: GetBacklinksRequest,
       O: BacklinksResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Pin/unpin a note
-     *
-     * @generated from rpc notes.v1.NotesService.TogglePin
-     */
-    togglePin: {
-      name: "TogglePin",
-      I: TogglePinRequest,
-      O: NoteResponse,
       kind: MethodKind.Unary,
     },
     /**

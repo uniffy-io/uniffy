@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
-import { 
-  EllipsisHorizontalIcon, 
-  ShareIcon, 
+import {
+  EllipsisHorizontalIcon,
+  ShareIcon,
   PencilSquareIcon,
   EyeIcon,
   EyeSlashIcon,
   CodeBracketIcon,
-  StarIcon,
+  BookmarkIcon,
   ChevronRightIcon,
   ChevronDoubleRightIcon,
   ChevronDoubleLeftIcon,
@@ -14,15 +14,16 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
-import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '../../store/notesThunks';
-import { setEditorMode, toggleMetadataPanel, toggleStarredNote, toggleSidebar, toggleMarkdownPreview } from '../../store/editorSlice';
+import { setEditorMode, toggleMetadataPanel, toggleSidebar, toggleMarkdownPreview } from '../../store/editorSlice';
 import { updateNote } from '../../store/notesSlice';
 import { useSaveStatus } from '../../hooks/useNotesHooks';
 import { buildBreadcrumbPath } from '../../utils/notesTreeUtils';
 import type { EditorMode } from '../../store/editorSlice';
 import { TagInput } from './TagInput';
+import { useBookmarkToggle } from '@/features/bookmarks';
 
 interface EditorHeaderProps {
   note: SerializedNote;
@@ -43,16 +44,18 @@ export function EditorHeader({ note }: EditorHeaderProps) {
   const showMarkdownPreview = settings?.showMarkdownPreview ?? true;
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
-  const starredNotes = editorState?.starredNotes || {};
+
+  // Bookmark state
+  const noteUrn = `urn:uwos:content:NOTE:${note.id}`;
+  const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(noteUrn);
+
   // Track local edits separately from note title
   const [localTitle, setLocalTitle] = useState<string | null>(null);
   // Use localTitle if editing, otherwise use note.title directly
   const title = localTitle ?? note.title;
-  
+
   // Save status
   const { isSaving, hasUnsavedChanges, error: saveError, statusText } = useSaveStatus(note.id);
-  
-  const isStarred = starredNotes?.[note.id] || false;
 
   // Build breadcrumb path from parent folders
   const breadcrumb = useMemo(() => {
@@ -213,16 +216,17 @@ export function EditorHeader({ note }: EditorHeaderProps) {
             </button>
           </div>
           
-          {/* Star Button */}
+          {/* Bookmark Button */}
           <button
-            onClick={() => dispatch(toggleStarredNote(note.id))}
-            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
-            title={isStarred ? 'Remove from favorites' : 'Add to favorites'}
+            onClick={toggleBookmark}
+            disabled={bookmarkToggling}
+            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
+            title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
           >
-            {isStarred ? (
-              <StarIconSolid className="h-5 w-5 text-primary" />
+            {isBookmarked ? (
+              <BookmarkIconSolid className="h-5 w-5 text-primary" />
             ) : (
-              <StarIcon className="h-5 w-5 text-primary" />
+              <BookmarkIcon className="h-5 w-5 text-primary" />
             )}
           </button>
           

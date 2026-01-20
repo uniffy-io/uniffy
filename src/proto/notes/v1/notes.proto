@@ -63,10 +63,7 @@ service NotesService {
   
   // Get backlinks for a note (other notes that reference this note)
   rpc GetBacklinks(GetBacklinksRequest) returns (BacklinksResponse) {}
-  
-  // Pin/unpin a note
-  rpc TogglePin(TogglePinRequest) returns (NoteResponse) {}
-  
+
   // Restore a deleted note
   rpc RestoreNote(RestoreNoteRequest) returns (NoteResponse) {}
   
@@ -184,8 +181,9 @@ message ListNotesRequest {
   repeated string tags = 3;
   // Include deleted notes
   bool include_deleted = 4;
-  // Only pinned notes
-  bool pinned_only = 5;
+  // Reserved: was pinned_only (now use BookmarksService)
+  reserved 5;
+  reserved "pinned_only";
   // Pagination: page number (1-indexed)
   int32 page = 6;
   // Pagination: page size (default: 50, max: 100)
@@ -262,16 +260,6 @@ message BacklinksResponse {
   int32 total_count = 2;
 }
 
-// Request to toggle pin status
-message TogglePinRequest {
-  // Note ID
-  string note_id = 1;
-  // Organization ID for access control
-  string organization_id = 2;
-  // Pin status (true = pin, false = unpin)
-  bool pinned = 3;
-}
-
 // Request to restore a deleted note
 message RestoreNoteRequest {
   // Note ID
@@ -340,8 +328,9 @@ message Note {
   string slug = 8;
   // Is deleted flag
   bool is_deleted = 9;
-  // Is pinned flag
-  bool is_pinned = 10;
+  // Reserved: was is_pinned (now use BookmarksService)
+  reserved 10;
+  reserved "is_pinned";
   // Version number for conflict detection
   int64 version = 11;
   // Optional parent note ID

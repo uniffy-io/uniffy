@@ -4,6 +4,7 @@ import type { PersistedState, MigrationManifest } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import authReducer from '@/features/auth/store/authSlice';
 import type { AuthState } from '@/features/auth/store/authSlice';
+import bookmarksReducer from '@/features/bookmarks/store/bookmarksSlice';
 import themeReducer from '@/theme/themeSlice';
 import notesReducer from '@/features/notes/store/notesSlice';
 import notesTreeReducer from '@/features/notes/store/notesTreeSlice';
@@ -34,6 +35,7 @@ const authSecurityTransform = createTransform(
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  bookmarks: bookmarksReducer,
   theme: themeReducer,
   notes: notesReducer,
   notesTree: notesTreeReducer,
@@ -42,7 +44,6 @@ const rootReducer = combineReducers({
 });
 
 // Migrations to handle state shape changes across versions
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const migrations: MigrationManifest = {
   // Version 2: Migrate from currentTheme (string) to themeMode ('system' | 'light' | 'dark')
   2: (state: PersistedState) => {

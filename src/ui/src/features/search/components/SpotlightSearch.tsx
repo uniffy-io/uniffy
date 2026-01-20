@@ -3,6 +3,11 @@
  *
  * A macOS Spotlight-style search popup that can be triggered globally.
  * Opens with Ctrl+K (Cmd+K on Mac) and navigates to selected result.
+ *
+ * Supports Google-style keyword filters:
+ * - Type filters: note:, file:, user:, calendar:
+ * - Tag filters: tag:work
+ * - Ownership: my: (current user's content)
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -11,9 +16,19 @@ import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useSearch } from '../hooks/useSearch';
 import { useSpotlightOpenListener } from '../hooks/useSpotlightTrigger';
 import { SearchResultsList } from './SearchResultsList';
+import { FilterChip } from './FilterChip';
+import { FilterHints } from './FilterHints';
 import { useShortcutHandler, useFormattedKeybinding } from '@/features/settings';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import { cn } from '@/utils/cn';
+import {
+    getTypeFilterLabel,
+    removeTypeFilterFromQuery,
+    removeTagFilterFromQuery,
+    removeMyFilterFromQuery,
+    removeProjectFilterFromQuery,
+    removePhraseFromQuery,
+} from '../utils/queryParser';
 
 export function SpotlightSearch() {
     const navigate = useNavigate();
@@ -23,8 +38,39 @@ export function SpotlightSearch() {
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const { query, setQuery, results, isLoading, clearResults } = useSearch();
+    const { query, setQuery, results, isLoading, clearResults, parsedQuery, hasFilters } = useSearch();
     const shortcutDisplay = useFormattedKeybinding('nav.search');
+
+    // Filter removal handlers
+    const handleRemoveTypeFilter = useCallback((type: number) => {
+        const newQuery = removeTypeFilterFromQuery(query, type);
+        setQuery(newQuery);
+    }, [query, setQuery]);
+
+    const handleRemoveTagFilter = useCallback((tag: string) => {
+        const newQuery = removeTagFilterFromQuery(query, tag);
+        setQuery(newQuery);
+    }, [query, setQuery]);
+
+    const handleRemoveProjectFilter = useCallback((project: string) => {
+        const newQuery = removeProjectFilterFromQuery(query, project);
+        setQuery(newQuery);
+    }, [query, setQuery]);
+
+    const handleRemoveMyFilter = useCallback(() => {
+        const newQuery = removeMyFilterFromQuery(query);
+        setQuery(newQuery);
+    }, [query, setQuery]);
+
+    const handleRemovePhraseFilter = useCallback((phrase: string) => {
+        const newQuery = removePhraseFromQuery(query, phrase);
+        setQuery(newQuery);
+    }, [query, setQuery]);
+
+    const handleFilterHintClick = useCallback((filter: string) => {
+        setQuery(filter + ' ');
+        inputRef.current?.focus();
+    }, [setQuery]);
 
     // Compute bounded index inline to handle when results change
     // This avoids calling setState in an effect which causes cascading renders
@@ -183,8 +229,49 @@ export function SpotlightSearch() {
                             </div>
                         </div>
 
+                        {/* Active filters display */}
+                        {hasFilters && (
+                            <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b border-border/50 bg-muted/30">
+                                {parsedQuery.filters.types.map((type) => (
+                                    <FilterChip
+                                        key={`type-${type}`}
+                                        label={getTypeFilterLabel(type)}
+                                        onRemove={() => handleRemoveTypeFilter(type)}
+                                    />
+                                ))}
+                                {parsedQuery.filters.tags.map((tag) => (
+                                    <FilterChip
+                                        key={`tag-${tag}`}
+                                        label={`tag:${tag}`}
+                                        onRemove={() => handleRemoveTagFilter(tag)}
+                                    />
+                                ))}
+                                {parsedQuery.filters.projects.map((project) => (
+                                    <FilterChip
+                                        key={`project-${project}`}
+                                        label={`project:${project}`}
+                                        onRemove={() => handleRemoveProjectFilter(project)}
+                                    />
+                                ))}
+                                {parsedQuery.filters.myContentOnly && (
+                                    <FilterChip
+                                        label="My content"
+                                        onRemove={handleRemoveMyFilter}
+                                    />
+                                )}
+                                {parsedQuery.filters.exactPhrases.map((phrase) => (
+                                    <FilterChip
+                                        key={`phrase-${phrase}`}
+                                        label={`"${phrase}"`}
+                                        variant="exact"
+                                        onRemove={() => handleRemovePhraseFilter(phrase)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
                         {/* Results or empty prompt */}
-                        {query.trim() || isLoading ? (
+                        {query.trim() || isLoading || hasFilters ? (
                             <SearchResultsList
                                 results={results}
                                 isLoading={isLoading}
@@ -203,9 +290,10 @@ export function SpotlightSearch() {
                                 <p className="text-sm text-muted-foreground">
                                     Type to search across all your content
                                 </p>
-                                <p className="text-xs text-muted-foreground/60 mt-2">
+                                <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
                                     Press <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">{shortcutDisplay}</kbd> anytime to open search
                                 </p>
+                                <FilterHints onHintClick={handleFilterHintClick} />
                             </div>
                         )}
                     </div>

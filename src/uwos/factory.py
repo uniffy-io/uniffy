@@ -5,13 +5,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from uwos.db import close_db, init_db
-from uwos.domains.auth.seed import seed_initial_data
+from uwos.core.search import close_meilisearch, init_meilisearch
+from uwos.db import close_db, init_db, seed_initial_data
 from uwos.domains.auth.service import AuthServiceImpl
+from uwos.domains.bookmarks.service import BookmarksServiceImpl
 from uwos.domains.notes.service import NotesServiceImpl
 from uwos.domains.search.service import SearchServiceImpl
 from uwos.domains.settings.service import SettingsServiceImpl
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
+from uwos.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uwos.gen.search.v1.search_connect import SearchServiceASGIApplication
 from uwos.gen.settings.v1.settings_connect import SettingsServiceASGIApplication
@@ -48,22 +50,36 @@ async def lifespan(app: FastAPI):
     """
     Manage application lifespan events.
 
-    Handles startup (database initialization) and shutdown (cleanup).
+    Handles startup (database, Meilisearch initialization) and shutdown (cleanup).
     """
-    # Startup
     logger.info("Starting UWOS application...")
+
     try:
         await init_db()
-        await seed_initial_data()
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.exception(f"Failed to initialize database: {e}")
+        raise
+
+    try:
+        await init_meilisearch()
+        logger.info("Meilisearch initialized successfully")
+    except Exception as e:
+        logger.exception(f"Failed to initialize Meilisearch: {e}")
+        raise
+
+    try:
+        await seed_initial_data()
+        logger.info("Initial data seeded successfully")
+    except Exception as e:
+        logger.exception(f"Failed to seed initial data: {e}")
         raise
 
     yield
 
     # Shutdown
     logger.info("Shutting down UWOS application...")
+    await close_meilisearch()
     await close_db()
 
 
@@ -156,3 +172,12 @@ def _mount_connect_services(app: FastAPI) -> None:
     )
     app.mount("/settings.v1.SettingsService", settings_app)
     logger.info("Mounted SettingsService at /settings.v1.SettingsService")
+
+    # Create and mount the bookmarks service
+    bookmarks_service = BookmarksServiceImpl()
+    bookmarks_app = BookmarksServiceASGIApplication(
+        bookmarks_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/bookmarks.v1.BookmarksService", bookmarks_app)
+    logger.info("Mounted BookmarksService at /bookmarks.v1.BookmarksService")

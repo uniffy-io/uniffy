@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -8,10 +8,11 @@ import { NotesEditor } from '../components/editor/NotesEditor';
 import { NotesMetadataPanel } from '../components/metadata/NotesMetadataPanel';
 import { NotesGraphDashboard } from '../components/dashboard/NotesGraphDashboard';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { toggleSidebar } from '../store/editorSlice';
+import { toggleSidebar, setEditorMode } from '../store/editorSlice';
+import type { EditorMode } from '../store/editorSlice';
 import { fetchNotes, setCurrentNote } from '../store/notesSlice';
 import { fetchNotesTree } from '../store/notesTreeSlice';
-import { useShortcutHandler } from '@/features/settings';
+import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
 
 export default function NotesPage() {
   useDocumentTitle('Notes');
@@ -21,6 +22,7 @@ export default function NotesPage() {
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const { defaultEditor } = useAppearanceSettings();
 
   const currentNoteId = notesState?.currentNoteId;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
@@ -35,6 +37,15 @@ export default function NotesPage() {
   }, [dispatch]);
 
   useShortcutHandler('notes.toggleSidebar', handleToggleSidebar);
+
+  // Apply default editor mode from settings on initial mount only
+  const hasAppliedDefaultEditor = useRef(false);
+  useEffect(() => {
+    if (!hasAppliedDefaultEditor.current && defaultEditor && ['crepe', 'markdown', 'readonly'].includes(defaultEditor)) {
+      dispatch(setEditorMode(defaultEditor as EditorMode));
+      hasAppliedDefaultEditor.current = true;
+    }
+  }, [dispatch, defaultEditor]);
 
   // Load notes on mount when we have an organization
   // Uses excludeContent=true for performance - full content fetched when note is opened

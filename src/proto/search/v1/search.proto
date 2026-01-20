@@ -40,6 +40,12 @@ message SearchRequest {
   string query = 2;
   repeated SearchResultType type_filters = 3;
   int32 limit = 4;
+
+  // Advanced filters (parsed from query or set explicitly)
+  repeated string tag_filters = 5;
+  repeated string project_filters = 6;
+  bool my_content_only = 7;
+  string owner_filter = 8;
 }
 
 message SearchResponse {
@@ -54,6 +60,7 @@ message SearchResultItem {
   string url = 5; // Frontend route path
   double score = 6; // Relevance score
   map<string, string> metadata = 7; // Extra icon info, etc.
+  repeated string tags = 8; // Tags associated with the content
 }
 
 message IndexItemRequest {

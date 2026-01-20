@@ -9,6 +9,7 @@ import { setCredentials, logout } from "../store/authSlice";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree } from "@/features/notes/store/notesTreeSlice";
+import { clearBookmarks } from "@/features/bookmarks";
 import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
 import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -103,6 +104,7 @@ export default function OrganizationPicker() {
     dispatch(resetSettings());
     dispatch(clearNotes());
     dispatch(clearTree());
+    dispatch(clearBookmarks());
     // Navigate to auth page
     navigate('/auth');
   };

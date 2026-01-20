@@ -36,12 +36,20 @@ class NoteOperations(BaseContentOperations[Note]):
     # ─────────────────────────────────────────────────────────────
 
     def _build_search_keywords(self, model: Note) -> str:
-        """Build search keywords from note content."""
+        """
+        Build search keywords from note content.
+
+        Tags are prefixed with 'tag:' to enable filtered search queries
+        like 'tag:work' to match notes with that tag.
+
+        Full content is indexed to support complete full-text search.
+        """
         parts = [model.title]
         if model.tags:
-            parts.extend(model.tags)
+            # Prefix tags with 'tag:' for filtered search support
+            parts.extend(f"tag:{tag}" for tag in model.tags)
         if model.content:
-            parts.append(model.content[:1000])
+            parts.append(model.content)
         return " ".join(parts)
 
     def _get_search_title(self, model: Note) -> str:
@@ -57,6 +65,10 @@ class NoteOperations(BaseContentOperations[Note]):
         if model.content:
             return model.content[:200]
         return None
+
+    def _get_search_tags(self, model: Note) -> list[str] | None:
+        """Get tags for search index."""
+        return model.tags if model.tags else None
 
     # ─────────────────────────────────────────────────────────────
     # Note-specific operations
@@ -361,46 +373,6 @@ class NoteOperations(BaseContentOperations[Note]):
 
         return note
 
-    async def toggle_pin(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        note_id: UUID,
-        pinned: bool,
-    ) -> Note:
-        """
-        Pin or unpin a note.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing action.
-        organization_id : UUID
-            Organization ID.
-        note_id : UUID
-            Note to pin/unpin.
-        pinned : bool
-            New pin status.
-
-        Returns
-        -------
-        Note
-            Updated note.
-
-        """
-        note = await self._fetch_by_id(note_id, organization_id)
-        if not note:
-            raise NotFoundError("Note", note_id)
-
-        await self._require_edit(user_id, organization_id, note)
-
-        note.is_pinned = pinned
-        note.updated_at = datetime.now(UTC)
-
-        await self.session.commit()
-        await self.session.refresh(note)
-        return note
-
     async def autosave(
         self,
         user_id: UUID,
@@ -554,7 +526,6 @@ class NoteOperations(BaseContentOperations[Note]):
         group_id: UUID | None = None,
         personal_only: bool = False,
         include_deleted: bool = False,
-        pinned_only: bool = False,
         tags: list[str] | None = None,
         page: int = 1,
         page_size: int = 50,
@@ -580,8 +551,6 @@ class NoteOperations(BaseContentOperations[Note]):
             Only personal notes.
         include_deleted : bool
             Include trash.
-        pinned_only : bool
-            Only pinned notes.
         tags : list[str] | None
             Filter by tags.
         page : int
@@ -597,6 +566,8 @@ class NoteOperations(BaseContentOperations[Note]):
         -------
         tuple[list[Note], int]
             List of notes and total count.
+
+        Note: Bookmark filtering is handled by the BookmarksService.
 
         """
         query = select(Note).where(Note.organization_id == organization_id)
@@ -640,9 +611,6 @@ class NoteOperations(BaseContentOperations[Note]):
 
         if not include_deleted:
             query = query.where(Note.is_deleted == False)  # noqa: E712
-
-        if pinned_only:
-            query = query.where(Note.is_pinned == True)  # noqa: E712
 
         if tags:
             for tag in tags:

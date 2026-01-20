@@ -90,6 +90,13 @@ const FONT_FAMILIES = [
     { id: 'system', name: 'System', description: 'Native OS font' },
 ];
 
+// Editor mode options for notes
+const EDITOR_OPTIONS = [
+    { id: 'crepe', name: 'Editor', description: 'Rich WYSIWYG editor with full formatting' },
+    { id: 'markdown', name: 'Markdown', description: 'Split view with markdown source and preview' },
+    { id: 'readonly', name: 'Read Only', description: 'View-only mode for reading notes' },
+];
+
 export function AppearanceSection() {
     const { updateSettings, saving } = useSettings();
     const appearance = useAppearanceSettings();
@@ -104,6 +111,10 @@ export function AppearanceSection() {
 
     const handleFontFamilyChange = (fontFamily: string) => {
         updateSettings({ appearance: { fontFamily } });
+    };
+
+    const handleDefaultEditorChange = (defaultEditor: string) => {
+        updateSettings({ appearance: { defaultEditor } });
     };
 
     return (
@@ -239,6 +250,40 @@ export function AppearanceSection() {
                                 <div className="text-sm text-muted-foreground">{description}</div>
                             </div>
                             {appearance.fontFamily === id && (
+                                <CheckIcon className="h-5 w-5 text-primary" />
+                            )}
+                        </button>
+                    ))}
+                </div>
+            </section>
+
+            {/* Notes section */}
+            <section className="space-y-4">
+                <div>
+                    <h2 className="text-lg font-semibold text-foreground">Notes</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Configure the default editor for your notes.
+                    </p>
+                </div>
+
+                <div className="space-y-2">
+                    {EDITOR_OPTIONS.map(({ id, name, description }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            disabled={saving}
+                            className={`flex items-center justify-between w-full p-4 rounded-lg border transition-colors ${
+                                appearance.defaultEditor === id
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border hover:border-primary/50 bg-card'
+                            }`}
+                            onClick={() => handleDefaultEditorChange(id)}
+                        >
+                            <div className="text-left">
+                                <div className="font-medium text-foreground">{name}</div>
+                                <div className="text-sm text-muted-foreground">{description}</div>
+                            </div>
+                            {appearance.defaultEditor === id && (
                                 <CheckIcon className="h-5 w-5 text-primary" />
                             )}
                         </button>

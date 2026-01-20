@@ -98,8 +98,12 @@ export const mentionNode = $node('mention', () => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runner: (state: any, node: Node) => {
       const attrs = node.attrs as { label: string; urn: string };
-      // Export as [[[label|urn]]] format for markdown (unique, won't confuse with regular links)
-      state.addNode('text', undefined, `[[[${attrs.label}|${attrs.urn}]]]`);
+      // Export as custom 'mention' MDAST node - handler added via remarkStringifyMention
+      // This avoids mdast-util-to-markdown escaping the brackets in text nodes
+      state.addNode('mention', undefined, undefined, {
+        label: attrs.label,
+        urn: attrs.urn,
+      });
     },
   },
 }));
@@ -115,57 +119,78 @@ interface MentionNode extends UnistNode {
 }
 
 // Remark plugin to parse [[[label|urn]]] into mention AST nodes
-export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => () => (tree: Parent) => {
-  visit(tree, 'text', (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
-    if (!parent || index === undefined) return;
+export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
+  // Return a unified plugin that handles both parsing and stringifying
+  return function mentionPlugin(this: { data: (key: string, value?: unknown) => unknown }) {
+    // Add handler for stringifying mention nodes back to markdown
+    // This handler outputs raw [[[label|urn]]] without escaping
+    const data = this.data();
 
-    const textNode = node as { type: 'text'; value: string };
-    const value = textNode.value;
+    const toMarkdownExtension = {
+      handlers: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mention: (node: any) => `[[[${node.label}|${node.urn}]]]`,
+      },
+    };
 
-    // Check if this text contains any mention patterns
-    if (!MENTION_REGEX.test(value)) return;
+    // Add to existing toMarkdownExtensions or create new array
+    const existing = data.toMarkdownExtensions as unknown[] || [];
+    data.toMarkdownExtensions = [...existing, toMarkdownExtension];
 
-    // Reset regex lastIndex since we use 'g' flag
-    MENTION_REGEX.lastIndex = 0;
+    // Return the tree transformer for parsing
+    return (tree: Parent) => {
+      visit(tree, 'text', (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
+        if (!parent || index === undefined) return;
 
-    // Split the text into parts, replacing mentions with mention nodes
-    const newNodes: (UnistNode | MentionNode)[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
+        const textNode = node as { type: 'text'; value: string };
+        const value = textNode.value;
 
-    while ((match = MENTION_REGEX.exec(value)) !== null) {
-      // Add text before the match
-      if (match.index > lastIndex) {
-        newNodes.push({
-          type: 'text',
-          value: value.slice(lastIndex, match.index),
-        } as UnistNode);
-      }
+        // Check if this text contains any mention patterns
+        if (!MENTION_REGEX.test(value)) return;
 
-      // Add the mention node
-      newNodes.push({
-        type: 'mention',
-        label: match[1],
-        urn: match[2],
-      } as MentionNode);
+        // Reset regex lastIndex since we use 'g' flag
+        MENTION_REGEX.lastIndex = 0;
 
-      lastIndex = match.index + match[0].length;
-    }
+        // Split the text into parts, replacing mentions with mention nodes
+        const newNodes: (UnistNode | MentionNode)[] = [];
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
 
-    // Add any remaining text after the last match
-    if (lastIndex < value.length) {
-      newNodes.push({
-        type: 'text',
-        value: value.slice(lastIndex),
-      } as UnistNode);
-    }
+        while ((match = MENTION_REGEX.exec(value)) !== null) {
+          // Add text before the match
+          if (match.index > lastIndex) {
+            newNodes.push({
+              type: 'text',
+              value: value.slice(lastIndex, match.index),
+            } as UnistNode);
+          }
 
-    // Replace the original node with the new nodes
-    if (newNodes.length > 0) {
-      parent.children.splice(index, 1, ...newNodes);
-      return [SKIP, index + newNodes.length];
-    }
-  });
+          // Add the mention node
+          newNodes.push({
+            type: 'mention',
+            label: match[1],
+            urn: match[2],
+          } as MentionNode);
+
+          lastIndex = match.index + match[0].length;
+        }
+
+        // Add any remaining text after the last match
+        if (lastIndex < value.length) {
+          newNodes.push({
+            type: 'text',
+            value: value.slice(lastIndex),
+          } as UnistNode);
+        }
+
+        // Replace the original node with the new nodes
+        if (newNodes.length > 0) {
+          parent.children.splice(index, 1, ...newNodes);
+          return [SKIP, index + newNodes.length];
+        }
+      });
+    };
+  };
 });
 
 // 2. Input rule to detect "@" and trigger search

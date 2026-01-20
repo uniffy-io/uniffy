@@ -40,9 +40,6 @@ interface EditorState {
     isMetadataPanelOpen: boolean;
     metadataPanelWidth: number;
     metadataPanelTab: MetadataPanelTab;
-
-    // Note starred state (favorites)
-    starredNotes: Record<string, boolean>;
 }
 
 const initialState: EditorState = {
@@ -64,7 +61,6 @@ const initialState: EditorState = {
     isMetadataPanelOpen: false,
     metadataPanelWidth: 320,
     metadataPanelTab: 'outline',
-    starredNotes: {},
 };
 
 export const editorSlice = createSlice({
@@ -165,15 +161,6 @@ export const editorSlice = createSlice({
         setMetadataPanelTab: (state, action: PayloadAction<MetadataPanelTab>) => {
             state.metadataPanelTab = action.payload;
         },
-
-        // Starred notes
-        toggleStarredNote: (state, action: PayloadAction<string>) => {
-            state.starredNotes[action.payload] = !state.starredNotes[action.payload];
-        },
-
-        setStarredNote: (state, action: PayloadAction<{ noteId: string; starred: boolean }>) => {
-            state.starredNotes[action.payload.noteId] = action.payload.starred;
-        },
     },
 });
 
@@ -198,8 +185,6 @@ export const {
     setMetadataPanelOpen,
     setMetadataPanelWidth,
     setMetadataPanelTab,
-    toggleStarredNote,
-    setStarredNote,
 } = editorSlice.actions;
 
 export default editorSlice.reducer;

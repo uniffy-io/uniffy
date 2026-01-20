@@ -94,6 +94,9 @@ def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance
     if settings.get("compact_mode") is not None:
         proto.compact_mode = settings["compact_mode"]
 
+    if settings.get("default_editor") is not None:
+        proto.default_editor = settings["default_editor"]
+
     return proto
 
 
@@ -223,6 +226,9 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
     if proto.HasField("compact_mode"):
         result["compact_mode"] = proto.compact_mode
+
+    if proto.HasField("default_editor"):
+        result["default_editor"] = proto.default_editor
 
     return result if result else None
 

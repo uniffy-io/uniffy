@@ -2,17 +2,12 @@
 Search indexing utilities.
 
 Provides the SearchIndexer class for adding, updating, and removing
-content from the unified search index.
+content from the unified search index using Meilisearch.
 """
 
-from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from uwos.core.models.search.search_index import SearchIndex
+from uwos.core.search.meilisearch import get_meilisearch_client
 from uwos.core.types import ContentType
 
 
@@ -21,26 +16,25 @@ class SearchIndexer:
     Utility for indexing content in unified search.
 
     Provides methods to add, update, and remove content from
-    the search index with proper permission denormalization.
+    the Meilisearch index with proper permission denormalization.
 
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session for queries.
+    Note: This class no longer requires a database session since
+    indexing is done via Meilisearch HTTP API, not PostgreSQL.
 
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session=None) -> None:
         """
         Initialize the search indexer.
 
         Parameters
         ----------
-        session : AsyncSession
-            Database session for queries.
+        session : AsyncSession | None
+            Database session (kept for backwards compatibility, not used).
 
         """
-        self.session = session
+        # Session kept for backwards compatibility but not used
+        self._session = session
 
     async def index(
         self,
@@ -55,12 +49,11 @@ class SearchIndexer:
         description: str | None = None,
         shared_group_ids: list[UUID] | None = None,
         shared_user_ids: list[UUID] | None = None,
+        tags: list[str] | None = None,
         rank_score: float = 1.0,
     ) -> None:
         """
         Index or update content in the search index.
-
-        Uses PostgreSQL upsert to insert or update the search entry.
 
         Parameters
         ----------
@@ -79,51 +72,35 @@ class SearchIndexer:
         owner_id : UUID
             Owner of the content.
         keywords : str | None
-            Aggregated text for indexing.
+            Aggregated text for indexing (mapped to 'content' in Meilisearch).
         description : str | None
             Subtitle or short snippet for context.
         shared_group_ids : list[UUID] | None
             List of Group IDs this content is shared with.
         shared_user_ids : list[UUID] | None
             List of User IDs this content is explicitly shared with.
+        tags : list[str] | None
+            Tags associated with the content.
         rank_score : float
             Relevance booster (default 1.0).
 
         """
-        stmt = insert(SearchIndex).values(
+        client = get_meilisearch_client()
+        await client.index_document(
             urn=urn,
             organization_id=organization_id,
             title=title,
-            description=description,
-            keywords=keywords,
             entity_type=entity_type,
             url_path=url_path,
             visibility=visibility,
             owner_id=owner_id,
+            content=keywords,  # 'keywords' maps to 'content' in Meilisearch
+            description=description,
             shared_group_ids=shared_group_ids,
             shared_user_ids=shared_user_ids,
-            updated_at=datetime.now(UTC),
+            tags=tags,
             rank_score=rank_score,
         )
-
-        # Upsert: update if (URN, organization_id) exists
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["urn", "organization_id"],
-            set_={
-                "title": stmt.excluded.title,
-                "description": stmt.excluded.description,
-                "keywords": stmt.excluded.keywords,
-                "url_path": stmt.excluded.url_path,
-                "visibility": stmt.excluded.visibility,
-                "owner_id": stmt.excluded.owner_id,
-                "shared_group_ids": stmt.excluded.shared_group_ids,
-                "shared_user_ids": stmt.excluded.shared_user_ids,
-                "updated_at": stmt.excluded.updated_at,
-                "rank_score": stmt.excluded.rank_score,
-            },
-        )
-
-        await self.session.execute(stmt)
 
     async def remove(
         self,
@@ -142,17 +119,8 @@ class SearchIndexer:
             If None, removes all entries for this URN across all orgs.
 
         """
-        if organization_id:
-            await self.session.execute(
-                delete(SearchIndex).where(
-                    SearchIndex.urn == urn,
-                    SearchIndex.organization_id == organization_id,
-                )
-            )
-        else:
-            await self.session.execute(
-                delete(SearchIndex).where(SearchIndex.urn == urn)
-            )
+        client = get_meilisearch_client()
+        await client.delete_document(urn, organization_id)
 
     async def remove_by_content(
         self,

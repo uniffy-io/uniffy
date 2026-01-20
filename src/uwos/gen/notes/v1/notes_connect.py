@@ -37,9 +37,6 @@ class NotesService(Protocol):
     async def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.BacklinksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def toggle_pin(self, request: notes_dot_v1_dot_notes__pb2.TogglePinRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -145,16 +142,6 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_backlinks,
-                ),
-                "/notes.v1.NotesService/TogglePin": Endpoint.unary(
-                    method=MethodInfo(
-                        name="TogglePin",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.TogglePinRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.toggle_pin,
                 ),
                 "/notes.v1.NotesService/RestoreNote": Endpoint.unary(
                     method=MethodInfo(
@@ -408,26 +395,6 @@ class NotesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def toggle_pin(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.TogglePinRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="TogglePin",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.TogglePinRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def restore_note(
         self,
         request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest,
@@ -644,8 +611,6 @@ class NotesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.BacklinksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def toggle_pin(self, request: notes_dot_v1_dot_notes__pb2.TogglePinRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def empty_trash(self, request: notes_dot_v1_dot_notes__pb2.EmptyTrashRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.EmptyTrashResponse:
@@ -741,16 +706,6 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_backlinks,
-                ),
-                "/notes.v1.NotesService/TogglePin": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="TogglePin",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.TogglePinRequest,
-                        output=notes_dot_v1_dot_notes__pb2.NoteResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.toggle_pin,
                 ),
                 "/notes.v1.NotesService/RestoreNote": EndpointSync.unary(
                     method=MethodInfo(
@@ -998,26 +953,6 @@ class NotesServiceClientSync(ConnectClientSync):
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.GetBacklinksRequest,
                 output=notes_dot_v1_dot_notes__pb2.BacklinksResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def toggle_pin(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.TogglePinRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.NoteResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="TogglePin",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.TogglePinRequest,
-                output=notes_dot_v1_dot_notes__pb2.NoteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

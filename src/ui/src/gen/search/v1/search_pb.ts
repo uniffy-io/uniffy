@@ -98,6 +98,28 @@ export class SearchRequest extends Message<SearchRequest> {
    */
   limit = 0;
 
+  /**
+   * Advanced filters (parsed from query or set explicitly)
+   *
+   * @generated from field: repeated string tag_filters = 5;
+   */
+  tagFilters: string[] = [];
+
+  /**
+   * @generated from field: repeated string project_filters = 6;
+   */
+  projectFilters: string[] = [];
+
+  /**
+   * @generated from field: bool my_content_only = 7;
+   */
+  myContentOnly = false;
+
+  /**
+   * @generated from field: string owner_filter = 8;
+   */
+  ownerFilter = "";
+
   constructor(data?: PartialMessage<SearchRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -110,6 +132,10 @@ export class SearchRequest extends Message<SearchRequest> {
     { no: 2, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type_filters", kind: "enum", T: proto3.getEnumType(SearchResultType), repeated: true },
     { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "tag_filters", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "project_filters", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "my_content_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "owner_filter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchRequest {
@@ -215,6 +241,13 @@ export class SearchResultItem extends Message<SearchResultItem> {
    */
   metadata: { [key: string]: string } = {};
 
+  /**
+   * Tags associated with the content
+   *
+   * @generated from field: repeated string tags = 8;
+   */
+  tags: string[] = [];
+
   constructor(data?: PartialMessage<SearchResultItem>) {
     super();
     proto3.util.initPartial(data, this);
@@ -230,6 +263,7 @@ export class SearchResultItem extends Message<SearchResultItem> {
     { no: 5, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "score", kind: "scalar", T: 1 /* ScalarType.DOUBLE */ },
     { no: 7, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 8, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchResultItem {

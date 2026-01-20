@@ -28,6 +28,7 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
         fontFamily: appearance.fontFamily || undefined,
         sidebarCollapsed: appearance.sidebarCollapsed,
         compactMode: appearance.compactMode,
+        defaultEditor: appearance.defaultEditor || undefined,
     };
 };
 
@@ -81,6 +82,7 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         fontFamily: 'inter',
         sidebarCollapsed: false,
         compactMode: false,
+        defaultEditor: 'crepe',
     },
     keyboardShortcuts: keyboardShortcutsToPlain(settings.keyboardShortcuts) ?? {
         bindings: {},

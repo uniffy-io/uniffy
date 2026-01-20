@@ -842,6 +842,13 @@ export class AppearanceSettings extends Message<AppearanceSettings> {
    */
   compactMode?: boolean;
 
+  /**
+   * Default editor mode for notes: "crepe", "markdown", "readonly"
+   *
+   * @generated from field: optional string default_editor = 6;
+   */
+  defaultEditor?: string;
+
   constructor(data?: PartialMessage<AppearanceSettings>) {
     super();
     proto3.util.initPartial(data, this);
@@ -855,6 +862,7 @@ export class AppearanceSettings extends Message<AppearanceSettings> {
     { no: 3, name: "font_family", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "sidebar_collapsed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "compact_mode", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 6, name: "default_editor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AppearanceSettings {

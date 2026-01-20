@@ -2,7 +2,7 @@
 
 Revision ID: 002
 Revises: 001
-Create Date: 2026-01-12
+Create Date: 2026-01-20
 
 """
 
@@ -57,6 +57,7 @@ def upgrade() -> None:
         sa.Column("email_verified", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("accent_color", sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
         sa.Column("font_family", sqlmodel.sql.sqltypes.AutoString(length=20), nullable=True),
+        sa.Column("token_version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),

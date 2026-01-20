@@ -50,7 +50,6 @@ export {
 
 export {
     setTree,
-    setPinnedNodes,
     setPersonalNodes,
     setSharedNodes,
     setGroupSections,
@@ -96,14 +95,12 @@ export {
     setMetadataPanelOpen,
     setMetadataPanelWidth,
     setMetadataPanelTab,
-    toggleStarredNote,
-    setStarredNote,
 } from './store/editorSlice';
 
 // Store - Thunks
+// Note: Bookmark functionality is now in @/features/bookmarks
 export {
     fetchNotes,
-    fetchPinnedNotes,
     fetchDeletedNotes,
     fetchNote,
     createNote,
@@ -111,7 +108,6 @@ export {
     autosaveNote,
     deleteNote,
     restoreNote,
-    togglePinNote,
     searchNotes,
     moveNote,
     copyNote,

@@ -130,7 +130,7 @@ See [docs/architecture-content-permissions.md](docs/architecture-content-permiss
 
 ### Search
 
-Unified search with `pg_trgm` for fuzzy matching. Single `search_index` table with denormalized permissions for performance.
+Unified search powered by [Meilisearch](https://www.meilisearch.com/) for instant, typo-tolerant full-text search. Supports keyword-based filters (`note:`, `tag:`, `my:`), exact phrase matching with quotes, and real-time indexing.
 
 See [docs/search.md](docs/search.md).
 
