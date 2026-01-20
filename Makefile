@@ -70,9 +70,13 @@ licenses: ## Generate third-party license files
 	@echo "Generating third-party licenses..."
 	@mkdir -p LICENSES
 	@echo "Generating Python licenses..."
-	uv run pip-licenses --format=markdown --with-urls --with-license-file --no-license-path --output-file=LICENSES/PYTHON_LICENSES.md
+	@echo "# Python Third-Party Licenses\n\nThis file lists all Python dependencies used in UWOS and their licenses.\n" > LICENSES/PYTHON_LICENSES.md
+	uv run pip-licenses --format=markdown --with-urls >> LICENSES/PYTHON_LICENSES.md
 	@echo "Generating Node.js licenses..."
-	cd src/ui && npx license-checker --markdown > ../../LICENSES/NODE_LICENSES.md
+	@echo "# Node.js Third-Party Licenses\n\nThis file lists all Node.js dependencies used in UWOS and their licenses.\n" > LICENSES/NODE_LICENSES.md
+	@echo "| Package | License | Repository |" >> LICENSES/NODE_LICENSES.md
+	@echo "|---------|---------|------------|" >> LICENSES/NODE_LICENSES.md
+	cd src/ui && npx license-checker --csv --csvComponentPrefix | tail -n +2 | awk -F',' '{gsub(/"/, "", $$1); gsub(/"/, "", $$2); gsub(/"/, "", $$3); print "| " $$1 " | " $$2 " | " $$3 " |"}' >> ../../LICENSES/NODE_LICENSES.md
 	@echo "Third-party licenses generated in LICENSES/"
 
 .DEFAULT_GOAL := help

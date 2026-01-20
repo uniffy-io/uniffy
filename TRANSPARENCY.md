@@ -6,9 +6,8 @@ UWOS is **source-available** software, free to use for teams of up to 10 users, 
 
 ### What This Means
 
-- **Source Available**: The complete source code is publicly accessible. You can read it, learn from it, and understand exactly how UWOS works.
+- **Source Available**: The complete source code is publicly accessible. You can read it, learn from it, verify and understand exactly how UWOS works.
 - **Free for Small Teams**: Organizations with 10 or fewer users can use UWOS at no cost.
-- **Public Contributions**: You can contribute to the project via GitHub, helping to improve UWOS for everyone.
 - **Public Development**: Development discussions, roadmaps, and issue tracking are all conducted in the open on GitHub.
 - **Commercial License Required**: Teams larger than 10 users require a commercial license.
 
@@ -22,7 +21,9 @@ We are trying to build a cloud version of UWOS that will be affordable for small
 
 ### Privacy
 
-UWOS respects your privacy. We do not collect telemetry, usage, or personal data. You have full control over your data, especially when using the self-hosted UWOS in your own environment. We **ONLY** phone home for update checks (**if enabled**) and license validation for paid plans. 
+UWOS respects your privacy. We do not collect telemetry, usage, or personal data. You have full control over your data.
+
+When using the self-hosted UWOS in your own environment. We **ONLY** phone home for update checks (**if enabled**) and license validation for paid plans. 
 
 For Enterprise customers, we can offer air-gapped deployments with no external network access. This works by deploying additional software that acts as a license server within your air-gapped environment to validate your license keys without any external communication.
 
@@ -33,6 +34,34 @@ For the cloud version of UWOS, we adhere to strict data protection standards and
 The complete source code of UWOS is available on [GitHub](https://github.com/uniffy-io/uwos.git). You can inspect, audit, and contribute to the codebase. This transparency allows you to verify that UWOS operates as described and meets your security and privacy requirements.
 
 We provide a detailed guide of how to check if the code you are running exactly matches the code in the public repository, ensuring full transparency and trust. 
+
+### Freedom by choice
+
+UWOS don't force you to use proprietary formats. You can export your whole organisation data in a directory structure. Most content (Notes, Calendar, Projects) stored in UWOS can be exported in Markdown format. Files can be downloaded in their original formats. Workflows and Chat are exportable in JSON / JSONL files.
+
+```less
+# This is an example structure of an exported organisation named "my-org"
+
+/my-org
+  /notes
+    note-1.md
+    note-2.md
+  /files
+    file-1.pdf
+    file-2.png
+  /chat
+    chat-1.jsonl
+    chat-2.jsonl
+  /calendar
+    event-1.md
+    event-2.md
+  /projects
+    project-1.md
+    project-2.md
+  /workflows
+    workflow-1.json
+    workflow-2.json
+```
 
 ### Future License Change
 
