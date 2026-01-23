@@ -113,6 +113,8 @@ export {
     copyNote,
 } from './store/notesSlice';
 
+export { updateNoteIcon } from './store/notesThunks';
+
 export { fetchNotesTree } from './store/notesTreeSlice';
 
 // Hooks
@@ -130,6 +132,24 @@ export {
     getNodeSize,
     getGraphStats,
 } from './utils/notesGraphUtils';
+
+// Note icons - constants from noteIconConstants.ts, rendering from noteIcons.tsx
+export {
+    CURATED_HEROICONS,
+    COMMON_EMOJIS,
+    getIconCategories,
+    getIconsByCategory,
+    isValidHeroiconName,
+    getHeroiconComponent,
+} from './utils/noteIconConstants';
+export type { NoteIcon } from './utils/noteIconConstants';
+
+export {
+    renderNoteIcon,
+    getHeroiconByName,
+    getHeroiconSvgPaths,
+    drawHeroiconOnCanvas,
+} from './utils/noteIcons';
 
 // Types
 export type { TreeNode, GroupTreeSection } from './store/notesTreeSlice';

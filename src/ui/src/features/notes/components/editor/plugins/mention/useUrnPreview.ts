@@ -116,8 +116,11 @@ export function useUrnPreview(): UseUrnPreviewResult {
           type: searchResultTypeToUrnType(resolved.type),
           url: resolved.url,
         };
+        // Only cache successful lookups, not fallback data
+        previewCache.set(urn, previewData);
       } else {
         // Fallback for URNs not in search index
+        // Don't cache - the content might be indexed later
         previewData = {
           urn,
           title: getTypeLabel(parsed.type),
@@ -126,8 +129,6 @@ export function useUrnPreview(): UseUrnPreviewResult {
         };
       }
 
-      // Cache the result
-      previewCache.set(urn, previewData);
       setPreview(previewData);
     } catch (err) {
       // Ignore abort errors

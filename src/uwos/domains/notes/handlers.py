@@ -79,6 +79,14 @@ class NotesHandlers:
                 if request.group_ids:
                     group_ids = [UUID(gid) for gid in request.group_ids]
 
+                # Build metadata dict, including icon if provided
+                metadata = dict(request.metadata) if request.metadata else {}
+                if request.HasField("icon"):
+                    metadata["icon"] = {
+                        "type": request.icon.icon_type,
+                        "value": request.icon.value,
+                    }
+
                 note = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -89,7 +97,7 @@ class NotesHandlers:
                     node_type=node_type,
                     parent_id=parent_id,
                     tags=list(request.tags) if request.tags else None,
-                    metadata=dict(request.metadata) if request.metadata else None,
+                    metadata=metadata if metadata else None,
                     group_ids=group_ids,
                 )
 
@@ -160,6 +168,16 @@ class NotesHandlers:
                         except ValueError:
                             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
 
+                # Build metadata dict, including icon if provided
+                metadata = dict(request.metadata) if request.metadata else None
+                if request.HasField("icon"):
+                    if metadata is None:
+                        metadata = {}
+                    metadata["icon"] = {
+                        "type": request.icon.icon_type,
+                        "value": request.icon.value,
+                    }
+
                 note = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -169,7 +187,7 @@ class NotesHandlers:
                     slug=request.slug if request.HasField("slug") else None,
                     parent_id=parent_id,
                     tags=list(request.tags) if request.tags else None,
-                    metadata=dict(request.metadata) if request.metadata else None,
+                    metadata=metadata,
                 )
 
                 return NoteResponse(note=note_to_proto(note))

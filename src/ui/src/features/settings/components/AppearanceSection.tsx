@@ -2,7 +2,6 @@
  * Appearance settings section for theme, accent color, and font.
  */
 
-import React from 'react';
 import { SunIcon, MoonIcon, ComputerDesktopIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useSettings, useAppearanceSettings } from '../hooks/useSettings';
 

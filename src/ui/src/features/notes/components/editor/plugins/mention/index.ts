@@ -7,23 +7,8 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import React from 'react';
 import { Provider } from 'react-redux';
-import type { Store } from '@reduxjs/toolkit';
 import { MentionChip } from './MentionChip';
-
-// Lazy store getter to avoid circular dependency with api.ts
-let _store: Store | null = null;
-async function getStore(): Promise<Store> {
-  if (!_store) {
-    const { store } = await import('@/app/store');
-    _store = store;
-  }
-  return _store;
-}
-
-// Synchronous store getter - returns cached store or null
-function getStoreCached(): Store | null {
-  return _store;
-}
+import { getStoreRef } from '@/app/storeRef';
 import { urnToPath } from '@/utils/urn';
 import { navigateTo, openInNewTab } from '@/utils/navigation';
 import { visit, SKIP } from 'unist-util-visit';
@@ -121,11 +106,10 @@ interface MentionNode extends UnistNode {
 // Remark plugin to parse [[[label|urn]]] into mention AST nodes
 export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
   // Return a unified plugin that handles both parsing and stringifying
-  return function mentionPlugin(this: { data: (key: string, value?: unknown) => unknown }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function mentionPlugin(this: any) {
     // Add handler for stringifying mention nodes back to markdown
     // This handler outputs raw [[[label|urn]]] without escaping
-    const data = this.data();
-
     const toMarkdownExtension = {
       handlers: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,8 +118,8 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
     };
 
     // Add to existing toMarkdownExtensions or create new array
-    const existing = data.toMarkdownExtensions as unknown[] || [];
-    data.toMarkdownExtensions = [...existing, toMarkdownExtension];
+    const existing = (this.data('toMarkdownExtensions') as unknown[] | undefined) || [];
+    this.data('toMarkdownExtensions', [...existing, toMarkdownExtension]);
 
     // Return the tree transformer for parsing
     return (tree: Parent) => {
@@ -229,11 +213,13 @@ class MentionNodeView implements NodeView {
   view: EditorView;
   getPos: () => number | undefined;
   root: Root;
+  destroyed: boolean;
 
   constructor(node: Node, view: EditorView, getPos: () => number | undefined) {
     this.node = node;
     this.view = view;
     this.getPos = getPos;
+    this.destroyed = false;
 
     // Create wrapper element
     this.dom = document.createElement('span');
@@ -270,6 +256,9 @@ class MentionNodeView implements NodeView {
   }
 
   render(selected = false) {
+    // Don't render if already destroyed
+    if (this.destroyed) return;
+
     const { urn, label } = this.node.attrs as { urn: string; label: string };
 
     // Wrap with Redux Provider since this React root is outside the main app tree
@@ -279,19 +268,17 @@ class MentionNodeView implements NodeView {
       selected,
     });
 
-    // Use cached store if available, otherwise load it
-    const cachedStore = getStoreCached();
-    if (cachedStore) {
+    // Get store from storeRef - should always be available at render time
+    const store = getStoreRef();
+    if (store) {
       this.root.render(
-        React.createElement(Provider, { store: cachedStore, children: mentionElement })
+        React.createElement(Provider, { store, children: mentionElement })
       );
     } else {
-      // Load store async and then render
-      getStore().then((loadedStore) => {
-        this.root.render(
-          React.createElement(Provider, { store: loadedStore, children: mentionElement })
-        );
-      });
+      // Store not yet initialized - render without provider
+      // This should rarely happen in practice
+      console.warn('Store not initialized when rendering MentionChip');
+      this.root.render(mentionElement);
     }
   }
 
@@ -313,6 +300,7 @@ class MentionNodeView implements NodeView {
   }
 
   destroy() {
+    this.destroyed = true;
     this.root.unmount();
   }
 

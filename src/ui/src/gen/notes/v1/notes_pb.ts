@@ -218,6 +218,13 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
    */
   nodeType?: NodeType;
 
+  /**
+   * Optional custom icon
+   *
+   * @generated from field: optional notes.v1.NoteIcon icon = 11;
+   */
+  icon?: NoteIcon;
+
   constructor(data?: PartialMessage<CreateNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -236,6 +243,7 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
     { no: 8, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
     { no: 9, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 10, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType), opt: true },
+    { no: 11, name: "icon", kind: "message", T: NoteIcon, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNoteRequest {
@@ -366,6 +374,13 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
    */
   metadata: { [key: string]: string } = {};
 
+  /**
+   * Updated icon (optional)
+   *
+   * @generated from field: optional notes.v1.NoteIcon icon = 9;
+   */
+  icon?: NoteIcon;
+
   constructor(data?: PartialMessage<UpdateNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -382,6 +397,7 @@ export class UpdateNoteRequest extends Message<UpdateNoteRequest> {
     { no: 6, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 8, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 9, name: "icon", kind: "message", T: NoteIcon, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNoteRequest {
@@ -1272,6 +1288,55 @@ export class AutosaveNoteResponse extends Message<AutosaveNoteResponse> {
 }
 
 /**
+ * Note icon - can be a heroicon name or emoji
+ *
+ * @generated from message notes.v1.NoteIcon
+ */
+export class NoteIcon extends Message<NoteIcon> {
+  /**
+   * Type of icon: "heroicon" or "emoji"
+   *
+   * @generated from field: string icon_type = 1;
+   */
+  iconType = "";
+
+  /**
+   * Icon value: heroicon name (e.g., "StarIcon") or emoji character (e.g., "🚀")
+   *
+   * @generated from field: string value = 2;
+   */
+  value = "";
+
+  constructor(data?: PartialMessage<NoteIcon>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.NoteIcon";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "icon_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteIcon {
+    return new NoteIcon().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteIcon {
+    return new NoteIcon().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteIcon {
+    return new NoteIcon().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NoteIcon | PlainMessage<NoteIcon> | undefined, b: NoteIcon | PlainMessage<NoteIcon> | undefined): boolean {
+    return proto3.util.equals(NoteIcon, a, b);
+  }
+}
+
+/**
  * Note message
  *
  * @generated from message notes.v1.Note
@@ -1410,6 +1475,13 @@ export class Note extends Message<Note> {
    */
   outgoingReferences: string[] = [];
 
+  /**
+   * Custom icon for the note (optional)
+   *
+   * @generated from field: optional notes.v1.NoteIcon icon = 21;
+   */
+  icon?: NoteIcon;
+
   constructor(data?: PartialMessage<Note>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1437,6 +1509,7 @@ export class Note extends Message<Note> {
     { no: 18, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 19, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
     { no: 20, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 21, name: "icon", kind: "message", T: NoteIcon, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {

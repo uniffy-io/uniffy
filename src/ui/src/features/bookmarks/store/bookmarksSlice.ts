@@ -158,8 +158,8 @@ export const bulkCheckBookmarks = createAsyncThunk<
             urns,
         });
 
-        // Convert the map to a plain object
-        return Object.fromEntries(response.bookmarkedUrns.entries());
+        // Return the bookmarked URNs map directly (already a plain object)
+        return response.bookmarkedUrns;
     } catch (error) {
         return rejectWithValue(
             error instanceof Error ? error.message : 'Failed to check bookmarks'

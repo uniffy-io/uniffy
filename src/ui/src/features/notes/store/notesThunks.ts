@@ -51,6 +51,11 @@ const noteToPlain = (note: Note) => ({
     groupIds: [...note.groupIds],
     userPermission: note.userPermission,
     outgoingReferences: [...note.outgoingReferences],
+    // Custom icon (heroicon name or emoji)
+    icon: note.icon ? {
+        type: note.icon.iconType as 'heroicon' | 'emoji',
+        value: note.icon.value,
+    } : undefined,
 });
 
 /** Serialized note type for Redux storage (bigints converted to numbers) */
@@ -223,6 +228,36 @@ export const updateNote = createAsyncThunk<
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to update note');
+    }
+});
+
+/**
+ * Update note icon.
+ */
+export const updateNoteIcon = createAsyncThunk<
+    SerializedNote,
+    {
+        noteId: string;
+        icon: { type: 'heroicon' | 'emoji'; value: string } | null;
+    },
+    { state: RootState; rejectValue: string }
+>('notes/updateNoteIcon', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await notesApi.updateNote({
+            noteId: params.noteId,
+            organizationId,
+            icon: params.icon ? {
+                iconType: params.icon.type,
+                value: params.icon.value,
+            } : undefined,
+        });
+        if (!response.note) {
+            return rejectWithValue('Failed to update note icon');
+        }
+        return noteToPlain(response.note);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to update note icon');
     }
 });
 

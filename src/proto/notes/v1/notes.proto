@@ -117,6 +117,8 @@ message CreateNoteRequest {
   repeated string group_ids = 9;
   // Node type (defaults to NOTE)
   optional NodeType node_type = 10;
+  // Optional custom icon
+  optional NoteIcon icon = 11;
 }
 
 // Request to get a note
@@ -145,6 +147,8 @@ message UpdateNoteRequest {
   repeated string tags = 7;
   // Updated metadata (optional, merges with existing)
   map<string, string> metadata = 8;
+  // Updated icon (optional)
+  optional NoteIcon icon = 9;
 }
 
 // Request to delete a note
@@ -308,6 +312,14 @@ message AutosaveNoteResponse {
   int64 version = 3;
 }
 
+// Note icon - can be a heroicon name or emoji
+message NoteIcon {
+  // Type of icon: "heroicon" or "emoji"
+  string icon_type = 1;
+  // Icon value: heroicon name (e.g., "StarIcon") or emoji character (e.g., "🚀")
+  string value = 2;
+}
+
 // Note message
 message Note {
   // Note ID
@@ -351,6 +363,8 @@ message Note {
   PermissionLevel user_permission = 19;
   // URNs referenced in this note's content (outgoing links)
   repeated string outgoing_references = 20;
+  // Custom icon for the note (optional)
+  optional NoteIcon icon = 21;
 }
 
 // Note reference (lightweight representation for backlinks)

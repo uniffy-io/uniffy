@@ -27,6 +27,8 @@ import {
   ChatBubbleLeftIcon,
   LinkIcon,
 } from '@heroicons/react/24/outline';
+import { getHeroiconComponent } from '../../utils/noteIconConstants';
+import { drawHeroiconOnCanvas } from '../../utils/noteIcons';
 import { UrnType, urnToPath, parseUrn } from '@/utils/urn';
 import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
 import { useUrnResolution } from '@/features/search';
@@ -36,6 +38,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 function asGraphNode(node: NodeObject): GraphNode {
   return node as unknown as GraphNode;
 }
+
 
 /**
  * Draw a type-specific icon inside a node circle
@@ -708,10 +711,31 @@ export function NotesGraphDashboard() {
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
 
-      // Draw type icon inside the node
-      // Use white/light color for contrast against the node color
+      // Draw icon inside the node
       const iconColor = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.95)';
-      drawNodeIcon(ctx, graphNode.type, x, y, size, iconColor);
+
+      if (graphNode.customIcon) {
+        if (graphNode.customIcon.type === 'emoji') {
+          // Draw custom emoji icon - sized to match heroicons (~70% of node)
+          const emojiSize = size * 0.65;
+          ctx.font = `${emojiSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          // Small vertical offset to visually center (emojis tend to sit high)
+          ctx.fillText(graphNode.customIcon.value, x, y + emojiSize * 0.08);
+        } else {
+          // Draw custom heroicon using SVG path data
+          const iconSize = size * 0.7; // Icon takes up ~70% of node size
+          const drawn = drawHeroiconOnCanvas(ctx, graphNode.customIcon.value, x, y, iconSize, iconColor);
+          if (!drawn) {
+            // Fallback to default icon if heroicon not found
+            drawNodeIcon(ctx, 'note', x, y, size, iconColor);
+          }
+        }
+      } else {
+        // Draw default type icon using canvas paths
+        drawNodeIcon(ctx, graphNode.type, x, y, size, iconColor);
+      }
 
       // Border ring (consistent for all nodes)
       ctx.beginPath();
@@ -893,10 +917,21 @@ export function NotesGraphDashboard() {
                   borderWidth: 1,
                 }}
               >
-                {(() => {
-                  const Icon = getTypeIcon(hoveredNode.type);
-                  return <Icon className="h-5 w-5" style={{ color: getNodeColor(hoveredNode) }} />;
-                })()}
+                {hoveredNode.customIcon ? (
+                  hoveredNode.customIcon.type === 'emoji' ? (
+                    <span className="text-xl">{hoveredNode.customIcon.value}</span>
+                  ) : (
+                    (() => {
+                      const Icon = getHeroiconComponent(hoveredNode.customIcon.value);
+                      return <Icon className="h-5 w-5" style={{ color: getNodeColor(hoveredNode) }} />;
+                    })()
+                  )
+                ) : (
+                  (() => {
+                    const Icon = getTypeIcon(hoveredNode.type);
+                    return <Icon className="h-5 w-5" style={{ color: getNodeColor(hoveredNode) }} />;
+                  })()
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium truncate">{hoveredNode.label}</h3>

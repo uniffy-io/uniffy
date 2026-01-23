@@ -15,6 +15,14 @@ import type { Interceptor } from '@connectrpc/connect';
 import { ConnectError, Code, createClient } from '@connectrpc/connect';
 import { env } from './env';
 import { AuthService } from '@/gen/auth/v1/auth_connect';
+import { getStoreRef } from '@/app/storeRef';
+import {
+  createSetCredentialsAction,
+  createStartRehydratingAction,
+  createRehydrateCompleteAction,
+  createRehydrateFailedAction,
+  createLogoutAction,
+} from '@/features/auth/store/authActions';
 
 // In-memory access token storage (security: not persisted to localStorage)
 let memoryAccessToken: string | null = null;
@@ -72,20 +80,23 @@ function clearMemoryAccessToken(): void {
  * Access token goes to memory, refresh token to Redux (persisted).
  * Preserves current organizationId if not provided.
  */
-async function updateAuthState(accessToken: string, refreshToken: string, organizationId?: string): Promise<void> {
+function updateAuthState(accessToken: string, refreshToken: string, organizationId?: string): void {
   // Store access token in memory only (security)
   setMemoryAccessToken(accessToken);
 
-  // Dynamically import store to avoid circular dependency
-  const { store } = await import('@/app/store');
-  const { setCredentials } = await import('@/features/auth/store/authSlice');
+  // Use storeRef to avoid circular dependency
+  const store = getStoreRef();
+  if (!store) {
+    console.warn('Store not initialized, cannot update auth state');
+    return;
+  }
 
   const state = store.getState();
   const user = state.auth?.user;
   const currentOrgId = state.auth?.currentOrganizationId;
 
   if (user) {
-    store.dispatch(setCredentials({
+    store.dispatch(createSetCredentialsAction({
       user,
       accessToken, // This will be stripped by transform before persistence
       refreshToken,
@@ -99,15 +110,15 @@ async function updateAuthState(accessToken: string, refreshToken: string, organi
  * Clear auth state and redirect to login.
  * Clears both memory token and Redux state.
  */
-async function clearAuthAndRedirect(): Promise<void> {
+function clearAuthAndRedirect(): void {
   // Clear memory token first
   clearMemoryAccessToken();
 
-  try {
-    const { store } = await import('@/app/store');
-    const { logout } = await import('@/features/auth/store/authSlice');
-    store.dispatch(logout());
-  } catch {
+  // Use storeRef to avoid circular dependency
+  const store = getStoreRef();
+  if (store) {
+    store.dispatch(createLogoutAction());
+  } else {
     // Fallback: clear localStorage directly
     localStorage.removeItem('persist:root');
   }
@@ -183,7 +194,7 @@ async function refreshAccessToken(): Promise<string | null> {
       setMemoryAccessToken(response.accessToken);
 
       // Update Redux state
-      await updateAuthState(response.accessToken, response.refreshToken, response.organizationId);
+      updateAuthState(response.accessToken, response.refreshToken, response.organizationId);
 
       return response.accessToken;
     } catch (error) {
@@ -230,11 +241,14 @@ export async function rehydrateAuth(): Promise<boolean> {
   }
 
   // Notify Redux we're rehydrating
-  try {
-    const { store } = await import('@/app/store');
-    const { startRehydrating, rehydrateComplete, rehydrateFailed } = await import('@/features/auth/store/authSlice');
+  const store = getStoreRef();
+  if (!store) {
+    console.error('Auth rehydration failed: store not initialized');
+    return false;
+  }
 
-    store.dispatch(startRehydrating());
+  try {
+    store.dispatch(createStartRehydratingAction());
 
     // Attempt to refresh
     const newToken = await refreshAccessToken();
@@ -243,14 +257,14 @@ export async function rehydrateAuth(): Promise<boolean> {
       // Get updated state after refresh
       const state = store.getState();
       // Use localStorage org ID as fallback since Redux may not have rehydrated yet
-      store.dispatch(rehydrateComplete({
+      store.dispatch(createRehydrateCompleteAction({
         accessToken: newToken,
         refreshToken: state.auth?.refreshToken || refreshToken,
         organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
       }));
       return true;
     } else {
-      store.dispatch(rehydrateFailed());
+      store.dispatch(createRehydrateFailedAction());
       return false;
     }
   } catch (error) {

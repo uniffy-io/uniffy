@@ -403,7 +403,7 @@ export function NotesMetadataPanel() {
         <label className="text-xs font-medium text-muted-foreground block mb-2">Tags</label>
         {note.tags && note.tags.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {note.tags.map((tag) => (
+            {note.tags.map((tag: string) => (
               <span
                 key={tag}
                 className="px-2 py-1 text-xs rounded-md bg-muted text-muted-foreground"

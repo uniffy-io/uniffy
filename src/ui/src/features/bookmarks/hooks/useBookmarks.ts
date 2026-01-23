@@ -70,7 +70,7 @@ export function useBookmarks() {
     );
 
     // Get bookmarks as an array sorted by creation date (newest first)
-    const bookmarksList: SerializedBookmark[] = Object.values(bookmarks).sort(
+    const bookmarksList = (Object.values(bookmarks) as SerializedBookmark[]).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 

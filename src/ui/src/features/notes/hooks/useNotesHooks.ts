@@ -4,7 +4,7 @@
  * Custom hooks for notes feature functionality.
  */
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
     autosaveNote,
@@ -23,6 +23,18 @@ import {
 const AUTOSAVE_DELAY_MS = 2000; // 2 seconds debounce
 
 /**
+ * Fast string hash using djb2 algorithm.
+ * Good enough for change detection, not cryptographic.
+ */
+function hashString(str: string): number {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    }
+    return hash >>> 0; // Convert to unsigned 32-bit
+}
+
+/**
  * Hook for managing autosave functionality.
  */
 export function useAutosave(noteId: string | null) {
@@ -35,6 +47,14 @@ export function useAutosave(noteId: string | null) {
     );
     const hasUnsavedChanges = useAppSelector((state) =>
         noteId ? state.editor.hasUnsavedChanges[noteId] : false
+    );
+    // Get original note content and compute hash for efficient comparison
+    const originalContent = useAppSelector((state) =>
+        noteId ? state.notes.notes[noteId]?.content : null
+    );
+    const originalContentHash = useMemo(
+        () => (originalContent != null ? hashString(originalContent) : null),
+        [originalContent]
     );
 
     const isSaving = noteId ? autosave.isSaving[noteId] : false;
@@ -82,6 +102,13 @@ export function useAutosave(noteId: string | null) {
         (content: string, title?: string) => {
             if (!noteId) return;
 
+            // Skip if content hasn't actually changed from original (hash comparison)
+            // This prevents false "unsaved changes" on editor initialization
+            // Hash comparison is O(n) once then O(1), better than string compare for large content
+            if (originalContentHash != null && hashString(content) === originalContentHash) {
+                return;
+            }
+
             // Clear any pending autosave
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
@@ -96,7 +123,7 @@ export function useAutosave(noteId: string | null) {
                 performAutosave(content, title);
             }, AUTOSAVE_DELAY_MS);
         },
-        [dispatch, noteId, performAutosave]
+        [dispatch, noteId, performAutosave, originalContentHash]
     );
 
     // Force save immediately

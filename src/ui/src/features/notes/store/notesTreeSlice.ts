@@ -5,7 +5,8 @@ import { notesApi } from '../api/notesApi';
 import { organizeNotesByVisibility } from '../utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
-import { updateNote } from './notesThunks';
+import { updateNote, updateNoteIcon } from './notesThunks';
+import type { NoteIcon } from '../utils/noteIconConstants';
 
 // Helper to convert proto Note to PlainMessage
 const noteToPlain = (note: Note) => ({
@@ -37,12 +38,18 @@ const noteToPlain = (note: Note) => ({
     groupIds: [...note.groupIds],
     userPermission: note.userPermission,
     outgoingReferences: [...note.outgoingReferences],
+    // Custom icon (heroicon name or emoji)
+    icon: note.icon ? {
+        type: note.icon.iconType as 'heroicon' | 'emoji',
+        value: note.icon.value,
+    } : undefined,
 });
 
 export interface TreeNode {
     id: string;
     title: string;
     type: 'note' | 'folder';
+    icon?: NoteIcon;
     children?: TreeNode[];
     noteId?: string;
     folderId?: string;
@@ -360,12 +367,37 @@ export const notesTreeSlice = createSlice({
             })
             // Sync tree when a note is updated (e.g., title change from editor)
             .addCase(updateNote.fulfilled, (state, action) => {
-                const { id, title } = action.payload;
-                // Update the node title in all sections
+                const { id, title, icon } = action.payload;
+                // Update the node title and icon in all sections
                 const updateInArray = (nodes: TreeNode[]): boolean => {
                     for (const node of nodes) {
                         if (node.id === id) {
                             node.title = title;
+                            node.icon = icon;
+                            return true;
+                        }
+                        if (node.children && updateInArray(node.children)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
+                    if (updateInArray(state.tree[section])) break;
+                }
+                for (const group of state.tree.groups) {
+                    if (updateInArray(group.nodes)) break;
+                }
+            })
+            // Sync tree when note icon is updated
+            .addCase(updateNoteIcon.fulfilled, (state, action) => {
+                const { id, icon } = action.payload;
+                // Update the node icon in all sections
+                const updateInArray = (nodes: TreeNode[]): boolean => {
+                    for (const node of nodes) {
+                        if (node.id === id) {
+                            node.icon = icon;
                             return true;
                         }
                         if (node.children && updateInArray(node.children)) {

@@ -1,5 +1,7 @@
 """Proto <-> domain converters for notes domain."""
 
+import json
+
 from uwos.core.converters import datetime_to_timestamp
 from uwos.core.models.notes.note import Note
 from uwos.core.models.shared import NodeType, VisibilityScope
@@ -8,6 +10,9 @@ from uwos.gen.notes.v1.notes_pb2 import (
 )
 from uwos.gen.notes.v1.notes_pb2 import (
     Note as ProtoNote,
+)
+from uwos.gen.notes.v1.notes_pb2 import (
+    NoteIcon as ProtoNoteIcon,
 )
 from uwos.gen.notes.v1.notes_pb2 import (
     NoteReference,
@@ -80,6 +85,20 @@ def note_to_proto(
         ProtoNodeType.NODE_TYPE_NOTE,
     )
 
+    # Convert metadata to a simple dict with string values for proto compatibility
+    # Proto map<string, string> requires string values, so we serialize non-strings
+    metadata_dict: dict[str, str] = {}
+    if note.note_metadata:
+        for key, val in note.note_metadata.items():
+            if key == "icon":
+                # Icon is handled separately below, skip it in metadata
+                continue
+            if isinstance(val, str):
+                metadata_dict[key] = val
+            else:
+                # Serialize complex values as JSON strings
+                metadata_dict[key] = json.dumps(val)
+
     proto_note = ProtoNote(
         id=str(note.id),
         organization_id=str(note.organization_id),
@@ -92,7 +111,7 @@ def note_to_proto(
         is_deleted=note.is_deleted,
         version=note.version,
         tags=note.tags or [],
-        metadata=note.note_metadata or {},
+        metadata=metadata_dict,
         created_at=datetime_to_timestamp(note.created_at),
         updated_at=datetime_to_timestamp(note.updated_at),
         outgoing_references=note.outgoing_references or [],
@@ -103,6 +122,17 @@ def note_to_proto(
 
     if note.deleted_at:
         proto_note.deleted_at.CopyFrom(datetime_to_timestamp(note.deleted_at))
+
+    # Extract icon from metadata if present
+    if note.note_metadata and "icon" in note.note_metadata:
+        icon_data = note.note_metadata["icon"]
+        if isinstance(icon_data, dict):
+            proto_note.icon.CopyFrom(
+                ProtoNoteIcon(
+                    icon_type=icon_data.get("type", ""),
+                    value=icon_data.get("value", ""),
+                )
+            )
 
     return proto_note
 

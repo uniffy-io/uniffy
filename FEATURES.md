@@ -33,6 +33,7 @@
 - [x] Notes Knowledge Graph
 - [x] Notes Tagging System
 - [x] Notes Linking and Backlinking trough the Unified Tagging System
+- [x] Icons picker for notes 
 - [ ] Notes Versioning and History 
 - [ ] Suggest tags as user types his note
 - [ ] Allow fuzzy search in notes wtihout the need to follow words

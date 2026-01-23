@@ -1,5 +1,6 @@
 """Note operations extending BaseContentOperations."""
 
+import copy
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -235,10 +236,11 @@ class NoteOperations(BaseContentOperations[Note]):
         if tags is not None:
             note.tags = tags
         if metadata is not None:
-            if note.note_metadata:
-                note.note_metadata.update(metadata)
-            else:
-                note.note_metadata = metadata
+            # Create a new dict to ensure SQLAlchemy detects the change
+            # (in-place .update() on JSONB fields is not tracked by SQLAlchemy)
+            existing = copy.deepcopy(note.note_metadata) if note.note_metadata else {}
+            existing.update(metadata)
+            note.note_metadata = existing
 
         note.version += 1
         note.updated_at = datetime.now(UTC)

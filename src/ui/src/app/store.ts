@@ -10,6 +10,7 @@ import notesReducer from '@/features/notes/store/notesSlice';
 import notesTreeReducer from '@/features/notes/store/notesTreeSlice';
 import editorReducer from '@/features/notes/store/editorSlice';
 import settingsReducer from '@/features/settings/store/settingsSlice';
+import { setStoreRef } from './storeRef';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -87,7 +88,9 @@ const migrations: MigrationManifest = {
   },
 };
 
-const persistConfig = {
+type RootReducerState = ReturnType<typeof rootReducer>;
+
+const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
   version: 3, // Bumped to trigger security migration (access token removal)
   storage,
@@ -107,6 +110,10 @@ export const store = configureStore({
       },
     }),
 });
+
+// Initialize storeRef for modules that need store access without direct import
+// This breaks the circular dependency: api.ts -> store.ts -> authSlice.ts
+setStoreRef(store);
 
 export const persistor = persistStore(store);
 

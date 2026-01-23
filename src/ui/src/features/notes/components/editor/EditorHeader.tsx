@@ -17,12 +17,16 @@ import {
 import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '../../store/notesThunks';
+import { updateNoteIcon } from '../../store/notesThunks';
 import { setEditorMode, toggleMetadataPanel, toggleSidebar, toggleMarkdownPreview } from '../../store/editorSlice';
 import { updateNote } from '../../store/notesSlice';
 import { useSaveStatus } from '../../hooks/useNotesHooks';
 import { buildBreadcrumbPath } from '../../utils/notesTreeUtils';
+import type { NoteIcon } from '../../utils/noteIconConstants';
+import { renderNoteIcon } from '../../utils/noteIcons';
 import type { EditorMode } from '../../store/editorSlice';
 import { TagInput } from './TagInput';
+import { IconPicker } from './IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
 
 interface EditorHeaderProps {
@@ -54,6 +58,9 @@ export function EditorHeader({ note }: EditorHeaderProps) {
   // Use localTitle if editing, otherwise use note.title directly
   const title = localTitle ?? note.title;
 
+  // Icon picker state
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+
   // Save status
   const { isSaving, hasUnsavedChanges, error: saveError, statusText } = useSaveStatus(note.id);
 
@@ -77,7 +84,14 @@ export function EditorHeader({ note }: EditorHeaderProps) {
     // Reset local state after save
     setLocalTitle(null);
   };
-  
+
+  const handleIconChange = (icon: NoteIcon | null) => {
+    // Close picker first to prevent unmounted component updates
+    setIsIconPickerOpen(false);
+    // Then dispatch the update
+    dispatch(updateNoteIcon({ noteId: note.id, icon }));
+  };
+
   const handleShare = () => {
     // TODO: Open share modal
   };
@@ -266,10 +280,23 @@ export function EditorHeader({ note }: EditorHeaderProps) {
       <div className="px-8 pt-6 pb-2">
         <div className="flex items-start gap-4">
           {/* Note Icon/Emoji */}
-          <button className="mt-1 p-2 rounded-lg hover:bg-accent transition-colors">
-            <span className="text-2xl">📄</span>
-          </button>
-          
+          <div className="relative mt-1">
+            <button
+              onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
+              className="p-2 rounded-lg hover:bg-accent transition-colors"
+              title="Change icon"
+            >
+              {renderNoteIcon(note.icon, "h-7 w-7 text-muted-foreground")}
+            </button>
+            {isIconPickerOpen && (
+              <IconPicker
+                currentIcon={note.icon}
+                onSelect={handleIconChange}
+                onClose={() => setIsIconPickerOpen(false)}
+              />
+            )}
+          </div>
+
           <div className="flex-1 min-w-0">
             {/* Title Input */}
             <input

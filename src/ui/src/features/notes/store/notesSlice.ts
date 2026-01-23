@@ -7,6 +7,7 @@ import {
     fetchNote,
     createNote,
     updateNote,
+    updateNoteIcon,
     autosaveNote,
     deleteNote,
     restoreNote,
@@ -288,6 +289,20 @@ export const notesSlice = createSlice({
             .addCase(updateNote.rejected, (state, action) => {
                 state.savingNote = false;
                 state.error = action.payload ?? 'Failed to update note';
+            });
+
+        // updateNoteIcon
+        builder
+            .addCase(updateNoteIcon.pending, (state) => {
+                state.savingNote = true;
+            })
+            .addCase(updateNoteIcon.fulfilled, (state, action) => {
+                state.savingNote = false;
+                state.notes[action.payload.id] = normalizeNote(action.payload);
+            })
+            .addCase(updateNoteIcon.rejected, (state, action) => {
+                state.savingNote = false;
+                state.error = action.payload ?? 'Failed to update note icon';
             });
 
         // autosaveNote

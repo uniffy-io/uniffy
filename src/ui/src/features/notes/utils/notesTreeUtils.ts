@@ -25,6 +25,7 @@ export function noteToTreeNode(note: SerializedNote): TreeNode {
         id: note.id,
         title: note.title,
         type: nodeTypeToTreeType(note.nodeType),
+        icon: note.icon,
         noteId: note.id,
         visibility: note.visibility,
         updatedAt: note.updatedAt?.seconds?.toString(),

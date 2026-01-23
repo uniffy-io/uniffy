@@ -67,6 +67,7 @@ INDEX_SETTINGS = MeilisearchSettings(
     ],
     # Fields available for filtering
     filterable_attributes=[
+        "urn",  # For batch URN lookups (mention previews)
         "organization_id",
         "entity_type",
         "visibility",
@@ -511,6 +512,9 @@ class MeilisearchClient:
         """
         Get multiple documents by URNs.
 
+        Uses filter-based lookup since Meilisearch doesn't support
+        fetching multiple documents by ID directly.
+
         Parameters
         ----------
         urns : list[str]
@@ -528,12 +532,24 @@ class MeilisearchClient:
             return {}
 
         index = self.client.index(self.config.index_name)
-        doc_ids = [build_document_id(urn, organization_id) for urn in urns]
+
+        # Build filter to match any of the URNs within the organization
+        # URN is stored as a field in the document
+        urn_filters = " OR ".join(f'urn = "{urn}"' for urn in urns)
+        org_filter = f'organization_id = "{organization_id}"'
+        combined_filter = f"({urn_filters}) AND {org_filter}"
 
         try:
-            docs = await index.get_documents(document_ids=doc_ids)
+            # Use get_documents with filter parameter (requires Meilisearch >= 1.2.0)
+            docs = await index.get_documents(
+                filter=combined_filter,
+                limit=len(urns),
+            )
             return {doc["urn"]: doc for doc in docs.results if "urn" in doc}
-        except Exception:
+        except Exception as e:
+            # Log the error for debugging
+            from loguru import logger
+            logger.warning(f"Failed to fetch documents by URNs: {e}")
             return {}
 
     async def health_check(self) -> bool:

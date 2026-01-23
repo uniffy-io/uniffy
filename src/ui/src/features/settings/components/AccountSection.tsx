@@ -2,7 +2,6 @@
  * Account settings section - displays user account information.
  */
 
-import React from 'react';
 import { useAppSelector } from '@/app/hooks';
 
 export function AccountSection() {

@@ -2,7 +2,6 @@
  * Notifications settings section.
  */
 
-import React from 'react';
 import { useSettings, useNotificationSettings } from '../hooks/useSettings';
 
 interface ToggleSwitchProps {

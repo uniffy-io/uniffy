@@ -12,6 +12,12 @@ import { parseUrn, UrnType } from '@/utils/urn';
 import type { SerializedNote } from '../store/notesThunks';
 import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
 
+/** Custom icon for a note */
+export interface NoteIconData {
+  type: 'heroicon' | 'emoji';
+  value: string;
+}
+
 /** Node in the graph representing a note or external resource */
 export interface GraphNode {
   /** Unique identifier (note ID or URN for external resources) */
@@ -28,6 +34,10 @@ export interface GraphNode {
   connections: number;
   /** Color based on type */
   color: string;
+  /** Custom icon (heroicon or emoji) for internal notes */
+  customIcon?: NoteIconData;
+  /** @deprecated Use customIcon.type === 'emoji' instead */
+  emoji?: string;
   /** X position (set by force simulation) */
   x?: number;
   /** Y position (set by force simulation) */
@@ -125,6 +135,11 @@ export function buildGraphData(
   for (const note of contentNotes) {
     const noteUrn = `urn:uwos:content:NOTE:${note.id}`;
 
+    // Extract custom icon if the note has one
+    const customIcon: NoteIconData | undefined = note.icon
+      ? { type: note.icon.type, value: note.icon.value }
+      : undefined;
+
     const node: GraphNode = {
       id: note.id,
       label: note.title || 'Untitled',
@@ -133,6 +148,9 @@ export function buildGraphData(
       isInternal: true,
       connections: connectionCount.get(note.id) || 0,
       color: getNodeColor('note', true),
+      customIcon,
+      // Keep emoji for backwards compatibility
+      emoji: customIcon?.type === 'emoji' ? customIcon.value : undefined,
     };
 
     nodes.push(node);

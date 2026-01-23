@@ -144,11 +144,11 @@ export function SearchResultsList({
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex((prev: number) => (prev + 1) % results.length);
+          setSelectedIndex((selectedIndex + 1) % results.length);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setSelectedIndex((prev: number) => (prev - 1 + results.length) % results.length);
+          setSelectedIndex((selectedIndex - 1 + results.length) % results.length);
           break;
         case 'Enter':
           e.preventDefault();

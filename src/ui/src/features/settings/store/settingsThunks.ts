@@ -92,6 +92,8 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         emailEnabled: true,
         soundEnabled: true,
         emailFrequency: 'instant',
+        quietHoursStart: undefined,
+        quietHoursEnd: undefined,
     },
 });
 

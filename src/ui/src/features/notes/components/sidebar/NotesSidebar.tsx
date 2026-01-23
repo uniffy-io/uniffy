@@ -44,6 +44,7 @@ import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
 import { notesApi } from '../../api/notesApi';
 import { Button } from '@/components/ui/button';
 import { useBookmarks, useIsBookmarked } from '@/features/bookmarks';
+import { renderNoteIcon } from '../../utils/noteIcons';
 
 // Section configuration
 interface SectionConfig {
@@ -304,7 +305,7 @@ function TreeNodeItem({
       {node.type === 'folder' ? (
         <FolderIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       ) : (
-        <DocumentTextIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        renderNoteIcon(node.icon, "h-4 w-4 text-muted-foreground flex-shrink-0")
       )}
       {isBookmarked && (
         <BookmarkIconSolid className="h-3 w-3 text-primary flex-shrink-0" />

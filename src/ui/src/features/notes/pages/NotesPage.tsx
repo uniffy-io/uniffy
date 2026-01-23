@@ -10,7 +10,7 @@ import { NotesGraphDashboard } from '../components/dashboard/NotesGraphDashboard
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { toggleSidebar, setEditorMode } from '../store/editorSlice';
 import type { EditorMode } from '../store/editorSlice';
-import { fetchNotes, setCurrentNote } from '../store/notesSlice';
+import { fetchNotes, setCurrentNote, fetchNote } from '../store/notesSlice';
 import { fetchNotesTree } from '../store/notesTreeSlice';
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
 
@@ -59,10 +59,13 @@ export default function NotesPage() {
     dispatch(fetchNotesTree());
   }, [dispatch, organizationId]);
 
-  // Select note from URL parameter (or clear if viewing dashboard)
+  // Select note from URL parameter and fetch full content (or clear if viewing dashboard)
   useEffect(() => {
     if (noteId && noteId !== currentNoteId) {
       dispatch(setCurrentNote(noteId));
+      // Fetch full note content - needed when navigating via URL/URN links
+      // The initial fetchNotes() uses excludeContent=true for performance
+      dispatch(fetchNote(noteId));
     } else if (!noteId && currentNoteId) {
       // Clear current note when navigating to dashboard
       dispatch(setCurrentNote(null));
