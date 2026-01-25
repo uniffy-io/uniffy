@@ -164,6 +164,11 @@ export enum VisibilityScope {
    * @generated from enum value: VISIBILITY_SCOPE_ORGANIZATION = 3;
    */
   ORGANIZATION = 3,
+
+  /**
+   * @generated from enum value: VISIBILITY_SCOPE_PUBLIC = 4;
+   */
+  PUBLIC = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(VisibilityScope)
 proto3.util.setEnumType(VisibilityScope, "common.v1.VisibilityScope", [
@@ -171,6 +176,7 @@ proto3.util.setEnumType(VisibilityScope, "common.v1.VisibilityScope", [
   { no: 1, name: "VISIBILITY_SCOPE_PRIVATE" },
   { no: 2, name: "VISIBILITY_SCOPE_GROUP" },
   { no: 3, name: "VISIBILITY_SCOPE_ORGANIZATION" },
+  { no: 4, name: "VISIBILITY_SCOPE_PUBLIC" },
 ]);
 
 /**

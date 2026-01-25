@@ -3,7 +3,7 @@
  *
  * Contains:
  * - New Event button
- * - Quick Access (Today, This Week, Upcoming, Favorites)
+ * - Quick Access (Today, This Week, Upcoming, Bookmarked)
  * - Mini Calendar
  * - My Calendars
  * - Categories
@@ -33,9 +33,9 @@ export function LeftSidebar() {
         <button
           type="button"
           onClick={handleNewEvent}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-lg font-semibold text-sm hover:from-primary/90 hover:to-primary/80 transition-all shadow-sm cursor-pointer"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors"
         >
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon className="h-4 w-4" />
           <span>New Event</span>
         </button>
       </div>

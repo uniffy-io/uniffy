@@ -30,7 +30,7 @@ export function CalendarLayout({
   // Mobile layout - show one panel at a time
   if (isMobileView) {
     return (
-      <div className="h-[calc(100vh-3.5rem)] bg-background overflow-hidden">
+      <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">
         <div className="h-full">
           {mainContent}
         </div>
@@ -39,7 +39,7 @@ export function CalendarLayout({
   }
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] bg-background overflow-hidden">
+    <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">
       <Group orientation="horizontal" className="h-full">
         {/* Left Sidebar */}
         {!isSidebarCollapsed && (

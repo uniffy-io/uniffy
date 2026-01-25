@@ -8,7 +8,7 @@
  * - View mode toggle (Day/Week/Month)
  */
 
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, GlobeAltIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useCalendarNavigation } from '../../hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { openTimezoneModal } from '../../store';
@@ -38,35 +38,34 @@ export function CalendarHeader() {
   return (
     <div className="flex items-center justify-between px-5 py-3 bg-card border-b border-border">
       {/* Left: Navigation */}
-      <div className="flex items-center gap-4">
-        {/* Previous/Next arrows */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={goToPrevious}
-            className="p-1 rounded-md hover:bg-muted transition-colors"
-            aria-label="Previous period"
-          >
-            <ChevronLeftIcon className="w-4 h-4 text-muted-foreground" />
-          </button>
+      <div className="flex items-center gap-2">
+        {/* Previous arrow */}
+        <button
+          onClick={goToPrevious}
+          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          aria-label="Previous period"
+        >
+          <ChevronLeftIcon className="h-4 w-4 text-muted-foreground" />
+        </button>
 
-          {/* Month/Year title */}
-          <h1 className="text-xl font-semibold text-foreground min-w-[180px]">
-            {headerTitle}
-          </h1>
+        {/* Month/Year title */}
+        <h1 className="text-base font-medium text-foreground min-w-[140px]">
+          {headerTitle}
+        </h1>
 
-          <button
-            onClick={goToNext}
-            className="p-1 rounded-md hover:bg-muted transition-colors"
-            aria-label="Next period"
-          >
-            <ChevronRightIcon className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
+        {/* Next arrow */}
+        <button
+          onClick={goToNext}
+          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          aria-label="Next period"
+        >
+          <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+        </button>
 
         {/* Today button */}
         <button
           onClick={goToToday}
-          className="px-3 py-1.5 text-sm font-medium text-muted-foreground bg-background border border-border rounded-md hover:bg-muted transition-colors"
+          className="px-3 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
         >
           Today
         </button>
@@ -77,24 +76,24 @@ export function CalendarHeader() {
         {/* Timezone indicator */}
         <button
           onClick={() => dispatch(openTimezoneModal())}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
         >
-          <span className="text-base">🌐</span>
+          <GlobeAltIcon className="h-4 w-4" />
           <span>{timezoneOffset}</span>
-          <ChevronRightIcon className="w-3 h-3 rotate-90" />
+          <ChevronDownIcon className="h-3 w-3" />
         </button>
 
         {/* View mode toggle */}
-        <div className="flex items-center bg-muted rounded-lg p-1">
+        <div className="flex items-center gap-0.5">
           {viewModes.map((mode) => (
             <button
               key={mode}
               onClick={() => changeViewMode(mode)}
               className={cn(
-                'px-4 py-1.5 text-sm font-medium rounded-md transition-all',
+                'px-3 py-1 text-sm rounded-md transition-colors',
                 viewMode === mode
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
             >
               {mode.charAt(0).toUpperCase() + mode.slice(1)}

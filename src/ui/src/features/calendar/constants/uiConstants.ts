@@ -20,7 +20,7 @@ export const LAYOUT = {
   /** Maximum detail panel width */
   DETAIL_PANEL_MAX_WIDTH: 400,
   /** Top header height */
-  HEADER_HEIGHT: 56,
+  HEADER_HEIGHT: 64,
   /** Calendar sub-header height (month nav + view toggle) */
   CALENDAR_HEADER_HEIGHT: 60,
   /** Week view day headers height */

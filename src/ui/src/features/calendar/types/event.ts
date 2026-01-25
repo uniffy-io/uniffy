@@ -98,8 +98,6 @@ export interface CalendarEvent {
   tags: string[];
   /** Linked resources (notes, files, chats) */
   linkedResources: LinkedResource[];
-  /** Whether this event is favorited */
-  isFavorite: boolean;
   /** Organization ID */
   organizationId: string;
   /** Created timestamp (ISO string) */

@@ -159,6 +159,14 @@ export default function App() {
                     />
 
                     <Route
+                        path="/calendar"
+                        element={
+                            <ProtectedRoute>
+                                    <CalendarPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/notes"
                         element={
                             <ProtectedRoute>

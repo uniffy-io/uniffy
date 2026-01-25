@@ -13,6 +13,7 @@ from uwos.core.models.calendar.attendee import EventAttendee
 from uwos.core.models.calendar.calendar import Calendar
 from uwos.core.models.calendar.category import Category
 from uwos.core.models.calendar.event import CalendarEvent
+from uwos.core.models.login.organization_member import OrganizationMember
 from uwos.core.models.shared import (
     AttendeeRole,
     AttendeeStatus,
@@ -883,21 +884,59 @@ class CategoryOperations:
     """
     Category CRUD operations.
 
-    Categories are organization-wide and don't require user-level permissions.
+    Categories are organization-wide and require org membership verification.
     """
 
     def __init__(self, session: AsyncSession) -> None:
         """Initialize category operations."""
         self.session = session
 
+    async def _verify_org_membership(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        """
+        Verify user is an active member of the organization.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID to verify.
+        organization_id : UUID
+            Organization ID to check membership for.
+
+        Raises
+        ------
+        PermissionDeniedError
+            If user is not an active member of the organization.
+
+        """
+        result = await self.session.execute(
+            select(OrganizationMember).where(
+                and_(
+                    OrganizationMember.user_id == user_id,
+                    OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.is_active == True,  # noqa: E712
+                )
+            )
+        )
+        membership = result.scalar_one_or_none()
+
+        if not membership:
+            raise PermissionDeniedError("access", "organization")
+
     async def create(
         self,
+        user_id: UUID,
         organization_id: UUID,
         name: str,
         color: str,
         icon: str | None = None,
     ) -> Category:
         """Create a new category."""
+        await self._verify_org_membership(user_id, organization_id)
+
         # Get next sort order
         result = await self.session.execute(
             select(func.max(Category.sort_order)).where(
@@ -921,10 +960,13 @@ class CategoryOperations:
 
     async def get_by_id(
         self,
+        user_id: UUID,
         category_id: UUID,
         organization_id: UUID,
     ) -> Category:
         """Get category by ID."""
+        await self._verify_org_membership(user_id, organization_id)
+
         result = await self.session.execute(
             select(Category).where(
                 and_(
@@ -940,6 +982,7 @@ class CategoryOperations:
 
     async def update(
         self,
+        user_id: UUID,
         category_id: UUID,
         organization_id: UUID,
         name: str | None = None,
@@ -948,7 +991,9 @@ class CategoryOperations:
         sort_order: int | None = None,
     ) -> Category:
         """Update a category."""
-        category = await self.get_by_id(category_id, organization_id)
+        await self._verify_org_membership(user_id, organization_id)
+
+        category = await self.get_by_id(user_id, category_id, organization_id)
 
         if name is not None:
             category.name = name
@@ -966,11 +1011,14 @@ class CategoryOperations:
 
     async def delete(
         self,
+        user_id: UUID,
         category_id: UUID,
         organization_id: UUID,
     ) -> bool:
         """Delete a category."""
-        category = await self.get_by_id(category_id, organization_id)
+        await self._verify_org_membership(user_id, organization_id)
+
+        category = await self.get_by_id(user_id, category_id, organization_id)
 
         # Don't allow deleting default categories
         if category.is_default:
@@ -982,14 +1030,18 @@ class CategoryOperations:
 
     async def list_categories(
         self,
+        user_id: UUID,
         organization_id: UUID,
     ) -> list[Category]:
         """List all categories for an organization."""
+        await self._verify_org_membership(user_id, organization_id)
         return await queries.get_categories(self.session, organization_id)
 
     async def ensure_defaults(
         self,
+        user_id: UUID,
         organization_id: UUID,
     ) -> list[Category]:
         """Ensure organization has default categories."""
+        await self._verify_org_membership(user_id, organization_id)
         return await queries.ensure_default_categories(self.session, organization_id)

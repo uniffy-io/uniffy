@@ -8,7 +8,6 @@ import {
   addEvent,
   updateEvent,
   removeEvent,
-  toggleEventFavorite,
 } from '../store/calendarSlice';
 import {
   selectEvent,
@@ -159,13 +158,6 @@ export function useCalendarEvents() {
     return Array.from(tagSet).sort();
   }, [visibleEvents]);
 
-  /**
-   * Get favorite events
-   */
-  const favoriteEvents = useMemo(() => {
-    return visibleEvents.filter((event) => event.isFavorite);
-  }, [visibleEvents]);
-
   // Action handlers
   const handleSelectEvent = useCallback(
     (eventId: string | null) => {
@@ -202,13 +194,6 @@ export function useCalendarEvents() {
     [dispatch, selectedEventId]
   );
 
-  const handleToggleFavorite = useCallback(
-    (eventId: string) => {
-      dispatch(toggleEventFavorite(eventId));
-    },
-    [dispatch]
-  );
-
   const handleOpenEventModal = useCallback(
     (mode: 'create' | 'edit', prefill?: EventModalPrefill) => {
       dispatch(openEventModal({ mode, prefill }));
@@ -227,7 +212,6 @@ export function useCalendarEvents() {
     selectedEvent,
     selectedEventId,
     allTags,
-    favoriteEvents,
 
     // Modal state
     isEventModalOpen,
@@ -249,7 +233,6 @@ export function useCalendarEvents() {
     addEvent: handleAddEvent,
     updateEvent: handleUpdateEvent,
     removeEvent: handleRemoveEvent,
-    toggleFavorite: handleToggleFavorite,
     openEventModal: handleOpenEventModal,
     closeEventModal: handleCloseEventModal,
   };

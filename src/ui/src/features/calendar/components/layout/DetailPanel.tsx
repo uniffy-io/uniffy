@@ -6,25 +6,35 @@
  * - Event title with category color
  * - Event metadata (date, time, recurrence, location)
  * - Attendees list
- * - Categories and tags
- * - Linked resources
+ * - Tags
+ * - Referenced content (from @mentions)
  * - Description
- * - Tabs (Outline, Links, Properties)
+ * - Properties (created/modified timestamps)
  */
 
 import { useState, useMemo } from 'react';
 import {
-  ArrowLeftIcon,
-  StarIcon,
+  ChevronDoubleRightIcon,
+  BookmarkIcon,
   PencilIcon,
   TrashIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+  ArrowPathIcon,
+  MapPinIcon,
+  CheckIcon,
+  XMarkIcon,
+  QuestionMarkCircleIcon,
+  LinkIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
-import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { closeDetailPanel } from '../../store';
 import { deleteEvent } from '../../store/calendarThunks';
 import { useCalendarEvents } from '../../hooks';
 import { getCategoryColor } from '../../constants';
+import { useBookmarkToggle } from '@/features/bookmarks';
 import { EventEditor } from '../modals/EventEditor';
 import { MarkdownEditor } from '@/components/editor';
 import { MentionChipCompact } from '@/features/notes/components/editor/plugins/mention';
@@ -60,14 +70,16 @@ function extractMentionsFromMarkdown(markdown: string): Array<{ label: string; u
 
 export function DetailPanel() {
   const dispatch = useAppDispatch();
-  const { selectedEvent, toggleFavorite } = useCalendarEvents();
+  const { selectedEvent } = useCalendarEvents();
   const displayTimezone = useAppSelector(
     (state) => state.calendarUi.displayTimezone
   );
   const [isEditingOpen, setIsEditingOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'links' | 'properties'>('links');
-  const [linksContent, setLinksContent] = useState('');
+
+  // Bookmark state - build URN for the event
+  const eventUrn = selectedEvent ? `urn:uwos:content:CALENDAR_EVENT:${selectedEvent.id}` : '';
+  const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(eventUrn);
 
   // Extract mentions from description to show as linked resources
   // Must be called before early return to respect rules of hooks
@@ -92,10 +104,6 @@ export function DetailPanel() {
     dispatch(closeDetailPanel());
   };
 
-  const handleToggleFavorite = () => {
-    toggleFavorite(selectedEvent.id);
-  };
-
   const handleDelete = async () => {
     await dispatch(deleteEvent(selectedEvent.id));
     dispatch(closeDetailPanel());
@@ -105,197 +113,204 @@ export function DetailPanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-muted/50 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         <button
           onClick={handleBack}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
+          title="Close panel"
         >
-          <ArrowLeftIcon className="w-4 h-4" />
-          <span>Back</span>
+          <ChevronDoubleRightIcon className="h-4 w-4 text-primary" />
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
-            onClick={handleToggleFavorite}
-            className="p-1 rounded hover:bg-muted transition-colors"
-            aria-label={
-              selectedEvent.isFavorite
-                ? 'Remove from favorites'
-                : 'Add to favorites'
-            }
+            onClick={toggleBookmark}
+            disabled={bookmarkToggling}
+            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
+            title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
           >
-            {selectedEvent.isFavorite ? (
-              <StarIconSolid className="w-5 h-5 text-yellow-500" />
+            {isBookmarked ? (
+              <BookmarkIconSolid className="h-5 w-5 text-primary" />
             ) : (
-              <StarIcon className="w-5 h-5 text-muted-foreground" />
+              <BookmarkIcon className="h-5 w-5 text-primary" />
             )}
           </button>
           <button
             onClick={() => setIsEditingOpen(true)}
-            className="p-1 rounded hover:bg-muted transition-colors"
-            aria-label="Edit event"
+            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
+            title="Edit event"
           >
-            <PencilIcon className="w-5 h-5 text-muted-foreground" />
+            <PencilIcon className="h-5 w-5 text-primary" />
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="p-1 rounded hover:bg-muted transition-colors"
-            aria-label="Delete event"
+            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
+            title="Delete event"
           >
-            <TrashIcon className="w-5 h-5 text-red-500" />
+            <TrashIcon className="h-5 w-5 text-red-500" />
           </button>
         </div>
       </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Event Title */}
-        <div className="px-5 py-4 flex items-start gap-3">
-          <div
-            className="w-1 h-8 rounded-full shrink-0"
-            style={{ backgroundColor: categoryColor }}
-          />
-          <h2 className="text-lg font-semibold text-foreground">
-            {selectedEvent.title}
-          </h2>
-        </div>
-
-        {/* Event Metadata */}
-        <div className="px-5 py-3 space-y-3 border-b border-border">
-          {/* Date */}
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-base">📅</span>
-            <span className="text-foreground">
-              {formatDateWithDay(selectedEvent.startTime)}
-            </span>
+        {/* Event Details Section */}
+        <div className="border-b border-border">
+          {/* Event Title */}
+          <div className="px-5 py-4 flex items-start gap-3">
+            <div
+              className="w-1 h-8 rounded-full shrink-0"
+              style={{ backgroundColor: categoryColor }}
+            />
+            <h2 className="text-lg font-semibold text-foreground">
+              {selectedEvent.title}
+            </h2>
           </div>
 
-          {/* Time */}
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-base">🕐</span>
-            <span className="text-foreground">
-              {formatTimeRange(
-                selectedEvent.startTime,
-                selectedEvent.endTime
+          {/* Event Metadata */}
+          <div className="px-5 pb-4 space-y-2.5">
+            {/* Date */}
+            <div className="flex items-center gap-3 text-sm">
+              <CalendarDaysIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-foreground">
+                {formatDateWithDay(selectedEvent.startTime)}
+              </span>
+            </div>
+
+            {/* Time */}
+            <div className="flex items-center gap-3 text-sm">
+              <ClockIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-foreground">
+                {formatTimeRange(
+                  selectedEvent.startTime,
+                  selectedEvent.endTime
+                )}
+              </span>
+              <span className="text-muted-foreground text-xs">
+                ({timezoneOffset})
+              </span>
+            </div>
+
+            {/* Recurrence */}
+            {selectedEvent.recurrence &&
+              selectedEvent.recurrence.pattern !== 'none' && (
+                <div className="flex items-center gap-3 text-sm">
+                  <ArrowPathIcon className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-foreground">
+                    {selectedEvent.recurrence.pattern === 'weekly'
+                      ? 'Every week'
+                      : selectedEvent.recurrence.pattern}
+                  </span>
+                  {selectedEvent.recurrence.endDate && (
+                    <span className="text-muted-foreground text-xs">
+                      · Ends {selectedEvent.recurrence.endDate}
+                    </span>
+                  )}
+                </div>
               )}
-            </span>
-            <span className="text-muted-foreground text-xs">
-              ({timezoneOffset})
-            </span>
-          </div>
 
-          {/* Recurrence */}
-          {selectedEvent.recurrence &&
-            selectedEvent.recurrence.pattern !== 'none' && (
+            {/* Location */}
+            {selectedEvent.location && (
               <div className="flex items-center gap-3 text-sm">
-                <span className="text-base">🔄</span>
-                <span className="text-foreground">
-                  {selectedEvent.recurrence.pattern === 'weekly'
-                    ? 'Every week'
-                    : selectedEvent.recurrence.pattern}
-                </span>
-                {selectedEvent.recurrence.endDate && (
+                <MapPinIcon className="w-4 h-4 text-muted-foreground" />
+                <span className="text-primary">{selectedEvent.location}</span>
+                {selectedEvent.meetingUrl && (
                   <span className="text-muted-foreground text-xs">
-                    · Ends {selectedEvent.recurrence.endDate}
+                    · {new URL(selectedEvent.meetingUrl).hostname}
                   </span>
                 )}
               </div>
             )}
 
-          {/* Location */}
-          {selectedEvent.location && (
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-base">📍</span>
-              <span className="text-primary">{selectedEvent.location}</span>
-              {selectedEvent.meetingUrl && (
-                <span className="text-muted-foreground text-xs">
-                  · {new URL(selectedEvent.meetingUrl).hostname}
-                </span>
-              )}
+            {/* Tags inline */}
+            {selectedEvent.tags.length > 0 && (
+              <div className="flex items-center gap-2 pt-1">
+                {selectedEvent.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-0.5 text-xs rounded bg-primary/15 text-primary"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Attendees */}
+          {selectedEvent.attendees.length > 0 && (
+            <div className="px-5 py-3 border-t border-border">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Attendees
+              </h3>
+              <div className="space-y-2">
+                {selectedEvent.attendees.map((attendee) => (
+                  <div
+                    key={attendee.id}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium"
+                        style={{
+                          backgroundColor:
+                            attendee.role === 'organizer'
+                              ? '#3B82F6'
+                              : '#8B5CF6',
+                        }}
+                      >
+                        {attendee.initials}
+                      </div>
+                      <span className="text-sm text-foreground">
+                        {attendee.name}
+                      </span>
+                    </div>
+                    {attendee.role === 'organizer' ? (
+                      <span className="text-xs text-muted-foreground">
+                        (organizer)
+                      </span>
+                    ) : (
+                      <span>
+                        {attendee.status === 'accepted' && (
+                          <CheckIcon className="w-4 h-4 text-green-500" />
+                        )}
+                        {attendee.status === 'declined' && (
+                          <XMarkIcon className="w-4 h-4 text-red-500" />
+                        )}
+                        {attendee.status === 'tentative' && (
+                          <QuestionMarkCircleIcon className="w-4 h-4 text-yellow-500" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Attendees */}
-        {selectedEvent.attendees.length > 0 && (
-          <div className="px-5 py-4 border-b border-border">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Attendees
-            </h3>
-            <div className="space-y-3">
-              {selectedEvent.attendees.map((attendee) => (
-                <div
-                  key={attendee.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-medium"
-                      style={{
-                        backgroundColor:
-                          attendee.role === 'organizer'
-                            ? '#3B82F6'
-                            : '#8B5CF6',
-                      }}
-                    >
-                      {attendee.initials}
-                    </div>
-                    <span className="text-sm text-foreground">
-                      {attendee.name}
-                    </span>
-                  </div>
-                  {attendee.role === 'organizer' ? (
-                    <span className="text-xs text-muted-foreground">
-                      (organizer)
-                    </span>
-                  ) : (
-                    <span
-                      className={`text-sm ${
-                        attendee.status === 'accepted'
-                          ? 'text-green-500'
-                          : attendee.status === 'declined'
-                          ? 'text-red-500'
-                          : attendee.status === 'tentative'
-                          ? 'text-yellow-500'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      {attendee.status === 'accepted' && '✓'}
-                      {attendee.status === 'declined' && '✗'}
-                      {attendee.status === 'tentative' && '⏳'}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-            <button className="mt-3 text-sm text-primary hover:text-primary/80 transition-colors">
-              + Add attendees
-            </button>
-          </div>
-        )}
+        {/* Description Section - Takes most of the space with large min-height */}
+        <div className="min-h-[50vh] px-5 py-4 border-b border-border">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Description
+          </h3>
+          {selectedEvent.description ? (
+            <MarkdownEditor
+              value={selectedEvent.description}
+              onChange={() => {}}
+              readonly={true}
+              minHeight="calc(50vh - 60px)"
+              className="border-none bg-transparent"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No description</p>
+          )}
+        </div>
 
-        {/* Tags */}
-        {selectedEvent.tags.length > 0 && (
-          <div className="px-5 py-4 border-b border-border">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Tags
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {selectedEvent.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-1 text-xs rounded bg-primary/15 text-primary"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Linked Resources - derived from @mentions in description */}
+        {/* Referenced Content Section */}
         {mentionsFromDescription.length > 0 && (
           <div className="px-5 py-4 border-b border-border">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+              <LinkIcon className="w-3.5 h-3.5" />
               Referenced Content
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -310,80 +325,22 @@ export function DetailPanel() {
           </div>
         )}
 
-        {/* Description with markdown and mention rendering */}
-        {selectedEvent.description && (
-          <div className="px-5 py-4 border-b border-border">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Description
-            </h3>
-            <MarkdownEditor
-              value={selectedEvent.description}
-              onChange={() => {}}
-              readonly={true}
-              minHeight="auto"
-              className="border-none bg-transparent"
-            />
-          </div>
-        )}
-
-        {/* Tabs */}
+        {/* Properties Section */}
         <div className="px-5 py-4">
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setActiveTab('links')}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'links'
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Links
-            </button>
-            <button
-              onClick={() => setActiveTab('properties')}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'properties'
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Properties
-            </button>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+            <InformationCircleIcon className="w-3.5 h-3.5" />
+            Properties
+          </h3>
+          <div className="text-sm text-muted-foreground space-y-1.5">
+            <div className="flex justify-between">
+              <span>Created:</span>
+              <span>{new Date(selectedEvent.createdAt).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Modified:</span>
+              <span>{new Date(selectedEvent.updatedAt).toLocaleString()}</span>
+            </div>
           </div>
-
-          {/* Tab Content */}
-          {activeTab === 'links' && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">
-                Use @ to reference content.
-              </p>
-              <MarkdownEditor
-                value={linksContent}
-                onChange={setLinksContent}
-                placeholder="Start typing..."
-                minHeight="100px"
-                maxHeight="150px"
-                showBottomToolbar={true}
-              />
-            </div>
-          )}
-
-          {activeTab === 'properties' && (
-            <div className="text-sm text-muted-foreground space-y-2">
-              <div className="flex justify-between">
-                <span>Created:</span>
-                <span>{new Date(selectedEvent.createdAt).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Modified:</span>
-                <span>{new Date(selectedEvent.updatedAt).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Calendar:</span>
-                <span>{selectedEvent.calendarId}</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

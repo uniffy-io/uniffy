@@ -3,12 +3,15 @@
  * Opens when user clicks on an empty time slot
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '../../store/calendarUiSlice';
 import { createEvent } from '../../store/calendarThunks';
 import { cn } from '@/utils/cn';
 import { MarkdownEditor } from '@/components/editor';
+import { Select } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface QuickEventModalProps {
   isOpen: boolean;
@@ -37,6 +40,42 @@ export function QuickEventModal({
 
   const calendars = useAppSelector((state) => state.calendar.calendars);
   const categories = useAppSelector((state) => state.calendar.categories);
+
+  // Build options for Select components
+  const calendarOptions = useMemo(
+    () =>
+      Object.entries(calendars).map(([id, cal]) => ({
+        value: id,
+        label: cal.name,
+      })),
+    [calendars]
+  );
+
+  const categoryOptions = useMemo(
+    () =>
+      Object.entries(categories).map(([id, cat]) => ({
+        value: id,
+        label: cat.name,
+      })),
+    [categories]
+  );
+
+  // Generate time options for 30-minute increments
+  const timeOptions = useMemo(
+    () =>
+      Array.from({ length: 48 }, (_, i) => {
+        const timeValue = i * 0.5;
+        const hour = Math.floor(timeValue);
+        const minutes = timeValue % 1 === 0.5 ? '30' : '00';
+        const period = hour < 12 ? 'AM' : 'PM';
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        return {
+          value: timeValue,
+          label: `${displayHour}:${minutes} ${period}`,
+        };
+      }),
+    []
+  );
 
   // Reset form when modal opens
   useEffect(() => {
@@ -109,36 +148,24 @@ export function QuickEventModal({
       />
 
       {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-96 border border-border">
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg shadow-xl z-50 w-[640px] max-h-[85vh] overflow-hidden flex flex-col border border-border">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">New Event</h2>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* Title */}
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">
-              Event Title
+            <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1.5">
+              Title
             </label>
             <input
               id="title"
@@ -151,10 +178,79 @@ export function QuickEventModal({
             />
           </div>
 
+          {/* Calendar & Category */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Calendar
+              </label>
+              <Select
+                value={selectedCalendarId}
+                onChange={(value) => setSelectedCalendarId(value)}
+                options={calendarOptions}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Category
+              </label>
+              <Select
+                value={selectedCategoryId}
+                onChange={(value) => setSelectedCategoryId(value)}
+                options={categoryOptions}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* All-day toggle */}
+          <Checkbox
+            id="allday"
+            checked={isAllDay}
+            onChange={(e) => setIsAllDay(e.target.checked)}
+            label="All-day event"
+          />
+
+          {/* Time selectors */}
+          {!isAllDay && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Start
+                </label>
+                <Select
+                  value={startHour}
+                  onChange={(value) => {
+                    setStartHour(value);
+                    if (value >= endHour) {
+                      setEndHour(value + 0.5);
+                    }
+                  }}
+                  options={timeOptions}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  End
+                </label>
+                <Select
+                  value={endHour}
+                  onChange={(value) => setEndHour(value)}
+                  options={timeOptions.filter((opt) => opt.value > startHour)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Description with @ mention support and formatting toolbar */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Description (Optional)
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Description
             </label>
             <MarkdownEditor
               key={editorKey}
@@ -166,144 +262,30 @@ export function QuickEventModal({
               showBottomToolbar={true}
             />
           </div>
-
-          {/* Calendar & Category */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="calendar" className="block text-sm font-medium text-foreground mb-1">
-                Calendar
-              </label>
-              <select
-                id="calendar"
-                value={selectedCalendarId}
-                onChange={(e) => setSelectedCalendarId(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                {Object.entries(calendars).map(([id, cal]) => (
-                  <option key={id} value={id}>
-                    {cal.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-foreground mb-1">
-                Category
-              </label>
-              <select
-                id="category"
-                value={selectedCategoryId}
-                onChange={(e) => setSelectedCategoryId(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                {Object.entries(categories).map(([id, cat]) => (
-                  <option key={id} value={id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* All-day toggle */}
-          <div className="flex items-center">
-            <input
-              id="allday"
-              type="checkbox"
-              checked={isAllDay}
-              onChange={(e) => setIsAllDay(e.target.checked)}
-              className="w-4 h-4 border border-border rounded bg-background cursor-pointer"
-            />
-            <label htmlFor="allday" className="ml-2 text-sm text-foreground cursor-pointer">
-              All-day event
-            </label>
-          </div>
-
-          {/* Time selectors - 30-minute increments */}
-          {!isAllDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="startHour" className="block text-sm font-medium text-foreground mb-1">
-                  Start Time
-                </label>
-                <select
-                  id="startHour"
-                  value={startHour}
-                  onChange={(e) => {
-                    const newStart = parseFloat(e.target.value);
-                    setStartHour(newStart);
-                    if (newStart >= endHour) {
-                      setEndHour(newStart + 0.5);
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {Array.from({ length: 48 }, (_, i) => {
-                    const timeValue = i * 0.5;
-                    const hour = Math.floor(timeValue);
-                    const minutes = timeValue % 1 === 0.5 ? '30' : '00';
-                    const period = hour < 12 ? 'AM' : 'PM';
-                    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-                    return (
-                      <option key={i} value={timeValue}>
-                        {displayHour}:{minutes} {period}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="endHour" className="block text-sm font-medium text-foreground mb-1">
-                  End Time
-                </label>
-                <select
-                  id="endHour"
-                  value={endHour}
-                  onChange={(e) => setEndHour(parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {Array.from({ length: 48 }, (_, i) => {
-                    const timeValue = i * 0.5;
-                    const hour = Math.floor(timeValue);
-                    const minutes = timeValue % 1 === 0.5 ? '30' : '00';
-                    const period = hour < 12 ? 'AM' : 'PM';
-                    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-                    return (
-                      <option key={i} value={timeValue} disabled={timeValue <= startHour}>
-                        {displayHour}:{minutes} {period}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex gap-2 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={cn(
-                'flex-1 px-4 py-2 rounded-md font-medium transition-colors',
-                title.trim()
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              )}
-              disabled={!title.trim()}
-            >
-              Create Event
-            </button>
-          </div>
         </form>
+
+        {/* Footer */}
+        <div className="flex gap-2 px-6 py-4 border-t border-border">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className={cn(
+              'flex-1 px-4 py-2 rounded-md font-medium transition-colors',
+              title.trim()
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-muted text-muted-foreground cursor-not-allowed'
+            )}
+            disabled={!title.trim()}
+          >
+            Create Event
+          </button>
+        </div>
       </div>
     </>
   );

@@ -41,6 +41,7 @@ class VisibilityScope(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     VISIBILITY_SCOPE_PRIVATE: _ClassVar[VisibilityScope]
     VISIBILITY_SCOPE_GROUP: _ClassVar[VisibilityScope]
     VISIBILITY_SCOPE_ORGANIZATION: _ClassVar[VisibilityScope]
+    VISIBILITY_SCOPE_PUBLIC: _ClassVar[VisibilityScope]
 
 class OrganizationRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -75,6 +76,7 @@ VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope
 VISIBILITY_SCOPE_PRIVATE: VisibilityScope
 VISIBILITY_SCOPE_GROUP: VisibilityScope
 VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope
+VISIBILITY_SCOPE_PUBLIC: VisibilityScope
 ORGANIZATION_ROLE_UNSPECIFIED: OrganizationRole
 ORGANIZATION_ROLE_MEMBER: OrganizationRole
 ORGANIZATION_ROLE_ADMIN: OrganizationRole

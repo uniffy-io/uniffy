@@ -9,6 +9,7 @@ from uwos.core.search import close_meilisearch, init_meilisearch
 from uwos.db import close_db, init_db, seed_initial_data
 from uwos.domains.auth.service import AuthServiceImpl
 from uwos.domains.bookmarks.service import BookmarksServiceImpl
+from uwos.domains.calendar.service import CalendarServiceImpl
 from uwos.domains.groups.service import GroupsServiceImpl
 from uwos.domains.notes.service import NotesServiceImpl
 from uwos.domains.organizations.service import OrganizationsServiceImpl
@@ -18,6 +19,7 @@ from uwos.domains.settings.service import SettingsServiceImpl
 from uwos.domains.users.service import UsersServiceImpl
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
+from uwos.gen.cal.v1.calendar_connect import CalendarServiceASGIApplication
 from uwos.gen.groups.v1.groups_connect import GroupsServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uwos.gen.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
@@ -233,4 +235,3 @@ def _mount_connect_services(app: FastAPI) -> None:
     )
     app.mount("/cal.v1.CalendarService", calendar_app)
     logger.info("Mounted CalendarService at /cal.v1.CalendarService")
-

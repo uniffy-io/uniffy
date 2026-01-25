@@ -134,8 +134,8 @@ export type EventAction =
   | 'edit'
   | 'duplicate'
   | 'delete'
-  | 'favorite'
-  | 'unfavorite'
+  | 'bookmark'
+  | 'unbookmark'
   | 'add_attendee'
   | 'link_resource'
   | 'share';

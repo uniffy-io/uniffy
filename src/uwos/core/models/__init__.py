@@ -59,5 +59,5 @@ __all__ = [
     "AttendeeStatus",
     "AttendeeRole",
     "CalendarType",
-    "ResourceType",
+    "ResourceType", "SettingsProfile",
 ]

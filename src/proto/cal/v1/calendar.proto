@@ -3,6 +3,7 @@ syntax = "proto3";
 package cal.v1;
 
 import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
 
 // ============================================================================
 // Enums
@@ -63,15 +64,6 @@ enum ResourceType {
   RESOURCE_TYPE_NOTE        = 1;
   RESOURCE_TYPE_FILE        = 2;
   RESOURCE_TYPE_CHAT        = 3;
-}
-
-// Visibility scope (reuse from notes for consistency)
-enum VisibilityScope {
-  VISIBILITY_SCOPE_UNSPECIFIED  = 0;
-  VISIBILITY_SCOPE_PRIVATE      = 1;
-  VISIBILITY_SCOPE_GROUP        = 2;
-  VISIBILITY_SCOPE_ORGANIZATION = 3;
-  VISIBILITY_SCOPE_PUBLIC       = 4;
 }
 
 // ============================================================================
@@ -189,7 +181,7 @@ message CalendarEvent {
   // Linked resources (notes, files, chats)
   repeated LinkedResource linked_resources = 18;
   // Visibility scope
-  VisibilityScope visibility = 19;
+  common.v1.VisibilityScope visibility = 19;
   // Is deleted flag (soft delete)
   bool is_deleted = 20;
   // URNs referenced in this event's description (outgoing links)
@@ -285,7 +277,7 @@ message CreateEventRequest {
   // Linked resource URNs
   repeated string linked_resource_urns = 16;
   // Visibility scope (defaults to PRIVATE)
-  optional VisibilityScope visibility = 17;
+  optional common.v1.VisibilityScope visibility = 17;
 }
 
 // Request to get an event
@@ -331,7 +323,7 @@ message UpdateEventRequest {
   // Updated linked resource URNs (replaces existing)
   repeated string linked_resource_urns = 16;
   // Updated visibility
-  optional VisibilityScope visibility = 17;
+  optional common.v1.VisibilityScope visibility = 17;
 }
 
 // Request to delete an event

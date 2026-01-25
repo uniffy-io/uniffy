@@ -71,11 +71,6 @@ class Calendar(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
 
-    @property
-    def urn(self) -> str:
-        """Return the URN for this calendar."""
-        return f"urn:uwos:content:CALENDAR:{self.id}"
-
     def __repr__(self) -> str:
         """Return string representation of Calendar."""
         return (

@@ -61,7 +61,6 @@ export {
   addEvent,
   updateEvent,
   removeEvent,
-  toggleEventFavorite,
   toggleCalendarVisibility,
   setVisibleCalendars,
   addCalendar,

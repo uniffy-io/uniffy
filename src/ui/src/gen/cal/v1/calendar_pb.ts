@@ -5,6 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
+import { VisibilityScope } from "../../common/v1/common_pb.js";
 
 /**
  * Recurrence patterns for repeating events
@@ -265,46 +266,6 @@ proto3.util.setEnumType(ResourceType, "cal.v1.ResourceType", [
 ]);
 
 /**
- * Visibility scope (reuse from notes for consistency)
- *
- * @generated from enum cal.v1.VisibilityScope
- */
-export enum VisibilityScope {
-  /**
-   * @generated from enum value: VISIBILITY_SCOPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: VISIBILITY_SCOPE_PRIVATE = 1;
-   */
-  PRIVATE = 1,
-
-  /**
-   * @generated from enum value: VISIBILITY_SCOPE_GROUP = 2;
-   */
-  GROUP = 2,
-
-  /**
-   * @generated from enum value: VISIBILITY_SCOPE_ORGANIZATION = 3;
-   */
-  ORGANIZATION = 3,
-
-  /**
-   * @generated from enum value: VISIBILITY_SCOPE_PUBLIC = 4;
-   */
-  PUBLIC = 4,
-}
-// Retrieve enum metadata with: proto3.getEnumType(VisibilityScope)
-proto3.util.setEnumType(VisibilityScope, "cal.v1.VisibilityScope", [
-  { no: 0, name: "VISIBILITY_SCOPE_UNSPECIFIED" },
-  { no: 1, name: "VISIBILITY_SCOPE_PRIVATE" },
-  { no: 2, name: "VISIBILITY_SCOPE_GROUP" },
-  { no: 3, name: "VISIBILITY_SCOPE_ORGANIZATION" },
-  { no: 4, name: "VISIBILITY_SCOPE_PUBLIC" },
-]);
-
-/**
  * Calendar event
  *
  * @generated from message cal.v1.CalendarEvent
@@ -439,7 +400,7 @@ export class CalendarEvent extends Message<CalendarEvent> {
   /**
    * Visibility scope
    *
-   * @generated from field: cal.v1.VisibilityScope visibility = 19;
+   * @generated from field: common.v1.VisibilityScope visibility = 19;
    */
   visibility = VisibilityScope.UNSPECIFIED;
 
@@ -893,7 +854,7 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
   /**
    * Visibility scope (defaults to PRIVATE)
    *
-   * @generated from field: optional cal.v1.VisibilityScope visibility = 17;
+   * @generated from field: optional common.v1.VisibilityScope visibility = 17;
    */
   visibility?: VisibilityScope;
 
@@ -1111,7 +1072,7 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
   /**
    * Updated visibility
    *
-   * @generated from field: optional cal.v1.VisibilityScope visibility = 17;
+   * @generated from field: optional common.v1.VisibilityScope visibility = 17;
    */
   visibility?: VisibilityScope;
 

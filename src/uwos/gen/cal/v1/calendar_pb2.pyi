@@ -1,6 +1,7 @@
 import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from common.v1 import common_pb2 as _common_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -60,14 +61,6 @@ class ResourceType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     RESOURCE_TYPE_NOTE: _ClassVar[ResourceType]
     RESOURCE_TYPE_FILE: _ClassVar[ResourceType]
     RESOURCE_TYPE_CHAT: _ClassVar[ResourceType]
-
-class VisibilityScope(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
-    __slots__ = ()
-    VISIBILITY_SCOPE_UNSPECIFIED: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_PRIVATE: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_GROUP: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_ORGANIZATION: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_PUBLIC: _ClassVar[VisibilityScope]
 RECURRENCE_PATTERN_UNSPECIFIED: RecurrencePattern
 RECURRENCE_PATTERN_NONE: RecurrencePattern
 RECURRENCE_PATTERN_DAILY: RecurrencePattern
@@ -101,11 +94,6 @@ RESOURCE_TYPE_UNSPECIFIED: ResourceType
 RESOURCE_TYPE_NOTE: ResourceType
 RESOURCE_TYPE_FILE: ResourceType
 RESOURCE_TYPE_CHAT: ResourceType
-VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope
-VISIBILITY_SCOPE_PRIVATE: VisibilityScope
-VISIBILITY_SCOPE_GROUP: VisibilityScope
-VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope
-VISIBILITY_SCOPE_PUBLIC: VisibilityScope
 
 class CalendarEvent(_message.Message):
     __slots__ = ("id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendees", "organizer_id", "recurrence", "is_focus_time", "tags", "linked_resources", "visibility", "is_deleted", "outgoing_references", "created_at", "updated_at", "deleted_at")
@@ -151,13 +139,13 @@ class CalendarEvent(_message.Message):
     is_focus_time: bool
     tags: _containers.RepeatedScalarFieldContainer[str]
     linked_resources: _containers.RepeatedCompositeFieldContainer[LinkedResource]
-    visibility: VisibilityScope
+    visibility: _common_pb2.VisibilityScope
     is_deleted: bool
     outgoing_references: _containers.RepeatedScalarFieldContainer[str]
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     deleted_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class Attendee(_message.Message):
     __slots__ = ("id", "name", "email", "avatar_url", "initials", "status", "role", "timezone")
@@ -242,8 +230,8 @@ class CreateEventRequest(_message.Message):
     is_focus_time: bool
     tags: _containers.RepeatedScalarFieldContainer[str]
     linked_resource_urns: _containers.RepeatedScalarFieldContainer[str]
-    visibility: VisibilityScope
-    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ...) -> None: ...
+    visibility: _common_pb2.VisibilityScope
+    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
 
 class GetEventRequest(_message.Message):
     __slots__ = ("event_id", "organization_id")
@@ -288,8 +276,8 @@ class UpdateEventRequest(_message.Message):
     is_focus_time: bool
     tags: _containers.RepeatedScalarFieldContainer[str]
     linked_resource_urns: _containers.RepeatedScalarFieldContainer[str]
-    visibility: VisibilityScope
-    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ...) -> None: ...
+    visibility: _common_pb2.VisibilityScope
+    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
 
 class DeleteEventRequest(_message.Message):
     __slots__ = ("event_id", "organization_id", "permanent")

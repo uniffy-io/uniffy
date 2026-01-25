@@ -69,7 +69,7 @@ export type ViewMode = 'day' | 'week' | 'month';
 /**
  * Quick access filter options
  */
-export type QuickAccessFilter = 'today' | 'this_week' | 'upcoming' | 'favorites';
+export type QuickAccessFilter = 'today' | 'this_week' | 'upcoming' | 'bookmarked';
 
 /**
  * Navigation direction

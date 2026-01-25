@@ -3,24 +3,89 @@
  * Full form for editing event details
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEvent } from '../../store/calendarThunks';
 import type { CalendarEvent } from '../../types';
 import { cn } from '@/utils/cn';
 import { MarkdownEditor } from '@/components/editor';
+import { Select } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 /**
- * Convert ISO string to local datetime-local input format
+ * Extract time value (hours as decimal) from ISO string
  */
-function isoToLocalDatetime(isoString: string): string {
+function getTimeValue(isoString: string): number {
+  const date = new Date(isoString);
+  return date.getHours() + (date.getMinutes() >= 30 ? 0.5 : 0);
+}
+
+/**
+ * Extract date string (YYYY-MM-DD) from ISO string
+ */
+function getDateString(isoString: string): string {
   const date = new Date(isoString);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format date for display
+ */
+function formatDateLabel(dateString: string): string {
+  const date = new Date(dateString + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/**
+ * Generate date options for the next 60 days and past 30 days
+ */
+function generateDateOptions(): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [];
+  const today = new Date();
+
+  // Past 30 days
+  for (let i = 30; i >= 1; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    options.push({ value: dateString, label: formatDateLabel(dateString) });
+  }
+
+  // Today and next 60 days
+  for (let i = 0; i <= 60; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const label = i === 0 ? `Today, ${formatDateLabel(dateString)}` : formatDateLabel(dateString);
+    options.push({ value: dateString, label });
+  }
+
+  return options;
+}
+
+/**
+ * Generate time options for 30-minute increments
+ */
+function generateTimeOptions(): { value: number; label: string }[] {
+  return Array.from({ length: 48 }, (_, i) => {
+    const timeValue = i * 0.5;
+    const hour = Math.floor(timeValue);
+    const minutes = timeValue % 1 === 0.5 ? '30' : '00';
+    const period = hour < 12 ? 'AM' : 'PM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return {
+      value: timeValue,
+      label: `${displayHour}:${minutes} ${period}`,
+    };
+  });
 }
 
 interface EventEditorProps {
@@ -36,6 +101,74 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
 
   const [formData, setFormData] = useState(event);
   const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'attendees'>('basic');
+
+  // Build options for Select components
+  const calendarOptions = useMemo(
+    () =>
+      Object.entries(calendars).map(([id, cal]) => ({
+        value: id,
+        label: cal.name,
+      })),
+    [calendars]
+  );
+
+  const categoryOptions = useMemo(
+    () =>
+      Object.entries(categories).map(([id, cat]) => ({
+        value: id,
+        label: cat.name,
+      })),
+    [categories]
+  );
+
+  // Date and time options for selectors
+  const dateOptions = useMemo(() => generateDateOptions(), []);
+  const timeOptions = useMemo(() => generateTimeOptions(), []);
+
+  // Extract current date and time values from formData
+  const startDate = useMemo(() => getDateString(formData.startTime), [formData.startTime]);
+  const startTime = useMemo(() => getTimeValue(formData.startTime), [formData.startTime]);
+  const endDate = useMemo(() => getDateString(formData.endTime), [formData.endTime]);
+  const endTime = useMemo(() => getTimeValue(formData.endTime), [formData.endTime]);
+
+  // Handlers for date/time changes
+  const handleStartDateChange = (newDate: string) => {
+    const current = new Date(formData.startTime);
+    const [year, month, day] = newDate.split('-').map(Number);
+    current.setFullYear(year, month - 1, day);
+    handleChange('startTime', current.toISOString());
+  };
+
+  const handleStartTimeChange = (newTime: number) => {
+    const current = new Date(formData.startTime);
+    const hours = Math.floor(newTime);
+    const minutes = newTime % 1 === 0.5 ? 30 : 0;
+    current.setHours(hours, minutes, 0, 0);
+    handleChange('startTime', current.toISOString());
+
+    // Auto-adjust end time if needed
+    const endDateTime = new Date(formData.endTime);
+    if (current >= endDateTime) {
+      const newEnd = new Date(current);
+      newEnd.setMinutes(newEnd.getMinutes() + 30);
+      handleChange('endTime', newEnd.toISOString());
+    }
+  };
+
+  const handleEndDateChange = (newDate: string) => {
+    const current = new Date(formData.endTime);
+    const [year, month, day] = newDate.split('-').map(Number);
+    current.setFullYear(year, month - 1, day);
+    handleChange('endTime', current.toISOString());
+  };
+
+  const handleEndTimeChange = (newTime: number) => {
+    const current = new Date(formData.endTime);
+    const hours = Math.floor(newTime);
+    const minutes = newTime % 1 === 0.5 ? 30 : 0;
+    current.setHours(hours, minutes, 0, 0);
+    handleChange('endTime', current.toISOString());
+  };
 
   // Reset form when modal opens or event changes - this is a valid pattern for modals
   useEffect(() => {
@@ -81,36 +214,24 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-120 max-h-[90vh] overflow-hidden flex flex-col border border-border">
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg shadow-xl z-50 w-[640px] max-h-[85vh] overflow-hidden flex flex-col border border-border">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">Edit Event</h2>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-0 border-b border-border px-6">
+        <div className="flex gap-4 border-b border-border px-6">
           <button
             onClick={() => setActiveTab('basic')}
             className={cn(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
+              'px-1 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === 'basic'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -121,7 +242,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
           <button
             onClick={() => setActiveTab('details')}
             className={cn(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
+              'px-1 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === 'details'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -132,7 +253,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
           <button
             onClick={() => setActiveTab('attendees')}
             className={cn(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
+              'px-1 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === 'attendees'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -163,52 +284,96 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
               {/* Calendar & Category */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="calendar" className="block text-sm font-medium text-foreground mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
                     Calendar
                   </label>
-                  <select
-                    id="calendar"
+                  <Select
                     value={formData.calendarId}
-                    onChange={(e) => handleChange('calendarId', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    {Object.entries(calendars).map(([id, cal]) => (
-                      <option key={id} value={id}>
-                        {cal.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => handleChange('calendarId', value)}
+                    options={calendarOptions}
+                    className="w-full"
+                  />
                 </div>
 
                 <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-foreground mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
                     Category
                   </label>
-                  <select
-                    id="category"
+                  <Select
                     value={formData.categoryId}
-                    onChange={(e) => handleChange('categoryId', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    {Object.entries(categories).map(([id, cat]) => (
-                      <option key={id} value={id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => handleChange('categoryId', value)}
+                    options={categoryOptions}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
+              {/* All-day toggle */}
+              <Checkbox
+                id="allday-basic"
+                checked={formData.isAllDay}
+                onChange={(e) => handleChange('isAllDay', e.target.checked)}
+                label="All-day event"
+              />
+
+              {/* Date and Time */}
+              {!formData.isAllDay && (
+                <div className="space-y-3">
+                  {/* Start Date & Time */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Start
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select
+                        value={startDate}
+                        onChange={handleStartDateChange}
+                        options={dateOptions}
+                        className="w-full"
+                      />
+                      <Select
+                        value={startTime}
+                        onChange={handleStartTimeChange}
+                        options={timeOptions}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* End Date & Time */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      End
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select
+                        value={endDate}
+                        onChange={handleEndDateChange}
+                        options={dateOptions}
+                        className="w-full"
+                      />
+                      <Select
+                        value={endTime}
+                        onChange={handleEndTimeChange}
+                        options={timeOptions}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Description with @ mention support and formatting toolbar */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Description
                 </label>
                 <MarkdownEditor
                   value={formData.description}
                   onChange={(markdown) => handleChange('description', markdown)}
                   placeholder="Add notes, use @ to reference content..."
-                  minHeight="200px"
+                  minHeight="180px"
+                  maxHeight="250px"
                   showBottomToolbar={true}
                 />
               </div>
@@ -217,57 +382,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
 
           {activeTab === 'details' && (
             <div className="space-y-4">
-              {/* All-day toggle */}
-              <div className="flex items-center">
-                <input
-                  id="allday"
-                  type="checkbox"
-                  checked={formData.isAllDay}
-                  onChange={(e) => handleChange('isAllDay', e.target.checked)}
-                  className="w-4 h-4 border border-border rounded bg-background cursor-pointer"
-                />
-                <label htmlFor="allday" className="ml-2 text-sm text-foreground cursor-pointer">
-                  All-day event
-                </label>
-              </div>
-
-              {/* Date and Time */}
-              {!formData.isAllDay && (
-                <>
-                  <div>
-                    <label htmlFor="startTime" className="block text-sm font-medium text-foreground mb-1">
-                      Start Time
-                    </label>
-                    <input
-                      id="startTime"
-                      type="datetime-local"
-                      value={isoToLocalDatetime(formData.startTime)}
-                      onChange={(e) => {
-                        const date = new Date(e.target.value);
-                        handleChange('startTime', date.toISOString());
-                      }}
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="endTime" className="block text-sm font-medium text-foreground mb-1">
-                      End Time
-                    </label>
-                    <input
-                      id="endTime"
-                      type="datetime-local"
-                      value={isoToLocalDatetime(formData.endTime)}
-                      onChange={(e) => {
-                        const date = new Date(e.target.value);
-                        handleChange('endTime', date.toISOString());
-                      }}
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </>
-              )}
-
               {/* Location */}
               <div>
                 <label htmlFor="location" className="block text-sm font-medium text-foreground mb-1">
@@ -299,18 +413,12 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
               </div>
 
               {/* Focus Time */}
-              <div className="flex items-center">
-                <input
-                  id="focusTime"
-                  type="checkbox"
-                  checked={formData.isFocusTime}
-                  onChange={(e) => handleChange('isFocusTime', e.target.checked)}
-                  className="w-4 h-4 border border-border rounded bg-background cursor-pointer"
-                />
-                <label htmlFor="focusTime" className="ml-2 text-sm text-foreground cursor-pointer">
-                  This is focus/deep work time
-                </label>
-              </div>
+              <Checkbox
+                id="focusTime"
+                checked={formData.isFocusTime}
+                onChange={(e) => handleChange('isFocusTime', e.target.checked)}
+                label="This is focus/deep work time"
+              />
             </div>
           )}
 

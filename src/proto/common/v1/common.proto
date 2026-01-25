@@ -46,6 +46,7 @@ enum VisibilityScope {
   VISIBILITY_SCOPE_PRIVATE = 1;
   VISIBILITY_SCOPE_GROUP = 2;
   VISIBILITY_SCOPE_ORGANIZATION = 3;
+  VISIBILITY_SCOPE_PUBLIC = 4;
 }
 
 // OrganizationRole defines a user's role within an organization.

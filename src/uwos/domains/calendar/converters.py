@@ -49,7 +49,7 @@ from uwos.gen.cal.v1.calendar_pb2 import (
 from uwos.gen.cal.v1.calendar_pb2 import (
     ResourceType as ProtoResourceType,
 )
-from uwos.gen.cal.v1.calendar_pb2 import (
+from uwos.gen.common.v1.common_pb2 import (
     VisibilityScope as ProtoVisibilityScope,
 )
 

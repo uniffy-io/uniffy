@@ -2,7 +2,7 @@
  * MiniCalendar - Small month calendar for date selection
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCurrentDate } from '../../store';
@@ -22,8 +22,22 @@ export function MiniCalendar() {
   const dispatch = useAppDispatch();
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
 
-  // Local state for mini calendar month (independent from main view)
+  // Local state for mini calendar month (synced with main view)
   const [displayMonth, setDisplayMonth] = useState(() => parseISO(currentDate));
+
+  // Sync mini calendar with main calendar when currentDate changes
+  useEffect(() => {
+    const newDate = parseISO(currentDate);
+    // Only update if the month/year changed - this is a valid sync pattern for derived state
+    if (
+      newDate.getMonth() !== displayMonth.getMonth() ||
+      newDate.getFullYear() !== displayMonth.getFullYear()
+    ) {
+       
+      setDisplayMonth(newDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate]);
 
   const monthColumns = useMemo(
     () => getMonthColumns(displayMonth),

@@ -21,10 +21,10 @@ import {
     RecurrencePattern as ProtoRecurrencePattern,
     AttendeeStatus as ProtoAttendeeStatus,
     AttendeeRole as ProtoAttendeeRole,
-    VisibilityScope as ProtoVisibilityScope,
     DayOfWeek as ProtoDayOfWeek,
     ResourceType as ProtoResourceType,
 } from '@/gen/cal/v1/calendar_pb';
+import { VisibilityScope as ProtoVisibilityScope } from '@/gen/common/v1/common_pb';
 import { Timestamp } from '@bufbuild/protobuf';
 import type {
     CalendarEvent,
@@ -243,7 +243,6 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     isFocusTime: proto.isFocusTime,
     tags: [...proto.tags],
     linkedResources: proto.linkedResources.map(linkedResourceFromProto),
-    isFavorite: false, // Managed locally
     createdAt: timestampToIso(proto.createdAt),
     updatedAt: timestampToIso(proto.updatedAt),
 });

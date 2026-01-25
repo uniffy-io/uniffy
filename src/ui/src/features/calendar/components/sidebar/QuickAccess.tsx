@@ -1,23 +1,25 @@
 /**
- * QuickAccess - Quick filter buttons for Today, This Week, Upcoming, Favorites
+ * QuickAccess - Quick filter buttons for Today, This Week, Upcoming, Bookmarked
  */
 
+import { BookmarkIcon } from '@heroicons/react/24/outline';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setQuickAccessFilter, goToToday } from '../../store';
 import type { QuickAccessFilter } from '../../types';
 import { cn } from '@/utils/cn';
+import { useBookmarksByType } from '@/features/bookmarks';
 
 interface QuickAccessItem {
   id: QuickAccessFilter;
   label: string;
-  icon?: string;
+  useBookmarkIcon?: boolean;
 }
 
 const quickAccessItems: QuickAccessItem[] = [
   { id: 'today', label: 'Today' },
   { id: 'this_week', label: 'This Week' },
   { id: 'upcoming', label: 'Upcoming' },
-  { id: 'favorites', label: 'Favorites', icon: '★' },
+  { id: 'bookmarked', label: 'Bookmarked', useBookmarkIcon: true },
 ];
 
 export function QuickAccess() {
@@ -25,9 +27,9 @@ export function QuickAccess() {
   const activeFilter = useAppSelector(
     (state) => state.calendarUi.quickAccessFilter
   );
-  const favoriteCount = useAppSelector(
-    (state) => state.calendar.favoriteEventIds.length
-  );
+  // Get bookmarked calendar events count
+  const calendarBookmarks = useBookmarksByType('calendar_event');
+  const bookmarkCount = calendarBookmarks.length;
 
   const handleClick = (filter: QuickAccessFilter) => {
     if (activeFilter === filter) {
@@ -59,8 +61,8 @@ export function QuickAccess() {
             )}
           >
             <div className="flex items-center gap-2">
-              {item.id === 'favorites' ? (
-                <span className="text-yellow-500 text-xs">{item.icon}</span>
+              {item.useBookmarkIcon ? (
+                <BookmarkIcon className="w-3.5 h-3.5" />
               ) : (
                 <span
                   className={cn(
@@ -73,8 +75,8 @@ export function QuickAccess() {
               )}
               <span>{item.label}</span>
             </div>
-            {item.id === 'favorites' && favoriteCount > 0 && (
-              <span className="text-xs text-muted-foreground">{favoriteCount}</span>
+            {item.id === 'bookmarked' && bookmarkCount > 0 && (
+              <span className="text-xs text-muted-foreground">{bookmarkCount}</span>
             )}
           </button>
         ))}

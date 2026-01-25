@@ -40,9 +40,6 @@ interface CalendarState {
   // Event IDs for the current view date range
   visibleEventIds: string[];
 
-  // Favorite event IDs
-  favoriteEventIds: string[];
-
   // User's calendars indexed by ID
   calendars: Record<string, Calendar>;
 
@@ -136,7 +133,6 @@ function createDefaultCategories(): Record<string, Category> {
 const initialState: CalendarState = {
   events: {},
   visibleEventIds: [],
-  favoriteEventIds: [],
   calendars: defaultCalendars.reduce((acc, cal) => {
     acc[cal.id] = cal;
     return acc;
@@ -205,28 +201,6 @@ const calendarSlice = createSlice({
       state.visibleEventIds = state.visibleEventIds.filter(
         (id) => id !== action.payload
       );
-      state.favoriteEventIds = state.favoriteEventIds.filter(
-        (id) => id !== action.payload
-      );
-    },
-
-    toggleEventFavorite: (state, action: PayloadAction<string>) => {
-      const eventId = action.payload;
-      const event = state.events[eventId];
-
-      if (event) {
-        event.isFavorite = !event.isFavorite;
-
-        if (event.isFavorite) {
-          if (!state.favoriteEventIds.includes(eventId)) {
-            state.favoriteEventIds.push(eventId);
-          }
-        } else {
-          state.favoriteEventIds = state.favoriteEventIds.filter(
-            (id) => id !== eventId
-          );
-        }
-      }
     },
 
     // Calendar visibility
@@ -381,13 +355,8 @@ const calendarSlice = createSlice({
       })
       .addCase(fetchEventsInRange.fulfilled, (state, action) => {
         state.loading.events = false;
-        // Merge events into state (preserving favorites)
         action.payload.forEach((event) => {
-          const existingEvent = state.events[event.id];
-          state.events[event.id] = {
-            ...event,
-            isFavorite: existingEvent?.isFavorite || false,
-          };
+          state.events[event.id] = event;
         });
         state.visibleEventIds = action.payload.map((e) => e.id);
       })
@@ -399,11 +368,7 @@ const calendarSlice = createSlice({
     // Fetch single event
     builder
       .addCase(fetchEvent.fulfilled, (state, action) => {
-        const existingEvent = state.events[action.payload.id];
-        state.events[action.payload.id] = {
-          ...action.payload,
-          isFavorite: existingEvent?.isFavorite || false,
-        };
+        state.events[action.payload.id] = action.payload;
       });
 
     // Create event
@@ -433,11 +398,7 @@ const calendarSlice = createSlice({
       .addCase(updateEventThunk.fulfilled, (state, action) => {
         state.loading.updating = false;
         if (state.events[action.payload.id]) {
-          const existingEvent = state.events[action.payload.id];
-          state.events[action.payload.id] = {
-            ...action.payload,
-            isFavorite: existingEvent.isFavorite,
-          };
+          state.events[action.payload.id] = action.payload;
         }
       })
       .addCase(updateEventThunk.rejected, (state, action) => {
@@ -455,9 +416,6 @@ const calendarSlice = createSlice({
         state.loading.deleting = false;
         delete state.events[action.payload.eventId];
         state.visibleEventIds = state.visibleEventIds.filter(
-          (id) => id !== action.payload.eventId
-        );
-        state.favoriteEventIds = state.favoriteEventIds.filter(
           (id) => id !== action.payload.eventId
         );
       })
@@ -577,11 +535,7 @@ const calendarSlice = createSlice({
     builder
       .addCase(addAttendees.fulfilled, (state, action) => {
         if (state.events[action.payload.id]) {
-          const existingEvent = state.events[action.payload.id];
-          state.events[action.payload.id] = {
-            ...action.payload,
-            isFavorite: existingEvent.isFavorite,
-          };
+          state.events[action.payload.id] = action.payload;
         }
       });
 
@@ -589,11 +543,7 @@ const calendarSlice = createSlice({
     builder
       .addCase(removeAttendees.fulfilled, (state, action) => {
         if (state.events[action.payload.id]) {
-          const existingEvent = state.events[action.payload.id];
-          state.events[action.payload.id] = {
-            ...action.payload,
-            isFavorite: existingEvent.isFavorite,
-          };
+          state.events[action.payload.id] = action.payload;
         }
       });
   },
@@ -604,7 +554,6 @@ export const {
   addEvent,
   updateEvent,
   removeEvent,
-  toggleEventFavorite,
   toggleCalendarVisibility,
   setVisibleCalendars,
   addCalendar,

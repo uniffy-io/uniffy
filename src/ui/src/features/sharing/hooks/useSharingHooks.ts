@@ -23,6 +23,9 @@ import {
 import { sharingApi } from '../api/sharingApi';
 import { SubjectType, PermissionLevel, ContentType } from '@/gen/common/v1/common_pb';
 
+// Stable empty array reference to prevent unnecessary re-renders
+const EMPTY_PERMISSIONS: SerializedPermissionInfo[] = [];
+
 /**
  * Get content key for state lookup.
  */
@@ -64,7 +67,7 @@ export function useContentPermissions(contentType: number, contentId: string) {
     const key = getContentKey(contentType, contentId);
 
     const permissions = useAppSelector(
-        (state) => state.sharing.permissionsByContent[key] || []
+        (state) => state.sharing.permissionsByContent[key] ?? EMPTY_PERMISSIONS
     );
     const owner = useAppSelector((state) => state.sharing.ownerByContent[key] || null);
     const loading = useAppSelector((state) => state.sharing.loading[key] || false);

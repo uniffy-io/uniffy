@@ -611,12 +611,13 @@ class CalendarHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        get_user_id_from_context(ctx)  # Verify auth
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
                 ops = CategoryOperations(session)
                 category = await ops.create(
+                    user_id=user_id,
                     organization_id=organization_id,
                     name=request.name,
                     color=request.color,
@@ -625,6 +626,8 @@ class CalendarHandlers:
 
                 return CategoryResponse(category=category_to_proto(category))
 
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
         except Exception as e:
@@ -643,16 +646,18 @@ class CalendarHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        get_user_id_from_context(ctx)  # Verify auth
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
                 ops = CategoryOperations(session)
-                category = await ops.get_by_id(category_id, organization_id)
+                category = await ops.get_by_id(user_id, category_id, organization_id)
                 return CategoryResponse(category=category_to_proto(category))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Category not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
         except Exception as e:
@@ -671,12 +676,13 @@ class CalendarHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        get_user_id_from_context(ctx)  # Verify auth
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
                 ops = CategoryOperations(session)
                 category = await ops.update(
+                    user_id=user_id,
                     category_id=category_id,
                     organization_id=organization_id,
                     name=request.name if request.HasField("name") else None,
@@ -689,6 +695,8 @@ class CalendarHandlers:
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Category not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
         except Exception as e:
@@ -707,12 +715,12 @@ class CalendarHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        get_user_id_from_context(ctx)  # Verify auth
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
                 ops = CategoryOperations(session)
-                await ops.delete(category_id, organization_id)
+                await ops.delete(user_id, category_id, organization_id)
                 return DeleteCategoryResponse(success=True, message="Category deleted")
 
         except NotFoundError:
@@ -736,21 +744,23 @@ class CalendarHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        get_user_id_from_context(ctx)  # Verify auth
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
                 ops = CategoryOperations(session)
 
                 # Ensure default categories exist
-                await ops.ensure_defaults(organization_id)
+                await ops.ensure_defaults(user_id, organization_id)
 
-                categories = await ops.list_categories(organization_id)
+                categories = await ops.list_categories(user_id, organization_id)
 
                 return ListCategoriesResponse(
                     categories=[category_to_proto(c) for c in categories]
                 )
 
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
         except Exception as e:
