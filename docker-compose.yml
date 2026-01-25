@@ -57,29 +57,32 @@ services:
     networks:
       - uwos-network
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: uwos-pgadmin
+  valkey:
+    image: valkey/valkey:9-alpine
+    container_name: uwos-valkey
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@uwos.dev
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      VALKEY_PASSWORD: uwos-valkey-dev
     ports:
-      - "5050:80"
+      - "6380:6379"
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
+      - valkey_data:/data
+    command: valkey-server --appendonly yes --requirepass uwos-valkey-dev
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-a", "uwos-valkey-dev", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - uwos-network
+
 
 volumes:
   postgres_data:
     driver: local
   meilisearch_data:
     driver: local
-  pgadmin_data:
+  valkey_data:
     driver: local
 
 networks:

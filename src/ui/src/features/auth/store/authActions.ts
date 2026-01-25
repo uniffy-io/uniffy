@@ -9,7 +9,7 @@
  */
 
 import type { PlainMessage } from '@bufbuild/protobuf';
-import type { UserInfoResponse } from '@/gen/auth/v1/auth_pb';
+import type { CurrentUserResponse } from '@/gen/auth/v1/auth_pb';
 
 // Action type constants
 const AUTH_SLICE_NAME = 'auth';
@@ -25,16 +25,18 @@ export const AUTH_ACTION_TYPES = {
 
 // Action creator types
 export interface SetCredentialsPayload {
-  user: PlainMessage<UserInfoResponse>;
+  user: PlainMessage<CurrentUserResponse>;
   accessToken: string;
   refreshToken: string;
   organizationId?: string;
+  organizationRole?: string;
 }
 
 export interface RehydrateCompletePayload {
   accessToken: string;
   refreshToken: string;
   organizationId?: string;
+  organizationRole?: string;
 }
 
 // Action creators that return plain action objects

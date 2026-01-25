@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from "@/gen/auth/v1/auth_connect";
-import { OrganizationInfo } from "@/gen/auth/v1/auth_pb";
+import { OrganizationsService } from "@/gen/organizations/v1/organizations_connect";
+import type { MyOrganization } from "@/gen/organizations/v1/organizations_pb";
+import { OrganizationRole } from "@/gen/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials, logout } from "../store/authSlice";
@@ -10,13 +12,31 @@ import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree } from "@/features/notes/store/notesTreeSlice";
 import { clearBookmarks } from "@/features/bookmarks";
+import { clearSharing } from "@/features/sharing";
+import { clearAdmin } from "@/features/admin";
 import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
 import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
+/**
+ * Get human-readable label for organization role.
+ */
+function getRoleLabel(role: OrganizationRole): string {
+  switch (role) {
+    case OrganizationRole.OWNER:
+      return 'owner';
+    case OrganizationRole.ADMIN:
+      return 'admin';
+    case OrganizationRole.MEMBER:
+      return 'member';
+    default:
+      return 'member';
+  }
+}
+
 export default function OrganizationPicker() {
   useDocumentTitle('Select Organization');
-  const [organizations, setOrganizations] = useState<OrganizationInfo[]>([]);
+  const [organizations, setOrganizations] = useState<MyOrganization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -34,7 +54,7 @@ export default function OrganizationPicker() {
 
     const fetchOrgs = async () => {
       try {
-        const client = createClient(AuthService, transport);
+        const client = createClient(OrganizationsService, transport);
         const response = await client.listMyOrganizations(
           {},
           { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -105,6 +125,8 @@ export default function OrganizationPicker() {
     dispatch(clearNotes());
     dispatch(clearTree());
     dispatch(clearBookmarks());
+    dispatch(clearSharing());
+    dispatch(clearAdmin());
     // Navigate to auth page
     navigate('/auth');
   };
@@ -133,15 +155,15 @@ export default function OrganizationPicker() {
         </div>
       ) : (
         <div className="space-y-3">
-          {organizations.map((org) => (
+          {organizations.map((myOrg) => (
             <button
-              key={org.id}
-              onClick={() => handleSelectOrg(org.slug)}
+              key={myOrg.organization?.id}
+              onClick={() => handleSelectOrg(myOrg.organization?.slug || '')}
               className="w-full text-left p-4 border border-input rounded hover:bg-accent hover:text-accent-foreground transition-colors flex justify-between items-center group"
             >
               <div>
-                <div className="font-semibold">{org.name}</div>
-                <div className="text-xs text-muted-foreground capitalize">{org.role.toLowerCase()}</div>
+                <div className="font-semibold">{myOrg.organization?.name}</div>
+                <div className="text-xs text-muted-foreground capitalize">{getRoleLabel(myOrg.role)}</div>
               </div>
               <div className="opacity-0 group-hover:opacity-100 transition-opacity text-primary">
                 →

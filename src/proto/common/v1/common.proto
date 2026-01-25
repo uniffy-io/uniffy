@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package common.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "uwos/gen/common/v1;commonv1";
+
+// =============================================================================
+// ENUMS - Shared across all services
+// =============================================================================
+
+// ContentType defines the types of content in the system.
+// Used for polymorphic references in permission tables.
+enum ContentType {
+  CONTENT_TYPE_UNSPECIFIED = 0;
+  CONTENT_TYPE_NOTE = 1;
+  CONTENT_TYPE_FILE = 2;
+  CONTENT_TYPE_CALENDAR_EVENT = 3;
+  CONTENT_TYPE_BOOK = 4;
+  CONTENT_TYPE_PASSWORD = 5;
+  CONTENT_TYPE_WORKFLOW = 6;
+  CONTENT_TYPE_CHAT_MESSAGE = 7;
+  CONTENT_TYPE_SPACE = 8;
+}
+
+// SubjectType defines who can be granted permissions.
+enum SubjectType {
+  SUBJECT_TYPE_UNSPECIFIED = 0;
+  SUBJECT_TYPE_USER = 1;
+  SUBJECT_TYPE_GROUP = 2;
+  SUBJECT_TYPE_ORGANIZATION = 3;
+}
+
+// PermissionLevel defines access levels for content.
+enum PermissionLevel {
+  PERMISSION_LEVEL_UNSPECIFIED = 0;
+  PERMISSION_LEVEL_VIEW = 1;
+  PERMISSION_LEVEL_EDIT = 2;
+  PERMISSION_LEVEL_ADMIN = 3;
+}
+
+// VisibilityScope defines who can see content by default.
+enum VisibilityScope {
+  VISIBILITY_SCOPE_UNSPECIFIED = 0;
+  VISIBILITY_SCOPE_PRIVATE = 1;
+  VISIBILITY_SCOPE_GROUP = 2;
+  VISIBILITY_SCOPE_ORGANIZATION = 3;
+}
+
+// OrganizationRole defines a user's role within an organization.
+enum OrganizationRole {
+  ORGANIZATION_ROLE_UNSPECIFIED = 0;
+  ORGANIZATION_ROLE_MEMBER = 1;
+  ORGANIZATION_ROLE_ADMIN = 2;
+  ORGANIZATION_ROLE_OWNER = 3;
+}
+
+// GroupRole defines a user's role within a group.
+// Note: Only MEMBER and ADMIN are supported by the backend.
+enum GroupRole {
+  GROUP_ROLE_UNSPECIFIED = 0;
+  GROUP_ROLE_MEMBER = 1;
+  GROUP_ROLE_ADMIN = 2;
+}
+
+// =============================================================================
+// MESSAGES - Common data structures
+// =============================================================================
+
+// UserInfo represents basic user information.
+message UserInfo {
+  string id = 1;
+  string email = 2;
+  optional string full_name = 3;
+  optional string username = 4;
+  optional string avatar_url = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// OrganizationInfo represents basic organization information.
+message OrganizationInfo {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  optional string logo_url = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// GroupInfo represents a group within an organization.
+message GroupInfo {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string slug = 4;
+  optional string description = 5;
+  bool is_private = 6;
+  bool is_default = 7;
+  int32 member_count = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// MemberInfo represents a user's membership in an organization.
+message MemberInfo {
+  string user_id = 1;
+  string display_name = 2;
+  string email = 3;
+  optional string avatar_url = 4;
+  OrganizationRole role = 5;
+  google.protobuf.Timestamp joined_at = 6;
+  bool is_active = 7;
+}
+
+// GroupMemberInfo represents a user's membership in a group.
+message GroupMemberInfo {
+  string user_id = 1;
+  string display_name = 2;
+  string email = 3;
+  optional string avatar_url = 4;
+  GroupRole role = 5;
+  google.protobuf.Timestamp joined_at = 6;
+}
+
+// =============================================================================
+// PAGINATION - Common pagination structures
+// =============================================================================
+
+// PaginationRequest for paginated list requests.
+message PaginationRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+// PaginationResponse for paginated list responses.
+message PaginationResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total_count = 3;
+  int32 total_pages = 4;
+}

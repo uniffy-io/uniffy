@@ -81,8 +81,11 @@ class AuthOperations:
 
         # Handle organization context
         organization_id = None
+        organization_role = None
         if organization_slug:
-            organization_id = await self._verify_org_membership(user.id, organization_slug)
+            organization_id, organization_role = await self._verify_org_membership(
+                user.id, organization_slug
+            )
 
         # Create tokens with token_version for revocation support
         access_token = create_access_token(
@@ -97,6 +100,7 @@ class AuthOperations:
             refresh_token=refresh_token,
             user_id=user.id,
             organization_id=organization_id,
+            organization_role=organization_role,
         )
 
     async def register(
@@ -226,8 +230,11 @@ class AuthOperations:
 
         # Handle organization context
         organization_id = None
+        organization_role = None
         if organization_slug:
-            organization_id = await self._verify_org_membership(user_id, organization_slug)
+            organization_id, organization_role = await self._verify_org_membership(
+                user_id, organization_slug
+            )
 
         # Create new tokens with current token_version
         access_token = create_access_token(
@@ -242,6 +249,7 @@ class AuthOperations:
             refresh_token=new_refresh_token,
             user_id=user_id,
             organization_id=organization_id,
+            organization_role=organization_role,
         )
 
     # -------------------------------------------------------------------------
@@ -267,9 +275,14 @@ class AuthOperations:
         self,
         user_id: UUID,
         organization_slug: str,
-    ) -> UUID:
+    ) -> tuple[UUID, str]:
         """
-        Verify user is member of organization and return org ID.
+        Verify user is member of organization and return org ID and role.
+
+        Returns
+        -------
+        tuple[UUID, str]
+            Organization ID and user's role (MEMBER, ADMIN, or OWNER).
 
         Raises
         ------
@@ -298,4 +311,4 @@ class AuthOperations:
         if not membership or not membership.is_active:
             raise AuthenticationError("User is not a member of this organization")
 
-        return org.id
+        return org.id, membership.role.value

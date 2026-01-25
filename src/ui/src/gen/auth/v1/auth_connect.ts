@@ -3,11 +3,14 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddGroupMemberRequest, AdminAddUserToOrganizationRequest, AdminCreateOrganizationRequest, AdminCreateUserRequest, AdminListUserOrganizationsRequest, AdminOrganizationInfo, AdminOrganizationListResponse, AdminRemoveUserFromOrganizationRequest, AdminUserListResponse, AdminUserOrganizationInfo, AdminUserOrganizationListResponse, AuthResponse, CreateGroupRequest, DeleteGroupRequest, Empty, GetCurrentUserRequest, GroupInfo, GroupListResponse, GroupMemberListResponse, ListAllOrganizationsRequest, ListAllUsersRequest, ListGroupMembersRequest, ListGroupsRequest, ListMyOrganizationsRequest, ListOrganizationUsersRequest, LoginRequest, OrganizationListResponse, OrganizationUserListResponse, RefreshTokenRequest, RegisterRequest, RemoveGroupMemberRequest, UpdateGroupRequest, UpdateMyProfileRequest, UpdateOrganizationRequest, UpdateUserRequest, UserInfoResponse } from "./auth_pb.js";
+import { AuthResponse, CurrentUserResponse, GetCurrentUserRequest, LoginRequest, LogoutRequest, LogoutResponse, RefreshTokenRequest, RegisterRequest } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
- * AuthService provides authentication and user management
+ * AuthService handles user authentication (login, register, token refresh).
+ * For user management, see users.v1.UsersService.
+ * For organization management, see organizations.v1.OrganizationsService.
+ * For group management, see groups.v1.GroupsService.
  *
  * @generated from service auth.v1.AuthService
  */
@@ -15,7 +18,7 @@ export const AuthService = {
   typeName: "auth.v1.AuthService",
   methods: {
     /**
-     * Register a new user
+     * Register a new user account
      *
      * @generated from rpc auth.v1.AuthService.Register
      */
@@ -48,223 +51,25 @@ export const AuthService = {
       kind: MethodKind.Unary,
     },
     /**
-     * Get current user info
+     * Get current authenticated user info
      *
      * @generated from rpc auth.v1.AuthService.GetCurrentUser
      */
     getCurrentUser: {
       name: "GetCurrentUser",
       I: GetCurrentUserRequest,
-      O: UserInfoResponse,
+      O: CurrentUserResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * Update current user's profile (own profile only)
+     * Logout (invalidate tokens)
      *
-     * @generated from rpc auth.v1.AuthService.UpdateMyProfile
+     * @generated from rpc auth.v1.AuthService.Logout
      */
-    updateMyProfile: {
-      name: "UpdateMyProfile",
-      I: UpdateMyProfileRequest,
-      O: UserInfoResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * List organizations the current user is a member of
-     *
-     * @generated from rpc auth.v1.AuthService.ListMyOrganizations
-     */
-    listMyOrganizations: {
-      name: "ListMyOrganizations",
-      I: ListMyOrganizationsRequest,
-      O: OrganizationListResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: List all organizations
-     *
-     * @generated from rpc auth.v1.AuthService.ListAllOrganizations
-     */
-    listAllOrganizations: {
-      name: "ListAllOrganizations",
-      I: ListAllOrganizationsRequest,
-      O: AdminOrganizationListResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: Update organization details
-     *
-     * @generated from rpc auth.v1.AuthService.UpdateOrganization
-     */
-    updateOrganization: {
-      name: "UpdateOrganization",
-      I: UpdateOrganizationRequest,
-      O: AdminOrganizationInfo,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: Create a new organization
-     *
-     * @generated from rpc auth.v1.AuthService.AdminCreateOrganization
-     */
-    adminCreateOrganization: {
-      name: "AdminCreateOrganization",
-      I: AdminCreateOrganizationRequest,
-      O: AdminOrganizationInfo,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: List all users
-     *
-     * @generated from rpc auth.v1.AuthService.ListAllUsers
-     */
-    listAllUsers: {
-      name: "ListAllUsers",
-      I: ListAllUsersRequest,
-      O: AdminUserListResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: Create a new user
-     *
-     * @generated from rpc auth.v1.AuthService.AdminCreateUser
-     */
-    adminCreateUser: {
-      name: "AdminCreateUser",
-      I: AdminCreateUserRequest,
-      O: UserInfoResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: Update user details
-     *
-     * @generated from rpc auth.v1.AuthService.UpdateUser
-     */
-    updateUser: {
-      name: "UpdateUser",
-      I: UpdateUserRequest,
-      O: UserInfoResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: List organizations for a specific user
-     *
-     * @generated from rpc auth.v1.AuthService.AdminListUserOrganizations
-     */
-    adminListUserOrganizations: {
-      name: "AdminListUserOrganizations",
-      I: AdminListUserOrganizationsRequest,
-      O: AdminUserOrganizationListResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: Add user to organization
-     *
-     * @generated from rpc auth.v1.AuthService.AdminAddUserToOrganization
-     */
-    adminAddUserToOrganization: {
-      name: "AdminAddUserToOrganization",
-      I: AdminAddUserToOrganizationRequest,
-      O: AdminUserOrganizationInfo,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Admin: Remove user from organization
-     *
-     * @generated from rpc auth.v1.AuthService.AdminRemoveUserFromOrganization
-     */
-    adminRemoveUserFromOrganization: {
-      name: "AdminRemoveUserFromOrganization",
-      I: AdminRemoveUserFromOrganizationRequest,
-      O: Empty,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: List groups
-     *
-     * @generated from rpc auth.v1.AuthService.ListGroups
-     */
-    listGroups: {
-      name: "ListGroups",
-      I: ListGroupsRequest,
-      O: GroupListResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: Create a new group
-     *
-     * @generated from rpc auth.v1.AuthService.CreateGroup
-     */
-    createGroup: {
-      name: "CreateGroup",
-      I: CreateGroupRequest,
-      O: GroupInfo,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: Update a group
-     *
-     * @generated from rpc auth.v1.AuthService.UpdateGroup
-     */
-    updateGroup: {
-      name: "UpdateGroup",
-      I: UpdateGroupRequest,
-      O: GroupInfo,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: Delete a group
-     *
-     * @generated from rpc auth.v1.AuthService.DeleteGroup
-     */
-    deleteGroup: {
-      name: "DeleteGroup",
-      I: DeleteGroupRequest,
-      O: Empty,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: List members of a group
-     *
-     * @generated from rpc auth.v1.AuthService.ListGroupMembers
-     */
-    listGroupMembers: {
-      name: "ListGroupMembers",
-      I: ListGroupMembersRequest,
-      O: GroupMemberListResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: Add user to group
-     *
-     * @generated from rpc auth.v1.AuthService.AddGroupMember
-     */
-    addGroupMember: {
-      name: "AddGroupMember",
-      I: AddGroupMemberRequest,
-      O: Empty,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: Remove user from group
-     *
-     * @generated from rpc auth.v1.AuthService.RemoveGroupMember
-     */
-    removeGroupMember: {
-      name: "RemoveGroupMember",
-      I: RemoveGroupMemberRequest,
-      O: Empty,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Org Admin: List users in organization
-     *
-     * @generated from rpc auth.v1.AuthService.ListOrganizationUsers
-     */
-    listOrganizationUsers: {
-      name: "ListOrganizationUsers",
-      I: ListOrganizationUsersRequest,
-      O: OrganizationUserListResponse,
+    logout: {
+      name: "Logout",
+      I: LogoutRequest,
+      O: LogoutResponse,
       kind: MethodKind.Unary,
     },
   }

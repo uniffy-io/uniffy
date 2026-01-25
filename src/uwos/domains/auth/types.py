@@ -12,6 +12,7 @@ class AuthResult:
     refresh_token: str
     user_id: UUID
     organization_id: UUID | None = None
+    organization_role: str | None = None  # MEMBER, ADMIN, or OWNER
 
 
 @dataclass(frozen=True)

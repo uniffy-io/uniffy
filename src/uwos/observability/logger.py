@@ -20,7 +20,7 @@ RED = "\033[31m"
 CYAN = "\033[36m"
 RESET = "\033[0m"
 
-app_name = "gt"
+app_name = "uwos"
 app_version = "0.0.1"
 
 # Mapping of log level strings to their corresponding `logging` module constants.
@@ -243,7 +243,8 @@ def format_error_log(record: dict) -> str:
                 )
                 # Join all lines and escape special characters
                 formatted_tb = (
-                    "".join(tb_lines)
+                    ""
+                    .join(tb_lines)
                     .replace("{", "{{")
                     .replace("}", "}}")
                     .replace("<", "\\<")
@@ -390,8 +391,6 @@ def configure_loguru(config: "ObservabilityConfig") -> None:
         "sqlalchemy",
         "sqlalchemy.engine",
         "sqlalchemy.pool",
-        "kafka.conn",
-        "kafka",
         "uvicorn",
         "uvicorn.error",
         "fastapi",
@@ -408,6 +407,15 @@ def configure_loguru(config: "ObservabilityConfig") -> None:
     # Disable uvicorn access logs - we have our own ConnectRPC access logging
     logging.getLogger("uvicorn.access").handlers = []
     logging.getLogger("uvicorn.access").propagate = False
+
+    # Suppress DEBUG/INFO logs from HTTP transport libraries (too noisy)
+    # These produce verbose connection-level logs that clutter output
+    http_loggers = ["httpx", "httpcore", "httpcore.connection", "httpcore.http11"]
+    for http_logger_name in http_loggers:
+        http_logger = logging.getLogger(http_logger_name)
+        http_logger.setLevel(logging.WARNING)
+        http_logger.handlers = []
+        http_logger.propagate = False
 
     if config.console_log_type == "json":
         logger.add(

@@ -28,9 +28,12 @@ import type { EditorMode } from '../../store/editorSlice';
 import { TagInput } from './TagInput';
 import { IconPicker } from './IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
+import { useSharingDialog } from '@/features/sharing';
+import { ContentType } from '@/gen/common/v1/common_pb';
 
 interface EditorHeaderProps {
   note: SerializedNote;
+  canEdit?: boolean;
 }
 
 // Mock collaborators for demo
@@ -39,7 +42,7 @@ const mockCollaborators = [
   { id: '2', initials: 'AM', color: 'bg-green-500' },
 ];
 
-export function EditorHeader({ note }: EditorHeaderProps) {
+export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
   const allNotes = useAppSelector((state) => state.notes.notes);
@@ -52,6 +55,9 @@ export function EditorHeader({ note }: EditorHeaderProps) {
   // Bookmark state
   const noteUrn = `urn:uwos:content:NOTE:${note.id}`;
   const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(noteUrn);
+
+  // Sharing dialog
+  const { open: openSharingDialog } = useSharingDialog();
 
   // Track local edits separately from note title
   const [localTitle, setLocalTitle] = useState<string | null>(null);
@@ -93,18 +99,23 @@ export function EditorHeader({ note }: EditorHeaderProps) {
   };
 
   const handleShare = () => {
-    // TODO: Open share modal
+    openSharingDialog(ContentType.NOTE, note.id, note.title || 'Untitled');
   };
   
+  // Only show edit modes if user has edit permission
   const viewModes: Array<{
     mode: EditorMode;
     icon: typeof PencilSquareIcon;
     label: string;
-  }> = [
-    { mode: 'crepe', icon: PencilSquareIcon, label: 'Editor' },
-    { mode: 'markdown', icon: CodeBracketIcon, label: 'Markdown' },
-    { mode: 'readonly', icon: EyeIcon, label: 'Read Only' },
-  ];
+  }> = canEdit
+    ? [
+        { mode: 'crepe', icon: PencilSquareIcon, label: 'Editor' },
+        { mode: 'markdown', icon: CodeBracketIcon, label: 'Markdown' },
+        { mode: 'readonly', icon: EyeIcon, label: 'Read Only' },
+      ]
+    : [
+        { mode: 'readonly', icon: EyeIcon, label: 'Read Only' },
+      ];
 
 
   // Format date
@@ -244,14 +255,16 @@ export function EditorHeader({ note }: EditorHeaderProps) {
             )}
           </button>
           
-          {/* Share Button */}
-          <button
-            onClick={handleShare}
-            className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
-            title="Share"
-          >
-            <ShareIcon className="h-5 w-5 text-primary" />
-          </button>
+          {/* Share Button - only show if user can edit (requires edit/admin/owner permission) */}
+          {canEdit && (
+            <button
+              onClick={handleShare}
+              className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
+              title="Share"
+            >
+              <ShareIcon className="h-5 w-5 text-primary" />
+            </button>
+          )}
           
           {/* More Options */}
           <button
@@ -282,13 +295,16 @@ export function EditorHeader({ note }: EditorHeaderProps) {
           {/* Note Icon/Emoji */}
           <div className="relative mt-1">
             <button
-              onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
-              className="p-2 rounded-lg hover:bg-accent transition-colors"
-              title="Change icon"
+              onClick={() => canEdit && setIsIconPickerOpen(!isIconPickerOpen)}
+              className={`p-2 rounded-lg transition-colors ${
+                canEdit ? 'hover:bg-accent cursor-pointer' : 'cursor-not-allowed opacity-60'
+              }`}
+              title={canEdit ? 'Change icon' : 'Read only'}
+              disabled={!canEdit}
             >
               {renderNoteIcon(note.icon, "h-7 w-7 text-muted-foreground")}
             </button>
-            {isIconPickerOpen && (
+            {isIconPickerOpen && canEdit && (
               <IconPicker
                 currentIcon={note.icon}
                 onSelect={handleIconChange}
@@ -302,10 +318,13 @@ export function EditorHeader({ note }: EditorHeaderProps) {
             <input
               type="text"
               value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
+              onChange={(e) => canEdit && handleTitleChange(e.target.value)}
               onBlur={handleTitleBlur}
               placeholder="Untitled"
-              className="w-full text-3xl font-bold bg-transparent border-none outline-none focus:ring-0 text-foreground"
+              readOnly={!canEdit}
+              className={`w-full text-3xl font-bold bg-transparent border-none outline-none focus:ring-0 text-foreground ${
+                !canEdit ? 'cursor-not-allowed opacity-80' : ''
+              }`}
             />
             
             {/* Meta Info */}
@@ -326,6 +345,7 @@ export function EditorHeader({ note }: EditorHeaderProps) {
             onTagsChange={(newTags) => {
               dispatch(updateNote({ noteId: note.id, tags: newTags }));
             }}
+            disabled={!canEdit}
           />
         </div>
       </div>

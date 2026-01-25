@@ -36,14 +36,16 @@ function getAuthState(): {
   refreshToken: string | null;
   user: unknown;
   currentOrganizationId: string | null;
+  currentOrganizationRole: string | null;
 } {
   // Access token from memory
   const accessToken = memoryAccessToken;
 
-  // Refresh token, user, and org ID from localStorage (via redux-persist)
+  // Refresh token, user, org ID, and org role from localStorage (via redux-persist)
   let refreshToken: string | null = null;
   let user: unknown = null;
   let currentOrganizationId: string | null = null;
+  let currentOrganizationRole: string | null = null;
 
   try {
     const persistedState = localStorage.getItem('persist:root');
@@ -53,12 +55,13 @@ function getAuthState(): {
       refreshToken = authState.refreshToken || null;
       user = authState.user || null;
       currentOrganizationId = authState.currentOrganizationId || null;
+      currentOrganizationRole = authState.currentOrganizationRole || null;
     }
   } catch {
     // Ignore parse errors
   }
 
-  return { accessToken, refreshToken, user, currentOrganizationId };
+  return { accessToken, refreshToken, user, currentOrganizationId, currentOrganizationRole };
 }
 
 /**
@@ -78,9 +81,14 @@ function clearMemoryAccessToken(): void {
 /**
  * Update auth state in memory and Redux store.
  * Access token goes to memory, refresh token to Redux (persisted).
- * Preserves current organizationId if not provided.
+ * Preserves current organizationId and organizationRole if not provided.
  */
-function updateAuthState(accessToken: string, refreshToken: string, organizationId?: string): void {
+function updateAuthState(
+  accessToken: string,
+  refreshToken: string,
+  organizationId?: string,
+  organizationRole?: string
+): void {
   // Store access token in memory only (security)
   setMemoryAccessToken(accessToken);
 
@@ -94,14 +102,16 @@ function updateAuthState(accessToken: string, refreshToken: string, organization
   const state = store.getState();
   const user = state.auth?.user;
   const currentOrgId = state.auth?.currentOrganizationId;
+  const currentOrgRole = state.auth?.currentOrganizationRole;
 
   if (user) {
     store.dispatch(createSetCredentialsAction({
       user,
       accessToken, // This will be stripped by transform before persistence
       refreshToken,
-      // Preserve existing org ID if not provided (important for token refresh)
+      // Preserve existing org ID and role if not provided (important for token refresh)
       organizationId: organizationId ?? currentOrgId ?? undefined,
+      organizationRole: organizationRole ?? currentOrgRole ?? undefined,
     }));
   }
 }
@@ -193,8 +203,13 @@ async function refreshAccessToken(): Promise<string | null> {
       // Store access token in memory
       setMemoryAccessToken(response.accessToken);
 
-      // Update Redux state
-      updateAuthState(response.accessToken, response.refreshToken, response.organizationId);
+      // Update Redux state (including organization role from response)
+      updateAuthState(
+        response.accessToken,
+        response.refreshToken,
+        response.organizationId,
+        response.organizationRole
+      );
 
       return response.accessToken;
     } catch (error) {
@@ -228,7 +243,12 @@ async function refreshAccessToken(): Promise<string | null> {
  * @returns true if successfully authenticated, false otherwise
  */
 export async function rehydrateAuth(): Promise<boolean> {
-  const { refreshToken, user, currentOrganizationId: persistedOrgId } = getAuthState();
+  const {
+    refreshToken,
+    user,
+    currentOrganizationId: persistedOrgId,
+    currentOrganizationRole: persistedOrgRole,
+  } = getAuthState();
 
   // No refresh token = not logged in
   if (!refreshToken || !user) {
@@ -256,11 +276,12 @@ export async function rehydrateAuth(): Promise<boolean> {
     if (newToken) {
       // Get updated state after refresh
       const state = store.getState();
-      // Use localStorage org ID as fallback since Redux may not have rehydrated yet
+      // Use localStorage values as fallback since Redux may not have rehydrated yet
       store.dispatch(createRehydrateCompleteAction({
         accessToken: newToken,
         refreshToken: state.auth?.refreshToken || refreshToken,
         organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
+        organizationRole: state.auth?.currentOrganizationRole || persistedOrgRole || undefined,
       }));
       return true;
     } else {

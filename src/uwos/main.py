@@ -30,6 +30,7 @@ def main() -> None:
             log_level=log_level,
             workers=workers if workers > 1 else 1,
             reload=reload_enabled,
+            access_log=False,  # We have our own ConnectRPC access logging
         )
     else:
         from uwos.factory import create_app
@@ -40,6 +41,7 @@ def main() -> None:
             host=host,
             port=port,
             log_level=log_level,
+            access_log=False,  # We have our own ConnectRPC access logging
         )
 
 

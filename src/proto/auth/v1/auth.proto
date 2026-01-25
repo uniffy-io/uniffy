@@ -2,404 +2,96 @@ syntax = "proto3";
 
 package auth.v1;
 
-// AuthService provides authentication and user management
+option go_package = "uwos/gen/auth/v1;authv1";
+
+// =============================================================================
+// AuthService - Authentication only
+// =============================================================================
+
+// AuthService handles user authentication (login, register, token refresh).
+// For user management, see users.v1.UsersService.
+// For organization management, see organizations.v1.OrganizationsService.
+// For group management, see groups.v1.GroupsService.
 service AuthService {
-  // Register a new user
-  rpc Register(RegisterRequest) returns (AuthResponse) {}
-  
+  // Register a new user account
+  rpc Register(RegisterRequest) returns (AuthResponse);
+
   // Login with email and password
-  rpc Login(LoginRequest) returns (AuthResponse) {}
-  
+  rpc Login(LoginRequest) returns (AuthResponse);
+
   // Refresh access token using refresh token
-  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse) {}
-  
-  // Get current user info
-  rpc GetCurrentUser(GetCurrentUserRequest) returns (UserInfoResponse) {}
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
 
-  // Update current user's profile (own profile only)
-  rpc UpdateMyProfile(UpdateMyProfileRequest) returns (UserInfoResponse) {}
+  // Get current authenticated user info
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (CurrentUserResponse);
 
-  // List organizations the current user is a member of
-  rpc ListMyOrganizations(ListMyOrganizationsRequest) returns (OrganizationListResponse) {}
-
-  // Admin: List all organizations
-  rpc ListAllOrganizations(ListAllOrganizationsRequest) returns (AdminOrganizationListResponse) {}
-
-  // Admin: Update organization details
-  rpc UpdateOrganization(UpdateOrganizationRequest) returns (AdminOrganizationInfo) {}
-
-  // Admin: Create a new organization
-  rpc AdminCreateOrganization(AdminCreateOrganizationRequest) returns (AdminOrganizationInfo) {}
-
-  // Admin: List all users
-  rpc ListAllUsers(ListAllUsersRequest) returns (AdminUserListResponse) {}
-
-  // Admin: Create a new user
-  rpc AdminCreateUser(AdminCreateUserRequest) returns (UserInfoResponse) {}
-
-  // Admin: Update user details
-  rpc UpdateUser(UpdateUserRequest) returns (UserInfoResponse) {}
-
-  // Admin: List organizations for a specific user
-  rpc AdminListUserOrganizations(AdminListUserOrganizationsRequest) returns (AdminUserOrganizationListResponse) {}
-
-  // Admin: Add user to organization
-  rpc AdminAddUserToOrganization(AdminAddUserToOrganizationRequest) returns (AdminUserOrganizationInfo) {}
-
-  // Admin: Remove user from organization
-  rpc AdminRemoveUserFromOrganization(AdminRemoveUserFromOrganizationRequest) returns (Empty) {}
-
-  // Org Admin: List groups
-  rpc ListGroups(ListGroupsRequest) returns (GroupListResponse) {}
-
-  // Org Admin: Create a new group
-  rpc CreateGroup(CreateGroupRequest) returns (GroupInfo) {}
-
-  // Org Admin: Update a group
-  rpc UpdateGroup(UpdateGroupRequest) returns (GroupInfo) {}
-
-  // Org Admin: Delete a group
-  rpc DeleteGroup(DeleteGroupRequest) returns (Empty) {}
-
-  // Org Admin: List members of a group
-  rpc ListGroupMembers(ListGroupMembersRequest) returns (GroupMemberListResponse) {}
-
-  // Org Admin: Add user to group
-  rpc AddGroupMember(AddGroupMemberRequest) returns (Empty) {}
-
-  // Org Admin: Remove user from group
-  rpc RemoveGroupMember(RemoveGroupMemberRequest) returns (Empty) {}
-
-  // Org Admin: List users in organization
-  rpc ListOrganizationUsers(ListOrganizationUsersRequest) returns (OrganizationUserListResponse) {}
+  // Logout (invalidate tokens)
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
 }
 
-// Simple empty message for responses without data
-message Empty {}
-
-// Request to list users in an organization
-message ListOrganizationUsersRequest {
-  string organization_id = 1;
-  int32 page = 2;
-  int32 page_size = 3;
-  optional string query = 4;
-}
-
-// Response with list of organization users
-message OrganizationUserListResponse {
-  repeated UserInfoResponse users = 1;
-  int32 total_count = 2;
-}
-
-// Group information
-message GroupInfo {
-  string id = 1;
-  string organization_id = 2;
-  string name = 3;
-  string slug = 4;
-  optional string description = 5;
-  bool is_private = 6;
-  bool is_default = 7;
-  string created_at = 8;
-  int32 member_count = 9;
-}
-
-// Request to list groups
-message ListGroupsRequest {
-  string organization_id = 1;
-  int32 page = 2;
-  int32 page_size = 3;
-  optional string query = 4;
-}
-
-// Response with list of groups
-message GroupListResponse {
-  repeated GroupInfo groups = 1;
-  int32 total_count = 2;
-}
-
-// Request to create a group
-message CreateGroupRequest {
-  string organization_id = 1;
-  string name = 2;
-  string slug = 3;
-  optional string description = 4;
-  bool is_private = 5;
-  bool is_default = 6;
-}
-
-// Request to update a group
-message UpdateGroupRequest {
-  string group_id = 1;
-  optional string name = 2;
-  optional string description = 3;
-  optional bool is_private = 4;
-  optional bool is_default = 5;
-}
-
-// Request to delete a group
-message DeleteGroupRequest {
-  string group_id = 1;
-}
-
-// Request to list group members
-message ListGroupMembersRequest {
-  string group_id = 1;
-  int32 page = 2;
-  int32 page_size = 3;
-  optional string query = 4;
-}
-
-// Group member info
-message GroupMemberInfo {
-  string user_id = 1;
-  string email = 2;
-  string username = 3;
-  optional string full_name = 4;
-  string role = 5; // "admin", "member"
-  string joined_at = 6;
-}
-
-// Response with list of group members
-message GroupMemberListResponse {
-  repeated GroupMemberInfo members = 1;
-  int32 total_count = 2;
-}
-
-// Request to add member to group
-message AddGroupMemberRequest {
-  string group_id = 1;
-  string user_id = 2;
-  string role = 3; // "admin", "member"
-}
-
-// Request to remove member from group
-message RemoveGroupMemberRequest {
-  string group_id = 1;
-  string user_id = 2;
-}
+// =============================================================================
+// Request Messages
+// =============================================================================
 
 // Request to register a new user
 message RegisterRequest {
-  // User's email address
   string email = 1;
-  // Desired username
   string username = 2;
-  // User's password (min 8 characters)
-  string password = 3;
-  // Optional full name
+  string password = 3;  // Min 8 characters
   optional string full_name = 4;
-  // Optional organization slug to join after registration
-  optional string organization_slug = 5;
+  optional string organization_slug = 5;  // Join org after registration
 }
 
 // Request to login
 message LoginRequest {
-  // User's email address
   string email = 1;
-  // User's password
   string password = 2;
-  // Optional organization slug to authenticate into
-  optional string organization_slug = 3;
+  optional string organization_slug = 3;  // Authenticate into specific org
 }
 
 // Request to refresh access token
 message RefreshTokenRequest {
-  // Refresh token
   string refresh_token = 1;
-  // Optional organization slug to switch context
-  optional string organization_slug = 2;
+  optional string organization_slug = 2;  // Switch org context
 }
 
 // Request to get current user info
-message GetCurrentUserRequest {
-  // Empty request, user identified by token
+message GetCurrentUserRequest {}
+
+// Request to logout
+message LogoutRequest {
+  optional string refresh_token = 1;  // If provided, invalidates specific token
 }
 
-// Request to update current user's profile
-message UpdateMyProfileRequest {
-  // Optional full name
-  optional string full_name = 1;
-  // Optional accent color in HSL format
-  optional string accent_color = 2;
-  // Optional font family: 'inter', 'geist', or 'system'
-  optional string font_family = 3;
-}
-
-// Request to list user's organizations
-message ListMyOrganizationsRequest {
-  // Empty request, user identified by token
-}
-
-// Organization information
-message OrganizationInfo {
-  // Organization ID
-  string id = 1;
-  // Organization name
-  string name = 2;
-  // Organization slug
-  string slug = 3;
-  // User's role in the organization
-  string role = 4;
-}
-
-// Response containing list of organizations
-message OrganizationListResponse {
-  // List of organizations
-  repeated OrganizationInfo organizations = 1;
-}
+// =============================================================================
+// Response Messages
+// =============================================================================
 
 // Authentication response with tokens
 message AuthResponse {
-  // JWT access token
   string access_token = 1;
-  // JWT refresh token
   string refresh_token = 2;
-  // Token type (always "bearer")
-  string token_type = 3;
-  // User ID
+  string token_type = 3;  // Always "bearer"
   string user_id = 4;
-  // Organization ID if logged into specific org
-  optional string organization_id = 5;
+  optional string organization_id = 5;  // If authenticated into specific org
+  optional string organization_role = 6;  // User's role in the org: MEMBER, ADMIN, or OWNER
 }
 
-// User information response
-message UserInfoResponse {
-  // User ID
+// Current user info response
+message CurrentUserResponse {
   string id = 1;
-  // User email
   string email = 2;
-  // Username
   string username = 3;
-  // Full name
-  optional string full_name = 4;
-  // Whether user is active
-  bool is_active = 5;
-  // Whether user is system admin
-  bool is_system_admin = 6;
-  // Whether email is verified
-  bool email_verified = 7;
-  // User's preferred accent color in HSL format
-  optional string accent_color = 8;
-  // User's preferred font family: 'inter', 'geist', or 'system'
-  optional string font_family = 9;
-}
-
-// Admin: Request to list all organizations
-message ListAllOrganizationsRequest {
-  // Page number (1-based)
-  int32 page = 1;
-  // Page size (default 20)
-  int32 page_size = 2;
-  // Optional search query
-  optional string query = 3;
-}
-
-// Admin: Detailed organization info
-message AdminOrganizationInfo {
-  string id = 1;
-  string name = 2;
-  string slug = 3;
-  optional string domain = 4;
-  string plan = 5;
-  bool is_active = 6;
-  string created_at = 7;
-  // Number of members
-  int32 member_count = 8;
-}
-
-// Admin: Response with list of organizations
-message AdminOrganizationListResponse {
-  repeated AdminOrganizationInfo organizations = 1;
-  int32 total_count = 2;
-}
-
-// Admin: Request to create an organization
-message AdminCreateOrganizationRequest {
-  string name = 1;
-  string slug = 2;
-  optional string domain = 3;
-  string plan = 4;
-}
-
-// Admin: Request to update organization
-message UpdateOrganizationRequest {
-  string organization_id = 1;
-  optional string name = 2;
-  optional string domain = 3;
-  optional string plan = 4;
-  optional bool is_active = 5;
-}
-
-// Admin: Request to list all users
-message ListAllUsersRequest {
-  int32 page = 1;
-  int32 page_size = 2;
-  optional string query = 3;
-}
-
-// Admin: Response with list of users
-message AdminUserListResponse {
-  repeated UserInfoResponse users = 1;
-  int32 total_count = 2;
-}
-
-// Admin: Request to create a user
-message AdminCreateUserRequest {
-  string email = 1;
-  string username = 2;
-  string password = 3;
   optional string full_name = 4;
   bool is_active = 5;
   bool is_system_admin = 6;
   bool email_verified = 7;
-  // Optional: Add to organization immediately
-  optional string organization_id = 8;
-  optional string organization_role = 9; // "member", "admin", "owner"
-}
-
-// Admin: Request to update user
-message UpdateUserRequest {
-  string user_id = 1;
-  optional string full_name = 2;
-  optional string username = 3;
-  optional string email = 4;
-  optional bool is_active = 5;
-  optional bool is_system_admin = 6;
-  optional bool email_verified = 7;
   optional string accent_color = 8;
   optional string font_family = 9;
+  optional string avatar_url = 10;
 }
 
-// Admin: Request to list organizations for a user
-message AdminListUserOrganizationsRequest {
-  string user_id = 1;
-}
-
-// Admin: Organization info with role for a specific user
-message AdminUserOrganizationInfo {
-  string organization_id = 1;
-  string name = 2;
-  string slug = 3;
-  string role = 4;
-  bool is_active = 5;
-  string joined_at = 6;
-}
-
-// Admin: Response with list of user's organizations
-message AdminUserOrganizationListResponse {
-  repeated AdminUserOrganizationInfo organizations = 1;
-}
-
-// Admin: Request to add user to organization
-message AdminAddUserToOrganizationRequest {
-  string user_id = 1;
-  string organization_id = 2;
-  string role = 3; // "owner", "admin", "member"
-}
-
-// Admin: Request to remove user from organization
-message AdminRemoveUserFromOrganizationRequest {
-  string user_id = 1;
-  string organization_id = 2;
+// Logout response
+message LogoutResponse {
+  bool success = 1;
 }

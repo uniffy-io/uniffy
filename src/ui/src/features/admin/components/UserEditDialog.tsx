@@ -1,43 +1,69 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { AuthService } from "@/gen/auth/v1/auth_connect";
-import { UserInfoResponse, AdminUserOrganizationInfo, AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
+import { UsersService } from "@/gen/users/v1/users_connect";
+import { OrganizationsService } from "@/gen/organizations/v1/organizations_connect";
+import { UserProfile, UserOrganizationMembership } from "@/gen/users/v1/users_pb";
+import { OrganizationDetail } from "@/gen/organizations/v1/organizations_pb";
+import { OrganizationRole } from "@/gen/common/v1/common_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Select, type SelectOption } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { transport } from "@/config";
 import { XMarkIcon, UserCircleIcon, BuildingOfficeIcon, PlusIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
+// Role options for organization membership
+const ORG_ROLE_OPTIONS: SelectOption<number>[] = [
+    { value: OrganizationRole.MEMBER, label: 'Member' },
+    { value: OrganizationRole.ADMIN, label: 'Admin' },
+    { value: OrganizationRole.OWNER, label: 'Owner' },
+];
+
 interface UserEditDialogProps {
-  user: UserInfoResponse;
+  user: UserProfile;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
 }
 
+function getRoleName(role: OrganizationRole): string {
+  switch (role) {
+    case OrganizationRole.OWNER:
+      return 'owner';
+    case OrganizationRole.ADMIN:
+      return 'admin';
+    case OrganizationRole.MEMBER:
+      return 'member';
+    default:
+      return 'member';
+  }
+}
+
 export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialogProps) {
   const [fullName, setFullName] = useState(user.fullName || '');
-  const [username, setUsername] = useState(user.username);
+  const [username, setUsername] = useState(user.username || '');
   const [email, setEmail] = useState(user.email);
   const [isActive, setIsActive] = useState(user.isActive);
   const [isSystemAdmin, setIsSystemAdmin] = useState(user.isSystemAdmin);
-  const [emailVerified, setEmailVerified] = useState(user.emailVerified);
-  
-  const [orgs, setOrgs] = useState<AdminUserOrganizationInfo[]>([]);
-  const [allOrgs, setAllOrgs] = useState<AdminOrganizationInfo[]>([]);
+
+  const [orgs, setOrgs] = useState<UserOrganizationMembership[]>([]);
+  const [allOrgs, setAllOrgs] = useState<OrganizationDetail[]>([]);
   const [newOrgId, setNewOrgId] = useState('');
-  const [newOrgRole, setNewOrgRole] = useState('MEMBER');
-  
+  const [newOrgRole, setNewOrgRole] = useState<OrganizationRole>(OrganizationRole.MEMBER);
+
   const [loading, setLoading] = useState(false);
+  const [removingOrgId, setRemovingOrgId] = useState<string | null>(null);
+  const [removeOrgLoading, setRemoveOrgLoading] = useState(false);
   const accessToken = useAppSelector((state) => state.auth?.accessToken);
 
   const fetchUserOrgs = useCallback(async () => {
     try {
-      const client = createClient(AuthService, transport);
-      const response = await client.adminListUserOrganizations(
+      const client = createClient(UsersService, transport);
+      const response = await client.listUserOrganizations(
         { userId: user.id },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      setOrgs(response.organizations);
+      setOrgs(response.memberships);
     } catch (err) {
       console.error('Failed to fetch user organizations:', err);
     }
@@ -45,9 +71,9 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
 
   const fetchAllOrgs = useCallback(async () => {
     try {
-      const client = createClient(AuthService, transport);
-      const response = await client.listAllOrganizations(
-        { page: 1, pageSize: 100 }, 
+      const client = createClient(OrganizationsService, transport);
+      const response = await client.listOrganizations(
+        { pagination: { page: 1, pageSize: 100 } },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setAllOrgs(response.organizations);
@@ -67,18 +93,17 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
     e.preventDefault();
     if (!accessToken) return;
     setLoading(true);
-    
+
     try {
-      const client = createClient(AuthService, transport);
+      const client = createClient(UsersService, transport);
       await client.updateUser(
         {
           userId: user.id,
-          fullName,
-          username,
+          fullName: fullName || undefined,
+          username: username || undefined,
           email,
           isActive,
-          isSystemAdmin,
-          emailVerified
+          isSystemAdmin
         },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
@@ -95,8 +120,8 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
   const handleAddOrg = async () => {
     if (!newOrgId || !accessToken) return;
     try {
-      const client = createClient(AuthService, transport);
-      await client.adminAddUserToOrganization(
+      const client = createClient(UsersService, transport);
+      await client.addUserToOrganization(
         {
           userId: user.id,
           organizationId: newOrgId,
@@ -112,28 +137,45 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
     }
   };
 
-  const handleRemoveOrg = async (orgId: string) => {
-    if (!confirm('Are you sure?') || !accessToken) return;
+  const handleRemoveOrgClick = (orgId: string) => {
+    setRemovingOrgId(orgId);
+  };
+
+  const handleRemoveOrgConfirm = async () => {
+    if (!removingOrgId || !accessToken) return;
+    setRemoveOrgLoading(true);
     try {
-      const client = createClient(AuthService, transport);
-      await client.adminRemoveUserFromOrganization(
+      const client = createClient(UsersService, transport);
+      await client.removeUserFromOrganization(
         {
           userId: user.id,
-          organizationId: orgId
+          organizationId: removingOrgId
         },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
+      setRemovingOrgId(null);
       fetchUserOrgs();
     } catch (err) {
       console.error('Failed to remove user from org:', err);
       alert('Failed to remove user from organization');
+    } finally {
+      setRemoveOrgLoading(false);
     }
   };
 
   // Filter out organizations the user is already a member of
   const availableOrgs = allOrgs.filter(
-    (org) => !orgs.some((userOrg) => userOrg.organizationId === org.id)
+    (org) => !orgs.some((userOrg) => userOrg.organization?.id === org.organization?.id)
   );
+
+  // Build organization options for the select
+  const orgOptions: SelectOption<string>[] = useMemo(() => [
+    { value: '', label: 'Choose an organization...' },
+    ...availableOrgs.map((org) => ({
+      value: org.organization?.id || '',
+      label: `${org.organization?.name} • ${org.organization?.slug}`,
+    })),
+  ], [availableOrgs]);
 
   if (!isOpen) return null;
 
@@ -148,7 +190,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
             </div>
             <div>
               <h2 className="text-xl font-bold">Edit User</h2>
-              <p className="text-xs text-muted-foreground">@{user.username}</p>
+              <p className="text-xs text-muted-foreground">@{user.username || user.email}</p>
             </div>
           </div>
           <button
@@ -158,7 +200,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        
+
         {/* Body */}
         <div className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -168,7 +210,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                 <UserCircleIcon className="h-5 w-5 text-primary" />
                 <h3 className="text-lg font-semibold">User Details</h3>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="block text-sm font-semibold">Full Name</label>
                 <input
@@ -181,12 +223,11 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold">Username *</label>
+                <label className="block text-sm font-semibold">Username</label>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  required
                   className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 />
               </div>
@@ -201,7 +242,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                   className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 />
               </div>
-              
+
               <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/20">
                 <p className="text-sm font-semibold">User Permissions</p>
                 <div className="space-y-2">
@@ -227,16 +268,6 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                       <span className="text-sm font-medium group-hover:text-foreground">System Administrator</span>
                       <ShieldCheckIcon className="h-4 w-4 text-purple-600" />
                     </div>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      id="emailVerified"
-                      checked={emailVerified}
-                      onChange={(e) => setEmailVerified(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium group-hover:text-foreground">Email verified</span>
                   </label>
                 </div>
               </div>
@@ -268,22 +299,22 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                     </div>
                   ) : (
                     <ul className="divide-y divide-border">
-                      {orgs.map((org) => (
-                        <li key={org.organizationId} className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors group">
+                      {orgs.map((membership) => (
+                        <li key={membership.organization?.id} className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors group">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
                               <BuildingOfficeIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                              <div className="font-semibold text-sm">{org.name}</div>
-                              <div className="text-xs text-muted-foreground capitalize">{org.role.toLowerCase()}</div>
+                              <div className="font-semibold text-sm">{membership.organization?.name}</div>
+                              <div className="text-xs text-muted-foreground capitalize">{getRoleName(membership.role)}</div>
                             </div>
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="xs" 
+                          <Button
+                            variant="ghost"
+                            size="xs"
                             className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 transition-opacity"
-                            onClick={() => handleRemoveOrg(org.organizationId)}
+                            onClick={() => handleRemoveOrgClick(membership.organization?.id || '')}
                           >
                             <TrashIcon className="h-3.5 w-3.5" />
                             Remove
@@ -304,31 +335,23 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Organization</label>
-                    <select
+                    <Select
                       value={newOrgId}
-                      onChange={(e) => setNewOrgId(e.target.value)}
-                      className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                    >
-                      <option value="">Choose an organization...</option>
-                      {availableOrgs.map((org) => (
-                        <option key={org.id} value={org.id}>
-                          {org.name} • {org.slug}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setNewOrgId}
+                      options={orgOptions}
+                      placeholder="Choose an organization..."
+                      className="w-full"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</label>
-                      <select
+                      <Select
                         value={newOrgRole}
-                        onChange={(e) => setNewOrgRole(e.target.value)}
-                        className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all capitalize"
-                      >
-                        <option value="MEMBER">Member</option>
-                        <option value="ADMIN">Admin</option>
-                        <option value="OWNER">Owner</option>
-                      </select>
+                        onChange={(val) => setNewOrgRole(val as OrganizationRole)}
+                        options={ORG_ROLE_OPTIONS}
+                        className="w-full"
+                      />
                     </div>
                     <div className="flex items-end">
                       <Button onClick={handleAddOrg} disabled={!newOrgId} size="md" className="w-full">
@@ -342,6 +365,18 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
             </div>
           </div>
         </div>
+
+        {/* Remove from organization confirmation dialog */}
+        <ConfirmDialog
+          isOpen={!!removingOrgId}
+          onClose={() => setRemovingOrgId(null)}
+          onConfirm={handleRemoveOrgConfirm}
+          title="Remove from Organization"
+          message={`Are you sure you want to remove ${user.fullName || user.email} from this organization?`}
+          confirmLabel="Remove"
+          variant="danger"
+          loading={removeOrgLoading}
+        />
       </div>
     </div>
   );

@@ -5,21 +5,33 @@ import { MarkdownSplitEditor } from './MarkdownSplitEditor';
 import { ReadOnlyViewer } from './ReadOnlyViewer';
 import { toggleSidebar } from '../../store/editorSlice';
 import { ChevronDoubleRightIcon } from '@heroicons/react/24/outline';
+import { useMyPermission } from '@/features/sharing';
+import { ContentType } from '@/gen/common/v1/common_pb';
 
 export function NotesEditor() {
   const dispatch = useAppDispatch();
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
-  
+
   const currentNoteId = notesState?.currentNoteId;
   const notes = notesState?.notes || {};
   const loadingNoteId = notesState?.loadingNoteId;
   const settings = editorState?.settings;
-  const editorMode = settings?.editorMode || 'crepe';
+  const userSelectedMode = settings?.editorMode || 'crepe';
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
-  
+
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
+
+  // Check user's permission on the current note
+  const { permission } = useMyPermission(
+    ContentType.NOTE,
+    currentNoteId
+  );
+
+  // Force readonly mode if user doesn't have edit permission
+  const canEdit = permission?.canEdit ?? true; // Default to true while loading
+  const editorMode = canEdit ? userSelectedMode : 'readonly';
   
   // Show loading state when:
   // 1. We're loading the current note AND
@@ -91,7 +103,7 @@ export function NotesEditor() {
   
   return (
     <div className="flex flex-col h-full bg-card">
-      <EditorHeader note={currentNote} />
+      <EditorHeader note={currentNote} canEdit={canEdit} />
       <div className="flex-1 overflow-hidden">
         {renderEditor()}
       </div>

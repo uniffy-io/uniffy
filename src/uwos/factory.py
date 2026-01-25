@@ -9,16 +9,22 @@ from uwos.core.search import close_meilisearch, init_meilisearch
 from uwos.db import close_db, init_db, seed_initial_data
 from uwos.domains.auth.service import AuthServiceImpl
 from uwos.domains.bookmarks.service import BookmarksServiceImpl
-from uwos.domains.calendar.service import CalendarServiceImpl
+from uwos.domains.groups.service import GroupsServiceImpl
 from uwos.domains.notes.service import NotesServiceImpl
+from uwos.domains.organizations.service import OrganizationsServiceImpl
+from uwos.domains.permissions.service import PermissionsServiceImpl
 from uwos.domains.search.service import SearchServiceImpl
 from uwos.domains.settings.service import SettingsServiceImpl
+from uwos.domains.users.service import UsersServiceImpl
 from uwos.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uwos.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
-from uwos.gen.cal.v1.calendar_connect import CalendarServiceASGIApplication
+from uwos.gen.groups.v1.groups_connect import GroupsServiceASGIApplication
 from uwos.gen.notes.v1.notes_connect import NotesServiceASGIApplication
+from uwos.gen.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
+from uwos.gen.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
 from uwos.gen.search.v1.search_connect import SearchServiceASGIApplication
 from uwos.gen.settings.v1.settings_connect import SettingsServiceASGIApplication
+from uwos.gen.users.v1.users_connect import UsersServiceASGIApplication
 from uwos.observability import ObservabilityConfig, setup_observability
 from uwos.observability.crpc import LoggingInterceptor
 from uwos.observability.otel import instrument_fastapi
@@ -184,6 +190,41 @@ def _mount_connect_services(app: FastAPI) -> None:
     app.mount("/bookmarks.v1.BookmarksService", bookmarks_app)
     logger.info("Mounted BookmarksService at /bookmarks.v1.BookmarksService")
 
+    permissions_service = PermissionsServiceImpl()
+    permissions_app = PermissionsServiceASGIApplication(
+        permissions_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/permissions.v1.PermissionsService", permissions_app)
+    logger.info("Mounted PermissionsService at /permissions.v1.PermissionsService")
+
+    # Create and mount the users service
+    users_service = UsersServiceImpl()
+    users_app = UsersServiceASGIApplication(
+        users_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/users.v1.UsersService", users_app)
+    logger.info("Mounted UsersService at /users.v1.UsersService")
+
+    # Create and mount the organizations service
+    organizations_service = OrganizationsServiceImpl()
+    organizations_app = OrganizationsServiceASGIApplication(
+        organizations_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/organizations.v1.OrganizationsService", organizations_app)
+    logger.info("Mounted OrganizationsService at /organizations.v1.OrganizationsService")
+
+    # Create and mount the groups service
+    groups_service = GroupsServiceImpl()
+    groups_app = GroupsServiceASGIApplication(
+        groups_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/groups.v1.GroupsService", groups_app)
+    logger.info("Mounted GroupsService at /groups.v1.GroupsService")
+
     # Create and mount the calendar service
     calendar_service = CalendarServiceImpl()
     calendar_app = CalendarServiceASGIApplication(
@@ -192,3 +233,4 @@ def _mount_connect_services(app: FastAPI) -> None:
     )
     app.mount("/cal.v1.CalendarService", calendar_app)
     logger.info("Mounted CalendarService at /cal.v1.CalendarService")
+

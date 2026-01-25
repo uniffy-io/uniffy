@@ -18,18 +18,11 @@ proto: ## Generate all protobuf code (backend + UI)
 	rm -rf src/uwos/gen src/ui/src/gen
 	PATH="$(PWD)/src/ui/node_modules/.bin:$(PATH)" buf generate
 	printf "import os\nimport sys\n\nsys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))\n" > src/uwos/gen/__init__.py
-	touch src/uwos/gen/auth/__init__.py 
-	touch src/uwos/gen/auth/v1/__init__.py
-	touch src/uwos/gen/notes/v1/__init__.py
-	touch src/uwos/gen/notes/__init__.py
-	touch src/uwos/gen/search/v1/__init__.py
-	touch src/uwos/gen/search/__init__.py
-	touch src/uwos/gen/settings/__init__.py
-	touch src/uwos/gen/settings/v1/__init__.py
-	touch src/uwos/gen/bookmarks/__init__.py
-	touch src/uwos/gen/bookmarks/v1/__init__.py
-	touch src/uwos/gen/uwcal/__init__.py
-	touch src/uwos/gen/uwcal/v1/__init__.py
+	@# Create __init__.py for all generated proto packages
+	@for pkg in auth notes search settings bookmarks permissions common groups organizations users cal; do \
+		touch src/uwos/gen/$$pkg/__init__.py 2>/dev/null || true; \
+		touch src/uwos/gen/$$pkg/v1/__init__.py 2>/dev/null || true; \
+	done
 	@echo "Protobuf code generated for backend and UI!"
 
 clean: ## Clean generated files

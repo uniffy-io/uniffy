@@ -6,6 +6,7 @@ Uses meilisearch-python-sdk for async support with FastAPI/asyncio.
 """
 
 import os
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -217,10 +218,15 @@ class MeilisearchClient:
         Should be called on application startup.
 
         """
+        start = time.perf_counter()
         # Try to get existing index
         try:
             index = await self.client.get_index(self.config.index_name)
-            logger.info(f"Meilisearch index '{self.config.index_name}' already exists")
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                f"Meilisearch: get_index '{self.config.index_name}' (exists)",
+                ms=f"{elapsed_ms:.1f}",
+            )
         except Exception:
             # Index doesn't exist, create it with settings
             index = await self.client.create_index(
@@ -228,12 +234,21 @@ class MeilisearchClient:
                 primary_key="id",
                 settings=INDEX_SETTINGS,
             )
-            logger.info(f"Created Meilisearch index '{self.config.index_name}'")
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                f"Meilisearch: create_index '{self.config.index_name}'",
+                ms=f"{elapsed_ms:.1f}",
+            )
             return  # Settings already applied during creation
 
         # Update settings on existing index
+        settings_start = time.perf_counter()
         await index.update_settings(INDEX_SETTINGS)
-        logger.info(f"Updated Meilisearch index settings for '{self.config.index_name}'")
+        elapsed_ms = (time.perf_counter() - settings_start) * 1000
+        logger.info(
+            f"Meilisearch: update_settings '{self.config.index_name}'",
+            ms=f"{elapsed_ms:.1f}",
+        )
 
     async def index_document(
         self,
@@ -304,8 +319,15 @@ class MeilisearchClient:
             "updated_at": int(datetime.now(UTC).timestamp()),
         }
 
+        start = time.perf_counter()
         index = self.client.index(self.config.index_name)
         await index.add_documents([document])
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            f"Meilisearch: index_document type={entity_type}",
+            ms=f"{elapsed_ms:.1f}",
+            urn=urn,
+        )
 
     async def delete_document(
         self,
@@ -324,16 +346,29 @@ class MeilisearchClient:
             If None, deletes all entries for this URN across all orgs.
 
         """
+        start = time.perf_counter()
         index = self.client.index(self.config.index_name)
 
         if organization_id:
             # Delete specific document
             doc_id = build_document_id(urn, organization_id)
             await index.delete_document(doc_id)
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "Meilisearch: delete_document",
+                ms=f"{elapsed_ms:.1f}",
+                urn=urn,
+            )
         else:
             # Delete all documents with this URN across all orgs
             # Use filter-based deletion
             await index.delete_documents_by_filter(f'urn = "{urn}"')
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "Meilisearch: delete_documents_by_filter",
+                ms=f"{elapsed_ms:.1f}",
+                urn=urn,
+            )
 
     async def search(
         self,
@@ -402,6 +437,7 @@ class MeilisearchClient:
             filters = f"({filters}) AND ({tag_conditions})"
 
         # Execute search
+        start = time.perf_counter()
         results = await index.search(
             query=query if query else None,
             filter=filters,
@@ -409,6 +445,12 @@ class MeilisearchClient:
             offset=offset,
             sort=["rank_score:desc", "updated_at:desc"] if not query else None,
             show_ranking_score=True,
+        )
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            f"Meilisearch: search hits={len(results.hits)}",
+            ms=f"{elapsed_ms:.1f}",
+            query=query[:50] if query else "",
         )
 
         return results
@@ -496,12 +538,26 @@ class MeilisearchClient:
             Document if found, None otherwise.
 
         """
+        start = time.perf_counter()
         index = self.client.index(self.config.index_name)
         doc_id = build_document_id(urn, organization_id)
 
         try:
-            return await index.get_document(doc_id)
+            result = await index.get_document(doc_id)
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                f"Meilisearch: get_document found={result is not None}",
+                ms=f"{elapsed_ms:.1f}",
+                urn=urn,
+            )
+            return result
         except Exception:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "Meilisearch: get_document found=False",
+                ms=f"{elapsed_ms:.1f}",
+                urn=urn,
+            )
             return None
 
     async def get_documents_by_urns(
@@ -531,6 +587,7 @@ class MeilisearchClient:
         if not urns:
             return {}
 
+        start = time.perf_counter()
         index = self.client.index(self.config.index_name)
 
         # Build filter to match any of the URNs within the organization
@@ -545,11 +602,19 @@ class MeilisearchClient:
                 filter=combined_filter,
                 limit=len(urns),
             )
-            return {doc["urn"]: doc for doc in docs.results if "urn" in doc}
+            result = {doc["urn"]: doc for doc in docs.results if "urn" in doc}
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                f"Meilisearch: get_documents_by_urns found={len(result)}/{len(urns)}",
+                ms=f"{elapsed_ms:.1f}",
+            )
+            return result
         except Exception as e:
-            # Log the error for debugging
-            from loguru import logger
-            logger.warning(f"Failed to fetch documents by URNs: {e}")
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.warning(
+                f"Meilisearch: get_documents_by_urns failed: {e}",
+                ms=f"{elapsed_ms:.1f}",
+            )
             return {}
 
     async def health_check(self) -> bool:
@@ -562,10 +627,22 @@ class MeilisearchClient:
             True if healthy, False otherwise.
 
         """
+        start = time.perf_counter()
         try:
             health = await self.client.health()
-            return health.status == "available"
-        except Exception:
+            is_healthy = health.status == "available"
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                f"Meilisearch: health_check status={health.status}",
+                ms=f"{elapsed_ms:.1f}",
+            )
+            return is_healthy
+        except Exception as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.warning(
+                f"Meilisearch: health_check failed: {e}",
+                ms=f"{elapsed_ms:.1f}",
+            )
             return False
 
 

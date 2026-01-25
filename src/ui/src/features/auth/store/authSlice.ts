@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { UserInfoResponse } from '@/gen/auth/v1/auth_pb';
+import type { CurrentUserResponse } from '@/gen/auth/v1/auth_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 
 /**
@@ -11,10 +11,11 @@ import type { PlainMessage } from '@bufbuild/protobuf';
  * a new accessToken via the rehydrateAuth() function.
  */
 export interface AuthState {
-  user: PlainMessage<UserInfoResponse> | null;
+  user: PlainMessage<CurrentUserResponse> | null;
   accessToken: string | null; // Memory only - never persisted
   refreshToken: string | null; // Persisted for session continuity
   currentOrganizationId: string | null;
+  currentOrganizationRole: string | null; // MEMBER, ADMIN, or OWNER
   isAuthenticated: boolean;
   isRehydrating: boolean; // True while refreshing token on app startup
 }
@@ -24,6 +25,7 @@ const initialState: AuthState = {
   accessToken: null,
   refreshToken: null,
   currentOrganizationId: null,
+  currentOrganizationRole: null,
   isAuthenticated: false,
   isRehydrating: false,
 };
@@ -35,16 +37,18 @@ export const authSlice = createSlice({
     setCredentials: (
       state,
       action: PayloadAction<{
-        user: PlainMessage<UserInfoResponse>;
+        user: PlainMessage<CurrentUserResponse>;
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
+        organizationRole?: string;
       }>
     ) => {
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || null;
+      state.currentOrganizationRole = action.payload.organizationRole || null;
       state.isAuthenticated = true;
       state.isRehydrating = false;
     },
@@ -63,11 +67,13 @@ export const authSlice = createSlice({
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
+        organizationRole?: string;
       }>
     ) => {
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;
+      state.currentOrganizationRole = action.payload.organizationRole || state.currentOrganizationRole;
       state.isAuthenticated = true;
       state.isRehydrating = false;
     },
@@ -79,6 +85,7 @@ export const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.currentOrganizationId = null;
+      state.currentOrganizationRole = null;
       state.isAuthenticated = false;
       state.isRehydrating = false;
     },
@@ -87,6 +94,7 @@ export const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.currentOrganizationId = null;
+      state.currentOrganizationRole = null;
       state.isAuthenticated = false;
       state.isRehydrating = false;
     },

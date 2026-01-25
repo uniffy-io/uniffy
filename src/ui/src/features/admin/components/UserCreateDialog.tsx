@@ -1,11 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { AuthService } from "@/gen/auth/v1/auth_connect";
-import { AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
+import { UsersService } from "@/gen/users/v1/users_connect";
+import { OrganizationsService } from "@/gen/organizations/v1/organizations_connect";
+import { OrganizationDetail } from "@/gen/organizations/v1/organizations_pb";
+import { OrganizationRole } from "@/gen/common/v1/common_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { transport } from "@/config";
 import { XMarkIcon } from '@heroicons/react/24/outline';
+
+// Role options for organization membership
+const ORG_ROLE_OPTIONS: SelectOption<number>[] = [
+    { value: OrganizationRole.MEMBER, label: 'Member' },
+    { value: OrganizationRole.ADMIN, label: 'Admin' },
+    { value: OrganizationRole.OWNER, label: 'Owner' },
+];
 
 interface UserCreateDialogProps {
   isOpen: boolean;
@@ -18,22 +28,20 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isActive, setIsActive] = useState(true);
   const [isSystemAdmin, setIsSystemAdmin] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-  
+
   const [orgId, setOrgId] = useState('');
-  const [orgRole, setOrgRole] = useState('MEMBER');
-  
-  const [organizations, setOrganizations] = useState<AdminOrganizationInfo[]>([]);
+  const [orgRole, setOrgRole] = useState<OrganizationRole>(OrganizationRole.MEMBER);
+
+  const [organizations, setOrganizations] = useState<OrganizationDetail[]>([]);
   const [loading, setLoading] = useState(false);
   const accessToken = useAppSelector((state) => state.auth?.accessToken);
 
   const fetchOrganizations = useCallback(async () => {
     try {
-      const client = createClient(AuthService, transport);
-      const response = await client.listAllOrganizations(
-        { page: 1, pageSize: 100 }, 
+      const client = createClient(OrganizationsService, transport);
+      const response = await client.listOrganizations(
+        { pagination: { page: 1, pageSize: 100 } },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setOrganizations(response.organizations);
@@ -48,29 +56,49 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
     }
   }, [isOpen, accessToken, fetchOrganizations]);
 
+  // Build organization options for the select
+  const orgOptions: SelectOption<string>[] = useMemo(() => [
+    { value: '', label: 'Select an organization...' },
+    ...organizations.map((org) => ({
+      value: org.organization?.id || '',
+      label: `${org.organization?.name} (${org.organization?.slug})`,
+    })),
+  ], [organizations]);
+
   if (!isOpen) return null;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accessToken) return;
     setLoading(true);
-    
+
     try {
-      const client = createClient(AuthService, transport);
-      await client.adminCreateUser(
+      const usersClient = createClient(UsersService, transport);
+
+      // Create the user
+      const newUser = await usersClient.createUser(
         {
           fullName: fullName || undefined,
-          username,
+          username: username || undefined,
           email,
           password,
-          isActive,
-          isSystemAdmin,
-          emailVerified,
-          organizationId: orgId || undefined,
-          organizationRole: orgId ? orgRole : undefined
+          isSystemAdmin
         },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
+
+      // If an organization is selected, add the user to it
+      if (orgId && newUser.id) {
+        await usersClient.addUserToOrganization(
+          {
+            userId: newUser.id,
+            organizationId: orgId,
+            role: orgRole
+          },
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+      }
+
       onSave();
       onClose();
       // Reset form
@@ -78,11 +106,9 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
       setUsername('');
       setEmail('');
       setPassword('');
-      setIsActive(true);
       setIsSystemAdmin(false);
-      setEmailVerified(false);
       setOrgId('');
-      setOrgRole('member');
+      setOrgRole(OrganizationRole.MEMBER);
     } catch (err: unknown) {
       console.error('Failed to create user:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -164,32 +190,12 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
               <label className="flex items-center gap-3 cursor-pointer group">
                 <input
                   type="checkbox"
-                  id="create-isActive"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span className="text-sm font-medium group-hover:text-foreground">Active account</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
                   id="create-isSystemAdmin"
                   checked={isSystemAdmin}
                   onChange={(e) => setIsSystemAdmin(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                 />
                 <span className="text-sm font-medium group-hover:text-foreground">System Administrator</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  id="create-emailVerified"
-                  checked={emailVerified}
-                  onChange={(e) => setEmailVerified(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span className="text-sm font-medium group-hover:text-foreground">Email verified</span>
               </label>
             </div>
           </div>
@@ -199,31 +205,23 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
             <div className="space-y-3">
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-muted-foreground">Organization</label>
-                <select
+                <Select
                   value={orgId}
-                  onChange={(e) => setOrgId(e.target.value)}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                >
-                  <option value="">Select an organization...</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name} ({org.slug})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setOrgId}
+                  options={orgOptions}
+                  placeholder="Select an organization..."
+                  className="w-full"
+                />
               </div>
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-muted-foreground">Role</label>
-                <select
+                <Select
                   value={orgRole}
-                  onChange={(e) => setOrgRole(e.target.value)}
+                  onChange={(val) => setOrgRole(val as OrganizationRole)}
+                  options={ORG_ROLE_OPTIONS}
                   disabled={!orgId}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed capitalize"
-                >
-                  <option value="MEMBER">Member</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="OWNER">Owner</option>
-                </select>
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

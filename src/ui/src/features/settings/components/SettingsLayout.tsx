@@ -1,5 +1,7 @@
 /**
  * Settings layout component with sidebar navigation.
+ *
+ * Personal user preferences only - org admin functionality has moved to /admin.
  */
 
 import React from 'react';
@@ -12,7 +14,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { ProfileSwitcher } from './ProfileSwitcher';
 
-export type SettingsSection = 'appearance' | 'shortcuts' | 'notifications' | 'profile' | 'general';
+export type SettingsSection =
+    | 'appearance'
+    | 'shortcuts'
+    | 'notifications'
+    | 'profile'
+    | 'general';
 
 interface SettingsLayoutProps {
     activeSection: SettingsSection;
@@ -48,7 +55,7 @@ export function SettingsLayout({
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 p-2">
+                <nav className="flex-1 p-2 overflow-y-auto">
                     {SECTIONS.map(({ id, label, icon: Icon }) => (
                         <button
                             key={id}
@@ -69,9 +76,7 @@ export function SettingsLayout({
 
             {/* Main content */}
             <main className="flex-1 overflow-auto">
-                <div className="max-w-3xl mx-auto p-8">
-                    {children}
-                </div>
+                <div className="max-w-3xl mx-auto p-8">{children}</div>
             </main>
         </div>
     );

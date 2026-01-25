@@ -2,17 +2,20 @@
 Core permission checking logic for all content types.
 
 Provides centralized permission verification based on:
+- Organization role (OWNER/ADMIN have elevated access)
 - Content ownership
 - Visibility scope (private, group, organization, public)
 - Group membership
-- Explicit permission grants
+- Explicit permission grants (with expiration support)
 """
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uwos.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uwos.core.types import (
     ContentType,
     PermissionLevel,
@@ -84,6 +87,10 @@ class PermissionChecker:
         if content_owner_id == user_id:
             return True
 
+        # Org OWNER/ADMIN always have full access to all org content
+        if await self._is_org_admin(user_id, organization_id):
+            return True
+
         # Check if user is in the organization
         if not await self._is_user_in_organization(user_id, organization_id):
             return False
@@ -145,6 +152,10 @@ class PermissionChecker:
         if content_owner_id == user_id:
             return True
 
+        # Org OWNER/ADMIN always have full access to all org content
+        if await self._is_org_admin(user_id, organization_id):
+            return True
+
         # Check if user can access first
         if not await self.can_access_content(
             user_id,
@@ -199,6 +210,10 @@ class PermissionChecker:
         if content_owner_id == user_id:
             return True
 
+        # Org OWNER/ADMIN always have full access to all org content
+        if await self._is_org_admin(user_id, organization_id):
+            return True
+
         # Check for explicit delete permission
         permission = await self._get_user_permission(
             user_id, content_type, content_id, organization_id
@@ -238,6 +253,10 @@ class PermissionChecker:
         """
         # Owner always can share
         if content_owner_id == user_id:
+            return True
+
+        # Org OWNER/ADMIN always have full access to all org content
+        if await self._is_org_admin(user_id, organization_id):
             return True
 
         # Check for explicit share permission
@@ -281,6 +300,10 @@ class PermissionChecker:
         if content_owner_id == user_id:
             return True
 
+        # Org OWNER/ADMIN always have full access to all org content
+        if await self._is_org_admin(user_id, organization_id):
+            return True
+
         # Check for explicit move permission
         permission = await self._get_user_permission(
             user_id, content_type, content_id, organization_id
@@ -321,6 +344,10 @@ class PermissionChecker:
         # Owner has OWNER level
         if content_owner_id == user_id:
             return PermissionLevel.OWNER
+
+        # Org OWNER/ADMIN have ADMIN level on all content
+        if await self._is_org_admin(user_id, organization_id):
+            return PermissionLevel.ADMIN
 
         # Check for explicit permission
         permission = await self._get_user_permission(
@@ -466,9 +493,12 @@ class PermissionChecker:
         content_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Check if user has an explicit permission grant."""
+        """Check if user has an explicit permission grant (not expired)."""
+        from sqlalchemy import or_
+
         from uwos.core.models.permissions.content_permission import ContentPermission
 
+        now = datetime.now(UTC)
         result = await self.session.execute(
             select(ContentPermission)
             .where(ContentPermission.organization_id == organization_id)
@@ -477,6 +507,12 @@ class PermissionChecker:
             .where(ContentPermission.subject_type == SubjectType.USER)
             .where(ContentPermission.subject_id == user_id)
             .where(ContentPermission.can_view == True)  # noqa: E712
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
         )
 
         return result.scalar_one_or_none() is not None
@@ -517,9 +553,12 @@ class PermissionChecker:
         content_id: UUID,
         organization_id: UUID,
     ):
-        """Get the explicit permission for a user on content."""
+        """Get the explicit permission for a user on content (not expired)."""
+        from sqlalchemy import or_
+
         from uwos.core.models.permissions.content_permission import ContentPermission
 
+        now = datetime.now(UTC)
         result = await self.session.execute(
             select(ContentPermission)
             .where(ContentPermission.organization_id == organization_id)
@@ -527,6 +566,36 @@ class PermissionChecker:
             .where(ContentPermission.content_id == content_id)
             .where(ContentPermission.subject_type == SubjectType.USER)
             .where(ContentPermission.subject_id == user_id)
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
         )
 
         return result.scalar_one_or_none()
+
+    async def _get_user_org_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> OrganizationRole | None:
+        """Get the user's role in the organization."""
+        result = await self.session.execute(
+            select(OrganizationMember.role)
+            .where(OrganizationMember.user_id == user_id)
+            .where(OrganizationMember.organization_id == organization_id)
+            .where(OrganizationMember.is_active == True)  # noqa: E712
+        )
+        row = result.scalar_one_or_none()
+        return row if row else None
+
+    async def _is_org_admin(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> bool:
+        """Check if user is an organization OWNER or ADMIN."""
+        role = await self._get_user_org_role(user_id, organization_id)
+        return role in (OrganizationRole.OWNER, OrganizationRole.ADMIN)

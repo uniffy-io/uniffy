@@ -1,12 +1,13 @@
 """
-Auth domain - authentication, users, organizations, and groups.
+Auth domain - authentication only.
 
 This domain handles:
 - User authentication (login, register, token refresh)
-- User management
-- Organization management
-- Group management
-- Membership operations
+- Token management
+
+Note: User, organization, and group management have been moved to their
+respective domains: uwos.domains.users, uwos.domains.organizations,
+and uwos.domains.groups.
 """
 
 from uwos.domains.auth.context import (
@@ -19,11 +20,8 @@ from uwos.domains.auth.errors import (
     RegistrationError,
     TokenError,
 )
-from uwos.domains.auth.groups import GroupOperations
 from uwos.domains.auth.handlers import AuthHandlers
-from uwos.domains.auth.handlers_admin import AdminHandlers, GroupHandlers
 from uwos.domains.auth.operations import AuthOperations
-from uwos.domains.auth.orgs import OrganizationOperations
 from uwos.domains.auth.passwords import hash_password, verify_password
 from uwos.domains.auth.service import AuthServiceImpl
 from uwos.domains.auth.tokens import (
@@ -32,7 +30,6 @@ from uwos.domains.auth.tokens import (
     decode_access_token,
 )
 from uwos.domains.auth.types import AuthResult, TokenPair
-from uwos.domains.auth.users import UserOperations
 
 __all__ = [
     # Context
@@ -55,13 +52,8 @@ __all__ = [
     "OrganizationAccessError",
     # Operations
     "AuthOperations",
-    "UserOperations",
-    "OrganizationOperations",
-    "GroupOperations",
     # Handlers
     "AuthHandlers",
-    "AdminHandlers",
-    "GroupHandlers",
     # Service (for mounting)
     "AuthServiceImpl",
 ]

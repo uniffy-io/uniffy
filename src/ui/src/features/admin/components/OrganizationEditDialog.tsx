@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { AuthService } from "@/gen/auth/v1/auth_connect";
-import { AdminOrganizationInfo } from "@/gen/auth/v1/auth_pb";
+import { OrganizationsService } from "@/gen/organizations/v1/organizations_connect";
+import { OrganizationDetail } from "@/gen/organizations/v1/organizations_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface OrganizationEditDialogProps {
-  org?: AdminOrganizationInfo | null;
+  org?: OrganizationDetail | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -17,25 +17,22 @@ interface OrganizationEditDialogProps {
 export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: OrganizationEditDialogProps) {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [domain, setDomain] = useState('');
-  const [plan, setPlan] = useState('free');
+  const [logoUrl, setLogoUrl] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
   const { accessToken } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     if (isOpen) {
-      if (org) {
-        setName(org.name);
-        setSlug(org.slug);
-        setDomain(org.domain || '');
-        setPlan(org.plan);
+      if (org?.organization) {
+        setName(org.organization.name);
+        setSlug(org.organization.slug);
+        setLogoUrl(org.organization.logoUrl || '');
         setIsActive(org.isActive);
       } else {
         setName('');
         setSlug('');
-        setDomain('');
-        setPlan('free');
+        setLogoUrl('');
         setIsActive(true);
       }
     }
@@ -47,29 +44,28 @@ export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: Organiz
     e.preventDefault();
     if (!accessToken) return;
     setLoading(true);
-    
+
     try {
-      const client = createClient(AuthService, transport);
-      if (org) {
+      const client = createClient(OrganizationsService, transport);
+      if (org?.organization) {
         // Edit mode
         await client.updateOrganization(
           {
-            organizationId: org.id,
+            organizationId: org.organization.id,
             name,
-            domain: domain || undefined,
-            plan,
+            slug,
+            logoUrl: logoUrl || undefined,
             isActive
           },
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
       } else {
         // Create mode
-        await client.adminCreateOrganization(
+        await client.createOrganization(
           {
             name,
             slug,
-            domain: domain || undefined,
-            plan
+            logoUrl: logoUrl || undefined
           },
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
@@ -129,28 +125,15 @@ export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: Organiz
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-semibold">Domain</label>
+            <label className="block text-sm font-semibold">Logo URL</label>
             <input
               type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="acme.com"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              placeholder="https://example.com/logo.png"
               className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
             />
-            <p className="text-xs text-muted-foreground">Optional: Custom domain for this organization</p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold">Plan *</label>
-            <select
-              value={plan}
-              onChange={(e) => setPlan(e.target.value)}
-              className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all capitalize"
-            >
-              <option value="free">Free</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
+            <p className="text-xs text-muted-foreground">Optional: Logo URL for this organization</p>
           </div>
 
           {isEdit && (

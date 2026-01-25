@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package permissions.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "uwos/gen/permissions/v1;permissionsv1";
+
+// =============================================================================
+// PermissionsService - Fine-grained content permission management
+// =============================================================================
+
+service PermissionsService {
+  // Grant permission to a user or group on content
+  rpc GrantPermission(GrantPermissionRequest) returns (PermissionInfo);
+
+  // Revoke permission from a user or group on content
+  rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse);
+
+  // Update an existing permission
+  rpc UpdatePermission(UpdatePermissionRequest) returns (PermissionInfo);
+
+  // List all permissions for a piece of content
+  rpc ListContentPermissions(ListContentPermissionsRequest) returns (PermissionListResponse);
+
+  // Get the current user's permission on content
+  rpc GetMyPermission(GetMyPermissionRequest) returns (PermissionInfo);
+
+  // Search for users and groups to share with
+  rpc SearchShareTargets(SearchShareTargetsRequest) returns (ShareTargetsResponse);
+}
+
+// =============================================================================
+// Request Messages
+// =============================================================================
+
+// Request to grant permission
+message GrantPermissionRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  common.v1.SubjectType subject_type = 4;
+  string subject_id = 5;
+  common.v1.PermissionLevel level = 6;
+  optional google.protobuf.Timestamp expires_at = 7;
+}
+
+// Request to revoke permission
+message RevokePermissionRequest {
+  string organization_id = 1;
+  string permission_id = 2;
+}
+
+// Request to update permission
+message UpdatePermissionRequest {
+  string organization_id = 1;
+  string permission_id = 2;
+  optional common.v1.PermissionLevel level = 3;
+  optional google.protobuf.Timestamp expires_at = 4;
+  bool clear_expiration = 5;
+}
+
+// Request to list permissions for content
+message ListContentPermissionsRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+}
+
+// Request to get current user's permission
+message GetMyPermissionRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+}
+
+// Request to search for share targets
+message SearchShareTargetsRequest {
+  string organization_id = 1;
+  string query = 2;
+  int32 limit = 3;
+  bool include_users = 4;
+  bool include_groups = 5;
+}
+
+// =============================================================================
+// Response Messages
+// =============================================================================
+
+// Response for revoke operation
+message RevokePermissionResponse {
+  bool success = 1;
+}
+
+// Response for listing permissions
+message PermissionListResponse {
+  repeated PermissionInfo permissions = 1;
+  ShareTarget owner = 2;
+}
+
+// Response for search share targets
+message ShareTargetsResponse {
+  repeated ShareTarget targets = 1;
+}
+
+// =============================================================================
+// Data Messages
+// =============================================================================
+
+// Permission information
+message PermissionInfo {
+  string id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  common.v1.SubjectType subject_type = 4;
+  ShareTarget subject = 5;
+  common.v1.PermissionLevel level = 6;
+  // Fine-grained permissions
+  bool can_view = 7;
+  bool can_edit = 8;
+  bool can_delete = 9;
+  bool can_share = 10;
+  bool can_move = 11;
+  // Audit fields
+  ShareTarget granted_by = 12;
+  google.protobuf.Timestamp granted_at = 13;
+  optional google.protobuf.Timestamp expires_at = 14;
+}
+
+// Share target (user or group)
+message ShareTarget {
+  string id = 1;
+  common.v1.SubjectType type = 2;
+  string name = 3;
+  string email = 4;
+  string avatar_url = 5;
+  int32 member_count = 6;  // For groups
+}

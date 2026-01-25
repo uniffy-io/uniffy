@@ -1,5 +1,7 @@
 /**
  * Settings page - main entry point for user settings.
+ *
+ * Personal user preferences only - org admin functionality has moved to /admin.
  */
 
 import { useEffect, useState } from 'react';

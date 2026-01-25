@@ -13,6 +13,7 @@ from uwos.core.models.login.user import User
 from uwos.core.models.notes.note import Note
 from uwos.core.models.permissions.content_group_link import ContentGroupLink
 from uwos.core.models.permissions.content_permission import ContentPermission
+from uwos.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uwos.core.models.settings.settings_profile import SettingsProfile
 from uwos.core.models.shared import (
     AttendeeRole,
@@ -48,9 +49,7 @@ __all__ = [
     # Permission models
     "ContentGroupLink",
     "ContentPermission",
-    # Settings models
-    "SettingsProfile",
-    # Shared enums
+    "OrganizationPermissionDefaults",
     "VisibilityScope",
     "ContentType",
     "PermissionLevel",

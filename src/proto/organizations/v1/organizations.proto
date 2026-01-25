@@ -1,0 +1,191 @@
+syntax = "proto3";
+
+package organizations.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "uwos/gen/organizations/v1;organizationsv1";
+
+// =============================================================================
+// OrganizationsService - Organization CRUD, membership, and settings
+// =============================================================================
+
+service OrganizationsService {
+  // User's organizations
+  rpc ListMyOrganizations(ListMyOrganizationsRequest) returns (ListMyOrganizationsResponse);
+
+  // Organization CRUD (System Admin)
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc GetOrganization(GetOrganizationRequest) returns (OrganizationDetail);
+  rpc CreateOrganization(CreateOrganizationRequest) returns (common.v1.OrganizationInfo);
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (common.v1.OrganizationInfo);
+  rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse);
+
+  // Organization overview (Org Admin)
+  rpc GetOrganizationOverview(GetOrganizationOverviewRequest) returns (OrganizationOverview);
+
+  // Member management (Org Admin)
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc AddMember(AddMemberRequest) returns (common.v1.MemberInfo);
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (common.v1.MemberInfo);
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+
+  // Permission defaults (Org Admin)
+  rpc GetPermissionDefaults(GetPermissionDefaultsRequest) returns (PermissionDefaultsResponse);
+  rpc UpdatePermissionDefaults(UpdatePermissionDefaultsRequest) returns (ContentTypeDefaults);
+}
+
+// =============================================================================
+// User's Organizations Messages
+// =============================================================================
+
+message ListMyOrganizationsRequest {}
+
+message ListMyOrganizationsResponse {
+  repeated MyOrganization organizations = 1;
+}
+
+message MyOrganization {
+  common.v1.OrganizationInfo organization = 1;
+  common.v1.OrganizationRole role = 2;
+  google.protobuf.Timestamp joined_at = 3;
+}
+
+// =============================================================================
+// Organization CRUD Messages (System Admin)
+// =============================================================================
+
+message ListOrganizationsRequest {
+  optional common.v1.PaginationRequest pagination = 1;
+  optional string search = 2;
+}
+
+message ListOrganizationsResponse {
+  repeated OrganizationDetail organizations = 1;
+  optional common.v1.PaginationResponse pagination = 2;
+}
+
+message OrganizationDetail {
+  common.v1.OrganizationInfo organization = 1;
+  int32 member_count = 2;
+  int32 group_count = 3;
+  bool is_active = 4;
+}
+
+message GetOrganizationRequest {
+  string organization_id = 1;
+}
+
+message CreateOrganizationRequest {
+  string name = 1;
+  string slug = 2;
+  optional string logo_url = 3;
+  optional string owner_user_id = 4;
+}
+
+message UpdateOrganizationRequest {
+  string organization_id = 1;
+  optional string name = 2;
+  optional string slug = 3;
+  optional string logo_url = 4;
+  optional bool is_active = 5;
+}
+
+message DeleteOrganizationRequest {
+  string organization_id = 1;
+}
+
+message DeleteOrganizationResponse {
+  bool success = 1;
+}
+
+// =============================================================================
+// Organization Overview Messages (Org Admin)
+// =============================================================================
+
+message GetOrganizationOverviewRequest {
+  string organization_id = 1;
+}
+
+message OrganizationOverview {
+  common.v1.OrganizationInfo organization = 1;
+  int32 member_count = 2;
+  int32 group_count = 3;
+  repeated ContentTypeCount content_counts = 4;
+}
+
+message ContentTypeCount {
+  common.v1.ContentType content_type = 1;
+  int32 count = 2;
+}
+
+// =============================================================================
+// Member Management Messages (Org Admin)
+// =============================================================================
+
+message ListMembersRequest {
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+  optional common.v1.OrganizationRole role_filter = 3;
+  optional string search = 4;
+  optional bool include_inactive = 5;
+}
+
+message ListMembersResponse {
+  repeated common.v1.MemberInfo members = 1;
+  optional common.v1.PaginationResponse pagination = 2;
+}
+
+message AddMemberRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  common.v1.OrganizationRole role = 3;
+}
+
+message UpdateMemberRoleRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  common.v1.OrganizationRole role = 3;
+}
+
+message RemoveMemberRequest {
+  string organization_id = 1;
+  string user_id = 2;
+}
+
+message RemoveMemberResponse {
+  bool success = 1;
+}
+
+// =============================================================================
+// Permission Defaults Messages (Org Admin)
+// =============================================================================
+
+message GetPermissionDefaultsRequest {
+  string organization_id = 1;
+}
+
+message PermissionDefaultsResponse {
+  repeated ContentTypeDefaults defaults = 1;
+}
+
+message UpdatePermissionDefaultsRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  optional common.v1.VisibilityScope default_visibility = 3;
+  optional bool members_can_view = 4;
+  optional bool members_can_edit = 5;
+  optional bool members_can_delete = 6;
+  optional bool members_can_share = 7;
+}
+
+message ContentTypeDefaults {
+  common.v1.ContentType content_type = 1;
+  common.v1.VisibilityScope default_visibility = 2;
+  bool members_can_view = 3;
+  bool members_can_edit = 4;
+  bool members_can_delete = 5;
+  bool members_can_share = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}

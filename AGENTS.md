@@ -184,6 +184,70 @@ When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these
 
 Run `make proto` after updating the proto file to regenerate TypeScript and Python bindings.
 
+### API Services Architecture
+
+The backend is organized into domain-specific ConnectRPC services. Each service has its own proto definition and handles a specific domain.
+
+**Core Services:**
+
+| Service | Proto | Purpose |
+|---------|-------|---------|
+| `auth.v1.AuthService` | `src/proto/auth/v1/auth.proto` | Authentication only (5 methods: Register, Login, RefreshToken, GetCurrentUser, Logout) |
+| `users.v1.UsersService` | `src/proto/users/v1/users.proto` | User profile CRUD, user org memberships |
+| `organizations.v1.OrganizationsService` | `src/proto/organizations/v1/organizations.proto` | Organization CRUD, member management, permission defaults |
+| `groups.v1.GroupsService` | `src/proto/groups/v1/groups.proto` | Group CRUD, group membership |
+| `permissions.v1.PermissionsService` | `src/proto/permissions/v1/permissions.proto` | Content permission management |
+
+**Content Services:**
+
+| Service | Proto | Purpose |
+|---------|-------|---------|
+| `notes.v1.NotesService` | `src/proto/notes/v1/notes.proto` | Notes/documents |
+| `bookmarks.v1.BookmarksService` | `src/proto/bookmarks/v1/bookmarks.proto` | User bookmarks |
+| `search.v1.SearchService` | `src/proto/search/v1/search.proto` | Full-text search |
+| `settings.v1.SettingsService` | `src/proto/settings/v1/settings.proto` | User settings |
+
+**Common Types** (`src/proto/common/v1/common.proto`):
+
+Shared enums and messages used across services:
+
+```protobuf
+// Enums
+enum OrganizationRole { MEMBER, ADMIN, OWNER }
+enum GroupRole { MEMBER, ADMIN }
+enum ContentType { NOTE, FILE, CALENDAR_EVENT, ... }
+enum PermissionLevel { VIEW, EDIT, ADMIN }
+enum VisibilityScope { PRIVATE, GROUP, ORGANIZATION }
+
+// Messages
+message UserInfo { id, email, full_name, username, avatar_url, created_at }
+message OrganizationInfo { id, name, slug, logo_url, created_at, updated_at }
+message GroupInfo { id, organization_id, name, slug, description, ... }
+message MemberInfo { user_id, display_name, email, role, joined_at, is_active }
+message GroupMemberInfo { user_id, display_name, email, role, joined_at }
+
+// Pagination
+message PaginationRequest { page, page_size }
+message PaginationResponse { page, page_size, total_count, total_pages }
+```
+
+**Frontend Import Pattern:**
+
+```typescript
+// Service clients
+import { UsersService } from '@/gen/users/v1/users_connect';
+import { OrganizationsService } from '@/gen/organizations/v1/organizations_connect';
+import { GroupsService } from '@/gen/groups/v1/groups_connect';
+
+// Types from service-specific _pb files
+import { UserProfile } from '@/gen/users/v1/users_pb';
+import { OrganizationDetail } from '@/gen/organizations/v1/organizations_pb';
+import { GroupDetail } from '@/gen/groups/v1/groups_pb';
+
+// Shared types from common
+import { OrganizationRole, GroupRole, PaginationRequest } from '@/gen/common/v1/common_pb';
+```
+
 ### Key Backend Patterns
 
 - **Async everywhere**: All database I/O must use `AsyncSession`
@@ -241,14 +305,20 @@ Contact [[[John Doe|urn:uwos:content:USER:uuid]]] for questions.
 
 JWT-based authentication with access/refresh token pattern. Users authenticate globally, then select an organization context.
 
+**Important:** `AuthService` handles **authentication only** (5 methods). For user/org/group management, use the dedicated services:
+- User management → `users.v1.UsersService`
+- Organization management → `organizations.v1.OrganizationsService`
+- Group management → `groups.v1.GroupsService`
+
 **Key Files:**
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Proto | `src/proto/auth/v1/auth.proto` | API contract (Login, Register, RefreshToken, etc.) |
+| Proto | `src/proto/auth/v1/auth.proto` | Auth API (Register, Login, RefreshToken, GetCurrentUser, Logout) |
+| Proto | `src/proto/users/v1/users.proto` | User profile CRUD, org membership management |
+| Proto | `src/proto/organizations/v1/organizations.proto` | Org CRUD, member management |
 | Backend | `src/uwos/domains/auth/operations.py` | Auth business logic (login, refresh, token validation) |
 | Backend | `src/uwos/domains/auth/tokens.py` | JWT creation/validation (access + refresh tokens) |
-| Backend | `src/uwos/domains/auth/handlers.py` | RPC handlers |
 | Backend | `src/uwos/core/models/login/user.py` | User model with `token_version` for revocation |
 | Frontend | `src/ui/src/config/api.ts` | Token storage, refresh, rehydration, auth interceptor |
 | Frontend | `src/ui/src/features/auth/store/authSlice.ts` | Auth state (user, tokens, org ID) |
@@ -312,6 +382,66 @@ const handleLogout = () => {
 ```
 
 When adding new features with user/org-specific state, add a reset action and include it in logout handlers.
+
+### Administration System
+
+UWOS has a unified administration panel at `/admin` with two admin types:
+
+**Admin Hierarchy:**
+
+| Role | Scope | Capabilities |
+|------|-------|--------------|
+| **Organization Admin** | Current org only | Manage members, groups, permissions, org settings |
+| **System Admin** | All orgs + server | Everything above + manage all organizations, all users, server settings |
+
+**Route Structure:**
+
+```
+/admin                    # Unified admin panel (org admins + system admins)
+├── /admin/members        # Org members (org admin)
+├── /admin/groups         # Groups/teams (org admin)
+├── /admin/permissions    # Permission defaults (org admin)
+├── /admin/org-settings   # Org config (org admin)
+├── /admin/organizations  # All orgs (system admin only)
+├── /admin/users          # All users (system admin only)
+└── /admin/server-settings # Global config (system admin only)
+
+/settings                 # Personal user preferences (all users)
+├── ?section=appearance
+├── ?section=shortcuts
+├── ?section=notifications
+└── ?section=account
+```
+
+**Access Control:**
+
+- Organization role (`currentOrganizationRole`) is returned in `AuthResponse` and stored in Redux
+- Use `useAdminAccess()` hook to check permissions:
+
+```typescript
+import { useAdminAccess } from '@/features/admin';
+
+function MyComponent() {
+    const { isOrgAdmin, isSystemAdmin, canAccessAdmin } = useAdminAccess();
+    // isOrgAdmin: true if role is ADMIN or OWNER in current org
+    // isSystemAdmin: true if user.isSystemAdmin
+    // canAccessAdmin: isOrgAdmin || isSystemAdmin
+}
+```
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/features/admin/hooks/useAdminHooks.ts` | `useAdminAccess()` hook |
+| `src/ui/src/features/admin/layouts/AdminLayout.tsx` | Role-aware sidebar layout |
+| `src/ui/src/features/admin/components/AdminRoute.tsx` | Route guard for admin pages |
+| `src/ui/src/features/auth/store/authSlice.ts` | `currentOrganizationRole` state |
+
+**Important:**
+- `/settings` is for personal preferences only (appearance, shortcuts, notifications)
+- All organization management is under `/admin`
+- The "Administration" menu item in UserMenu is visible to org admins and system admins
 
 ### Permission System
 
@@ -423,7 +553,29 @@ function BookmarksList() {
 - `src/features/`: Domain modules (auth, notes, etc.) with components, hooks, store
 - `src/components/ui/`: Shared UI primitives
 - `src/theme/`: Theme engine (dark/light + user accent colors)
-- `src/gen/`: Generated ConnectRPC clients
+- `src/gen/`: Generated ConnectRPC clients (organized by service)
+
+**Generated Code Structure** (`src/gen/`):
+
+```
+src/gen/
+├── common/v1/          # Shared types (OrganizationRole, GroupRole, PaginationRequest, etc.)
+│   ├── common_pb.ts    # Message and enum types
+│   └── common_connect.ts
+├── auth/v1/            # Authentication (login, register, refresh)
+├── users/v1/           # User management
+├── organizations/v1/   # Organization management
+├── groups/v1/          # Group management
+├── permissions/v1/     # Permission management
+├── notes/v1/           # Notes domain
+├── bookmarks/v1/       # Bookmarks domain
+├── search/v1/          # Search domain
+└── settings/v1/        # Settings domain
+```
+
+Each service directory contains:
+- `{service}_pb.ts` - Protobuf message types
+- `{service}_connect.ts` - ConnectRPC service client
 
 ### Adding a New Frontend Feature
 
@@ -516,6 +668,33 @@ features/{feature}/
 - Thunks handle API calls, slices handle state updates
 - Hooks abstract store interactions for components
 - Components never call API directly (always through store/hooks)
+
+**Admin Feature** (`src/features/admin/`):
+
+Unified administration panel for org admins and system admins.
+
+```
+features/admin/
+├── layouts/
+│   └── AdminLayout.tsx          # Role-aware sidebar layout
+├── components/
+│   ├── AdminRoute.tsx           # Route guard for admin pages
+│   ├── groups/GroupsSection.tsx # Groups management UI
+│   ├── members/MembersSection.tsx # Members management UI
+│   └── permissions/PermissionDefaultsSection.tsx
+├── hooks/
+│   └── useAdminHooks.ts         # useAdminAccess() and other hooks
+├── pages/
+│   ├── MembersPage.tsx          # Org members (org admin)
+│   ├── GroupsPage.tsx           # Org groups (org admin)
+│   ├── PermissionsPage.tsx      # Permission defaults (org admin)
+│   ├── OrgSettingsPage.tsx      # Org settings (org admin)
+│   ├── OrganizationsPage.tsx    # All orgs (system admin)
+│   ├── UsersPage.tsx            # All users (system admin)
+│   └── ServerSettingsPage.tsx   # Server config (system admin)
+└── store/
+    └── adminSlice.ts            # Admin state management
+```
 
 ### Path Aliases
 
@@ -822,3 +1001,4 @@ function NewEventButton() {
 10. Use centralized URN type colors from `@/theme/urnColors.ts` - never define URN colors inline
 11. Use the keyboard shortcuts framework from `@/features/settings` - never hardcode keyboard handlers
 12. Use the shared bookmarks system (`@/features/bookmarks`) - never add `is_pinned`/`is_starred`/`is_favorite` fields to content models
+13. Always use uv to run python scripts 

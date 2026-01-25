@@ -13,6 +13,7 @@ import type { EditorMode } from '../store/editorSlice';
 import { fetchNotes, setCurrentNote, fetchNote } from '../store/notesSlice';
 import { fetchNotesTree } from '../store/notesTreeSlice';
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
+import { SharingDialog } from '@/features/sharing';
 
 export default function NotesPage() {
   useDocumentTitle('Notes');
@@ -82,6 +83,7 @@ export default function NotesPage() {
         showSidebar={isSidebarOpen}
         showMetadataPanel={isMetadataPanelOpen && !!currentNoteId}
       />
+      <SharingDialog />
     </>
   );
 }
