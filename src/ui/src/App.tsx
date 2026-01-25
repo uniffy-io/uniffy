@@ -16,6 +16,7 @@ import { SettingsPage as UserSettingsPage } from '@/features/settings';
 import { SpotlightSearch } from '@/features/search';
 import { rehydrateAuth } from '@/config';
 import { useAppSelector } from '@/app/hooks';
+import { CalendarPage } from '@/features/calendar';
 
 /**
  * AuthInitializer - Handles auth token rehydration on app startup.
@@ -118,6 +119,13 @@ export default function App() {
         } />
         
         {/* User settings (unified profile + preferences) */}
+
+        <Route path="/calendar" element={
+          <ProtectedRoute>
+            <CalendarPage />
+          </ProtectedRoute>
+        } />
+
         <Route path="/settings" element={
           <ProtectedRoute>
             <MainLayout>

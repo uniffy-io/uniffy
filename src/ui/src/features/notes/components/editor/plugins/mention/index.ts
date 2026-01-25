@@ -324,5 +324,6 @@ export const mentionPlugins = [...mentionRemarkPlugin, mentionNode, mentionInput
 // Re-export components and hooks for use in other features
 export { MentionChip, MentionChipBasic, MentionChipCompact } from './MentionChip';
 export { MentionPreview } from './MentionPreview';
+export { MentionSearch } from './MentionSearch';
 export { useUrnPreview, clearPreviewCache, invalidatePreviewCache, invalidateNotePreviewCache } from './useUrnPreview';
 export type { UrnPreviewData } from './useUrnPreview';

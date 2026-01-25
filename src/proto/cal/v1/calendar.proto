@@ -1,0 +1,644 @@
+syntax = "proto3";
+
+package cal.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+// Recurrence patterns for repeating events
+enum RecurrencePattern {
+  RECURRENCE_PATTERN_UNSPECIFIED = 0;
+  RECURRENCE_PATTERN_NONE        = 1;
+  RECURRENCE_PATTERN_DAILY       = 2;
+  RECURRENCE_PATTERN_WEEKLY      = 3;
+  RECURRENCE_PATTERN_BIWEEKLY    = 4;
+  RECURRENCE_PATTERN_MONTHLY     = 5;
+  RECURRENCE_PATTERN_YEARLY      = 6;
+}
+
+// Days of the week
+enum DayOfWeek {
+  DAY_OF_WEEK_UNSPECIFIED = 0;
+  DAY_OF_WEEK_MONDAY      = 1;
+  DAY_OF_WEEK_TUESDAY     = 2;
+  DAY_OF_WEEK_WEDNESDAY   = 3;
+  DAY_OF_WEEK_THURSDAY    = 4;
+  DAY_OF_WEEK_FRIDAY      = 5;
+  DAY_OF_WEEK_SATURDAY    = 6;
+  DAY_OF_WEEK_SUNDAY      = 7;
+}
+
+// Attendee response status
+enum AttendeeStatus {
+  ATTENDEE_STATUS_UNSPECIFIED = 0;
+  ATTENDEE_STATUS_PENDING     = 1;
+  ATTENDEE_STATUS_ACCEPTED    = 2;
+  ATTENDEE_STATUS_TENTATIVE   = 3;
+  ATTENDEE_STATUS_DECLINED    = 4;
+}
+
+// Attendee role in the event
+enum AttendeeRole {
+  ATTENDEE_ROLE_UNSPECIFIED = 0;
+  ATTENDEE_ROLE_ORGANIZER   = 1;
+  ATTENDEE_ROLE_REQUIRED    = 2;
+  ATTENDEE_ROLE_OPTIONAL    = 3;
+}
+
+// Calendar types
+enum CalendarType {
+  CALENDAR_TYPE_UNSPECIFIED = 0;
+  CALENDAR_TYPE_PERSONAL    = 1;
+  CALENDAR_TYPE_WORK        = 2;
+  CALENDAR_TYPE_TEAM        = 3;
+  CALENDAR_TYPE_SHARED      = 4;
+}
+
+// Linked resource types
+enum ResourceType {
+  RESOURCE_TYPE_UNSPECIFIED = 0;
+  RESOURCE_TYPE_NOTE        = 1;
+  RESOURCE_TYPE_FILE        = 2;
+  RESOURCE_TYPE_CHAT        = 3;
+}
+
+// Visibility scope (reuse from notes for consistency)
+enum VisibilityScope {
+  VISIBILITY_SCOPE_UNSPECIFIED  = 0;
+  VISIBILITY_SCOPE_PRIVATE      = 1;
+  VISIBILITY_SCOPE_GROUP        = 2;
+  VISIBILITY_SCOPE_ORGANIZATION = 3;
+  VISIBILITY_SCOPE_PUBLIC       = 4;
+}
+
+// ============================================================================
+// Service Definition
+// ============================================================================
+
+// CalendarService provides calendar and event management functionality
+service CalendarService {
+  // === Event Operations ===
+
+  // Create a new calendar event
+  rpc CreateEvent(CreateEventRequest) returns (EventResponse) {}
+
+  // Get an event by ID
+  rpc GetEvent(GetEventRequest) returns (EventResponse) {}
+
+  // Update an existing event
+  rpc UpdateEvent(UpdateEventRequest) returns (EventResponse) {}
+
+  // Delete an event (soft delete)
+  rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse) {}
+
+  // List events with filters (date range, calendar, category, etc.)
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {}
+
+  // Get events for a specific date range (optimized for calendar views)
+  rpc GetEventsInRange(GetEventsInRangeRequest) returns (GetEventsInRangeResponse) {}
+
+  // === Calendar Operations ===
+
+  // Create a new calendar
+  rpc CreateCalendar(CreateCalendarRequest) returns (CalendarResponse) {}
+
+  // Get a calendar by ID
+  rpc GetCalendar(GetCalendarRequest) returns (CalendarResponse) {}
+
+  // Update a calendar
+  rpc UpdateCalendar(UpdateCalendarRequest) returns (CalendarResponse) {}
+
+  // Delete a calendar
+  rpc DeleteCalendar(DeleteCalendarRequest) returns (DeleteCalendarResponse) {}
+
+  // List user's calendars
+  rpc ListCalendars(ListCalendarsRequest) returns (ListCalendarsResponse) {}
+
+  // === Category Operations ===
+
+  // Create a new category
+  rpc CreateCategory(CreateCategoryRequest) returns (CategoryResponse) {}
+
+  // Get a category by ID
+  rpc GetCategory(GetCategoryRequest) returns (CategoryResponse) {}
+
+  // Update a category
+  rpc UpdateCategory(UpdateCategoryRequest) returns (CategoryResponse) {}
+
+  // Delete a category
+  rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse) {}
+
+  // List categories
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse) {}
+
+  // === Attendee Operations ===
+
+  // Update attendee response status
+  rpc UpdateAttendeeStatus(UpdateAttendeeStatusRequest) returns (UpdateAttendeeStatusResponse) {}
+
+  // Add attendees to an event
+  rpc AddAttendees(AddAttendeesRequest) returns (EventResponse) {}
+
+  // Remove attendees from an event
+  rpc RemoveAttendees(RemoveAttendeesRequest) returns (EventResponse) {}
+}
+
+// ============================================================================
+// Event Messages
+// ============================================================================
+
+// Calendar event
+message CalendarEvent {
+  // Unique event identifier
+  string id = 1;
+  // Organization ID (multi-tenancy)
+  string organization_id = 2;
+  // Event title
+  string title = 3;
+  // Event description (markdown with URN mentions)
+  string description = 4;
+  // Start time
+  google.protobuf.Timestamp start_time = 5;
+  // End time
+  google.protobuf.Timestamp end_time = 6;
+  // Whether this is an all-day event
+  bool is_all_day = 7;
+  // Timezone identifier (e.g., 'America/New_York')
+  string timezone = 8;
+  // Event location (physical or virtual)
+  string location = 9;
+  // Meeting URL (Zoom, Google Meet, etc.)
+  optional string meeting_url = 10;
+  // Calendar ID this event belongs to
+  string calendar_id = 11;
+  // Category ID for color coding
+  string category_id = 12;
+  // List of attendees
+  repeated Attendee attendees = 13;
+  // User ID of the event creator/organizer
+  string organizer_id = 14;
+  // Recurrence configuration
+  optional RecurrenceConfig recurrence = 15;
+  // Whether this event is marked as focus/deep work time
+  bool is_focus_time = 16;
+  // Tags for categorization
+  repeated string tags = 17;
+  // Linked resources (notes, files, chats)
+  repeated LinkedResource linked_resources = 18;
+  // Visibility scope
+  VisibilityScope visibility = 19;
+  // Is deleted flag (soft delete)
+  bool is_deleted = 20;
+  // URNs referenced in this event's description (outgoing links)
+  repeated string outgoing_references = 21;
+  // Created timestamp
+  google.protobuf.Timestamp created_at = 22;
+  // Updated timestamp
+  google.protobuf.Timestamp updated_at = 23;
+  // Deleted timestamp (if soft-deleted)
+  optional google.protobuf.Timestamp deleted_at = 24;
+}
+
+// Event attendee
+message Attendee {
+  // User ID
+  string id = 1;
+  // Display name
+  string name = 2;
+  // Email address
+  string email = 3;
+  // Avatar URL
+  optional string avatar_url = 4;
+  // Initials for avatar fallback
+  string initials = 5;
+  // Response status
+  AttendeeStatus status = 6;
+  // Role in the event
+  AttendeeRole role = 7;
+  // Timezone
+  optional string timezone = 8;
+}
+
+// Recurrence configuration
+message RecurrenceConfig {
+  // The recurrence pattern
+  RecurrencePattern pattern = 1;
+  // Interval between recurrences (e.g., every 2 weeks)
+  int32 interval = 2;
+  // Days of the week for weekly recurrence
+  repeated DayOfWeek days_of_week = 3;
+  // Day of the month for monthly recurrence
+  optional int32 day_of_month = 4;
+  // End date for recurrence
+  optional google.protobuf.Timestamp end_date = 5;
+  // Maximum number of occurrences
+  optional int32 max_occurrences = 6;
+}
+
+// Linked resource (note, file, or chat)
+message LinkedResource {
+  // Resource ID (URN)
+  string id = 1;
+  // Resource type
+  ResourceType type = 2;
+  // Display name
+  string name = 3;
+  // URL for navigation
+  optional string url = 4;
+}
+
+// Request to create an event
+message CreateEventRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Event title
+  string title = 2;
+  // Event description (optional)
+  optional string description = 3;
+  // Start time
+  google.protobuf.Timestamp start_time = 4;
+  // End time
+  google.protobuf.Timestamp end_time = 5;
+  // Whether this is an all-day event
+  bool is_all_day = 6;
+  // Timezone identifier
+  optional string timezone = 7;
+  // Event location
+  optional string location = 8;
+  // Meeting URL
+  optional string meeting_url = 9;
+  // Calendar ID
+  string calendar_id = 10;
+  // Category ID
+  optional string category_id = 11;
+  // Attendee user IDs
+  repeated string attendee_ids = 12;
+  // Recurrence configuration
+  optional RecurrenceConfig recurrence = 13;
+  // Whether this event is focus time
+  bool is_focus_time = 14;
+  // Tags
+  repeated string tags = 15;
+  // Linked resource URNs
+  repeated string linked_resource_urns = 16;
+  // Visibility scope (defaults to PRIVATE)
+  optional VisibilityScope visibility = 17;
+}
+
+// Request to get an event
+message GetEventRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+}
+
+// Request to update an event
+message UpdateEventRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // Updated title
+  optional string title = 3;
+  // Updated description
+  optional string description = 4;
+  // Updated start time
+  optional google.protobuf.Timestamp start_time = 5;
+  // Updated end time
+  optional google.protobuf.Timestamp end_time = 6;
+  // Updated all-day flag
+  optional bool is_all_day = 7;
+  // Updated timezone
+  optional string timezone = 8;
+  // Updated location
+  optional string location = 9;
+  // Updated meeting URL
+  optional string meeting_url = 10;
+  // Updated calendar ID
+  optional string calendar_id = 11;
+  // Updated category ID
+  optional string category_id = 12;
+  // Updated recurrence
+  optional RecurrenceConfig recurrence = 13;
+  // Updated focus time flag
+  optional bool is_focus_time = 14;
+  // Updated tags (replaces existing)
+  repeated string tags = 15;
+  // Updated linked resource URNs (replaces existing)
+  repeated string linked_resource_urns = 16;
+  // Updated visibility
+  optional VisibilityScope visibility = 17;
+}
+
+// Request to delete an event
+message DeleteEventRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // Permanent delete flag (default: false for soft delete)
+  bool permanent = 3;
+}
+
+// Response for delete event operation
+message DeleteEventResponse {
+  bool   success = 1;
+  string message = 2;
+}
+
+// Response containing an event
+message EventResponse {
+  CalendarEvent event = 1;
+}
+
+// Request to list events
+message ListEventsRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Optional calendar ID filter
+  optional string calendar_id = 2;
+  // Optional category ID filter
+  optional string category_id = 3;
+  // Optional start date filter
+  optional google.protobuf.Timestamp start_date = 4;
+  // Optional end date filter
+  optional google.protobuf.Timestamp end_date = 5;
+  // Include deleted events
+  bool include_deleted = 6;
+  // Tag filter
+  repeated string tags = 7;
+  // Pagination: page number (1-indexed)
+  int32 page = 8;
+  // Pagination: page size (default: 50, max: 100)
+  int32 page_size = 9;
+  // Sort by field (start_time, created_at, title)
+  string sort_by = 10;
+  // Sort order (asc, desc)
+  string sort_order = 11;
+}
+
+// Response for listing events
+message ListEventsResponse {
+  repeated CalendarEvent events      = 1;
+  int32                  total_count = 2;
+  int32                  page        = 3;
+  int32                  page_size   = 4;
+  int32                  total_pages = 5;
+}
+
+// Request to get events in a date range (optimized for calendar views)
+message GetEventsInRangeRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Start of range
+  google.protobuf.Timestamp start_date = 2;
+  // End of range
+  google.protobuf.Timestamp end_date = 3;
+  // Optional calendar IDs to filter by (empty = all visible calendars)
+  repeated string calendar_ids = 4;
+  // Optional category IDs to filter by
+  repeated string category_ids = 5;
+}
+
+// Response for events in range
+message GetEventsInRangeResponse {
+  repeated CalendarEvent events = 1;
+}
+
+// ============================================================================
+// Calendar Messages
+// ============================================================================
+
+// A user's calendar
+message Calendar {
+  // Unique calendar identifier
+  string id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // Calendar display name
+  string name = 3;
+  // Color for calendar events (hex)
+  string color = 4;
+  // Whether calendar is visible in the grid
+  bool is_visible = 5;
+  // Whether this is the default calendar for new events
+  bool is_default = 6;
+  // Owner user ID
+  string owner_id = 7;
+  // Calendar type
+  CalendarType type = 8;
+  // Created timestamp
+  google.protobuf.Timestamp created_at = 9;
+  // Updated timestamp
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// Request to create a calendar
+message CreateCalendarRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Calendar name
+  string name = 2;
+  // Color (hex)
+  optional string color = 3;
+  // Calendar type
+  optional CalendarType type = 4;
+  // Is default calendar
+  bool is_default = 5;
+}
+
+// Request to get a calendar
+message GetCalendarRequest {
+  // Calendar ID
+  string calendar_id = 1;
+  // Organization ID
+  string organization_id = 2;
+}
+
+// Request to update a calendar
+message UpdateCalendarRequest {
+  // Calendar ID
+  string calendar_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // Updated name
+  optional string name = 3;
+  // Updated color
+  optional string color = 4;
+  // Updated visibility
+  optional bool is_visible = 5;
+  // Updated default flag
+  optional bool is_default = 6;
+  // Updated type
+  optional CalendarType type = 7;
+}
+
+// Request to delete a calendar
+message DeleteCalendarRequest {
+  // Calendar ID
+  string calendar_id = 1;
+  // Organization ID
+  string organization_id = 2;
+}
+
+// Response for delete calendar operation
+message DeleteCalendarResponse {
+  bool   success = 1;
+  string message = 2;
+}
+
+// Response containing a calendar
+message CalendarResponse {
+  Calendar calendar = 1;
+}
+
+// Request to list calendars
+message ListCalendarsRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Include only visible calendars
+  bool visible_only = 2;
+}
+
+// Response for listing calendars
+message ListCalendarsResponse {
+  repeated Calendar calendars = 1;
+}
+
+// ============================================================================
+// Category Messages
+// ============================================================================
+
+// Event category for color coding and filtering
+message Category {
+  // Unique category identifier
+  string id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // Category display name
+  string name = 3;
+  // Category color (hex)
+  string color = 4;
+  // Optional icon or emoji
+  optional string icon = 5;
+  // Whether this is a default/system category
+  bool is_default = 6;
+  // Display order
+  int32 sort_order = 7;
+  // Created timestamp
+  google.protobuf.Timestamp created_at = 8;
+  // Updated timestamp
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// Request to create a category
+message CreateCategoryRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Category name
+  string name = 2;
+  // Color (hex)
+  string color = 3;
+  // Icon or emoji
+  optional string icon = 4;
+}
+
+// Request to get a category
+message GetCategoryRequest {
+  // Category ID
+  string category_id = 1;
+  // Organization ID
+  string organization_id = 2;
+}
+
+// Request to update a category
+message UpdateCategoryRequest {
+  // Category ID
+  string category_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // Updated name
+  optional string name = 3;
+  // Updated color
+  optional string color = 4;
+  // Updated icon
+  optional string icon = 5;
+  // Updated sort order
+  optional int32 sort_order = 6;
+}
+
+// Request to delete a category
+message DeleteCategoryRequest {
+  // Category ID
+  string category_id = 1;
+  // Organization ID
+  string organization_id = 2;
+}
+
+// Response for delete category operation
+message DeleteCategoryResponse {
+  bool   success = 1;
+  string message = 2;
+}
+
+// Response containing a category
+message CategoryResponse {
+  Category category = 1;
+}
+
+// Request to list categories
+message ListCategoriesRequest {
+  // Organization ID
+  string organization_id = 1;
+}
+
+// Response for listing categories
+message ListCategoriesResponse {
+  repeated Category categories = 1;
+}
+
+// ============================================================================
+// Attendee Messages
+// ============================================================================
+
+// Request to update attendee status
+message UpdateAttendeeStatusRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // New status
+  AttendeeStatus status = 3;
+}
+
+// Response for update attendee status
+message UpdateAttendeeStatusResponse {
+  bool   success = 1;
+  string message = 2;
+}
+
+// Request to add attendees
+message AddAttendeesRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // User IDs to add
+  repeated string user_ids = 3;
+  // Role for new attendees
+  AttendeeRole role = 4;
+}
+
+// Request to remove attendees
+message RemoveAttendeesRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // User IDs to remove
+  repeated string user_ids = 3;
+}

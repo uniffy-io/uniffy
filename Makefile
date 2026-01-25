@@ -24,10 +24,12 @@ proto: ## Generate all protobuf code (backend + UI)
 	touch src/uwos/gen/notes/__init__.py
 	touch src/uwos/gen/search/v1/__init__.py
 	touch src/uwos/gen/search/__init__.py
-	touch src/uwos/gen/settings/v1/__init__.py
 	touch src/uwos/gen/settings/__init__.py
-	touch src/uwos/gen/bookmarks/v1/__init__.py
+	touch src/uwos/gen/settings/v1/__init__.py
 	touch src/uwos/gen/bookmarks/__init__.py
+	touch src/uwos/gen/bookmarks/v1/__init__.py
+	touch src/uwos/gen/uwcal/__init__.py
+	touch src/uwos/gen/uwcal/v1/__init__.py
 	@echo "Protobuf code generated for backend and UI!"
 
 clean: ## Clean generated files

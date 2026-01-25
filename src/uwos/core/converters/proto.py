@@ -5,7 +5,7 @@ Provides common conversion functions between protobuf types
 and Python/domain types.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from google.protobuf.timestamp_pb2 import Timestamp
 
@@ -42,10 +42,13 @@ def timestamp_to_datetime(ts: Timestamp) -> datetime:
     Returns
     -------
     datetime
-        Python datetime object (UTC).
+        Python datetime object (UTC, timezone-aware).
 
     """
-    return ts.ToDatetime()
+    # ToDatetime() returns naive datetime in UTC
+    # We must make it timezone-aware so PostgreSQL doesn't misinterpret it
+    naive_dt = ts.ToDatetime()
+    return naive_dt.replace(tzinfo=UTC)
 
 
 def optional_timestamp(dt: datetime | None) -> Timestamp | None:

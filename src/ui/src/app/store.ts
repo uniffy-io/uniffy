@@ -11,6 +11,7 @@ import notesTreeReducer from '@/features/notes/store/notesTreeSlice';
 import editorReducer from '@/features/notes/store/editorSlice';
 import settingsReducer from '@/features/settings/store/settingsSlice';
 import { setStoreRef } from './storeRef';
+import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -34,6 +35,26 @@ const authSecurityTransform = createTransform(
   { whitelist: ['auth'] }
 );
 
+/**
+ * Calendar UI transform: Reset currentDate to today on rehydration.
+ *
+ * Users expect to see today's date when opening the calendar, not the
+ * last date they were viewing from a previous session. Other UI preferences
+ * like viewMode, sidebar settings, etc. are still preserved.
+ */
+const calendarUiTransform = createTransform(
+  // Transform state before persisting (outbound) - keep as is
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (inboundState: any) => inboundState,
+  // Transform state when rehydrating (inbound) - reset currentDate to today
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (outboundState: any) => ({
+    ...outboundState,
+    currentDate: new Date().toISOString().split('T')[0], // Reset to today (YYYY-MM-DD)
+  }),
+  { whitelist: ['calendarUi'] }
+);
+
 const rootReducer = combineReducers({
   auth: authReducer,
   bookmarks: bookmarksReducer,
@@ -42,6 +63,8 @@ const rootReducer = combineReducers({
   notesTree: notesTreeReducer,
   editor: editorReducer,
   settings: settingsReducer,
+  calendar: calendarReducer,
+  calendarUi: calendarUiReducer,
 });
 
 // Migrations to handle state shape changes across versions
@@ -88,18 +111,20 @@ const migrations: MigrationManifest = {
   },
 };
 
+// Type the persisted reducer properly - during rehydration state is never truly undefined
+// because each slice has an initialState that's used as fallback
 type RootReducerState = ReturnType<typeof rootReducer>;
 
 const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
   version: 3, // Bumped to trigger security migration (access token removal)
   storage,
-  whitelist: ['auth', 'theme', 'editor'], // Persist auth, theme, and editor settings
-  transforms: [authSecurityTransform], // Security: don't persist access tokens
+  whitelist: ['auth', 'theme', 'editor', 'calendarUi'], // Persist auth, theme, editor, and calendar UI settings
+  transforms: [authSecurityTransform, calendarUiTransform], // Security: don't persist access tokens; reset calendar to today
   migrate: createMigrate(migrations, { debug: false }),
 };
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+const persistedReducer = persistReducer<RootReducerState>(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,

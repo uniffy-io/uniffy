@@ -1,0 +1,173 @@
+/**
+ * Create Template Modal
+ * Dialog for creating a new event template
+ */
+
+import { useState } from 'react';
+import { useAppSelector } from '@/app/hooks';
+import { cn } from '@/utils/cn';
+
+interface CreateTemplateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProps) {
+  const categories = useAppSelector((state) => state.calendar.categories);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    Object.values(categories)[0]?.id || ''
+  );
+  const [duration, setDuration] = useState(60); // minutes
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      alert('Please enter a template name');
+      return;
+    }
+
+    // TODO: Save template to Redux store or API
+    console.log('Create template:', {
+      name: name.trim(),
+      description,
+      categoryId: selectedCategoryId,
+      duration,
+    });
+
+    setName('');
+    setDescription('');
+    setDuration(60);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  const categoryArray = Object.values(categories);
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 z-40"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-96 border border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">New Template</h2>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Name Input */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Template Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Daily Standup, Code Review"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              autoFocus
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add notes about this template..."
+              rows={3}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+          </div>
+
+          {/* Category Selection */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Category
+            </label>
+            <select
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {categoryArray.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Default Duration (minutes)
+            </label>
+            <input
+              type="number"
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value))}
+              min="15"
+              step="15"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-4 border-t border-border">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={cn(
+                'flex-1 px-4 py-2 rounded-md font-medium transition-colors',
+                name.trim()
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              )}
+              disabled={!name.trim()}
+            >
+              Create
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+}

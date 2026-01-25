@@ -132,3 +132,155 @@ class SubjectType(str, Enum):
     USER = "USER"
     GROUP = "GROUP"
     ORGANIZATION = "ORGANIZATION"
+
+
+# ============================================================================
+# Calendar-specific enums
+# ============================================================================
+
+
+class RecurrencePattern(str, Enum):
+    """
+    Recurrence patterns for repeating calendar events.
+
+    Attributes
+    ----------
+    NONE : str
+        No recurrence (single event).
+    DAILY : str
+        Repeats every day.
+    WEEKLY : str
+        Repeats every week.
+    BIWEEKLY : str
+        Repeats every two weeks.
+    MONTHLY : str
+        Repeats every month.
+    YEARLY : str
+        Repeats every year.
+
+    """
+
+    NONE = "NONE"
+    DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
+    BIWEEKLY = "BIWEEKLY"
+    MONTHLY = "MONTHLY"
+    YEARLY = "YEARLY"
+
+
+class DayOfWeek(str, Enum):
+    """
+    Days of the week for weekly recurrence.
+
+    Attributes
+    ----------
+    MONDAY : str
+        Monday.
+    TUESDAY : str
+        Tuesday.
+    WEDNESDAY : str
+        Wednesday.
+    THURSDAY : str
+        Thursday.
+    FRIDAY : str
+        Friday.
+    SATURDAY : str
+        Saturday.
+    SUNDAY : str
+        Sunday.
+
+    """
+
+    MONDAY = "MONDAY"
+    TUESDAY = "TUESDAY"
+    WEDNESDAY = "WEDNESDAY"
+    THURSDAY = "THURSDAY"
+    FRIDAY = "FRIDAY"
+    SATURDAY = "SATURDAY"
+    SUNDAY = "SUNDAY"
+
+
+class AttendeeStatus(str, Enum):
+    """
+    Response status for event attendees.
+
+    Attributes
+    ----------
+    PENDING : str
+        No response yet.
+    ACCEPTED : str
+        Confirmed attendance.
+    TENTATIVE : str
+        Maybe attending.
+    DECLINED : str
+        Not attending.
+
+    """
+
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    TENTATIVE = "TENTATIVE"
+    DECLINED = "DECLINED"
+
+
+class AttendeeRole(str, Enum):
+    """
+    Role of an attendee in an event.
+
+    Attributes
+    ----------
+    ORGANIZER : str
+        Event creator/organizer.
+    REQUIRED : str
+        Must attend.
+    OPTIONAL : str
+        Optional attendance.
+
+    """
+
+    ORGANIZER = "ORGANIZER"
+    REQUIRED = "REQUIRED"
+    OPTIONAL = "OPTIONAL"
+
+
+class CalendarType(str, Enum):
+    """
+    Types of calendars.
+
+    Attributes
+    ----------
+    PERSONAL : str
+        Personal calendar.
+    WORK : str
+        Work calendar.
+    TEAM : str
+        Team/shared calendar.
+    SHARED : str
+        Externally shared calendar.
+
+    """
+
+    PERSONAL = "PERSONAL"
+    WORK = "WORK"
+    TEAM = "TEAM"
+    SHARED = "SHARED"
+
+
+class ResourceType(str, Enum):
+    """
+    Types of linked resources for calendar events.
+
+    Attributes
+    ----------
+    NOTE : str
+        Linked note.
+    FILE : str
+        Linked file.
+    CHAT : str
+        Linked chat.
+
+    """
+
+    NOTE = "NOTE"
+    FILE = "FILE"
+    CHAT = "CHAT"

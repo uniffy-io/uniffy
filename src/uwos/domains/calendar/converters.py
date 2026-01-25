@@ -1,0 +1,445 @@
+"""Proto <-> domain converters for calendar domain."""
+
+from uwos.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
+from uwos.core.models.calendar.attendee import EventAttendee
+from uwos.core.models.calendar.calendar import Calendar
+from uwos.core.models.calendar.category import Category
+from uwos.core.models.calendar.event import CalendarEvent
+from uwos.core.models.shared import (
+    AttendeeRole,
+    AttendeeStatus,
+    CalendarType,
+    RecurrencePattern,
+    ResourceType,
+    VisibilityScope,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    Attendee as ProtoAttendee,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    AttendeeRole as ProtoAttendeeRole,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    AttendeeStatus as ProtoAttendeeStatus,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    Calendar as ProtoCalendar,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    CalendarEvent as ProtoCalendarEvent,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    CalendarType as ProtoCalendarType,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    Category as ProtoCategory,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    DayOfWeek as ProtoDayOfWeek,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    LinkedResource as ProtoLinkedResource,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    RecurrenceConfig as ProtoRecurrenceConfig,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    RecurrencePattern as ProtoRecurrencePattern,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    ResourceType as ProtoResourceType,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    VisibilityScope as ProtoVisibilityScope,
+)
+
+# ============================================================================
+# Visibility mapping (reuse from notes pattern)
+# ============================================================================
+
+VISIBILITY_TO_PROTO = {
+    VisibilityScope.PRIVATE: ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
+    VisibilityScope.GROUP: ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP,
+    VisibilityScope.ORGANIZATION: ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION,
+    VisibilityScope.PUBLIC: ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC,
+}
+
+VISIBILITY_FROM_PROTO = {
+    ProtoVisibilityScope.VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope.PRIVATE,
+    ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE: VisibilityScope.PRIVATE,
+    ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP: VisibilityScope.GROUP,
+    ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope.ORGANIZATION,
+    ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC: VisibilityScope.PUBLIC,
+}
+
+# ============================================================================
+# Recurrence pattern mapping
+# ============================================================================
+
+RECURRENCE_TO_PROTO = {
+    RecurrencePattern.NONE: ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
+    RecurrencePattern.DAILY: ProtoRecurrencePattern.RECURRENCE_PATTERN_DAILY,
+    RecurrencePattern.WEEKLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_WEEKLY,
+    RecurrencePattern.BIWEEKLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_BIWEEKLY,
+    RecurrencePattern.MONTHLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_MONTHLY,
+    RecurrencePattern.YEARLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_YEARLY,
+}
+
+RECURRENCE_FROM_PROTO = {
+    ProtoRecurrencePattern.RECURRENCE_PATTERN_UNSPECIFIED: RecurrencePattern.NONE,
+    ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE: RecurrencePattern.NONE,
+    ProtoRecurrencePattern.RECURRENCE_PATTERN_DAILY: RecurrencePattern.DAILY,
+    ProtoRecurrencePattern.RECURRENCE_PATTERN_WEEKLY: RecurrencePattern.WEEKLY,
+    ProtoRecurrencePattern.RECURRENCE_PATTERN_BIWEEKLY: RecurrencePattern.BIWEEKLY,
+    ProtoRecurrencePattern.RECURRENCE_PATTERN_MONTHLY: RecurrencePattern.MONTHLY,
+    ProtoRecurrencePattern.RECURRENCE_PATTERN_YEARLY: RecurrencePattern.YEARLY,
+}
+
+# ============================================================================
+# Attendee status mapping
+# ============================================================================
+
+ATTENDEE_STATUS_TO_PROTO = {
+    AttendeeStatus.PENDING: ProtoAttendeeStatus.ATTENDEE_STATUS_PENDING,
+    AttendeeStatus.ACCEPTED: ProtoAttendeeStatus.ATTENDEE_STATUS_ACCEPTED,
+    AttendeeStatus.TENTATIVE: ProtoAttendeeStatus.ATTENDEE_STATUS_TENTATIVE,
+    AttendeeStatus.DECLINED: ProtoAttendeeStatus.ATTENDEE_STATUS_DECLINED,
+}
+
+ATTENDEE_STATUS_FROM_PROTO = {
+    ProtoAttendeeStatus.ATTENDEE_STATUS_UNSPECIFIED: AttendeeStatus.PENDING,
+    ProtoAttendeeStatus.ATTENDEE_STATUS_PENDING: AttendeeStatus.PENDING,
+    ProtoAttendeeStatus.ATTENDEE_STATUS_ACCEPTED: AttendeeStatus.ACCEPTED,
+    ProtoAttendeeStatus.ATTENDEE_STATUS_TENTATIVE: AttendeeStatus.TENTATIVE,
+    ProtoAttendeeStatus.ATTENDEE_STATUS_DECLINED: AttendeeStatus.DECLINED,
+}
+
+# ============================================================================
+# Attendee role mapping
+# ============================================================================
+
+ATTENDEE_ROLE_TO_PROTO = {
+    AttendeeRole.ORGANIZER: ProtoAttendeeRole.ATTENDEE_ROLE_ORGANIZER,
+    AttendeeRole.REQUIRED: ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED,
+    AttendeeRole.OPTIONAL: ProtoAttendeeRole.ATTENDEE_ROLE_OPTIONAL,
+}
+
+ATTENDEE_ROLE_FROM_PROTO = {
+    ProtoAttendeeRole.ATTENDEE_ROLE_UNSPECIFIED: AttendeeRole.REQUIRED,
+    ProtoAttendeeRole.ATTENDEE_ROLE_ORGANIZER: AttendeeRole.ORGANIZER,
+    ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED: AttendeeRole.REQUIRED,
+    ProtoAttendeeRole.ATTENDEE_ROLE_OPTIONAL: AttendeeRole.OPTIONAL,
+}
+
+# ============================================================================
+# Calendar type mapping
+# ============================================================================
+
+CALENDAR_TYPE_TO_PROTO = {
+    CalendarType.PERSONAL: ProtoCalendarType.CALENDAR_TYPE_PERSONAL,
+    CalendarType.WORK: ProtoCalendarType.CALENDAR_TYPE_WORK,
+    CalendarType.TEAM: ProtoCalendarType.CALENDAR_TYPE_TEAM,
+    CalendarType.SHARED: ProtoCalendarType.CALENDAR_TYPE_SHARED,
+}
+
+CALENDAR_TYPE_FROM_PROTO = {
+    ProtoCalendarType.CALENDAR_TYPE_UNSPECIFIED: CalendarType.PERSONAL,
+    ProtoCalendarType.CALENDAR_TYPE_PERSONAL: CalendarType.PERSONAL,
+    ProtoCalendarType.CALENDAR_TYPE_WORK: CalendarType.WORK,
+    ProtoCalendarType.CALENDAR_TYPE_TEAM: CalendarType.TEAM,
+    ProtoCalendarType.CALENDAR_TYPE_SHARED: CalendarType.SHARED,
+}
+
+# ============================================================================
+# Resource type mapping
+# ============================================================================
+
+RESOURCE_TYPE_TO_PROTO = {
+    ResourceType.NOTE: ProtoResourceType.RESOURCE_TYPE_NOTE,
+    ResourceType.FILE: ProtoResourceType.RESOURCE_TYPE_FILE,
+    ResourceType.CHAT: ProtoResourceType.RESOURCE_TYPE_CHAT,
+}
+
+RESOURCE_TYPE_FROM_PROTO = {
+    ProtoResourceType.RESOURCE_TYPE_UNSPECIFIED: ResourceType.NOTE,
+    ProtoResourceType.RESOURCE_TYPE_NOTE: ResourceType.NOTE,
+    ProtoResourceType.RESOURCE_TYPE_FILE: ResourceType.FILE,
+    ProtoResourceType.RESOURCE_TYPE_CHAT: ResourceType.CHAT,
+}
+
+# ============================================================================
+# Day of week mapping
+# ============================================================================
+
+DAY_OF_WEEK_MAP = {
+    "MONDAY": ProtoDayOfWeek.DAY_OF_WEEK_MONDAY,
+    "TUESDAY": ProtoDayOfWeek.DAY_OF_WEEK_TUESDAY,
+    "WEDNESDAY": ProtoDayOfWeek.DAY_OF_WEEK_WEDNESDAY,
+    "THURSDAY": ProtoDayOfWeek.DAY_OF_WEEK_THURSDAY,
+    "FRIDAY": ProtoDayOfWeek.DAY_OF_WEEK_FRIDAY,
+    "SATURDAY": ProtoDayOfWeek.DAY_OF_WEEK_SATURDAY,
+    "SUNDAY": ProtoDayOfWeek.DAY_OF_WEEK_SUNDAY,
+}
+
+DAY_OF_WEEK_FROM_PROTO = {v: k for k, v in DAY_OF_WEEK_MAP.items()}
+
+
+# ============================================================================
+# Converter functions
+# ============================================================================
+
+
+def visibility_from_proto(proto_visibility: ProtoVisibilityScope) -> VisibilityScope:
+    """Convert proto VisibilityScope to model."""
+    return VISIBILITY_FROM_PROTO.get(proto_visibility, VisibilityScope.PRIVATE)
+
+
+def recurrence_from_proto(proto_recurrence: ProtoRecurrencePattern) -> RecurrencePattern:
+    """Convert proto RecurrencePattern to model."""
+    return RECURRENCE_FROM_PROTO.get(proto_recurrence, RecurrencePattern.NONE)
+
+
+def attendee_status_from_proto(proto_status: ProtoAttendeeStatus) -> AttendeeStatus:
+    """Convert proto AttendeeStatus to model."""
+    return ATTENDEE_STATUS_FROM_PROTO.get(proto_status, AttendeeStatus.PENDING)
+
+
+def attendee_role_from_proto(proto_role: ProtoAttendeeRole) -> AttendeeRole:
+    """Convert proto AttendeeRole to model."""
+    return ATTENDEE_ROLE_FROM_PROTO.get(proto_role, AttendeeRole.REQUIRED)
+
+
+def calendar_type_from_proto(proto_type: ProtoCalendarType) -> CalendarType:
+    """Convert proto CalendarType to model."""
+    return CALENDAR_TYPE_FROM_PROTO.get(proto_type, CalendarType.PERSONAL)
+
+
+def resource_type_from_proto(proto_type: ProtoResourceType) -> ResourceType:
+    """Convert proto ResourceType to model."""
+    return RESOURCE_TYPE_FROM_PROTO.get(proto_type, ResourceType.NOTE)
+
+
+def event_to_proto(
+    event: CalendarEvent,
+    attendees: list[tuple[EventAttendee, dict]] | None = None,
+) -> ProtoCalendarEvent:
+    """
+    Convert CalendarEvent model to proto CalendarEvent.
+
+    Parameters
+    ----------
+    event : CalendarEvent
+        Event model instance.
+    attendees : list[tuple[EventAttendee, dict]] | None
+        List of (EventAttendee, user_info) tuples for attendee details.
+
+    Returns
+    -------
+    ProtoCalendarEvent
+        Proto message.
+
+    """
+    proto_visibility = VISIBILITY_TO_PROTO.get(
+        event.visibility,
+        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
+    )
+    proto_recurrence = RECURRENCE_TO_PROTO.get(
+        event.recurrence_pattern,
+        ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
+    )
+
+    proto_event = ProtoCalendarEvent(
+        id=str(event.id),
+        organization_id=str(event.organization_id),
+        title=event.title,
+        description=event.description,
+        start_time=datetime_to_timestamp(event.start_time),
+        end_time=datetime_to_timestamp(event.end_time),
+        is_all_day=event.is_all_day,
+        timezone=event.timezone,
+        location=event.location,
+        calendar_id=str(event.calendar_id),
+        category_id=str(event.category_id) if event.category_id else "",
+        organizer_id=str(event.organizer_id),
+        is_focus_time=event.is_focus_time,
+        visibility=proto_visibility,
+        is_deleted=event.is_deleted,
+        tags=event.tags or [],
+        outgoing_references=event.outgoing_references or [],
+        created_at=datetime_to_timestamp(event.created_at),
+        updated_at=datetime_to_timestamp(event.updated_at),
+    )
+
+    if event.meeting_url:
+        proto_event.meeting_url = event.meeting_url
+
+    if event.deleted_at:
+        proto_event.deleted_at.CopyFrom(datetime_to_timestamp(event.deleted_at))
+
+    # Add linked resources
+    if event.linked_resources:
+        for resource in event.linked_resources:
+            proto_resource = ProtoLinkedResource(
+                id=resource.get("id", ""),
+                type=RESOURCE_TYPE_TO_PROTO.get(
+                    ResourceType(resource.get("type", "NOTE")),
+                    ProtoResourceType.RESOURCE_TYPE_NOTE,
+                ),
+                name=resource.get("name", ""),
+            )
+            if resource.get("url"):
+                proto_resource.url = resource["url"]
+            proto_event.linked_resources.append(proto_resource)
+
+    # Add recurrence config
+    if event.recurrence_config:
+        config = event.recurrence_config
+        proto_recurrence_config = ProtoRecurrenceConfig(
+            pattern=proto_recurrence,
+            interval=config.get("interval", 1),
+        )
+        if config.get("days_of_week"):
+            for day in config["days_of_week"]:
+                if day in DAY_OF_WEEK_MAP:
+                    proto_recurrence_config.days_of_week.append(DAY_OF_WEEK_MAP[day])
+        if config.get("day_of_month"):
+            proto_recurrence_config.day_of_month = config["day_of_month"]
+        if config.get("end_date"):
+            proto_recurrence_config.end_date.CopyFrom(
+                datetime_to_timestamp(config["end_date"])
+            )
+        if config.get("max_occurrences"):
+            proto_recurrence_config.max_occurrences = config["max_occurrences"]
+        proto_event.recurrence.CopyFrom(proto_recurrence_config)
+
+    # Add attendees
+    if attendees:
+        for attendee, user_info in attendees:
+            proto_attendee = ProtoAttendee(
+                id=str(attendee.user_id),
+                name=user_info.get("name", ""),
+                email=user_info.get("email", ""),
+                initials=user_info.get("initials", ""),
+                status=ATTENDEE_STATUS_TO_PROTO.get(
+                    attendee.status,
+                    ProtoAttendeeStatus.ATTENDEE_STATUS_PENDING,
+                ),
+                role=ATTENDEE_ROLE_TO_PROTO.get(
+                    attendee.role,
+                    ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED,
+                ),
+            )
+            if user_info.get("avatar_url"):
+                proto_attendee.avatar_url = user_info["avatar_url"]
+            if user_info.get("timezone"):
+                proto_attendee.timezone = user_info["timezone"]
+            proto_event.attendees.append(proto_attendee)
+
+    return proto_event
+
+
+def calendar_to_proto(calendar: Calendar) -> ProtoCalendar:
+    """
+    Convert Calendar model to proto Calendar.
+
+    Parameters
+    ----------
+    calendar : Calendar
+        Calendar model instance.
+
+    Returns
+    -------
+    ProtoCalendar
+        Proto message.
+
+    """
+    proto_type = CALENDAR_TYPE_TO_PROTO.get(
+        calendar.calendar_type,
+        ProtoCalendarType.CALENDAR_TYPE_PERSONAL,
+    )
+
+    return ProtoCalendar(
+        id=str(calendar.id),
+        organization_id=str(calendar.organization_id),
+        name=calendar.name,
+        color=calendar.color,
+        is_visible=calendar.is_visible,
+        is_default=calendar.is_default,
+        owner_id=str(calendar.owner_id),
+        type=proto_type,
+        created_at=datetime_to_timestamp(calendar.created_at),
+        updated_at=datetime_to_timestamp(calendar.updated_at),
+    )
+
+
+def category_to_proto(category: Category) -> ProtoCategory:
+    """
+    Convert Category model to proto Category.
+
+    Parameters
+    ----------
+    category : Category
+        Category model instance.
+
+    Returns
+    -------
+    ProtoCategory
+        Proto message.
+
+    """
+    proto_category = ProtoCategory(
+        id=str(category.id),
+        organization_id=str(category.organization_id),
+        name=category.name,
+        color=category.color,
+        is_default=category.is_default,
+        sort_order=category.sort_order,
+        created_at=datetime_to_timestamp(category.created_at),
+        updated_at=datetime_to_timestamp(category.updated_at),
+    )
+
+    if category.icon:
+        proto_category.icon = category.icon
+
+    return proto_category
+
+
+def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
+    """
+    Convert proto RecurrenceConfig to dict for storage.
+
+    Parameters
+    ----------
+    proto_config : ProtoRecurrenceConfig
+        Proto recurrence config.
+
+    Returns
+    -------
+    dict
+        Recurrence config dict for JSONB storage.
+
+    """
+    config = {
+        "pattern": RECURRENCE_FROM_PROTO.get(
+            proto_config.pattern,
+            RecurrencePattern.NONE,
+        ).value,
+        "interval": proto_config.interval or 1,
+    }
+
+    if proto_config.days_of_week:
+        config["days_of_week"] = [
+            DAY_OF_WEEK_FROM_PROTO.get(day, "MONDAY")
+            for day in proto_config.days_of_week
+        ]
+
+    if proto_config.HasField("day_of_month"):
+        config["day_of_month"] = proto_config.day_of_month
+
+    if proto_config.HasField("end_date"):
+        config["end_date"] = timestamp_to_datetime(proto_config.end_date)
+
+    if proto_config.HasField("max_occurrences"):
+        config["max_occurrences"] = proto_config.max_occurrences
+
+    return config
