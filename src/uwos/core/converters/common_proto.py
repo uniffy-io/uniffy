@@ -59,11 +59,8 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.NOTE: ProtoContentType.CONTENT_TYPE_NOTE,
     DomainContentType.FILE: ProtoContentType.CONTENT_TYPE_FILE,
     DomainContentType.CALENDAR_EVENT: ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT,
-    DomainContentType.BOOK: ProtoContentType.CONTENT_TYPE_BOOK,
-    DomainContentType.PASSWORD: ProtoContentType.CONTENT_TYPE_PASSWORD,
-    DomainContentType.WORKFLOW: ProtoContentType.CONTENT_TYPE_WORKFLOW,
     DomainContentType.CHAT_MESSAGE: ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE,
-    DomainContentType.SPACE: ProtoContentType.CONTENT_TYPE_SPACE,
+    DomainContentType.USER: ProtoContentType.CONTENT_TYPE_USER,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType.ValueType, DomainContentType] = {

@@ -34,29 +34,14 @@ export enum ContentType {
   CALENDAR_EVENT = 3,
 
   /**
-   * @generated from enum value: CONTENT_TYPE_BOOK = 4;
-   */
-  BOOK = 4,
-
-  /**
-   * @generated from enum value: CONTENT_TYPE_PASSWORD = 5;
-   */
-  PASSWORD = 5,
-
-  /**
-   * @generated from enum value: CONTENT_TYPE_WORKFLOW = 6;
-   */
-  WORKFLOW = 6,
-
-  /**
    * @generated from enum value: CONTENT_TYPE_CHAT_MESSAGE = 7;
    */
   CHAT_MESSAGE = 7,
 
   /**
-   * @generated from enum value: CONTENT_TYPE_SPACE = 8;
+   * @generated from enum value: CONTENT_TYPE_USER = 9;
    */
-  SPACE = 8,
+  USER = 9,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ContentType)
 proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
@@ -64,11 +49,8 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
   { no: 1, name: "CONTENT_TYPE_NOTE" },
   { no: 2, name: "CONTENT_TYPE_FILE" },
   { no: 3, name: "CONTENT_TYPE_CALENDAR_EVENT" },
-  { no: 4, name: "CONTENT_TYPE_BOOK" },
-  { no: 5, name: "CONTENT_TYPE_PASSWORD" },
-  { no: 6, name: "CONTENT_TYPE_WORKFLOW" },
   { no: 7, name: "CONTENT_TYPE_CHAT_MESSAGE" },
-  { no: 8, name: "CONTENT_TYPE_SPACE" },
+  { no: 9, name: "CONTENT_TYPE_USER" },
 ]);
 
 /**

@@ -142,28 +142,6 @@ function drawNodeIcon(
       break;
     }
 
-    case UrnType.BOOK: {
-      // BookOpenIcon - open book shape
-      const w = s * 0.9;
-      const h = s * 0.65;
-      ctx.beginPath();
-      // Spine
-      ctx.moveTo(0, -h * 0.4);
-      ctx.lineTo(0, h * 0.5);
-      // Left page
-      ctx.moveTo(0, -h * 0.4);
-      ctx.quadraticCurveTo(-w * 0.25, -h * 0.5, -w / 2, -h * 0.35);
-      ctx.lineTo(-w / 2, h * 0.4);
-      ctx.quadraticCurveTo(-w * 0.25, h * 0.5, 0, h * 0.5);
-      // Right page
-      ctx.moveTo(0, -h * 0.4);
-      ctx.quadraticCurveTo(w * 0.25, -h * 0.5, w / 2, -h * 0.35);
-      ctx.lineTo(w / 2, h * 0.4);
-      ctx.quadraticCurveTo(w * 0.25, h * 0.5, 0, h * 0.5);
-      ctx.stroke();
-      break;
-    }
-
     case UrnType.CALENDAR_EVENT: {
       // CalendarIcon - calendar with top hooks
       const w = s * 0.8;
@@ -184,49 +162,6 @@ function drawNodeIcon(
       ctx.beginPath();
       ctx.moveTo(-w / 2, -h * 0.08);
       ctx.lineTo(w / 2, -h * 0.08);
-      ctx.stroke();
-      break;
-    }
-
-    case UrnType.PASSWORD: {
-      // KeyIcon - key shape
-      const ringR = s * 0.28;
-      // Ring
-      ctx.beginPath();
-      ctx.arc(-s * 0.2, 0, ringR, 0, 2 * Math.PI);
-      ctx.stroke();
-      // Shaft and teeth
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.2 + ringR, 0);
-      ctx.lineTo(s * 0.45, 0);
-      ctx.moveTo(s * 0.25, 0);
-      ctx.lineTo(s * 0.25, s * 0.18);
-      ctx.moveTo(s * 0.4, 0);
-      ctx.lineTo(s * 0.4, s * 0.14);
-      ctx.stroke();
-      break;
-    }
-
-    case UrnType.SPACE: {
-      // CubeIcon - 3D cube outline
-      const cs = s * 0.42;
-      ctx.beginPath();
-      // Top face
-      ctx.moveTo(0, -cs * 0.9);
-      ctx.lineTo(cs, -cs * 0.4);
-      ctx.lineTo(0, cs * 0.1);
-      ctx.lineTo(-cs, -cs * 0.4);
-      ctx.closePath();
-      ctx.stroke();
-      // Front edges
-      ctx.beginPath();
-      ctx.moveTo(-cs, -cs * 0.4);
-      ctx.lineTo(-cs, cs * 0.45);
-      ctx.lineTo(0, cs * 0.95);
-      ctx.lineTo(cs, cs * 0.45);
-      ctx.lineTo(cs, -cs * 0.4);
-      ctx.moveTo(0, cs * 0.1);
-      ctx.lineTo(0, cs * 0.95);
       ctx.stroke();
       break;
     }

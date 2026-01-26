@@ -16,11 +16,7 @@ ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
     "file": SearchResultType.SEARCH_RESULT_TYPE_FILE,
     "chat": SearchResultType.SEARCH_RESULT_TYPE_CHAT,
     "user": SearchResultType.SEARCH_RESULT_TYPE_USER,
-    "book": SearchResultType.SEARCH_RESULT_TYPE_BOOK,
     "calendar_event": SearchResultType.SEARCH_RESULT_TYPE_CALENDAR_EVENT,
-    "password": SearchResultType.SEARCH_RESULT_TYPE_PASSWORD,
-    "workflow": SearchResultType.SEARCH_RESULT_TYPE_WORKFLOW,
-    "space": SearchResultType.SEARCH_RESULT_TYPE_SPACE,
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}

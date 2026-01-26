@@ -4,7 +4,7 @@
  * Parses Google-style keyword search queries into structured filters.
  *
  * Supported syntax:
- * - Type filters: note:, file:, user:, calendar:, chat:, book:, password:, space:
+ * - Type filters: note:, file:, user:, calendar:, chat:
  * - Metadata filters: tag:, project:
  * - Ownership: my: (shorthand for current user's content)
  * - Quoted phrases: "exact phrase" preserved in text
@@ -62,14 +62,6 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'events': SearchResultType.CALENDAR_EVENT,
     'chat': SearchResultType.CHAT,
     'chats': SearchResultType.CHAT,
-    'book': SearchResultType.BOOK,
-    'books': SearchResultType.BOOK,
-    'password': SearchResultType.PASSWORD,
-    'passwords': SearchResultType.PASSWORD,
-    'space': SearchResultType.SPACE,
-    'spaces': SearchResultType.SPACE,
-    'workflow': SearchResultType.WORKFLOW,
-    'workflows': SearchResultType.WORKFLOW,
 };
 
 /**
@@ -79,8 +71,6 @@ const FILTER_PREFIXES = [
     // Type filters
     'note', 'notes', 'file', 'files', 'user', 'users',
     'calendar', 'event', 'events', 'chat', 'chats',
-    'book', 'books', 'password', 'passwords',
-    'space', 'spaces', 'workflow', 'workflows',
     // Metadata filters
     'tag', 'project',
     // Ownership filters
@@ -239,14 +229,6 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Events';
         case SearchResultType.CHAT:
             return 'Chats';
-        case SearchResultType.BOOK:
-            return 'Books';
-        case SearchResultType.PASSWORD:
-            return 'Passwords';
-        case SearchResultType.SPACE:
-            return 'Spaces';
-        case SearchResultType.WORKFLOW:
-            return 'Workflows';
         default:
             return 'Unknown';
     }
@@ -267,14 +249,6 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'calendar';
         case SearchResultType.CHAT:
             return 'chat';
-        case SearchResultType.BOOK:
-            return 'book';
-        case SearchResultType.PASSWORD:
-            return 'password';
-        case SearchResultType.SPACE:
-            return 'space';
-        case SearchResultType.WORKFLOW:
-            return 'workflow';
         default:
             return '';
     }

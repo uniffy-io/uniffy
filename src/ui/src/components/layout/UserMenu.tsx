@@ -89,32 +89,42 @@ export function UserMenu() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "group relative flex items-center gap-1.5 rounded-lg p-0.5 pr-2",
-                    "hover:bg-muted/50 transition-all duration-200",
-                    "focus:outline-none focus:ring-1 focus:ring-primary/20",
-                    isOpen && "bg-muted/50"
+                    "group relative flex items-center justify-center py-1.5 px-1.5 rounded-lg",
+                    "transition-all duration-500 ease-out overflow-hidden",
+                    "focus:outline-none"
                 )}
             >
-                {/* Avatar */}
-                <div className="relative">
-                    <div className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-lg",
-                        "bg-primary",
-                        "text-primary-foreground text-xs font-semibold",
-                        "transition-transform duration-200",
-                        "group-hover:scale-105 group-active:scale-95"
+                {/* Hover/Active background */}
+                <span
+                    className={cn(
+                        "absolute inset-0 rounded-lg transition-all duration-500",
+                        isOpen ? "bg-primary/10" : "bg-transparent"
+                    )}
+                />
+
+                {/* Hover underline effect - matching nav items */}
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+
+                {/* Avatar container - matching nav item icon style */}
+                <span className={cn(
+                    "relative z-10 flex items-center justify-center w-7 h-7 rounded-md",
+                    "transition-all duration-500 ease-out",
+                    isOpen
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground group-hover:text-primary"
+                )}>
+                    {/* Avatar with initials */}
+                    <span className={cn(
+                        "flex items-center justify-center w-full h-full rounded-md text-[11px] font-bold tracking-tight",
+                        "transition-all duration-300",
+                        isOpen
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted/80 text-foreground group-hover:bg-primary/20 group-hover:text-primary"
                     )}>
                         {user.fullName
                             ? getInitials(user.fullName)
                             : (user.username || '??').slice(0, 2).toUpperCase()}
-                    </div>
-                    {/* Online indicator */}
-                    <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
-                </div>
-
-                {/* Name - hidden on small screens */}
-                <span className="hidden lg:block text-sm font-medium text-foreground max-w-20 truncate">
-                    {displayName.split(' ')[0]}
+                    </span>
                 </span>
             </button>
 

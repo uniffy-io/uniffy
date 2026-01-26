@@ -11,6 +11,7 @@ import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { cn } from '@/utils/cn';
 import { useAdminAccess } from '../hooks/useAdminHooks';
+import type { Icon } from '@phosphor-icons/react';
 import {
     Users,
     UsersThree,
@@ -23,7 +24,7 @@ import {
 interface NavItem {
     name: string;
     path: string;
-    icon: React.ComponentType<{ className?: string; size?: number; weight?: string }>;
+    icon: Icon;
 }
 
 const orgNavItems: NavItem[] = [

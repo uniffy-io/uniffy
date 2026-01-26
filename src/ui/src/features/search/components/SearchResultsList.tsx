@@ -6,91 +6,42 @@
  */
 
 import { useState, useEffect } from 'react';
-import {
-  MagnifyingGlass,
-  FileText,
-  Folder,
-  ChatTeardropDots,
-  User,
-  BookOpen,
-  CalendarDots,
-  Key,
-  Cube,
-  Tag,
-} from '@phosphor-icons/react';
+import { MagnifyingGlass, Tag } from '@phosphor-icons/react';
+import type { Icon } from '@phosphor-icons/react';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import { cn } from '@/utils/cn';
 import { UrnType } from '@/utils/urn';
-import { getUrnTypeTheme, type UrnTypeTheme } from '@/theme/urnColors';
+import { type UrnTypeTheme } from '@/theme/urnColors';
+import { getContentTypeConfig } from '@/theme/contentTypes';
 import { stripMarkdown } from '../utils/stripMarkdown';
 
-/** Icon mapping for search result types */
-const RESULT_TYPE_ICONS: Record<number, typeof FileText> = {
-  [SearchResultType.NOTE]: FileText,
-  [SearchResultType.FILE]: Folder,
-  [SearchResultType.CHAT]: ChatTeardropDots,
-  [SearchResultType.USER]: User,
-  [SearchResultType.BOOK]: BookOpen,
-  [SearchResultType.CALENDAR_EVENT]: CalendarDots,
-  [SearchResultType.PASSWORD]: Key,
-  [SearchResultType.SPACE]: Cube,
-};
-
-/** Map SearchResultType to UrnType for theme lookup */
-const RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
+/** Map SearchResultType to UrnType */
+const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.NOTE]: UrnType.NOTE,
   [SearchResultType.FILE]: UrnType.FILE,
   [SearchResultType.CHAT]: UrnType.CHAT,
   [SearchResultType.USER]: UrnType.USER,
-  [SearchResultType.BOOK]: UrnType.BOOK,
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
-  [SearchResultType.PASSWORD]: UrnType.PASSWORD,
-  [SearchResultType.SPACE]: UrnType.SPACE,
 };
 
 interface ResultTheme extends UrnTypeTheme {
-  icon: typeof FileText;
+  icon: Icon;
+  label: string;
 }
 
 /**
- * Get theme for search result type
+ * Get theme for search result type using centralized content type config
  */
 function getResultTheme(type: SearchResultType): ResultTheme {
-  const urnType = RESULT_TYPE_TO_URN_TYPE[type] || UrnType.UNKNOWN;
-  const theme = getUrnTypeTheme(urnType);
-  const icon = RESULT_TYPE_ICONS[type] || FileText;
+  const urnType = SEARCH_RESULT_TYPE_TO_URN_TYPE[type] || UrnType.UNKNOWN;
+  const config = getContentTypeConfig(urnType);
 
   return {
-    ...theme,
-    icon,
+    ...config.theme,
+    icon: config.icon,
+    label: config.label,
   };
-}
-
-/**
- * Get label for search result type
- */
-function getResultTypeLabel(type: SearchResultType): string {
-  switch (type) {
-    case SearchResultType.NOTE:
-      return 'Note';
-    case SearchResultType.FILE:
-      return 'File';
-    case SearchResultType.CHAT:
-      return 'Chat';
-    case SearchResultType.USER:
-      return 'User';
-    case SearchResultType.BOOK:
-      return 'Book';
-    case SearchResultType.CALENDAR_EVENT:
-      return 'Event';
-    case SearchResultType.PASSWORD:
-      return 'Password';
-    case SearchResultType.SPACE:
-      return 'Space';
-    default:
-      return 'Item';
-  }
 }
 
 interface SearchResultsListProps {
@@ -170,23 +121,22 @@ export function SearchResultsList({
   return (
     <div
       className={cn(
-        'rounded-2xl border-2 border-primary/50 bg-card shadow-2xl',
-        'ring-4 ring-primary/10',
+        'rounded-xl bg-card border border-border/80 shadow-xl',
         'overflow-hidden',
-        'animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200',
+        'animate-in fade-in-0 slide-in-from-top-1 duration-200',
         className
       )}
     >
       {/* Header */}
       {showHeader && (
-        <div className="px-4 py-3 border-b border-border/50 bg-gradient-to-r from-muted/50 to-transparent">
+        <div className="px-3 py-2 border-b border-border/50">
           <div className="flex items-center gap-2">
-            <MagnifyingGlass size={16} weight="bold" className="text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">
-              {query ? `Search: "${query}"` : 'Search'}
+            <MagnifyingGlass size={14} weight="duotone" className="text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">
+              {query ? `"${query}"` : 'Search'}
             </span>
             {results.length > 0 && (
-              <span className="text-xs text-muted-foreground ml-auto">
+              <span className="text-[10px] text-muted-foreground/70 ml-auto">
                 {results.length} result{results.length !== 1 ? 's' : ''}
               </span>
             )}
@@ -196,9 +146,9 @@ export function SearchResultsList({
 
       {/* Loading state */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <div className="flex items-center justify-center py-10">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
             <span className="text-sm text-muted-foreground">Searching...</span>
           </div>
         </div>
@@ -206,19 +156,17 @@ export function SearchResultsList({
 
       {/* Empty state */}
       {!isLoading && results.length === 0 && query.trim() && (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-3">
-            <MagnifyingGlass size={24} weight="duotone" className="opacity-50" />
-          </div>
-          <p className="text-sm font-medium">{emptyMessage}</p>
-          <p className="text-xs mt-1 opacity-70">Try a different search term</p>
+        <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+          <MagnifyingGlass size={20} weight="duotone" className="opacity-40 mb-2" />
+          <p className="text-sm">{emptyMessage}</p>
+          <p className="text-xs mt-0.5 opacity-60">Try a different search term</p>
         </div>
       )}
 
       {/* Results list */}
       {!isLoading && results.length > 0 && (
         <>
-          <ul className="py-2 max-h-80 overflow-auto">
+          <ul className="py-1.5 max-h-96 overflow-auto">
             {results.map((result, index) => {
               const theme = getResultTheme(result.type);
               const Icon = theme.icon;
@@ -230,26 +178,27 @@ export function SearchResultsList({
                     onClick={() => onSelect(result)}
                     onMouseEnter={() => setSelectedIndex(index)}
                     className={cn(
-                      'w-full flex items-center gap-3 px-4 py-2.5 text-left',
+                      'w-full flex items-center gap-3 px-3 py-2 mx-1.5 rounded-lg text-left',
                       'transition-all duration-150 relative',
-                      isSelected && 'bg-gradient-to-r ' + theme.gradient
+                      isSelected ? 'bg-muted/80' : 'hover:bg-muted/40'
                     )}
+                    style={{ width: 'calc(100% - 12px)' }}
                   >
                     {/* Selection indicator */}
                     {isSelected && (
                       <div className={cn(
-                        'absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full',
+                        'absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full',
                         theme.iconBg
                       )} />
                     )}
 
                     {/* Icon badge */}
                     <div className={cn(
-                      'flex items-center justify-center w-9 h-9 rounded-lg shrink-0',
+                      'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
                       'transition-all duration-200',
-                      isSelected ? theme.iconBg + ' shadow-md' : 'bg-muted'
+                      isSelected ? theme.iconBg : 'bg-muted'
                     )}>
-                      <Icon size={18} weight="duotone" className={cn(
+                      <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
                         isSelected ? 'text-white' : 'text-muted-foreground'
                       )} />
                     </div>
@@ -258,43 +207,39 @@ export function SearchResultsList({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={cn(
-                          'font-medium truncate',
-                          isSelected ? 'text-foreground' : 'text-foreground/90'
+                          'text-sm font-medium truncate',
+                          isSelected ? 'text-foreground' : 'text-foreground/80'
                         )}>
                           {result.title}
                         </span>
                         <span className={cn(
-                          'text-xs font-medium shrink-0',
-                          isSelected ? theme.accentText : 'text-muted-foreground'
+                          'text-[10px] font-medium shrink-0 px-1.5 py-0.5 rounded',
+                          isSelected ? theme.badgeBg + ' ' + theme.accentText : 'text-muted-foreground/60'
                         )}>
-                          {getResultTypeLabel(result.type)}
+                          {theme.label}
                         </span>
                       </div>
                       {/* Tags */}
                       {result.tags && result.tags.length > 0 && (
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                          <Tag size={12} weight="duotone" className="text-muted-foreground shrink-0" />
+                          <Tag size={10} weight="duotone" className="text-muted-foreground/50 shrink-0" />
                           {result.tags.slice(0, 3).map((tag) => (
                             <span
                               key={tag}
-                              className={cn(
-                                'text-[10px] px-1.5 py-0.5 rounded-full',
-                                'bg-muted/50 text-muted-foreground',
-                                isSelected && 'bg-primary/10 text-primary'
-                              )}
+                              className="text-[10px] text-muted-foreground/60"
                             >
                               {tag}
                             </span>
                           ))}
                           {result.tags.length > 3 && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[10px] text-muted-foreground/40">
                               +{result.tags.length - 3}
                             </span>
                           )}
                         </div>
                       )}
                       {result.description && (
-                        <p className="text-sm text-muted-foreground truncate mt-0.5">
+                        <p className="text-xs text-muted-foreground/60 truncate mt-0.5">
                           {stripMarkdown(result.description)}
                         </p>
                       )}
@@ -307,25 +252,25 @@ export function SearchResultsList({
 
           {/* Footer hint */}
           {showFooter && (
-            <div className="border-t border-border/50 px-4 py-2.5 bg-muted/30 flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded-md bg-card border border-border/50 font-mono text-[10px]">↑↓</kbd>
+            <div className="border-t border-border/50 px-3 py-2 flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono">↑↓</kbd>
                 <span>navigate</span>
               </span>
-              <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded-md bg-card border border-border/50 font-mono text-[10px]">↵</kbd>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono">↵</kbd>
                 <span>select</span>
               </span>
-              <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded-md bg-card border border-border/50 font-mono text-[10px]">⌘C</kbd>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono">⌘C</kbd>
                 {copiedUrn ? (
                   <span className="text-green-600 dark:text-green-400">copied!</span>
                 ) : (
-                  <span>copy URN</span>
+                  <span>copy</span>
                 )}
               </span>
-              <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded-md bg-card border border-border/50 font-mono text-[10px]">esc</kbd>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono">esc</kbd>
                 <span>close</span>
               </span>
             </div>

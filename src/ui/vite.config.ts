@@ -52,7 +52,7 @@ export default defineConfig({
           // UI utilities
           'vendor-ui': [
             '@headlessui/react',
-            '@heroicons/react',
+            '@phosphor-icons/react',
           ],
         },
       },

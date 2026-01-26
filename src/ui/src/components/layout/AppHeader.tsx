@@ -1,23 +1,32 @@
 import { Link, useLocation } from 'react-router-dom';
-import {
-  SquaresFour,
-  NotePencil,
-  FolderSimple,
-  ChatTeardrop,
-  CalendarDots,
-  Kanban,
-  TreeStructure,
-} from '@phosphor-icons/react';
+import { SquaresFour, Kanban, TreeStructure } from '@phosphor-icons/react';
+import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from './UserMenu';
 import { GlobalSearch } from '@/features/search';
 import { cn } from '@/utils/cn';
+import { UrnType } from '@/utils/urn';
+import { getContentTypeConfig } from '@/theme/contentTypes';
 
-const navItems = [
+// Get content type configs for nav items
+const noteConfig = getContentTypeConfig(UrnType.NOTE);
+const fileConfig = getContentTypeConfig(UrnType.FILE);
+const chatConfig = getContentTypeConfig(UrnType.CHAT);
+const calendarConfig = getContentTypeConfig(UrnType.CALENDAR_EVENT);
+
+interface NavItem {
+  name: string;
+  path: string;
+  icon: Icon;
+}
+
+// Nav items use icons from central config but may have custom paths/names
+// (nav paths like /chat differ from URN paths like /chats/{id})
+const navItems: NavItem[] = [
   { name: 'Dashboard', path: '/', icon: SquaresFour },
-  { name: 'Notes', path: '/notes', icon: NotePencil },
-  { name: 'Files', path: '/files', icon: FolderSimple },
-  { name: 'Chat', path: '/chat', icon: ChatTeardrop },
-  { name: 'Calendar', path: '/calendar', icon: CalendarDots },
+  { name: noteConfig.labelPlural, path: '/notes', icon: noteConfig.icon },
+  { name: fileConfig.labelPlural, path: '/files', icon: fileConfig.icon },
+  { name: 'Chat', path: '/chat', icon: chatConfig.icon },
+  { name: 'Calendar', path: '/calendar', icon: calendarConfig.icon },
   { name: 'Projects', path: '/projects', icon: Kanban },
   { name: 'Workflows', path: '/workflows', icon: TreeStructure },
 ];
@@ -76,32 +85,9 @@ export function AppHeader() {
       {/* Background */}
       <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
 
-      <div className="relative flex h-12 items-center justify-between px-3 lg:px-4">
-        {/* Left: Logo + Navigation */}
-        <div className="flex items-center gap-1.5 lg:gap-3">
-          {/* Logo */}
-          <Link
-            to="/"
-            className="group flex items-center gap-2 flex-shrink-0 pr-1.5 lg:pr-3"
-          >
-            {/* Logo container */}
-            <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
-              <span className="text-sm">U</span>
-            </div>
-
-            <div className="hidden sm:flex flex-col">
-              <span className="font-semibold text-sm tracking-tight leading-none text-foreground">
-                UWOS
-              </span>
-              <span className="text-[9px] text-muted-foreground font-medium tracking-wider uppercase">
-                Workspace
-              </span>
-            </div>
-          </Link>
-
-          {/* Separator */}
-          <div className="hidden md:block h-5 w-px bg-border" />
-
+      <div className="relative flex h-12 items-center px-3 lg:px-4">
+        {/* Left: Navigation */}
+        <div className="flex items-center gap-0.5">
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-0.5">
             {navItems.map((item) => {
@@ -139,9 +125,13 @@ export function AppHeader() {
           </nav>
         </div>
 
-        {/* Right: Search + User */}
-        <div className="flex items-center gap-2">
+        {/* Center: Search */}
+        <div className="flex-1 flex justify-center px-4">
           <GlobalSearch />
+        </div>
+
+        {/* Right: User */}
+        <div className="flex items-center">
           <UserMenu />
         </div>
       </div>

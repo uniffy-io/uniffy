@@ -94,16 +94,8 @@ class ContentType(str, Enum):
         Files (uploaded documents, images, etc.).
     CALENDAR_EVENT : str
         Calendar events.
-    BOOK : str
-        Books and reading materials.
-    PASSWORD : str
-        Password entries.
-    WORKFLOW : str
-        Automated workflows.
     CHAT_MESSAGE : str
         Chat messages.
-    SPACE : str
-        AI-powered spaces.
     USER : str
         User profiles (for @mentions and references).
 
@@ -112,11 +104,7 @@ class ContentType(str, Enum):
     NOTE = "NOTE"
     FILE = "FILE"
     CALENDAR_EVENT = "CALENDAR_EVENT"
-    BOOK = "BOOK"
-    PASSWORD = "PASSWORD"
-    WORKFLOW = "WORKFLOW"
     CHAT_MESSAGE = "CHAT_MESSAGE"
-    SPACE = "SPACE"
     USER = "USER"
 
 

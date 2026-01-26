@@ -7,19 +7,14 @@ import {
   Gear,
   Sparkle,
   Clock,
-  FileText,
   ListBullets,
   Hash,
-  Folder,
-  ChatTeardropDots,
-  User,
-  BookOpen,
-  CalendarDots,
-  Key,
+  FileText,
   Cube,
 } from '@phosphor-icons/react';
 import { parseUrn, urnToPath, UrnType } from '@/utils/urn';
 import { useNavigate } from 'react-router-dom';
+import { getContentTypeConfig } from '@/theme/contentTypes';
 
 /** Parsed mention from content */
 interface ParsedMention {
@@ -54,34 +49,13 @@ function parseMentionsFromContent(content: string): ParsedMention[] {
 
 /** Get icon component for URN type */
 function getTypeIcon(type: UrnType) {
-  const iconMap: Record<UrnType, typeof FileText> = {
-    [UrnType.NOTE]: FileText,
-    [UrnType.FILE]: Folder,
-    [UrnType.CHAT]: ChatTeardropDots,
-    [UrnType.USER]: User,
-    [UrnType.BOOK]: BookOpen,
-    [UrnType.CALENDAR_EVENT]: CalendarDots,
-    [UrnType.PASSWORD]: Key,
-    [UrnType.SPACE]: Cube,
-    [UrnType.UNKNOWN]: Link,
-  };
-  return iconMap[type] || Link;
+  return getContentTypeConfig(type).icon;
 }
 
 /** Get type-specific styling */
 function getTypeStyle(type: UrnType) {
-  const styleMap: Record<UrnType, { bg: string; text: string }> = {
-    [UrnType.NOTE]: { bg: 'bg-primary/10', text: 'text-primary' },
-    [UrnType.FILE]: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
-    [UrnType.CHAT]: { bg: 'bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400' },
-    [UrnType.USER]: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
-    [UrnType.BOOK]: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400' },
-    [UrnType.CALENDAR_EVENT]: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400' },
-    [UrnType.PASSWORD]: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400' },
-    [UrnType.SPACE]: { bg: 'bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400' },
-    [UrnType.UNKNOWN]: { bg: 'bg-muted', text: 'text-muted-foreground' },
-  };
-  return styleMap[type] || styleMap[UrnType.UNKNOWN];
+  const theme = getContentTypeConfig(type).theme;
+  return { bg: theme.badgeBg, text: theme.accentText };
 }
 
 /** Get initials from a name */

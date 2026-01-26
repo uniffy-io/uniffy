@@ -10,6 +10,7 @@ import { parseUrn, UrnType } from '@/utils/urn';
 import { useAppSelector } from '@/app/hooks';
 import { searchApi } from '@/features/search';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
+import { getContentTypeLabel } from '@/theme/contentTypes';
 
 export interface UrnPreviewData {
   urn: string;
@@ -43,14 +44,8 @@ function searchResultTypeToUrnType(type: SearchResultType): UrnType {
       return UrnType.CHAT;
     case SearchResultType.USER:
       return UrnType.USER;
-    case SearchResultType.BOOK:
-      return UrnType.BOOK;
     case SearchResultType.CALENDAR_EVENT:
       return UrnType.CALENDAR_EVENT;
-    case SearchResultType.PASSWORD:
-      return UrnType.PASSWORD;
-    case SearchResultType.SPACE:
-      return UrnType.SPACE;
     default:
       return UrnType.UNKNOWN;
   }
@@ -158,20 +153,9 @@ export function useUrnPreview(): UseUrnPreviewResult {
   };
 }
 
-/** Get a human-readable label for a URN type */
+/** Get a human-readable label for a URN type using centralized config */
 function getTypeLabel(type: UrnType): string {
-  const labels: Record<UrnType, string> = {
-    [UrnType.NOTE]: 'Note',
-    [UrnType.FILE]: 'File',
-    [UrnType.CHAT]: 'Chat',
-    [UrnType.USER]: 'User',
-    [UrnType.BOOK]: 'Book',
-    [UrnType.CALENDAR_EVENT]: 'Event',
-    [UrnType.PASSWORD]: 'Password',
-    [UrnType.SPACE]: 'Space',
-    [UrnType.UNKNOWN]: 'Unknown',
-  };
-  return labels[type] || 'Unknown';
+  return getContentTypeLabel(type);
 }
 
 /**

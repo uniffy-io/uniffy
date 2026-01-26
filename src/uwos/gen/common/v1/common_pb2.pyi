@@ -15,11 +15,8 @@ class ContentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONTENT_TYPE_NOTE: _ClassVar[ContentType]
     CONTENT_TYPE_FILE: _ClassVar[ContentType]
     CONTENT_TYPE_CALENDAR_EVENT: _ClassVar[ContentType]
-    CONTENT_TYPE_BOOK: _ClassVar[ContentType]
-    CONTENT_TYPE_PASSWORD: _ClassVar[ContentType]
-    CONTENT_TYPE_WORKFLOW: _ClassVar[ContentType]
     CONTENT_TYPE_CHAT_MESSAGE: _ClassVar[ContentType]
-    CONTENT_TYPE_SPACE: _ClassVar[ContentType]
+    CONTENT_TYPE_USER: _ClassVar[ContentType]
 
 class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -59,11 +56,8 @@ CONTENT_TYPE_UNSPECIFIED: ContentType
 CONTENT_TYPE_NOTE: ContentType
 CONTENT_TYPE_FILE: ContentType
 CONTENT_TYPE_CALENDAR_EVENT: ContentType
-CONTENT_TYPE_BOOK: ContentType
-CONTENT_TYPE_PASSWORD: ContentType
-CONTENT_TYPE_WORKFLOW: ContentType
 CONTENT_TYPE_CHAT_MESSAGE: ContentType
-CONTENT_TYPE_SPACE: ContentType
+CONTENT_TYPE_USER: ContentType
 SUBJECT_TYPE_UNSPECIFIED: SubjectType
 SUBJECT_TYPE_USER: SubjectType
 SUBJECT_TYPE_GROUP: SubjectType

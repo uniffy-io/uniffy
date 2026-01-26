@@ -15,21 +15,13 @@ class SearchResultType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEARCH_RESULT_TYPE_FILE: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_CHAT: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_USER: _ClassVar[SearchResultType]
-    SEARCH_RESULT_TYPE_BOOK: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_CALENDAR_EVENT: _ClassVar[SearchResultType]
-    SEARCH_RESULT_TYPE_PASSWORD: _ClassVar[SearchResultType]
-    SEARCH_RESULT_TYPE_WORKFLOW: _ClassVar[SearchResultType]
-    SEARCH_RESULT_TYPE_SPACE: _ClassVar[SearchResultType]
 SEARCH_RESULT_TYPE_UNSPECIFIED: SearchResultType
 SEARCH_RESULT_TYPE_NOTE: SearchResultType
 SEARCH_RESULT_TYPE_FILE: SearchResultType
 SEARCH_RESULT_TYPE_CHAT: SearchResultType
 SEARCH_RESULT_TYPE_USER: SearchResultType
-SEARCH_RESULT_TYPE_BOOK: SearchResultType
 SEARCH_RESULT_TYPE_CALENDAR_EVENT: SearchResultType
-SEARCH_RESULT_TYPE_PASSWORD: SearchResultType
-SEARCH_RESULT_TYPE_WORKFLOW: SearchResultType
-SEARCH_RESULT_TYPE_SPACE: SearchResultType
 
 class SearchRequest(_message.Message):
     __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter")

@@ -273,16 +273,10 @@ export function getContentTypeLabel(contentType: number): string {
             return 'Files';
         case ContentType.CALENDAR_EVENT:
             return 'Calendar Events';
-        case ContentType.BOOK:
-            return 'Books';
-        case ContentType.PASSWORD:
-            return 'Passwords';
-        case ContentType.WORKFLOW:
-            return 'Workflows';
         case ContentType.CHAT_MESSAGE:
             return 'Chat Messages';
-        case ContentType.SPACE:
-            return 'Spaces';
+        case ContentType.USER:
+            return 'Users';
         default:
             return 'Unknown';
     }

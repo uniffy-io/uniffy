@@ -11,10 +11,11 @@ import type { PlainMessage } from '@bufbuild/protobuf';
 import { parseUrn, UrnType } from '@/utils/urn';
 import type { SerializedNote } from '../store/notesThunks';
 import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
+import { getContentTypeLabel } from '@/theme/contentTypes';
 
 /** Custom icon for a note */
 export interface NoteIconData {
-  type: 'heroicon' | 'emoji';
+  type: 'icon' | 'emoji';
   value: string;
 }
 
@@ -218,20 +219,9 @@ export function buildGraphData(
   return { nodes, links };
 }
 
-/** Get a human-readable label for a URN type */
+/** Get a human-readable label for a URN type using centralized config */
 function getTypeLabel(type: UrnType): string {
-  const labels: Record<UrnType, string> = {
-    [UrnType.NOTE]: 'Note',
-    [UrnType.FILE]: 'File',
-    [UrnType.CHAT]: 'Chat',
-    [UrnType.USER]: 'User',
-    [UrnType.BOOK]: 'Book',
-    [UrnType.CALENDAR_EVENT]: 'Event',
-    [UrnType.PASSWORD]: 'Password',
-    [UrnType.SPACE]: 'Space',
-    [UrnType.UNKNOWN]: 'Unknown',
-  };
-  return labels[type] || 'Unknown';
+  return getContentTypeLabel(type);
 }
 
 /**

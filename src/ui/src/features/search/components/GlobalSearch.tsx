@@ -1,13 +1,13 @@
 /**
  * Global Search Component
  *
- * A modern search bar with dropdown results for the header.
- * Uses fuzzy search with permission filtering.
+ * A modern command-palette style search bar for the header.
+ * Expands on focus to become the central interaction point.
  */
 
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlassIcon, X } from '@phosphor-icons/react';
+import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { useSearch } from '../hooks/useSearch';
 import { SearchResultsList } from './SearchResultsList';
 import { cn } from '@/utils/cn';
@@ -39,11 +39,14 @@ export function GlobalSearch() {
     const handleResultSelect = (result: SearchResultItem) => {
         navigate(result.url);
         setIsOpen(false);
+        setIsFocused(false);
         clearResults();
+        inputRef.current?.blur();
     };
 
     const handleClose = () => {
         setIsOpen(false);
+        setIsFocused(false);
         inputRef.current?.blur();
     };
 
@@ -62,76 +65,102 @@ export function GlobalSearch() {
 
     return (
         <div ref={containerRef} className="relative">
-            {/* Search Input */}
+            {/* Search Input Container */}
             <div
                 className={cn(
-                    "relative flex items-center transition-all duration-200",
-                    isFocused ? "w-72" : "w-56"
+                    "group relative flex items-center",
+                    "transition-all duration-500 ease-out",
+                    isFocused ? "w-[420px]" : "w-64"
                 )}
             >
-                {/* Search icon */}
-                <MagnifyingGlassIcon
-                    size={14}
-                    weight="duotone"
-                    className={cn(
-                        "absolute left-2.5 transition-colors duration-200",
+                {/* Glow effect when focused */}
+                <div className={cn(
+                    "absolute -inset-1 rounded-xl opacity-0 blur-md transition-opacity duration-500",
+                    "bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20",
+                    isFocused && "opacity-100"
+                )} />
+
+                {/* Input wrapper */}
+                <div className={cn(
+                    "relative w-full flex items-center rounded-lg overflow-hidden",
+                    "transition-all duration-300",
+                    isFocused
+                        ? "bg-card border border-primary/30 shadow-lg"
+                        : "bg-muted/60 border border-transparent hover:bg-muted/80"
+                )}>
+                    {/* Search icon */}
+                    <div className={cn(
+                        "flex items-center justify-center w-9 h-8 shrink-0",
+                        "transition-colors duration-300",
                         isFocused ? "text-primary" : "text-muted-foreground"
-                    )}
-                />
+                    )}>
+                        <MagnifyingGlass size={16} weight={isFocused ? "bold" : "duotone"} />
+                    </div>
 
-                {/* Input field */}
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={query}
-                    onChange={handleInputChange}
-                    onFocus={() => {
-                        setIsFocused(true);
-                        if (query.trim()) setIsOpen(true);
-                    }}
-                    onBlur={() => !isOpen && setIsFocused(false)}
-                    placeholder="Search anything..."
-                    className={cn(
-                        "h-8 w-full rounded-lg pl-8 pr-16 text-sm",
-                        "bg-muted/50 hover:bg-muted/70",
-                        "border border-transparent",
-                        "focus:bg-background focus:border-primary/30 focus:ring-1 focus:ring-primary/10",
-                        "placeholder:text-muted-foreground/60",
-                        "outline-none",
-                        "transition-all duration-200"
-                    )}
-                />
+                    {/* Input field */}
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={query}
+                        onChange={handleInputChange}
+                        onFocus={() => {
+                            setIsFocused(true);
+                            if (query.trim()) setIsOpen(true);
+                        }}
+                        onBlur={() => !isOpen && setIsFocused(false)}
+                        placeholder="Search anything..."
+                        className={cn(
+                            "flex-1 h-8 bg-transparent text-sm",
+                            "placeholder:text-muted-foreground/50",
+                            "outline-none border-none",
+                            "transition-all duration-300"
+                        )}
+                    />
 
-                {/* Right side: Clear button or keyboard shortcut */}
-                <div className="absolute right-2.5 flex items-center gap-1.5">
-                    {query ? (
-                        <button
-                            onClick={handleClear}
-                            className="p-0.5 rounded hover:bg-muted transition-colors"
-                        >
-                            <X size={14} weight="bold" className="text-muted-foreground" />
-                        </button>
-                    ) : (
-                        <kbd className="hidden sm:inline-flex h-4 items-center gap-1 rounded border border-border bg-muted/50 px-1 text-[9px] font-medium text-muted-foreground">
-                            {searchShortcut || '⌘K'}
-                        </kbd>
-                    )}
+                    {/* Right side: Clear button or keyboard shortcut */}
+                    <div className="flex items-center pr-2.5 gap-2">
+                        {query ? (
+                            <button
+                                onClick={handleClear}
+                                className={cn(
+                                    "p-1 rounded-md transition-all duration-200",
+                                    "text-muted-foreground hover:text-foreground",
+                                    "hover:bg-muted"
+                                )}
+                            >
+                                <X size={14} weight="bold" />
+                            </button>
+                        ) : (
+                            <kbd className={cn(
+                                "hidden sm:inline-flex h-5 items-center gap-0.5 rounded-md px-1.5",
+                                "text-[10px] font-medium tracking-wide",
+                                "transition-all duration-300",
+                                isFocused
+                                    ? "bg-primary/10 text-primary border border-primary/20"
+                                    : "bg-background/50 text-muted-foreground border border-border/50"
+                            )}>
+                                {searchShortcut || '⌘K'}
+                            </kbd>
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Results Dropdown */}
             {isOpen && (query.trim() || isLoading) && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-50">
-                    <div className="rounded-lg bg-card border border-border shadow-lg overflow-hidden">
-                        <SearchResultsList
-                            results={results}
-                            isLoading={isLoading}
-                            query={query}
-                            onSelect={handleResultSelect}
-                            onClose={handleClose}
-                            className="max-h-[60vh]"
-                        />
-                    </div>
+                <div className={cn(
+                    "absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50",
+                    "w-[480px]"
+                )}>
+                    <SearchResultsList
+                        results={results}
+                        isLoading={isLoading}
+                        query={query}
+                        onSelect={handleResultSelect}
+                        onClose={handleClose}
+                        className="max-h-[70vh]"
+                        showHeader={false}
+                    />
                 </div>
             )}
         </div>

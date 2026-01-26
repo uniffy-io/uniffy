@@ -53,7 +53,7 @@ const noteToPlain = (note: Note) => ({
     outgoingReferences: [...note.outgoingReferences],
     // Custom icon (heroicon name or emoji)
     icon: note.icon ? {
-        type: note.icon.iconType as 'heroicon' | 'emoji',
+        type: note.icon.iconType as 'icon' | 'emoji',
         value: note.icon.value,
     } : undefined,
 });
@@ -238,7 +238,7 @@ export const updateNoteIcon = createAsyncThunk<
     SerializedNote,
     {
         noteId: string;
-        icon: { type: 'heroicon' | 'emoji'; value: string } | null;
+        icon: { type: 'icon' | 'emoji'; value: string } | null;
     },
     { state: RootState; rejectValue: string }
 >('notes/updateNoteIcon', async (params, { getState, rejectWithValue }) => {

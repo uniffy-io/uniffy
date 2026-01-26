@@ -36,29 +36,9 @@ export enum SearchResultType {
   USER = 4,
 
   /**
-   * @generated from enum value: SEARCH_RESULT_TYPE_BOOK = 5;
-   */
-  BOOK = 5,
-
-  /**
    * @generated from enum value: SEARCH_RESULT_TYPE_CALENDAR_EVENT = 6;
    */
   CALENDAR_EVENT = 6,
-
-  /**
-   * @generated from enum value: SEARCH_RESULT_TYPE_PASSWORD = 7;
-   */
-  PASSWORD = 7,
-
-  /**
-   * @generated from enum value: SEARCH_RESULT_TYPE_WORKFLOW = 8;
-   */
-  WORKFLOW = 8,
-
-  /**
-   * @generated from enum value: SEARCH_RESULT_TYPE_SPACE = 9;
-   */
-  SPACE = 9,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SearchResultType)
 proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
@@ -67,11 +47,7 @@ proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
   { no: 2, name: "SEARCH_RESULT_TYPE_FILE" },
   { no: 3, name: "SEARCH_RESULT_TYPE_CHAT" },
   { no: 4, name: "SEARCH_RESULT_TYPE_USER" },
-  { no: 5, name: "SEARCH_RESULT_TYPE_BOOK" },
   { no: 6, name: "SEARCH_RESULT_TYPE_CALENDAR_EVENT" },
-  { no: 7, name: "SEARCH_RESULT_TYPE_PASSWORD" },
-  { no: 8, name: "SEARCH_RESULT_TYPE_WORKFLOW" },
-  { no: 9, name: "SEARCH_RESULT_TYPE_SPACE" },
 ]);
 
 /**

@@ -7,21 +7,15 @@
 
 import { useEffect, useRef } from 'react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/utils/urn';
+import type { Icon } from '@phosphor-icons/react';
 import {
-  FileText,
-  Folder,
-  ChatTeardropDots,
-  User,
-  BookOpen,
-  CalendarDots,
-  Key,
-  Cube,
-  Link,
   Clock,
   ArrowSquareOut,
+  Link,
 } from '@phosphor-icons/react';
 import type { UrnPreviewData } from './useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
+import { getContentTypeConfig } from '@/theme/contentTypes';
 
 interface MentionPreviewProps {
   preview: UrnPreviewData | null;
@@ -32,7 +26,7 @@ interface MentionPreviewProps {
 }
 
 interface TypeTheme {
-  icon: typeof FileText;
+  icon: Icon;
   gradient: string;
   iconBg: string;
   accentText: string;
@@ -40,75 +34,23 @@ interface TypeTheme {
 }
 
 /**
- * Get theme configuration for URN type
+ * Get theme configuration for URN type using centralized config
  */
 function getTypeTheme(type: UrnType): TypeTheme {
-  const themeMap: Record<UrnType, TypeTheme> = {
-    [UrnType.NOTE]: {
-      icon: FileText,
-      gradient: 'from-primary/20 via-primary/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-primary to-primary/80',
-      accentText: 'text-primary',
-      dotColor: 'bg-primary',
-    },
-    [UrnType.FILE]: {
-      icon: Folder,
-      gradient: 'from-blue-500/20 via-blue-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
-      accentText: 'text-blue-600 dark:text-blue-400',
-      dotColor: 'bg-blue-500',
-    },
-    [UrnType.CHAT]: {
-      icon: ChatTeardropDots,
-      gradient: 'from-violet-500/20 via-violet-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
-      accentText: 'text-violet-600 dark:text-violet-400',
-      dotColor: 'bg-violet-500',
-    },
-    [UrnType.USER]: {
-      icon: User,
-      gradient: 'from-emerald-500/20 via-emerald-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-      accentText: 'text-emerald-600 dark:text-emerald-400',
-      dotColor: 'bg-emerald-500',
-    },
-    [UrnType.BOOK]: {
-      icon: BookOpen,
-      gradient: 'from-amber-500/20 via-amber-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
-      accentText: 'text-amber-600 dark:text-amber-400',
-      dotColor: 'bg-amber-500',
-    },
-    [UrnType.CALENDAR_EVENT]: {
-      icon: CalendarDots,
-      gradient: 'from-rose-500/20 via-rose-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
-      accentText: 'text-rose-600 dark:text-rose-400',
-      dotColor: 'bg-rose-500',
-    },
-    [UrnType.PASSWORD]: {
-      icon: Key,
-      gradient: 'from-red-500/20 via-red-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
-      accentText: 'text-red-600 dark:text-red-400',
-      dotColor: 'bg-red-500',
-    },
-    [UrnType.SPACE]: {
-      icon: Cube,
-      gradient: 'from-indigo-500/20 via-indigo-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
-      accentText: 'text-indigo-600 dark:text-indigo-400',
-      dotColor: 'bg-indigo-500',
-    },
-    [UrnType.UNKNOWN]: {
-      icon: Link,
-      gradient: 'from-gray-500/20 via-gray-500/10 to-transparent',
-      iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
-      accentText: 'text-muted-foreground',
-      dotColor: 'bg-gray-400',
-    },
+  const config = getContentTypeConfig(type);
+  const theme = config.theme;
+
+  // Derive dotColor from iconBg (extract the main color)
+  const dotColorMatch = theme.iconBg.match(/from-(\w+-\d+)/);
+  const dotColor = dotColorMatch ? `bg-${dotColorMatch[1]}` : 'bg-gray-400';
+
+  return {
+    icon: config.icon,
+    gradient: theme.gradient,
+    iconBg: theme.iconBg,
+    accentText: theme.accentText,
+    dotColor,
   };
-  return themeMap[type] || themeMap[UrnType.UNKNOWN];
 }
 
 /**

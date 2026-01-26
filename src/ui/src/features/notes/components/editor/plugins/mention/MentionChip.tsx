@@ -15,19 +15,10 @@
 import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/utils/urn';
-import {
-  FileText,
-  Folder,
-  ChatTeardropDots,
-  User,
-  BookOpen,
-  CalendarDots,
-  Key,
-  Cube,
-  Link,
-} from '@phosphor-icons/react';
 import { MentionPreview } from './MentionPreview';
 import { useUrnPreview } from './useUrnPreview';
+import { getContentTypeConfig } from '@/theme/contentTypes';
+import type { Icon } from '@phosphor-icons/react';
 
 interface MentionChipProps {
   urn: string;
@@ -46,7 +37,7 @@ interface MentionChipBasicProps {
  * Type-specific styling configuration with gradients
  */
 interface TypeStyle {
-  icon: typeof FileText;
+  icon: Icon;
   gradient: string;
   glowColor: string;
   iconBg: string;
@@ -55,85 +46,21 @@ interface TypeStyle {
 }
 
 /**
- * Get complete styling for URN type
+ * Get complete styling for URN type using centralized config
  */
 function getTypeStyle(type: UrnType): TypeStyle {
-  const styleMap: Record<UrnType, TypeStyle> = {
-    [UrnType.NOTE]: {
-      icon: FileText,
-      gradient: 'from-primary/10 via-primary/5 to-transparent',
-      glowColor: 'group-hover:shadow-primary/25',
-      iconBg: 'bg-gradient-to-br from-primary to-primary/80',
-      iconColor: 'text-primary-foreground',
-      borderColor: 'border-primary/30 group-hover:border-primary/50',
-    },
-    [UrnType.FILE]: {
-      icon: Folder,
-      gradient: 'from-blue-500/10 via-blue-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-blue-500/25',
-      iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
-      iconColor: 'text-white',
-      borderColor: 'border-blue-500/30 group-hover:border-blue-500/50',
-    },
-    [UrnType.CHAT]: {
-      icon: ChatTeardropDots,
-      gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-violet-500/25',
-      iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
-      iconColor: 'text-white',
-      borderColor: 'border-violet-500/30 group-hover:border-violet-500/50',
-    },
-    [UrnType.USER]: {
-      icon: User,
-      gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-emerald-500/25',
-      iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-      iconColor: 'text-white',
-      borderColor: 'border-emerald-500/30 group-hover:border-emerald-500/50',
-    },
-    [UrnType.BOOK]: {
-      icon: BookOpen,
-      gradient: 'from-amber-500/10 via-amber-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-amber-500/25',
-      iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
-      iconColor: 'text-white',
-      borderColor: 'border-amber-500/30 group-hover:border-amber-500/50',
-    },
-    [UrnType.CALENDAR_EVENT]: {
-      icon: CalendarDots,
-      gradient: 'from-rose-500/10 via-rose-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-rose-500/25',
-      iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
-      iconColor: 'text-white',
-      borderColor: 'border-rose-500/30 group-hover:border-rose-500/50',
-    },
-    [UrnType.PASSWORD]: {
-      icon: Key,
-      gradient: 'from-red-500/10 via-red-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-red-500/25',
-      iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
-      iconColor: 'text-white',
-      borderColor: 'border-red-500/30 group-hover:border-red-500/50',
-    },
-    [UrnType.SPACE]: {
-      icon: Cube,
-      gradient: 'from-indigo-500/10 via-indigo-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-indigo-500/25',
-      iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
-      iconColor: 'text-white',
-      borderColor: 'border-indigo-500/30 group-hover:border-indigo-500/50',
-    },
-    [UrnType.UNKNOWN]: {
-      icon: Link,
-      gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
-      glowColor: 'group-hover:shadow-gray-500/20',
-      iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
-      iconColor: 'text-white',
-      borderColor: 'border-border group-hover:border-border',
-    },
-  };
+  const config = getContentTypeConfig(type);
+  const theme = config.theme;
 
-  return styleMap[type];
+  // Convert theme to chip-specific styling
+  return {
+    icon: config.icon,
+    gradient: theme.gradient,
+    glowColor: `group-hover:${theme.shadow}`,
+    iconBg: theme.iconBg,
+    iconColor: 'text-white',
+    borderColor: `${theme.border} group-hover:${theme.border}`,
+  };
 }
 
 // Delay before showing preview (ms)

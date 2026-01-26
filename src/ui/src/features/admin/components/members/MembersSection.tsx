@@ -200,8 +200,8 @@ export function MembersSection() {
     const [roleFilter, setRoleFilter] = useState<number | undefined>(undefined);
 
     // Track previous values to detect actual changes vs initial mount
-    const prevSearchRef = useRef<string | undefined>();
-    const prevRoleFilterRef = useRef<number | undefined>();
+    const prevSearchRef = useRef<string | undefined>(undefined);
+    const prevRoleFilterRef = useRef<number | undefined>(undefined);
     const hasFetchedRef = useRef(false);
 
     // Fetch on mount and when filters change (debounced)

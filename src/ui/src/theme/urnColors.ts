@@ -9,7 +9,7 @@
  * - Tailwind classes for component styling
  */
 
-import { UrnType } from '@/utils/urn';
+import { UrnType } from '@/utils/urnTypes';
 
 /**
  * Hex color values for each URN type.
@@ -20,10 +20,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.FILE]: '#3b82f6',           // blue-500
   [UrnType.CHAT]: '#8b5cf6',           // violet-500
   [UrnType.USER]: '#10b981',           // emerald-500
-  [UrnType.BOOK]: '#f59e0b',           // amber-500
   [UrnType.CALENDAR_EVENT]: '#f43f5e', // rose-500
-  [UrnType.PASSWORD]: '#ef4444',       // red-500
-  [UrnType.SPACE]: '#6366f1',          // indigo-500
   [UrnType.UNKNOWN]: '#6b7280',        // gray-500
 };
 
@@ -79,14 +76,6 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: 'border-emerald-500/20',
     shadow: 'shadow-emerald-500/50',
   },
-  [UrnType.BOOK]: {
-    gradient: 'from-amber-500/10 via-amber-500/5 to-transparent',
-    iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
-    accentText: 'text-amber-600 dark:text-amber-400',
-    badgeBg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
-    shadow: 'shadow-amber-500/50',
-  },
   [UrnType.CALENDAR_EVENT]: {
     gradient: 'from-rose-500/10 via-rose-500/5 to-transparent',
     iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
@@ -94,22 +83,6 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     badgeBg: 'bg-rose-500/10',
     border: 'border-rose-500/20',
     shadow: 'shadow-rose-500/50',
-  },
-  [UrnType.PASSWORD]: {
-    gradient: 'from-red-500/10 via-red-500/5 to-transparent',
-    iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
-    accentText: 'text-red-600 dark:text-red-400',
-    badgeBg: 'bg-red-500/10',
-    border: 'border-red-500/20',
-    shadow: 'shadow-red-500/50',
-  },
-  [UrnType.SPACE]: {
-    gradient: 'from-indigo-500/10 via-indigo-500/5 to-transparent',
-    iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
-    accentText: 'text-indigo-600 dark:text-indigo-400',
-    badgeBg: 'bg-indigo-500/10',
-    border: 'border-indigo-500/20',
-    shadow: 'shadow-indigo-500/50',
   },
   [UrnType.UNKNOWN]: {
     gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
@@ -151,8 +124,5 @@ export const URN_TYPE_LEGEND: Array<{
   { type: UrnType.USER, label: 'Users', hexColor: URN_TYPE_HEX_COLORS[UrnType.USER], tailwindBg: 'bg-emerald-500' },
   { type: UrnType.FILE, label: 'Files', hexColor: URN_TYPE_HEX_COLORS[UrnType.FILE], tailwindBg: 'bg-blue-500' },
   { type: UrnType.CHAT, label: 'Chats', hexColor: URN_TYPE_HEX_COLORS[UrnType.CHAT], tailwindBg: 'bg-violet-500' },
-  { type: UrnType.SPACE, label: 'Spaces', hexColor: URN_TYPE_HEX_COLORS[UrnType.SPACE], tailwindBg: 'bg-indigo-500' },
-  { type: UrnType.BOOK, label: 'Books', hexColor: URN_TYPE_HEX_COLORS[UrnType.BOOK], tailwindBg: 'bg-amber-500' },
   { type: UrnType.CALENDAR_EVENT, label: 'Events', hexColor: URN_TYPE_HEX_COLORS[UrnType.CALENDAR_EVENT], tailwindBg: 'bg-rose-500' },
-  { type: UrnType.PASSWORD, label: 'Passwords', hexColor: URN_TYPE_HEX_COLORS[UrnType.PASSWORD], tailwindBg: 'bg-red-500' },
 ];

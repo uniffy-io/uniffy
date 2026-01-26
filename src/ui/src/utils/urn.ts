@@ -13,19 +13,12 @@
  * - urn:uwos:content:USER:456e7890-e89b-12d3-a456-426614174001
  */
 
-export const UrnType = {
-  NOTE: 'note',
-  FILE: 'file',
-  CHAT: 'chat',
-  USER: 'user',
-  BOOK: 'book',
-  CALENDAR_EVENT: 'calendar_event',
-  PASSWORD: 'password',
-  SPACE: 'space',
-  UNKNOWN: 'unknown',
-} as const;
+// Re-export UrnType from dedicated file to avoid circular dependencies
+// Consumers can import from either '@/utils/urn' or '@/utils/urnTypes'
+export { UrnType } from './urnTypes';
 
-export type UrnType = (typeof UrnType)[keyof typeof UrnType];
+// Local import for use in this file
+import { UrnType } from './urnTypes';
 
 export interface ParsedUrn {
   /** Full URN string */
@@ -110,9 +103,22 @@ export function buildUrn(type: UrnType | string, id: string): string {
   return `urn:uwos:${type}:${id}`;
 }
 
+// Import centralized content type config
+// Note: ES modules handle circular imports correctly when the imported values
+// are accessed at function call time rather than module initialization time
+import type { Icon } from '@phosphor-icons/react';
+import {
+  getContentTypeConfig,
+  getContentTypeIcon,
+  getContentTypeLabel,
+  getContentTypeRoute,
+} from '@/theme/contentTypes';
+
 /**
  * Extract the URL path from a URN
  * Example: urn:uwos:note:123 -> /notes/123
+ *
+ * Uses centralized route config from @/theme/contentTypes
  */
 export function urnToPath(urn: string): string {
   const parsed = parseUrn(urn);
@@ -121,63 +127,39 @@ export function urnToPath(urn: string): string {
     return '#';
   }
 
-  // Map types to plural routes
-  const routeMap: Record<UrnType, string> = {
-    [UrnType.NOTE]: 'notes',
-    [UrnType.FILE]: 'files',
-    [UrnType.CHAT]: 'chats',
-    [UrnType.USER]: 'users',
-    [UrnType.BOOK]: 'books',
-    [UrnType.CALENDAR_EVENT]: 'calendar',
-    [UrnType.PASSWORD]: 'passwords',
-    [UrnType.SPACE]: 'spaces',
-    [UrnType.UNKNOWN]: '',
-  };
-
-  const route = routeMap[parsed.type];
+  const route = getContentTypeRoute(parsed.type);
   return route ? `/${route}/${parsed.id}` : '#';
 }
 
 /**
- * Get display icon for URN type (returns Heroicon name)
+ * Get display icon component for URN type
+ *
+ * Returns a Phosphor icon component from centralized config.
+ * Use this when you need the icon component directly.
  */
-export function getUrnIcon(urn: string): string {
+export function getUrnIcon(urn: string): Icon {
   const parsed = parseUrn(urn);
-
-  const iconMap: Record<UrnType, string> = {
-    [UrnType.NOTE]: 'DocumentTextIcon',
-    [UrnType.FILE]: 'FolderIcon',
-    [UrnType.CHAT]: 'ChatBubbleLeftRightIcon',
-    [UrnType.USER]: 'UserIcon',
-    [UrnType.BOOK]: 'BookOpenIcon',
-    [UrnType.CALENDAR_EVENT]: 'CalendarIcon',
-    [UrnType.PASSWORD]: 'KeyIcon',
-    [UrnType.SPACE]: 'CubeIcon',
-    [UrnType.UNKNOWN]: 'QuestionMarkCircleIcon',
-  };
-
-  return iconMap[parsed.type];
+  return getContentTypeIcon(parsed.type);
 }
 
 /**
  * Get human-readable type label for URN
+ *
+ * Uses centralized label config from @/theme/contentTypes
  */
 export function getUrnTypeLabel(urn: string): string {
   const parsed = parseUrn(urn);
+  return getContentTypeLabel(parsed.type);
+}
 
-  const labelMap: Record<UrnType, string> = {
-    [UrnType.NOTE]: 'Note',
-    [UrnType.FILE]: 'File',
-    [UrnType.CHAT]: 'Chat',
-    [UrnType.USER]: 'User',
-    [UrnType.BOOK]: 'Book',
-    [UrnType.CALENDAR_EVENT]: 'Event',
-    [UrnType.PASSWORD]: 'Password',
-    [UrnType.SPACE]: 'Space',
-    [UrnType.UNKNOWN]: 'Unknown',
-  };
-
-  return labelMap[parsed.type];
+/**
+ * Get full content type configuration for a URN
+ *
+ * Returns the complete config including icon, labels, route, and theme.
+ */
+export function getUrnContentTypeConfig(urn: string) {
+  const parsed = parseUrn(urn);
+  return getContentTypeConfig(parsed.type);
 }
 
 /**

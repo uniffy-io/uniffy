@@ -38,9 +38,9 @@ const noteToPlain = (note: Note) => ({
     groupIds: [...note.groupIds],
     userPermission: note.userPermission,
     outgoingReferences: [...note.outgoingReferences],
-    // Custom icon (heroicon name or emoji)
+    // Custom icon (Phosphor icon name or emoji)
     icon: note.icon ? {
-        type: note.icon.iconType as 'heroicon' | 'emoji',
+        type: note.icon.iconType as 'icon' | 'emoji',
         value: note.icon.value,
     } : undefined,
 });

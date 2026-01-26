@@ -9,12 +9,9 @@ import {
     ShieldCheck,
     FileText,
     Folder,
-    Calendar,
-    BookOpen,
-    Key,
-    Gear,
+    CalendarDots,
     ChatTeardrop,
-    Cube,
+    User,
     WarningCircle,
 } from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '../../hooks/useAdminHooks';
@@ -32,23 +29,17 @@ const VISIBILITY_OPTIONS: SelectOption<number>[] = [
 const CONTENT_TYPE_ICONS: Record<number, typeof FileText> = {
     [ContentType.NOTE]: FileText,
     [ContentType.FILE]: Folder,
-    [ContentType.CALENDAR_EVENT]: Calendar,
-    [ContentType.BOOK]: BookOpen,
-    [ContentType.PASSWORD]: Key,
-    [ContentType.WORKFLOW]: Gear,
+    [ContentType.CALENDAR_EVENT]: CalendarDots,
     [ContentType.CHAT_MESSAGE]: ChatTeardrop,
-    [ContentType.SPACE]: Cube,
+    [ContentType.USER]: User,
 };
 
 const ALL_CONTENT_TYPES = [
     ContentType.NOTE,
     ContentType.FILE,
     ContentType.CALENDAR_EVENT,
-    ContentType.BOOK,
-    ContentType.PASSWORD,
-    ContentType.WORKFLOW,
     ContentType.CHAT_MESSAGE,
-    ContentType.SPACE,
+    ContentType.USER,
 ];
 
 interface ContentTypeCardProps {

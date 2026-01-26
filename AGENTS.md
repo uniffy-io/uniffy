@@ -89,24 +89,28 @@ domains/{feature}/
 
 When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these hardcoded enums/mappings:
 
-**Proto (regenerate after editing):**
+**Proto (regenerate after editing with `make proto`):**
 | File | What to update |
 |------|----------------|
 | `src/proto/search/v1/search.proto` | Add `SEARCH_RESULT_TYPE_{TYPE}` to `SearchResultType` enum |
+| `src/proto/common/v1/common.proto` | Add `CONTENT_TYPE_{TYPE}` to `ContentType` enum |
 
 **Backend:**
 | File | What to update |
 |------|----------------|
+| `src/uwos/core/models/shared.py` | Add to `ContentType` enum |
+| `src/uwos/core/converters/common_proto.py` | Add mapping in `CONTENT_TYPE_TO_PROTO` and `CONTENT_TYPE_FROM_PROTO` |
 | `src/uwos/domains/search/converters.py` | Add mapping in `ENTITY_TYPE_TO_PROTO` dict |
-| `src/uwos/core/types.py` | Add to `ContentType` enum (if applicable) |
+| `src/uwos/domains/permissions/converters.py` | Add mapping in `DOMAIN_CONTENT_TYPE_TO_PROTO` dict |
 
-**Frontend (all files have switch statements or Record mappings):**
+**Frontend:**
 | File | What to update |
 |------|----------------|
-| `src/ui/src/utils/urn.ts` | Add to `UrnType` const, `urnToPath()` route map, `getUrnIcon()`, `getUrnTypeLabel()` |
-| `src/ui/src/theme/urnColors.ts` | Add to `URN_TYPE_HEX_COLORS`, `URN_TYPE_THEMES`, and `URN_TYPE_LEGEND` |
-| `src/ui/src/features/search/utils/queryParser.ts` | Add to `TYPE_KEYWORD_MAP`, `FILTER_PREFIXES`, `getTypeFilterLabel()`, `getTypeFilterKeyword()` |
-| `src/ui/src/features/search/components/SearchResultsList.tsx` | Add to `RESULT_TYPE_ICONS`, `RESULT_TYPE_TO_URN_TYPE`, `getResultTypeLabel()` |
+| `src/ui/src/utils/urnTypes.ts` | Add to `UrnType` const (source of truth for URN types) |
+| `src/ui/src/theme/urnColors.ts` | Add hex color and theme in `URN_TYPE_HEX_COLORS` and `URN_TYPE_THEMES` |
+| `src/ui/src/theme/contentTypes.ts` | Add config to `CONTENT_TYPE_CONFIG` (icon, label, route, theme, color) |
+| `src/ui/src/features/search/utils/queryParser.ts` | Add to `TYPE_KEYWORD_MAP` and `FILTER_PREFIXES` |
+| `src/ui/src/features/search/components/SearchResultsList.tsx` | Add to `SEARCH_RESULT_TYPE_TO_URN_TYPE` mapping |
 
 **Example - Adding a TASK type:**
 
@@ -118,7 +122,30 @@ When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these
    }
    ```
 
-2. **Backend converters** (`converters.py`):
+2. **Proto** (`common.proto`):
+   ```protobuf
+   enum ContentType {
+     // ... existing types
+     CONTENT_TYPE_TASK = 10;
+   }
+   ```
+
+3. **Backend model** (`core/models/shared.py`):
+   ```python
+   class ContentType(str, Enum):
+       # ... existing types
+       TASK = "TASK"
+   ```
+
+4. **Backend converters** (`core/converters/common_proto.py`):
+   ```python
+   CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
+       # ... existing mappings
+       DomainContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
+   }
+   ```
+
+5. **Backend search converters** (`domains/search/converters.py`):
    ```python
    ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
        # ... existing mappings
@@ -126,27 +153,28 @@ When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these
    }
    ```
 
-3. **Frontend URN utils** (`urn.ts`):
+6. **Backend permissions converters** (`domains/permissions/converters.py`):
+   ```python
+   DOMAIN_CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType] = {
+       # ... existing mappings
+       DomainContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
+   }
+   ```
+
+7. **Frontend URN types** (`utils/urnTypes.ts`):
    ```typescript
    export const UrnType = {
      // ... existing types
      TASK: 'task',
    } as const;
-
-   // Add to routeMap in urnToPath()
-   [UrnType.TASK]: 'tasks',
-
-   // Add to iconMap in getUrnIcon()
-   [UrnType.TASK]: 'ClipboardDocumentListIcon',
-
-   // Add to labelMap in getUrnTypeLabel()
-   [UrnType.TASK]: 'Task',
    ```
 
-4. **Frontend theme colors** (`urnColors.ts`):
+8. **Frontend URN colors** (`theme/urnColors.ts`):
    ```typescript
+   // Add to URN_TYPE_HEX_COLORS
    [UrnType.TASK]: '#14b8a6', // teal-500
 
+   // Add to URN_TYPE_THEMES
    [UrnType.TASK]: {
      gradient: 'from-teal-500/10 via-teal-500/5 to-transparent',
      iconBg: 'bg-gradient-to-br from-teal-500 to-teal-600',
@@ -157,7 +185,30 @@ When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these
    },
    ```
 
-5. **Frontend query parser** (`queryParser.ts`):
+9. **Frontend content type config** (`theme/contentTypes.ts`):
+   ```typescript
+   import { ListChecks } from '@phosphor-icons/react';
+
+   // Add to CONTENT_TYPE_CONFIG
+   [UrnType.TASK]: {
+     type: UrnType.TASK,
+     icon: ListChecks,
+     label: 'Task',
+     labelPlural: 'Tasks',
+     route: 'tasks',
+     theme: {
+       gradient: 'from-teal-500/10 via-teal-500/5 to-transparent',
+       iconBg: 'bg-gradient-to-br from-teal-500 to-teal-600',
+       accentText: 'text-teal-600 dark:text-teal-400',
+       badgeBg: 'bg-teal-500/10',
+       border: 'border-teal-500/20',
+       shadow: 'shadow-teal-500/50',
+     },
+     hexColor: '#14b8a6',
+   },
+   ```
+
+10. **Frontend query parser** (`features/search/utils/queryParser.ts`):
    ```typescript
    const TYPE_KEYWORD_MAP = {
      // ... existing mappings
@@ -171,18 +222,15 @@ When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these
    ];
    ```
 
-6. **Frontend search results** (`SearchResultsList.tsx`):
-   ```typescript
-   const RESULT_TYPE_ICONS = {
-     [SearchResultType.TASK]: ClipboardDocumentListIcon,
-   };
+11. **Frontend search results** (`features/search/components/SearchResultsList.tsx`):
+    ```typescript
+    const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
+      // ... existing mappings
+      [SearchResultType.TASK]: UrnType.TASK,
+    };
+    ```
 
-   const RESULT_TYPE_TO_URN_TYPE = {
-     [SearchResultType.TASK]: UrnType.TASK,
-   };
-   ```
-
-Run `make proto` after updating the proto file to regenerate TypeScript and Python bindings.
+Run `make proto` after updating proto files to regenerate TypeScript and Python bindings.
 
 ### API Services Architecture
 
