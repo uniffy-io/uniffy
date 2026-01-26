@@ -8,7 +8,7 @@ import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { transport } from "@/config";
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from '@phosphor-icons/react';
 
 // Role options for organization membership
 const ORG_ROLE_OPTIONS: SelectOption<number>[] = [
@@ -128,7 +128,7 @@ export function UserCreateDialog({ isOpen, onClose, onSave }: UserCreateDialogPr
             onClick={onClose}
             className="rounded-lg p-1 hover:bg-muted transition-colors"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <X size={20} weight="bold" />
           </button>
         </div>
         

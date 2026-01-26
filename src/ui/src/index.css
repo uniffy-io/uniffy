@@ -29,18 +29,18 @@
   --color-ring: hsl(var(--ring));
 }
 
-/* Default values (fallback) */
+/* Default values (fallback) - Light theme */
 :root {
   --primary: 221.2 83.2% 53.3%;
   --primary-foreground: 210 40% 98%;
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 220 14.3% 93%;
+  --muted-foreground: 220 8.9% 40%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
+  --border: 220 13% 82%;
+  --input: 220 13% 82%;
   --ring: 221.2 83.2% 53.3%;
 }
 

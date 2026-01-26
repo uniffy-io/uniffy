@@ -3,7 +3,7 @@
  */
 
 import { useAppDispatch } from '@/app/hooks';
-import { DocumentDuplicateIcon } from '@heroicons/react/24/outline';
+import { CopySimple } from '@phosphor-icons/react';
 import { openCreateTemplateModal, openEventModal } from '../../store';
 import { SidebarSection } from './SidebarSection';
 import { DEFAULT_TEMPLATES, getTemplateById } from '../../constants';
@@ -37,7 +37,7 @@ export function TemplateList() {
             onClick={() => handleTemplateClick(template.id)}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
-            <DocumentDuplicateIcon className="w-4 h-4" />
+            <CopySimple size={16} weight="duotone" />
             <span>{template.name}</span>
           </button>
         ))}

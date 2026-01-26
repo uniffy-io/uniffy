@@ -17,7 +17,7 @@ import {
 import { OrganizationEditDialog } from "../components/OrganizationEditDialog";
 import { transport } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { BuildingOfficeIcon, PlusIcon, PencilSquareIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { Buildings, Plus, PencilSimple, Clipboard, Check } from '@phosphor-icons/react';
 import { cn } from "@/utils/cn";
 
 export default function OrganizationsPage() {
@@ -105,7 +105,7 @@ export default function OrganizationsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-primary p-3 shadow-lg">
-            <BuildingOfficeIcon className="h-7 w-7 text-primary-foreground" />
+            <Buildings size={28} weight="duotone" className="text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
@@ -115,7 +115,7 @@ export default function OrganizationsPage() {
           </div>
         </div>
         <Button size="md" onClick={handleCreate}>
-          <PlusIcon className="h-4 w-4" />
+          <Plus size={16} />
           Add Organization
         </Button>
       </div>
@@ -145,7 +145,7 @@ export default function OrganizationsPage() {
           ) : organizations.length === 0 ? (
             <TableEmpty
               colSpan={7}
-              icon={<BuildingOfficeIcon className="h-12 w-12" />}
+              icon={<Buildings size={48} weight="duotone" />}
               title="No organizations found"
               description="Create your first organization to get started"
             />
@@ -155,7 +155,7 @@ export default function OrganizationsPage() {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center border border-blue-500/30">
-                      <BuildingOfficeIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <Buildings size={20} weight="duotone" className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <div className="font-semibold text-foreground">{org.organization?.name}</div>
@@ -168,9 +168,9 @@ export default function OrganizationsPage() {
                           title="Copy full UUID"
                         >
                           {copiedId === org.organization?.id ? (
-                            <CheckIcon className="h-3 w-3 text-green-600 dark:text-green-400" />
+                            <Check size={12} weight="bold" className="text-green-600 dark:text-green-400" />
                           ) : (
-                            <ClipboardDocumentIcon className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                            <Clipboard size={12} className="text-muted-foreground hover:text-foreground" />
                           )}
                         </button>
                       </div>
@@ -215,7 +215,7 @@ export default function OrganizationsPage() {
                     }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <PencilSquareIcon className="h-3.5 w-3.5" />
+                    <PencilSimple size={14} />
                     Edit
                   </Button>
                 </TableCell>

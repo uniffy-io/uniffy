@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MagnifyingGlassIcon, UserIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlass, User, UsersThree } from '@phosphor-icons/react';
 import { useShareTargetSearch, isUserTarget } from '../hooks/useSharingHooks';
 import { PermissionLevel } from '@/gen/common/v1/common_pb';
 import { PermissionLevelSelect } from './PermissionLevelSelect';
@@ -82,7 +82,7 @@ export function ShareTargetSearch({
             <div className="flex gap-2">
                 {/* Search input */}
                 <div className="relative flex-1">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                         ref={inputRef}
                         type="text"
@@ -147,9 +147,9 @@ export function ShareTargetSearch({
                                             `}
                                         >
                                             {isUserTarget(target) ? (
-                                                <UserIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                                <User size={16} className="text-emerald-600 dark:text-emerald-400" />
                                             ) : (
-                                                <UserGroupIcon className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                                <UsersThree size={16} className="text-violet-600 dark:text-violet-400" />
                                             )}
                                         </div>
 

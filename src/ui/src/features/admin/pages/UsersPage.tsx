@@ -18,7 +18,7 @@ import { UserEditDialog } from "../components/UserEditDialog";
 import { UserCreateDialog } from "../components/UserCreateDialog";
 import { transport } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { UserGroupIcon, PlusIcon, PencilSquareIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { UsersThree, Plus, PencilSimple, ShieldCheck } from '@phosphor-icons/react';
 import { cn } from "@/utils/cn";
 
 export default function UsersPage() {
@@ -67,7 +67,7 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-primary p-3 shadow-lg">
-            <UserGroupIcon className="h-7 w-7 text-primary-foreground" />
+            <UsersThree size={28} weight="duotone" className="text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Users</h1>
@@ -77,7 +77,7 @@ export default function UsersPage() {
           </div>
         </div>
         <Button size="md" onClick={() => setIsCreateOpen(true)}>
-          <PlusIcon className="h-4 w-4" />
+          <Plus size={16} />
           Add User
         </Button>
       </div>
@@ -106,7 +106,7 @@ export default function UsersPage() {
           ) : users.length === 0 ? (
             <TableEmpty
               colSpan={6}
-              icon={<UserGroupIcon className="h-12 w-12" />}
+              icon={<UsersThree size={48} weight="duotone" />}
               title="No users found"
               description="Create your first user to get started"
             />
@@ -127,7 +127,7 @@ export default function UsersPage() {
                       <div className="font-semibold text-foreground flex items-center gap-2">
                         {user.username || user.email}
                         {user.isSystemAdmin && (
-                          <ShieldCheckIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <ShieldCheck size={16} weight="fill" className="text-purple-600 dark:text-purple-400" />
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">@{user.username || user.email.split('@')[0]}</div>
@@ -167,7 +167,7 @@ export default function UsersPage() {
                     }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <PencilSquareIcon className="h-3.5 w-3.5" />
+                    <PencilSimple size={14} />
                     Edit
                   </Button>
                 </TableCell>

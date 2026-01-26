@@ -6,17 +6,17 @@
 
 import { useEffect, useState } from 'react';
 import {
-    ShieldCheckIcon,
-    DocumentTextIcon,
-    FolderIcon,
-    CalendarIcon,
-    BookOpenIcon,
-    KeyIcon,
-    CogIcon,
-    ChatBubbleLeftRightIcon,
-    CubeIcon,
-    ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
+    ShieldCheck,
+    FileText,
+    Folder,
+    Calendar,
+    BookOpen,
+    Key,
+    Gear,
+    ChatTeardrop,
+    Cube,
+    WarningCircle,
+} from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '../../hooks/useAdminHooks';
 import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
 import type { SerializedContentTypeDefaults } from '../../store/adminSlice';
@@ -29,15 +29,15 @@ const VISIBILITY_OPTIONS: SelectOption<number>[] = [
     { value: VisibilityScope.ORGANIZATION, label: 'Organization' },
 ];
 
-const CONTENT_TYPE_ICONS: Record<number, typeof DocumentTextIcon> = {
-    [ContentType.NOTE]: DocumentTextIcon,
-    [ContentType.FILE]: FolderIcon,
-    [ContentType.CALENDAR_EVENT]: CalendarIcon,
-    [ContentType.BOOK]: BookOpenIcon,
-    [ContentType.PASSWORD]: KeyIcon,
-    [ContentType.WORKFLOW]: CogIcon,
-    [ContentType.CHAT_MESSAGE]: ChatBubbleLeftRightIcon,
-    [ContentType.SPACE]: CubeIcon,
+const CONTENT_TYPE_ICONS: Record<number, typeof FileText> = {
+    [ContentType.NOTE]: FileText,
+    [ContentType.FILE]: Folder,
+    [ContentType.CALENDAR_EVENT]: Calendar,
+    [ContentType.BOOK]: BookOpen,
+    [ContentType.PASSWORD]: Key,
+    [ContentType.WORKFLOW]: Gear,
+    [ContentType.CHAT_MESSAGE]: ChatTeardrop,
+    [ContentType.SPACE]: Cube,
 };
 
 const ALL_CONTENT_TYPES = [
@@ -59,7 +59,7 @@ interface ContentTypeCardProps {
 
 function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardProps) {
     const [saving, setSaving] = useState(false);
-    const Icon = CONTENT_TYPE_ICONS[contentType] || DocumentTextIcon;
+    const Icon = CONTENT_TYPE_ICONS[contentType] || FileText;
 
     // Local state for toggles
     const [membersCanView, setMembersCanView] = useState(defaults?.membersCanView ?? true);
@@ -124,7 +124,7 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
-                    <Icon className="h-5 w-5 text-primary" />
+                    <Icon size={20} weight="duotone" className="text-primary" />
                 </div>
                 <div className="flex-1">
                     <h3 className="font-medium">{getContentTypeLabel(contentType)}</h3>
@@ -243,7 +243,7 @@ export function PermissionDefaultsSection() {
             {/* Header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">
-                    <ShieldCheckIcon className="h-6 w-6 text-primary" />
+                    <ShieldCheck size={24} weight="duotone" className="text-primary" />
                     <h1 className="text-2xl font-bold">Permission Defaults</h1>
                 </div>
                 <p className="text-muted-foreground">
@@ -257,7 +257,7 @@ export function PermissionDefaultsSection() {
                 <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm text-red-500">
-                            <ExclamationCircleIcon className="h-5 w-5" />
+                            <WarningCircle size={20} weight="fill" />
                             {error}
                         </div>
                         <button

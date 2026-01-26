@@ -14,21 +14,20 @@
 
 import { useState, useMemo } from 'react';
 import {
-  ChevronDoubleRightIcon,
-  BookmarkIcon,
-  PencilIcon,
-  TrashIcon,
-  CalendarDaysIcon,
-  ClockIcon,
-  ArrowPathIcon,
-  MapPinIcon,
-  CheckIcon,
-  XMarkIcon,
-  QuestionMarkCircleIcon,
-  LinkIcon,
-  InformationCircleIcon,
-} from '@heroicons/react/24/outline';
-import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
+  CaretDoubleRight,
+  BookmarkSimple,
+  PencilSimple,
+  Trash,
+  CalendarDots,
+  Clock,
+  ArrowsClockwise,
+  MapPin,
+  Check,
+  X,
+  Question,
+  Link,
+  Info,
+} from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { closeDetailPanel } from '../../store';
 import { deleteEvent } from '../../store/calendarThunks';
@@ -119,7 +118,7 @@ export function DetailPanel() {
           className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
           title="Close panel"
         >
-          <ChevronDoubleRightIcon className="h-4 w-4 text-primary" />
+          <CaretDoubleRight size={16} weight="bold" className="text-primary" />
         </button>
         <div className="flex items-center gap-1">
           <button
@@ -128,25 +127,21 @@ export function DetailPanel() {
             className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
             title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
           >
-            {isBookmarked ? (
-              <BookmarkIconSolid className="h-5 w-5 text-primary" />
-            ) : (
-              <BookmarkIcon className="h-5 w-5 text-primary" />
-            )}
+            <BookmarkSimple size={20} weight={isBookmarked ? "fill" : "duotone"} className="text-primary" />
           </button>
           <button
             onClick={() => setIsEditingOpen(true)}
             className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="Edit event"
           >
-            <PencilIcon className="h-5 w-5 text-primary" />
+            <PencilSimple size={20} weight="duotone" className="text-primary" />
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="Delete event"
           >
-            <TrashIcon className="h-5 w-5 text-red-500" />
+            <Trash size={20} weight="duotone" className="text-red-500" />
           </button>
         </div>
       </div>
@@ -170,7 +165,7 @@ export function DetailPanel() {
           <div className="px-5 pb-4 space-y-2.5">
             {/* Date */}
             <div className="flex items-center gap-3 text-sm">
-              <CalendarDaysIcon className="w-4 h-4 text-muted-foreground" />
+              <CalendarDots size={16} weight="duotone" className="text-muted-foreground" />
               <span className="text-foreground">
                 {formatDateWithDay(selectedEvent.startTime)}
               </span>
@@ -178,7 +173,7 @@ export function DetailPanel() {
 
             {/* Time */}
             <div className="flex items-center gap-3 text-sm">
-              <ClockIcon className="w-4 h-4 text-muted-foreground" />
+              <Clock size={16} weight="duotone" className="text-muted-foreground" />
               <span className="text-foreground">
                 {formatTimeRange(
                   selectedEvent.startTime,
@@ -194,7 +189,7 @@ export function DetailPanel() {
             {selectedEvent.recurrence &&
               selectedEvent.recurrence.pattern !== 'none' && (
                 <div className="flex items-center gap-3 text-sm">
-                  <ArrowPathIcon className="w-4 h-4 text-muted-foreground" />
+                  <ArrowsClockwise size={16} weight="duotone" className="text-muted-foreground" />
                   <span className="text-foreground">
                     {selectedEvent.recurrence.pattern === 'weekly'
                       ? 'Every week'
@@ -211,7 +206,7 @@ export function DetailPanel() {
             {/* Location */}
             {selectedEvent.location && (
               <div className="flex items-center gap-3 text-sm">
-                <MapPinIcon className="w-4 h-4 text-muted-foreground" />
+                <MapPin size={16} weight="duotone" className="text-muted-foreground" />
                 <span className="text-primary">{selectedEvent.location}</span>
                 {selectedEvent.meetingUrl && (
                   <span className="text-muted-foreground text-xs">
@@ -271,13 +266,13 @@ export function DetailPanel() {
                     ) : (
                       <span>
                         {attendee.status === 'accepted' && (
-                          <CheckIcon className="w-4 h-4 text-green-500" />
+                          <Check size={16} weight="bold" className="text-green-500" />
                         )}
                         {attendee.status === 'declined' && (
-                          <XMarkIcon className="w-4 h-4 text-red-500" />
+                          <X size={16} weight="bold" className="text-red-500" />
                         )}
                         {attendee.status === 'tentative' && (
-                          <QuestionMarkCircleIcon className="w-4 h-4 text-yellow-500" />
+                          <Question size={16} weight="duotone" className="text-yellow-500" />
                         )}
                       </span>
                     )}
@@ -310,7 +305,7 @@ export function DetailPanel() {
         {mentionsFromDescription.length > 0 && (
           <div className="px-5 py-4 border-b border-border">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-              <LinkIcon className="w-3.5 h-3.5" />
+              <Link size={14} weight="duotone" />
               Referenced Content
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -328,7 +323,7 @@ export function DetailPanel() {
         {/* Properties Section */}
         <div className="px-5 py-4">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-            <InformationCircleIcon className="w-3.5 h-3.5" />
+            <Info size={14} weight="duotone" />
             Properties
           </h3>
           <div className="text-sm text-muted-foreground space-y-1.5">

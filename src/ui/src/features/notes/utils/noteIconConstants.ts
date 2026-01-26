@@ -5,238 +5,239 @@
  * For rendering icons, import from noteIcons.tsx instead.
  */
 
+import type { Icon } from '@phosphor-icons/react';
 import {
-    DocumentTextIcon,
-    DocumentIcon,
-    DocumentChartBarIcon,
-    ClipboardDocumentIcon,
-    NewspaperIcon,
-    BookOpenIcon,
-    BookmarkIcon,
-    StarIcon,
-    HeartIcon,
-    LightBulbIcon,
-    FlagIcon,
-    FireIcon,
-    BoltIcon,
-    SparklesIcon,
-    GlobeAltIcon,
-    KeyIcon,
-    LockClosedIcon,
-    ChatBubbleLeftIcon,
-    EnvelopeIcon,
-    PhoneIcon,
-    MegaphoneIcon,
-    CodeBracketIcon,
-    MusicalNoteIcon,
-    PuzzlePieceIcon,
-    WrenchIcon,
-    BeakerIcon,
-    CameraIcon,
-    PaintBrushIcon,
-    SunIcon,
-    MoonIcon,
-    CloudIcon,
-    UserIcon,
-    UsersIcon,
-    AcademicCapIcon,
-    UserGroupIcon,
-    CurrencyDollarIcon,
-    BanknotesIcon,
-    CreditCardIcon,
-    CheckCircleIcon,
-    ExclamationCircleIcon,
-    QuestionMarkCircleIcon,
-    InformationCircleIcon,
-    XCircleIcon,
-    FolderIcon,
-    TagIcon,
-    ArchiveBoxIcon,
-    InboxIcon,
-    Squares2X2Icon,
-    RocketLaunchIcon,
-    TrophyIcon,
-    GiftIcon,
-    CakeIcon,
-    ShoppingCartIcon,
-    ClockIcon,
-    CalendarIcon,
-    CalendarDaysIcon,
-    LinkIcon,
-} from '@heroicons/react/24/outline';
+    FileText,
+    File,
+    ChartBar,
+    ClipboardText,
+    Newspaper,
+    BookOpen,
+    BookmarkSimple,
+    Star,
+    Heart,
+    Lightbulb,
+    Flag,
+    Fire,
+    Lightning,
+    Sparkle,
+    Globe,
+    Key,
+    Lock,
+    ChatCircle,
+    Envelope,
+    Phone,
+    Megaphone,
+    CodeBlock,
+    MusicNote,
+    PuzzlePiece,
+    Wrench,
+    Flask,
+    Camera,
+    PaintBrush,
+    Sun,
+    Moon,
+    Cloud,
+    User,
+    Users,
+    GraduationCap,
+    UsersThree,
+    CurrencyDollar,
+    Money,
+    CreditCard,
+    CheckCircle,
+    WarningCircle,
+    Question,
+    Info,
+    XCircle,
+    Folder,
+    Tag,
+    Archive,
+    Tray,
+    SquaresFour,
+    Rocket,
+    Trophy,
+    Gift,
+    Cake,
+    ShoppingCart,
+    Clock,
+    Calendar,
+    CalendarBlank,
+    Link,
+} from '@phosphor-icons/react';
 
-/** Icon type - either a heroicon name or an emoji */
+/** Icon type - either a phosphor icon name or an emoji */
 export interface NoteIcon {
-    type: 'heroicon' | 'emoji';
+    type: 'icon' | 'emoji';
     value: string;
 }
 
 /**
- * Map of all supported heroicon names to their React components.
+ * Map of all supported icon names to their React components.
  * Used for rendering icons in React components and hover cards.
  */
-export const HEROICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+export const ICON_COMPONENTS: Record<string, Icon> = {
     // Documents
-    DocumentTextIcon,
-    DocumentIcon,
-    DocumentChartBarIcon,
-    ClipboardDocumentIcon,
-    NewspaperIcon,
-    BookOpenIcon,
-    BookmarkIcon,
+    FileText,
+    File,
+    ChartBar,
+    ClipboardText,
+    Newspaper,
+    BookOpen,
+    BookmarkSimple,
     // Objects
-    StarIcon,
-    HeartIcon,
-    LightBulbIcon,
-    FlagIcon,
-    FireIcon,
-    BoltIcon,
-    SparklesIcon,
-    GlobeAltIcon,
-    KeyIcon,
-    LockClosedIcon,
+    Star,
+    Heart,
+    Lightbulb,
+    Flag,
+    Fire,
+    Lightning,
+    Sparkle,
+    Globe,
+    Key,
+    Lock,
     // Communication
-    ChatBubbleLeftIcon,
-    EnvelopeIcon,
-    PhoneIcon,
-    MegaphoneIcon,
+    ChatCircle,
+    Envelope,
+    Phone,
+    Megaphone,
     // Activities
-    CodeBracketIcon,
-    MusicalNoteIcon,
-    PuzzlePieceIcon,
-    WrenchIcon,
-    BeakerIcon,
-    CameraIcon,
-    PaintBrushIcon,
+    CodeBlock,
+    MusicNote,
+    PuzzlePiece,
+    Wrench,
+    Flask,
+    Camera,
+    PaintBrush,
     // Nature
-    SunIcon,
-    MoonIcon,
-    CloudIcon,
+    Sun,
+    Moon,
+    Cloud,
     // People
-    UserIcon,
-    UsersIcon,
-    AcademicCapIcon,
-    UserGroupIcon,
+    User,
+    Users,
+    GraduationCap,
+    UsersThree,
     // Finance
-    CurrencyDollarIcon,
-    BanknotesIcon,
-    CreditCardIcon,
+    CurrencyDollar,
+    Money,
+    CreditCard,
     // Status
-    CheckCircleIcon,
-    ExclamationCircleIcon,
-    QuestionMarkCircleIcon,
-    InformationCircleIcon,
-    XCircleIcon,
+    CheckCircle,
+    WarningCircle,
+    Question,
+    Info,
+    XCircle,
     // Categories
-    FolderIcon,
-    TagIcon,
-    ArchiveBoxIcon,
-    InboxIcon,
-    Squares2X2Icon,
+    Folder,
+    Tag,
+    Archive,
+    Tray,
+    SquaresFour,
     // Actions
-    RocketLaunchIcon,
-    TrophyIcon,
-    GiftIcon,
-    CakeIcon,
-    ShoppingCartIcon,
+    Rocket,
+    Trophy,
+    Gift,
+    Cake,
+    ShoppingCart,
     // Time
-    ClockIcon,
-    CalendarIcon,
-    CalendarDaysIcon,
+    Clock,
+    Calendar,
+    CalendarBlank,
     // Misc
-    LinkIcon,
+    Link,
 };
 
 /**
- * Get a heroicon React component by name.
- * Falls back to DocumentTextIcon if not found.
+ * Get an icon React component by name.
+ * Falls back to FileText if not found.
  */
-export function getHeroiconComponent(name: string): React.ComponentType<{ className?: string; style?: React.CSSProperties }> {
-    return HEROICON_COMPONENTS[name] || DocumentTextIcon;
+export function getIconComponent(name: string): Icon {
+    return ICON_COMPONENTS[name] || FileText;
 }
 
 /**
- * Curated list of heroicons suitable for notes.
+ * Curated list of icons suitable for notes.
  * Each icon includes a name and category for organization in the picker.
  */
-export const CURATED_HEROICONS = [
+export const CURATED_ICONS = [
     // Documents
-    { name: 'DocumentTextIcon', category: 'Documents' },
-    { name: 'DocumentIcon', category: 'Documents' },
-    { name: 'DocumentChartBarIcon', category: 'Documents' },
-    { name: 'ClipboardDocumentIcon', category: 'Documents' },
-    { name: 'NewspaperIcon', category: 'Documents' },
-    { name: 'BookOpenIcon', category: 'Documents' },
-    { name: 'BookmarkIcon', category: 'Documents' },
+    { name: 'FileText', category: 'Documents' },
+    { name: 'File', category: 'Documents' },
+    { name: 'ChartBar', category: 'Documents' },
+    { name: 'ClipboardText', category: 'Documents' },
+    { name: 'Newspaper', category: 'Documents' },
+    { name: 'BookOpen', category: 'Documents' },
+    { name: 'BookmarkSimple', category: 'Documents' },
 
     // Objects
-    { name: 'StarIcon', category: 'Objects' },
-    { name: 'HeartIcon', category: 'Objects' },
-    { name: 'LightBulbIcon', category: 'Objects' },
-    { name: 'FlagIcon', category: 'Objects' },
-    { name: 'FireIcon', category: 'Objects' },
-    { name: 'BoltIcon', category: 'Objects' },
-    { name: 'SparklesIcon', category: 'Objects' },
-    { name: 'GlobeAltIcon', category: 'Objects' },
-    { name: 'KeyIcon', category: 'Objects' },
-    { name: 'LockClosedIcon', category: 'Objects' },
+    { name: 'Star', category: 'Objects' },
+    { name: 'Heart', category: 'Objects' },
+    { name: 'Lightbulb', category: 'Objects' },
+    { name: 'Flag', category: 'Objects' },
+    { name: 'Fire', category: 'Objects' },
+    { name: 'Lightning', category: 'Objects' },
+    { name: 'Sparkle', category: 'Objects' },
+    { name: 'Globe', category: 'Objects' },
+    { name: 'Key', category: 'Objects' },
+    { name: 'Lock', category: 'Objects' },
 
     // Communication
-    { name: 'ChatBubbleLeftIcon', category: 'Communication' },
-    { name: 'EnvelopeIcon', category: 'Communication' },
-    { name: 'PhoneIcon', category: 'Communication' },
-    { name: 'MegaphoneIcon', category: 'Communication' },
+    { name: 'ChatCircle', category: 'Communication' },
+    { name: 'Envelope', category: 'Communication' },
+    { name: 'Phone', category: 'Communication' },
+    { name: 'Megaphone', category: 'Communication' },
 
     // Activities
-    { name: 'CodeBracketIcon', category: 'Activities' },
-    { name: 'MusicalNoteIcon', category: 'Activities' },
-    { name: 'PuzzlePieceIcon', category: 'Activities' },
-    { name: 'WrenchIcon', category: 'Activities' },
-    { name: 'BeakerIcon', category: 'Activities' },
-    { name: 'CameraIcon', category: 'Activities' },
-    { name: 'PaintBrushIcon', category: 'Activities' },
+    { name: 'CodeBlock', category: 'Activities' },
+    { name: 'MusicNote', category: 'Activities' },
+    { name: 'PuzzlePiece', category: 'Activities' },
+    { name: 'Wrench', category: 'Activities' },
+    { name: 'Flask', category: 'Activities' },
+    { name: 'Camera', category: 'Activities' },
+    { name: 'PaintBrush', category: 'Activities' },
 
     // Nature
-    { name: 'SunIcon', category: 'Nature' },
-    { name: 'MoonIcon', category: 'Nature' },
-    { name: 'CloudIcon', category: 'Nature' },
+    { name: 'Sun', category: 'Nature' },
+    { name: 'Moon', category: 'Nature' },
+    { name: 'Cloud', category: 'Nature' },
 
     // People
-    { name: 'UserIcon', category: 'People' },
-    { name: 'UsersIcon', category: 'People' },
-    { name: 'AcademicCapIcon', category: 'People' },
-    { name: 'UserGroupIcon', category: 'People' },
+    { name: 'User', category: 'People' },
+    { name: 'Users', category: 'People' },
+    { name: 'GraduationCap', category: 'People' },
+    { name: 'UsersThree', category: 'People' },
 
     // Finance
-    { name: 'CurrencyDollarIcon', category: 'Finance' },
-    { name: 'BanknotesIcon', category: 'Finance' },
-    { name: 'CreditCardIcon', category: 'Finance' },
+    { name: 'CurrencyDollar', category: 'Finance' },
+    { name: 'Money', category: 'Finance' },
+    { name: 'CreditCard', category: 'Finance' },
 
     // Status
-    { name: 'CheckCircleIcon', category: 'Status' },
-    { name: 'ExclamationCircleIcon', category: 'Status' },
-    { name: 'QuestionMarkCircleIcon', category: 'Status' },
-    { name: 'InformationCircleIcon', category: 'Status' },
-    { name: 'XCircleIcon', category: 'Status' },
+    { name: 'CheckCircle', category: 'Status' },
+    { name: 'WarningCircle', category: 'Status' },
+    { name: 'Question', category: 'Status' },
+    { name: 'Info', category: 'Status' },
+    { name: 'XCircle', category: 'Status' },
 
     // Categories
-    { name: 'FolderIcon', category: 'Categories' },
-    { name: 'TagIcon', category: 'Categories' },
-    { name: 'ArchiveBoxIcon', category: 'Categories' },
-    { name: 'InboxIcon', category: 'Categories' },
-    { name: 'Squares2X2Icon', category: 'Categories' },
+    { name: 'Folder', category: 'Categories' },
+    { name: 'Tag', category: 'Categories' },
+    { name: 'Archive', category: 'Categories' },
+    { name: 'Tray', category: 'Categories' },
+    { name: 'SquaresFour', category: 'Categories' },
 
     // Actions
-    { name: 'RocketLaunchIcon', category: 'Actions' },
-    { name: 'TrophyIcon', category: 'Actions' },
-    { name: 'GiftIcon', category: 'Actions' },
-    { name: 'CakeIcon', category: 'Actions' },
-    { name: 'ShoppingCartIcon', category: 'Actions' },
+    { name: 'Rocket', category: 'Actions' },
+    { name: 'Trophy', category: 'Actions' },
+    { name: 'Gift', category: 'Actions' },
+    { name: 'Cake', category: 'Actions' },
+    { name: 'ShoppingCart', category: 'Actions' },
 
     // Time
-    { name: 'ClockIcon', category: 'Time' },
-    { name: 'CalendarIcon', category: 'Time' },
-    { name: 'CalendarDaysIcon', category: 'Time' },
+    { name: 'Clock', category: 'Time' },
+    { name: 'Calendar', category: 'Time' },
+    { name: 'CalendarBlank', category: 'Time' },
 ] as const;
 
 /** Common emojis for quick access in the picker */
@@ -249,18 +250,18 @@ export const COMMON_EMOJIS = [
 
 /** Get all unique categories from curated icons */
 export function getIconCategories(): string[] {
-    const categories = new Set(CURATED_HEROICONS.map(icon => icon.category));
+    const categories = new Set(CURATED_ICONS.map(icon => icon.category));
     return Array.from(categories);
 }
 
 /** Get icons by category */
-export function getIconsByCategory(category: string): typeof CURATED_HEROICONS[number][] {
-    return CURATED_HEROICONS.filter(icon => icon.category === category);
+export function getIconsByCategory(category: string): typeof CURATED_ICONS[number][] {
+    return CURATED_ICONS.filter(icon => icon.category === category);
 }
 
 /**
- * Check if a heroicon name is valid (exists in the HEROICON_COMPONENTS map).
+ * Check if an icon name is valid (exists in the ICON_COMPONENTS map).
  */
-export function isValidHeroiconName(name: string): boolean {
-    return name in HEROICON_COMPONENTS;
+export function isValidIconName(name: string): boolean {
+    return name in ICON_COMPONENTS;
 }

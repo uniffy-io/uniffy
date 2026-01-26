@@ -5,7 +5,7 @@
  */
 
 import { forwardRef, useId } from 'react';
-import { CheckIcon } from '@heroicons/react/24/outline';
+import { Check } from '@phosphor-icons/react';
 import { cn } from '@/utils/cn';
 
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -46,12 +46,13 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
               }
             }}
           >
-            <CheckIcon
+            <Check
+              size={14}
+              weight="bold"
               className={cn(
-                'h-3.5 w-3.5 text-primary-foreground transition-opacity duration-150',
+                'text-primary-foreground transition-opacity duration-150',
                 checked ? 'opacity-100' : 'opacity-0'
               )}
-              strokeWidth={3}
             />
           </div>
         </div>

@@ -6,13 +6,13 @@
 
 import { useEffect, useState } from 'react';
 import {
-    UserGroupIcon,
-    PlusIcon,
-    PencilIcon,
-    TrashIcon,
-    UsersIcon,
-    XMarkIcon,
-} from '@heroicons/react/24/outline';
+    UsersThree,
+    Plus,
+    Pencil,
+    Trash,
+    Users,
+    X,
+} from '@phosphor-icons/react';
 import { useGroups, useGroupMembers } from '../../hooks/useAdminHooks';
 import type { SerializedGroupInfo } from '../../store/adminSlice';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -46,7 +46,7 @@ function GroupCard({ group, onEdit, onDelete, onViewMembers }: GroupCardProps) {
         <div className="p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors">
             <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-violet-500/10 flex-shrink-0">
-                    <UserGroupIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    <UsersThree size={20} weight="duotone" className="text-violet-600 dark:text-violet-400" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -58,7 +58,7 @@ function GroupCard({ group, onEdit, onDelete, onViewMembers }: GroupCardProps) {
                     )}
                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
-                            <UsersIcon className="h-3.5 w-3.5" />
+                            <Users size={14} />
                             {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
                         </span>
                         {group.createdAt && (
@@ -76,7 +76,7 @@ function GroupCard({ group, onEdit, onDelete, onViewMembers }: GroupCardProps) {
                         className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         title="View members"
                     >
-                        <UsersIcon className="h-4 w-4" />
+                        <Users size={16} />
                     </button>
                     <button
                         type="button"
@@ -84,7 +84,7 @@ function GroupCard({ group, onEdit, onDelete, onViewMembers }: GroupCardProps) {
                         className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         title="Edit group"
                     >
-                        <PencilIcon className="h-4 w-4" />
+                        <Pencil size={16} />
                     </button>
                     <button
                         type="button"
@@ -93,7 +93,7 @@ function GroupCard({ group, onEdit, onDelete, onViewMembers }: GroupCardProps) {
                         className="p-2 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                         title="Delete group"
                     >
-                        <TrashIcon className="h-4 w-4" />
+                        <Trash size={16} />
                     </button>
                 </div>
             </div>
@@ -158,7 +158,7 @@ function GroupFormModal({ group, onSave, onClose }: GroupFormModalProps) {
                         onClick={onClose}
                         className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
-                        <XMarkIcon className="h-5 w-5" />
+                        <X size={20} weight="bold" />
                     </button>
                 </div>
 
@@ -251,7 +251,7 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                         onClick={onClose}
                         className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
-                        <XMarkIcon className="h-5 w-5" />
+                        <X size={20} weight="bold" />
                     </button>
                 </div>
 
@@ -263,7 +263,7 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                         </div>
                     ) : members.length === 0 ? (
                         <div className="py-8 text-center">
-                            <UsersIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                            <Users size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-2" />
                             <p className="text-sm text-muted-foreground">No members in this group</p>
                         </div>
                     ) : (
@@ -301,7 +301,7 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                                             disabled:opacity-50"
                                         title="Remove from group"
                                     >
-                                        <TrashIcon className="h-4 w-4" />
+                                        <Trash size={16} />
                                     </button>
                                 </div>
                             ))}
@@ -351,7 +351,7 @@ export function GroupsSection() {
             <div className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <UserGroupIcon className="h-6 w-6 text-primary" />
+                        <UsersThree size={24} weight="duotone" className="text-primary" />
                         <h1 className="text-2xl font-bold">Groups</h1>
                     </div>
                     <p className="text-muted-foreground">
@@ -364,7 +364,7 @@ export function GroupsSection() {
                     className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
                         bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
-                    <PlusIcon className="h-4 w-4" />
+                    <Plus size={16} />
                     Create Group
                 </button>
             </div>
@@ -377,7 +377,7 @@ export function GroupsSection() {
                 </div>
             ) : groups.length === 0 ? (
                 <div className="py-12 text-center border border-dashed border-border rounded-lg">
-                    <UserGroupIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <UsersThree size={48} weight="duotone" className="mx-auto text-muted-foreground/50 mb-4" />
                     <h3 className="text-lg font-medium mb-2">No groups yet</h3>
                     <p className="text-muted-foreground mb-4">
                         Create a group to organize members and share content with them.
@@ -388,7 +388,7 @@ export function GroupsSection() {
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
                             bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                     >
-                        <PlusIcon className="h-4 w-4" />
+                        <Plus size={16} />
                         Create your first group
                     </button>
                 </div>

@@ -3,7 +3,7 @@ import type { Theme } from './types';
 import { defaultTheme, darkTheme } from './types';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setThemeMode, setAccentColor, setFontFamily, type ThemeMode } from './themeSlice';
-import { updateEffectiveSettingsLocal } from '@/features/settings/store/settingsSlice';
+import { updateEffectiveSettingsLocal, updateProfile } from '@/features/settings/store/settingsSlice';
 
 interface ThemeContextType {
   theme: Theme;
@@ -77,6 +77,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Read from settings store (new settings framework)
   const settingsInitialized = useAppSelector((state) => state.settings?.initialized);
   const effectiveSettings = useAppSelector((state) => state.settings?.effectiveSettings);
+  const activeProfileId = useAppSelector((state) => state.settings?.activeProfileId);
 
   // Read from user profile (legacy fallback)
   const user = useAppSelector((state) => state.auth?.user);
@@ -170,8 +171,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Also update settings store if initialized (so computed themeMode updates)
     if (settingsInitialized) {
       dispatch(updateEffectiveSettingsLocal({ appearance: { theme: mode } }));
+      // Persist to backend if we have an active profile
+      if (activeProfileId) {
+        dispatch(updateProfile({ profileId: activeProfileId, appearance: { theme: mode } }));
+      }
     }
-  }, [dispatch, settingsInitialized]);
+  }, [dispatch, settingsInitialized, activeProfileId]);
 
   // Apply theme variables to root
   useEffect(() => {

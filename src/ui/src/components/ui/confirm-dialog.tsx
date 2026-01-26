@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Warning, X } from '@phosphor-icons/react';
 import { Button } from './button';
 import { cn } from '@/utils/cn';
 
@@ -90,7 +90,7 @@ export function ConfirmDialog({
                 {/* Header */}
                 <div className="flex items-start gap-4 p-6 pb-4">
                     <div className={cn('p-3 rounded-full', styles.icon)}>
-                        <ExclamationTriangleIcon className="h-6 w-6" />
+                        <Warning size={24} weight="duotone" />
                     </div>
                     <div className="flex-1 pt-1">
                         <h3 className="text-lg font-semibold text-foreground">{title}</h3>
@@ -102,7 +102,7 @@ export function ConfirmDialog({
                         disabled={loading}
                         className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                     >
-                        <XMarkIcon className="h-5 w-5" />
+                        <X size={20} weight="bold" />
                     </button>
                 </div>
 

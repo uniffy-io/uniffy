@@ -10,7 +10,7 @@
  * - Tags
  */
 
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { Plus } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
 import { openEventModal } from '../../store';
 import { QuickAccess } from '../sidebar/QuickAccess';
@@ -35,7 +35,7 @@ export function LeftSidebar() {
           onClick={handleNewEvent}
           className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors"
         >
-          <PlusIcon className="h-4 w-4" />
+          <Plus size={16} weight="bold" />
           <span>New Event</span>
         </button>
       </div>

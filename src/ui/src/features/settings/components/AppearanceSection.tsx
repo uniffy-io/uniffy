@@ -2,7 +2,7 @@
  * Appearance settings section for theme, accent color, and font.
  */
 
-import { SunIcon, MoonIcon, ComputerDesktopIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { Sun, Moon, Desktop, Check } from '@phosphor-icons/react';
 import { useSettings, useAppearanceSettings } from '../hooks/useSettings';
 
 // Predefined accent colors (quick picks)
@@ -136,9 +136,9 @@ export function AppearanceSection() {
 
                 <div className="grid grid-cols-3 gap-4">
                     {[
-                        { id: 'light', label: 'Light', icon: SunIcon },
-                        { id: 'dark', label: 'Dark', icon: MoonIcon },
-                        { id: 'system', label: 'System', icon: ComputerDesktopIcon },
+                        { id: 'light', label: 'Light', icon: Sun },
+                        { id: 'dark', label: 'Dark', icon: Moon },
+                        { id: 'system', label: 'System', icon: Desktop },
                     ].map(({ id, label, icon: Icon }) => (
                         <button
                             key={id}
@@ -151,7 +151,7 @@ export function AppearanceSection() {
                             }`}
                             onClick={() => handleThemeChange(id)}
                         >
-                            <Icon className="h-8 w-8 text-foreground" />
+                            <Icon size={32} weight="duotone" className="text-foreground" />
                             <span className="text-sm font-medium text-foreground">{label}</span>
                         </button>
                     ))}
@@ -214,7 +214,7 @@ export function AppearanceSection() {
                                 onClick={() => handleAccentColorChange(value)}
                             >
                                 {appearance.accentColor === value && (
-                                    <CheckIcon className="absolute inset-0 m-auto h-4 w-4 text-white" />
+                                    <Check size={16} weight="bold" className="absolute inset-0 m-auto text-white" />
                                 )}
                             </button>
                         ))}
@@ -249,7 +249,7 @@ export function AppearanceSection() {
                                 <div className="text-sm text-muted-foreground">{description}</div>
                             </div>
                             {appearance.fontFamily === id && (
-                                <CheckIcon className="h-5 w-5 text-primary" />
+                                <Check size={20} weight="bold" className="text-primary" />
                             )}
                         </button>
                     ))}
@@ -283,7 +283,7 @@ export function AppearanceSection() {
                                 <div className="text-sm text-muted-foreground">{description}</div>
                             </div>
                             {appearance.defaultEditor === id && (
-                                <CheckIcon className="h-5 w-5 text-primary" />
+                                <Check size={20} weight="bold" className="text-primary" />
                             )}
                         </button>
                     ))}

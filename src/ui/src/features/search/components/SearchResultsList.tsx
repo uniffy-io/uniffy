@@ -7,17 +7,17 @@
 
 import { useState, useEffect } from 'react';
 import {
-  MagnifyingGlassIcon,
-  DocumentTextIcon,
-  FolderIcon,
-  ChatBubbleLeftRightIcon,
-  UserIcon,
-  BookOpenIcon,
-  CalendarIcon,
-  KeyIcon,
-  CubeIcon,
-  TagIcon,
-} from '@heroicons/react/24/outline';
+  MagnifyingGlass,
+  FileText,
+  Folder,
+  ChatTeardropDots,
+  User,
+  BookOpen,
+  CalendarDots,
+  Key,
+  Cube,
+  Tag,
+} from '@phosphor-icons/react';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import { cn } from '@/utils/cn';
@@ -26,15 +26,15 @@ import { getUrnTypeTheme, type UrnTypeTheme } from '@/theme/urnColors';
 import { stripMarkdown } from '../utils/stripMarkdown';
 
 /** Icon mapping for search result types */
-const RESULT_TYPE_ICONS: Record<number, typeof DocumentTextIcon> = {
-  [SearchResultType.NOTE]: DocumentTextIcon,
-  [SearchResultType.FILE]: FolderIcon,
-  [SearchResultType.CHAT]: ChatBubbleLeftRightIcon,
-  [SearchResultType.USER]: UserIcon,
-  [SearchResultType.BOOK]: BookOpenIcon,
-  [SearchResultType.CALENDAR_EVENT]: CalendarIcon,
-  [SearchResultType.PASSWORD]: KeyIcon,
-  [SearchResultType.SPACE]: CubeIcon,
+const RESULT_TYPE_ICONS: Record<number, typeof FileText> = {
+  [SearchResultType.NOTE]: FileText,
+  [SearchResultType.FILE]: Folder,
+  [SearchResultType.CHAT]: ChatTeardropDots,
+  [SearchResultType.USER]: User,
+  [SearchResultType.BOOK]: BookOpen,
+  [SearchResultType.CALENDAR_EVENT]: CalendarDots,
+  [SearchResultType.PASSWORD]: Key,
+  [SearchResultType.SPACE]: Cube,
 };
 
 /** Map SearchResultType to UrnType for theme lookup */
@@ -50,7 +50,7 @@ const RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
 };
 
 interface ResultTheme extends UrnTypeTheme {
-  icon: typeof DocumentTextIcon;
+  icon: typeof FileText;
 }
 
 /**
@@ -59,7 +59,7 @@ interface ResultTheme extends UrnTypeTheme {
 function getResultTheme(type: SearchResultType): ResultTheme {
   const urnType = RESULT_TYPE_TO_URN_TYPE[type] || UrnType.UNKNOWN;
   const theme = getUrnTypeTheme(urnType);
-  const icon = RESULT_TYPE_ICONS[type] || DocumentTextIcon;
+  const icon = RESULT_TYPE_ICONS[type] || FileText;
 
   return {
     ...theme,
@@ -181,7 +181,7 @@ export function SearchResultsList({
       {showHeader && (
         <div className="px-4 py-3 border-b border-border/50 bg-gradient-to-r from-muted/50 to-transparent">
           <div className="flex items-center gap-2">
-            <MagnifyingGlassIcon className="w-4 h-4 text-muted-foreground" />
+            <MagnifyingGlass size={16} weight="bold" className="text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">
               {query ? `Search: "${query}"` : 'Search'}
             </span>
@@ -208,7 +208,7 @@ export function SearchResultsList({
       {!isLoading && results.length === 0 && query.trim() && (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-3">
-            <MagnifyingGlassIcon className="w-6 h-6 opacity-50" />
+            <MagnifyingGlass size={24} weight="duotone" className="opacity-50" />
           </div>
           <p className="text-sm font-medium">{emptyMessage}</p>
           <p className="text-xs mt-1 opacity-70">Try a different search term</p>
@@ -249,8 +249,7 @@ export function SearchResultsList({
                       'transition-all duration-200',
                       isSelected ? theme.iconBg + ' shadow-md' : 'bg-muted'
                     )}>
-                      <Icon className={cn(
-                        'w-4.5 h-4.5',
+                      <Icon size={18} weight="duotone" className={cn(
                         isSelected ? 'text-white' : 'text-muted-foreground'
                       )} />
                     </div>
@@ -274,7 +273,7 @@ export function SearchResultsList({
                       {/* Tags */}
                       {result.tags && result.tags.length > 0 && (
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                          <TagIcon className="w-3 h-3 text-muted-foreground shrink-0" />
+                          <Tag size={12} weight="duotone" className="text-muted-foreground shrink-0" />
                           {result.tags.slice(0, 3).map((tag) => (
                             <span
                               key={tag}

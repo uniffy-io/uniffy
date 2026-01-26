@@ -16,16 +16,16 @@ import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/utils/urn';
 import {
-  DocumentTextIcon,
-  FolderIcon,
-  ChatBubbleLeftRightIcon,
-  UserIcon,
-  BookOpenIcon,
-  CalendarIcon,
-  KeyIcon,
-  CubeIcon,
-  LinkIcon,
-} from '@heroicons/react/24/outline';
+  FileText,
+  Folder,
+  ChatTeardropDots,
+  User,
+  BookOpen,
+  CalendarDots,
+  Key,
+  Cube,
+  Link,
+} from '@phosphor-icons/react';
 import { MentionPreview } from './MentionPreview';
 import { useUrnPreview } from './useUrnPreview';
 
@@ -46,7 +46,7 @@ interface MentionChipBasicProps {
  * Type-specific styling configuration with gradients
  */
 interface TypeStyle {
-  icon: typeof DocumentTextIcon;
+  icon: typeof FileText;
   gradient: string;
   glowColor: string;
   iconBg: string;
@@ -60,7 +60,7 @@ interface TypeStyle {
 function getTypeStyle(type: UrnType): TypeStyle {
   const styleMap: Record<UrnType, TypeStyle> = {
     [UrnType.NOTE]: {
-      icon: DocumentTextIcon,
+      icon: FileText,
       gradient: 'from-primary/10 via-primary/5 to-transparent',
       glowColor: 'group-hover:shadow-primary/25',
       iconBg: 'bg-gradient-to-br from-primary to-primary/80',
@@ -68,7 +68,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-primary/30 group-hover:border-primary/50',
     },
     [UrnType.FILE]: {
-      icon: FolderIcon,
+      icon: Folder,
       gradient: 'from-blue-500/10 via-blue-500/5 to-transparent',
       glowColor: 'group-hover:shadow-blue-500/25',
       iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
@@ -76,7 +76,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-blue-500/30 group-hover:border-blue-500/50',
     },
     [UrnType.CHAT]: {
-      icon: ChatBubbleLeftRightIcon,
+      icon: ChatTeardropDots,
       gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
       glowColor: 'group-hover:shadow-violet-500/25',
       iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
@@ -84,7 +84,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-violet-500/30 group-hover:border-violet-500/50',
     },
     [UrnType.USER]: {
-      icon: UserIcon,
+      icon: User,
       gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
       glowColor: 'group-hover:shadow-emerald-500/25',
       iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
@@ -92,7 +92,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-emerald-500/30 group-hover:border-emerald-500/50',
     },
     [UrnType.BOOK]: {
-      icon: BookOpenIcon,
+      icon: BookOpen,
       gradient: 'from-amber-500/10 via-amber-500/5 to-transparent',
       glowColor: 'group-hover:shadow-amber-500/25',
       iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
@@ -100,7 +100,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-amber-500/30 group-hover:border-amber-500/50',
     },
     [UrnType.CALENDAR_EVENT]: {
-      icon: CalendarIcon,
+      icon: CalendarDots,
       gradient: 'from-rose-500/10 via-rose-500/5 to-transparent',
       glowColor: 'group-hover:shadow-rose-500/25',
       iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
@@ -108,7 +108,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-rose-500/30 group-hover:border-rose-500/50',
     },
     [UrnType.PASSWORD]: {
-      icon: KeyIcon,
+      icon: Key,
       gradient: 'from-red-500/10 via-red-500/5 to-transparent',
       glowColor: 'group-hover:shadow-red-500/25',
       iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
@@ -116,7 +116,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-red-500/30 group-hover:border-red-500/50',
     },
     [UrnType.SPACE]: {
-      icon: CubeIcon,
+      icon: Cube,
       gradient: 'from-indigo-500/10 via-indigo-500/5 to-transparent',
       glowColor: 'group-hover:shadow-indigo-500/25',
       iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
@@ -124,7 +124,7 @@ function getTypeStyle(type: UrnType): TypeStyle {
       borderColor: 'border-indigo-500/30 group-hover:border-indigo-500/50',
     },
     [UrnType.UNKNOWN]: {
-      icon: LinkIcon,
+      icon: Link,
       gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
       glowColor: 'group-hover:shadow-gray-500/20',
       iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
@@ -220,7 +220,7 @@ export function MentionChip({ urn, label, selected = false, onClick }: MentionCh
           transition-transform duration-200
           group-hover:scale-110
         `}>
-          <Icon className={`w-4 h-4 ${style.iconColor}`} />
+          <Icon size={16} weight="duotone" className={style.iconColor} />
         </span>
 
         {/* Label */}
@@ -286,7 +286,7 @@ export function MentionChipBasic({ urn, label, selected = false }: MentionChipBa
         transition-transform duration-200
         group-hover:scale-110
       `}>
-        <Icon className={`w-4 h-4 ${style.iconColor}`} />
+        <Icon size={16} weight="duotone" className={style.iconColor} />
       </span>
 
       {/* Label */}
@@ -365,7 +365,7 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
           w-4 h-4 rounded
           ${style.iconBg}
         `}>
-          <Icon className={`w-2.5 h-2.5 ${style.iconColor}`} />
+          <Icon size={10} weight="duotone" className={style.iconColor} />
         </span>
         <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
           {label}

@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDownIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { CaretDown, Check } from '@phosphor-icons/react';
 import { cn } from '@/utils/cn';
 
 export interface SelectOption<T extends string | number = string> {
@@ -178,7 +178,7 @@ export function Select<T extends string | number = string>({
                                     {option.icon}
                                     {option.label}
                                 </span>
-                                {isSelected && <CheckIcon className="h-4 w-4 text-primary" />}
+                                {isSelected && <Check size={16} weight="bold" className="text-primary" />}
                             </button>
                         );
                     })}
@@ -210,9 +210,11 @@ export function Select<T extends string | number = string>({
                     {selectedOption?.icon}
                     {selectedOption?.label || placeholder}
                 </span>
-                <ChevronDownIcon
+                <CaretDown
+                    size={16}
+                    weight="bold"
                     className={cn(
-                        'h-4 w-4 text-muted-foreground transition-transform duration-200',
+                        'text-muted-foreground transition-transform duration-200',
                         isOpen && 'rotate-180'
                     )}
                 />

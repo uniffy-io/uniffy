@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '../../store/calendarUiSlice';
 import { createEvent } from '../../store/calendarThunks';
@@ -156,7 +156,7 @@ export function QuickEventModal({
             onClick={onClose}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <X size={20} weight="bold" />
           </button>
         </div>
 

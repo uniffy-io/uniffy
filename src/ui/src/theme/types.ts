@@ -24,12 +24,12 @@ export const defaultTheme: Theme = {
     primaryForeground: '210 40% 98%', // White-ish
     background: '0 0% 100%', // White
     foreground: '222.2 84% 4.9%', // Dark
-    muted: '210 40% 96.1%',
-    mutedForeground: '215.4 16.3% 46.9%',
+    muted: '220 14.3% 93%', // Slightly darker for visibility
+    mutedForeground: '220 8.9% 40%', // Darker for better readability
     card: '0 0% 100%', // White
     cardForeground: '222.2 84% 4.9%',
-    border: '214.3 31.8% 91.4%',
-    input: '214.3 31.8% 91.4%',
+    border: '220 13% 82%', // Darker for visible borders
+    input: '220 13% 82%', // Match border
     ring: '221.2 83.2% 53.3%',
   },
 };

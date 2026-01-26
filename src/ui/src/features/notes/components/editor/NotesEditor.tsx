@@ -4,7 +4,7 @@ import { CrepeEditor } from './CrepeEditor';
 import { MarkdownSplitEditor } from './MarkdownSplitEditor';
 import { ReadOnlyViewer } from './ReadOnlyViewer';
 import { toggleSidebar } from '../../store/editorSlice';
-import { ChevronDoubleRightIcon } from '@heroicons/react/24/outline';
+import { CaretDoubleRight } from '@phosphor-icons/react';
 import { useMyPermission } from '@/features/sharing';
 import { ContentType } from '@/gen/common/v1/common_pb';
 
@@ -49,7 +49,7 @@ export function NotesEditor() {
               className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
               title="Show sidebar (⌘\\)"
             >
-              <ChevronDoubleRightIcon className="h-4 w-4" />
+              <CaretDoubleRight size={16} weight="bold" />
             </button>
           </div>
         )}
@@ -73,7 +73,7 @@ export function NotesEditor() {
               className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
               title="Show sidebar (⌘\\)"
             >
-              <ChevronDoubleRightIcon className="h-4 w-4" />
+              <CaretDoubleRight size={16} weight="bold" />
             </button>
           </div>
         )}

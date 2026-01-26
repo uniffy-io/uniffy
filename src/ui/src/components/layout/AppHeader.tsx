@@ -1,76 +1,146 @@
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  DocumentTextIcon, 
-  ChatBubbleLeftRightIcon, 
-  FolderIcon, 
-  CalendarIcon, 
-  BookOpenIcon, 
-  KeyIcon,
-  Squares2X2Icon,
-  FolderOpenIcon,
-  SparklesIcon,
-  CogIcon
-} from '@heroicons/react/24/outline';
+import {
+  SquaresFour,
+  NotePencil,
+  FolderSimple,
+  ChatTeardrop,
+  CalendarDots,
+  Kanban,
+  TreeStructure,
+} from '@phosphor-icons/react';
 import { UserMenu } from './UserMenu';
 import { GlobalSearch } from '@/features/search';
 import { cn } from '@/utils/cn';
 
 const navItems = [
-  { name: 'Dashboard', path: '/', icon: Squares2X2Icon },
-  { name: 'Notes', path: '/notes', icon: DocumentTextIcon },
-  { name: 'Files', path: '/files', icon: FolderIcon },
-  { name: 'Chat', path: '/chat', icon: ChatBubbleLeftRightIcon },
-  { name: 'Calendar', path: '/calendar', icon: CalendarIcon },
-  { name: 'Library', path: '/library', icon: BookOpenIcon },
-  { name: 'Vault', path: '/vault', icon: KeyIcon },
-  { name: 'Projects', path: '/projects', icon: FolderOpenIcon },
-  { name: 'Assistants', path: '/assistants', icon: SparklesIcon },
-  { name: 'Workflows', path: '/workflows', icon: CogIcon },
+  { name: 'Dashboard', path: '/', icon: SquaresFour },
+  { name: 'Notes', path: '/notes', icon: NotePencil },
+  { name: 'Files', path: '/files', icon: FolderSimple },
+  { name: 'Chat', path: '/chat', icon: ChatTeardrop },
+  { name: 'Calendar', path: '/calendar', icon: CalendarDots },
+  { name: 'Projects', path: '/projects', icon: Kanban },
+  { name: 'Workflows', path: '/workflows', icon: TreeStructure },
 ];
+
+// Nav item that expands on hover to show label
+function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive: boolean }) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      to={item.path}
+      className={cn(
+        "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
+        "hover:px-2.5",
+        isActive && "text-foreground"
+      )}
+    >
+      {/* Active indicator */}
+      <span
+        className={cn(
+          "absolute inset-0 rounded-lg transition-all duration-500",
+          isActive ? "bg-primary/10" : "bg-transparent"
+        )}
+      />
+
+      {/* Hover underline effect */}
+      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+
+      {/* Icon */}
+      <span className={cn(
+        "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
+        isActive
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground group-hover:text-primary"
+      )}>
+        <Icon size={20} weight={isActive ? "fill" : "duotone"} />
+      </span>
+
+      {/* Label - hidden by default, shows on hover */}
+      <span className={cn(
+        "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
+        "group-hover:ml-1.5 group-hover:max-w-24",
+        isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+      )}>
+        {item.name}
+      </span>
+    </Link>
+  );
+}
 
 export function AppHeader() {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background">
-      <div className="flex h-14 items-center justify-between pl-6 pr-4">
-        <div className="flex items-center gap-3 md:gap-4">
+    <header className="sticky top-0 z-40 w-full">
+      {/* Background */}
+      <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
+
+      <div className="relative flex h-12 items-center justify-between px-3 lg:px-4">
+        {/* Left: Logo + Navigation */}
+        <div className="flex items-center gap-1.5 lg:gap-3">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-1.5 flex-shrink-0">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-sm">
-              U
+          <Link
+            to="/"
+            className="group flex items-center gap-2 flex-shrink-0 pr-1.5 lg:pr-3"
+          >
+            {/* Logo container */}
+            <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+              <span className="text-sm">U</span>
             </div>
-            <span className="hidden font-bold sm:inline-block text-lg tracking-tight whitespace-nowrap">UWOS</span>
+
+            <div className="hidden sm:flex flex-col">
+              <span className="font-semibold text-sm tracking-tight leading-none text-foreground">
+                UWOS
+              </span>
+              <span className="text-[9px] text-muted-foreground font-medium tracking-wider uppercase">
+                Workspace
+              </span>
+            </div>
           </Link>
 
+          {/* Separator */}
+          <div className="hidden md:block h-5 w-px bg-border" />
+
           {/* Desktop Navigation */}
-          <nav className="flex items-center gap-0.5">
+          <nav className="hidden md:flex items-center gap-0.5">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path || 
+              const isActive = location.pathname === item.path ||
+                               (item.path !== '/' && location.pathname.startsWith(item.path));
+
+              return (
+                <CompactNavItem key={item.path} item={item} isActive={isActive} />
+              );
+            })}
+          </nav>
+
+          {/* Mobile: Show only icons */}
+          <nav className="flex md:hidden items-center gap-0.5">
+            {navItems.slice(0, 5).map((item) => {
+              const isActive = location.pathname === item.path ||
                                (item.path !== '/' && location.pathname.startsWith(item.path));
               const Icon = item.icon;
-              
+
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap",
-                    isActive 
-                      ? "bg-primary/10 text-primary shadow-sm" 
+                    "relative p-1.5 rounded-md transition-all duration-200",
+                    isActive
+                      ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="hidden sm:inline">{item.name}</span>
+                  <Icon size={18} weight={isActive ? "fill" : "duotone"} />
                 </Link>
               );
             })}
           </nav>
         </div>
 
-        {/* Right Side */}
-        <div className="flex items-center gap-4">
+        {/* Right: Search + User */}
+        <div className="flex items-center gap-2">
           <GlobalSearch />
           <UserMenu />
         </div>

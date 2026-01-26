@@ -3,7 +3,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCurrentDate } from '../../store';
 import {
@@ -78,14 +78,14 @@ export function MiniCalendar() {
             className="p-1 rounded hover:bg-white/10 transition-colors"
             aria-label="Previous month"
           >
-            <ChevronLeftIcon className="w-3 h-3 text-muted-foreground" />
+            <CaretLeft size={12} weight="bold" className="text-muted-foreground" />
           </button>
           <button
             onClick={handleNextMonth}
             className="p-1 rounded hover:bg-white/10 transition-colors"
             aria-label="Next month"
           >
-            <ChevronRightIcon className="w-3 h-3 text-muted-foreground" />
+            <CaretRight size={12} weight="bold" className="text-muted-foreground" />
           </button>
         </div>
       </div>

@@ -9,17 +9,17 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import {
-    ServerIcon,
-    ShieldCheckIcon,
-    UserGroupIcon,
-    BellIcon,
-    PaintBrushIcon,
-    EnvelopeIcon,
-    KeyIcon,
-    ComputerDesktopIcon,
-    SunIcon,
-    MoonIcon,
-} from '@heroicons/react/24/outline';
+    HardDrives,
+    ShieldCheck,
+    UsersThree,
+    Bell,
+    PaintBrush,
+    Envelope,
+    Key,
+    Desktop,
+    Sun,
+    Moon,
+} from '@phosphor-icons/react';
 import { cn } from "@/utils/cn";
 
 interface ToggleSwitchProps {
@@ -107,7 +107,7 @@ export default function ServerSettingsPage() {
             <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                     <div className="rounded-xl bg-primary p-3 shadow-lg">
-                        <ServerIcon className="h-7 w-7 text-primary-foreground" />
+                        <HardDrives size={28} weight="duotone" className="text-primary-foreground" />
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">
@@ -124,7 +124,7 @@ export default function ServerSettingsPage() {
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <PaintBrushIcon className="h-5 w-5 text-primary" />
+                        <PaintBrush size={20} weight="duotone" className="text-primary" />
                         <div>
                             <h3 className="text-lg font-semibold text-foreground">Default Appearance</h3>
                             <p className="text-sm text-muted-foreground">Set the default theme for new users</p>
@@ -134,7 +134,7 @@ export default function ServerSettingsPage() {
                 <div className="p-6">
                     <div className="flex gap-3">
                         {availableModes.map((mode) => {
-                            const Icon = mode === 'dark' ? MoonIcon : mode === 'light' ? SunIcon : ComputerDesktopIcon;
+                            const Icon = mode === 'dark' ? Moon : mode === 'light' ? Sun : Desktop;
                             return (
                                 <button
                                     key={mode}
@@ -147,7 +147,7 @@ export default function ServerSettingsPage() {
                                     )}
                                 >
                                     <div className="flex flex-col items-center gap-2">
-                                        <Icon className="h-6 w-6 text-muted-foreground" />
+                                        <Icon size={24} weight="duotone" className="text-muted-foreground" />
                                         <span className="text-sm font-medium capitalize">{mode}</span>
                                         {themeMode === mode && (
                                             <span className="text-xs text-primary font-medium">Active</span>
@@ -164,7 +164,7 @@ export default function ServerSettingsPage() {
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <ShieldCheckIcon className="h-5 w-5 text-primary" />
+                        <ShieldCheck size={20} weight="duotone" className="text-primary" />
                         <div>
                             <h3 className="text-lg font-semibold text-foreground">Security & Access</h3>
                             <p className="text-sm text-muted-foreground">Control authentication and user access settings</p>
@@ -173,7 +173,7 @@ export default function ServerSettingsPage() {
                 </div>
                 <div className="p-6 space-y-3">
                     <SettingItem
-                        icon={ServerIcon}
+                        icon={HardDrives}
                         title="Maintenance Mode"
                         description="Temporarily disable access for non-admin users during system updates"
                         enabled={maintenanceMode}
@@ -181,14 +181,14 @@ export default function ServerSettingsPage() {
                         badge={maintenanceMode ? "Active" : undefined}
                     />
                     <SettingItem
-                        icon={UserGroupIcon}
+                        icon={UsersThree}
                         title="Public Registration"
                         description="Allow new users to create accounts without admin approval"
                         enabled={publicRegistration}
                         onChange={setPublicRegistration}
                     />
                     <SettingItem
-                        icon={KeyIcon}
+                        icon={Key}
                         title="Require Two-Factor Authentication"
                         description="Enforce 2FA for all user accounts to enhance security"
                         enabled={twoFactorRequired}
@@ -201,7 +201,7 @@ export default function ServerSettingsPage() {
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <ServerIcon className="h-5 w-5 text-primary" />
+                        <HardDrives size={20} weight="duotone" className="text-primary" />
                         <div>
                             <h3 className="text-lg font-semibold text-foreground">System & Monitoring</h3>
                             <p className="text-sm text-muted-foreground">Configure system behavior and tracking features</p>
@@ -210,7 +210,7 @@ export default function ServerSettingsPage() {
                 </div>
                 <div className="p-6 space-y-3">
                     <SettingItem
-                        icon={ShieldCheckIcon}
+                        icon={ShieldCheck}
                         title="Audit Logging"
                         description="Track and record all system activities for security compliance"
                         enabled={auditLogging}
@@ -218,7 +218,7 @@ export default function ServerSettingsPage() {
                         badge="Recommended"
                     />
                     <SettingItem
-                        icon={ServerIcon}
+                        icon={HardDrives}
                         title="API Rate Limiting"
                         description="Protect against abuse by limiting API requests per user"
                         enabled={apiRateLimiting}
@@ -231,7 +231,7 @@ export default function ServerSettingsPage() {
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="border-b border-border bg-muted/30 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <BellIcon className="h-5 w-5 text-primary" />
+                        <Bell size={20} weight="duotone" className="text-primary" />
                         <div>
                             <h3 className="text-lg font-semibold text-foreground">Notifications</h3>
                             <p className="text-sm text-muted-foreground">Manage system-wide notification preferences</p>
@@ -240,7 +240,7 @@ export default function ServerSettingsPage() {
                 </div>
                 <div className="p-6 space-y-3">
                     <SettingItem
-                        icon={EnvelopeIcon}
+                        icon={Envelope}
                         title="Email Notifications"
                         description="Send email alerts for important system events and updates"
                         enabled={emailNotifications}

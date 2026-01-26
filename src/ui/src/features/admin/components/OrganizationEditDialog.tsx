@@ -5,7 +5,7 @@ import { OrganizationDetail } from "@/gen/organizations/v1/organizations_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from '@phosphor-icons/react';
 
 interface OrganizationEditDialogProps {
   org?: OrganizationDetail | null;
@@ -92,7 +92,7 @@ export function OrganizationEditDialog({ org, isOpen, onClose, onSave }: Organiz
             onClick={onClose}
             className="rounded-lg p-1 hover:bg-muted transition-colors"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <X size={20} weight="bold" />
           </button>
         </div>
         

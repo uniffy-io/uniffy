@@ -8,18 +8,18 @@
 import { useEffect, useRef } from 'react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/utils/urn';
 import {
-  DocumentTextIcon,
-  FolderIcon,
-  ChatBubbleLeftRightIcon,
-  UserIcon,
-  BookOpenIcon,
-  CalendarIcon,
-  KeyIcon,
-  CubeIcon,
-  LinkIcon,
-  ClockIcon,
-  ArrowTopRightOnSquareIcon,
-} from '@heroicons/react/24/outline';
+  FileText,
+  Folder,
+  ChatTeardropDots,
+  User,
+  BookOpen,
+  CalendarDots,
+  Key,
+  Cube,
+  Link,
+  Clock,
+  ArrowSquareOut,
+} from '@phosphor-icons/react';
 import type { UrnPreviewData } from './useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 
@@ -32,7 +32,7 @@ interface MentionPreviewProps {
 }
 
 interface TypeTheme {
-  icon: typeof DocumentTextIcon;
+  icon: typeof FileText;
   gradient: string;
   iconBg: string;
   accentText: string;
@@ -45,63 +45,63 @@ interface TypeTheme {
 function getTypeTheme(type: UrnType): TypeTheme {
   const themeMap: Record<UrnType, TypeTheme> = {
     [UrnType.NOTE]: {
-      icon: DocumentTextIcon,
+      icon: FileText,
       gradient: 'from-primary/20 via-primary/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-primary to-primary/80',
       accentText: 'text-primary',
       dotColor: 'bg-primary',
     },
     [UrnType.FILE]: {
-      icon: FolderIcon,
+      icon: Folder,
       gradient: 'from-blue-500/20 via-blue-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
       accentText: 'text-blue-600 dark:text-blue-400',
       dotColor: 'bg-blue-500',
     },
     [UrnType.CHAT]: {
-      icon: ChatBubbleLeftRightIcon,
+      icon: ChatTeardropDots,
       gradient: 'from-violet-500/20 via-violet-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
       accentText: 'text-violet-600 dark:text-violet-400',
       dotColor: 'bg-violet-500',
     },
     [UrnType.USER]: {
-      icon: UserIcon,
+      icon: User,
       gradient: 'from-emerald-500/20 via-emerald-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
       accentText: 'text-emerald-600 dark:text-emerald-400',
       dotColor: 'bg-emerald-500',
     },
     [UrnType.BOOK]: {
-      icon: BookOpenIcon,
+      icon: BookOpen,
       gradient: 'from-amber-500/20 via-amber-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
       accentText: 'text-amber-600 dark:text-amber-400',
       dotColor: 'bg-amber-500',
     },
     [UrnType.CALENDAR_EVENT]: {
-      icon: CalendarIcon,
+      icon: CalendarDots,
       gradient: 'from-rose-500/20 via-rose-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
       accentText: 'text-rose-600 dark:text-rose-400',
       dotColor: 'bg-rose-500',
     },
     [UrnType.PASSWORD]: {
-      icon: KeyIcon,
+      icon: Key,
       gradient: 'from-red-500/20 via-red-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
       accentText: 'text-red-600 dark:text-red-400',
       dotColor: 'bg-red-500',
     },
     [UrnType.SPACE]: {
-      icon: CubeIcon,
+      icon: Cube,
       gradient: 'from-indigo-500/20 via-indigo-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
       accentText: 'text-indigo-600 dark:text-indigo-400',
       dotColor: 'bg-indigo-500',
     },
     [UrnType.UNKNOWN]: {
-      icon: LinkIcon,
+      icon: Link,
       gradient: 'from-gray-500/20 via-gray-500/10 to-transparent',
       iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
       accentText: 'text-muted-foreground',
@@ -220,7 +220,7 @@ export function MentionPreview({
         <div className="p-4">
           <div className="flex items-center gap-3 text-muted-foreground">
             <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-              <LinkIcon className="w-5 h-5" />
+              <Link size={20} weight="duotone" />
             </div>
             <div>
               <p className="text-sm font-medium">Unable to load preview</p>
@@ -247,7 +247,7 @@ export function MentionPreview({
                 shadow-lg
                 ring-2 ring-background
               `}>
-                <Icon className="w-5 h-5 text-white" />
+                <Icon size={20} weight="duotone" className="text-white" />
               </div>
 
               {/* Title and type */}
@@ -285,11 +285,11 @@ export function MentionPreview({
           {/* Footer with metadata */}
           <div className="px-4 py-2.5 bg-muted/30 border-t border-border/50 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ClockIcon className="w-3.5 h-3.5" />
+              <Clock size={14} weight="duotone" />
               <span>{formatRelativeTime(preview.updatedAt) || 'No date'}</span>
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-70 group-hover:opacity-100">
-              <ArrowTopRightOnSquareIcon className="w-3 h-3" />
+              <ArrowSquareOut size={12} weight="bold" />
               <span>Open</span>
             </div>
           </div>

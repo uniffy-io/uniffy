@@ -1,18 +1,18 @@
 /**
  * IconPicker Component
  *
- * A popover component for selecting note icons (Heroicons or emojis).
+ * A popover component for selecting note icons (Phosphor icons or emojis).
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from '@phosphor-icons/react';
 import {
     COMMON_EMOJIS,
     getIconCategories,
     getIconsByCategory,
     type NoteIcon,
 } from '../../utils/noteIconConstants';
-import { getHeroiconByName } from '../../utils/noteIcons';
+import { getIconByName } from '../../utils/noteIcons';
 
 interface IconPickerProps {
     currentIcon?: NoteIcon;
@@ -20,11 +20,11 @@ interface IconPickerProps {
     onClose: () => void;
 }
 
-type TabType = 'heroicons' | 'emojis';
+type TabType = 'icons' | 'emojis';
 
 export function IconPicker({ currentIcon, onSelect, onClose }: IconPickerProps) {
     const [activeTab, setActiveTab] = useState<TabType>(
-        currentIcon?.type === 'emoji' ? 'emojis' : 'heroicons'
+        currentIcon?.type === 'emoji' ? 'emojis' : 'icons'
     );
     const [customEmoji, setCustomEmoji] = useState('');
     const pickerRef = useRef<HTMLDivElement>(null);
@@ -53,8 +53,8 @@ export function IconPicker({ currentIcon, onSelect, onClose }: IconPickerProps) 
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
-    const handleHeroiconSelect = (iconName: string) => {
-        onSelect({ type: 'heroicon', value: iconName });
+    const handleIconSelect = (iconName: string) => {
+        onSelect({ type: 'icon', value: iconName });
         // Note: Parent handles closing via onSelect callback
     };
 
@@ -93,16 +93,16 @@ export function IconPicker({ currentIcon, onSelect, onClose }: IconPickerProps) 
                     onClick={onClose}
                     className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 >
-                    <XMarkIcon className="h-4 w-4" />
+                    <X size={16} weight="bold" />
                 </button>
             </div>
 
             {/* Tabs */}
             <div className="flex border-b border-border">
                 <button
-                    onClick={() => setActiveTab('heroicons')}
+                    onClick={() => setActiveTab('icons')}
                     className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                        activeTab === 'heroicons'
+                        activeTab === 'icons'
                             ? 'text-primary border-b-2 border-primary bg-primary/5'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
@@ -123,7 +123,7 @@ export function IconPicker({ currentIcon, onSelect, onClose }: IconPickerProps) 
 
             {/* Content */}
             <div className="max-h-72 overflow-y-auto p-3">
-                {activeTab === 'heroicons' ? (
+                {activeTab === 'icons' ? (
                     <div className="space-y-4">
                         {categories.map((category) => (
                             <div key={category}>
@@ -132,23 +132,23 @@ export function IconPicker({ currentIcon, onSelect, onClose }: IconPickerProps) 
                                 </h4>
                                 <div className="grid grid-cols-8 gap-1">
                                     {getIconsByCategory(category).map(({ name }) => {
-                                        const IconComponent = getHeroiconByName(name);
+                                        const IconComponent = getIconByName(name);
                                         const isSelected =
-                                            currentIcon?.type === 'heroicon' &&
+                                            currentIcon?.type === 'icon' &&
                                             currentIcon.value === name;
 
                                         return IconComponent ? (
                                             <button
                                                 key={name}
-                                                onClick={() => handleHeroiconSelect(name)}
+                                                onClick={() => handleIconSelect(name)}
                                                 className={`p-2 rounded hover:bg-muted transition-colors ${
                                                     isSelected
                                                         ? 'bg-primary/10 ring-1 ring-primary'
                                                         : ''
                                                 }`}
-                                                title={name.replace('Icon', '')}
+                                                title={name}
                                             >
-                                                <IconComponent className="h-4 w-4 text-foreground" />
+                                                <IconComponent size={16} className="text-foreground" />
                                             </button>
                                         ) : null;
                                     })}

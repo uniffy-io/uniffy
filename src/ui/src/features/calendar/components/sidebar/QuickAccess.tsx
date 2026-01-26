@@ -2,7 +2,7 @@
  * QuickAccess - Quick filter buttons for Today, This Week, Upcoming, Bookmarked
  */
 
-import { BookmarkIcon } from '@heroicons/react/24/outline';
+import { BookmarkSimple } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setQuickAccessFilter, goToToday } from '../../store';
 import type { QuickAccessFilter } from '../../types';
@@ -62,7 +62,7 @@ export function QuickAccess() {
           >
             <div className="flex items-center gap-2">
               {item.useBookmarkIcon ? (
-                <BookmarkIcon className="w-3.5 h-3.5" />
+                <BookmarkSimple size={14} weight="duotone" />
               ) : (
                 <span
                   className={cn(

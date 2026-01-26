@@ -6,13 +6,13 @@
 
 import { useEffect, useState, useRef } from 'react';
 import {
-    UsersIcon,
-    MagnifyingGlassIcon,
-    ShieldCheckIcon,
-    UserIcon,
-    TrashIcon,
-    ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
+    Users,
+    MagnifyingGlass,
+    ShieldCheck,
+    User,
+    Trash,
+    Warning,
+} from '@phosphor-icons/react';
 import { useOrgMembers } from '../../hooks/useAdminHooks';
 import { OrganizationRole } from '@/gen/common/v1/common_pb';
 import type { SerializedMemberInfo } from '../../store/adminSlice';
@@ -135,7 +135,7 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
                                 ${getRoleBadgeStyle(member.role)}
                             `}
                         >
-                            <ShieldCheckIcon className="h-3.5 w-3.5" />
+                            <ShieldCheck size={14} weight="fill" />
                             Owner
                         </span>
                     ) : (
@@ -172,7 +172,7 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
                                 disabled:opacity-50"
                             title="Remove from organization"
                         >
-                            <TrashIcon className="h-4 w-4" />
+                            <Trash size={16} />
                         </button>
                     )}
                 </TableCell>
@@ -242,7 +242,7 @@ export function MembersSection() {
             {/* Header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">
-                    <UsersIcon className="h-6 w-6 text-primary" />
+                    <Users size={24} weight="duotone" className="text-primary" />
                     <h1 className="text-2xl font-bold">Members</h1>
                 </div>
                 <p className="text-muted-foreground">
@@ -270,7 +270,7 @@ export function MembersSection() {
             <div className="flex items-center gap-4">
                 {/* Search */}
                 <div className="relative flex-1 max-w-sm">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                         type="text"
                         value={search}
@@ -294,7 +294,7 @@ export function MembersSection() {
             {error && (
                 <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
                     <div className="flex items-center gap-2 text-sm text-red-500">
-                        <ExclamationTriangleIcon className="h-5 w-5" />
+                        <Warning size={20} weight="fill" />
                         {error}
                     </div>
                 </div>
@@ -316,7 +316,7 @@ export function MembersSection() {
                     ) : members.length === 0 ? (
                         <TableEmpty
                             colSpan={4}
-                            icon={<UserIcon className="h-12 w-12" />}
+                            icon={<User size={48} weight="duotone" />}
                             title={search || roleFilter !== undefined
                                 ? 'No members match your filters'
                                 : 'No members found'}

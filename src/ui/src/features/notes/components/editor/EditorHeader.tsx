@@ -1,20 +1,19 @@
 import { useState, useMemo } from 'react';
 import {
-  EllipsisHorizontalIcon,
-  ShareIcon,
-  PencilSquareIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  CodeBracketIcon,
-  BookmarkIcon,
-  ChevronRightIcon,
-  ChevronDoubleRightIcon,
-  ChevronDoubleLeftIcon,
-  ArrowPathIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
-import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
+  DotsThree,
+  ShareNetwork,
+  PencilSimple,
+  Eye,
+  EyeSlash,
+  CodeSimple,
+  BookmarkSimple,
+  CaretRight,
+  CaretDoubleRight,
+  CaretDoubleLeft,
+  ArrowsClockwise,
+  CheckCircle,
+  WarningCircle,
+} from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '../../store/notesThunks';
 import { updateNoteIcon } from '../../store/notesThunks';
@@ -105,16 +104,16 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
   // Only show edit modes if user has edit permission
   const viewModes: Array<{
     mode: EditorMode;
-    icon: typeof PencilSquareIcon;
+    icon: typeof PencilSimple;
     label: string;
   }> = canEdit
     ? [
-        { mode: 'crepe', icon: PencilSquareIcon, label: 'Editor' },
-        { mode: 'markdown', icon: CodeBracketIcon, label: 'Markdown' },
-        { mode: 'readonly', icon: EyeIcon, label: 'Read Only' },
+        { mode: 'crepe', icon: PencilSimple, label: 'Editor' },
+        { mode: 'markdown', icon: CodeSimple, label: 'Markdown' },
+        { mode: 'readonly', icon: Eye, label: 'Read Only' },
       ]
     : [
-        { mode: 'readonly', icon: EyeIcon, label: 'Read Only' },
+        { mode: 'readonly', icon: Eye, label: 'Read Only' },
       ];
 
 
@@ -142,7 +141,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
               className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
               title="Show sidebar (⌘\\)"
             >
-              <ChevronDoubleRightIcon className="h-4 w-4 text-primary" />
+              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
             </button>
           )}
           
@@ -150,7 +149,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
           <nav className="flex items-center gap-1 text-sm text-muted-foreground">
             {breadcrumb.map((item, index) => (
               <span key={index} className="flex items-center gap-1">
-                {index > 0 && <ChevronRightIcon className="h-3 w-3" />}
+                {index > 0 && <CaretRight size={12} weight="bold" />}
                 <span className={index === breadcrumb.length - 1 ? 'text-foreground font-medium' : 'hover:text-foreground cursor-pointer'}>
                   {item}
                 </span>
@@ -162,12 +161,12 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
           <div className="flex items-center gap-1.5 ml-4 text-xs">
             {isSaving ? (
               <>
-                <ArrowPathIcon className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                <ArrowsClockwise size={14} weight="bold" className="text-muted-foreground animate-spin" />
                 <span className="text-muted-foreground">{statusText}</span>
               </>
             ) : saveError ? (
               <>
-                <ExclamationCircleIcon className="h-3.5 w-3.5 text-red-500" />
+                <WarningCircle size={14} weight="fill" className="text-red-500" />
                 <span className="text-red-500">Save failed</span>
               </>
             ) : hasUnsavedChanges ? (
@@ -177,7 +176,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
               </>
             ) : (
               <>
-                <CheckCircleIcon className="h-3.5 w-3.5 text-green-500" />
+                <CheckCircle size={14} weight="fill" className="text-green-500" />
                 <span className="text-muted-foreground">{statusText}</span>
               </>
             )}
@@ -199,7 +198,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
                 }`}
                 title={label}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon size={14} weight="duotone" />
                 <span className="hidden md:inline">{label}</span>
               </button>
             ))}
@@ -216,9 +215,9 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
                 title={showMarkdownPreview ? 'Hide Preview' : 'Show Preview'}
               >
                 {showMarkdownPreview ? (
-                  <EyeSlashIcon className="h-3.5 w-3.5" />
+                  <EyeSlash size={14} weight="duotone" />
                 ) : (
-                  <EyeIcon className="h-3.5 w-3.5" />
+                  <Eye size={14} weight="duotone" />
                 )}
                 <span className="hidden md:inline">Preview</span>
               </button>
@@ -249,9 +248,9 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
             title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
           >
             {isBookmarked ? (
-              <BookmarkIconSolid className="h-5 w-5 text-primary" />
+              <BookmarkSimple size={20} weight="fill" className="text-primary" />
             ) : (
-              <BookmarkIcon className="h-5 w-5 text-primary" />
+              <BookmarkSimple size={20} weight="duotone" className="text-primary" />
             )}
           </button>
           
@@ -262,7 +261,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
               className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
               title="Share"
             >
-              <ShareIcon className="h-5 w-5 text-primary" />
+              <ShareNetwork size={20} weight="duotone" className="text-primary" />
             </button>
           )}
           
@@ -271,7 +270,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
             className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="More Options"
           >
-            <EllipsisHorizontalIcon className="h-5 w-5 text-primary" />
+            <DotsThree size={20} weight="bold" className="text-primary" />
           </button>
           
           {/* Right panel toggle */}
@@ -281,9 +280,9 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
             title={isMetadataPanelOpen ? 'Hide panel (⌘])' : 'Show panel (⌘])'}
           >
             {isMetadataPanelOpen ? (
-              <ChevronDoubleRightIcon className="h-4 w-4 text-primary" />
+              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
             ) : (
-              <ChevronDoubleLeftIcon className="h-4 w-4 text-primary" />
+              <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
             )}
           </button>
         </div>

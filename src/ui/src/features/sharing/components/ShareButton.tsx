@@ -4,7 +4,7 @@
  * Trigger button to open the sharing dialog.
  */
 
-import { ShareIcon } from '@heroicons/react/24/outline';
+import { ShareNetwork } from '@phosphor-icons/react';
 import { useSharingDialog } from '../hooks/useSharingHooks';
 import { ContentType } from '@/gen/common/v1/common_pb';
 
@@ -37,7 +37,7 @@ export function ShareButton({
                 className={`p-2 rounded-md bg-transparent hover:bg-muted transition-colors ${className}`}
                 title="Share"
             >
-                <ShareIcon className="h-5 w-5 text-primary" />
+                <ShareNetwork size={20} weight="duotone" className="text-primary" />
             </button>
         );
     }
@@ -54,7 +54,7 @@ export function ShareButton({
                 ${className}
             `}
         >
-            <ShareIcon className="h-4 w-4" />
+            <ShareNetwork size={16} />
             <span>Share</span>
         </button>
     );

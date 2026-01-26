@@ -6,7 +6,7 @@
  */
 
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { BuildingOfficeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { Buildings, Gear } from '@phosphor-icons/react';
 
 export default function OrgSettingsPage() {
     useDocumentTitle('Organization Settings - Administration');
@@ -16,7 +16,7 @@ export default function OrgSettingsPage() {
             {/* Header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">
-                    <Cog6ToothIcon className="h-6 w-6 text-primary" />
+                    <Gear size={24} weight="duotone" className="text-primary" />
                     <h1 className="text-2xl font-bold">Organization Settings</h1>
                 </div>
                 <p className="text-muted-foreground">
@@ -27,7 +27,7 @@ export default function OrgSettingsPage() {
             {/* Coming Soon Placeholder */}
             <div className="py-16 text-center border border-dashed border-border rounded-xl">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary/10 mb-4">
-                    <BuildingOfficeIcon className="h-8 w-8 text-primary" />
+                    <Buildings size={32} weight="duotone" className="text-primary" />
                 </div>
                 <h2 className="text-lg font-semibold mb-2">Coming Soon</h2>
                 <p className="text-muted-foreground max-w-sm mx-auto">

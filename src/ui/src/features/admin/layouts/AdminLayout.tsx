@@ -12,31 +12,31 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { cn } from '@/utils/cn';
 import { useAdminAccess } from '../hooks/useAdminHooks';
 import {
-    UsersIcon,
-    UserGroupIcon,
-    ShieldCheckIcon,
-    Cog6ToothIcon,
-    BuildingOffice2Icon,
-    ServerIcon,
-} from '@heroicons/react/24/outline';
+    Users,
+    UsersThree,
+    ShieldCheck,
+    Gear,
+    Buildings,
+    HardDrives,
+} from '@phosphor-icons/react';
 
 interface NavItem {
     name: string;
     path: string;
-    icon: React.ComponentType<{ className?: string }>;
+    icon: React.ComponentType<{ className?: string; size?: number; weight?: string }>;
 }
 
 const orgNavItems: NavItem[] = [
-    { name: 'Members', path: '/admin/members', icon: UsersIcon },
-    { name: 'Groups', path: '/admin/groups', icon: UserGroupIcon },
-    { name: 'Permissions', path: '/admin/permissions', icon: ShieldCheckIcon },
-    { name: 'Organization', path: '/admin/org-settings', icon: Cog6ToothIcon },
+    { name: 'Members', path: '/admin/members', icon: Users },
+    { name: 'Groups', path: '/admin/groups', icon: UsersThree },
+    { name: 'Permissions', path: '/admin/permissions', icon: ShieldCheck },
+    { name: 'Organization', path: '/admin/org-settings', icon: Gear },
 ];
 
 const serverNavItems: NavItem[] = [
-    { name: 'Organizations', path: '/admin/organizations', icon: BuildingOffice2Icon },
-    { name: 'Users', path: '/admin/users', icon: UsersIcon },
-    { name: 'Settings', path: '/admin/server-settings', icon: ServerIcon },
+    { name: 'Organizations', path: '/admin/organizations', icon: Buildings },
+    { name: 'Users', path: '/admin/users', icon: Users },
+    { name: 'Settings', path: '/admin/server-settings', icon: HardDrives },
 ];
 
 function NavSection({
@@ -67,7 +67,7 @@ function NavSection({
                                 : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                         )}
                     >
-                        <Icon className="h-5 w-5" />
+                        <Icon size={20} weight="duotone" />
                         {item.name}
                     </Link>
                 );

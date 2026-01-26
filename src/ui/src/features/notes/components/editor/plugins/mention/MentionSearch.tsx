@@ -12,7 +12,7 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import type { EditorView } from '@milkdown/kit/prose/view';
-import { XMarkIcon, AtSymbolIcon } from '@heroicons/react/24/outline';
+import { X, At } from '@phosphor-icons/react';
 import { SearchResultsList, useSearch } from '@/features/search';
 import { FilterChip } from '@/features/search/components/FilterChip';
 import { FilterHints } from '@/features/search/components/FilterHints';
@@ -200,7 +200,7 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
             {/* Search input */}
             <div className="relative flex items-center border-b border-border/50">
               <div className="absolute left-4 flex items-center gap-1">
-                <AtSymbolIcon className="h-5 w-5 text-primary" />
+                <At size={20} weight="bold" className="text-primary" />
               </div>
               <input
                 ref={inputRef}
@@ -225,7 +225,7 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
                     onClick={handleClear}
                     className="p-1 rounded-md hover:bg-muted transition-colors"
                   >
-                    <XMarkIcon className="h-4 w-4 text-muted-foreground" />
+                    <X size={16} weight="bold" className="text-muted-foreground" />
                   </button>
                 )}
                 <kbd className="hidden sm:inline-flex px-2 py-1 rounded-md bg-muted border border-border/50 text-xs text-muted-foreground font-mono">

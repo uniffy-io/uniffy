@@ -5,29 +5,30 @@
  * For constants and pure utility functions, import from noteIconConstants.ts.
  */
 
-import * as OutlineIcons from '@heroicons/react/24/outline';
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { FileText } from '@phosphor-icons/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { NoteIcon } from './noteIconConstants';
+import { ICON_COMPONENTS } from './noteIconConstants';
 
 /**
- * Render a note icon (heroicon or emoji) with the given className.
- * Falls back to DocumentTextIcon if no icon or invalid icon.
+ * Render a note icon (phosphor icon or emoji) with the given className.
+ * Falls back to FileText if no icon or invalid icon.
  */
 export function renderNoteIcon(
     icon: NoteIcon | undefined | null,
     className?: string,
+    size?: number,
 ): React.ReactNode {
     if (!icon) {
-        return <DocumentTextIcon className={className} />;
+        return <FileText className={className} size={size} />;
     }
 
     if (icon.type === 'emoji') {
         // For emojis, we need to handle sizing differently
         // The className might have h-4 w-4, we extract and apply equivalent font size
         const sizeMatch = className?.match(/h-(\d+)/);
-        const size = sizeMatch ? parseInt(sizeMatch[1], 10) : 4;
-        const fontSize = size * 4; // Approximate rem to px conversion
+        const extractedSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 4;
+        const fontSize = size || extractedSize * 4; // Approximate rem to px conversion
 
         return (
             <span
@@ -45,44 +46,44 @@ export function renderNoteIcon(
         );
     }
 
-    // Heroicon
-    const IconComponent = (OutlineIcons as Record<string, React.ComponentType<{ className?: string }>>)[icon.value];
+    // Phosphor icon
+    const IconComponent = ICON_COMPONENTS[icon.value];
     if (IconComponent) {
-        return <IconComponent className={className} />;
+        return <IconComponent className={className} size={size} />;
     }
 
     // Fallback to default
-    return <DocumentTextIcon className={className} />;
+    return <FileText className={className} size={size} />;
 }
 
 /**
- * Get a heroicon component by name.
+ * Get a Phosphor icon component by name.
  * Returns undefined if not found.
  */
-export function getHeroiconByName(name: string): React.ComponentType<{ className?: string }> | undefined {
-    return (OutlineIcons as Record<string, React.ComponentType<{ className?: string }>>)[name];
+export function getIconByName(name: string) {
+    return ICON_COMPONENTS[name];
 }
 
 /**
- * Cache for extracted SVG path data from heroicons.
+ * Cache for extracted SVG path data from Phosphor icons.
  * Key is icon name, value is array of path `d` attributes.
  */
 const svgPathCache = new Map<string, string[]>();
 
 /**
- * Extract SVG path data from a heroicon component.
+ * Extract SVG path data from a Phosphor icon component.
  * Uses renderToStaticMarkup to convert the React component to HTML,
  * then parses the SVG to extract path `d` attributes.
  * Results are cached for performance.
  */
-export function getHeroiconSvgPaths(iconName: string): string[] {
+export function getIconSvgPaths(iconName: string): string[] {
     // Check cache first
     if (svgPathCache.has(iconName)) {
         return svgPathCache.get(iconName)!;
     }
 
     // Get the icon component
-    const IconComponent = (OutlineIcons as Record<string, React.ComponentType<{ className?: string }>>)[iconName];
+    const IconComponent = ICON_COMPONENTS[iconName];
     if (!IconComponent) {
         return [];
     }
@@ -109,17 +110,17 @@ export function getHeroiconSvgPaths(iconName: string): string[] {
 }
 
 /**
- * Draw a heroicon on a canvas context using its SVG path data.
+ * Draw a Phosphor icon on a canvas context using its SVG path data.
  * The icon is drawn centered at (x, y) with the specified size.
  *
  * @param ctx - Canvas 2D rendering context
- * @param iconName - Name of the heroicon (e.g., 'StarIcon')
+ * @param iconName - Name of the Phosphor icon (e.g., 'Star')
  * @param x - Center X coordinate
  * @param y - Center Y coordinate
  * @param size - Size of the icon (width/height)
  * @param color - Stroke color for the icon
  */
-export function drawHeroiconOnCanvas(
+export function drawIconOnCanvas(
     ctx: CanvasRenderingContext2D,
     iconName: string,
     x: number,
@@ -127,23 +128,23 @@ export function drawHeroiconOnCanvas(
     size: number,
     color: string
 ): boolean {
-    const paths = getHeroiconSvgPaths(iconName);
+    const paths = getIconSvgPaths(iconName);
     if (paths.length === 0) {
         return false; // Icon not found, caller should use fallback
     }
 
     ctx.save();
 
-    // Heroicons use a 24x24 viewBox, scale to desired size
-    const scale = size / 24;
+    // Phosphor icons use a 256x256 viewBox, scale to desired size
+    const scale = size / 256;
 
     // Translate to center the icon at (x, y)
     ctx.translate(x - size / 2, y - size / 2);
     ctx.scale(scale, scale);
 
-    // Set stroke style matching heroicons outline style
+    // Set stroke style matching Phosphor regular style
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 16; // Phosphor uses 16px stroke at 256 viewBox
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 

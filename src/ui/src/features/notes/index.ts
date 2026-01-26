@@ -135,20 +135,21 @@ export {
 
 // Note icons - constants from noteIconConstants.ts, rendering from noteIcons.tsx
 export {
-    CURATED_HEROICONS,
+    CURATED_ICONS,
     COMMON_EMOJIS,
     getIconCategories,
     getIconsByCategory,
-    isValidHeroiconName,
-    getHeroiconComponent,
+    isValidIconName,
+    getIconComponent,
+    ICON_COMPONENTS,
 } from './utils/noteIconConstants';
 export type { NoteIcon } from './utils/noteIconConstants';
 
 export {
     renderNoteIcon,
-    getHeroiconByName,
-    getHeroiconSvgPaths,
-    drawHeroiconOnCanvas,
+    getIconByName,
+    getIconSvgPaths,
+    drawIconOnCanvas,
 } from './utils/noteIcons';
 
 // Types

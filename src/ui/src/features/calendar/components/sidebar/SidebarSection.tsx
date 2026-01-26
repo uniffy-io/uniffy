@@ -2,7 +2,7 @@
  * SidebarSection - Reusable collapsible section for sidebar
  */
 
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { CaretDown } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { toggleSectionCollapse } from '../../store';
 import type { SidebarSectionId } from '../../types';
@@ -42,9 +42,11 @@ export function SidebarSection({
           className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
         >
           <span>{title}</span>
-          <ChevronDownIcon
+          <CaretDown
+            size={12}
+            weight="bold"
             className={cn(
-              'w-3 h-3 transition-transform',
+              'transition-transform',
               isCollapsed && '-rotate-90'
             )}
           />

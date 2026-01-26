@@ -8,7 +8,7 @@
  * - View mode toggle (Day/Week/Month)
  */
 
-import { ChevronLeftIcon, ChevronRightIcon, GlobeAltIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { CaretLeft, CaretRight, GlobeHemisphereWest, CaretDown } from '@phosphor-icons/react';
 import { useCalendarNavigation } from '../../hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { openTimezoneModal } from '../../store';
@@ -45,7 +45,7 @@ export function CalendarHeader() {
           className="p-1.5 rounded-md hover:bg-muted transition-colors"
           aria-label="Previous period"
         >
-          <ChevronLeftIcon className="h-4 w-4 text-muted-foreground" />
+          <CaretLeft size={16} weight="bold" className="text-muted-foreground" />
         </button>
 
         {/* Month/Year title */}
@@ -59,7 +59,7 @@ export function CalendarHeader() {
           className="p-1.5 rounded-md hover:bg-muted transition-colors"
           aria-label="Next period"
         >
-          <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+          <CaretRight size={16} weight="bold" className="text-muted-foreground" />
         </button>
 
         {/* Today button */}
@@ -78,9 +78,9 @@ export function CalendarHeader() {
           onClick={() => dispatch(openTimezoneModal())}
           className="flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
         >
-          <GlobeAltIcon className="h-4 w-4" />
+          <GlobeHemisphereWest size={16} weight="duotone" />
           <span>{timezoneOffset}</span>
-          <ChevronDownIcon className="h-3 w-3" />
+          <CaretDown size={12} weight="bold" />
         </button>
 
         {/* View mode toggle */}

@@ -3,21 +3,21 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { setMetadataPanelTab } from '../../store/editorSlice';
 import type { MetadataPanelTab } from '../../store/editorSlice';
 import {
-  LinkIcon,
-  Cog6ToothIcon,
-  SparklesIcon,
-  ClockIcon,
-  DocumentTextIcon,
-  ListBulletIcon,
-  HashtagIcon,
-  FolderIcon,
-  ChatBubbleLeftRightIcon,
-  UserIcon,
-  BookOpenIcon,
-  CalendarIcon,
-  KeyIcon,
-  CubeIcon,
-} from '@heroicons/react/24/outline';
+  Link,
+  Gear,
+  Sparkle,
+  Clock,
+  FileText,
+  ListBullets,
+  Hash,
+  Folder,
+  ChatTeardropDots,
+  User,
+  BookOpen,
+  CalendarDots,
+  Key,
+  Cube,
+} from '@phosphor-icons/react';
 import { parseUrn, urnToPath, UrnType } from '@/utils/urn';
 import { useNavigate } from 'react-router-dom';
 
@@ -54,18 +54,18 @@ function parseMentionsFromContent(content: string): ParsedMention[] {
 
 /** Get icon component for URN type */
 function getTypeIcon(type: UrnType) {
-  const iconMap: Record<UrnType, typeof DocumentTextIcon> = {
-    [UrnType.NOTE]: DocumentTextIcon,
-    [UrnType.FILE]: FolderIcon,
-    [UrnType.CHAT]: ChatBubbleLeftRightIcon,
-    [UrnType.USER]: UserIcon,
-    [UrnType.BOOK]: BookOpenIcon,
-    [UrnType.CALENDAR_EVENT]: CalendarIcon,
-    [UrnType.PASSWORD]: KeyIcon,
-    [UrnType.SPACE]: CubeIcon,
-    [UrnType.UNKNOWN]: LinkIcon,
+  const iconMap: Record<UrnType, typeof FileText> = {
+    [UrnType.NOTE]: FileText,
+    [UrnType.FILE]: Folder,
+    [UrnType.CHAT]: ChatTeardropDots,
+    [UrnType.USER]: User,
+    [UrnType.BOOK]: BookOpen,
+    [UrnType.CALENDAR_EVENT]: CalendarDots,
+    [UrnType.PASSWORD]: Key,
+    [UrnType.SPACE]: Cube,
+    [UrnType.UNKNOWN]: Link,
   };
-  return iconMap[type] || LinkIcon;
+  return iconMap[type] || Link;
 }
 
 /** Get type-specific styling */
@@ -130,12 +130,12 @@ export function NotesMetadataPanel() {
     : 'Unknown';
   const ownerInitials = getInitials(ownerName);
 
-  const tabs: Array<{ id: MetadataPanelTab; label: string; icon: typeof LinkIcon }> = [
-    { id: 'outline', label: 'Outline', icon: ListBulletIcon },
-    { id: 'links', label: 'Links', icon: LinkIcon },
-    { id: 'properties', label: 'Properties', icon: Cog6ToothIcon },
-    { id: 'ai', label: 'AI', icon: SparklesIcon },
-    { id: 'history', label: 'History', icon: ClockIcon },
+  const tabs: Array<{ id: MetadataPanelTab; label: string; icon: typeof Link }> = [
+    { id: 'outline', label: 'Outline', icon: ListBullets },
+    { id: 'links', label: 'Links', icon: Link },
+    { id: 'properties', label: 'Properties', icon: Gear },
+    { id: 'ai', label: 'AI', icon: Sparkle },
+    { id: 'history', label: 'History', icon: Clock },
   ];
 
   // Parse headings from markdown content
@@ -217,7 +217,7 @@ export function NotesMetadataPanel() {
     <div className="space-y-2">
       {headings.length === 0 ? (
         <div className="text-center py-8">
-          <ListBulletIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+          <ListBullets size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
           <p className="text-sm text-muted-foreground">No headings found</p>
           <p className="text-xs text-muted-foreground mt-1">
             Add headings (# H1, ## H2, etc.) to see the outline
@@ -259,7 +259,7 @@ export function NotesMetadataPanel() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
-                    <HashtagIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Hash size={14} weight="bold" className="text-muted-foreground" />
                   )}
                 </button>
               </div>
@@ -282,7 +282,7 @@ export function NotesMetadataPanel() {
         </h4>
         {outgoingLinks.length === 0 ? (
           <div className="text-center py-6">
-            <LinkIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+            <Link size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
             <p className="text-sm text-muted-foreground">No outgoing links</p>
             <p className="text-xs text-muted-foreground mt-1">
               Use @ mentions to link to other content
@@ -306,7 +306,7 @@ export function NotesMetadataPanel() {
                   title={`Open: ${link.label}`}
                 >
                   <span className={`${style.text} transition-transform group-hover:scale-110`}>
-                    <Icon className="h-4 w-4" />
+                    <Icon size={16} weight="duotone" />
                   </span>
                   <span className="truncate max-w-[150px]">{link.label}</span>
                 </button>
@@ -325,7 +325,7 @@ export function NotesMetadataPanel() {
           </span>
         </h4>
         <div className="text-center py-6 border border-dashed border-border rounded-lg">
-          <DocumentTextIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+          <FileText size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
           <p className="text-sm text-muted-foreground">Backlinks coming soon</p>
           <p className="text-xs text-muted-foreground mt-1">
             See which notes link to this one
@@ -340,7 +340,7 @@ export function NotesMetadataPanel() {
         </h4>
         <div className="aspect-square rounded-lg bg-muted/30 border border-dashed border-border flex items-center justify-center">
           <div className="text-center p-4">
-            <CubeIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+            <Cube size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-2" />
             <p className="text-xs text-muted-foreground">Graph view coming soon</p>
           </div>
         </div>
@@ -423,7 +423,7 @@ export function NotesMetadataPanel() {
     <div className="space-y-4">
       <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
         <div className="flex items-center gap-2 mb-3">
-          <SparklesIcon className="h-5 w-5 text-purple-500" />
+          <Sparkle size={20} weight="duotone" className="text-purple-500" />
           <h4 className="font-semibold">Ask AI about this note</h4>
         </div>
         <p className="text-sm text-muted-foreground mb-3">
@@ -466,7 +466,7 @@ export function NotesMetadataPanel() {
 
       {/* Coming soon placeholder */}
       <div className="text-center py-6 border border-dashed border-border rounded-lg">
-        <ClockIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+        <Clock size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
         <p className="text-sm text-muted-foreground">Full version history coming soon</p>
         <p className="text-xs text-muted-foreground mt-1">
           Track changes and restore previous versions
@@ -506,7 +506,7 @@ export function NotesMetadataPanel() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon className="h-4 w-4" />
+            <Icon size={16} weight="duotone" />
             <span className="hidden xl:inline">{label}</span>
             {metadataPanelTab === id && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />

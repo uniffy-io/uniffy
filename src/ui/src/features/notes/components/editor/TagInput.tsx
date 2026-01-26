@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
-import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { X, Plus } from '@phosphor-icons/react';
 
 interface TagInputProps {
   tags: string[];
@@ -86,7 +86,7 @@ export function TagInput({ tags, onTagsChange, maxTags = 10, disabled = false }:
               className="opacity-0 group-hover:opacity-100 -mr-1 p-0.5 rounded-full hover:bg-primary/20 transition-opacity"
               title="Remove tag"
             >
-              <XMarkIcon className="h-3 w-3" />
+              <X size={12} weight="bold" />
             </button>
           )}
         </span>
@@ -114,7 +114,7 @@ export function TagInput({ tags, onTagsChange, maxTags = 10, disabled = false }:
                 className="p-1 rounded-full hover:bg-muted transition-colors"
                 title="Add tag"
               >
-                <PlusIcon className="h-4 w-4 text-muted-foreground" />
+                <Plus size={16} weight="bold" className="text-muted-foreground" />
               </button>
             )
           )}

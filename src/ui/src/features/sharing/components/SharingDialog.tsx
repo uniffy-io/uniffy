@@ -7,12 +7,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import {
-    XMarkIcon,
-    ShareIcon,
-    UserIcon,
-    ShieldCheckIcon,
-    ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
+    X,
+    ShareNetwork,
+    User,
+    ShieldCheck,
+    WarningCircle,
+} from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import {
     useSharingDialog,
@@ -126,7 +126,7 @@ export function SharingDialog() {
                                 <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 rounded-lg bg-primary/10">
-                                            <ShareIcon className="h-5 w-5 text-primary" />
+                                            <ShareNetwork size={20} weight="duotone" className="text-primary" />
                                         </div>
                                         <div>
                                             <Dialog.Title className="text-lg font-semibold">
@@ -142,7 +142,7 @@ export function SharingDialog() {
                                         onClick={close}
                                         className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                                     >
-                                        <XMarkIcon className="h-5 w-5" />
+                                        <X size={20} weight="bold" />
                                     </button>
                                 </div>
 
@@ -160,7 +160,7 @@ export function SharingDialog() {
                                         />
                                         {grantError && (
                                             <div className="mt-2 flex items-center gap-2 text-sm text-red-500">
-                                                <ExclamationCircleIcon className="h-4 w-4" />
+                                                <WarningCircle size={16} weight="fill" />
                                                 {grantError}
                                             </div>
                                         )}
@@ -170,7 +170,7 @@ export function SharingDialog() {
                                     {error && (
                                         <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                                             <div className="flex items-center gap-2 text-sm text-red-500">
-                                                <ExclamationCircleIcon className="h-4 w-4" />
+                                                <WarningCircle size={16} weight="fill" />
                                                 {error}
                                             </div>
                                         </div>
@@ -224,7 +224,7 @@ export function SharingDialog() {
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                            <ShieldCheckIcon className="h-4 w-4" />
+                                                            <ShieldCheck size={16} weight="fill" />
                                                             <span>Owner</span>
                                                         </div>
                                                     </div>
@@ -244,7 +244,7 @@ export function SharingDialog() {
 
                                                 {sortedPermissions.length === 0 ? (
                                                     <div className="py-6 text-center border border-dashed border-border rounded-lg">
-                                                        <UserIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                                                        <User size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-2" />
                                                         <p className="text-sm text-muted-foreground">
                                                             Not shared with anyone yet
                                                         </p>

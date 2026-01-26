@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { PencilIcon, PlusIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PencilSimple, Plus, Trash, Check, X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
   toggleCategoryFilter,
@@ -100,7 +100,7 @@ export function CategoryList() {
           className="p-0.5 rounded hover:bg-muted cursor-pointer"
           title="Add Category"
         >
-          <PlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          <Plus size={14} weight="bold" className="text-muted-foreground" />
         </span>
       }
     >
@@ -140,14 +140,14 @@ export function CategoryList() {
                       className="p-0.5 rounded hover:bg-muted cursor-pointer"
                       title="Save"
                     >
-                      <CheckIcon className="h-3.5 w-3.5 text-green-500" />
+                      <Check size={14} weight="bold" className="text-green-500" />
                     </span>
                     <span
                       onClick={handleCancelEdit}
                       className="p-0.5 rounded hover:bg-muted cursor-pointer"
                       title="Cancel"
                     >
-                      <XMarkIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <X size={14} weight="bold" className="text-muted-foreground" />
                     </span>
                   </div>
                 </>
@@ -174,14 +174,14 @@ export function CategoryList() {
                       className="p-0.5 rounded hover:bg-muted cursor-pointer"
                       title="Edit"
                     >
-                      <PencilIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <PencilSimple size={14} weight="duotone" className="text-muted-foreground" />
                     </span>
                     <span
                       onClick={(e) => handleDelete(category.id, category.name, e)}
                       className="p-0.5 rounded hover:bg-destructive/10 cursor-pointer"
                       title="Delete"
                     >
-                      <TrashIcon className="h-3.5 w-3.5 text-destructive" />
+                      <Trash size={14} weight="duotone" className="text-destructive" />
                     </span>
                   </div>
                 </>

@@ -4,7 +4,7 @@
  * Displays an active search filter as a removable chip.
  */
 
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from '@phosphor-icons/react';
 import { cn } from '@/utils/cn';
 
 interface FilterChipProps {
@@ -57,7 +57,7 @@ export function FilterChip({ label, onRemove, icon, variant = 'default', classNa
                 className={cn("ml-0.5 p-0.5 rounded-full transition-colors", styles.button)}
                 aria-label={`Remove ${label} filter`}
             >
-                <XMarkIcon className="h-3 w-3" />
+                <X size={12} weight="bold" />
             </button>
         </span>
     );

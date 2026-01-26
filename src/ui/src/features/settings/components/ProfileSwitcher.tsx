@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { ChevronDownIcon, CheckIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { CaretDown, Check, Plus } from '@phosphor-icons/react';
 import { useSettings } from '../hooks/useSettings';
 
 interface ProfileSwitcherProps {
@@ -28,7 +28,7 @@ export function ProfileSwitcher({ onCreateProfile }: ProfileSwitcherProps) {
                 disabled={loading}
             >
                 <span>{activeProfile?.name ?? 'Select Profile'}</span>
-                <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                <CaretDown size={16} weight="bold" className="text-muted-foreground" />
             </button>
 
             {isOpen && (
@@ -56,7 +56,7 @@ export function ProfileSwitcher({ onCreateProfile }: ProfileSwitcherProps) {
                                         )}
                                     </span>
                                     {profile.id === activeProfile?.id && (
-                                        <CheckIcon className="h-4 w-4 text-primary" />
+                                        <Check size={16} weight="bold" className="text-primary" />
                                     )}
                                 </button>
                             ))}
@@ -72,7 +72,7 @@ export function ProfileSwitcher({ onCreateProfile }: ProfileSwitcherProps) {
                                             onCreateProfile();
                                         }}
                                     >
-                                        <PlusIcon className="h-4 w-4" />
+                                        <Plus size={16} />
                                         <span>Create Profile</span>
                                     </button>
                                 </>

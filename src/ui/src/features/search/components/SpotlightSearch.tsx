@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { useSearch } from '../hooks/useSearch';
 import { useSpotlightOpenListener } from '../hooks/useSpotlightTrigger';
 import { SearchResultsList } from './SearchResultsList';
@@ -196,7 +196,7 @@ export function SpotlightSearch() {
                     <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
                         {/* Search input */}
                         <div className="relative flex items-center border-b border-border/50">
-                            <MagnifyingGlassIcon className="absolute left-4 h-5 w-5 text-muted-foreground" />
+                            <MagnifyingGlass size={20} weight="bold" className="absolute left-4 text-muted-foreground" />
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -220,7 +220,7 @@ export function SpotlightSearch() {
                                         onClick={handleClear}
                                         className="p-1 rounded-md hover:bg-muted transition-colors"
                                     >
-                                        <XMarkIcon className="h-4 w-4 text-muted-foreground" />
+                                        <X size={16} weight="bold" className="text-muted-foreground" />
                                     </button>
                                 )}
                                 <kbd className="hidden sm:inline-flex px-2 py-1 rounded-md bg-muted border border-border/50 text-xs text-muted-foreground font-mono">

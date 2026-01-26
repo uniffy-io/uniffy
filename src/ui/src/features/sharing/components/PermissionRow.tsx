@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { UserGroupIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { UsersThree, Trash, Calendar } from '@phosphor-icons/react';
 import { PermissionLevelSelect } from './PermissionLevelSelect';
 import { isUserPermission, getPermissionLevelLabel } from '../hooks/useSharingHooks';
 import type { SerializedPermissionInfo } from '../store/sharingSlice';
@@ -67,7 +67,7 @@ export function PermissionRow({
                     isExpired ? 'text-red-500' : 'text-muted-foreground'
                 }`}
             >
-                <CalendarIcon className="h-3 w-3" />
+                <Calendar size={12} />
                 {isExpired ? 'Expired' : `Until ${date.toLocaleDateString()}`}
             </span>
         );
@@ -111,7 +111,7 @@ export function PermissionRow({
                         </span>
                     )
                 ) : (
-                    <UserGroupIcon className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                    <UsersThree size={16} className="text-violet-600 dark:text-violet-400" />
                 )}
             </div>
 
@@ -163,7 +163,7 @@ export function PermissionRow({
                                 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Remove access"
                         >
-                            <TrashIcon className="h-4 w-4" />
+                            <Trash size={16} />
                         </button>
                     </>
                 ) : (

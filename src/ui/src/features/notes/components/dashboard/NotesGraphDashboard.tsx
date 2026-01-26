@@ -17,18 +17,18 @@ import {
   type GraphNode,
 } from '../../utils/notesGraphUtils';
 import {
-  CubeTransparentIcon,
-  MagnifyingGlassMinusIcon,
-  MagnifyingGlassPlusIcon,
-  ArrowsPointingOutIcon,
-  DocumentTextIcon,
-  UserIcon,
-  FolderIcon,
-  ChatBubbleLeftIcon,
-  LinkIcon,
-} from '@heroicons/react/24/outline';
-import { getHeroiconComponent } from '../../utils/noteIconConstants';
-import { drawHeroiconOnCanvas } from '../../utils/noteIcons';
+  Cube,
+  MagnifyingGlassMinus,
+  MagnifyingGlassPlus,
+  ArrowsOutSimple,
+  FileText,
+  User,
+  Folder,
+  ChatTeardrop,
+  Link,
+} from '@phosphor-icons/react';
+import { getIconComponent } from '../../utils/noteIconConstants';
+import { drawIconOnCanvas } from '../../utils/noteIcons';
 import { UrnType, urnToPath, parseUrn } from '@/utils/urn';
 import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
 import { useUrnResolution } from '@/features/search';
@@ -726,7 +726,7 @@ export function NotesGraphDashboard() {
         } else {
           // Draw custom heroicon using SVG path data
           const iconSize = size * 0.7; // Icon takes up ~70% of node size
-          const drawn = drawHeroiconOnCanvas(ctx, graphNode.customIcon.value, x, y, iconSize, iconColor);
+          const drawn = drawIconOnCanvas(ctx, graphNode.customIcon.value, x, y, iconSize, iconColor);
           if (!drawn) {
             // Fallback to default icon if heroicon not found
             drawNodeIcon(ctx, 'note', x, y, size, iconColor);
@@ -805,15 +805,15 @@ export function NotesGraphDashboard() {
     switch (type) {
       case 'note':
       case UrnType.NOTE:
-        return DocumentTextIcon;
+        return FileText;
       case UrnType.USER:
-        return UserIcon;
+        return User;
       case UrnType.FILE:
-        return FolderIcon;
+        return Folder;
       case UrnType.CHAT:
-        return ChatBubbleLeftIcon;
+        return ChatTeardrop;
       default:
-        return LinkIcon;
+        return Link;
     }
   };
 
@@ -825,7 +825,7 @@ export function NotesGraphDashboard() {
           <div className="relative mx-auto w-24 h-24 mb-6">
             <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
             <div className="relative w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 rounded-full flex items-center justify-center border border-primary/20">
-              <CubeTransparentIcon className="h-12 w-12 text-primary/60" />
+              <Cube size={48} weight="duotone" className="text-primary/60" />
             </div>
           </div>
           <h2 className="text-2xl font-semibold mb-3">Your Knowledge Graph</h2>
@@ -887,21 +887,21 @@ export function NotesGraphDashboard() {
             className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 hover:bg-muted hover:border-border transition-all shadow-lg"
             title="Zoom in"
           >
-            <MagnifyingGlassPlusIcon className="h-4 w-4" />
+            <MagnifyingGlassPlus size={16} weight="bold" />
           </button>
           <button
             onClick={handleZoomOut}
             className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 hover:bg-muted hover:border-border transition-all shadow-lg"
             title="Zoom out"
           >
-            <MagnifyingGlassMinusIcon className="h-4 w-4" />
+            <MagnifyingGlassMinus size={16} weight="bold" />
           </button>
           <button
             onClick={handleZoomFit}
             className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 hover:bg-muted hover:border-border transition-all shadow-lg"
             title="Fit to view"
           >
-            <ArrowsPointingOutIcon className="h-4 w-4" />
+            <ArrowsOutSimple size={16} weight="bold" />
           </button>
         </div>
 
@@ -922,14 +922,14 @@ export function NotesGraphDashboard() {
                     <span className="text-xl">{hoveredNode.customIcon.value}</span>
                   ) : (
                     (() => {
-                      const Icon = getHeroiconComponent(hoveredNode.customIcon.value);
-                      return <Icon className="h-5 w-5" style={{ color: getNodeColor(hoveredNode) }} />;
+                      const Icon = getIconComponent(hoveredNode.customIcon.value);
+                      return <Icon size={20} weight="duotone" style={{ color: getNodeColor(hoveredNode) }} />;
                     })()
                   )
                 ) : (
                   (() => {
                     const Icon = getTypeIcon(hoveredNode.type);
-                    return <Icon className="h-5 w-5" style={{ color: getNodeColor(hoveredNode) }} />;
+                    return <Icon size={20} weight="duotone" style={{ color: getNodeColor(hoveredNode) }} />;
                   })()
                 )}
               </div>

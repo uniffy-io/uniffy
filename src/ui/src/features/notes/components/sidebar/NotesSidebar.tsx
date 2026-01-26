@@ -8,26 +8,25 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  PlusIcon,
-  ClockIcon,
-  BookmarkIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-  DocumentTextIcon,
-  ChevronDoubleLeftIcon,
-  FolderIcon,
+  Plus,
+  Clock,
+  BookmarkSimpleIcon,
+  CaretDown,
+  CaretRight,
+  CaretUp,
+  FileText,
+  CaretDoubleLeft,
+  Folder,
   FolderPlusIcon,
-  LockClosedIcon,
-  UserGroupIcon,
-  BuildingOfficeIcon,
-  TrashIcon,
-  PencilIcon,
-  ArrowPathIcon,
-  ArrowUturnLeftIcon,
-  CubeTransparentIcon,
-} from '@heroicons/react/24/outline';
-import { BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
+  LockSimple,
+  UsersThree,
+  Buildings,
+  Trash,
+  PencilSimple,
+  ArrowsClockwise,
+  ArrowUUpLeft,
+  Cube,
+} from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote } from '../../store/notesSlice';
 import { toggleSidebar } from '../../store/editorSlice';
@@ -50,15 +49,15 @@ import { renderNoteIcon } from '../../utils/noteIcons';
 interface SectionConfig {
   id: 'bookmarked' | 'personal' | 'shared' | 'organization' | 'trash';
   name: string;
-  icon: typeof FolderIcon;
+  icon: typeof Folder;
   scope?: VisibilityScope;
 }
 
 const SECTIONS: SectionConfig[] = [
-  { id: 'bookmarked', name: 'Bookmarks', icon: BookmarkIcon },
-  { id: 'personal', name: 'Personal Space', icon: LockClosedIcon, scope: VisibilityScope.PRIVATE },
-  { id: 'shared', name: 'Shared With Me', icon: UserGroupIcon },
-  { id: 'organization', name: 'Organization', icon: BuildingOfficeIcon, scope: VisibilityScope.ORGANIZATION },
+  { id: 'bookmarked', name: 'Bookmarks', icon: BookmarkSimpleIcon },
+  { id: 'personal', name: 'Personal Space', icon: LockSimple, scope: VisibilityScope.PRIVATE },
+  { id: 'shared', name: 'Shared With Me', icon: UsersThree },
+  { id: 'organization', name: 'Organization', icon: Buildings, scope: VisibilityScope.ORGANIZATION },
 ];
 
 /**
@@ -189,12 +188,12 @@ function TreeNodeItem({
         >
           <button onClick={() => onToggle(node.id)} className="flex items-center">
             {isExpanded ? (
-              <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <CaretDown size={14} weight="bold" className="text-muted-foreground" />
             ) : (
-              <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <CaretRight size={14} weight="bold" className="text-muted-foreground" />
             )}
           </button>
-          <FolderIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <Folder size={16} weight="duotone" className="text-muted-foreground flex-shrink-0" />
           {isEditing ? (
             <input
               ref={inputRef}
@@ -222,7 +221,7 @@ function TreeNodeItem({
               className="p-0.5 rounded hover:bg-muted cursor-pointer"
               title="New note inside"
             >
-              <PlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <Plus size={14} weight="bold" className="text-muted-foreground" />
             </span>
             <span
               onClick={(e) => {
@@ -232,7 +231,7 @@ function TreeNodeItem({
               className="p-0.5 rounded hover:bg-muted cursor-pointer"
               title="New folder inside"
             >
-              <FolderPlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <FolderPlusIcon size={14} weight="duotone" className="text-muted-foreground" />
             </span>
             <span
               onClick={(e) => {
@@ -242,7 +241,7 @@ function TreeNodeItem({
               className="p-0.5 rounded hover:bg-muted cursor-pointer"
               title="Rename"
             >
-              <PencilIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <PencilSimple size={14} weight="duotone" className="text-muted-foreground" />
             </span>
             <span
               onClick={(e) => {
@@ -252,7 +251,7 @@ function TreeNodeItem({
               className="p-0.5 rounded hover:bg-destructive/10 cursor-pointer"
               title="Delete"
             >
-              <TrashIcon className="h-3.5 w-3.5 text-destructive" />
+              <Trash size={14} weight="duotone" className="text-destructive" />
             </span>
           </div>
         </div>
@@ -303,12 +302,12 @@ function TreeNodeItem({
       onClick={() => onSelect(node.id)}
     >
       {node.type === 'folder' ? (
-        <FolderIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <Folder size={16} weight="duotone" className="text-muted-foreground flex-shrink-0" />
       ) : (
         renderNoteIcon(node.icon, "h-4 w-4 text-muted-foreground flex-shrink-0")
       )}
       {isBookmarked && (
-        <BookmarkIconSolid className="h-3 w-3 text-primary flex-shrink-0" />
+        <BookmarkSimpleIcon size={12} weight="fill" className="text-primary flex-shrink-0" />
       )}
       {isEditing ? (
         <input
@@ -341,7 +340,7 @@ function TreeNodeItem({
           className="p-0.5 rounded hover:bg-muted cursor-pointer"
           title="Rename"
         >
-          <PencilIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          <PencilSimple size={14} weight="duotone" className="text-muted-foreground" />
         </span>
         <span
           onClick={(e) => {
@@ -351,7 +350,7 @@ function TreeNodeItem({
           className="p-0.5 rounded hover:bg-destructive/10 cursor-pointer"
           title="Delete"
         >
-          <TrashIcon className="h-3.5 w-3.5 text-destructive" />
+          <Trash size={14} weight="duotone" className="text-destructive" />
         </span>
       </div>
     </div>
@@ -670,7 +669,7 @@ export function NotesSidebar() {
 
     // Use BookmarkIconSolid for bookmarked section
     const SectionIcon = config.id === 'bookmarked' ?
-      (sectionExpanded ? BookmarkIconSolid : BookmarkIcon) :
+      (sectionExpanded ? BookmarkSimpleIcon : BookmarkSimpleIcon) :
       IconComponent;
 
     return (
@@ -680,11 +679,11 @@ export function NotesSidebar() {
           className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group"
         >
           {sectionExpanded ? (
-            <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+            <CaretDown size={16} weight="bold" className="text-muted-foreground" />
           ) : (
-            <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+            <CaretRight size={16} weight="bold" className="text-muted-foreground" />
           )}
-          <SectionIcon className={`h-4 w-4 ${config.id === 'bookmarked' ? 'text-primary' : 'text-muted-foreground'}`} />
+          <SectionIcon size={16} weight="duotone" className={`${config.id === 'bookmarked' ? 'text-primary' : 'text-muted-foreground'}`} />
           <span className="flex-1">{config.name}</span>
           <span className="text-xs text-muted-foreground">{nodeCount}</span>
           {config.scope && (
@@ -697,7 +696,7 @@ export function NotesSidebar() {
                 className="p-0.5 rounded hover:bg-muted cursor-pointer"
                 title="New folder"
               >
-                <FolderPlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <FolderPlusIcon size={14} weight="duotone" className="text-muted-foreground" />
               </span>
               <span
                 onClick={(e) => {
@@ -707,7 +706,7 @@ export function NotesSidebar() {
                 className="p-0.5 rounded hover:bg-muted cursor-pointer"
                 title="New note"
               >
-                <PlusIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <Plus size={14} weight="bold" className="text-muted-foreground" />
               </span>
             </div>
           )}
@@ -770,11 +769,11 @@ export function NotesSidebar() {
                 className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group"
               >
                 {groupExpanded ? (
-                  <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                  <CaretDown size={16} weight="bold" className="text-muted-foreground" />
                 ) : (
-                  <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+                  <CaretRight size={16} weight="bold" className="text-muted-foreground" />
                 )}
-                <UserGroupIcon className="h-4 w-4 text-muted-foreground" />
+                <UsersThree size={16} weight="duotone" className="text-muted-foreground" />
                 <span className="flex-1">{group.groupName}</span>
                 <span className="text-xs text-muted-foreground">{nodeCount}</span>
               </button>
@@ -866,11 +865,11 @@ export function NotesSidebar() {
             className="flex-1 flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left"
           >
             {showTrash ? (
-              <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+              <CaretDown size={16} weight="bold" className="text-muted-foreground" />
             ) : (
-              <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+              <CaretRight size={16} weight="bold" className="text-muted-foreground" />
             )}
-            <TrashIcon className="h-4 w-4 text-muted-foreground" />
+            <Trash size={16} weight="duotone" className="text-muted-foreground" />
             <span className="flex-1">Trash</span>
             <span className="text-xs text-muted-foreground">{tree.trash.length}</span>
           </button>
@@ -893,7 +892,7 @@ export function NotesSidebar() {
                 className={`group w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left opacity-60 cursor-pointer ${currentNoteId === node.id ? 'bg-accent text-accent-foreground' : ''
                   }`}
               >
-                <DocumentTextIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <FileText size={16} weight="duotone" className="text-muted-foreground flex-shrink-0" />
                 <span className="truncate flex-1">{node.title}</span>
                 <button
                   onClick={(e) => handleRestore(node.id, e)}
@@ -902,9 +901,9 @@ export function NotesSidebar() {
                   title="Restore"
                 >
                   {restoringNoteId === node.id ? (
-                    <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                    <ArrowsClockwise size={14} weight="bold" className="animate-spin" />
                   ) : (
-                    <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
+                    <ArrowUUpLeft size={14} weight="bold" />
                   )}
                 </button>
               </div>
@@ -925,9 +924,9 @@ export function NotesSidebar() {
           className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors disabled:opacity-50"
         >
           {creatingNote ? (
-            <ArrowPathIcon className="h-4 w-4 animate-spin" />
+            <ArrowsClockwise size={16} weight="bold" className="animate-spin" />
           ) : (
-            <PlusIcon className="h-4 w-4" />
+            <Plus size={16} weight="bold" />
           )}
           <span>New Note</span>
         </button>
@@ -937,14 +936,14 @@ export function NotesSidebar() {
             className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="Expand all"
           >
-            <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+            <CaretDown size={16} weight="bold" className="text-muted-foreground" />
           </button>
           <button
             onClick={() => dispatch(collapseAll())}
             className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="Collapse all"
           >
-            <ChevronUpIcon className="h-4 w-4 text-muted-foreground" />
+            <CaretUp size={16} weight="bold" className="text-muted-foreground" />
           </button>
           <button
             onClick={handleRefresh}
@@ -952,14 +951,14 @@ export function NotesSidebar() {
             className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
             title="Refresh"
           >
-            <ArrowPathIcon className={`h-4 w-4 text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
+            <ArrowsClockwise size={16} weight="bold" className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => dispatch(toggleSidebar())}
             className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="Toggle sidebar (⌘\\)"
           >
-            <ChevronDoubleLeftIcon className="h-4 w-4 text-primary" />
+            <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
           </button>
         </div>
       </div>
@@ -976,11 +975,11 @@ export function NotesSidebar() {
               !currentNoteId ? 'bg-primary/10 text-primary' : ''
             }`}
           >
-            <CubeTransparentIcon className={`h-4 w-4 ${!currentNoteId ? 'text-primary' : 'text-muted-foreground'}`} />
+            <Cube size={16} weight="duotone" className={`${!currentNoteId ? 'text-primary' : 'text-muted-foreground'}`} />
             <span>Knowledge Graph</span>
           </button>
           <button className="w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left">
-            <ClockIcon className="h-4 w-4 text-muted-foreground" />
+            <Clock size={16} weight="duotone" className="text-muted-foreground" />
             <span>Recent</span>
           </button>
         </nav>
@@ -1020,7 +1019,7 @@ export function NotesSidebar() {
             {/* Header */}
             <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
               <div className="rounded-lg bg-destructive/10 p-2">
-                <TrashIcon className="h-5 w-5 text-destructive" />
+                <Trash size={20} weight="duotone" className="text-destructive" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold">Empty Trash</h2>

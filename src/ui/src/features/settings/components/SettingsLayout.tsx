@@ -6,12 +6,12 @@
 
 import React from 'react';
 import {
-    PaintBrushIcon,
-    KeyIcon,
-    BellIcon,
-    UserCircleIcon,
-    Cog6ToothIcon,
-} from '@heroicons/react/24/outline';
+    PaintBrush,
+    Key,
+    Bell,
+    UserCircle,
+    Gear,
+} from '@phosphor-icons/react';
 import { ProfileSwitcher } from './ProfileSwitcher';
 
 export type SettingsSection =
@@ -29,11 +29,11 @@ interface SettingsLayoutProps {
 }
 
 const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
-    { id: 'appearance', label: 'Appearance', icon: PaintBrushIcon },
-    { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: KeyIcon },
-    { id: 'notifications', label: 'Notifications', icon: BellIcon },
-    { id: 'profile', label: 'Account', icon: UserCircleIcon },
-    { id: 'general', label: 'General', icon: Cog6ToothIcon },
+    { id: 'appearance', label: 'Appearance', icon: PaintBrush },
+    { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: Key },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'profile', label: 'Account', icon: UserCircle },
+    { id: 'general', label: 'General', icon: Gear },
 ];
 
 export function SettingsLayout({
@@ -67,7 +67,7 @@ export function SettingsLayout({
                             }`}
                             onClick={() => onSectionChange(id)}
                         >
-                            <Icon className="h-5 w-5" />
+                            <Icon size={20} weight="duotone" />
                             <span>{label}</span>
                         </button>
                     ))}

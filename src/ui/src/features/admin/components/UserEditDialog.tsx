@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { transport } from "@/config";
-import { XMarkIcon, UserCircleIcon, BuildingOfficeIcon, PlusIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { X, UserCircle, Buildings, Plus, Trash, ShieldCheck } from '@phosphor-icons/react';
 
 // Role options for organization membership
 const ORG_ROLE_OPTIONS: SelectOption<number>[] = [
@@ -186,7 +186,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-primary/10 p-2">
-              <UserCircleIcon className="h-5 w-5 text-primary" />
+              <UserCircle size={20} weight="duotone" className="text-primary" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Edit User</h2>
@@ -197,7 +197,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
             onClick={onClose}
             className="rounded-lg p-1 hover:bg-muted transition-colors"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <X size={20} weight="bold" />
           </button>
         </div>
 
@@ -207,7 +207,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
             {/* User Details Form */}
             <form onSubmit={handleSave} className="space-y-5">
               <div className="flex items-center gap-2 mb-4">
-                <UserCircleIcon className="h-5 w-5 text-primary" />
+                <UserCircle size={20} weight="duotone" className="text-primary" />
                 <h3 className="text-lg font-semibold">User Details</h3>
               </div>
 
@@ -266,7 +266,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                     />
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium group-hover:text-foreground">System Administrator</span>
-                      <ShieldCheckIcon className="h-4 w-4 text-purple-600" />
+                      <ShieldCheck size={16} weight="fill" className="text-purple-600" />
                     </div>
                   </label>
                 </div>
@@ -285,7 +285,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
             {/* Organizations Section */}
             <div className="space-y-5">
               <div className="flex items-center gap-2 mb-4">
-                <BuildingOfficeIcon className="h-5 w-5 text-primary" />
+                <Buildings size={20} weight="duotone" className="text-primary" />
                 <h3 className="text-lg font-semibold">Organizations</h3>
               </div>
 
@@ -294,7 +294,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                 <div className="max-h-64 overflow-y-auto">
                   {orgs.length === 0 ? (
                     <div className="p-6 text-center">
-                      <BuildingOfficeIcon className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                      <Buildings size={40} weight="duotone" className="text-muted-foreground/50 mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No organizations assigned</p>
                     </div>
                   ) : (
@@ -303,7 +303,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                         <li key={membership.organization?.id} className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors group">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                              <BuildingOfficeIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                              <Buildings size={20} weight="duotone" className="text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
                               <div className="font-semibold text-sm">{membership.organization?.name}</div>
@@ -316,7 +316,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                             className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 transition-opacity"
                             onClick={() => handleRemoveOrgClick(membership.organization?.id || '')}
                           >
-                            <TrashIcon className="h-3.5 w-3.5" />
+                            <Trash size={14} />
                             Remove
                           </Button>
                         </li>
@@ -329,7 +329,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
               {/* Add Organization Form */}
               <div className="rounded-xl border border-border bg-gradient-to-br from-muted/30 to-muted/10 p-5 space-y-4">
                 <div className="flex items-center gap-2">
-                  <PlusIcon className="h-4 w-4 text-primary" />
+                  <Plus size={16} className="text-primary" />
                   <h4 className="text-sm font-semibold">Add to Organization</h4>
                 </div>
                 <div className="space-y-3">
@@ -355,7 +355,7 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                     </div>
                     <div className="flex items-end">
                       <Button onClick={handleAddOrg} disabled={!newOrgId} size="md" className="w-full">
-                        <PlusIcon className="h-4 w-4" />
+                        <Plus size={16} />
                         Add
                       </Button>
                     </div>
