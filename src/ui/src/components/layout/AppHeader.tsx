@@ -85,8 +85,8 @@ export function AppHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 w-full overflow-hidden transition-[height,opacity] duration-300 ease-in-out",
-        isZenMode ? "h-0 opacity-0 delay-150" : "h-12 opacity-100 delay-0"
+        "sticky top-0 z-40 w-full transition-[height,opacity] duration-300 ease-in-out",
+        isZenMode ? "h-0 opacity-0 delay-150 overflow-hidden" : "h-12 opacity-100 delay-0"
       )}
     >
       {/* Background */}
