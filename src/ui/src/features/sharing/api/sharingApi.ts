@@ -70,4 +70,3 @@ export const sharingApi = {
     },
 };
 
-export default sharingApi;

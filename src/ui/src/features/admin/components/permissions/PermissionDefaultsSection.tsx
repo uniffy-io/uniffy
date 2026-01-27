@@ -285,4 +285,3 @@ export function PermissionDefaultsSection() {
     );
 }
 
-export default PermissionDefaultsSection;

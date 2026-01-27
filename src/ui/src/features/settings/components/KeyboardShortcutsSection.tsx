@@ -255,4 +255,3 @@ export function KeyboardShortcutsSection() {
     );
 }
 
-export default KeyboardShortcutsSection;

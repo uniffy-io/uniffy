@@ -85,4 +85,3 @@ export function ProfileSwitcher({ onCreateProfile }: ProfileSwitcherProps) {
     );
 }
 
-export default ProfileSwitcher;

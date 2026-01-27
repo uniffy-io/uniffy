@@ -338,4 +338,3 @@ export function MembersSection() {
     );
 }
 
-export default MembersSection;

@@ -232,4 +232,3 @@ export function IconPicker({ currentIcon, onSelect, onClose }: IconPickerProps) 
     );
 }
 
-export default IconPicker;

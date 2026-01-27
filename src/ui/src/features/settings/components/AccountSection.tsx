@@ -109,4 +109,3 @@ export function AccountSection() {
     );
 }
 
-export default AccountSection;

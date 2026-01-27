@@ -161,12 +161,13 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
             )}
           >
             {event.hasConflict && (
-              <Warning
-                size={12}
-                weight="duotone"
-                className="text-yellow-600 dark:text-yellow-400 flex-shrink-0"
-                title={`Conflicts with ${event.conflictingEvents?.length || 0} other event(s)`}
-              />
+              <span title={`Conflicts with ${event.conflictingEvents?.length || 0} other event(s)`}>
+                <Warning
+                  size={12}
+                  weight="duotone"
+                  className="text-yellow-600 dark:text-yellow-400 flex-shrink-0"
+                />
+              </span>
             )}
             <span className="truncate">{event.title}</span>
           </div>

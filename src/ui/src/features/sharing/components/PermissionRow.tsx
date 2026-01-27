@@ -176,4 +176,3 @@ export function PermissionRow({
     );
 }
 
-export default PermissionRow;

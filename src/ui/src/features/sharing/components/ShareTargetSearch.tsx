@@ -194,4 +194,3 @@ export function ShareTargetSearch({
     );
 }
 
-export default ShareTargetSearch;

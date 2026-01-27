@@ -15,7 +15,7 @@ export { NotificationsSection } from './components/NotificationsSection';
 export { AccountSection } from './components/AccountSection';
 
 // Pages
-export { SettingsPage, default as SettingsPageDefault } from './pages/SettingsPage';
+export { SettingsPage } from './pages/SettingsPage';
 
 // Store - Slice & Actions
 export {

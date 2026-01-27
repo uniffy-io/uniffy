@@ -291,4 +291,3 @@ export function SharingDialog() {
     );
 }
 
-export default SharingDialog;

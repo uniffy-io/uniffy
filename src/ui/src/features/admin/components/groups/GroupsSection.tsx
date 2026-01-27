@@ -431,4 +431,3 @@ export function GroupsSection() {
     );
 }
 
-export default GroupsSection;

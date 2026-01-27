@@ -293,4 +293,3 @@ export function AppearanceSection() {
     );
 }
 
-export default AppearanceSection;

@@ -3,16 +3,9 @@
 UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions.
 
 ## Commands
-
-All commands are run from the repository root:
-
 ```bash
-# Setup
-make install          # Install Python (uv) + Node (pnpm) dependencies
-make proto            # Generate protobuf code (run after editing .proto files)
-
-# Code Quality
-make test             # Run pytest
+make proto # generate protos
+make lint  # run linters
 ```
 
 Migrations run automatically on startup.
@@ -1111,3 +1104,4 @@ This is achieved with `delay-150` on the header and layout height transitions wh
 12. Use the shared bookmarks system (`@/features/bookmarks`) - never add `is_pinned`/`is_starred`/`is_favorite` fields to content models
 13. Always use uv to run python scripts
 14. All domain layouts with sidebars/panels MUST support Zen Mode — check `state.zenMode.isActive` and hide navigation chrome when active
+15. Never use `export default` in frontend code — always use named exports (`export function`, `export const`, etc.)

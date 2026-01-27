@@ -46,4 +46,3 @@ export const bookmarksApi = {
     },
 };
 
-export default bookmarksApi;

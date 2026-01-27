@@ -142,4 +142,3 @@ export const notesApi = {
     },
 };
 
-export default notesApi;

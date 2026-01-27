@@ -129,4 +129,3 @@ export function CalendarPage() {
   );
 }
 
-export default CalendarPage;

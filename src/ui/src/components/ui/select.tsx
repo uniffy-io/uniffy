@@ -225,4 +225,3 @@ export function Select<T extends string | number = string>({
     );
 }
 
-export default Select;

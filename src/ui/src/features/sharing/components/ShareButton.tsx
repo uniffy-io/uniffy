@@ -60,4 +60,3 @@ export function ShareButton({
     );
 }
 
-export default ShareButton;

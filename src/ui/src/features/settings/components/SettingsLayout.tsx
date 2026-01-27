@@ -82,4 +82,3 @@ export function SettingsLayout({
     );
 }
 
-export default SettingsLayout;

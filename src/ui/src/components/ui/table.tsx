@@ -216,4 +216,3 @@ export function TableEmpty({
     );
 }
 
-export default Table;

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/main.tsx"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": [
+    "src/gen/**",
+    "src/types/**"
+  ],
+  "ignoreDependencies": [
+    "tailwindcss",
+    "@tailwindcss/typography",
+    "@milkdown/components",
+    "@milkdown/ctx",
+    "@milkdown/plugin-highlight",
+    "@milkdown/plugin-history",
+    "@milkdown/plugin-listener",
+    "@milkdown/preset-commonmark",
+    "@milkdown/react",
+    "@milkdown/theme-nord",
+    "@codemirror/language",
+    "@bufbuild/protoc-gen-es",
+    "@connectrpc/protoc-gen-connect-es",
+    "autoprefixer",
+    "postcss",
+    "@types/mdast"
+  ]
+}
