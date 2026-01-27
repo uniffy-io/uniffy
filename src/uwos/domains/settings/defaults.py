@@ -23,6 +23,7 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "app.settings": "Ctrl+,",
     "app.commandPalette": "Ctrl+Shift+P",
     "app.help": "F1",
+    "app.zenMode": "Ctrl+\\",
 }
 
 

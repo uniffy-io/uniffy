@@ -13,6 +13,7 @@ import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { cn } from '@/utils/cn';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { CalendarLayout, LeftSidebar, MainContent, DetailPanel } from '../components/layout';
 import { QuickEventModal } from '../components/modals/QuickEventModal';
@@ -30,6 +31,7 @@ export function CalendarPage() {
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
+  const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   // Track if we've handled the URL eventId to prevent duplicate fetches
   const handledEventIdRef = useRef<string | null>(null);
   const {
@@ -89,7 +91,10 @@ export function CalendarPage() {
   return (
     <>
       <AppHeader />
-      <div className="h-[calc(100vh-4rem)] bg-background">
+      <div className={cn(
+        "bg-background transition-[height] duration-300 ease-in-out",
+        isZenMode ? "h-screen delay-150" : "h-[calc(100vh-4rem)] delay-0"
+      )}>
         <CalendarLayout
           sidebar={<LeftSidebar />}
           mainContent={<MainContent />}

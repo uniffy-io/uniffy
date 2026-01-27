@@ -25,6 +25,7 @@ export default function NotesPage() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const { defaultEditor } = useAppearanceSettings();
 
+  const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const currentNoteId = notesState?.currentNoteId;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
@@ -80,8 +81,8 @@ export default function NotesPage() {
         sidebar={<NotesSidebar />}
         editor={showDashboard ? <NotesGraphDashboard /> : <NotesEditor />}
         metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}
-        showSidebar={isSidebarOpen}
-        showMetadataPanel={isMetadataPanelOpen && !!currentNoteId}
+        showSidebar={!isZenMode && isSidebarOpen}
+        showMetadataPanel={!isZenMode && isMetadataPanelOpen && !!currentNoteId}
       />
       <SharingDialog />
     </>

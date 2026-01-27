@@ -1035,6 +1035,66 @@ function NewEventButton() {
 - Users see platform-appropriate symbols in the UI
 - Shortcuts work correctly on both platforms
 
+### Zen Mode
+
+UWOS has a global Zen Mode (`Ctrl+\`) that hides the top navigation and all sidebars so the user can focus on content. It is implemented as a shared Redux slice (`zenModeSlice`) with a single `isActive` boolean, toggled by a global `ZenModeHandler` component mounted in `App.tsx`.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/app/zenModeSlice.ts` | Redux slice with `isActive` toggle |
+| `src/ui/src/components/layout/ZenModeHandler.tsx` | Global shortcut handler (renders nothing) |
+| `src/ui/src/components/layout/AppHeader.tsx` | Animates to `h-0 opacity-0` when zen mode active |
+
+**How it works:**
+- `AppHeader` checks `state.zenMode.isActive` and animates to zero height when active
+- Each domain layout checks `isZenMode` and hides its sidebars/panels
+- Domain sidebar state (open/closed) is **not modified** — zen mode overlays an additional hide condition
+- When zen mode is deactivated, layouts return to their previous state automatically
+
+**Animation sequence (two-stage):**
+
+Zen mode uses a staged transition so sidebars collapse first, then the header slides away:
+
+- **Entering zen mode:**
+  1. `t=0ms` — Sidebars hide instantly (conditional rendering)
+  2. `t=150ms` — Header starts collapsing + content area expands vertically (300ms `ease-in-out`)
+- **Exiting zen mode:**
+  1. `t=0ms` — Header expands + content shrinks (no delay), sidebars reappear instantly
+
+This is achieved with `delay-150` on the header and layout height transitions when `isZenMode` is true, and `delay-0` when false.
+
+**All new domains MUST support Zen Mode.** When adding a domain with a layout that has sidebars or panels:
+
+1. Read zen mode state in the layout or page component:
+   ```typescript
+   import { useAppSelector } from '@/app/hooks';
+
+   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+   ```
+
+2. Use `isZenMode` to conditionally hide sidebars and panels:
+   ```typescript
+   // Override sidebar visibility
+   showSidebar={!isZenMode && isSidebarOpen}
+
+   // Or in the layout directly
+   {!isZenMode && !isSidebarCollapsed && (
+     <Panel>...</Panel>
+   )}
+   ```
+
+3. Use the staged height transition with delay (sidebars collapse first, then header + height animate):
+   ```typescript
+   import { cn } from '@/utils/cn';
+
+   <div className={cn(
+     "bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
+     isZenMode ? "h-screen delay-150" : "h-[calc(100vh-4rem)] delay-0"
+   )}>
+   ```
+
 ## Critical Rules
 
 1. Run `make proto` after editing `.proto` files
@@ -1049,4 +1109,5 @@ function NewEventButton() {
 10. Use centralized URN type colors from `@/theme/urnColors.ts` - never define URN colors inline
 11. Use the keyboard shortcuts framework from `@/features/settings` - never hardcode keyboard handlers
 12. Use the shared bookmarks system (`@/features/bookmarks`) - never add `is_pinned`/`is_starred`/`is_favorite` fields to content models
-13. Always use uv to run python scripts 
+13. Always use uv to run python scripts
+14. All domain layouts with sidebars/panels MUST support Zen Mode — check `state.zenMode.isActive` and hide navigation chrome when active

@@ -26,11 +26,12 @@ export function CalendarLayout({
   const { isSidebarCollapsed, isDetailPanelOpen, isMobileView } = useAppSelector(
     (state) => state.calendarUi
   );
+  const isZenMode = useAppSelector((state) => state.zenMode.isActive);
 
   // Mobile layout - show one panel at a time
   if (isMobileView) {
     return (
-      <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">
+      <div className="h-full bg-background overflow-hidden">
         <div className="h-full">
           {mainContent}
         </div>
@@ -39,10 +40,10 @@ export function CalendarLayout({
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">
+    <div className="h-full bg-background overflow-hidden">
       <Group orientation="horizontal" className="h-full">
         {/* Left Sidebar */}
-        {!isSidebarCollapsed && (
+        {!isZenMode && !isSidebarCollapsed && (
           <>
             <Panel
               id="calendar-sidebar"
@@ -66,7 +67,7 @@ export function CalendarLayout({
         </Panel>
 
         {/* Right Detail Panel */}
-        {isDetailPanelOpen && detailPanel && (
+        {!isZenMode && isDetailPanelOpen && detailPanel && (
           <>
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
             <Panel

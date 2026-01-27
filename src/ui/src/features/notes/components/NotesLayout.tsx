@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
+import { useAppSelector } from '@/app/hooks';
+import { cn } from '@/utils/cn';
 
 interface NotesLayoutProps {
   sidebar: ReactNode;
@@ -16,8 +18,13 @@ export function NotesLayout({
   showSidebar = true,
   showMetadataPanel = false 
 }: NotesLayoutProps) {
+  const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+
   return (
-    <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">
+    <div className={cn(
+      "bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
+      isZenMode ? "h-screen delay-150" : "h-[calc(100vh-4rem)] delay-0"
+    )}>
       <Group orientation="horizontal" className="h-full">
         {/* Left Sidebar */}
         {showSidebar && (

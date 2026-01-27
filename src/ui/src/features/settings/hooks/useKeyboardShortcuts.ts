@@ -17,6 +17,7 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'app.settings': 'Ctrl+,',
     'app.commandPalette': 'Ctrl+Shift+P',
     'app.help': 'F1',
+    'app.zenMode': 'Ctrl+\\',
 };
 
 /**

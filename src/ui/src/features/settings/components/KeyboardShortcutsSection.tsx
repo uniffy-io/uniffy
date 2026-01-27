@@ -29,6 +29,7 @@ const SHORTCUT_CATEGORIES = [
             { action: 'app.settings', label: 'Open Settings' },
             { action: 'app.commandPalette', label: 'Command Palette' },
             { action: 'app.help', label: 'Help' },
+            { action: 'app.zenMode', label: 'Zen Mode' },
         ],
     },
 ];

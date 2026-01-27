@@ -6,6 +6,7 @@ import { GlobalSearch } from '@/features/search';
 import { cn } from '@/utils/cn';
 import { UrnType } from '@/utils/urn';
 import { getContentTypeConfig } from '@/theme/contentTypes';
+import { useAppSelector } from '@/app/hooks';
 
 // Get content type configs for nav items
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
@@ -79,9 +80,15 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
 
 export function AppHeader() {
   const location = useLocation();
+  const isZenMode = useAppSelector((state) => state.zenMode.isActive);
 
   return (
-    <header className="sticky top-0 z-40 w-full">
+    <header
+      className={cn(
+        "sticky top-0 z-40 w-full overflow-hidden transition-[height,opacity] duration-300 ease-in-out",
+        isZenMode ? "h-0 opacity-0 delay-150" : "h-12 opacity-100 delay-0"
+      )}
+    >
       {/* Background */}
       <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
 

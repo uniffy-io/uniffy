@@ -20,6 +20,7 @@ import ServerSettingsPage from '@/features/admin/pages/ServerSettingsPage';
 import NotesPage from '@/features/notes/pages/NotesPage';
 import { SettingsPage as UserSettingsPage } from '@/features/settings';
 import { SpotlightSearch } from '@/features/search';
+import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { rehydrateAuth } from '@/config';
 import { useAppSelector } from '@/app/hooks';
 import { CalendarPage } from '@/features/calendar';
@@ -98,6 +99,8 @@ export default function App() {
             <BrowserRouter>
                 {/* Global Spotlight Search - available on all pages */}
                 <SpotlightSearch />
+                {/* Global Zen Mode handler - toggles distraction-free mode */}
+                <ZenModeHandler />
 
                 <Routes>
                     <Route

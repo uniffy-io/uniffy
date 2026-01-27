@@ -14,6 +14,7 @@ import sharingReducer from '@/features/sharing/store/sharingSlice';
 import adminReducer from '@/features/admin/store/adminSlice';
 import { setStoreRef } from './storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
+import zenModeReducer from './zenModeSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -69,7 +70,7 @@ const rootReducer = combineReducers({
   admin: adminReducer,
   calendar: calendarReducer,
   calendarUi: calendarUiReducer,
-
+  zenMode: zenModeReducer,
 });
 
 // Migrations to handle state shape changes across versions
