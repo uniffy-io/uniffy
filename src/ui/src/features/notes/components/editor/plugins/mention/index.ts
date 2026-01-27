@@ -141,6 +141,9 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
         let match: RegExpExecArray | null;
 
         while ((match = MENTION_REGEX.exec(value)) !== null) {
+          // Skip tag patterns — handled by tag remark plugin
+          if (match[1] === 'tag') continue;
+
           // Add text before the match
           if (match.index > lastIndex) {
             newNodes.push({

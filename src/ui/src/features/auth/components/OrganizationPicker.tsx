@@ -17,6 +17,13 @@ import { clearAdmin } from "@/features/admin";
 import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
 import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import {
+  Buildings,
+  SignOut,
+  ArrowRight,
+  Plus,
+  CircleNotch,
+} from "@phosphor-icons/react";
 
 /**
  * Get human-readable label for organization role.
@@ -34,12 +41,39 @@ function getRoleLabel(role: OrganizationRole): string {
   }
 }
 
-export default function OrganizationPicker() {
+/**
+ * Role badge color mapping.
+ */
+function getRoleBadgeClasses(role: OrganizationRole): string {
+  switch (role) {
+    case OrganizationRole.OWNER:
+      return 'bg-primary/10 text-primary';
+    case OrganizationRole.ADMIN:
+      return 'bg-primary/10 text-primary';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+/**
+ * Extract initials from an organization name for the avatar.
+ */
+function getOrgInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
+
+export function OrganizationPicker() {
   useDocumentTitle('Select Organization');
   const [organizations, setOrganizations] = useState<MyOrganization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectingSlug, setSelectingSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const accessToken = useAppSelector((state) => state.auth?.accessToken);
@@ -77,7 +111,7 @@ export default function OrganizationPicker() {
       return;
     }
 
-    setLoading(true);
+    setSelectingSlug(orgSlug);
     try {
       const client = createClient(AuthService, transport);
       // Refresh token with the selected organization slug to get an org-scoped token
@@ -112,7 +146,7 @@ export default function OrganizationPicker() {
     } catch (err: unknown) {
       console.error('Failed to select organization:', err);
       setError('Failed to switch to organization.');
-      setLoading(false);
+      setSelectingSlug(null);
     }
   };
 
@@ -131,47 +165,166 @@ export default function OrganizationPicker() {
     navigate('/auth');
   };
 
-  if (loading) {
-    return <div className="text-center p-8">Loading organizations...</div>;
-  }
-
   return (
-    <div className="w-full max-w-md mx-auto p-8 border border-border rounded-xl shadow-sm bg-card text-card-foreground">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-primary">Select Workspace</h1>
-        <Button variant="ghost" size="sm" onClick={handleLogout}>Logout</Button>
-      </div>
+    <>
+      <style>{`
+        @keyframes org-slide-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes org-spinner {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
 
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded mb-6 text-sm">
-          {error}
-        </div>
-      )}
-
-      {organizations.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">You are not a member of any organization.</p>
-          <Button variant="outline">Create New Organization</Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {organizations.map((myOrg) => (
-            <button
-              key={myOrg.organization?.id}
-              onClick={() => handleSelectOrg(myOrg.organization?.slug || '')}
-              className="w-full text-left p-4 border border-input rounded hover:bg-accent hover:text-accent-foreground transition-colors flex justify-between items-center group"
-            >
+      <div className="flex min-h-screen items-center justify-center px-6 py-12 bg-background">
+        <div className="w-full max-w-md">
+          {/* Header area */}
+          <div
+            className="flex items-center justify-between mb-8 opacity-0"
+            style={{ animation: 'org-slide-up 0.5s ease-out 0.1s forwards' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-base">U</span>
+              </div>
               <div>
-                <div className="font-semibold">{myOrg.organization?.name}</div>
-                <div className="text-xs text-muted-foreground capitalize">{getRoleLabel(myOrg.role)}</div>
+                <h1 className="text-lg font-bold tracking-tight text-foreground">
+                  Select a workspace
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  {user?.email || 'Choose where to continue'}
+                </p>
               </div>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-primary">
-                →
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1.5 text-muted-foreground">
+              <SignOut className="h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div
+              className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
+              style={{ animation: 'org-slide-up 0.3s ease-out forwards' }}
+            >
+              <svg className="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
+                <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-10.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM8 12a1 1 0 100-2 1 1 0 000 2z" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {loading ? (
+            <div
+              className="flex flex-col items-center justify-center py-16 opacity-0"
+              style={{ animation: 'org-slide-up 0.5s ease-out 0.2s forwards' }}
+            >
+              <CircleNotch
+                className="h-8 w-8 text-primary mb-4"
+                style={{ animation: 'org-spinner 0.8s linear infinite' }}
+                weight="bold"
+              />
+              <p className="text-sm text-muted-foreground">Loading workspaces...</p>
+            </div>
+          ) : organizations.length === 0 ? (
+            /* Empty state */
+            <div
+              className="rounded-xl border border-border bg-card p-10 text-center opacity-0"
+              style={{ animation: 'org-slide-up 0.5s ease-out 0.2s forwards' }}
+            >
+              <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                <Buildings className="h-6 w-6 text-muted-foreground" />
               </div>
-            </button>
-          ))}
+              <p className="text-foreground font-medium mb-1">No workspaces yet</p>
+              <p className="text-sm text-muted-foreground mb-6">
+                You are not a member of any organization.
+              </p>
+              <Button variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create New Organization
+              </Button>
+            </div>
+          ) : (
+            /* Organization list */
+            <div className="space-y-2">
+              {organizations.map((myOrg, index) => {
+                const slug = myOrg.organization?.slug || '';
+                const isSelecting = selectingSlug === slug;
+
+                return (
+                  <button
+                    key={myOrg.organization?.id}
+                    onClick={() => handleSelectOrg(slug)}
+                    disabled={selectingSlug !== null}
+                    className={`
+                      w-full text-left rounded-xl border bg-card
+                      transition-all duration-200 group cursor-pointer
+                      opacity-0
+                      ${isSelecting
+                        ? 'border-primary ring-2 ring-primary/20 shadow-sm'
+                        : 'border-border hover:border-muted-foreground/30 hover:shadow-sm'
+                      }
+                      ${selectingSlug !== null && !isSelecting ? 'opacity-60' : ''}
+                    `}
+                    style={{
+                      animation: `org-slide-up 0.4s ease-out ${0.15 + index * 0.06}s forwards`,
+                    }}
+                  >
+                    <div className="flex items-center gap-4 p-4">
+                      {/* Org avatar */}
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-primary font-bold text-sm">
+                          {getOrgInitials(myOrg.organization?.name || '?')}
+                        </span>
+                      </div>
+
+                      {/* Org info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-foreground truncate">
+                          {myOrg.organization?.name}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded capitalize ${getRoleBadgeClasses(myOrg.role)}`}
+                          >
+                            {getRoleLabel(myOrg.role)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Arrow / spinner */}
+                      <div className="flex-shrink-0">
+                        {isSelecting ? (
+                          <CircleNotch
+                            className="h-5 w-5 text-primary"
+                            style={{ animation: 'org-spinner 0.8s linear infinite' }}
+                            weight="bold"
+                          />
+                        ) : (
+                          <ArrowRight
+                            className="h-5 w-5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Footer */}
+          <p
+            className="mt-8 text-center text-xs text-muted-foreground/60 opacity-0"
+            style={{ animation: 'org-slide-up 0.5s ease-out 0.6s forwards' }}
+          >
+            Signed in as {user?.fullName || user?.username || user?.email}
+          </p>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

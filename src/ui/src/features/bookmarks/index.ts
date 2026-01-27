@@ -4,10 +4,8 @@
  * This module provides user-scoped bookmarks for any URN-identified content.
  */
 
-// API
 export { bookmarksApi } from './api/bookmarksApi';
 
-// Store - Slice & Actions
 export {
     default as bookmarksReducer,
     clearBookmarks,
@@ -18,10 +16,8 @@ export {
     bulkCheckBookmarks,
 } from './store/bookmarksSlice';
 
-// Store - Types
 export type { SerializedBookmark, BookmarksState } from './store/bookmarksSlice';
 
-// Hooks
 export {
     useBookmarks,
     useIsBookmarked,

@@ -1,12 +1,3 @@
-/**
- * Custom hooks for bookmarks feature.
- *
- * Provides convenient access to bookmark state and actions:
- * - useBookmarks: Full bookmarks state and actions
- * - useIsBookmarked: Check if a single URN is bookmarked
- * - useBookmarkToggle: Toggle bookmark with loading state
- */
-
 import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {

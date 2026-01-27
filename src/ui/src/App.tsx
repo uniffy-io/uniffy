@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import AuthForms from '@/features/auth/components/AuthForms';
-import OrganizationPicker from '@/features/auth/components/OrganizationPicker';
+import { AuthForms } from '@/features/auth/components/AuthForms';
+import { OrganizationPicker } from '@/features/auth/components/OrganizationPicker';
 import { MainLayout } from '@/layouts/MainLayout';
 import { Home } from '@/features/home/Home';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -62,10 +62,10 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
 }
 
-// Simple layout for authentication pages
+// Layout for authentication pages — full bleed, no padding (pages own their own layout)
 function AuthLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-background text-foreground">
             {children}
         </div>
     );

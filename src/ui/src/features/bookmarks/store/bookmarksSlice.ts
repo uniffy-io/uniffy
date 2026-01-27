@@ -13,13 +13,7 @@ import type { RootState } from '@/app/store';
 import { bookmarksApi } from '../api/bookmarksApi';
 import type { Bookmark } from '@/gen/bookmarks/v1/bookmarks_pb';
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
 
-/**
- * Serialized bookmark for Redux storage (plain JS object).
- */
 export interface SerializedBookmark {
     id: string;
     userId: string;
@@ -57,10 +51,6 @@ const initialState: BookmarksState = {
     totalCount: 0,
 };
 
-// ─────────────────────────────────────────────────────────────
-// Serialization helpers
-// ─────────────────────────────────────────────────────────────
-
 const bookmarkToPlain = (bookmark: Bookmark): SerializedBookmark => ({
     id: bookmark.id,
     userId: bookmark.userId,
@@ -68,10 +58,6 @@ const bookmarkToPlain = (bookmark: Bookmark): SerializedBookmark => ({
     urn: bookmark.urn,
     createdAt: bookmark.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
 });
-
-// ─────────────────────────────────────────────────────────────
-// Async thunks
-// ─────────────────────────────────────────────────────────────
 
 /**
  * Fetch all bookmarks for the current user in the current organization.
@@ -166,10 +152,6 @@ export const bulkCheckBookmarks = createAsyncThunk<
         );
     }
 });
-
-// ─────────────────────────────────────────────────────────────
-// Slice
-// ─────────────────────────────────────────────────────────────
 
 const bookmarksSlice = createSlice({
     name: 'bookmarks',

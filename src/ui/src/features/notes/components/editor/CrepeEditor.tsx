@@ -7,6 +7,7 @@ import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
 import { useAppSelector } from '@/app/hooks';
 import { useAutosave } from '../../hooks/useNotesHooks';
+import { tagPlugins } from './plugins/tag';
 import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from './plugins/mention';
 import { MentionSearch } from './plugins/mention/MentionSearch';
 import { createPortal } from 'react-dom';
@@ -183,6 +184,9 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     // Access the underlying Milkdown editor and register our custom plugins
     try {
       const editor = crepe.editor;
+      // Register tag plugins first — tag remark must run before mention remark
+      // so that [[[tag|X]]] patterns are consumed before mention remark sees them
+      editor.use(tagPlugins);
       // Register mention plugins (includes view capture plugin)
       editor.use(mentionPlugins);
       // Store the editor reference globally so we can access it in plugins
@@ -276,6 +280,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     // Register plugins before create (same as above)
     try {
       const editor = crepe.editor;
+      editor.use(tagPlugins);
       editor.use(mentionPlugins);
     } catch {
       // Plugin registration failed silently

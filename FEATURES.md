@@ -32,6 +32,9 @@
 - [x] Editor, Markdown Editor and ReadOnly Viewer Modes
 - [x] Notes Knowledge Graph
 - [x] Notes Tagging System
+- [X] Notes Tag System
+- [ ] Notes Tags Dashboard with tag management
+- [ ] Notes Single Tag Page showing all notes with that tag and tag details
 - [x] Notes Linking and Backlinking trough the Unified Tagging System
 - [x] Icons picker for notes
 - [ ] Notes Versioning and History

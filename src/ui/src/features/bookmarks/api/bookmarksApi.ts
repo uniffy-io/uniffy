@@ -1,10 +1,3 @@
-/**
- * Bookmarks API Service
- *
- * Centralized ConnectRPC client for bookmark operations.
- * Handles user-scoped bookmarks for any URN-identified content.
- */
-
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import { BookmarksService } from '@/gen/bookmarks/v1/bookmarks_connect';
@@ -45,4 +38,3 @@ export const bookmarksApi = {
         return bookmarksClient.bulkCheckBookmarks(request);
     },
 };
-

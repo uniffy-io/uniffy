@@ -681,6 +681,46 @@
 }
 
 /*
+ * Tag Chip Styling
+ * Inline tag badge using the primary accent color.
+ * Tinted background with strong contrast in both light and dark modes.
+ */
+.crepe-editor .tag-chip,
+.crepe-editor-wrapper .tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.25rem 0.625rem;
+  margin: 0 0.125rem;
+  border-radius: 0.375rem;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  vertical-align: baseline;
+  line-height: 1.5;
+}
+
+.crepe-editor .tag-chip:hover,
+.crepe-editor-wrapper .tag-chip:hover {
+  background: hsl(var(--primary) / 0.22);
+}
+
+/* Dark mode: stronger background and brighter text for contrast */
+.dark .crepe-editor .tag-chip,
+.dark .crepe-editor-wrapper .tag-chip {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+}
+
+.dark .crepe-editor .tag-chip:hover,
+.dark .crepe-editor-wrapper .tag-chip:hover {
+  background: hsl(var(--primary) / 0.3);
+}
+
+/*
  * Mention Search Popup
  */
 .mention-popup {
