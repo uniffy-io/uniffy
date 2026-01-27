@@ -534,7 +534,7 @@ export function MarkdownEditor({
         >
           <div
             ref={editorRef}
-            className="crepe-editor prose prose-sm dark:prose-invert max-w-none px-3 py-2"
+            className="crepe-editor prose prose-sm max-w-none px-3 py-2"
           />
         </div>
 

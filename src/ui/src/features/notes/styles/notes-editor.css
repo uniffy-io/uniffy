@@ -12,41 +12,83 @@
   --crepe-color-background: transparent;
   --crepe-color-surface: hsl(var(--muted));
   --crepe-color-surface-low: hsl(var(--muted));
-  
+
   /* Text Colors - Critical for visibility */
   --crepe-color-on-background: hsl(var(--foreground));
   --crepe-color-on-surface: hsl(var(--foreground));
   --crepe-color-on-surface-variant: hsl(var(--muted-foreground));
-  
+
   /* Accent Colors */
   --crepe-color-primary: hsl(var(--primary));
   --crepe-color-secondary: hsl(var(--muted));
   --crepe-color-on-secondary: hsl(var(--foreground));
-  
+
   /* UI Colors */
   --crepe-color-outline: hsl(var(--muted-foreground));
   --crepe-color-hover: hsl(var(--muted));
   --crepe-color-selected: hsl(var(--primary) / 0.2);
   --crepe-color-inverse: hsl(var(--background));
   --crepe-color-on-inverse: hsl(var(--foreground));
-  
+
   /* Code/Inline styling */
   --crepe-color-inline-code: hsl(var(--primary));
   --crepe-color-inline-area: hsl(var(--muted));
   --crepe-color-error: #ef4444;
-  
+
   /* Typography - use our theme fonts */
   --crepe-font-title: var(--font-sans);
   --crepe-font-default: var(--font-sans);
   --crepe-font-code: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-  
+
   /* Shadows */
   --crepe-shadow-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
   --crepe-shadow-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
-  
+
   /* Ensure the editor doesn't affect global colors */
   background: transparent !important;
   color: hsl(var(--foreground)) !important;
+}
+
+/*
+ * Override Tailwind Typography (prose) color variables
+ * This ensures prose colors follow our theme in both light and dark mode,
+ * instead of relying on prose-slate/prose-invert which can mismatch.
+ */
+.crepe-editor {
+  --tw-prose-body: hsl(var(--foreground));
+  --tw-prose-headings: hsl(var(--foreground));
+  --tw-prose-lead: hsl(var(--muted-foreground));
+  --tw-prose-links: hsl(var(--primary));
+  --tw-prose-bold: hsl(var(--foreground));
+  --tw-prose-counters: hsl(var(--muted-foreground));
+  --tw-prose-bullets: hsl(var(--muted-foreground));
+  --tw-prose-hr: hsl(var(--border));
+  --tw-prose-quotes: hsl(var(--foreground));
+  --tw-prose-quote-borders: hsl(var(--primary));
+  --tw-prose-captions: hsl(var(--muted-foreground));
+  --tw-prose-code: hsl(var(--primary));
+  --tw-prose-pre-code: hsl(var(--foreground));
+  --tw-prose-pre-bg: hsl(var(--muted));
+  --tw-prose-th-borders: hsl(var(--border));
+  --tw-prose-td-borders: hsl(var(--border));
+
+  /* Invert variants (used by prose-invert in dark mode) */
+  --tw-prose-invert-body: hsl(var(--foreground));
+  --tw-prose-invert-headings: hsl(var(--foreground));
+  --tw-prose-invert-lead: hsl(var(--muted-foreground));
+  --tw-prose-invert-links: hsl(var(--primary));
+  --tw-prose-invert-bold: hsl(var(--foreground));
+  --tw-prose-invert-counters: hsl(var(--muted-foreground));
+  --tw-prose-invert-bullets: hsl(var(--muted-foreground));
+  --tw-prose-invert-hr: hsl(var(--border));
+  --tw-prose-invert-quotes: hsl(var(--foreground));
+  --tw-prose-invert-quote-borders: hsl(var(--primary));
+  --tw-prose-invert-captions: hsl(var(--muted-foreground));
+  --tw-prose-invert-code: hsl(var(--primary));
+  --tw-prose-invert-pre-code: hsl(var(--foreground));
+  --tw-prose-invert-pre-bg: hsl(var(--muted));
+  --tw-prose-invert-th-borders: hsl(var(--border));
+  --tw-prose-invert-td-borders: hsl(var(--border));
 }
 
 /* Scope Crepe styles to only affect the editor */
@@ -147,6 +189,29 @@
 .crepe-editor > span,
 .crepe-editor .ProseMirror > p span,
 .crepe-editor .milkdown-list-item-block span:not(.cm-editor span) {
+  color: hsl(var(--foreground)) !important;
+}
+
+/*
+ * Inline formatting marks (bold, italic, underline, strikethrough)
+ * Explicitly set color to prevent prose/theme conflicts.
+ * Prose sets its own color on these elements which can conflict with our theme.
+ */
+.crepe-editor strong,
+.crepe-editor b,
+.crepe-editor em,
+.crepe-editor i,
+.crepe-editor u,
+.crepe-editor s,
+.crepe-editor del,
+.crepe-editor mark,
+.crepe-editor .ProseMirror strong,
+.crepe-editor .ProseMirror b,
+.crepe-editor .ProseMirror em,
+.crepe-editor .ProseMirror i,
+.crepe-editor .ProseMirror u,
+.crepe-editor .ProseMirror s,
+.crepe-editor .ProseMirror del {
   color: hsl(var(--foreground)) !important;
 }
 
@@ -300,12 +365,15 @@
   content: none !important;
 }
 
-/* Blockquote */
+/* Blockquote - Crepe uses ::before pseudo-element for the left bar */
 .crepe-editor .milkdown blockquote {
-  border-left: 4px solid hsl(var(--primary));
-  padding-left: 1rem;
   margin-left: 0;
   color: hsl(var(--muted-foreground));
+}
+
+/* Override Crepe's ::before bar color from faint --crepe-color-selected to solid primary */
+.crepe-editor .milkdown .ProseMirror blockquote::before {
+  background: hsl(var(--primary)) !important;
 }
 
 /* Horizontal rule */

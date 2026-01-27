@@ -335,7 +335,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       <div className={`crepe-editor-wrapper h-full overflow-y-auto ${className || ''}`}>
         <div
           ref={editorRef}
-          className="crepe-editor prose prose-slate dark:prose-invert max-w-none px-8 py-4"
+          className="crepe-editor prose max-w-none px-8 py-4"
           style={{
             fontSize: `${settings?.fontSize || 16}px`,
             lineHeight: settings?.lineHeight || 1.6,

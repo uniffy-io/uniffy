@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Use class-based dark mode (matches ThemeProvider's .dark class on root) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Any custom base styles or theme overrides can go here */
 @theme {
   /* Font families */
