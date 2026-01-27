@@ -9,6 +9,7 @@ import type {
   CalendarEvent,
   Calendar,
   Category,
+  EventTemplate,
   EventFilters,
 } from '../types';
 import { DEFAULT_CATEGORIES, CALENDAR_COLORS } from '../constants';
@@ -28,6 +29,10 @@ import {
   deleteCategory as deleteCategoryThunk,
   addAttendees,
   removeAttendees,
+  createEventTemplate,
+  updateEventTemplate,
+  deleteEventTemplate,
+  listEventTemplates,
 } from './calendarThunks';
 
 /**
@@ -46,6 +51,9 @@ interface CalendarState {
   // Categories indexed by ID
   categories: Record<string, Category>;
 
+  // Templates indexed by ID
+  templates: Record<string, EventTemplate>;
+
   // Visible calendar IDs (checkboxes in sidebar)
   visibleCalendarIds: string[];
 
@@ -57,6 +65,7 @@ interface CalendarState {
     events: boolean;
     calendars: boolean;
     categories: boolean;
+    templates: boolean;
     creating: boolean;
     updating: boolean;
     deleting: boolean;
@@ -67,6 +76,7 @@ interface CalendarState {
     events: string | null;
     calendars: string | null;
     categories: string | null;
+    templates: string | null;
     creating: string | null;
     updating: string | null;
     deleting: string | null;
@@ -138,6 +148,7 @@ const initialState: CalendarState = {
     return acc;
   }, {} as Record<string, Calendar>),
   categories: createDefaultCategories(),
+  templates: {},
   visibleCalendarIds: defaultCalendars.map((c) => c.id),
   filters: {
     calendarIds: [],
@@ -150,6 +161,7 @@ const initialState: CalendarState = {
     events: false,
     calendars: false,
     categories: false,
+    templates: false,
     creating: false,
     updating: false,
     deleting: false,
@@ -158,6 +170,7 @@ const initialState: CalendarState = {
     events: null,
     calendars: null,
     categories: null,
+    templates: null,
     creating: null,
     updating: null,
     deleting: null,
@@ -545,6 +558,33 @@ const calendarSlice = createSlice({
         if (state.events[action.payload.id]) {
           state.events[action.payload.id] = action.payload;
         }
+      });
+
+    // Templates
+    builder
+      .addCase(createEventTemplate.fulfilled, (state, action) => {
+        state.templates[action.payload.id] = action.payload;
+      })
+      .addCase(updateEventTemplate.fulfilled, (state, action) => {
+        state.templates[action.payload.id] = action.payload;
+      })
+      .addCase(deleteEventTemplate.fulfilled, (state, action) => {
+        delete state.templates[action.payload];
+      })
+      .addCase(listEventTemplates.pending, (state) => {
+        state.loading.templates = true;
+        state.errors.templates = null;
+      })
+      .addCase(listEventTemplates.fulfilled, (state, action) => {
+        state.loading.templates = false;
+        state.templates = action.payload.reduce((acc, t) => {
+          acc[t.id] = t;
+          return acc;
+        }, {} as Record<string, EventTemplate>);
+      })
+      .addCase(listEventTemplates.rejected, (state, action) => {
+        state.loading.templates = false;
+        state.errors.templates = action.payload || 'Failed to fetch templates';
       });
   },
 });

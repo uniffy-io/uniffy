@@ -56,6 +56,18 @@ export interface EventModalPrefill {
   calendarId?: string;
   /** Pre-selected category ID */
   categoryId?: string;
+  /** Pre-filled title */
+  title?: string;
+  /** Pre-filled description */
+  description?: string;
+  /** Pre-filled location */
+  location?: string;
+  /** Pre-filled meeting URL */
+  meetingUrl?: string;
+  /** Pre-filled tags */
+  tags?: string[];
+  /** Duration in minutes */
+  durationMinutes?: number;
   /** Event ID to edit (for edit mode) */
   eventId?: string;
   /** Context for quick capture (chat, note, etc.) */

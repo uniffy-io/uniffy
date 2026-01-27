@@ -3,9 +3,9 @@
  * Handles event block placement, overlap detection, and sizing
  */
 
-import type { CalendarEvent, PositionedEvent } from '../types';
+import type { CalendarEvent, PositionedEvent, MultiDayPosition } from '../types';
 import { GRID } from '../constants';
-import { parseISO, getDurationMinutes, areSameDay, format } from './dateUtils';
+import { parseISO, getDurationMinutes, format } from './dateUtils';
 import { formatInTimeZone } from 'date-fns-tz';
 
 /**
@@ -40,23 +40,28 @@ function getLocalDateString(isoString: string): string {
 
 /**
  * Calculate the top position and height for an event block
+ * For multi-day events, uses the same hours on each day (hours are independent from dates)
  */
 export function calculateEventPosition(
   event: CalendarEvent,
   startHour: number = GRID.START_HOUR,
-  hourHeight: number = GRID.HOUR_HEIGHT
+  hourHeight: number = GRID.HOUR_HEIGHT,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _renderDate?: Date | string // kept for API compatibility but not used for hour calculation
 ): { top: number; height: number } {
-  // Get hours and minutes in the local timezone for correct positioning
-  const { hours: startHourOfDay, minutes: startMinutes } = getLocalHoursMinutes(event.startTime);
-  const durationMinutes = getDurationMinutes(event.startTime, event.endTime);
+  // Always use the actual start and end hours from the event
+  // Multi-day events show the same time block on each day
+  const { hours: effectiveStartHour, minutes: effectiveStartMinutes } = getLocalHoursMinutes(event.startTime);
+  const { hours: effectiveEndHour, minutes: effectiveEndMinutes } = getLocalHoursMinutes(event.endTime);
 
   // Calculate top position from start of visible grid
-  const minutesFromStart = (startHourOfDay - startHour) * 60 + startMinutes;
+  const minutesFromStart = (effectiveStartHour - startHour) * 60 + effectiveStartMinutes;
   const top = (minutesFromStart / 60) * hourHeight;
 
-  // Calculate height from duration
+  // Calculate height from the time duration (not date duration)
+  const effectiveDurationMinutes = (effectiveEndHour - effectiveStartHour) * 60 + (effectiveEndMinutes - effectiveStartMinutes);
   const height = Math.max(
-    (durationMinutes / 60) * hourHeight,
+    (effectiveDurationMinutes / 60) * hourHeight,
     GRID.MIN_EVENT_HEIGHT
   );
 
@@ -166,7 +171,59 @@ export function assignEventColumns(
 }
 
 /**
+ * Check if an event spans a specific date (starts before or on, ends on or after)
+ */
+function eventSpansDate(event: CalendarEvent, date: Date | string): boolean {
+  const targetDate = typeof date === 'string' ? new Date(date + 'T00:00:00') : date;
+  const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+
+  const eventStartDateStr = getLocalDateString(event.startTime);
+  const eventEndDateStr = getLocalDateString(event.endTime);
+
+  // Event spans this date if: startDate <= targetDate <= endDate
+  return eventStartDateStr <= targetDateStr && targetDateStr <= eventEndDateStr;
+}
+
+/**
+ * Determine the multi-day position for an event on a specific date
+ */
+function getMultiDayPosition(event: CalendarEvent, date: Date | string): MultiDayPosition {
+  const targetDate = typeof date === 'string' ? new Date(date + 'T00:00:00') : date;
+  const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+
+  const eventStartDateStr = getLocalDateString(event.startTime);
+  const eventEndDateStr = getLocalDateString(event.endTime);
+
+  // Single day event
+  if (eventStartDateStr === eventEndDateStr) {
+    return 'single';
+  }
+
+  // Multi-day event - determine position
+  if (targetDateStr === eventStartDateStr) {
+    return 'start';
+  } else if (targetDateStr === eventEndDateStr) {
+    return 'end';
+  } else {
+    return 'middle';
+  }
+}
+
+/**
+ * Find all events that conflict with a given event (overlap in time)
+ */
+export function findConflicts(
+  event: CalendarEvent,
+  allEvents: CalendarEvent[]
+): CalendarEvent[] {
+  return allEvents.filter(
+    (other) => other.id !== event.id && eventsOverlap(event, other)
+  );
+}
+
+/**
  * Get positioned events for a single day
+ * Includes events that start on this day OR span into this day (multi-day events)
  */
 export function getPositionedEventsForDay(
   events: CalendarEvent[],
@@ -175,10 +232,8 @@ export function getPositionedEventsForDay(
   hourHeight: number = GRID.HOUR_HEIGHT,
   columnWidth: number = 100 // percentage
 ): PositionedEvent[] {
-  // Filter events for this day
-  const dayEvents = events.filter((event) =>
-    areSameDay(event.startTime, date)
-  );
+  // Filter events that span this day (includes multi-day events)
+  const dayEvents = events.filter((event) => eventSpansDate(event, date));
 
   if (dayEvents.length === 0) return [];
 
@@ -191,13 +246,21 @@ export function getPositionedEventsForDay(
     const assignments = assignEventColumns(group);
 
     for (const { event, column, totalColumns } of assignments) {
-      const { top, height } = calculateEventPosition(event, startHour, hourHeight);
+      // Pass the render date to correctly position multi-day events
+      const { top, height } = calculateEventPosition(event, startHour, hourHeight, date);
 
       // Calculate horizontal position and width
       // Only apply small gap between overlapping events, single events fill full width
       const gapPercent = totalColumns > 1 ? GRID.EVENT_GAP / totalColumns : 0;
       const widthPercent = (columnWidth / totalColumns) - gapPercent;
       const leftPercent = (column / totalColumns) * columnWidth + (column > 0 ? gapPercent / 2 : 0);
+
+      // Determine multi-day position for styling
+      const multiDayPosition = getMultiDayPosition(event, date);
+
+      // Find conflicts (other events in the same group)
+      const conflicts = group.filter((e) => e.id !== event.id);
+      const hasConflict = conflicts.length > 0;
 
       positionedEvents.push({
         ...event,
@@ -207,6 +270,9 @@ export function getPositionedEventsForDay(
         width: widthPercent / 100,
         column,
         totalColumns,
+        multiDayPosition,
+        hasConflict,
+        conflictingEvents: conflicts,
       });
     }
   }

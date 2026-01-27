@@ -12,6 +12,9 @@ import { cn } from '@/utils/cn';
 import { MarkdownEditor } from '@/components/editor';
 import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { MemberInfo } from '@/gen/common/v1/common_pb';
+import { AttendeesSelector } from './AttendeesSelector';
+import type { Attendee } from '../../types';
 
 /**
  * Extract time value (hours as decimal) from ISO string
@@ -86,6 +89,16 @@ function generateTimeOptions(): { value: number; label: string }[] {
       label: `${displayHour}:${minutes} ${period}`,
     };
   });
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
 }
 
 interface EventEditorProps {
@@ -186,6 +199,31 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
     }));
   };
 
+  const handleAttendeeAdd = (member: MemberInfo) => {
+    if (formData.attendees.some((a) => a.id === member.userId)) return;
+
+    const newAttendee: Attendee = {
+      id: member.userId,
+      name: member.displayName || member.email,
+      email: member.email,
+      status: 'pending',
+      role: 'required',
+      initials: getInitials(member.displayName || member.email),
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      attendees: [...prev.attendees, newAttendee],
+    }));
+  };
+
+  const handleAttendeeRemove = (userId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      attendees: prev.attendees.filter((a) => a.id !== userId),
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await dispatch(updateEvent({
@@ -202,6 +240,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       categoryId: formData.categoryId,
       isFocusTime: formData.isFocusTime,
       tags: formData.tags,
+      attendeeIds: formData.attendees.map(a => a.id),
     }));
     onClose();
   };
@@ -308,29 +347,34 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 </div>
               </div>
 
-              {/* All-day toggle */}
+              {/* Multi-day toggle */}
               <Checkbox
                 id="allday-basic"
                 checked={formData.isAllDay}
                 onChange={(e) => handleChange('isAllDay', e.target.checked)}
-                label="All-day event"
+                label="Multi-day event"
               />
 
               {/* Date and Time */}
-              {!formData.isAllDay && (
+              {formData.isAllDay ? (
                 <div className="space-y-3">
-                  {/* Start Date & Time */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      Start
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* Multi-day: Start Date & Time */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Start Date
+                      </label>
                       <Select
                         value={startDate}
                         onChange={handleStartDateChange}
                         options={dateOptions}
                         className="w-full"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Start Time
+                      </label>
                       <Select
                         value={startTime}
                         onChange={handleStartTimeChange}
@@ -340,18 +384,23 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                     </div>
                   </div>
 
-                  {/* End Date & Time */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      End
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* Multi-day: End Date & Time */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        End Date
+                      </label>
                       <Select
                         value={endDate}
                         onChange={handleEndDateChange}
                         options={dateOptions}
                         className="w-full"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        End Time
+                      </label>
                       <Select
                         value={endTime}
                         onChange={handleEndTimeChange}
@@ -359,6 +408,32 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                         className="w-full"
                       />
                     </div>
+                  </div>
+                </div>
+              ) : (
+                /* Single-day: Time selectors only */
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Start
+                    </label>
+                    <Select
+                      value={startTime}
+                      onChange={handleStartTimeChange}
+                      options={timeOptions}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      End
+                    </label>
+                    <Select
+                      value={endTime}
+                      onChange={handleEndTimeChange}
+                      options={timeOptions}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               )}
@@ -423,41 +498,12 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
           )}
 
           {activeTab === 'attendees' && (
-            <div className="space-y-4">
-              {formData.attendees.length > 0 ? (
-                <div>
-                  <h3 className="text-sm font-medium text-foreground mb-3">Attendees</h3>
-                  <div className="space-y-2">
-                    {formData.attendees.map((attendee) => (
-                      <div
-                        key={attendee.id}
-                        className="flex items-center justify-between p-2 rounded border border-border"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
-                            {attendee.initials}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{attendee.name}</p>
-                            <p className="text-xs text-muted-foreground">{attendee.email}</p>
-                          </div>
-                        </div>
-                        <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground capitalize">
-                          {attendee.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No attendees added</p>
-              )}
-              <button
-                type="button"
-                className="w-full px-3 py-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-              >
-                + Add attendees
-              </button>
+            <div className="h-full">
+              <AttendeesSelector
+                attendees={formData.attendees}
+                onAdd={handleAttendeeAdd}
+                onRemove={handleAttendeeRemove}
+              />
             </div>
           )}
         </form>

@@ -15,6 +15,7 @@ import type {
     Attendee as ProtoAttendee,
     RecurrenceConfig as ProtoRecurrenceConfig,
     LinkedResource as ProtoLinkedResource,
+    EventTemplate as ProtoEventTemplate,
 } from '@/gen/cal/v1/calendar_pb';
 import {
     CalendarType as ProtoCalendarType,
@@ -39,6 +40,9 @@ import type {
     AttendeeStatus,
     AttendeeRole,
     CalendarType,
+    EventTemplate,
+    CreateTemplatePayload,
+    UpdateTemplatePayload,
 } from '../types';
 
 // ============================================================================
@@ -278,6 +282,25 @@ const categoryFromProto = (proto: ProtoCategory): Category => ({
     updatedAt: timestampToIso(proto.updatedAt),
 });
 
+/**
+ * Convert proto template to domain template.
+ */
+const templateFromProto = (proto: ProtoEventTemplate): EventTemplate => ({
+    id: proto.id,
+    organizationId: proto.organizationId,
+    title: proto.title,
+    description: proto.description,
+    durationMinutes: proto.durationMinutes,
+    location: proto.location || '',
+    meetingUrl: proto.meetingUrl,
+    categoryId: proto.categoryId,
+    tags: proto.tags,
+    visibility: proto.visibility,
+    createdBy: proto.createdBy,
+    createdAt: proto.createdAt?.toDate() || new Date(),
+    updatedAt: proto.updatedAt?.toDate() || new Date(),
+});
+
 // ============================================================================
 // Event Thunks
 // ============================================================================
@@ -412,6 +435,7 @@ export const updateEvent = createAsyncThunk<
         meetingUrl?: string;
         calendarId?: string;
         categoryId?: string;
+        attendeeIds?: string[];
         recurrence?: RecurrenceConfig;
         isFocusTime?: boolean;
         tags?: string[];
@@ -447,6 +471,7 @@ export const updateEvent = createAsyncThunk<
             meetingUrl: params.meetingUrl,
             calendarId: params.calendarId,
             categoryId: params.categoryId,
+            attendeeIds: params.attendeeIds,
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime,
             tags: params.tags,
@@ -787,5 +812,117 @@ export const removeAttendees = createAsyncThunk<
         return eventFromProto(response.event);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to remove attendees');
+    }
+});
+
+// ============================================================================
+// Template Thunks
+// ============================================================================
+
+export const createEventTemplate = createAsyncThunk<
+    EventTemplate,
+    CreateTemplatePayload,
+    { state: RootState; rejectValue: string }
+>('calendar/createTemplate', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await calendarApi.createEventTemplate({
+            organizationId,
+            title: params.title,
+            description: params.description,
+            durationMinutes: params.durationMinutes,
+            location: params.location,
+            meetingUrl: params.meetingUrl,
+            categoryId: params.categoryId,
+            tags: params.tags,
+            visibility: params.visibility ?? ProtoVisibilityScope.PRIVATE,
+        });
+        if (!response.template) {
+            return rejectWithValue('Failed to create template');
+        }
+        return templateFromProto(response.template);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to create template');
+    }
+});
+
+export const getEventTemplate = createAsyncThunk<
+    EventTemplate,
+    string,
+    { state: RootState; rejectValue: string }
+>('calendar/getTemplate', async (templateId, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await calendarApi.getEventTemplate({
+            templateId,
+            organizationId,
+        });
+        if (!response.template) {
+            return rejectWithValue('Failed to get template');
+        }
+        return templateFromProto(response.template);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to get template');
+    }
+});
+
+export const updateEventTemplate = createAsyncThunk<
+    EventTemplate,
+    UpdateTemplatePayload,
+    { state: RootState; rejectValue: string }
+>('calendar/updateTemplate', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await calendarApi.updateEventTemplate({
+            templateId: params.id,
+            organizationId,
+            title: params.title,
+            description: params.description,
+            durationMinutes: params.durationMinutes,
+            location: params.location,
+            meetingUrl: params.meetingUrl,
+            categoryId: params.categoryId,
+            tags: params.tags,
+            visibility: params.visibility,
+        });
+        if (!response.template) {
+            return rejectWithValue('Failed to update template');
+        }
+        return templateFromProto(response.template);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to update template');
+    }
+});
+
+export const deleteEventTemplate = createAsyncThunk<
+    string,
+    string,
+    { state: RootState; rejectValue: string }
+>('calendar/deleteTemplate', async (templateId, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        await calendarApi.deleteEventTemplate({
+            templateId,
+            organizationId,
+        });
+        return templateId;
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete template');
+    }
+});
+
+export const listEventTemplates = createAsyncThunk<
+    EventTemplate[],
+    void,
+    { state: RootState; rejectValue: string }
+>('calendar/listTemplates', async (_, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await calendarApi.listEventTemplates({
+            organizationId,
+        });
+        return (response.templates || []).map(templateFromProto);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to list templates');
     }
 });

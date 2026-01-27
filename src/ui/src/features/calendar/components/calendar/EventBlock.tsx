@@ -3,11 +3,15 @@
  */
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectEvent } from '../../store';
+import { selectEvent, startDrag, endDrag } from '../../store';
 import type { PositionedEvent } from '../../types';
-import { getCategoryColor, getCategoryBackgroundColor } from '../../constants';
+import { hexToRgba, CATEGORY_COLORS } from '../../constants';
 import { formatTimeRange } from '../../utils';
 import { cn } from '@/utils/cn';
+import { Warning } from '@phosphor-icons/react';
+
+// Default color when category is not found
+const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
 
 interface EventBlockProps {
   event: PositionedEvent;
@@ -19,10 +23,18 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const selectedEventId = useAppSelector(
     (state) => state.calendarUi.selectedEventId
   );
+  const categories = useAppSelector((state) => state.calendar.categories);
 
   const isSelected = selectedEventId === event.id;
-  const categoryColor = getCategoryColor(event.categoryId);
-  const backgroundColor = getCategoryBackgroundColor(event.categoryId);
+  const multiDayPosition = event.multiDayPosition ?? 'single';
+
+  // Determine if we should show content (only on start/single)
+  const showContent = multiDayPosition === 'start' || multiDayPosition === 'single';
+
+  // Look up category color from Redux state (real categories from backend)
+  const category = event.categoryId ? categories[event.categoryId] : null;
+  const categoryColor = category?.color ?? DEFAULT_COLOR;
+  const backgroundColor = hexToRgba(categoryColor, 0.1);
 
   const handleClick = () => {
     dispatch(selectEvent(event.id));
@@ -35,13 +47,87 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   // Check if event is short (less than 45 minutes display)
   const isShort = event.height < 45;
 
+  // Determine border radius based on multi-day position
+  const getBorderRadius = () => {
+    switch (multiDayPosition) {
+      case 'start':
+        return '6px 0 0 6px'; // rounded left, flat right
+      case 'middle':
+        return '0'; // flat both sides
+      case 'end':
+        return '0 6px 6px 0'; // flat left, rounded right
+      default:
+        return '6px'; // rounded all (single day)
+    }
+  };
+
+  // Get selection border styles based on multi-day position
+  // Only show borders on outer edges, not between days
+  const getSelectionBorderStyle = (): React.CSSProperties => {
+    if (!isSelected) return {};
+
+    const borderColor = 'hsl(var(--primary))';
+    const borderWidth = '2px';
+
+    switch (multiDayPosition) {
+      case 'start':
+        return {
+          borderTop: `${borderWidth} solid ${borderColor}`,
+          borderBottom: `${borderWidth} solid ${borderColor}`,
+          borderLeft: `${borderWidth} solid ${borderColor}`,
+          borderRight: 'none',
+        };
+      case 'middle':
+        return {
+          borderTop: `${borderWidth} solid ${borderColor}`,
+          borderBottom: `${borderWidth} solid ${borderColor}`,
+          borderLeft: 'none',
+          borderRight: 'none',
+        };
+      case 'end':
+        return {
+          borderTop: `${borderWidth} solid ${borderColor}`,
+          borderBottom: `${borderWidth} solid ${borderColor}`,
+          borderLeft: 'none',
+          borderRight: `${borderWidth} solid ${borderColor}`,
+        };
+      default: // single
+        return {
+          border: `${borderWidth} solid ${borderColor}`,
+        };
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    // Only allow left click drag
+    if (e.button !== 0) {
+      e.preventDefault();
+      return;
+    }
+
+    dispatch(startDrag(event.id));
+    
+    // Set ghost image effect
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', event.id); // Required for Firefox
+    }
+  };
+
+  const handleDragEnd = () => {
+    dispatch(endDrag());
+  };
+
   return (
     <button
       onClick={handleClick}
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={cn(
-        'absolute rounded-md overflow-hidden text-left transition-all',
-        'hover:shadow-md hover:z-10',
-        isSelected && 'ring-2 ring-primary z-20'
+        'absolute overflow-hidden text-left transition-all',
+        'hover:shadow-md hover:z-10 cursor-grab active:cursor-grabbing',
+        isSelected && 'z-20'
       )}
       style={{
         top: event.top,
@@ -49,76 +135,93 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         width: `${widthPercent}%`,
         height: event.height,
         backgroundColor,
+        borderRadius: getBorderRadius(),
+        ...getSelectionBorderStyle(),
       }}
     >
-      {/* Left color bar */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-md"
-        style={{ backgroundColor: categoryColor }}
-      />
-
-      {/* Content */}
-      <div className={cn('pl-2.5 pr-2', isShort ? 'py-0.5' : 'py-1.5')}>
-        {/* Title */}
+      {/* Left color bar - only show on start/single */}
+      {(multiDayPosition === 'start' || multiDayPosition === 'single') && (
         <div
           className={cn(
-            'font-semibold text-foreground truncate',
-            isShort ? 'text-[10px]' : 'text-xs'
+            'absolute left-0 top-0 bottom-0 w-1',
+            multiDayPosition === 'single' && 'rounded-l-md'
           )}
-        >
-          {event.title}
-        </div>
+          style={{ backgroundColor: categoryColor }}
+        />
+      )}
 
-        {/* Time (hide for short events) */}
-        {!isShort && (
-          <div className="text-[10px] text-muted-foreground truncate">
-            {formatTimeRange(event.startTime, event.endTime)}
-          </div>
-        )}
-
-        {/* Resource indicators (for taller events) */}
-        {event.height > 60 && event.linkedResources.length > 0 && (
-          <div className="absolute bottom-1 right-2 flex gap-0.5 text-[10px] text-muted-foreground">
-            {event.linkedResources.slice(0, 3).map((resource) => (
-              <span key={resource.id}>
-                {resource.type === 'note'
-                  ? '📄'
-                  : resource.type === 'file'
-                  ? '📁'
-                  : '💬'}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Attendee avatars (for taller events) */}
-        {event.height > 80 && event.attendees.length > 0 && (
-          <div className="mt-2 flex -space-x-1.5">
-            {event.attendees.slice(0, 3).map((attendee, index) => (
-              <div
-                key={attendee.id}
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-medium border-2 border-white"
-                style={{
-                  backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981'][
-                    index % 3
-                  ],
-                  zIndex: 3 - index,
-                }}
-              >
-                {attendee.initials}
-              </div>
-            ))}
-            {event.attendees.length > 3 && (
-              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-medium bg-gray-400 border-2 border-white">
-                +{event.attendees.length - 3}
-              </div>
+      {/* Content - only show on start/single */}
+      {showContent && (
+        <div className={cn('pl-2.5 pr-2', isShort ? 'py-0.5' : 'py-1.5')}>
+          {/* Title with conflict indicator */}
+          <div
+            className={cn(
+              'font-semibold text-foreground truncate flex items-center gap-1',
+              isShort ? 'text-[10px]' : 'text-xs'
             )}
+          >
+            {event.hasConflict && (
+              <Warning
+                size={12}
+                weight="duotone"
+                className="text-yellow-600 dark:text-yellow-400 flex-shrink-0"
+                title={`Conflicts with ${event.conflictingEvents?.length || 0} other event(s)`}
+              />
+            )}
+            <span className="truncate">{event.title}</span>
           </div>
-        )}
-      </div>
 
-      {/* Focus time indicator */}
-      {event.isFocusTime && (
+          {/* Time (hide for short events) */}
+          {!isShort && (
+            <div className="text-[10px] text-muted-foreground truncate">
+              {formatTimeRange(event.startTime, event.endTime)}
+            </div>
+          )}
+
+          {/* Resource indicators (for taller events) */}
+          {event.height > 60 && event.linkedResources.length > 0 && (
+            <div className="absolute bottom-1 right-2 flex gap-0.5 text-[10px] text-muted-foreground">
+              {event.linkedResources.slice(0, 3).map((resource) => (
+                <span key={resource.id}>
+                  {resource.type === 'note'
+                    ? '📄'
+                    : resource.type === 'file'
+                    ? '📁'
+                    : '💬'}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Attendee avatars (for taller events) */}
+          {event.height > 80 && event.attendees.length > 0 && (
+            <div className="mt-2 flex -space-x-1.5">
+              {event.attendees.slice(0, 3).map((attendee, index) => (
+                <div
+                  key={attendee.id}
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-medium border-2 border-white"
+                  style={{
+                    backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981'][
+                      index % 3
+                    ],
+                    zIndex: 3 - index,
+                  }}
+                >
+                  {attendee.initials}
+                </div>
+              ))}
+              {event.attendees.length > 3 && (
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-medium bg-gray-400 border-2 border-white">
+                  +{event.attendees.length - 3}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Focus time indicator - only show on start/single */}
+      {event.isFocusTime && showContent && (
         <div className="absolute top-1 right-1 text-[10px]">🔕</div>
       )}
     </button>

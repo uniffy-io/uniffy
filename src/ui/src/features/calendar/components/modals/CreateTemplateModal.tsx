@@ -4,8 +4,10 @@
  */
 
 import { useState } from 'react';
-import { useAppSelector } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/utils/cn';
+import { createEventTemplate, updateEventTemplate } from '../../store/calendarThunks';
+import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
 interface CreateTemplateModalProps {
   isOpen: boolean;
@@ -13,39 +15,81 @@ interface CreateTemplateModalProps {
 }
 
 export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProps) {
+  const dispatch = useAppDispatch();
   const categories = useAppSelector((state) => state.calendar.categories);
+  const templates = useAppSelector((state) => state.calendar.templates);
+  const editingTemplateId = useAppSelector((state) => state.calendarUi.editingTemplateId);
+  const isLoading = useAppSelector((state) => state.calendar.loading.templates);
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState(
-    Object.values(categories)[0]?.id || ''
-  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [duration, setDuration] = useState(60); // minutes
+  const [location, setLocation] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Reset form when modal opens or editing target changes (render-time state adjustment)
+  const [formKey, setFormKey] = useState('');
+  const currentFormKey = isOpen ? `open-${editingTemplateId ?? 'new'}` : 'closed';
+  if (currentFormKey !== formKey) {
+    setFormKey(currentFormKey);
+    if (isOpen) {
+      if (editingTemplateId && templates[editingTemplateId]) {
+        const t = templates[editingTemplateId];
+        setName(t.title);
+        setDescription(t.description || '');
+        setSelectedCategoryId(t.categoryId || '');
+        setDuration(t.durationMinutes || 60);
+        setLocation(t.location || '');
+      } else {
+        setName('');
+        setDescription('');
+        setSelectedCategoryId('');
+        setDuration(60);
+        setLocation('');
+      }
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
-      alert('Please enter a template name');
       return;
     }
 
-    // TODO: Save template to Redux store or API
-    console.log('Create template:', {
-      name: name.trim(),
-      description,
-      categoryId: selectedCategoryId,
-      duration,
-    });
+    try {
+        if (editingTemplateId) {
+            await dispatch(updateEventTemplate({
+                id: editingTemplateId,
+                title: name.trim(),
+                description,
+                durationMinutes: duration,
+                categoryId: selectedCategoryId || undefined,
+                location,
+            })).unwrap();
+        } else {
+            await dispatch(createEventTemplate({
+                title: name.trim(),
+                description,
+                durationMinutes: duration,
+                categoryId: selectedCategoryId || undefined,
+                location,
+                meetingUrl: '', 
+                visibility: VisibilityScope.PRIVATE,
+                tags: [],
+            })).unwrap();
+        }
 
-    setName('');
-    setDescription('');
-    setDuration(60);
-    onClose();
+        onClose();
+    } catch (error) {
+        console.error('Failed to save template:', error);
+    }
   };
 
   if (!isOpen) return null;
 
   const categoryArray = Object.values(categories);
+  const isEditing = !!editingTemplateId;
 
   return (
     <>
@@ -59,7 +103,9 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-96 border border-border">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">New Template</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            {isEditing ? 'Edit Template' : 'New Template'}
+          </h2>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
@@ -111,6 +157,20 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
             />
           </div>
 
+          {/* Location */}
+          <div>
+             <label className="block text-sm font-medium text-foreground mb-1">
+               Location (optional)
+             </label>
+             <input
+               type="text"
+               value={location}
+               onChange={(e) => setLocation(e.target.value)}
+               placeholder="e.g. Conference Room A or Zoom Link"
+               className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+             />
+          </div>
+          
           {/* Category Selection */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
@@ -149,7 +209,8 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -157,13 +218,13 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
               type="submit"
               className={cn(
                 'flex-1 px-4 py-2 rounded-md font-medium transition-colors',
-                name.trim()
+                name.trim() && !isLoading
                   ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               )}
-              disabled={!name.trim()}
+              disabled={!name.trim() || isLoading}
             >
-              Create
+              {isLoading ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create')}
             </button>
           </div>
         </form>

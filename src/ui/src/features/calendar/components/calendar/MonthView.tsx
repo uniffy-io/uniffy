@@ -2,19 +2,25 @@
  * MonthView - Month calendar grid view
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useCalendarNavigation, useCalendarEvents } from '../../hooks';
-import { useAppDispatch } from '@/app/hooks';
-import { setCurrentDate, setViewMode } from '../../store';
-import { getCategoryColor } from '../../constants';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { setCurrentDate, setViewMode, startDrag, endDrag, updateEventThunk } from '../../store';
+import { CATEGORY_COLORS } from '../../constants';
 import { cn } from '@/utils/cn';
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Default color when category is not found
+const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
+
 export function MonthView() {
   const dispatch = useAppDispatch();
   const { monthColumns } = useCalendarNavigation();
-  const { getEventsForDate } = useCalendarEvents();
+  const { getEventsForDate, events } = useCalendarEvents();
+  const categories = useAppSelector((state) => state.calendar.categories);
+  const draggedEventId = useAppSelector((state) => state.calendarUi.draggedEventId);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   // Group days into weeks
   const weeks = useMemo(() => {
@@ -28,6 +34,63 @@ export function MonthView() {
   const handleDayClick = (dateString: string) => {
     dispatch(setCurrentDate(dateString));
     dispatch(setViewMode('day'));
+  };
+
+  const handleDragStart = (e: React.DragEvent, eventId: string) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    // Using simple text/plain for compatibility
+    e.dataTransfer.setData('text/plain', eventId);
+    
+    // Set global drag state
+    dispatch(startDrag(eventId));
+  };
+
+  const handleDragEnd = () => {
+    dispatch(endDrag());
+    setDragOverDate(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, dateString: string) => {
+    e.preventDefault(); // Allow drop
+    if (draggedEventId && dragOverDate !== dateString) {
+      setDragOverDate(dateString);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDateStr: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverDate(null);
+
+    const eventId = e.dataTransfer.getData('text/plain');
+    if (!eventId || eventId !== draggedEventId) return;
+
+    const event = events[eventId];
+    if (!event) return;
+
+    // Calculate new start/end preserving time and duration
+    const targetDate = new Date(targetDateStr);
+    const oldStart = new Date(event.startTime);
+    const oldEnd = new Date(event.endTime);
+    
+    const newStart = new Date(targetDate);
+    newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), oldStart.getSeconds(), oldStart.getMilliseconds());
+    
+    const duration = oldEnd.getTime() - oldStart.getTime();
+    const newEnd = new Date(newStart.getTime() + duration);
+
+    try {
+        await dispatch(updateEventThunk({
+            eventId,
+            startTime: newStart.toISOString(),
+            endTime: newEnd.toISOString()
+        })).unwrap();
+    } catch (error) {
+        console.error("Failed to move event", error);
+    }
+    
+    dispatch(endDrag());
   };
 
   return (
@@ -60,11 +123,14 @@ export function MonthView() {
                 <button
                   key={day.dateString}
                   onClick={() => handleDayClick(day.dateString)}
+                  onDragOver={(e) => handleDragOver(e, day.dateString)}
+                  onDrop={(e) => handleDrop(e, day.dateString)}
                   className={cn(
                     'min-h-[100px] p-2 text-left border-r border-border last:border-r-0',
                     'hover:bg-muted/50 transition-colors',
                     day.isToday && 'bg-primary/5',
-                    !day.isCurrentMonth && 'bg-muted/30'
+                    !day.isCurrentMonth && 'bg-muted/30',
+                    dragOverDate === day.dateString && 'bg-primary/10 ring-2 ring-inset ring-primary'
                   )}
                 >
                   {/* Day number */}
@@ -85,20 +151,27 @@ export function MonthView() {
 
                   {/* Events */}
                   <div className="space-y-0.5">
-                    {displayEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        className="text-[10px] px-1.5 py-0.5 rounded truncate"
-                        style={{
-                          backgroundColor: `${getCategoryColor(
-                            event.categoryId
-                          )}20`,
-                          color: getCategoryColor(event.categoryId),
-                        }}
-                      >
-                        {event.title}
-                      </div>
-                    ))}
+                    {displayEvents.map((event) => {
+                      // Look up category color from Redux state
+                      const eventCategory = event.categoryId ? categories[event.categoryId] : null;
+                      const eventColor = eventCategory?.color ?? DEFAULT_COLOR;
+                      return (
+                        <div
+                          key={event.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, event.id)}
+                          onDragEnd={handleDragEnd}
+                          onClick={(e) => { e.stopPropagation(); /* Prevent day click */ }}
+                          className="text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing"
+                          style={{
+                            backgroundColor: `${eventColor}20`,
+                            color: eventColor,
+                          }}
+                        >
+                          {event.title}
+                        </div>
+                      );
+                    })}
 
                     {moreCount > 0 && (
                       <div className="text-[10px] text-muted-foreground px-1.5">

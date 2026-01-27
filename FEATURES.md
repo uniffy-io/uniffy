@@ -44,21 +44,20 @@
 - [x] Day, Week, and Month view modes with navigation
 - [x] Event creation and editing with date/time pickers
 - [x] Multiple calendars
-- [ ] Proper support for categories ( right not they are just mock in the UI )
-- [ ] Support for color-coded events
+- [x] Proper support for categories with backend persistence
+- [x] Support for color-coded events based on category
 - [x] Event detail panel with markdown descriptions and @mentions
 - [x] Mini calendar sidebar synced with main view
 - [x] Timezone display
-- [x] Bookmarks integration for quick access to events?
-- [ ] Calendar Event single page view   
-        right now when you click on a calendar event from other resources like notes it gives you 404 (/calendar/5c85514b-1afe-47e0-ad09-1c13f9889e20) because that route does not exist. We need to either open the calendar main page with this event selected or create a single event view page.
+- [x] Bookmarks integration for quick access to events
+- [x] Calendar Event single page view (navigates to calendar with event selected)
+- [x] Multi-day event support with continuous visual spanning across days
 - [ ] Recurring events with customizable patterns
 - [ ] Event reminders and notifications
-- [ ] Drag and drop event rescheduling
+- [x] Drag and drop event rescheduling
 - [ ] Calendar sharing between users and groups
-- [ ] Event attendees management
+- [x] Event attendees management
 - [ ] Event invitations with RSVP tracking
-- [ ] Conflict detection for overlapping events
+- [x] Conflict detection for overlapping events
 - [ ] External calendar subscriptions
-- [ ] Event templates for quick creation
-- [ ] Multi-day event support with proper spanning
+- [x] Event templates for quick creation

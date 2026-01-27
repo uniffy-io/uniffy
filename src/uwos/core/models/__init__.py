@@ -1,9 +1,11 @@
 """Database models package."""
 
+from uwos.core.models.bookmarks.bookmark import Bookmark
 from uwos.core.models.calendar.attendee import EventAttendee
 from uwos.core.models.calendar.calendar import Calendar
 from uwos.core.models.calendar.category import Category
 from uwos.core.models.calendar.event import CalendarEvent
+from uwos.core.models.calendar.template import EventTemplate
 from uwos.core.models.login.group import Group
 from uwos.core.models.login.group_member import GroupMember, GroupRole
 from uwos.core.models.login.organization import Organization
@@ -41,6 +43,8 @@ __all__ = [
     "SSOProvider",
     # Notes models
     "Note",
+    # Bookmarks
+    "Bookmark",
     # Calendar models
     "Calendar",
     "Category",
@@ -59,5 +63,7 @@ __all__ = [
     "AttendeeStatus",
     "AttendeeRole",
     "CalendarType",
-    "ResourceType", "SettingsProfile",
+    "ResourceType",
+    "SettingsProfile",
+    "EventTemplate",
 ]

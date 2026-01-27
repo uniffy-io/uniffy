@@ -335,7 +335,7 @@ class OrganizationsHandlers:
         request: ListMembersRequest,
         ctx: RequestContext,
     ) -> ListMembersResponse:
-        """List organization members (org admin only)."""
+        """List organization members (available to all members)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -346,7 +346,7 @@ class OrganizationsHandlers:
         try:
             async for session in get_async_session():
                 ops = OrganizationOperations(session)
-                await ops.require_org_admin(user_id, org_id)
+                await ops.require_org_member(user_id, org_id)
 
                 page = 1
                 page_size = 50
@@ -367,19 +367,14 @@ class OrganizationsHandlers:
                     role_filter=role_filter,
                     search=request.search if request.HasField("search") else None,
                     include_inactive=(
-                        request.include_inactive
-                        if request.HasField("include_inactive")
-                        else False
+                        request.include_inactive if request.HasField("include_inactive") else False
                     ),
                 )
 
                 total_pages = (total + page_size - 1) // page_size
 
                 return ListMembersResponse(
-                    members=[
-                        member_info_to_proto(user, membership)
-                        for membership, user in members
-                    ],
+                    members=[member_info_to_proto(user, membership) for membership, user in members],
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -570,14 +565,10 @@ class OrganizationsHandlers:
                     content_type=content_type,
                     default_visibility=default_visibility,
                     members_can_view=(
-                        request.members_can_view
-                        if request.HasField("members_can_view")
-                        else None
+                        request.members_can_view if request.HasField("members_can_view") else None
                     ),
                     members_can_edit=(
-                        request.members_can_edit
-                        if request.HasField("members_can_edit")
-                        else None
+                        request.members_can_edit if request.HasField("members_can_edit") else None
                     ),
                     members_can_delete=(
                         request.members_can_delete
@@ -585,9 +576,7 @@ class OrganizationsHandlers:
                         else None
                     ),
                     members_can_share=(
-                        request.members_can_share
-                        if request.HasField("members_can_share")
-                        else None
+                        request.members_can_share if request.HasField("members_can_share") else None
                     ),
                 )
 

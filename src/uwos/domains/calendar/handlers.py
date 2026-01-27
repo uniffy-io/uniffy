@@ -1,5 +1,6 @@
 """Calendar RPC handlers - thin layer delegating to operations."""
 
+import contextlib
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -22,12 +23,14 @@ from uwos.domains.calendar.converters import (
     event_to_proto,
     recurrence_config_from_proto,
     recurrence_from_proto,
+    template_to_proto,
     visibility_from_proto,
 )
 from uwos.domains.calendar.operations import (
     CalendarEventOperations,
     CalendarOperations,
     CategoryOperations,
+    EventTemplateOperations,
 )
 from uwos.gen.cal.v1.calendar_pb2 import (
     AddAttendeesRequest,
@@ -36,30 +39,38 @@ from uwos.gen.cal.v1.calendar_pb2 import (
     CreateCalendarRequest,
     CreateCategoryRequest,
     CreateEventRequest,
+    CreateEventTemplateRequest,
     DeleteCalendarRequest,
     DeleteCalendarResponse,
     DeleteCategoryRequest,
     DeleteCategoryResponse,
     DeleteEventRequest,
     DeleteEventResponse,
+    DeleteEventTemplateRequest,
+    DeleteEventTemplateResponse,
     EventResponse,
+    EventTemplateResponse,
     GetCalendarRequest,
     GetCategoryRequest,
     GetEventRequest,
     GetEventsInRangeRequest,
     GetEventsInRangeResponse,
+    GetEventTemplateRequest,
     ListCalendarsRequest,
     ListCalendarsResponse,
     ListCategoriesRequest,
     ListCategoriesResponse,
     ListEventsRequest,
     ListEventsResponse,
+    ListEventTemplatesRequest,
+    ListEventTemplatesResponse,
     RemoveAttendeesRequest,
     UpdateAttendeeStatusRequest,
     UpdateAttendeeStatusResponse,
     UpdateCalendarRequest,
     UpdateCategoryRequest,
     UpdateEventRequest,
+    UpdateEventTemplateRequest,
 )
 
 
@@ -236,6 +247,8 @@ class CalendarHandlers:
                     ]
                 if request.HasField("visibility"):
                     kwargs["visibility"] = visibility_from_proto(request.visibility)
+                if request.attendee_ids:
+                    kwargs["attendee_ids"] = [UUID(id) for id in request.attendee_ids]
 
                 event = await ops.update(
                     user_id=user_id,
@@ -586,9 +599,7 @@ class CalendarHandlers:
                     visible_only=request.visible_only,
                 )
 
-                return ListCalendarsResponse(
-                    calendars=[calendar_to_proto(c) for c in calendars]
-                )
+                return ListCalendarsResponse(calendars=[calendar_to_proto(c) for c in calendars])
 
         except ConnectError:
             raise
@@ -755,9 +766,7 @@ class CalendarHandlers:
 
                 categories = await ops.list_categories(user_id, organization_id)
 
-                return ListCategoriesResponse(
-                    categories=[category_to_proto(c) for c in categories]
-                )
+                return ListCategoriesResponse(categories=[category_to_proto(c) for c in categories])
 
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
@@ -891,4 +900,180 @@ class CalendarHandlers:
             raise
         except Exception as e:
             logger.error(f"Error removing attendees: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    # ─────────────────────────────────────────────────────────────
+    # Template Operations
+    # ─────────────────────────────────────────────────────────────
+
+    async def create_event_template(
+        self,
+        request: CreateEventTemplateRequest,
+        ctx: RequestContext,
+    ) -> EventTemplateResponse:
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = EventTemplateOperations(session)
+
+                category_id = None
+                if request.category_id:
+                    with contextlib.suppress(ValueError):
+                        category_id = UUID(request.category_id)
+
+                visibility = visibility_from_proto(request.visibility)
+
+                template = await ops.create(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    title=request.title,
+                    description=request.description,
+                    duration_minutes=request.duration_minutes,
+                    location=request.location,
+                    meeting_url=request.meeting_url if request.meeting_url else None,
+                    category_id=category_id,
+                    tags=list(request.tags),
+                    visibility=visibility,
+                )
+
+                return EventTemplateResponse(template=template_to_proto(template))
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except Exception as e:
+            logger.error(f"Error creating template: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_event_template(
+        self,
+        request: GetEventTemplateRequest,
+        ctx: RequestContext,
+    ) -> EventTemplateResponse:
+        try:
+            template_id = UUID(request.template_id)
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = EventTemplateOperations(session)
+                template = await ops.get_by_id(template_id, organization_id, user_id)
+                return EventTemplateResponse(template=template_to_proto(template))
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Template not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except Exception as e:
+            logger.error(f"Error getting template: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def update_event_template(
+        self,
+        request: UpdateEventTemplateRequest,
+        ctx: RequestContext,
+    ) -> EventTemplateResponse:
+        try:
+            template_id = UUID(request.template_id)
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        update_data = {}
+        if request.HasField("title"):
+            update_data["title"] = request.title
+        if request.HasField("description"):
+            update_data["description"] = request.description
+        if request.HasField("duration_minutes"):
+            update_data["duration_minutes"] = request.duration_minutes
+        if request.HasField("location"):
+            update_data["location"] = request.location
+        if request.HasField("meeting_url"):
+            update_data["meeting_url"] = request.meeting_url
+        if request.HasField("category_id"):
+            try:
+                update_data["category_id"] = UUID(request.category_id)
+            except ValueError:
+                update_data["category_id"] = None
+        if request.tags:
+            update_data["tags"] = list(request.tags)
+        if request.HasField("visibility"):
+            update_data["visibility"] = visibility_from_proto(request.visibility)
+
+        try:
+            async for session in get_async_session():
+                ops = EventTemplateOperations(session)
+                template = await ops.update(
+                    template_id=template_id,
+                    organization_id=organization_id,
+                    user_id=user_id,
+                    **update_data,
+                )
+                return EventTemplateResponse(template=template_to_proto(template))
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Template not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except Exception as e:
+            logger.error(f"Error updating template: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def delete_event_template(
+        self,
+        request: DeleteEventTemplateRequest,
+        ctx: RequestContext,
+    ) -> DeleteEventTemplateResponse:
+        try:
+            template_id = UUID(request.template_id)
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = EventTemplateOperations(session)
+                await ops.delete(template_id, organization_id, user_id)
+                return DeleteEventTemplateResponse(success=True, message="Template deleted")
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Template not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except Exception as e:
+            logger.error(f"Error deleting template: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def list_event_templates(
+        self,
+        request: ListEventTemplatesRequest,
+        ctx: RequestContext,
+    ) -> ListEventTemplatesResponse:
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = EventTemplateOperations(session)
+                templates = await ops.list(organization_id, user_id)
+                return ListEventTemplatesResponse(
+                    templates=[template_to_proto(t) for t in templates]
+                )
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except Exception as e:
+            logger.error(f"Error listing templates: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")

@@ -1076,6 +1076,13 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
    */
   visibility?: VisibilityScope;
 
+  /**
+   * Updated attendee IDs (replaces existing list)
+   *
+   * @generated from field: repeated string attendee_ids = 18;
+   */
+  attendeeIds: string[] = [];
+
   constructor(data?: PartialMessage<UpdateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1101,6 +1108,7 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 15, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 18, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventRequest {
@@ -2836,6 +2844,559 @@ export class RemoveAttendeesRequest extends Message<RemoveAttendeesRequest> {
 
   static equals(a: RemoveAttendeesRequest | PlainMessage<RemoveAttendeesRequest> | undefined, b: RemoveAttendeesRequest | PlainMessage<RemoveAttendeesRequest> | undefined): boolean {
     return proto3.util.equals(RemoveAttendeesRequest, a, b);
+  }
+}
+
+/**
+ * Event template
+ *
+ * @generated from message cal.v1.EventTemplate
+ */
+export class EventTemplate extends Message<EventTemplate> {
+  /**
+   * Unique template identifier
+   *
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * Organization ID
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Template title
+   *
+   * @generated from field: string title = 3;
+   */
+  title = "";
+
+  /**
+   * Template description
+   *
+   * @generated from field: string description = 4;
+   */
+  description = "";
+
+  /**
+   * Default duration in minutes
+   *
+   * @generated from field: int32 duration_minutes = 5;
+   */
+  durationMinutes = 0;
+
+  /**
+   * Location
+   *
+   * @generated from field: string location = 6;
+   */
+  location = "";
+
+  /**
+   * Meeting URL
+   *
+   * @generated from field: string meeting_url = 7;
+   */
+  meetingUrl = "";
+
+  /**
+   * Category ID
+   *
+   * @generated from field: string category_id = 8;
+   */
+  categoryId = "";
+
+  /**
+   * Tags
+   *
+   * @generated from field: repeated string tags = 9;
+   */
+  tags: string[] = [];
+
+  /**
+   * Visibility scope
+   *
+   * @generated from field: common.v1.VisibilityScope visibility = 10;
+   */
+  visibility = VisibilityScope.UNSPECIFIED;
+
+  /**
+   * Creator ID
+   *
+   * @generated from field: string created_by = 11;
+   */
+  createdBy = "";
+
+  /**
+   * Created timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp created_at = 12;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * Updated timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp updated_at = 13;
+   */
+  updatedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<EventTemplate>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.EventTemplate";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "duration_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "meeting_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 10, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 11, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "created_at", kind: "message", T: Timestamp },
+    { no: 13, name: "updated_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventTemplate {
+    return new EventTemplate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventTemplate {
+    return new EventTemplate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventTemplate {
+    return new EventTemplate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EventTemplate | PlainMessage<EventTemplate> | undefined, b: EventTemplate | PlainMessage<EventTemplate> | undefined): boolean {
+    return proto3.util.equals(EventTemplate, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.CreateEventTemplateRequest
+ */
+export class CreateEventTemplateRequest extends Message<CreateEventTemplateRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string title = 2;
+   */
+  title = "";
+
+  /**
+   * @generated from field: string description = 3;
+   */
+  description = "";
+
+  /**
+   * @generated from field: int32 duration_minutes = 4;
+   */
+  durationMinutes = 0;
+
+  /**
+   * @generated from field: string location = 5;
+   */
+  location = "";
+
+  /**
+   * @generated from field: string meeting_url = 6;
+   */
+  meetingUrl = "";
+
+  /**
+   * @generated from field: string category_id = 7;
+   */
+  categoryId = "";
+
+  /**
+   * @generated from field: repeated string tags = 8;
+   */
+  tags: string[] = [];
+
+  /**
+   * @generated from field: common.v1.VisibilityScope visibility = 9;
+   */
+  visibility = VisibilityScope.UNSPECIFIED;
+
+  constructor(data?: PartialMessage<CreateEventTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.CreateEventTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "duration_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "meeting_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventTemplateRequest {
+    return new CreateEventTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateEventTemplateRequest {
+    return new CreateEventTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateEventTemplateRequest {
+    return new CreateEventTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateEventTemplateRequest | PlainMessage<CreateEventTemplateRequest> | undefined, b: CreateEventTemplateRequest | PlainMessage<CreateEventTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(CreateEventTemplateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.GetEventTemplateRequest
+ */
+export class GetEventTemplateRequest extends Message<GetEventTemplateRequest> {
+  /**
+   * @generated from field: string template_id = 1;
+   */
+  templateId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<GetEventTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.GetEventTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "template_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventTemplateRequest {
+    return new GetEventTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventTemplateRequest {
+    return new GetEventTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventTemplateRequest {
+    return new GetEventTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetEventTemplateRequest | PlainMessage<GetEventTemplateRequest> | undefined, b: GetEventTemplateRequest | PlainMessage<GetEventTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(GetEventTemplateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.UpdateEventTemplateRequest
+ */
+export class UpdateEventTemplateRequest extends Message<UpdateEventTemplateRequest> {
+  /**
+   * @generated from field: string template_id = 1;
+   */
+  templateId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional string title = 3;
+   */
+  title?: string;
+
+  /**
+   * @generated from field: optional string description = 4;
+   */
+  description?: string;
+
+  /**
+   * @generated from field: optional int32 duration_minutes = 5;
+   */
+  durationMinutes?: number;
+
+  /**
+   * @generated from field: optional string location = 6;
+   */
+  location?: string;
+
+  /**
+   * @generated from field: optional string meeting_url = 7;
+   */
+  meetingUrl?: string;
+
+  /**
+   * @generated from field: optional string category_id = 8;
+   */
+  categoryId?: string;
+
+  /**
+   * @generated from field: repeated string tags = 9;
+   */
+  tags: string[] = [];
+
+  /**
+   * @generated from field: optional common.v1.VisibilityScope visibility = 10;
+   */
+  visibility?: VisibilityScope;
+
+  constructor(data?: PartialMessage<UpdateEventTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.UpdateEventTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "template_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "duration_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 6, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "meeting_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 10, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventTemplateRequest {
+    return new UpdateEventTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateEventTemplateRequest {
+    return new UpdateEventTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateEventTemplateRequest {
+    return new UpdateEventTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateEventTemplateRequest | PlainMessage<UpdateEventTemplateRequest> | undefined, b: UpdateEventTemplateRequest | PlainMessage<UpdateEventTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateEventTemplateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.DeleteEventTemplateRequest
+ */
+export class DeleteEventTemplateRequest extends Message<DeleteEventTemplateRequest> {
+  /**
+   * @generated from field: string template_id = 1;
+   */
+  templateId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<DeleteEventTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.DeleteEventTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "template_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteEventTemplateRequest {
+    return new DeleteEventTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteEventTemplateRequest {
+    return new DeleteEventTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteEventTemplateRequest {
+    return new DeleteEventTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteEventTemplateRequest | PlainMessage<DeleteEventTemplateRequest> | undefined, b: DeleteEventTemplateRequest | PlainMessage<DeleteEventTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteEventTemplateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.DeleteEventTemplateResponse
+ */
+export class DeleteEventTemplateResponse extends Message<DeleteEventTemplateResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  /**
+   * @generated from field: string message = 2;
+   */
+  message = "";
+
+  constructor(data?: PartialMessage<DeleteEventTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.DeleteEventTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteEventTemplateResponse {
+    return new DeleteEventTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteEventTemplateResponse {
+    return new DeleteEventTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteEventTemplateResponse {
+    return new DeleteEventTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteEventTemplateResponse | PlainMessage<DeleteEventTemplateResponse> | undefined, b: DeleteEventTemplateResponse | PlainMessage<DeleteEventTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteEventTemplateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.EventTemplateResponse
+ */
+export class EventTemplateResponse extends Message<EventTemplateResponse> {
+  /**
+   * @generated from field: cal.v1.EventTemplate template = 1;
+   */
+  template?: EventTemplate;
+
+  constructor(data?: PartialMessage<EventTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.EventTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "template", kind: "message", T: EventTemplate },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventTemplateResponse {
+    return new EventTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventTemplateResponse {
+    return new EventTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventTemplateResponse {
+    return new EventTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EventTemplateResponse | PlainMessage<EventTemplateResponse> | undefined, b: EventTemplateResponse | PlainMessage<EventTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(EventTemplateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.ListEventTemplatesRequest
+ */
+export class ListEventTemplatesRequest extends Message<ListEventTemplatesRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<ListEventTemplatesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.ListEventTemplatesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListEventTemplatesRequest {
+    return new ListEventTemplatesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListEventTemplatesRequest {
+    return new ListEventTemplatesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListEventTemplatesRequest {
+    return new ListEventTemplatesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListEventTemplatesRequest | PlainMessage<ListEventTemplatesRequest> | undefined, b: ListEventTemplatesRequest | PlainMessage<ListEventTemplatesRequest> | undefined): boolean {
+    return proto3.util.equals(ListEventTemplatesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message cal.v1.ListEventTemplatesResponse
+ */
+export class ListEventTemplatesResponse extends Message<ListEventTemplatesResponse> {
+  /**
+   * @generated from field: repeated cal.v1.EventTemplate templates = 1;
+   */
+  templates: EventTemplate[] = [];
+
+  constructor(data?: PartialMessage<ListEventTemplatesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "cal.v1.ListEventTemplatesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "templates", kind: "message", T: EventTemplate, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListEventTemplatesResponse {
+    return new ListEventTemplatesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListEventTemplatesResponse {
+    return new ListEventTemplatesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListEventTemplatesResponse {
+    return new ListEventTemplatesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListEventTemplatesResponse | PlainMessage<ListEventTemplatesResponse> | undefined, b: ListEventTemplatesResponse | PlainMessage<ListEventTemplatesResponse> | undefined): boolean {
+    return proto3.util.equals(ListEventTemplatesResponse, a, b);
   }
 }
 

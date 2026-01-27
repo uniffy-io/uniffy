@@ -27,12 +27,13 @@ import {
   Question,
   Link,
   Info,
+  Warning,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { closeDetailPanel } from '../../store';
 import { deleteEvent } from '../../store/calendarThunks';
 import { useCalendarEvents } from '../../hooks';
-import { getCategoryColor } from '../../constants';
+import { CATEGORY_COLORS } from '../../constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { EventEditor } from '../modals/EventEditor';
 import { MarkdownEditor } from '@/components/editor';
@@ -42,6 +43,7 @@ import {
   formatTimeRange,
   getTimezoneOffset,
 } from '../../utils';
+import { findConflicts } from '../../utils/eventPositioning';
 
 /**
  * Extract URN mentions from markdown content.
@@ -67,12 +69,16 @@ function extractMentionsFromMarkdown(markdown: string): Array<{ label: string; u
   return uniqueMentions;
 }
 
+// Default color when category is not found
+const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
+
 export function DetailPanel() {
   const dispatch = useAppDispatch();
-  const { selectedEvent } = useCalendarEvents();
+  const { selectedEvent, visibleEvents } = useCalendarEvents();
   const displayTimezone = useAppSelector(
     (state) => state.calendarUi.displayTimezone
   );
+  const categories = useAppSelector((state) => state.calendar.categories);
   const [isEditingOpen, setIsEditingOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -88,6 +94,12 @@ export function DetailPanel() {
     return extractMentionsFromMarkdown(eventDescription);
   }, [eventDescription]);
 
+  // Calculate conflicts for the selected event
+  const conflictingEvents = useMemo(() => {
+    if (!selectedEvent) return [];
+    return findConflicts(selectedEvent, visibleEvents);
+  }, [selectedEvent, visibleEvents]);
+
   if (!selectedEvent) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -96,7 +108,9 @@ export function DetailPanel() {
     );
   }
 
-  const categoryColor = getCategoryColor(selectedEvent.categoryId);
+  // Look up category color from Redux state (real categories from backend)
+  const category = selectedEvent.categoryId ? categories[selectedEvent.categoryId] : null;
+  const categoryColor = category?.color ?? DEFAULT_COLOR;
   const timezoneOffset = getTimezoneOffset(displayTimezone);
 
   const handleBack = () => {
@@ -279,6 +293,45 @@ export function DetailPanel() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Conflicts Warning */}
+          {conflictingEvents.length > 0 && (
+            <div className="px-5 py-3 border-t border-border bg-yellow-50 dark:bg-yellow-900/10">
+              <h3 className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 uppercase tracking-wide mb-2 flex items-center gap-2">
+                <Warning size={14} weight="duotone" />
+                Scheduling Conflicts ({conflictingEvents.length})
+              </h3>
+              <div className="space-y-2">
+                {conflictingEvents.map((conflict) => (
+                  <div
+                    key={conflict.id}
+                    className="flex flex-col gap-1 p-2 rounded-md bg-card border border-yellow-300 dark:border-yellow-700/50"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {conflict.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock size={12} weight="duotone" />
+                      <span>
+                        {formatTimeRange(conflict.startTime, conflict.endTime)}
+                      </span>
+                    </div>
+                    {conflict.location && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin size={12} weight="duotone" />
+                        <span className="truncate">{conflict.location}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-yellow-700 dark:text-yellow-500">
+                These events overlap with the current event's time slot. Consider rescheduling to avoid conflicts.
+              </p>
             </div>
           )}
         </div>

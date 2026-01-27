@@ -242,7 +242,7 @@ class GetEventRequest(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UpdateEventRequest(_message.Message):
-    __slots__ = ("event_id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "visibility")
+    __slots__ = ("event_id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "visibility", "attendee_ids")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
@@ -260,6 +260,7 @@ class UpdateEventRequest(_message.Message):
     TAGS_FIELD_NUMBER: _ClassVar[int]
     LINKED_RESOURCE_URNS_FIELD_NUMBER: _ClassVar[int]
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ATTENDEE_IDS_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     organization_id: str
     title: str
@@ -277,7 +278,8 @@ class UpdateEventRequest(_message.Message):
     tags: _containers.RepeatedScalarFieldContainer[str]
     linked_resource_urns: _containers.RepeatedScalarFieldContainer[str]
     visibility: _common_pb2.VisibilityScope
-    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+    attendee_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., attendee_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class DeleteEventRequest(_message.Message):
     __slots__ = ("event_id", "organization_id", "permanent")
@@ -594,3 +596,121 @@ class RemoveAttendeesRequest(_message.Message):
     organization_id: str
     user_ids: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., user_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class EventTemplate(_message.Message):
+    __slots__ = ("id", "organization_id", "title", "description", "duration_minutes", "location", "meeting_url", "category_id", "tags", "visibility", "created_by", "created_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    MEETING_URL_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BY_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    organization_id: str
+    title: str
+    description: str
+    duration_minutes: int
+    location: str
+    meeting_url: str
+    category_id: str
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    visibility: _common_pb2.VisibilityScope
+    created_by: str
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., duration_minutes: _Optional[int] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., category_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., created_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class CreateEventTemplateRequest(_message.Message):
+    __slots__ = ("organization_id", "title", "description", "duration_minutes", "location", "meeting_url", "category_id", "tags", "visibility")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    MEETING_URL_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    title: str
+    description: str
+    duration_minutes: int
+    location: str
+    meeting_url: str
+    category_id: str
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    visibility: _common_pb2.VisibilityScope
+    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., duration_minutes: _Optional[int] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., category_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+
+class GetEventTemplateRequest(_message.Message):
+    __slots__ = ("template_id", "organization_id")
+    TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    template_id: str
+    organization_id: str
+    def __init__(self, template_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
+class UpdateEventTemplateRequest(_message.Message):
+    __slots__ = ("template_id", "organization_id", "title", "description", "duration_minutes", "location", "meeting_url", "category_id", "tags", "visibility")
+    TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    MEETING_URL_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    template_id: str
+    organization_id: str
+    title: str
+    description: str
+    duration_minutes: int
+    location: str
+    meeting_url: str
+    category_id: str
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    visibility: _common_pb2.VisibilityScope
+    def __init__(self, template_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., duration_minutes: _Optional[int] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., category_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+
+class DeleteEventTemplateRequest(_message.Message):
+    __slots__ = ("template_id", "organization_id")
+    TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    template_id: str
+    organization_id: str
+    def __init__(self, template_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
+class DeleteEventTemplateResponse(_message.Message):
+    __slots__ = ("success", "message")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
+
+class EventTemplateResponse(_message.Message):
+    __slots__ = ("template",)
+    TEMPLATE_FIELD_NUMBER: _ClassVar[int]
+    template: EventTemplate
+    def __init__(self, template: _Optional[_Union[EventTemplate, _Mapping]] = ...) -> None: ...
+
+class ListEventTemplatesRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class ListEventTemplatesResponse(_message.Message):
+    __slots__ = ("templates",)
+    TEMPLATES_FIELD_NUMBER: _ClassVar[int]
+    templates: _containers.RepeatedCompositeFieldContainer[EventTemplate]
+    def __init__(self, templates: _Optional[_Iterable[_Union[EventTemplate, _Mapping]]] = ...) -> None: ...

@@ -2,7 +2,9 @@
  * DayView - Single day calendar view
  */
 
-import { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { updateEventThunk } from '../../store';
 import { useCalendarNavigation, useCalendarEvents } from '../../hooks';
 import { TimeColumn, TIME_COLUMN_TOP_PADDING } from './TimeColumn';
 import { DayHeader } from './DayHeader';
@@ -14,6 +16,8 @@ import { GRID, LAYOUT } from '../../constants';
 import { parseISO, format } from '../../utils';
 
 export function DayView() {
+  const dispatch = useAppDispatch();
+  const draggedEventId = useAppSelector((state) => state.calendarUi.draggedEventId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const { currentDate } = useCalendarNavigation();
@@ -24,6 +28,7 @@ export function DayView() {
   
   // State for half-hour slot selection
   const [selectedSlot, setSelectedSlot] = useState<{ hour: number; isHalf: boolean } | null>(null);
+  const [dropPreview, setDropPreview] = useState<{ hour: number; isHalf: boolean } | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
   const currentDateObj = useMemo(() => parseISO(currentDate), [currentDate]);
@@ -80,6 +85,80 @@ export function DayView() {
   }, [selectedSlot]);
 
   /**
+   * Calculate grid slot from mouse coordinates
+   */
+  const getSlotFromCoordinates = useCallback((clientY: number) => {
+    if (!gridRef.current || !scrollRef.current) return null;
+
+    const scrollRect = scrollRef.current.getBoundingClientRect();
+    const clickY = clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
+    
+    if (clickY < 0) return null;
+
+    const halfHourSlotHeight = hourHeight / 2;
+    const halfHourOffset = Math.floor(clickY / halfHourSlotHeight);
+    const hour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
+    const isHalf = halfHourOffset % 2 === 1;
+
+    if (hour < GRID.START_HOUR || hour >= GRID.END_HOUR) return null;
+
+    return { hour, isHalf };
+  }, [hourHeight]);
+
+  /**
+   * Handle drag over to show preview
+   */
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); // Allow dropping
+    
+    if (!draggedEventId) return;
+
+    const slot = getSlotFromCoordinates(e.clientY);
+    if (slot) {
+      setDropPreview(slot);
+    } else {
+      setDropPreview(null);
+    }
+  }, [draggedEventId, getSlotFromCoordinates]);
+
+  /**
+   * Handle drop to reschedule event
+   */
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDropPreview(null);
+
+    if (!draggedEventId) return;
+
+    const slot = getSlotFromCoordinates(e.clientY);
+    if (!slot) return;
+
+    // Calculate new start time
+    const newStartDate = new Date(currentDate);
+    newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
+
+    const match = positionedEvents.find(e => e.id === draggedEventId);
+    if (!match) return;
+
+    const start = new Date(match.startTime);
+    const end = new Date(match.endTime);
+    const durationMs = end.getTime() - start.getTime();
+
+    const newStartTime = newStartDate.toISOString();
+    const newEndTime = new Date(newStartDate.getTime() + durationMs).toISOString();
+
+    try {
+      await dispatch(updateEventThunk({
+        eventId: draggedEventId,
+        startTime: newStartTime,
+        endTime: newEndTime,
+      })).unwrap();
+    } catch (error) {
+      console.error('Failed to reschedule event:', error);
+    }
+  }, [draggedEventId, getSlotFromCoordinates, currentDate, positionedEvents, dispatch]);
+
+  /**
    * Handle clicks on empty grid cells - select half-hour slots
    */
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -95,34 +174,24 @@ export function DayView() {
       return;
     }
 
-    if (!gridRef.current || !scrollRef.current) return;
-
-    // Calculate which half-hour slot was clicked (accounting for top padding)
-    const scrollRect = scrollRef.current.getBoundingClientRect();
-    const clickY = e.clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
-    if (clickY < 0) return; // Clicked in the padding area above the grid
-    const halfHourSlotHeight = hourHeight / 2;
-    const halfHourOffset = Math.floor(clickY / halfHourSlotHeight);
-    const clickedHour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
-    const isHalf = halfHourOffset % 2 === 1;
-
-    // Ensure hour is within bounds
-    if (clickedHour < GRID.START_HOUR || clickedHour >= GRID.END_HOUR) return;
-
+    const slot = getSlotFromCoordinates(e.clientY);
+    if (!slot) return;
+    
+    const { hour, isHalf } = slot;
     const currentTime = Date.now();
     const isDoubleClick = currentTime - lastClickTimeRef.current < 300 && 
-                          selectedSlot?.hour === clickedHour && 
+                          selectedSlot?.hour === hour && 
                           selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
       // Double-click: create event with 30-minute duration
-      setModalStartHour(clickedHour + (isHalf ? 0.5 : 0));
-      setModalEndHour(clickedHour + (isHalf ? 1 : 0.5));
+      setModalStartHour(hour + (isHalf ? 0.5 : 0));
+      setModalEndHour(hour + (isHalf ? 1 : 0.5));
       setShowQuickEventModal(true);
       setSelectedSlot(null);
     } else {
       // Single click: select slot
-      setSelectedSlot({ hour: clickedHour, isHalf });
+      setSelectedSlot({ hour, isHalf });
       lastClickTimeRef.current = currentTime;
     }
   };
@@ -156,6 +225,8 @@ export function DayView() {
               className="flex-1 relative cursor-pointer select-none"
               style={{ minHeight: gridHeight + TIME_COLUMN_TOP_PADDING }}
               onClick={handleGridClick}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
             >
               {/* Grid lines */}
               <GridLines columnCount={1} hourCount={hourCount} topOffset={TIME_COLUMN_TOP_PADDING} hourHeight={hourHeight} />
@@ -167,6 +238,21 @@ export function DayView() {
                   style={{
                     top: `${TIME_COLUMN_TOP_PADDING + (selectedSlot.hour - GRID.START_HOUR) * hourHeight + (selectedSlot.isHalf ? hourHeight / 2 : 0)}px`,
                     height: `${hourHeight / 2}px`,
+                  }}
+                />
+              )}
+
+              {/* Drop Preview Ghost */}
+              {dropPreview && draggedEventId && (
+                <div
+                  className="absolute bg-primary/20 border-2 border-dashed border-primary z-20 pointer-events-none rounded transition-all duration-75"
+                  style={{
+                    top: `${TIME_COLUMN_TOP_PADDING + (dropPreview.hour - GRID.START_HOUR) * hourHeight + (dropPreview.isHalf ? hourHeight / 2 : 0)}px`,
+                    height: positionedEvents.find(e => e.id === draggedEventId) 
+                      ? `${(positionedEvents.find(e => e.id === draggedEventId)!.height / GRID.HOUR_HEIGHT) * hourHeight}px`
+                      : `${hourHeight}px`,
+                    left: 0,
+                    right: 0,
                   }}
                 />
               )}

@@ -3,9 +3,9 @@
  * Dialog for creating a new event category
  */
 
-import { useState } from 'react';
-import { useAppDispatch } from '@/app/hooks';
-import { addCategory } from '../../store';
+import { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { createCategory, updateCategory } from '../../store/calendarThunks';
 import { cn } from '@/utils/cn';
 
 interface AddCategoryModalProps {
@@ -27,35 +27,67 @@ const CATEGORY_COLORS = [
 
 export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
   const dispatch = useAppDispatch();
+  const categories = useAppSelector((state) => state.calendar.categories);
+  const editingCategoryId = useAppSelector((state) => state.calendarUi.editingCategoryId);
+  
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState(CATEGORY_COLORS[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Populate form when editing
+  useEffect(() => {
+    if (isOpen) {
+      if (editingCategoryId && categories[editingCategoryId]) {
+        const category = categories[editingCategoryId];
+        setName(category.name);
+        setSelectedColor(category.color);
+      } else {
+        setName('');
+        setSelectedColor(CATEGORY_COLORS[0]);
+      }
+      setError(null);
+    }
+  }, [isOpen, editingCategoryId, categories]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
-      alert('Please enter a category name');
+      setError('Please enter a category name');
       return;
     }
 
-    const newCategory = {
-      id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      name: name.trim(),
-      color: selectedColor,
-      isDefault: false,
-      organizationId: 'org-1',
-      sortOrder: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    setIsSubmitting(true);
+    setError(null);
 
-    dispatch(addCategory(newCategory));
-    setName('');
-    setSelectedColor(CATEGORY_COLORS[0]);
-    onClose();
+    try {
+      if (editingCategoryId) {
+        await dispatch(updateCategory({
+          categoryId: editingCategoryId,
+          name: name.trim(),
+          color: selectedColor,
+        })).unwrap();
+      } else {
+        await dispatch(createCategory({
+          name: name.trim(),
+          color: selectedColor,
+        })).unwrap();
+      }
+      
+      onClose();
+    } catch (err: unknown) {
+      console.error('Failed to save category:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save category. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
+
+  const isEditing = !!editingCategoryId;
 
   return (
     <>
@@ -69,7 +101,9 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-96 border border-border">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">New Category</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            {isEditing ? 'Edit Category' : 'New Category'}
+          </h2>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
@@ -90,66 +124,72 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
           </button>
         </div>
 
-        {/* Form */}
+        {/* Content */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* Name Input */}
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/50">
+              {error}
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Category Name
+              Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Meetings, Deep Work, Personal"
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
+              placeholder="e.g. Work, Personal"
               autoFocus
             />
           </div>
 
-          {/* Color Picker */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Color
             </label>
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-5 gap-2">
               {CATEGORY_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => setSelectedColor(color)}
                   className={cn(
-                    'w-8 h-8 rounded-full transition-all',
-                    selectedColor === color
-                      ? 'ring-2 ring-offset-2 ring-offset-background ring-primary'
-                      : 'hover:opacity-80'
+                    "w-8 h-8 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background transition-transform hover:scale-110",
+                    selectedColor === color ? "ring-2 ring-offset-2 ring-primary ring-offset-background scale-110" : ""
                   )}
                   style={{ backgroundColor: color }}
+                  title={color}
                 />
               ))}
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-2 pt-4 border-t border-border">
+          {/* Footer */}
+          <div className="flex justify-end gap-2 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={cn(
-                'flex-1 px-4 py-2 rounded-md font-medium transition-colors',
-                name.trim()
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              )}
-              disabled={!name.trim()}
+              disabled={isSubmitting}
+              className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-opacity disabled:opacity-50 flex items-center gap-2"
             >
-              Create
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                isEditing ? 'Save Changes' : 'Create Category'
+              )}
             </button>
           </div>
         </form>

@@ -220,9 +220,7 @@ class OrganizationOperations:
             )
 
         # Delete groups
-        await self._session.execute(
-            sql_delete(Group).where(Group.organization_id == org_id)
-        )
+        await self._session.execute(sql_delete(Group).where(Group.organization_id == org_id))
 
         # Delete permission defaults
         await self._session.execute(
@@ -446,6 +444,37 @@ class OrganizationOperations:
             OrganizationRole.ADMIN,
         ):
             raise PermissionDeniedError("Requires organization admin privileges")
+        return membership
+
+    async def require_org_member(
+        self,
+        user_id: UUID,
+        org_id: UUID,
+    ) -> OrganizationMember:
+        """
+        Verify user is a member of organization.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID.
+        org_id : UUID
+            Organization ID.
+
+        Returns
+        -------
+        OrganizationMember
+            User's membership.
+
+        Raises
+        ------
+        PermissionDeniedError
+            If user is not a member.
+
+        """
+        membership = await self.get_membership(user_id, org_id)
+        if not membership:
+            raise PermissionDeniedError("Requires organization membership")
         return membership
 
     async def list_members(
@@ -682,8 +711,9 @@ class OrganizationOperations:
 
         """
         result = await self._session.execute(
-            select(OrganizationPermissionDefaults)
-            .where(OrganizationPermissionDefaults.organization_id == org_id)
+            select(OrganizationPermissionDefaults).where(
+                OrganizationPermissionDefaults.organization_id == org_id
+            )
         )
         return list(result.scalars().all())
 

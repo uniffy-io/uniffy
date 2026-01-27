@@ -5,6 +5,7 @@ from uwos.core.models.calendar.attendee import EventAttendee
 from uwos.core.models.calendar.calendar import Calendar
 from uwos.core.models.calendar.category import Category
 from uwos.core.models.calendar.event import CalendarEvent
+from uwos.core.models.calendar.template import EventTemplate
 from uwos.core.models.shared import (
     AttendeeRole,
     AttendeeStatus,
@@ -36,6 +37,9 @@ from uwos.gen.cal.v1.calendar_pb2 import (
 )
 from uwos.gen.cal.v1.calendar_pb2 import (
     DayOfWeek as ProtoDayOfWeek,
+)
+from uwos.gen.cal.v1.calendar_pb2 import (
+    EventTemplate as ProtoEventTemplate,
 )
 from uwos.gen.cal.v1.calendar_pb2 import (
     LinkedResource as ProtoLinkedResource,
@@ -305,9 +309,7 @@ def event_to_proto(
         if config.get("day_of_month"):
             proto_recurrence_config.day_of_month = config["day_of_month"]
         if config.get("end_date"):
-            proto_recurrence_config.end_date.CopyFrom(
-                datetime_to_timestamp(config["end_date"])
-            )
+            proto_recurrence_config.end_date.CopyFrom(datetime_to_timestamp(config["end_date"]))
         if config.get("max_occurrences"):
             proto_recurrence_config.max_occurrences = config["max_occurrences"]
         proto_event.recurrence.CopyFrom(proto_recurrence_config)
@@ -429,8 +431,7 @@ def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
 
     if proto_config.days_of_week:
         config["days_of_week"] = [
-            DAY_OF_WEEK_FROM_PROTO.get(day, "MONDAY")
-            for day in proto_config.days_of_week
+            DAY_OF_WEEK_FROM_PROTO.get(day, "MONDAY") for day in proto_config.days_of_week
         ]
 
     if proto_config.HasField("day_of_month"):
@@ -443,3 +444,27 @@ def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
         config["max_occurrences"] = proto_config.max_occurrences
 
     return config
+
+
+def template_to_proto(template: EventTemplate) -> ProtoEventTemplate:
+    """Convert EventTemplate model to proto."""
+    proto_visibility = VISIBILITY_TO_PROTO.get(
+        template.visibility,
+        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
+    )
+
+    return ProtoEventTemplate(
+        id=str(template.id),
+        organization_id=str(template.organization_id),
+        title=template.title,
+        description=template.description,
+        duration_minutes=template.duration_minutes,
+        location=template.location,
+        meeting_url=template.meeting_url,
+        category_id=str(template.category_id) if template.category_id else None,
+        tags=template.tags or [],
+        visibility=proto_visibility,
+        created_by=str(template.created_by),
+        created_at=datetime_to_timestamp(template.created_at),
+        updated_at=datetime_to_timestamp(template.updated_at),
+    )

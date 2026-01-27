@@ -76,6 +76,23 @@ services:
     networks:
       - uwos-network
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: uwos-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@uwos.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - uwos-network
+
 
 volumes:
   postgres_data:
@@ -83,6 +100,8 @@ volumes:
   meilisearch_data:
     driver: local
   valkey_data:
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:

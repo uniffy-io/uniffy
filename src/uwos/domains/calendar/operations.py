@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -13,6 +13,7 @@ from uwos.core.models.calendar.attendee import EventAttendee
 from uwos.core.models.calendar.calendar import Calendar
 from uwos.core.models.calendar.category import Category
 from uwos.core.models.calendar.event import CalendarEvent
+from uwos.core.models.calendar.template import EventTemplate
 from uwos.core.models.login.organization_member import OrganizationMember
 from uwos.core.models.shared import (
     AttendeeRole,
@@ -250,6 +251,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         is_focus_time: bool | None = None,
         tags: list[str] | None = None,
         linked_resources: list[dict] | None = None,
+        attendee_ids: list[UUID] | None = None,
         visibility: VisibilityScope | None = None,
     ) -> CalendarEvent:
         """
@@ -265,6 +267,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Event to update.
         ... : (other parameters)
             Fields to update (None = no change).
+        attendee_ids : list[UUID] | None
+            New list of attendees (replaces existing).
 
         Returns
         -------
@@ -312,6 +316,49 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.linked_resources = linked_resources
         if visibility is not None:
             event.visibility = visibility
+
+        # Update attendees
+        if attendee_ids is not None:
+            # Fetch existing attendees
+            stmt = select(EventAttendee).where(EventAttendee.event_id == event.id)
+            result = await self.session.execute(stmt)
+            existing_attendees = result.scalars().all()
+            existing_map = {a.user_id: a for a in existing_attendees}
+
+            # Don't touch the organizer (who is also an attendee usually)
+            # but let's handle if organizer is passed or not in the list.
+            # Logic: If passing a new list, synchronize it.
+
+            # Identify current and new sets
+            current_ids = set(existing_map.keys())
+
+            # Ensure organizer is implicitly in the new list if they are an attendee?
+            # Or just rely on what frontend sends.
+            # Usually organizer is an attendee with role=ORGANIZER.
+            # If the backend previously added organizer as attendee, we should probably keep them.
+            # But simpler logic: sync to what is provided, but handle organizer separately or
+            # assume frontend sends full list.
+
+            # Let's trust the input list but skip re-adding existing ones.
+            new_ids = set(attendee_ids)
+
+            # Remove attendees not in new list (except maybe organizer if not in list?)
+            # Usually organizer cannot be removed.
+            for user_id in current_ids - new_ids:
+                attendee = existing_map[user_id]
+                if attendee.user_id != event.organizer_id:  # Prevent removing organizer
+                    await self.session.delete(attendee)
+
+            # Add new attendees
+            for user_id in new_ids - current_ids:
+                if user_id != event.organizer_id:  # Organizer added on create, or check if missing
+                    attendee = EventAttendee(
+                        event_id=event.id,
+                        user_id=user_id,
+                        status=AttendeeStatus.PENDING,
+                        role=AttendeeRole.REQUIRED,
+                    )
+                    self.session.add(attendee)
 
         event.updated_at = datetime.now(UTC)
 
@@ -478,9 +525,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Events and total count.
 
         """
-        query = select(CalendarEvent).where(
-            CalendarEvent.organization_id == organization_id
-        )
+        query = select(CalendarEvent).where(CalendarEvent.organization_id == organization_id)
 
         # Apply access filter
         access_filter = self.access_query.build_accessible_filter(
@@ -865,9 +910,7 @@ class CalendarOperations:
         visible_only: bool = False,
     ) -> list[Calendar]:
         """List user's calendars."""
-        return await queries.get_user_calendars(
-            self.session, organization_id, user_id, visible_only
-        )
+        return await queries.get_user_calendars(self.session, organization_id, user_id, visible_only)
 
     async def ensure_default(
         self,
@@ -875,9 +918,7 @@ class CalendarOperations:
         user_id: UUID,
     ) -> Calendar:
         """Ensure user has a default calendar."""
-        return await queries.ensure_default_calendar(
-            self.session, organization_id, user_id
-        )
+        return await queries.ensure_default_calendar(self.session, organization_id, user_id)
 
 
 class CategoryOperations:
@@ -939,9 +980,7 @@ class CategoryOperations:
 
         # Get next sort order
         result = await self.session.execute(
-            select(func.max(Category.sort_order)).where(
-                Category.organization_id == organization_id
-            )
+            select(func.max(Category.sort_order)).where(Category.organization_id == organization_id)
         )
         max_order = result.scalar() or 0
 
@@ -1045,3 +1084,151 @@ class CategoryOperations:
         """Ensure organization has default categories."""
         await self._verify_org_membership(user_id, organization_id)
         return await queries.ensure_default_categories(self.session, organization_id)
+
+
+class EventTemplateOperations:
+    """
+    EventTemplate CRUD operations.
+
+    Templates are organization-wide or private.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize template operations."""
+        self.session = session
+
+    async def _verify_org_membership(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        """
+        Verify user is an active member of the organization.
+        """
+        result = await self.session.execute(
+            select(OrganizationMember).where(
+                and_(
+                    OrganizationMember.user_id == user_id,
+                    OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.is_active == True,  # noqa: E712
+                )
+            )
+        )
+        membership = result.scalar_one_or_none()
+
+        if not membership:
+            raise PermissionDeniedError("access", "organization")
+
+    async def create(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        title: str,
+        description: str = "",
+        duration_minutes: int = 30,
+        location: str = "",
+        meeting_url: str | None = None,
+        category_id: UUID | None = None,
+        tags: list[str] | None = None,
+        visibility: VisibilityScope = VisibilityScope.PRIVATE,
+    ) -> EventTemplate:
+        await self._verify_org_membership(user_id, organization_id)
+
+        template = EventTemplate(
+            organization_id=organization_id,
+            title=title,
+            description=description,
+            duration_minutes=duration_minutes,
+            location=location,
+            meeting_url=meeting_url,
+            category_id=category_id,
+            tags=tags or [],
+            visibility=visibility,
+            created_by=user_id,
+        )
+        self.session.add(template)
+        await self.session.commit()
+        await self.session.refresh(template)
+        return template
+
+    async def get_by_id(
+        self,
+        template_id: UUID,
+        organization_id: UUID,
+        user_id: UUID,
+    ) -> EventTemplate:
+        await self._verify_org_membership(user_id, organization_id)
+
+        query = select(EventTemplate).where(
+            and_(
+                EventTemplate.id == template_id,
+                EventTemplate.organization_id == organization_id,
+            )
+        )
+        result = await self.session.execute(query)
+        template = result.scalar_one_or_none()
+
+        if not template:
+            raise NotFoundError(EventTemplate, template_id)
+
+        # Check visibility
+        if template.visibility == VisibilityScope.PRIVATE and template.created_by != user_id:
+            raise PermissionDeniedError("read", "event template")
+
+        return template
+
+    async def update(
+        self,
+        template_id: UUID,
+        organization_id: UUID,
+        user_id: UUID,
+        **kwargs,
+    ) -> EventTemplate:
+        template = await self.get_by_id(template_id, organization_id, user_id)
+
+        # Only creator can edit
+        if template.created_by != user_id:
+            raise PermissionDeniedError("update", "event template")
+
+        for key, value in kwargs.items():
+            if hasattr(template, key):
+                setattr(template, key, value)
+
+        await self.session.commit()
+        await self.session.refresh(template)
+        return template
+
+    async def delete(
+        self,
+        template_id: UUID,
+        organization_id: UUID,
+        user_id: UUID,
+    ) -> bool:
+        template = await self.get_by_id(template_id, organization_id, user_id)
+
+        if template.created_by != user_id:
+            raise PermissionDeniedError("delete", "event template")
+
+        await self.session.delete(template)
+        await self.session.commit()
+        return True
+
+    async def list(
+        self,
+        organization_id: UUID,
+        user_id: UUID,
+    ) -> list[EventTemplate]:
+        await self._verify_org_membership(user_id, organization_id)
+
+        query = select(EventTemplate).where(
+            and_(
+                EventTemplate.organization_id == organization_id,
+                or_(
+                    EventTemplate.visibility != VisibilityScope.PRIVATE,
+                    EventTemplate.created_by == user_id,
+                ),
+            )
+        )
+
+        result = await self.session.execute(query)
+        return result.scalars().all()

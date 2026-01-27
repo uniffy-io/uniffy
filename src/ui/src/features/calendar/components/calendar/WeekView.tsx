@@ -2,7 +2,9 @@
  * WeekView - Week calendar grid view
  */
 
-import { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { updateEventThunk } from '../../store';
 import { useCalendarNavigation, useCalendarEvents } from '../../hooks';
 import { TimeColumn, TIME_COLUMN_TOP_PADDING } from './TimeColumn';
 import { DayHeadersRow } from './DayHeader';
@@ -13,17 +15,20 @@ import { QuickEventModal } from '../modals/QuickEventModal';
 import { GRID, LAYOUT } from '../../constants';
 
 export function WeekView() {
+  const dispatch = useAppDispatch();
+  const draggedEventId = useAppSelector((state) => state.calendarUi.draggedEventId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const { weekColumns } = useCalendarNavigation();
-  const { getPositionedEventsWeek } = useCalendarEvents();
+  const { getPositionedEventsWeek, events } = useCalendarEvents();
   const [showQuickEventModal, setShowQuickEventModal] = useState(false);
   const [modalDate, setModalDate] = useState(new Date());
   const [modalStartHour, setModalStartHour] = useState(9);
   const [modalEndHour, setModalEndHour] = useState(10);
-  
+
   // State for half-hour slot selection
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; hour: number; isHalf: boolean } | null>(null);
+  const [dropPreview, setDropPreview] = useState<{ date: string; hour: number; isHalf: boolean } | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
   // Get positioned events for the week
@@ -68,6 +73,115 @@ export function WeekView() {
   }, [selectedSlot]);
 
   /**
+   * Calculate grid slot from mouse coordinates
+   */
+  const getSlotFromCoordinates = useCallback((clientX: number, clientY: number) => {
+    if (!gridRef.current || !scrollRef.current) return null;
+
+    const gridRect = gridRef.current.getBoundingClientRect();
+    const clickX = clientX - gridRect.left;
+    const columnWidth = gridRect.width / 7;
+    const columnIndex = Math.floor(clickX / columnWidth);
+
+    if (columnIndex < 0 || columnIndex >= 7) return null;
+
+    const scrollRect = scrollRef.current.getBoundingClientRect();
+    const clickY = clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
+    
+    if (clickY < 0) return null;
+
+    const halfHourOffset = Math.floor(clickY / GRID.HALF_HOUR_HEIGHT);
+    const hour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
+    const isHalf = halfHourOffset % 2 === 1;
+
+    if (hour < GRID.START_HOUR || hour >= GRID.END_HOUR) return null;
+
+    return {
+      date: weekColumns[columnIndex].dateString,
+      dateObj: weekColumns[columnIndex].date,
+      hour,
+      isHalf,
+      columnIndex
+    };
+  }, [weekColumns]);
+
+  /**
+   * Handle drag over to show preview
+   */
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); // Allow dropping
+    
+    if (!draggedEventId) return;
+
+    const slot = getSlotFromCoordinates(e.clientX, e.clientY);
+    if (slot) {
+      setDropPreview({
+        date: slot.date,
+        hour: slot.hour,
+        isHalf: slot.isHalf
+      });
+    } else {
+      setDropPreview(null);
+    }
+  }, [draggedEventId, getSlotFromCoordinates]);
+
+  /**
+   * Handle drop to reschedule event
+   */
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDropPreview(null);
+
+    if (!draggedEventId) return;
+
+    const slot = getSlotFromCoordinates(e.clientX, e.clientY);
+    if (!slot) return;
+
+    // Calculate new start time
+    const newStartDate = new Date(slot.dateObj);
+    newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
+
+    // We only update the start time, the backend/thunk should handle duration preservation
+    // But updateEventThunk expects specific fields. We need to fetch the event to know duration?
+    // Actually, updateEventThunk takes Partial<Event>. If we only send startTime, 
+    // the backend *should* update endTime to maintain duration, OR we need to calculate it here.
+    // 
+    // Let's check `CalendarEvent` type.
+    // For now, let's assume we need to calculate end time.
+    // But we don't have the event object here easily (it's in the map).
+    // Let's look up the event.
+    
+    let eventToUpdate = null;
+    for (const events of positionedEventsMap.values()) {
+      const found = events.find(e => e.id === draggedEventId);
+      if (found) {
+        eventToUpdate = found;
+        break;
+      }
+    }
+
+    if (!eventToUpdate) return;
+
+    // Calculate duration
+    const start = new Date(eventToUpdate.startTime);
+    const end = new Date(eventToUpdate.endTime);
+    const durationMs = end.getTime() - start.getTime();
+
+    const newStartTime = newStartDate.toISOString();
+    const newEndTime = new Date(newStartDate.getTime() + durationMs).toISOString();
+
+    try {
+      await dispatch(updateEventThunk({
+        eventId: draggedEventId,
+        startTime: newStartTime,
+        endTime: newEndTime,
+      })).unwrap();
+    } catch (error) {
+      console.error('Failed to reschedule event:', error);
+    }
+  }, [draggedEventId, getSlotFromCoordinates, positionedEventsMap, dispatch]);
+
+  /**
    * Handle clicks on empty grid cells - select half-hour slots
    */
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -83,44 +197,26 @@ export function WeekView() {
       return;
     }
 
-    if (!gridRef.current || !scrollRef.current) return;
-
-    // Calculate which column was clicked (day)
-    const gridRect = gridRef.current.getBoundingClientRect();
-    const clickX = e.clientX - gridRect.left;
-    const columnWidth = gridRect.width / 7;
-    const columnIndex = Math.floor(clickX / columnWidth);
-
-    if (columnIndex < 0 || columnIndex >= 7) return;
-
-    // Calculate which half-hour slot was clicked (accounting for top padding)
-    const scrollRect = scrollRef.current.getBoundingClientRect();
-    const clickY = e.clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
-    if (clickY < 0) return; // Clicked in the padding area above the grid
-    const halfHourOffset = Math.floor(clickY / GRID.HALF_HOUR_HEIGHT);
-    const clickedHour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
-    const isHalf = halfHourOffset % 2 === 1;
-
-    // Ensure hour is within bounds
-    if (clickedHour < GRID.START_HOUR || clickedHour >= GRID.END_HOUR) return;
-
-    const clickedDate = weekColumns[columnIndex].dateString;
+    const slot = getSlotFromCoordinates(e.clientX, e.clientY);
+    if (!slot) return;
+    
+    const { date, hour, isHalf, dateObj } = slot;
     const currentTime = Date.now();
     const isDoubleClick = currentTime - lastClickTimeRef.current < 300 && 
-                          selectedSlot?.date === clickedDate && 
-                          selectedSlot?.hour === clickedHour && 
+                          selectedSlot?.date === date && 
+                          selectedSlot?.hour === hour && 
                           selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
       // Double-click: create event with 30-minute duration
-      setModalDate(weekColumns[columnIndex].date);
-      setModalStartHour(clickedHour + (isHalf ? 0.5 : 0));
-      setModalEndHour(clickedHour + (isHalf ? 1 : 0.5));
+      setModalDate(dateObj);
+      setModalStartHour(hour + (isHalf ? 0.5 : 0));
+      setModalEndHour(hour + (isHalf ? 1 : 0.5));
       setShowQuickEventModal(true);
       setSelectedSlot(null);
     } else {
       // Single click: select slot
-      setSelectedSlot({ date: clickedDate, hour: clickedHour, isHalf });
+      setSelectedSlot({ date, hour, isHalf });
       lastClickTimeRef.current = currentTime;
     }
   };
@@ -152,9 +248,27 @@ export function WeekView() {
               className="flex-1 relative cursor-pointer select-none"
               style={{ minHeight: gridHeight + TIME_COLUMN_TOP_PADDING }}
               onClick={handleGridClick}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
             >
               {/* Grid lines */}
               <GridLines columnCount={7} hourCount={hourCount} topOffset={TIME_COLUMN_TOP_PADDING} />
+
+              {/* Drop Preview */}
+              {dropPreview && (
+                <div
+                  className="absolute bg-primary/30 border border-primary pointer-events-none z-30 transition-all duration-75 rounded"
+                  style={{
+                    left: `${((weekColumns.findIndex(col => col.dateString === dropPreview.date)) / 7) * 100}%`,
+                    width: `${95 / 7}%`, // Slightly narrower than full column
+                    marginLeft: '2px',
+                    top: `${TIME_COLUMN_TOP_PADDING + (dropPreview.hour - GRID.START_HOUR) * GRID.HOUR_HEIGHT + (dropPreview.isHalf ? GRID.HALF_HOUR_HEIGHT : 0)}px`,
+                    height: draggedEventId && events[draggedEventId]
+                      ? `${((new Date(events[draggedEventId].endTime).getTime() - new Date(events[draggedEventId].startTime).getTime()) / (1000 * 60 * 60)) * GRID.HOUR_HEIGHT}px`
+                      : `${GRID.HALF_HOUR_HEIGHT * 2}px`, 
+                  }}
+                />
+              )}
 
               {/* Selected half-hour slot indicator */}
               {selectedSlot && (

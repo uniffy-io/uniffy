@@ -3,9 +3,14 @@
  *
  * This is the entry point for the Calendar feature.
  * It renders the three-panel layout with sidebar, calendar grid, and detail panel.
+ *
+ * Supports two routes:
+ * - /calendar - Shows the calendar view
+ * - /calendar/:eventId - Shows the calendar with a specific event selected and detail panel open
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -14,14 +19,19 @@ import { QuickEventModal } from '../components/modals/QuickEventModal';
 import { AddCalendarModal } from '../components/modals/AddCalendarModal';
 import { AddCategoryModal } from '../components/modals/AddCategoryModal';
 import { CreateTemplateModal } from '../components/modals/CreateTemplateModal';
-import { closeEventModal, closeAddCalendarModal, closeAddCategoryModal, closeCreateTemplateModal } from '../store';
-import { fetchEventsInRange, fetchCalendars, fetchCategories } from '../store/calendarThunks';
+import { closeEventModal, closeAddCalendarModal, closeAddCategoryModal, closeCreateTemplateModal, selectEvent, setCurrentDate } from '../store';
+import { fetchEventsInRange, fetchCalendars, fetchCategories, fetchEvent } from '../store/calendarThunks';
+import { toDateString } from '../utils';
 
 export function CalendarPage() {
   useDocumentTitle('Calendar');
   const dispatch = useAppDispatch();
+  const { eventId } = useParams<{ eventId: string }>();
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+
+  // Track if we've handled the URL eventId to prevent duplicate fetches
+  const handledEventIdRef = useRef<string | null>(null);
   const {
     isEventModalOpen,
     isAddCalendarModalOpen,
@@ -36,6 +46,31 @@ export function CalendarPage() {
     dispatch(fetchCalendars());
     dispatch(fetchCategories());
   }, [dispatch, currentOrganizationId]);
+
+  // Handle eventId from URL (e.g., /calendar/:eventId from URN mentions)
+  useEffect(() => {
+    if (!currentOrganizationId || !eventId) return;
+    if (handledEventIdRef.current === eventId) return;
+
+    handledEventIdRef.current = eventId;
+
+    // Select the event to open the detail panel
+    dispatch(selectEvent(eventId));
+
+    // Fetch the full event data
+    dispatch(fetchEvent(eventId))
+      .unwrap()
+      .then((event) => {
+        // Navigate the calendar to the event's date so it's visible
+        const eventDate = toDateString(new Date(event.startTime));
+        if (eventDate !== currentDate) {
+          dispatch(setCurrentDate(eventDate));
+        }
+      })
+      .catch(() => {
+        // Event not found or error - the detail panel will handle showing an error
+      });
+  }, [dispatch, eventId, currentOrganizationId, currentDate]);
 
   // Fetch events when the current date changes or on initial load
   useEffect(() => {

@@ -150,6 +150,11 @@ export interface UpdateEventRequest {
 }
 
 /**
+ * Multi-day event span position
+ */
+export type MultiDayPosition = 'start' | 'middle' | 'end' | 'single';
+
+/**
  * Positioned event for rendering on the calendar grid
  * Includes calculated position and size values
  */
@@ -166,4 +171,10 @@ export interface PositionedEvent extends CalendarEvent {
   column: number;
   /** Total columns for this time slot */
   totalColumns: number;
+  /** Position in multi-day span (start/middle/end/single) */
+  multiDayPosition?: MultiDayPosition;
+  /** Whether this event has time conflicts with other events */
+  hasConflict?: boolean;
+  /** List of events that conflict with this one */
+  conflictingEvents?: CalendarEvent[];
 }

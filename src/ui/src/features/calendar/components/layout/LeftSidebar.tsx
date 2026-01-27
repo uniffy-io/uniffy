@@ -18,6 +18,7 @@ import { MiniCalendar } from '../sidebar/MiniCalendar';
 import { CalendarList } from '../sidebar/CalendarList';
 import { CategoryList } from '../sidebar/CategoryList';
 import { TagCloud } from '../sidebar/TagCloud';
+import { TemplateList } from '../sidebar/TemplateList';
 
 export function LeftSidebar() {
   const dispatch = useAppDispatch();
@@ -53,6 +54,9 @@ export function LeftSidebar() {
 
         {/* Categories */}
         <CategoryList />
+
+        {/* Templates */}
+        <TemplateList />
 
         {/* Tags */}
         <TagCloud />

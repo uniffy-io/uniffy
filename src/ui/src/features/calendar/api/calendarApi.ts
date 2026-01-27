@@ -28,6 +28,11 @@ import type {
     UpdateAttendeeStatusRequest,
     AddAttendeesRequest,
     RemoveAttendeesRequest,
+    CreateEventTemplateRequest,
+    GetEventTemplateRequest,
+    UpdateEventTemplateRequest,
+    DeleteEventTemplateRequest,
+    ListEventTemplatesRequest,
 } from '@/gen/cal/v1/calendar_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
@@ -187,6 +192,30 @@ export const calendarApi = {
      */
     removeAttendees: async (request: PartialMessage<RemoveAttendeesRequest>) => {
         return calendarClient.removeAttendees(request);
+    },
+
+    // ========================================================================
+    // Template Operations
+    // ========================================================================
+
+    createEventTemplate: async (request: PartialMessage<CreateEventTemplateRequest>) => {
+        return calendarClient.createEventTemplate(request);
+    },
+
+    getEventTemplate: async (request: PartialMessage<GetEventTemplateRequest>) => {
+        return calendarClient.getEventTemplate(request);
+    },
+
+    updateEventTemplate: async (request: PartialMessage<UpdateEventTemplateRequest>) => {
+        return calendarClient.updateEventTemplate(request);
+    },
+
+    deleteEventTemplate: async (request: PartialMessage<DeleteEventTemplateRequest>) => {
+        return calendarClient.deleteEventTemplate(request);
+    },
+
+    listEventTemplates: async (request: PartialMessage<ListEventTemplatesRequest>) => {
+        return calendarClient.listEventTemplates(request);
     },
 };
 

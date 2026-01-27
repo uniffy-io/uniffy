@@ -8,6 +8,7 @@ export type {
   CreateEventRequest,
   UpdateEventRequest,
   PositionedEvent,
+  MultiDayPosition,
   RecurrenceConfig,
   RecurrencePattern,
   DayOfWeek,
@@ -80,3 +81,10 @@ export {
   RECURRENCE_LABELS,
   DAY_OF_WEEK_LABELS,
 } from './forms';
+
+// Template types
+export type {
+  EventTemplate,
+  CreateTemplatePayload,
+  UpdateTemplatePayload,
+} from './template';

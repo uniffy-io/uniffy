@@ -64,8 +64,11 @@ interface CalendarUiState {
 
   // Calendar/Category/Template modals
   isAddCalendarModalOpen: boolean;
+  editingCalendarId: string | null;
   isAddCategoryModalOpen: boolean;
+  editingCategoryId: string | null;
   isCreateTemplateModalOpen: boolean;
+  editingTemplateId: string | null;
 
   // Mobile state
   isMobileView: boolean;
@@ -103,8 +106,11 @@ const initialState: CalendarUiState = {
   isQuickCaptureOpen: false,
   isTimezoneModalOpen: false,
   isAddCalendarModalOpen: false,
+  editingCalendarId: null,
   isAddCategoryModalOpen: false,
+  editingCategoryId: null,
   isCreateTemplateModalOpen: false,
+  editingTemplateId: null,
   isMobileView: false,
   activeMobilePanel: 'calendar',
 };
@@ -284,26 +290,47 @@ const calendarUiSlice = createSlice({
     // Calendar/Category/Template modals
     openAddCalendarModal: (state) => {
       state.isAddCalendarModalOpen = true;
+      state.editingCalendarId = null;
+    },
+
+    openEditCalendarModal: (state, action: PayloadAction<string>) => {
+      state.isAddCalendarModalOpen = true;
+      state.editingCalendarId = action.payload;
     },
 
     closeAddCalendarModal: (state) => {
       state.isAddCalendarModalOpen = false;
+      state.editingCalendarId = null;
     },
 
     openAddCategoryModal: (state) => {
       state.isAddCategoryModalOpen = true;
+      state.editingCategoryId = null;
+    },
+
+    openEditCategoryModal: (state, action: PayloadAction<string>) => {
+      state.isAddCategoryModalOpen = true;
+      state.editingCategoryId = action.payload;
     },
 
     closeAddCategoryModal: (state) => {
       state.isAddCategoryModalOpen = false;
+      state.editingCategoryId = null;
     },
 
     openCreateTemplateModal: (state) => {
       state.isCreateTemplateModalOpen = true;
+      state.editingTemplateId = null;
+    },
+
+    openEditTemplateModal: (state, action: PayloadAction<string>) => {
+      state.isCreateTemplateModalOpen = true;
+      state.editingTemplateId = action.payload;
     },
 
     closeCreateTemplateModal: (state) => {
       state.isCreateTemplateModalOpen = false;
+      state.editingTemplateId = null;
     },
 
     // Mobile state
@@ -356,10 +383,13 @@ export const {
   openTimezoneModal,
   closeTimezoneModal,
   openAddCalendarModal,
+  openEditCalendarModal,
   closeAddCalendarModal,
   openAddCategoryModal,
+  openEditCategoryModal,
   closeAddCategoryModal,
   openCreateTemplateModal,
+  openEditTemplateModal,
   closeCreateTemplateModal,
   setMobileView,
   setActiveMobilePanel,

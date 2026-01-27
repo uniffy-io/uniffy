@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddAttendeesRequest, CalendarResponse, CategoryResponse, CreateCalendarRequest, CreateCategoryRequest, CreateEventRequest, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, EventResponse, GetCalendarRequest, GetCategoryRequest, GetEventRequest, GetEventsInRangeRequest, GetEventsInRangeResponse, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventsRequest, ListEventsResponse, RemoveAttendeesRequest, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarRequest, UpdateCategoryRequest, UpdateEventRequest } from "./calendar_pb.js";
+import { AddAttendeesRequest, CalendarResponse, CategoryResponse, CreateCalendarRequest, CreateCategoryRequest, CreateEventRequest, CreateEventTemplateRequest, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, EventResponse, EventTemplateResponse, GetCalendarRequest, GetCategoryRequest, GetEventRequest, GetEventsInRangeRequest, GetEventsInRangeResponse, GetEventTemplateRequest, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventsRequest, ListEventsResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, RemoveAttendeesRequest, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarRequest, UpdateCategoryRequest, UpdateEventRequest, UpdateEventTemplateRequest } from "./calendar_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -223,6 +223,61 @@ export const CalendarService = {
       name: "RemoveAttendees",
       I: RemoveAttendeesRequest,
       O: EventResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Create a new event template
+     *
+     * @generated from rpc cal.v1.CalendarService.CreateEventTemplate
+     */
+    createEventTemplate: {
+      name: "CreateEventTemplate",
+      I: CreateEventTemplateRequest,
+      O: EventTemplateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get an event template by ID
+     *
+     * @generated from rpc cal.v1.CalendarService.GetEventTemplate
+     */
+    getEventTemplate: {
+      name: "GetEventTemplate",
+      I: GetEventTemplateRequest,
+      O: EventTemplateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Update an existing event template
+     *
+     * @generated from rpc cal.v1.CalendarService.UpdateEventTemplate
+     */
+    updateEventTemplate: {
+      name: "UpdateEventTemplate",
+      I: UpdateEventTemplateRequest,
+      O: EventTemplateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Delete an event template
+     *
+     * @generated from rpc cal.v1.CalendarService.DeleteEventTemplate
+     */
+    deleteEventTemplate: {
+      name: "DeleteEventTemplate",
+      I: DeleteEventTemplateRequest,
+      O: DeleteEventTemplateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * List event templates
+     *
+     * @generated from rpc cal.v1.CalendarService.ListEventTemplates
+     */
+    listEventTemplates: {
+      name: "ListEventTemplates",
+      I: ListEventTemplatesRequest,
+      O: ListEventTemplatesResponse,
       kind: MethodKind.Unary,
     },
   }
