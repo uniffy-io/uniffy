@@ -301,7 +301,6 @@ function useNetworkCanvas() {
             const isLabeledConn = !!nodes[i].label || !!nodes[j].label;
             const alpha = (isLabeledConn ? 0.24 : 0.16) * (1 - dist / CONNECTION_DIST);
             const midX = (nodes[i].x + nodes[j].x) / 2;
-            const midY = (nodes[i].y + nodes[j].y) / 2;
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
