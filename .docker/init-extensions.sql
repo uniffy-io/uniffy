@@ -1,4 +1,4 @@
--- Initialize PostgreSQL extensions for UWOS
+-- Initialize PostgreSQL extensions for UNIFFY
 -- This script runs automatically when the database is first created
 
 -- Enable pg_trgm for fuzzy text search and trigram similarity

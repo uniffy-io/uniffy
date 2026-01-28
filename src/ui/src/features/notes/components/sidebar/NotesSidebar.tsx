@@ -114,7 +114,7 @@ function TreeNodeItem({
   const isDragging = draggedNodeId === node.id;
 
   // Check if this note is bookmarked (via URN) - must be called unconditionally
-  const noteUrn = node.noteId ? `urn:uwos:content:NOTE:${node.noteId}` : '';
+  const noteUrn = node.noteId ? `urn:uniffy:content:NOTE:${node.noteId}` : '';
   const isBookmarked = useIsBookmarked(noteUrn);
 
   // Check if draggedNodeId is a descendant of this node (prevent dropping into own children)

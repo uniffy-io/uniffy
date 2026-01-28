@@ -5,7 +5,7 @@ package users.v1;
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "uwos/gen/users/v1;usersv1";
+option go_package = "uniffy/gen/users/v1;usersv1";
 
 // =============================================================================
 // UsersService - User profile and administration

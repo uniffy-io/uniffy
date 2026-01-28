@@ -1,7 +1,7 @@
 /**
  * Shared Editor Components
  *
- * Reusable editor components for use across UWOS features.
+ * Reusable editor components for use across UNIFFY features.
  */
 
 export { MarkdownEditor } from './MarkdownEditor';

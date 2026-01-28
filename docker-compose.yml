@@ -1,12 +1,14 @@
+name: uniffy-local
+
 services:
   postgres:
     image: postgres:18-alpine
-    container_name: uwos-postgres
+    container_name: uniffy-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: uwos
-      POSTGRES_PASSWORD: uwos
-      POSTGRES_DB: uwos
+      POSTGRES_USER: uniffy
+      POSTGRES_PASSWORD: uniffy
+      POSTGRES_DB: uniffy
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
@@ -14,19 +16,19 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./.docker/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U uwos -d uwos"]
+      test: ["CMD-SHELL", "pg_isready -U uniffy -d uniffy"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - uwos-network
+      - uniffy-network
 
   meilisearch:
     image: getmeili/meilisearch:v1.33
-    container_name: uwos-meilisearch
+    container_name: uniffy-meilisearch
     restart: unless-stopped
     environment:
-      MEILI_MASTER_KEY: uwos-dev-master-key
+      MEILI_MASTER_KEY: uniffy-dev-master-key
       MEILI_ENV: production
       MEILI_DB_PATH: /meili_data/data.ms
       MEILI_HTTP_ADDR: 0.0.0.0:7700
@@ -55,35 +57,35 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - uwos-network
+      - uniffy-network
 
   valkey:
     image: valkey/valkey:9-alpine
-    container_name: uwos-valkey
+    container_name: uniffy-valkey
     restart: unless-stopped
     environment:
-      VALKEY_PASSWORD: uwos-valkey-dev
+      VALKEY_PASSWORD: uniffy-valkey-dev
     ports:
       - "6380:6379"
     volumes:
       - valkey_data:/data
-    command: valkey-server --appendonly yes --requirepass uwos-valkey-dev
+    command: valkey-server --appendonly yes --requirepass uniffy-valkey-dev
     healthcheck:
-      test: ["CMD", "valkey-cli", "-a", "uwos-valkey-dev", "ping"]
+      test: ["CMD", "valkey-cli", "-a", "uniffy-valkey-dev", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - uwos-network
+      - uniffy-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: uwos-pgadmin
+    container_name: uniffy-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@uwos.dev
+      PGADMIN_DEFAULT_EMAIL: admin@uniffy.dev
       PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "5050:80"
     volumes:
@@ -91,8 +93,7 @@ services:
     depends_on:
       - postgres
     networks:
-      - uwos-network
-
+      - uniffy-network
 
 volumes:
   postgres_data:
@@ -105,5 +106,5 @@ volumes:
     driver: local
 
 networks:
-  uwos-network:
+  uniffy-network:
     driver: bridge

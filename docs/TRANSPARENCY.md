@@ -2,42 +2,42 @@
 
 ### License
 
-UWOS is **source-available** software, free to use for teams of up to 10 users, using the [Business Source License 1.1 (BSL 1.1)](LICENSE) created by MariaDB Corporation Ab. 
+Uniffy is **source-available** software, free to use for teams of up to 10 users, using the [Business Source License 1.1 (BSL 1.1)](LICENSE). 
 
 ### What This Means
 
-- **Source Available**: The complete source code is publicly accessible. You can read it, learn from it, verify and understand exactly how UWOS works.
-- **Free for Small Teams**: Organizations with 10 or fewer users can use UWOS at no cost.
+- **Source Available**: The complete source code is publicly accessible. You can read it, learn from it, verify and understand exactly how Uniffy works.
+- **Free for Small Teams**: Organizations with 10 or fewer users can use Uniffy at no cost.
 - **Public Development**: Development discussions, roadmaps, and issue tracking are all conducted in the open on GitHub.
 - **Commercial License Required**: Teams larger than 10 users require a commercial license.
 
 ### Why we choose this License
 
-UWOS is an idea and a project which requires significant resources to maintain and develop in the first place. We put many hours of work into building and releasing the first UWOS version.
+Uniffy is an idea and a project which requires significant resources to maintain and develop in the first place. We put many hours of work into building and releasing the first Uniffy version.
 
 We strongly believe in open code and the principles of transparency. However, we also need to ensure the sustainability of the project, protect from big corporations taking advantage of our work, and continue investing in its growth and improvement.
 
-We are trying to build a cloud version of UWOS that will be affordable for small teams and startups, while also providing a self-hosted version for organizations that require more control over their data. The BSL 1.1 allows us to strike a balance between open source principles and the need for a sustainable business model.
+We are trying to build a cloud version of Uniffy that will be affordable for small teams and startups, while also providing a self-hosted version for organizations that require more control over their data. The BSL 1.1 allows us to strike a balance between open source principles and the need for a sustainable business model.
 
 ### Privacy
 
-UWOS respects your privacy. We do not collect telemetry, usage, or personal data. You have full control over your data.
+Uniffy respects your privacy. We do not collect telemetry, usage, or personal data. You have full control over your data.
 
-When using the self-hosted UWOS in your own environment. We **ONLY** phone home for update checks (**if enabled**) and license validation for paid plans. 
+When using the self-hosted Uniffy in your own environment. We **ONLY** phone home for update checks (**if enabled**) and license validation for paid plans. 
 
 For Enterprise customers, we can offer air-gapped deployments with no external network access. This works by deploying additional software that acts as a license server within your air-gapped environment to validate your license keys without any external communication.
 
-For the cloud version of UWOS, we adhere to strict data protection standards and comply with relevant regulations to ensure your data is safe and secure. UWOS is hosted in Europe and fully comply with GDPR. You can read more about our privacy practices in the [Privacy Policy](https://www.uniffy.io/privacy-policy).
+For the cloud version of Uniffy, we adhere to strict data protection standards and comply with relevant regulations to ensure your data is safe and secure. Uniffy is hosted in Europe and fully comply with GDPR. You can read more about our privacy practices in the [Privacy Policy](https://www.uniffy.io/privacy-policy).
 
 ### Don't just trust, verify
 
-The complete source code of UWOS is available on [GitHub](https://github.com/uniffy-io/uwos.git). You can inspect, audit, and contribute to the codebase. This transparency allows you to verify that UWOS operates as described and meets your security and privacy requirements.
+The complete source code of Uniffy is available on [GitHub](https://github.com/uniffy-io/uniffy.git). You can inspect, audit, and contribute to the codebase. This transparency allows you to verify that Uniffy operates as described and meets your security and privacy requirements.
 
 We provide a detailed guide of how to check if the code you are running exactly matches the code in the public repository, ensuring full transparency and trust. 
 
 ### Freedom by choice
 
-UWOS don't force you to use proprietary formats. You can export your whole organisation data in a directory structure. Most content (Notes, Calendar, Projects) stored in UWOS can be exported in Markdown format. Files can be downloaded in their original formats. Workflows and Chat are exportable in JSON / JSONL files.
+Uniffy don't force you to use proprietary formats. You can export your whole organisation data in a directory structure. Most content (Notes, Calendar, Projects) stored in Uniffy can be exported in Markdown format. Files can be downloaded in their original formats. Workflows and Chat are exportable in JSON / JSONL files.
 
 ```less
 # This is an example structure of an exported organisation named "my-org"
@@ -65,11 +65,11 @@ UWOS don't force you to use proprietary formats. You can export your whole organ
 
 ### Future License Change
 
-The Business Source License includes a "Change Date" (currently set to January 1, 2039) at which point the license will automatically convert to the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0). This means that after this date, UWOS will be fully open source under the Apache 2.0 license.
+The Business Source License includes a "Change Date" (currently set to January 1, 2039) at which point the license will automatically convert to the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0). This means that after this date, Uniffy will be fully open source under the Apache 2.0 license.
 
 ### Third-Party Open Source
 
-UWOS is built on the shoulders of hackers, developers, and contributors from around the world just like you. We use many open-source libraries and frameworks licensed under permissive licenses such as MIT, Apache 2.0, and BSD. We are grateful to the open-source community for their contributions.
+Uniffy is built on the shoulders of hackers, developers, and contributors from around the world just like you. We use many open-source libraries and frameworks licensed under permissive licenses such as MIT, Apache 2.0, and BSD. We are grateful to the open-source community for their contributions.
 
 The uniffy-io Organization tries to donate as much as possible back to the open-source projects we depend on, either through code contributions, sponsorships, or other means. For a full list of third-party dependencies and their licenses, see [docs/THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
 

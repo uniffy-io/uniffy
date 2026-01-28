@@ -5,7 +5,7 @@ package groups.v1;
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "uwos/gen/groups/v1;groupsv1";
+option go_package = "uniffy/gen/groups/v1;groupsv1";
 
 // =============================================================================
 // GroupsService - Single source of truth for group management

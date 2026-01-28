@@ -1,15 +1,23 @@
-## UWOS
-***Work Infrastructure for the rest of us.***
+## Uniffy
+***Work Infrastructure, democratized.***
 
 ---
 
 ### The Problem
 
-Your notes are in one app. Files in another. Chat somewhere else. Calendar in a fourth. None of them talk to each other. You spend half your day copying links, searching for that doc you wrote last week, explaining the same thing twice because the info lives in six different places. Sounds familiar?
+Your notes live in one app. Files in another. Chat somewhere else. Calendar in a fourth. None of them talk to each other.
+So you spend half your day copying links, hunting for that doc you wrote last week, explaining the same thing twice because nobody can find where you already said it.
+
+Sound familiar?
 
 ### Solution
 
-UWOS is a unified system where everything connects. The system provides you with Notes, File Storage, Chat, Calendar, Project Management and Workflow Automations. These all components work together. They can reference each other natively with the already familiar experience of like mentioning someone with `@` in a chat app. However instead of just people, you can mention Notes, Files, Chat Messages, Calendar Events, and more. Chat messages can embed notes, files, calendar events, and more with a single keystroke. Your AI assistant can answer questions based on your actual work, with citations pointing back to the source.
+Uniffy puts everything in one place: notes, files, chat, calendar, projects, automations. They actually talk to each other.
+You know how you `@mention` someone in chat? Same idea, but for everything. Mention a note. Mention a file. Mention a calendar event. It just shows up, right there, with full context.
+
+Need to share a doc in chat? One keystroke. Want to reference last week's meeting notes while you're writing? Already linked. Ask your AI Assistant that you build in your workspace a question and it answers based on your actual work.
+
+Your work, but connected.
 
 #### Documentation
 

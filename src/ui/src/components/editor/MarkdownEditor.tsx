@@ -2,7 +2,7 @@
  * Reusable Markdown Editor with @ Mention Support
  *
  * A simplified Milkdown/Crepe editor for use across features.
- * Supports markdown formatting and @mentions for referencing any UWOS content.
+ * Supports markdown formatting and @mentions for referencing any UNIFFY content.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';

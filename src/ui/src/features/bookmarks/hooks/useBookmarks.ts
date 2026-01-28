@@ -131,7 +131,7 @@ export function useBookmarkToggle(urn: string) {
  */
 export function useBookmarksByType(type: string): SerializedBookmark[] {
     const bookmarks = useAppSelector((state) => state.bookmarks.bookmarks);
-    const typePattern = `urn:uwos:content:${type.toUpperCase()}:`;
+    const typePattern = `urn:uniffy:content:${type.toUpperCase()}:`;
 
     return Object.values(bookmarks)
         .filter((b) => b.urn.startsWith(typePattern))

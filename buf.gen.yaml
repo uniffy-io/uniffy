@@ -2,11 +2,11 @@ version: v2
 plugins:
   # Python backend generation
   - remote: buf.build/protocolbuffers/python
-    out: src/uwos/gen
+    out: src/uniffy/gen
   - remote: buf.build/protocolbuffers/pyi
-    out: src/uwos/gen
+    out: src/uniffy/gen
   - local: .venv/bin/protoc-gen-connect-python
-    out: src/uwos/gen
+    out: src/uniffy/gen
     strategy: all
   # TypeScript frontend generation
   - local: protoc-gen-es

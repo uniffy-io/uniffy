@@ -1,7 +1,7 @@
 /**
  * Calendar Feature
  *
- * A full-featured calendar module for UWOS with:
+ * A full-featured calendar module for UNIFFY with:
  * - Day/Week/Month views
  * - Event management (create, edit, delete)
  * - Multiple calendars support

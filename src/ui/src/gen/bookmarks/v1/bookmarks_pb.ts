@@ -20,7 +20,7 @@ export class ToggleBookmarkRequest extends Message<ToggleBookmarkRequest> {
   organizationId = "";
 
   /**
-   * URN of the content to bookmark (e.g., "urn:uwos:content:NOTE:uuid")
+   * URN of the content to bookmark (e.g., "urn:uniffy:content:NOTE:uuid")
    *
    * @generated from field: string urn = 2;
    */

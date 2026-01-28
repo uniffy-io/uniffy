@@ -557,9 +557,7 @@ function BrandContent() {
         style={{ animation: 'auth-slide-up 0.6s ease-out 0.4s forwards' }}
       >
         <p className="text-white/60 text-base font-medium tracking-wide">
-          Work Infrastructure for
-          < br />
-          the rest of us.
+          Work Infrastructure, democratized.
         </p>
       </div>
     </div>

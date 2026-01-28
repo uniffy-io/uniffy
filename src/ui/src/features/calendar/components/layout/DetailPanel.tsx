@@ -47,7 +47,7 @@ import { findConflicts } from '../../utils/eventPositioning';
 
 /**
  * Extract URN mentions from markdown content.
- * Matches the [[[label|urn]]] format used by UWOS mentions.
+ * Matches the [[[label|urn]]] format used by Uniffy mentions.
  */
 function extractMentionsFromMarkdown(markdown: string): Array<{ label: string; urn: string }> {
   const mentionRegex = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
@@ -83,7 +83,7 @@ export function DetailPanel() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Bookmark state - build URN for the event
-  const eventUrn = selectedEvent ? `urn:uwos:content:CALENDAR_EVENT:${selectedEvent.id}` : '';
+  const eventUrn = selectedEvent ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}` : '';
   const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(eventUrn);
 
   // Extract mentions from description to show as linked resources

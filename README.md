@@ -1,8 +1,8 @@
-# UWOS
+# Uniffy
 
 A unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions.
 
-For the full vision, see [docs/uwos-concept.md](docs/uwos-concept.md).
+For the full vision, see [docs/uniffy-concept.md](docs/uniffy-concept.md).
 
 ## Prerequisites
 
@@ -15,8 +15,8 @@ For the full vision, see [docs/uwos-concept.md](docs/uwos-concept.md).
 ## Setup
 
 ```bash
-git clone git@github.com:uniffy-io/uwos.git
-cd uwos
+git clone git@github.com:uniffy-io/uniffy.git
+cd uniffy
 make install
 ```
 
@@ -67,7 +67,7 @@ src/
 │       ├── components/
 │       ├── features/
 │       └── gen/        # Generated ConnectRPC clients
-└── uwos/               # Python backend
+└── uniffy/               # Python backend
     ├── core/           # Shared utilities, auth, content mixins
     ├── db/             # Database session, migrations
     ├── domains/        # Domain modules (auth, notes, etc.)
@@ -101,7 +101,7 @@ make db-reset   # Reset database (deletes data)
 Migrations apply on startup. Manual commands:
 
 ```bash
-cd src/uwos
+cd src/uniffy
 uv run alembic upgrade head
 uv run alembic revision --autogenerate -m "description"
 ```
@@ -110,7 +110,7 @@ uv run alembic revision --autogenerate -m "description"
 
 1. Define `.proto` in `src/proto/<service>/v1/`
 2. Run `make proto`
-3. Implement handlers in `src/uwos/domains/<service>/`
+3. Implement handlers in `src/uniffy/domains/<service>/`
 4. Register in `factory.py`
 
 ## Architecture
@@ -136,6 +136,6 @@ See [docs/search.md](docs/search.md).
 
 ## Documentation
 
-- [Concept & Vision](docs/uwos-concept.md)
+- [Concept & Vision](docs/uniffy-concept.md)
 - [Content Permissions](docs/architecture-content-permissions.md)
 - [Search Architecture](docs/search.md)

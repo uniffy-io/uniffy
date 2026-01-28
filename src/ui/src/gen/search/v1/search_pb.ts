@@ -173,7 +173,7 @@ export class SearchResponse extends Message<SearchResponse> {
  */
 export class SearchResultItem extends Message<SearchResultItem> {
   /**
-   * Universal Resource Name (urn:uwos:note:uuid)
+   * Universal Resource Name (urn:uniffy:note:uuid)
    *
    * @generated from field: string urn = 1;
    */
@@ -463,7 +463,7 @@ export class GetReferencesRequest extends Message<GetReferencesRequest> {
   organizationId = "";
 
   /**
-   * URN to find references to (e.g., urn:uwos:content:NOTE:uuid)
+   * URN to find references to (e.g., urn:uniffy:content:NOTE:uuid)
    *
    * @generated from field: string target_urn = 2;
    */

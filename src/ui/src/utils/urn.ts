@@ -1,16 +1,16 @@
 /**
  * URN Utilities
  *
- * Utilities for parsing and working with URNs in the UWOS system.
+ * Utilities for parsing and working with URNs in the Uniffy system.
  *
  * Supported URN formats:
- * - urn:uwos:{type}:{id} (legacy format)
- * - urn:uwos:content:{TYPE}:{id} (new format with content namespace)
+ * - urn:uniffy:{type}:{id} (legacy format)
+ * - urn:uniffy:content:{TYPE}:{id} (new format with content namespace)
  *
  * Examples:
- * - urn:uwos:note:123e4567-e89b-12d3-a456-426614174000
- * - urn:uwos:content:NOTE:123e4567-e89b-12d3-a456-426614174000
- * - urn:uwos:content:USER:456e7890-e89b-12d3-a456-426614174001
+ * - urn:uniffy:note:123e4567-e89b-12d3-a456-426614174000
+ * - urn:uniffy:content:NOTE:123e4567-e89b-12d3-a456-426614174000
+ * - urn:uniffy:content:USER:456e7890-e89b-12d3-a456-426614174001
  */
 
 // Re-export UrnType from dedicated file to avoid circular dependencies
@@ -34,8 +34,8 @@ export interface ParsedUrn {
 /**
  * Parse a URN string into its components
  * Supports both formats:
- * - urn:uwos:{type}:{id}
- * - urn:uwos:content:{TYPE}:{id}
+ * - urn:uniffy:{type}:{id}
+ * - urn:uniffy:content:{TYPE}:{id}
  */
 export function parseUrn(urn: string): ParsedUrn {
   // Basic validation
@@ -50,8 +50,8 @@ export function parseUrn(urn: string): ParsedUrn {
 
   const parts = urn.split(':');
 
-  // Must start with urn:uwos
-  if (parts.length < 4 || parts[0] !== 'urn' || parts[1] !== 'uwos') {
+  // Must start with urn:uniffy
+  if (parts.length < 4 || parts[0] !== 'urn' || parts[1] !== 'uniffy') {
     return {
       urn,
       type: UrnType.UNKNOWN,
@@ -63,12 +63,12 @@ export function parseUrn(urn: string): ParsedUrn {
   let typeStr: string;
   let id: string;
 
-  // Check for new format: urn:uwos:content:{TYPE}:{id}
+  // Check for new format: urn:uniffy:content:{TYPE}:{id}
   if (parts[2] === 'content' && parts.length === 5) {
     typeStr = parts[3].toLowerCase(); // TYPE is uppercase in new format
     id = parts[4];
   }
-  // Legacy format: urn:uwos:{type}:{id}
+  // Legacy format: urn:uniffy:{type}:{id}
   else if (parts.length === 4) {
     typeStr = parts[2];
     id = parts[3];
@@ -100,7 +100,7 @@ export function parseUrn(urn: string): ParsedUrn {
  * Build a URN from type and id
  */
 export function buildUrn(type: UrnType | string, id: string): string {
-  return `urn:uwos:${type}:${id}`;
+  return `urn:uniffy:${type}:${id}`;
 }
 
 // Import centralized content type config
@@ -116,7 +116,7 @@ import {
 
 /**
  * Extract the URL path from a URN
- * Example: urn:uwos:note:123 -> /notes/123
+ * Example: urn:uniffy:note:123 -> /notes/123
  *
  * Uses centralized route config from @/theme/contentTypes
  */
@@ -163,7 +163,7 @@ export function getUrnContentTypeConfig(urn: string) {
 }
 
 /**
- * Validate if a string is a valid UWOS URN
+ * Validate if a string is a valid Uniffy URN
  */
 export function isValidUrn(urn: string): boolean {
   return parseUrn(urn).isValid;

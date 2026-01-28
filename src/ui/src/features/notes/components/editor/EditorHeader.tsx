@@ -52,7 +52,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
 
   // Bookmark state
-  const noteUrn = `urn:uwos:content:NOTE:${note.id}`;
+  const noteUrn = `urn:uniffy:content:NOTE:${note.id}`;
   const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(noteUrn);
 
   // Sharing dialog

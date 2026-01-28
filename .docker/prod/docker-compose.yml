@@ -2,12 +2,12 @@
 # Usage: docker compose -f .docker/prod/docker-compose.yml up --build
 # Access: https://localhost
 
-name: uwos-prod
+name: uniffy-prod
 
 services:
   caddy:
     image: caddy:2-alpine
-    container_name: uwos-caddy-prod
+    container_name: uniffy-caddy-prod
     restart: unless-stopped
     ports:
       - "80:80"
@@ -23,8 +23,8 @@ services:
   backend:
     build:
       context: ../..
-      dockerfile: src/uwos/Dockerfile
-    container_name: uwos-backend
+      dockerfile: src/uniffy/Dockerfile
+    container_name: uniffy-backend
     restart: unless-stopped
     env_file:
       - ./.env.backend
@@ -39,7 +39,7 @@ services:
       args:
         - VITE_API_URL=${VITE_API_URL:-https://localhost}
         - VITE_ENV=production
-    container_name: uwos-ui
+    container_name: uniffy-ui
     restart: unless-stopped
     env_file:
       - ./.env.ui
@@ -48,14 +48,14 @@ services:
 
   postgres:
     image: postgres:18-alpine
-    container_name: uwos-postgres-prod
+    container_name: uniffy-postgres-prod
     restart: unless-stopped
     mem_limit: 6g
     mem_reservation: 4g
     environment:
-      POSTGRES_USER: uwos
-      POSTGRES_PASSWORD: uwos
-      POSTGRES_DB: uwos
+      POSTGRES_USER: uniffy
+      POSTGRES_PASSWORD: uniffy
+      POSTGRES_DB: uniffy
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
@@ -100,7 +100,7 @@ services:
       - "-c"
       - "log_min_duration_statement=500"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U uwos -d uwos"]
+      test: ["CMD-SHELL", "pg_isready -U uniffy -d uniffy"]
       interval: 10s
       timeout: 5s
       retries: 5

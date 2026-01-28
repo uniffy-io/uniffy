@@ -4,9 +4,9 @@ applyTo: ./**/**
 
 ### Project Overview
 
-UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, books, passwords, and workflows exist in one application. Every piece of information can be referenced from anywhere else using universal @ mentions.
+UNIFFY is a unified workspace where notes, files, chat, AI assistants, calendar, books, passwords, and workflows exist in one application. Every piece of information can be referenced from anywhere else using universal @ mentions.
 
-**For detailed concept and vision, see `docs/uwos-concept.md`**
+**For detailed concept and vision, see `docs/uniffy-concept.md`**
 **For domain creation guide, see `.github/instructions/domain-creation.instructions.md`**
 
 ### Tech Stack

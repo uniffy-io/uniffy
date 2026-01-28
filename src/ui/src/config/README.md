@@ -1,6 +1,6 @@
 # Configuration Module
 
-Centralized configuration management for the UWOS frontend application.
+Centralized configuration management for the UNIFFY frontend application.
 
 ## Overview
 

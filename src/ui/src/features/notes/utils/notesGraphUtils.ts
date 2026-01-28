@@ -134,7 +134,7 @@ export function buildGraphData(
 
   // Second pass: create nodes for all content notes
   for (const note of contentNotes) {
-    const noteUrn = `urn:uwos:content:NOTE:${note.id}`;
+    const noteUrn = `urn:uniffy:content:NOTE:${note.id}`;
 
     // Extract custom icon if the note has one
     const customIcon: NoteIconData | undefined = note.icon

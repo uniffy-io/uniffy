@@ -1,4 +1,4 @@
-# UI Dockerfile for UWOS Frontend
+# UI Dockerfile for UNIFFY Frontend
 # Build stage
 FROM node:24.0-slim AS builder
 

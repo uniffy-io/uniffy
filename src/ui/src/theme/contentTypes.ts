@@ -1,7 +1,7 @@
 /**
  * Content Type Configuration
  *
- * Centralized configuration for all content types in UWOS.
+ * Centralized configuration for all content types in UNIFFY.
  * Provides icons, labels, routes, and theme info for consistent
  * rendering across navigation, search, mentions, and other components.
  *

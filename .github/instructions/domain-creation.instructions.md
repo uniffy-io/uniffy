@@ -1,17 +1,17 @@
 ---
-applyTo: ./src/uwos/domains/**
+applyTo: ./src/uniffy/domains/**
 ---
 
 # Creating a New Domain / Service
 
-This guide explains how to create a new domain following the **Domain-Driven Vertical Slices** architecture established in UWOS.
+This guide explains how to create a new domain following the **Domain-Driven Vertical Slices** architecture established in UNIFFY.
 
 ## Architecture Overview
 
-UWOS uses a vertical slice architecture where each feature domain is self-contained:
+UNIFFY uses a vertical slice architecture where each feature domain is self-contained:
 
 ```
-src/uwos/
+src/uniffy/
 ├── core/                      # Shared infrastructure + models
 │   ├── auth/permissions/      # Permission checking
 │   ├── content/               # BaseContentOperations[T]
@@ -66,7 +66,7 @@ First, create the protobuf definition:
 ### 2. Create the Domain Folder Structure
 
 ```
-src/uwos/domains/{domain_name}/
+src/uniffy/domains/{domain_name}/
 ├── __init__.py           # Public exports
 ├── converters.py         # Proto <-> domain conversion
 ├── queries.py            # Complex SQL queries (optional)
@@ -107,8 +107,8 @@ src/uwos/domains/{domain_name}/
 For content-based domains (notes, files, etc.), extend `BaseContentOperations[TModel]`:
 
 ```
-from uwos.core.content import BaseContentOperations
-from uwos.models import YourModel
+from uniffy.core.content import BaseContentOperations
+from uniffy.models import YourModel
 
 class YourOperations(BaseContentOperations[YourModel]):
     """Business logic for your domain."""
@@ -208,7 +208,7 @@ Use `BaseContentOperations` which handles this automatically, or use `Permission
 
 ### Overview
 
-UWOS uses a layered permission system that combines:
+UNIFFY uses a layered permission system that combines:
 1. **Visibility Scopes** - Broad access levels (private, group, org, public)
 2. **Group Links** - Content shared with specific groups
 3. **Explicit Permissions** - Fine-grained grants to users/groups
@@ -307,7 +307,7 @@ User requests content
 **Reference:** `core/auth/permissions/checker.py`
 
 ```python
-from uwos.core.auth.permissions import PermissionChecker
+from uniffy.core.auth.permissions import PermissionChecker
 
 checker = PermissionChecker(session)
 
@@ -335,7 +335,7 @@ can_delete = await checker.can_delete_content(...)
 For building queries that automatically filter by permissions:
 
 ```python
-from uwos.core.auth.permissions import ContentAccessQuery
+from uniffy.core.auth.permissions import ContentAccessQuery
 
 access_query = ContentAccessQuery(session)
 
@@ -373,7 +373,7 @@ You only need to:
 To share content with a group (set visibility to GROUP):
 
 ```python
-from uwos.core.models.permissions import ContentGroupLink
+from uniffy.core.models.permissions import ContentGroupLink
 
 # Create link when sharing
 link = ContentGroupLink(
@@ -391,7 +391,7 @@ session.add(link)
 For fine-grained sharing (e.g., share private note with specific user):
 
 ```python
-from uwos.core.models.permissions import ContentPermission
+from uniffy.core.models.permissions import ContentPermission
 
 permission = ContentPermission(
     organization_id=org_id,

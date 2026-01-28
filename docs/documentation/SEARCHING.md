@@ -1,12 +1,12 @@
-## Searching in UWOS
+## Searching in UNIFFY
 
-UWOS provides a powerful unified search that lets you find any content across your workspace. Open search anytime with `Ctrl+K` (or `Cmd+K` on Mac). You can customize this shortcut in **Settings → Keyboard Shortcuts**.
+UNIFFY provides a powerful unified search that lets you find any content across your workspace. Open search anytime with `Ctrl+K` (or `Cmd+K` on Mac). You can customize this shortcut in **Settings → Keyboard Shortcuts**.
 
 ---
 
 ### Basic Search
 
-Just type what you're looking for. UWOS uses fuzzy matching, so it will find results even if you have typos or partial words.
+Just type what you're looking for. UNIFFY uses fuzzy matching, so it will find results even if you have typos or partial words.
 
 ```
 meeting notes
@@ -127,7 +127,7 @@ This finds: Notes you own, tagged "production", containing the exact phrase "kub
 
 ### How It Works
 
-UWOS uses [Meilisearch](https://www.meilisearch.com/) for fast, typo-tolerant search with instant results. The search index is updated in real-time as you create and edit content.
+UNIFFY uses [Meilisearch](https://www.meilisearch.com/) for fast, typo-tolerant search with instant results. The search index is updated in real-time as you create and edit content.
 
 **Ranking factors:**
 - Title matches rank higher than content matches

@@ -26,7 +26,7 @@ The frontend follows a feature-sliced architecture for scalability and maintaina
 ### Styling & Theme System
 
 #### Overview
-UWOS uses a sophisticated theme engine that supports:
+UNIFFY uses a sophisticated theme engine that supports:
 - **Dark/Light mode switching**
 - **User-customizable accent colors** (persisted per-user in the database)
 - **Dynamic text color calculation** for accessibility (auto-adjusts to light/dark text based on accent color brightness)

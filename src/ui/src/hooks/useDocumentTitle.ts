@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 
 /**
  * Custom hook to set the document title
- * @param title - The page title (will be prefixed with "UWOS - ")
+ * @param title - The page title (will be prefixed with "UNIFFY - ")
  * 
  * @example
  * ```tsx
  * function MyPage() {
  *   useDocumentTitle('Notes');
- *   // Document title will be "UWOS - Notes"
+ *   // Document title will be "UNIFFY - Notes"
  *   return <div>...</div>;
  * }
  * ```
@@ -18,9 +18,9 @@ export function useDocumentTitle(title?: string): void {
         const previousTitle = document.title;
 
         if (title) {
-            document.title = `UWOS - ${title}`;
+            document.title = `UNIFFY - ${title}`;
         } else {
-            document.title = 'UWOS';
+            document.title = 'UNIFFY';
         }
 
         // Cleanup: restore previous title when component unmounts

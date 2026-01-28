@@ -18,7 +18,7 @@ import {
 import type { SerializedEffectiveSettings } from '../store/settingsThunks';
 
 // Local storage key for active profile
-const ACTIVE_PROFILE_KEY = 'uwos_active_profile_id';
+const ACTIVE_PROFILE_KEY = 'uniffy_active_profile_id';
 
 /**
  * Hook for managing settings state and operations.

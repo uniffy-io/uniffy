@@ -20,7 +20,7 @@ service BookmarksService {
 message ToggleBookmarkRequest {
   // Organization context
   string organization_id = 1;
-  // URN of the content to bookmark (e.g., "urn:uwos:content:NOTE:uuid")
+  // URN of the content to bookmark (e.g., "urn:uniffy:content:NOTE:uuid")
   string urn = 2;
 }
 

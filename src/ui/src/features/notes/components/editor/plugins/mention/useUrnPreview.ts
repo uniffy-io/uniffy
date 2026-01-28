@@ -178,6 +178,6 @@ export function invalidatePreviewCache(urn: string): void {
  * Convenience function for use after note saves.
  */
 export function invalidateNotePreviewCache(noteId: string): void {
-  const urn = `urn:uwos:content:NOTE:${noteId}`;
+  const urn = `urn:uniffy:content:NOTE:${noteId}`;
   previewCache.delete(urn);
 }

@@ -1,6 +1,6 @@
 ## Project Overview
 
-UWOS is a unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions.
+Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions.
 
 ## Commands
 ```bash
@@ -22,7 +22,7 @@ Migrations run automatically on startup.
 
 ### BackendTree Structure
 
-`src/uwos/` is the root backend dir:
+`src/uniffy/` is the root backend dir:
 
 ```
 |-- __init__.py
@@ -49,7 +49,7 @@ Migrations run automatically on startup.
 
 ### Domain-Driven Vertical Slices
 
-Each feature is self-contained in `src/uwos/domains/{feature}/`:
+Each feature is self-contained in `src/uniffy/domains/{feature}/`:
 
 ```
 domains/{feature}/
@@ -69,8 +69,8 @@ domains/{feature}/
 4. Create domain module in `domains/{feature}/`
 5. Mount in `factory.py`:
    ```python
-   from uwos.domains.feature.service import FeatureServiceImpl
-   from uwos.gen.feature.v1.feature_connect import FeatureServiceASGIApplication
+   from uniffy.domains.feature.service import FeatureServiceImpl
+   from uniffy.gen.feature.v1.feature_connect import FeatureServiceASGIApplication
 
    service = FeatureServiceImpl()
    app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))
@@ -91,10 +91,10 @@ When adding a new content type (e.g., `TASK`, `DOCUMENT`), you MUST update these
 **Backend:**
 | File | What to update |
 |------|----------------|
-| `src/uwos/core/models/shared.py` | Add to `ContentType` enum |
-| `src/uwos/core/converters/common_proto.py` | Add mapping in `CONTENT_TYPE_TO_PROTO` and `CONTENT_TYPE_FROM_PROTO` |
-| `src/uwos/domains/search/converters.py` | Add mapping in `ENTITY_TYPE_TO_PROTO` dict |
-| `src/uwos/domains/permissions/converters.py` | Add mapping in `DOMAIN_CONTENT_TYPE_TO_PROTO` dict |
+| `src/uniffy/core/models/shared.py` | Add to `ContentType` enum |
+| `src/uniffy/core/converters/common_proto.py` | Add mapping in `CONTENT_TYPE_TO_PROTO` and `CONTENT_TYPE_FROM_PROTO` |
+| `src/uniffy/domains/search/converters.py` | Add mapping in `ENTITY_TYPE_TO_PROTO` dict |
+| `src/uniffy/domains/permissions/converters.py` | Add mapping in `DOMAIN_CONTENT_TYPE_TO_PROTO` dict |
 
 **Frontend:**
 | File | What to update |
@@ -299,11 +299,11 @@ import { OrganizationRole, GroupRole, PaginationRequest } from '@/gen/common/v1/
 
 ### Universal Resource Names (URNs)
 
-UWOS uses URNs to uniquely identify all content across the system. This enables universal `@` mentions where any piece of content can reference any other.
+Uniffy uses URNs to uniquely identify all content across the system. This enables universal `@` mentions where any piece of content can reference any other.
 
 **URN Format:**
 ```
-urn:uwos:content:{TYPE}:{uuid}
+urn:uniffy:content:{TYPE}:{uuid}
 ```
 
 **Supported Types:** `NOTE`, `FILE`, `CHAT`, `USER`, `BOOK`, `CALENDAR_EVENT`, `PASSWORD`, `SPACE`
@@ -317,12 +317,12 @@ urn:uwos:content:{TYPE}:{uuid}
 ```python
 @property
 def urn(self) -> str:
-    return f"urn:uwos:content:{self.__class__.__name__.upper()}:{self.id}"
+    return f"urn:uniffy:content:{self.__class__.__name__.upper()}:{self.id}"
 ```
 
 ### Markdown Content Standard
 
-All user-editable text content in UWOS MUST support Markdown with URN mentions.
+All user-editable text content in Uniffy MUST support Markdown with URN mentions.
 
 **Requirements for all domains:**
 1. Store content as Markdown text
@@ -332,8 +332,8 @@ All user-editable text content in UWOS MUST support Markdown with URN mentions.
 
 **Mention Format in Markdown:**
 ```markdown
-Check out [[[My Note|urn:uwos:content:NOTE:uuid]]] for details.
-Contact [[[John Doe|urn:uwos:content:USER:uuid]]] for questions.
+Check out [[[My Note|urn:uniffy:content:NOTE:uuid]]] for details.
+Contact [[[John Doe|urn:uniffy:content:USER:uuid]]] for questions.
 ```
 
 ### Multi-Tenancy
@@ -358,9 +358,9 @@ JWT-based authentication with access/refresh token pattern. Users authenticate g
 | Proto | `src/proto/auth/v1/auth.proto` | Auth API (Register, Login, RefreshToken, GetCurrentUser, Logout) |
 | Proto | `src/proto/users/v1/users.proto` | User profile CRUD, org membership management |
 | Proto | `src/proto/organizations/v1/organizations.proto` | Org CRUD, member management |
-| Backend | `src/uwos/domains/auth/operations.py` | Auth business logic (login, refresh, token validation) |
-| Backend | `src/uwos/domains/auth/tokens.py` | JWT creation/validation (access + refresh tokens) |
-| Backend | `src/uwos/core/models/login/user.py` | User model with `token_version` for revocation |
+| Backend | `src/uniffy/domains/auth/operations.py` | Auth business logic (login, refresh, token validation) |
+| Backend | `src/uniffy/domains/auth/tokens.py` | JWT creation/validation (access + refresh tokens) |
+| Backend | `src/uniffy/core/models/login/user.py` | User model with `token_version` for revocation |
 | Frontend | `src/ui/src/config/api.ts` | Token storage, refresh, rehydration, auth interceptor |
 | Frontend | `src/ui/src/features/auth/store/authSlice.ts` | Auth state (user, tokens, org ID) |
 | Frontend | `src/ui/src/components/auth/ProtectedRoute.tsx` | Route guard (redirects unauthenticated users) |
@@ -426,7 +426,7 @@ When adding new features with user/org-specific state, add a reset action and in
 
 ### Administration System
 
-UWOS has a unified administration panel at `/admin` with two admin types:
+Uniffy has a unified administration panel at `/admin` with two admin types:
 
 **Admin Hierarchy:**
 
@@ -495,7 +495,7 @@ Use `PermissionChecker` or `BaseContentOperations` (handles it automatically).
 
 ### Bookmarks System
 
-UWOS provides a unified bookmarks system for users to save and quick-access any content. **Do NOT implement domain-specific favorites, pinned, or starred functionality** - use the shared bookmarks feature instead.
+Uniffy provides a unified bookmarks system for users to save and quick-access any content. **Do NOT implement domain-specific favorites, pinned, or starred functionality** - use the shared bookmarks feature instead.
 
 **Key Characteristics:**
 - **User-scoped**: Each user has their own personal bookmarks (not shared)
@@ -508,9 +508,9 @@ UWOS provides a unified bookmarks system for users to save and quick-access any 
 | Layer | File | Purpose |
 |-------|------|---------|
 | Proto | `src/proto/bookmarks/v1/bookmarks.proto` | API contract (Toggle, List, BulkCheck) |
-| Backend | `src/uwos/core/models/bookmarks/bookmark.py` | Bookmark model |
-| Backend | `src/uwos/domains/bookmarks/operations.py` | Business logic |
-| Backend | `src/uwos/domains/bookmarks/handlers.py` | RPC handlers |
+| Backend | `src/uniffy/core/models/bookmarks/bookmark.py` | Bookmark model |
+| Backend | `src/uniffy/domains/bookmarks/operations.py` | Business logic |
+| Backend | `src/uniffy/domains/bookmarks/handlers.py` | RPC handlers |
 | Frontend | `src/ui/src/features/bookmarks/` | Complete bookmarks feature |
 
 **Frontend Integration:**
@@ -829,7 +829,7 @@ Use the shared URN utilities and components for consistent content referencing a
 import { parseUrn, buildUrn, urnToPath, getUrnIcon, getUrnTypeLabel, isValidUrn } from '@/utils/urn';
 
 // Parse a URN to get type and ID
-const parsed = parseUrn('urn:uwos:content:NOTE:uuid');
+const parsed = parseUrn('urn:uniffy:content:NOTE:uuid');
 // { type: 'note', id: 'uuid', isValid: true, urn: '...' }
 
 // Convert URN to navigation path
@@ -877,7 +877,7 @@ const { setQuery, results, isLoading } = useSearch();
 
 ### Keyboard Shortcuts Framework
 
-UWOS provides a centralized keyboard shortcuts system that all domains should use for consistent, user-customizable keybindings.
+Uniffy provides a centralized keyboard shortcuts system that all domains should use for consistent, user-customizable keybindings.
 
 **Available Hooks** (`@/features/settings`):
 
@@ -938,7 +938,7 @@ Shortcuts must be defined in **3 places** to work correctly:
 
 **Step 1: Backend defaults** (source of truth)
 
-`src/uwos/domains/settings/defaults.py`:
+`src/uniffy/domains/settings/defaults.py`:
 ```python
 DEFAULT_KEYBOARD_SHORTCUTS = {
     # ... existing shortcuts
@@ -1030,7 +1030,7 @@ function NewEventButton() {
 
 ### Zen Mode
 
-UWOS has a global Zen Mode (`Ctrl+\`) that hides the top navigation and all sidebars so the user can focus on content. It is implemented as a shared Redux slice (`zenModeSlice`) with a single `isActive` boolean, toggled by a global `ZenModeHandler` component mounted in `App.tsx`.
+Uniffy has a global Zen Mode (`Ctrl+\`) that hides the top navigation and all sidebars so the user can focus on content. It is implemented as a shared Redux slice (`zenModeSlice`) with a single `isActive` boolean, toggled by a global `ZenModeHandler` component mounted in `App.tsx`.
 
 **Key Files:**
 

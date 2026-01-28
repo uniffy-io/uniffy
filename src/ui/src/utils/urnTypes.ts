@@ -1,7 +1,7 @@
 /**
  * URN Type Definitions
  *
- * Defines the supported URN types in the UWOS system.
+ * Defines the supported URN types in the UNIFFY system.
  * This file is kept separate to avoid circular dependencies.
  */
 

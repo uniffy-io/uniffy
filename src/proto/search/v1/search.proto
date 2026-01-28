@@ -52,7 +52,7 @@ message SearchResponse {
 }
 
 message SearchResultItem {
-  string urn = 1; // Universal Resource Name (urn:uwos:note:uuid)
+  string urn = 1; // Universal Resource Name (urn:uniffy:note:uuid)
   string title = 2;
   string description = 3; // Snippet or subtitle
   SearchResultType type = 4;
@@ -88,7 +88,7 @@ message DeleteItemResponse {
 // Request to get content that references a specific URN
 message GetReferencesRequest {
   string organization_id = 1;
-  // URN to find references to (e.g., urn:uwos:content:NOTE:uuid)
+  // URN to find references to (e.g., urn:uniffy:content:NOTE:uuid)
   string target_urn = 2;
   // Optional: filter by content type
   repeated SearchResultType type_filters = 3;

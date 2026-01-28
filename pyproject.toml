@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "uwos"
+name = "uniffy"
 version = "0.1.0"
 description = "The Operating System for Work"
 readme = "README.md"

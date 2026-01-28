@@ -8,7 +8,7 @@
 import { useEffect, useCallback } from 'react';
 
 /** Custom event name for opening spotlight */
-const SPOTLIGHT_OPEN_EVENT = 'uwos:spotlight:open';
+const SPOTLIGHT_OPEN_EVENT = 'uniffy:spotlight:open';
 
 /**
  * Open the Spotlight search programmatically.

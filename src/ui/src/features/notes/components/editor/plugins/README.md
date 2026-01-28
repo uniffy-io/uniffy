@@ -1,6 +1,6 @@
-# Milkdown Plugin Development Guide for UWOS
+# Milkdown Plugin Development Guide for UNIFFY
 
-This guide covers how to create custom Milkdown plugins for the UWOS editor (Crepe).
+This guide covers how to create custom Milkdown plugins for the UNIFFY editor (Crepe).
 
 ## Table of Contents
 
@@ -631,7 +631,7 @@ useEffect(() => {
 - [Official Milkdown Docs](https://milkdown.dev/)
 - [ProseMirror Guide](https://prosemirror.net/docs/guide/)
 - [Remark](https://github.com/remarkjs/remark) (for markdown processing)
-- [UWOS Codebase Docs](./README.md)
+- [UNIFFY Codebase Docs](./README.md)
 
 ---
 

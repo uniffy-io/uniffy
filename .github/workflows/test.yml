@@ -40,7 +40,7 @@ jobs:
       - name: run python linters
         shell: bash
         run: |
-          uv run ruff check src/uwos/ --exclude src/uwos/gen
+          uv run ruff check src/uniffy/ --exclude src/uniffy/gen
 
   lint-frontend:
     runs-on: ubuntu-latest
