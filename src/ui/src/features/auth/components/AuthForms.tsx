@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from "@/gen/auth/v1/auth_connect";
@@ -7,6 +7,7 @@ import { setCredentials } from "../store/authSlice";
 import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
 import { transport, setMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { defaultTheme } from "@/theme/types";
 import {
   Envelope,
   Lock,
@@ -18,26 +19,16 @@ const authClient = createClient(AuthService, transport);
 
 // Static brand colors — not from the theme engine so the auth page stays visually consistent
 const BRAND_BLUE = 'hsl(221.2, 83.2%, 53.3%)';
-const BRAND_BLUE_RING = 'hsla(221.2, 83.2%, 53.3%, 0.2)';
+const BRAND_ACCENT = '#09090b';
+const BRAND_ACCENT_RING = 'rgba(9, 9, 11, 0.15)';
 
-// --- Connected network canvas for the brand panel ---
+// --- Connected network canvas for the auth page ---
 
-const FEATURE_LABELS = ['Notes', 'Files', 'Chat', 'Calendar', 'Workflows', 'Assistants', 'You'];
-const FEATURE_COUNT = FEATURE_LABELS.length;
+const CONTENT_LABELS = ['Note', 'File', 'Chat', 'Calendar', 'Workflow', 'Assistant'];
+const MAX_LABELED = 20;
 const AMBIENT_COUNT = 26;
-const CONNECTION_DIST = 280;
+const CONNECTION_DIST = 320;
 const MAX_PULSES = 10;
-
-// Predetermined angular positions for feature nodes (ring with Users at center)
-const FEATURE_ANGLES = [
-  -0.9,   // Notes — upper-left
-  -0.25,  // Files — upper-right
-  0.45,   // Chat — right
-  1.1,    // Calendar — lower-right
-  1.85,   // Workflows — lower-left
-  2.55,   // Assistants — left
-  0,      // You — center (angle ignored, placed at ring center)
-];
 
 interface NetNode {
   x: number;
@@ -69,66 +60,57 @@ function useNetworkCanvas() {
   const rafRef = useRef(0);
   const prevRef = useRef(0);
   const dragRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
+  const labeledCountRef = useRef(0);
+  const spawnTimerRef = useRef(0);
 
   const init = useCallback((w: number, h: number) => {
     const nodes: NetNode[] = [];
-    const centerX = w * 0.52;
-    const centerY = h * 0.55;
-    const ringRadius = Math.min(w, h) * 0.24;
+    const panelW = w * 0.52;
 
-    // Place feature nodes — outer ring + Users at center
-    for (let i = 0; i < FEATURE_COUNT; i++) {
-      const isCenter = FEATURE_LABELS[i] === 'You';
-      const cx = isCenter ? centerX : centerX + Math.cos(FEATURE_ANGLES[i]) * ringRadius;
-      const cy = isCenter ? centerY : centerY + Math.sin(FEATURE_ANGLES[i]) * ringRadius;
+    // Place exactly one "You" node — always on the left panel
+    const youCx = panelW * (0.15 + Math.random() * 0.7);
+    const youCy = h * (0.25 + Math.random() * 0.5);
+    nodes.push({
+      x: youCx, y: youCy, cx: youCx, cy: youCy,
+      vx: (Math.random() - 0.5) * 0.04,
+      vy: (Math.random() - 0.5) * 0.04,
+      radius: 6,
+      angle: Math.random() * Math.PI * 2,
+      orbitR: 10 + Math.random() * 8,
+      speed: 0.0003 + Math.random() * 0.00025,
+      label: 'You',
+      glowPhase: Math.random() * Math.PI * 2,
+    });
+
+    // Place remaining labeled nodes (8-19 more, for 9-20 total including You)
+    const extraCount = 7 + Math.floor(Math.random() * 13);
+    for (let i = 0; i < extraCount; i++) {
+      const label = CONTENT_LABELS[Math.floor(Math.random() * CONTENT_LABELS.length)];
+      const cx = w * (0.04 + Math.random() * 0.92);
+      const cy = h * (0.04 + Math.random() * 0.92);
       nodes.push({
         x: cx, y: cy, cx, cy,
-        vx: (Math.random() - 0.5) * (isCenter ? 0.04 : 0.12),
-        vy: (Math.random() - 0.5) * (isCenter ? 0.04 : 0.12),
-        radius: isCenter ? 6 : 4.5,
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.12,
+        radius: 4.5,
         angle: Math.random() * Math.PI * 2,
-        orbitR: isCenter ? 10 + Math.random() * 8 : 22 + Math.random() * 20,
+        orbitR: 15 + Math.random() * 20,
         speed: 0.0003 + Math.random() * 0.00025,
-        label: FEATURE_LABELS[i],
+        label,
         glowPhase: Math.random() * Math.PI * 2,
       });
     }
+    labeledCountRef.current = 1 + extraCount;
+    spawnTimerRef.current = 1500 + Math.random() * 3000;
 
-    // Exclusion zone: logo + slogan area (top-left)
-    const exL = w * 0.04;
-    const exR = w * 0.65;
-    const exT = h * 0.02;
-    const exB = h * 0.22;
-
-    // Place ambient nodes — mix of bridge nodes (between features) and scattered edge nodes
+    // Place ambient nodes — scattered across the full page
+    const centerX = panelW * 0.52;
+    const centerY = h * 0.52;
     for (let i = 0; i < AMBIENT_COUNT; i++) {
-      let cx: number, cy: number;
-      let attempts = 0;
-
-      if (i < 12) {
-        // Bridge nodes: placed inside/around the feature ring to connect everything
-        do {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = ringRadius * (0.3 + Math.random() * 0.9);
-          cx = centerX + Math.cos(angle) * dist;
-          cy = centerY + Math.sin(angle) * dist;
-          attempts++;
-        } while (
-          cx > exL && cx < exR && cy > exT && cy < exB && attempts < 30
-        );
-      } else {
-        // Edge nodes: scattered further out for depth
-        do {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = Math.min(w, h) * (0.25 + Math.random() * 0.35);
-          cx = centerX + Math.cos(angle) * dist;
-          cy = centerY + Math.sin(angle) * dist;
-          attempts++;
-        } while (
-          cx > exL && cx < exR && cy > exT && cy < exB && attempts < 30
-        );
-      }
-
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.min(w * 0.5, h) * (0.15 + Math.random() * 0.45);
+      const cx = centerX + Math.cos(angle) * dist;
+      const cy = centerY + Math.sin(angle) * dist;
       nodes.push({
         x: cx, y: cy, cx, cy,
         vx: (Math.random() - 0.5) * 0.15,
@@ -137,6 +119,24 @@ function useNetworkCanvas() {
         angle: Math.random() * Math.PI * 2,
         orbitR: 10 + Math.random() * 25,
         speed: 0.0002 + Math.random() * 0.0004,
+      });
+    }
+
+    // Right-panel ambient nodes — bridge nodes near boundary + scattered deeper
+    const rightW = w - panelW;
+    for (let i = 0; i < 18; i++) {
+      const rx = i < 10
+        ? panelW + rightW * (0.02 + Math.random() * 0.35)
+        : panelW + rightW * (0.25 + Math.random() * 0.65);
+      const ry = h * (0.08 + Math.random() * 0.84);
+      nodes.push({
+        x: rx, y: ry, cx: rx, cy: ry,
+        vx: (Math.random() - 0.5) * 0.1,
+        vy: (Math.random() - 0.5) * 0.1,
+        radius: 1.2 + Math.random() * 1.3,
+        angle: Math.random() * Math.PI * 2,
+        orbitR: 8 + Math.random() * 18,
+        speed: 0.0002 + Math.random() * 0.0003,
       });
     }
 
@@ -165,8 +165,6 @@ function useNetworkCanvas() {
     resize();
     window.addEventListener('resize', resize);
 
-    // Users node index (last feature node)
-    const usersIdx = FEATURE_LABELS.indexOf('You');
     const HIT_RADIUS = 28;
 
     const getCanvasPos = (e: MouseEvent) => {
@@ -174,17 +172,19 @@ function useNetworkCanvas() {
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
 
-    const isOverUsers = (mx: number, my: number) => {
-      const nodes = nodesRef.current;
-      if (!nodes[usersIdx]) return false;
-      const dx = mx - nodes[usersIdx].x;
-      const dy = my - nodes[usersIdx].y;
-      return dx * dx + dy * dy < HIT_RADIUS * HIT_RADIUS;
+    const isOverYou = (mx: number, my: number) => {
+      for (const n of nodesRef.current) {
+        if (n.label !== 'You') continue;
+        const dx = mx - n.x;
+        const dy = my - n.y;
+        if (dx * dx + dy * dy < HIT_RADIUS * HIT_RADIUS) return true;
+      }
+      return false;
     };
 
     const onMouseDown = (e: MouseEvent) => {
       const pos = getCanvasPos(e);
-      if (isOverUsers(pos.x, pos.y)) {
+      if (isOverYou(pos.x, pos.y)) {
         dragRef.current = { active: true, lastX: pos.x, lastY: pos.y };
         canvas.style.cursor = 'grabbing';
       }
@@ -206,7 +206,7 @@ function useNetworkCanvas() {
           n.cy += deltaY;
         }
       } else {
-        canvas.style.cursor = isOverUsers(pos.x, pos.y) ? 'grab' : '';
+        canvas.style.cursor = isOverYou(pos.x, pos.y) ? 'grab' : '';
       }
     };
 
@@ -234,13 +234,26 @@ function useNetworkCanvas() {
       const nodes = nodesRef.current;
       const pulses = pulsesRef.current;
 
-      // Exclusion zone for logo area (top-left)
-      const exL = w * 0.04;
-      const exR = w * 0.65;
-      const exT = h * 0.02;
-      const exB = h * 0.22;
-      const exCx = (exL + exR) / 2;
-      const exCy = (exT + exB) / 2;
+      const panelW = w * 0.52;
+
+      // Position-dependent color: white on dark left panel, near-black on light right panel
+      const splitX = panelW;
+      const transW = 150;
+      const ncT = (x: number) => Math.max(0, Math.min(1, (x - splitX + transW / 2) / transW));
+      const nc = (x: number, a: number): string => {
+        const t = ncT(x);
+        // Left: rgb(255,255,255) white. Right: rgb(30,30,40) near-black.
+        // Alpha is boosted on the right side so low-alpha elements (connections) stay visible on white.
+        const v = Math.round(255 - t * 225);
+        const boostedAlpha = a * (1 + t * 2.5);
+        return `rgba(${v},${v},${Math.round(255 - t * 215)},${Math.min(boostedAlpha, 1)})`;
+      };
+
+      // Form zone bounds (used only for suppressing labels over the form)
+      const fzL = panelW + (w - panelW) * 0.05;
+      const fzR = w - (w - panelW) * 0.05;
+      const fzT = h * 0.12;
+      const fzB = h * 0.88;
 
       // Update positions — slow orbit + drift
       for (const n of nodes) {
@@ -249,22 +262,30 @@ function useNetworkCanvas() {
         n.y = n.cy + Math.sin(n.angle * 0.7) * n.orbitR * 0.6;
         n.cx += n.vx * 0.015;
         n.cy += n.vy * 0.015;
+      }
 
-        // Soft repulsion from logo exclusion zone
-        if (n.cx > exL && n.cx < exR && n.cy > exT && n.cy < exB) {
-          const dx = n.cx - exCx;
-          const dy = n.cy - exCy;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          n.cx += (dx / dist) * 0.4;
-          n.cy += (dy / dist) * 0.4;
+      // Spawn new labeled nodes over time until MAX_LABELED (never spawn "You")
+      if (labeledCountRef.current < MAX_LABELED) {
+        spawnTimerRef.current -= dt;
+        if (spawnTimerRef.current <= 0) {
+          const label = CONTENT_LABELS[Math.floor(Math.random() * CONTENT_LABELS.length)];
+          const cx = w * (0.04 + Math.random() * 0.92);
+          const cy = h * (0.04 + Math.random() * 0.92);
+
+          nodes.push({
+            x: cx, y: cy, cx, cy,
+            vx: (Math.random() - 0.5) * 0.12,
+            vy: (Math.random() - 0.5) * 0.12,
+            radius: 4.5,
+            angle: Math.random() * Math.PI * 2,
+            orbitR: 15 + Math.random() * 20,
+            speed: 0.0003 + Math.random() * 0.00025,
+            label,
+            glowPhase: Math.random() * Math.PI * 2,
+          });
+          labeledCountRef.current++;
+          spawnTimerRef.current = 1500 + Math.random() * 3000;
         }
-
-        // Bounce off edges
-        const m = 50;
-        if (n.cx < m) { n.cx = m; n.vx = Math.abs(n.vx); }
-        if (n.cx > w - m) { n.cx = w - m; n.vx = -Math.abs(n.vx); }
-        if (n.cy < m) { n.cy = m; n.vy = Math.abs(n.vy); }
-        if (n.cy > h - m) { n.cy = h - m; n.vy = -Math.abs(n.vy); }
       }
 
       // Connections
@@ -276,14 +297,16 @@ function useNetworkCanvas() {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < CONNECTION_DIST) {
             conns.push([i, j]);
-            // Connections involving feature nodes are slightly brighter
-            const isFeatureConn = i < FEATURE_COUNT || j < FEATURE_COUNT;
-            const alpha = (isFeatureConn ? 0.16 : 0.10) * (1 - dist / CONNECTION_DIST);
+            // Connections involving labeled nodes are slightly brighter
+            const isLabeledConn = !!nodes[i].label || !!nodes[j].label;
+            const alpha = (isLabeledConn ? 0.24 : 0.16) * (1 - dist / CONNECTION_DIST);
+            const midX = (nodes[i].x + nodes[j].x) / 2;
+            const midY = (nodes[i].y + nodes[j].y) / 2;
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
-            ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-            ctx.lineWidth = isFeatureConn ? 1 : 0.7;
+            ctx.strokeStyle = nc(midX, alpha);
+            ctx.lineWidth = isLabeledConn ? 1.2 : 0.9;
             ctx.stroke();
           }
         }
@@ -310,8 +333,8 @@ function useNetworkCanvas() {
         const alpha = 0.6 * pulse.life;
 
         const grad = ctx.createRadialGradient(px, py, 0, px, py, 10);
-        grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
-        grad.addColorStop(1, `rgba(255,255,255,0)`);
+        grad.addColorStop(0, nc(px, alpha));
+        grad.addColorStop(1, nc(px, 0));
         ctx.beginPath();
         ctx.arc(px, py, 10, 0, Math.PI * 2);
         ctx.fillStyle = grad;
@@ -319,7 +342,7 @@ function useNetworkCanvas() {
 
         ctx.beginPath();
         ctx.arc(px, py, 2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.9})`;
+        ctx.fillStyle = nc(px, alpha * 0.9);
         ctx.fill();
       }
 
@@ -327,7 +350,10 @@ function useNetworkCanvas() {
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i];
 
-        if (n.label) {
+        // If a labeled node is inside the form zone, render as a plain dot (no label/glow)
+        const inFormZone = n.x > fzL && n.x < fzR && n.y > fzT && n.y < fzB;
+
+        if (n.label && !inFormZone) {
           // Feature node — glowing dot with label
           const glowPulse = 0.5 + 0.5 * Math.sin((ts * 0.001) + (n.glowPhase ?? 0));
           const isUsers = n.label === 'You';
@@ -338,9 +364,9 @@ function useNetworkCanvas() {
 
             // Outer glow
             const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, ringR + 12);
-            glow.addColorStop(0, `rgba(255,255,255,${0.15 + glowPulse * 0.08})`);
-            glow.addColorStop(0.6, `rgba(255,255,255,${0.04 + glowPulse * 0.03})`);
-            glow.addColorStop(1, 'rgba(255,255,255,0)');
+            glow.addColorStop(0, nc(n.x, 0.15 + glowPulse * 0.08));
+            glow.addColorStop(0.6, nc(n.x, 0.04 + glowPulse * 0.03));
+            glow.addColorStop(1, nc(n.x, 0));
             ctx.beginPath();
             ctx.arc(n.x, n.y, ringR + 12, 0, Math.PI * 2);
             ctx.fillStyle = glow;
@@ -349,35 +375,35 @@ function useNetworkCanvas() {
             // Ring border
             ctx.beginPath();
             ctx.arc(n.x, n.y, ringR, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(255,255,255,${0.35 + glowPulse * 0.25})`;
+            ctx.strokeStyle = nc(n.x, 0.35 + glowPulse * 0.25);
             ctx.lineWidth = 1.5;
             ctx.stroke();
 
             // Filled inner circle
             ctx.beginPath();
             ctx.arc(n.x, n.y, ringR - 3, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${0.08 + glowPulse * 0.04})`;
+            ctx.fillStyle = nc(n.x, 0.08 + glowPulse * 0.04);
             ctx.fill();
 
             // User silhouette — head
             const iconAlpha = 0.75 + glowPulse * 0.25;
             ctx.beginPath();
             ctx.arc(n.x, n.y - 3, 3.5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${iconAlpha})`;
+            ctx.fillStyle = nc(n.x, iconAlpha);
             ctx.fill();
 
             // User silhouette — shoulders
             ctx.beginPath();
             ctx.arc(n.x, n.y + 7, 5.5, Math.PI, 0, false);
-            ctx.fillStyle = `rgba(255,255,255,${iconAlpha})`;
+            ctx.fillStyle = nc(n.x, iconAlpha);
             ctx.fill();
           } else {
             // Standard feature node — glowing dot
             const haloR = 18 + glowPulse * 4;
             const halo = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, haloR);
-            halo.addColorStop(0, `rgba(255,255,255,${0.12 + glowPulse * 0.06})`);
-            halo.addColorStop(0.5, `rgba(255,255,255,${0.04 + glowPulse * 0.02})`);
-            halo.addColorStop(1, 'rgba(255,255,255,0)');
+            halo.addColorStop(0, nc(n.x, 0.12 + glowPulse * 0.06));
+            halo.addColorStop(0.5, nc(n.x, 0.04 + glowPulse * 0.02));
+            halo.addColorStop(1, nc(n.x, 0));
             ctx.beginPath();
             ctx.arc(n.x, n.y, haloR, 0, Math.PI * 2);
             ctx.fillStyle = halo;
@@ -386,7 +412,7 @@ function useNetworkCanvas() {
             // Core dot
             ctx.beginPath();
             ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${0.7 + glowPulse * 0.3})`;
+            ctx.fillStyle = nc(n.x, 0.7 + glowPulse * 0.3);
             ctx.fill();
           }
 
@@ -395,13 +421,13 @@ function useNetworkCanvas() {
           ctx.font = `${isUsers ? '600 12px' : '500 11px'} system-ui, -apple-system, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-          ctx.fillStyle = `rgba(255,255,255,${0.55 + glowPulse * 0.15})`;
+          ctx.fillStyle = nc(n.x, 0.55 + glowPulse * 0.15);
           ctx.fillText(n.label, n.x, labelY);
         } else {
           // Ambient node — small dot
           ctx.beginPath();
           ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255,255,255,0.2)';
+          ctx.fillStyle = nc(n.x, 0.2);
           ctx.fill();
         }
       }
@@ -455,7 +481,7 @@ function AuthInput({
       {Icon && (
         <div
           className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 z-10 transition-colors duration-200"
-          style={focused ? { color: BRAND_BLUE } : undefined}
+          style={focused ? { color: BRAND_ACCENT } : undefined}
         >
           <Icon className={`h-4 w-4 ${!focused ? 'text-muted-foreground' : ''}`} />
         </div>
@@ -482,8 +508,8 @@ function AuthInput({
           ${!focused ? 'border-border hover:border-muted-foreground/40' : ''}
         `}
         style={focused ? {
-          borderColor: BRAND_BLUE,
-          boxShadow: `0 0 0 2px ${BRAND_BLUE_RING}, 0 1px 2px 0 rgba(0,0,0,0.05)`,
+          borderColor: BRAND_ACCENT,
+          boxShadow: `0 0 0 2px ${BRAND_ACCENT_RING}, 0 1px 2px 0 rgba(0,0,0,0.05)`,
         } : undefined}
       />
 
@@ -499,7 +525,7 @@ function AuthInput({
           }
           ${!focused ? 'text-muted-foreground' : ''}
         `}
-        style={focused ? { color: BRAND_BLUE } : undefined}
+        style={focused ? { color: BRAND_ACCENT } : undefined}
       >
         {label}
       </label>
@@ -508,47 +534,34 @@ function AuthInput({
 }
 
 /**
- * Left brand panel with animated connected-nodes network background.
+ * Brand content for the left panel (logo + tagline).
  */
-function BrandPanel() {
-  const canvasRef = useNetworkCanvas();
-
+function BrandContent() {
   return (
-    <div
-      className="hidden lg:flex lg:w-[52%] relative overflow-hidden flex-col justify-start"
-      style={{ backgroundColor: 'hsl(221.2, 83.2%, 53.3%)' }}
-    >
-      {/* Animated network canvas */}
-      <div className="absolute inset-0">
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+    <div className="px-14 pt-14">
+      {/* Logo mark — large and prominent */}
+      <div
+        className="mb-5 opacity-0"
+        style={{ animation: 'auth-slide-up 0.6s ease-out 0.2s forwards' }}
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-13 h-13 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+            <span className="text-white font-bold text-2xl tracking-tight">U</span>
+          </div>
+          <span className="text-white text-4xl font-bold tracking-tight">uniffy</span>
+        </div>
       </div>
 
-      {/* Brand content — top-left, logo prominent */}
-      <div className="relative z-10 px-14 pt-14">
-        {/* Logo mark — large and prominent */}
-        <div
-          className="mb-5 opacity-0"
-          style={{ animation: 'auth-slide-up 0.6s ease-out 0.2s forwards' }}
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-13 h-13 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/10 flex items-center justify-center">
-              <span className="text-white font-bold text-2xl tracking-tight">U</span>
-            </div>
-            <span className="text-white text-4xl font-bold tracking-tight">uniffy</span>
-          </div>
-        </div>
-
-        {/* Tagline — subordinate to logo */}
-        <div
-          className="opacity-0"
-          style={{ animation: 'auth-slide-up 0.6s ease-out 0.4s forwards' }}
-        >
-          <p className="text-white/60 text-base font-medium tracking-wide">
-            Work Infrastructure for
-            < br />
-            the rest of us.
-          </p>
-        </div>
+      {/* Tagline — subordinate to logo */}
+      <div
+        className="opacity-0"
+        style={{ animation: 'auth-slide-up 0.6s ease-out 0.4s forwards' }}
+      >
+        <p className="text-white/60 text-base font-medium tracking-wide">
+          Work Infrastructure for
+          < br />
+          the rest of us.
+        </p>
       </div>
     </div>
   );
@@ -556,6 +569,31 @@ function BrandPanel() {
 
 export function AuthForms() {
   useDocumentTitle('Login');
+  const canvasRef = useNetworkCanvas();
+
+  // Force light mode on the auth page regardless of user/system theme preference
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains('dark');
+
+    root.classList.remove('dark');
+
+    // Override CSS variables with light theme values (ThemeProvider sets them as inline styles)
+    const savedValues: Record<string, string> = {};
+    Object.entries(defaultTheme.colors).forEach(([key, value]) => {
+      const cssVar = `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+      savedValues[cssVar] = root.style.getPropertyValue(cssVar);
+      root.style.setProperty(cssVar, value);
+    });
+
+    return () => {
+      if (wasDark) root.classList.add('dark');
+      Object.entries(savedValues).forEach(([cssVar, value]) => {
+        root.style.setProperty(cssVar, value);
+      });
+    };
+  }, []);
+
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -702,11 +740,11 @@ export function AuthForms() {
           to { transform: rotate(360deg); }
         }
         .auth-btn {
-          background-color: hsl(221.2, 83.2%, 53.3%);
+          background-color: #09090b;
           color: white;
         }
         .auth-btn:hover:not(:disabled) {
-          background-color: hsl(221.2, 83.2%, 46%);
+          background-color: #18181b;
         }
         .auth-btn:disabled {
           opacity: 0.5;
@@ -714,12 +752,28 @@ export function AuthForms() {
         }
       `}</style>
 
-      <div className="flex min-h-screen">
-        {/* Left — Brand panel */}
-        <BrandPanel />
+      <div className="flex min-h-screen relative overflow-hidden">
+        {/* Left panel gradient background */}
+        <div
+          className="hidden lg:block absolute inset-y-0 left-0 w-[52%]"
+          style={{ background: 'linear-gradient(160deg, #09090b 0%, #171723 60%, #1a1a2e 100%)' }}
+        />
+        {/* Right panel background */}
+        <div className="absolute inset-y-0 lg:left-[52%] left-0 right-0 bg-background" />
+
+        {/* Full-page network canvas (above backgrounds, below content) */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full z-[1] pointer-events-none hidden lg:block"
+        />
+
+        {/* Left — Brand content */}
+        <div className="hidden lg:flex lg:w-[52%] relative z-[2] flex-col justify-start">
+          <BrandContent />
+        </div>
 
         {/* Right — Form panel */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-12 lg:px-20 bg-background relative">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-12 lg:px-20 relative z-[2]">
           {/* Mobile logo — only shown on smaller screens */}
           <div className="lg:hidden mb-10 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: BRAND_BLUE }}>
@@ -729,22 +783,6 @@ export function AuthForms() {
           </div>
 
           <div className="w-full max-w-sm">
-            {/* Header */}
-            <div
-              className="mb-8 opacity-0"
-              style={{ animation: 'auth-slide-up 0.5s ease-out 0.1s forwards' }}
-            >
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                {mode === 'login' ? 'Welcome back' : 'Create your account'}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {mode === 'login'
-                  ? 'Sign in to continue to your workspace.'
-                  : 'Get started with your unified workspace.'
-                }
-              </p>
-            </div>
-
             {/* Mode switcher — pill toggle */}
             <div
               className="mb-6 opacity-0"
