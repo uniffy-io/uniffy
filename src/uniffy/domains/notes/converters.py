@@ -15,7 +15,13 @@ from uniffy.gen.notes.v1.notes_pb2 import (
     NoteIcon as ProtoNoteIcon,
 )
 from uniffy.gen.notes.v1.notes_pb2 import (
+    NoteOwner as ProtoNoteOwner,
+)
+from uniffy.gen.notes.v1.notes_pb2 import (
     NoteReference,
+)
+from uniffy.gen.notes.v1.notes_pb2 import (
+    NoteShareTarget as ProtoNoteShareTarget,
 )
 from uniffy.gen.notes.v1.notes_pb2 import (
     VisibilityScope as ProtoVisibilityScope,
@@ -57,6 +63,8 @@ def note_to_proto(
     note: Note,
     permission_level: str | None = None,
     exclude_content: bool = False,
+    owner_info: dict | None = None,
+    shared_with: list[dict] | None = None,
 ) -> ProtoNote:
     """
     Convert Note model to proto Note.
@@ -69,6 +77,13 @@ def note_to_proto(
         User's permission level on this note.
     exclude_content : bool
         If True, return empty string for content field (for tree/list views).
+    owner_info : dict | None
+        Owner information for notes shared with current user.
+        Expected keys: id, name, email.
+    shared_with : list[dict] | None
+        List of users/groups this note is shared with (only for owner).
+        Each dict has: id, type ("user"/"group"), name, email (optional),
+        member_count (optional), permission_level.
 
     Returns
     -------
@@ -111,6 +126,7 @@ def note_to_proto(
         is_deleted=note.is_deleted,
         version=note.version,
         tags=note.tags or [],
+        inline_tags=note.inline_tags or [],
         metadata=metadata_dict,
         created_at=datetime_to_timestamp(note.created_at),
         updated_at=datetime_to_timestamp(note.updated_at),
@@ -131,6 +147,30 @@ def note_to_proto(
                 ProtoNoteIcon(
                     icon_type=icon_data.get("type", ""),
                     value=icon_data.get("value", ""),
+                )
+            )
+
+    # Add owner info for notes shared with current user
+    if owner_info:
+        proto_note.owner_info.CopyFrom(
+            ProtoNoteOwner(
+                id=str(owner_info.get("id", "")),
+                name=owner_info.get("name", ""),
+                email=owner_info.get("email", ""),
+            )
+        )
+
+    # Add shared_with for notes owned by current user
+    if shared_with:
+        for target in shared_with:
+            proto_note.shared_with.append(
+                ProtoNoteShareTarget(
+                    id=str(target.get("id", "")),
+                    type=target.get("type", ""),
+                    name=target.get("name", ""),
+                    email=target.get("email", ""),
+                    member_count=target.get("member_count", 0),
+                    permission_level=target.get("permission_level", ""),
                 )
             )
 

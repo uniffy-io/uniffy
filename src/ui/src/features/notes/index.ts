@@ -20,6 +20,7 @@ export { NotesGraphDashboard } from './components/dashboard/NotesGraphDashboard'
 
 // Pages
 export { default as NotesPage } from './pages/NotesPage';
+export { NotesTagsPage } from './pages/NotesTagsPage';
 
 // Store - Slices
 export { default as notesReducer } from './store/notesSlice';
@@ -111,6 +112,7 @@ export {
     searchNotes,
     moveNote,
     copyNote,
+    initializeNotesData,
 } from './store/notesSlice';
 
 export { updateNoteIcon } from './store/notesThunks';
@@ -125,6 +127,9 @@ export {
     useSaveStatus,
 } from './hooks/useNotesHooks';
 
+export { useNotesCacheSync } from './hooks/useNotesCacheSync';
+export { useTreeStateSync } from './hooks/useTreeStateSync';
+
 // Utils
 export {
     buildGraphData,
@@ -132,6 +137,11 @@ export {
     getNodeSize,
     getGraphStats,
 } from './utils/notesGraphUtils';
+
+export {
+    buildBreadcrumbPath,
+} from './utils/notesTreeUtils';
+export type { BreadcrumbItem } from './utils/notesTreeUtils';
 
 // Note icons - constants from noteIconConstants.ts, rendering from noteIcons.tsx
 export {
@@ -151,6 +161,17 @@ export {
     getIconSvgPaths,
     drawIconOnCanvas,
 } from './utils/noteIcons';
+
+// Cache utilities (for logout cleanup)
+export {
+    clearAllCache as clearNotesCache,
+    clearCachedNotes,
+} from './utils/notesCache';
+
+// Tree state persistence
+export {
+    clearTreeState,
+} from './utils/treeStateStorage';
 
 // Types
 export type { TreeNode, GroupTreeSection } from './store/notesTreeSlice';

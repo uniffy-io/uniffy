@@ -347,8 +347,10 @@ message Note {
   int64 version = 11;
   // Optional parent note ID
   optional string parent_id = 12;
-  // Tags
+  // Tags (whole-note tags set explicitly by user)
   repeated string tags = 13;
+  // Inline tags extracted from note content (e.g., #tagname in markdown)
+  repeated string inline_tags = 24;
   // Metadata
   map<string, string> metadata = 14;
   // Created timestamp
@@ -365,6 +367,12 @@ message Note {
   repeated string outgoing_references = 20;
   // Custom icon for the note (optional)
   optional NoteIcon icon = 21;
+
+  // Owner information (populated for notes shared with current user)
+  optional NoteOwner owner_info = 22;
+
+  // Users/groups this note is shared with (only populated for owner)
+  repeated NoteShareTarget shared_with = 23;
 }
 
 // Note reference (lightweight representation for backlinks)
@@ -523,4 +531,30 @@ message ContentPermission {
   google.protobuf.Timestamp granted_at = 11;
   // Optional expiration
   optional google.protobuf.Timestamp expires_at = 12;
+}
+
+// Lightweight owner information for shared notes
+message NoteOwner {
+  // Owner user ID
+  string id = 1;
+  // Owner display name
+  string name = 2;
+  // Owner email
+  string email = 3;
+}
+
+// Share target for display (user or group this note is shared with)
+message NoteShareTarget {
+  // User or group ID
+  string id = 1;
+  // Type: "user" or "group"
+  string type = 2;
+  // Display name
+  string name = 3;
+  // Email (only for users)
+  string email = 4;
+  // Member count (only for groups)
+  int32 member_count = 5;
+  // Permission level: "view", "edit", "admin"
+  string permission_level = 6;
 }

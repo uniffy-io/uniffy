@@ -10,6 +10,19 @@ import { notesApi } from '../api/notesApi';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
 import { NodeType, type VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { organizeNotesByVisibility, type OrganizedNotes } from '../utils/notesTreeUtils';
+import {
+    getCachedNotes,
+    setCachedNotes,
+    isIndexedDBAvailable,
+} from '../utils/notesCache';
+
+// Request deduplication - track in-flight requests
+let initializeRequestPromise: Promise<{
+    notes: SerializedNote[];
+    tree: OrganizedNotes;
+    totalCount: number;
+}> | null = null;
 // Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -35,6 +48,7 @@ const noteToPlain = (note: Note) => ({
     version: typeof note.version === 'bigint' ? Number(note.version) : note.version,
     parentId: note.parentId,
     tags: [...note.tags],
+    inlineTags: [...note.inlineTags],
     metadata: { ...note.metadata },
     createdAt: note.createdAt ? {
         seconds: typeof note.createdAt.seconds === 'bigint' ? Number(note.createdAt.seconds) : note.createdAt.seconds,
@@ -56,6 +70,21 @@ const noteToPlain = (note: Note) => ({
         type: note.icon.iconType as 'icon' | 'emoji',
         value: note.icon.value,
     } : undefined,
+    // Owner info for notes shared with current user
+    ownerInfo: note.ownerInfo ? {
+        id: note.ownerInfo.id,
+        name: note.ownerInfo.name,
+        email: note.ownerInfo.email,
+    } : undefined,
+    // Users/groups this note is shared with (only for owner)
+    sharedWith: note.sharedWith.length > 0 ? note.sharedWith.map(target => ({
+        id: target.id,
+        type: target.type as 'user' | 'group',
+        name: target.name,
+        email: target.email || undefined,
+        memberCount: target.memberCount || undefined,
+        permissionLevel: target.permissionLevel,
+    })) : undefined,
 });
 
 /** Serialized note type for Redux storage (bigints converted to numbers) */
@@ -63,6 +92,7 @@ export type SerializedNote = ReturnType<typeof noteToPlain>;
 
 /**
  * Fetch all notes for the current organization.
+ * When fetchAllPages is true, automatically fetches all pages and combines results.
  */
 export const fetchNotes = createAsyncThunk<
     {
@@ -84,15 +114,20 @@ export const fetchNotes = createAsyncThunk<
         sortBy?: string;
         sortOrder?: string;
         excludeContent?: boolean;
+        /** When true, fetches all pages automatically */
+        fetchAllPages?: boolean;
     } | void,
     { state: RootState; rejectValue: string }
 >('notes/fetchNotes', async (params, { getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
-        const response = await notesApi.listNotes({
+        const pageSize = params?.pageSize ?? 100;
+
+        // Fetch first page
+        const firstResponse = await notesApi.listNotes({
             organizationId,
             page: params?.page ?? 1,
-            pageSize: params?.pageSize ?? 500,
+            pageSize,
             parentId: params?.parentId,
             visibility: params?.visibility,
             personalOnly: params?.personalOnly ?? false,
@@ -104,12 +139,53 @@ export const fetchNotes = createAsyncThunk<
             excludeContent: params?.excludeContent ?? true,
         });
 
+        // If not fetching all pages or only one page exists, return first response
+        if (!params?.fetchAllPages || firstResponse.totalPages <= 1) {
+            return {
+                notes: firstResponse.notes.map(noteToPlain),
+                totalCount: firstResponse.totalCount,
+                page: firstResponse.page,
+                pageSize: firstResponse.pageSize,
+                totalPages: firstResponse.totalPages,
+            };
+        }
+
+        // Fetch remaining pages in parallel
+        const allNotes = [...firstResponse.notes];
+        const remainingPages = Array.from(
+            { length: firstResponse.totalPages - 1 },
+            (_, i) => i + 2
+        );
+
+        const pageResponses = await Promise.all(
+            remainingPages.map(page =>
+                notesApi.listNotes({
+                    organizationId,
+                    page,
+                    pageSize,
+                    parentId: params?.parentId,
+                    visibility: params?.visibility,
+                    personalOnly: params?.personalOnly ?? false,
+                    includeDeleted: params?.includeDeleted ?? true,
+                    groupId: params?.groupId,
+                    tags: params?.tags ?? [],
+                    sortBy: params?.sortBy ?? 'updated_at',
+                    sortOrder: params?.sortOrder ?? 'desc',
+                    excludeContent: params?.excludeContent ?? true,
+                })
+            )
+        );
+
+        for (const response of pageResponses) {
+            allNotes.push(...response.notes);
+        }
+
         return {
-            notes: response.notes.map(noteToPlain),
-            totalCount: response.totalCount,
-            page: response.page,
-            pageSize: response.pageSize,
-            totalPages: response.totalPages,
+            notes: allNotes.map(noteToPlain),
+            totalCount: firstResponse.totalCount,
+            page: 1,
+            pageSize: allNotes.length,
+            totalPages: 1,
         };
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch notes');
@@ -445,5 +521,192 @@ export const copyNote = createAsyncThunk<
         return noteToPlain(response.note);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to copy note');
+    }
+});
+
+/**
+ * Fetch notes from API (internal helper).
+ * Handles pagination and returns all notes.
+ */
+async function fetchAllNotesFromAPI(
+    organizationId: string,
+    currentUserId: string,
+    userGroups: Array<{ groupId: string; groupName: string }>
+): Promise<{
+    notes: SerializedNote[];
+    tree: OrganizedNotes;
+    totalCount: number;
+}> {
+    const pageSize = 500;
+
+    // Fetch first page
+    const firstResponse = await notesApi.listNotes({
+        organizationId,
+        page: 1,
+        pageSize,
+        includeDeleted: true,
+        excludeContent: true,
+    });
+
+    const allNotes = [...firstResponse.notes];
+
+    // Fetch remaining pages in parallel if needed
+    if (firstResponse.totalPages > 1) {
+        const remainingPages = Array.from(
+            { length: firstResponse.totalPages - 1 },
+            (_, i) => i + 2
+        );
+
+        const pageResponses = await Promise.all(
+            remainingPages.map(page =>
+                notesApi.listNotes({
+                    organizationId,
+                    page,
+                    pageSize,
+                    includeDeleted: true,
+                    excludeContent: true,
+                })
+            )
+        );
+
+        for (const response of pageResponses) {
+            allNotes.push(...response.notes);
+        }
+    }
+
+    // Convert to serializable format
+    const serializedNotes = allNotes.map(noteToPlain);
+
+    // Organize into tree structure
+    const tree = organizeNotesByVisibility(serializedNotes, currentUserId, userGroups);
+
+    return {
+        notes: serializedNotes,
+        tree,
+        totalCount: firstResponse.totalCount,
+    };
+}
+
+/**
+ * Initialize all notes data with caching support.
+ *
+ * Load strategy:
+ * 1. If cache exists and is fresh (< 5 min) → return cached data, no API call
+ * 2. If cache exists but stale → return cached data immediately, revalidate in background
+ * 3. If no cache → fetch from API
+ *
+ * This is the primary entry point for loading notes on page mount.
+ * Both notesSlice and notesTreeSlice listen to this action.
+ */
+export const initializeNotesData = createAsyncThunk<
+    {
+        notes: SerializedNote[];
+        tree: OrganizedNotes;
+        totalCount: number;
+        fromCache?: boolean;
+    },
+    {
+        userGroups?: Array<{ groupId: string; groupName: string }>;
+        /** Force API fetch even if cache is fresh */
+        forceRefresh?: boolean;
+    } | void,
+    { state: RootState; rejectValue: string }
+>('notes/initializeNotesData', async (params, { getState, rejectWithValue, dispatch }) => {
+    try {
+        const state = getState();
+        const organizationId = state.auth.currentOrganizationId;
+        const currentUserId = state.auth.user?.id || '';
+
+        if (!organizationId) {
+            return rejectWithValue('No organization selected');
+        }
+
+        const userGroups = params?.userGroups ?? [];
+        const forceRefresh = params?.forceRefresh ?? false;
+
+        // Check if we already have notes loaded (prevent unnecessary fetches)
+        const existingNotesCount = Object.keys(state.notes.notes).length;
+        if (existingNotesCount > 0 && !forceRefresh) {
+            // Notes already loaded, just reorganize tree if needed
+            const existingNotes = Object.values(state.notes.notes);
+            const tree = organizeNotesByVisibility(existingNotes, currentUserId, userGroups);
+            return {
+                notes: existingNotes,
+                tree,
+                totalCount: existingNotesCount,
+                fromCache: true,
+            };
+        }
+
+        // Request deduplication - if a fetch is already in progress, wait for it
+        if (initializeRequestPromise && !forceRefresh) {
+            const result = await initializeRequestPromise;
+            return { ...result, fromCache: false };
+        }
+
+        // Try to load from IndexedDB cache first (stale-while-revalidate pattern)
+        // Always show cached data immediately, then revalidate in background
+        if (isIndexedDBAvailable() && !forceRefresh) {
+            const cached = await getCachedNotes(organizationId, currentUserId);
+
+            if (cached) {
+                // Start background revalidation (fire and forget)
+                // This runs regardless of cache freshness - ensures shared notes appear quickly
+                fetchAllNotesFromAPI(organizationId, currentUserId, userGroups)
+                    .then((freshData) => {
+                        // Update cache
+                        setCachedNotes(
+                            organizationId,
+                            currentUserId,
+                            freshData.notes,
+                            freshData.tree,
+                            freshData.totalCount
+                        );
+                        // Dispatch update to Redux (this will trigger UI update if data changed)
+                        dispatch({
+                            type: 'notes/backgroundRefreshComplete',
+                            payload: freshData,
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('[NotesCache] Background revalidation failed:', error);
+                    });
+
+                // Return cached data immediately for instant UI
+                return {
+                    notes: cached.notes,
+                    tree: cached.tree,
+                    totalCount: cached.totalCount,
+                    fromCache: true,
+                };
+            }
+        }
+
+        // No cache - fetch from API with deduplication
+        initializeRequestPromise = fetchAllNotesFromAPI(organizationId, currentUserId, userGroups);
+
+        try {
+            const result = await initializeRequestPromise;
+
+            // Save to cache for next time
+            if (isIndexedDBAvailable()) {
+                setCachedNotes(
+                    organizationId,
+                    currentUserId,
+                    result.notes,
+                    result.tree,
+                    result.totalCount
+                ).catch((error) => {
+                    console.error('[NotesCache] Failed to save to cache:', error);
+                });
+            }
+
+            return { ...result, fromCache: false };
+        } finally {
+            initializeRequestPromise = null;
+        }
+    } catch (error) {
+        initializeRequestPromise = null;
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to initialize notes');
     }
 });

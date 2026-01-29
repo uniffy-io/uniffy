@@ -33,7 +33,7 @@ dependencies = [
   "python-dotenv>=1.2.1",
   "python-multipart>=0.0.21",
   "sqlmodel>=0.0.25",
-  "uvicorn[standard]>=0.40.0",
+  "hypercorn>=0.17.0",
 ]
 
 [dependency-groups]

@@ -284,7 +284,7 @@ class NoteIcon(_message.Message):
     def __init__(self, icon_type: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
 
 class Note(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "visibility", "node_type", "title", "content", "slug", "is_deleted", "version", "parent_id", "tags", "metadata", "created_at", "updated_at", "deleted_at", "group_ids", "user_permission", "outgoing_references", "icon")
+    __slots__ = ("id", "organization_id", "owner_id", "visibility", "node_type", "title", "content", "slug", "is_deleted", "version", "parent_id", "tags", "inline_tags", "metadata", "created_at", "updated_at", "deleted_at", "group_ids", "user_permission", "outgoing_references", "icon", "owner_info", "shared_with")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -304,6 +304,7 @@ class Note(_message.Message):
     VERSION_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
+    INLINE_TAGS_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
@@ -312,6 +313,8 @@ class Note(_message.Message):
     USER_PERMISSION_FIELD_NUMBER: _ClassVar[int]
     OUTGOING_REFERENCES_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
+    OWNER_INFO_FIELD_NUMBER: _ClassVar[int]
+    SHARED_WITH_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -324,6 +327,7 @@ class Note(_message.Message):
     version: int
     parent_id: str
     tags: _containers.RepeatedScalarFieldContainer[str]
+    inline_tags: _containers.RepeatedScalarFieldContainer[str]
     metadata: _containers.ScalarMap[str, str]
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
@@ -332,7 +336,9 @@ class Note(_message.Message):
     user_permission: PermissionLevel
     outgoing_references: _containers.RepeatedScalarFieldContainer[str]
     icon: NoteIcon
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ...) -> None: ...
+    owner_info: NoteOwner
+    shared_with: _containers.RepeatedCompositeFieldContainer[NoteShareTarget]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[VisibilityScope, str]] = ..., node_type: _Optional[_Union[NodeType, str]] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., slug: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., version: _Optional[int] = ..., parent_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., inline_tags: _Optional[_Iterable[str]] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[PermissionLevel, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., icon: _Optional[_Union[NoteIcon, _Mapping]] = ..., owner_info: _Optional[_Union[NoteOwner, _Mapping]] = ..., shared_with: _Optional[_Iterable[_Union[NoteShareTarget, _Mapping]]] = ...) -> None: ...
 
 class NoteReference(_message.Message):
     __slots__ = ("id", "title", "slug", "owner_id", "updated_at", "visibility", "node_type")
@@ -499,3 +505,29 @@ class ContentPermission(_message.Message):
     granted_at: _timestamp_pb2.Timestamp
     expires_at: _timestamp_pb2.Timestamp
     def __init__(self, id: _Optional[str] = ..., subject_type: _Optional[str] = ..., subject_id: _Optional[str] = ..., permission_level: _Optional[_Union[PermissionLevel, str]] = ..., can_view: _Optional[bool] = ..., can_edit: _Optional[bool] = ..., can_delete: _Optional[bool] = ..., can_share: _Optional[bool] = ..., can_move: _Optional[bool] = ..., granted_by_user_id: _Optional[str] = ..., granted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class NoteOwner(_message.Message):
+    __slots__ = ("id", "name", "email")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    name: str
+    email: str
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ...) -> None: ...
+
+class NoteShareTarget(_message.Message):
+    __slots__ = ("id", "type", "name", "email", "member_count", "permission_level")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_COUNT_FIELD_NUMBER: _ClassVar[int]
+    PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    type: str
+    name: str
+    email: str
+    member_count: int
+    permission_level: str
+    def __init__(self, id: _Optional[str] = ..., type: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., member_count: _Optional[int] = ..., permission_level: _Optional[str] = ...) -> None: ...

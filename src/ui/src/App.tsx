@@ -18,6 +18,7 @@ import UsersPage from '@/features/admin/pages/UsersPage';
 import ServerSettingsPage from '@/features/admin/pages/ServerSettingsPage';
 // Other pages
 import NotesPage from '@/features/notes/pages/NotesPage';
+import { NotesTagsPage } from '@/features/notes/pages/NotesTagsPage';
 import { SettingsPage as UserSettingsPage } from '@/features/settings';
 import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
@@ -183,6 +184,15 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <NotesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/notes/tags"
+                        element={
+                            <ProtectedRoute>
+                                <NotesTagsPage />
                             </ProtectedRoute>
                         }
                     />

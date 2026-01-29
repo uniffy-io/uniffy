@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { SettingsLayout, type SettingsSection } from '../components/SettingsLayout';
 import { AppearanceSection } from '../components/AppearanceSection';
 import { KeyboardShortcutsSection } from '../components/KeyboardShortcutsSection';
@@ -14,6 +15,7 @@ import { AccountSection } from '../components/AccountSection';
 import { useSettings } from '../hooks/useSettings';
 
 export function SettingsPage() {
+    useDocumentTitle('Settings');
     const [searchParams, setSearchParams] = useSearchParams();
     const sectionParam = searchParams.get('section') as SettingsSection | null;
     const [activeSection, setActiveSection] = useState<SettingsSection>(sectionParam || 'appearance');

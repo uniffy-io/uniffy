@@ -6,10 +6,10 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useTreeStateSync } from '../../hooks/useTreeStateSync';
 import {
   Plus,
-  Clock,
   BookmarkSimpleIcon,
   CaretDown,
   CaretRight,
@@ -25,24 +25,27 @@ import {
   PencilSimple,
   ArrowsClockwise,
   ArrowUUpLeft,
-  Cube,
+  Atom,
+  Tag,
 } from '@phosphor-icons/react';
+import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote } from '../../store/notesSlice';
+import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote, initializeNotesData } from '../../store/notesSlice';
 import { toggleSidebar } from '../../store/editorSlice';
 import {
   toggleNodeExpanded,
   updateNodeTitle,
-  fetchNotesTree,
   expandAll,
   collapseAll,
   setBookmarkedNodes,
+  setSelectedNode,
   type TreeNode,
 } from '../../store/notesTreeSlice';
 import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
 import { notesApi } from '../../api/notesApi';
 import { Button } from '@/components/ui/button';
 import { useBookmarks, useIsBookmarked } from '@/features/bookmarks';
+import { cn } from '@/utils/cn';
 import { renderNoteIcon } from '../../utils/noteIcons';
 
 // Section configuration
@@ -59,6 +62,92 @@ const SECTIONS: SectionConfig[] = [
   { id: 'shared', name: 'Shared With Me', icon: UsersThree },
   { id: 'organization', name: 'Organization', icon: Buildings, scope: VisibilityScope.ORGANIZATION },
 ];
+
+// Notes submenu navigation items
+interface NotesNavItem {
+  name: string;
+  path: string;
+  icon: Icon;
+}
+
+const notesNavItems: NotesNavItem[] = [
+  { name: 'Graph', path: '/notes', icon: Atom },
+  { name: 'Tags', path: '/notes/tags', icon: Tag },
+];
+
+/**
+ * Compact nav item that expands on hover to show label.
+ * Matches the style of AppHeader's navigation items.
+ */
+function CompactNavItem({ item, isActive }: { item: NotesNavItem; isActive: boolean }) {
+  const IconComponent = item.icon;
+
+  return (
+    <Link
+      to={item.path}
+      className={cn(
+        "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
+        "hover:px-2.5",
+        isActive && "text-foreground"
+      )}
+    >
+      {/* Active indicator */}
+      <span
+        className={cn(
+          "absolute inset-0 rounded-lg transition-all duration-500",
+          isActive ? "bg-primary/10" : "bg-transparent"
+        )}
+      />
+
+      {/* Hover underline effect */}
+      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+
+      {/* Icon */}
+      <span className={cn(
+        "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
+        isActive
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground group-hover:text-primary"
+      )}>
+        <IconComponent size={18} weight={isActive ? "fill" : "duotone"} />
+      </span>
+
+      {/* Label - hidden by default, shows on hover */}
+      <span className={cn(
+        "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
+        "group-hover:ml-1.5 group-hover:max-w-24",
+        isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+      )}>
+        {item.name}
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * Notes submenu navigation component.
+ * Displays view options like Knowledge Graph and Tags.
+ */
+function NotesSubmenu() {
+  const location = useLocation();
+
+  return (
+    <div className="px-3 py-2 border-b border-border">
+      <nav className="flex items-center gap-0.5">
+        {notesNavItems.map((item) => {
+          // Exact match for /notes, startsWith for others
+          const isActive = item.path === '/notes'
+            ? location.pathname === '/notes'
+            : location.pathname.startsWith(item.path);
+
+          return (
+            <CompactNavItem key={item.path} item={item} isActive={isActive} />
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
 
 /**
  * Tree node component - renders a single node and its children recursively.
@@ -159,8 +248,8 @@ function TreeNodeItem({
 
   if (isFolder) {
     return (
-      <div>
-        <div 
+      <div data-node-id={node.id}>
+        <div
           draggable={!isEditing}
           onDragStart={(e) => {
             e.stopPropagation();
@@ -169,7 +258,7 @@ function TreeNodeItem({
           onDragEnd={onDragEnd}
           className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group ${
             isDragOver ? 'bg-primary/10 ring-2 ring-primary' : ''
-          } ${isDragging ? 'opacity-50' : ''}`}
+          } ${isDragging ? 'opacity-50' : ''} ${isSelected ? 'bg-accent ring-2 ring-primary/50' : ''}`}
           onDragOver={(e) => {
             if (canDropHere) {
               e.preventDefault();
@@ -290,6 +379,7 @@ function TreeNodeItem({
   // Note item
   return (
     <div
+      data-node-id={node.id}
       draggable={!isEditing}
       onDragStart={(e) => {
         e.stopPropagation();
@@ -369,12 +459,16 @@ export function NotesSidebar() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const tree = useAppSelector((state) => state.notesTree.tree);
   const expandedNodes = useAppSelector((state) => state.notesTree.expandedNodes);
+  const selectedNodeId = useAppSelector((state) => state.notesTree.selectedNodeId);
   const loading = useAppSelector((state) => state.notesTree.loading);
   const error = useAppSelector((state) => state.notesTree.error);
   const creatingNote = useAppSelector((state) => state.notes.creatingNote);
   // Bookmarks state - useBookmarks() auto-fetches when organization changes
   useBookmarks();
   const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);
+
+  // Sync tree expanded state with localStorage for persistence
+  useTreeStateSync();
 
   // Populate bookmarked section from bookmarks store
   // Use tree data instead of notes slice since tree is always populated after fetchNotesTree
@@ -437,6 +531,9 @@ export function NotesSidebar() {
   // Select a note
   const handleSelectNote = useCallback(
     async (noteId: string) => {
+      // Clear any breadcrumb-selected folder highlight
+      dispatch(setSelectedNode(null));
+
       // Navigate to the note URL (this will also trigger setCurrentNote via useEffect in NotesPage)
       navigate(`/notes/${noteId}`);
 
@@ -469,10 +566,7 @@ export function NotesSidebar() {
         // Navigate to the new note immediately
         navigate(`/notes/${result.id}`);
 
-        // Wait a bit for DB commit, then refresh tree to show new note
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await dispatch(fetchNotesTree()).unwrap();
-
+        // Tree is updated automatically via createNote.fulfilled reducer
         // Start editing the title immediately
         setEditingId(result.id);
       } catch (err) {
@@ -496,10 +590,7 @@ export function NotesSidebar() {
           })
         ).unwrap();
 
-        // Wait a bit for DB commit, then refresh tree to show new folder
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await dispatch(fetchNotesTree()).unwrap();
-
+        // Tree is updated automatically via createNote.fulfilled reducer
         // Start editing the title immediately
         setEditingId(result.id);
       } catch (err) {
@@ -554,10 +645,7 @@ export function NotesSidebar() {
         // Navigate to the new note immediately
         navigate(`/notes/${result.id}`);
 
-        // Wait a bit for DB commit, then refresh tree to show new note
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await dispatch(fetchNotesTree()).unwrap();
-
+        // Tree is updated automatically via createNote.fulfilled reducer
         // Start editing the title immediately
         setEditingId(result.id);
       } catch (err) {
@@ -583,8 +671,8 @@ export function NotesSidebar() {
         })).unwrap();
       } catch (err) {
         console.error('Failed to rename note/folder:', err);
-        // Refresh tree to revert to server state on error
-        dispatch(fetchNotesTree());
+        // Force refresh to revert to server state on error
+        dispatch(initializeNotesData({ forceRefresh: true }));
       }
     },
     [dispatch, organizationId]
@@ -596,20 +684,18 @@ export function NotesSidebar() {
       if (!organizationId) return;
 
       try {
-        // Update via API to move note into folder
-        await notesApi.updateNote({
+        // Update via thunk to move note into folder (updates Redux + cache)
+        await dispatch(updateNote({
           noteId: droppedNodeId,
-          organizationId,
           parentId: targetFolderId,
-        });
+        })).unwrap();
 
-        // Refresh tree to show updated structure
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await dispatch(fetchNotesTree()).unwrap();
+        // Force refresh to get updated tree structure (parent change affects tree)
+        dispatch(initializeNotesData({ forceRefresh: true }));
       } catch (err) {
         console.error('Failed to move note:', err);
-        // Refresh tree to revert to server state on error
-        dispatch(fetchNotesTree());
+        // Force refresh to revert to server state on error
+        dispatch(initializeNotesData({ forceRefresh: true }));
       }
     },
     [dispatch, organizationId]
@@ -635,9 +721,7 @@ export function NotesSidebar() {
           dispatch(setCurrentNote(null));
         }
 
-        // Refresh tree to show updated structure
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await dispatch(fetchNotesTree()).unwrap();
+        // Tree is updated automatically via deleteNote.fulfilled reducer
       } catch (err) {
         console.error('Failed to delete item:', err);
       }
@@ -645,25 +729,14 @@ export function NotesSidebar() {
     [dispatch, currentNoteId]
   );
 
-  // Refresh tree
+  // Refresh tree (force fetch from API, bypass cache)
   const handleRefresh = useCallback(() => {
-    dispatch(fetchNotesTree());
+    dispatch(initializeNotesData({ forceRefresh: true }));
   }, [dispatch]);
-
-  // Count nodes in a section
-  const countNodes = (nodes: TreeNode[]): number => {
-    return nodes.reduce((acc, node) => {
-      if (node.type === 'folder' && node.children) {
-        return acc + countNodes(node.children);
-      }
-      return acc + 1;
-    }, 0);
-  };
 
   // Render a section
   const renderSection = (config: SectionConfig) => {
     const nodes = tree[config.id];
-    const nodeCount = countNodes(nodes);
     const sectionExpanded = isExpanded(config.id);
     const IconComponent = config.icon;
 
@@ -685,7 +758,6 @@ export function NotesSidebar() {
           )}
           <SectionIcon size={16} weight="duotone" className={`${config.id === 'bookmarked' ? 'text-primary' : 'text-muted-foreground'}`} />
           <span className="flex-1">{config.name}</span>
-          <span className="text-xs text-muted-foreground">{nodeCount}</span>
           {config.scope && (
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
               <span
@@ -734,7 +806,7 @@ export function NotesSidebar() {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 isNodeExpanded={isExpanded}
-                isNodeSelected={(nodeId) => currentNoteId === nodeId}
+                isNodeSelected={(nodeId) => currentNoteId === nodeId || selectedNodeId === nodeId}
               />
             ))}
           </div>
@@ -760,7 +832,6 @@ export function NotesSidebar() {
         </p>
         {tree.groups.map((group) => {
           const groupExpanded = isExpanded(`group-${group.groupId}`);
-          const nodeCount = countNodes(group.nodes);
 
           return (
             <div key={group.groupId}>
@@ -775,7 +846,6 @@ export function NotesSidebar() {
                 )}
                 <UsersThree size={16} weight="duotone" className="text-muted-foreground" />
                 <span className="flex-1">{group.groupName}</span>
-                <span className="text-xs text-muted-foreground">{nodeCount}</span>
               </button>
 
               {groupExpanded && group.nodes.length > 0 && (
@@ -800,7 +870,7 @@ export function NotesSidebar() {
                       onDragStart={handleDragStart}
                       onDragEnd={handleDragEnd}
                       isNodeExpanded={isExpanded}
-                      isNodeSelected={(nodeId) => currentNoteId === nodeId}
+                      isNodeSelected={(nodeId) => currentNoteId === nodeId || selectedNodeId === nodeId}
                     />
                   ))}
                 </div>
@@ -825,12 +895,14 @@ export function NotesSidebar() {
     try {
       setEmptyingTrash(true);
       await notesApi.emptyTrash({ organizationId });
-      dispatch(fetchNotesTree({}));
 
       // If current note was in trash, clear selection
       if (currentNoteId && tree.trash.some((n) => n.id === currentNoteId)) {
         dispatch(setCurrentNote(null));
       }
+
+      // Force refresh to get updated state after bulk delete
+      dispatch(initializeNotesData({ forceRefresh: true }));
     } catch (error) {
       console.error('Failed to empty trash:', error);
     } finally {
@@ -845,7 +917,7 @@ export function NotesSidebar() {
     try {
       setRestoringNoteId(noteId);
       await dispatch(restoreNote(noteId)).unwrap();
-      await dispatch(fetchNotesTree({}));
+      // Tree is updated automatically via restoreNote.fulfilled reducer
     } catch (error) {
       console.error('Failed to restore note:', error);
     } finally {
@@ -871,7 +943,6 @@ export function NotesSidebar() {
             )}
             <Trash size={16} weight="duotone" className="text-muted-foreground" />
             <span className="flex-1">Trash</span>
-            <span className="text-xs text-muted-foreground">{tree.trash.length}</span>
           </button>
           <button
             onClick={handleEmptyTrashClick}
@@ -963,27 +1034,8 @@ export function NotesSidebar() {
         </div>
       </div>
 
-      {/* Quick Access */}
-      <div className="px-3 py-2">
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Quick Access
-        </p>
-        <nav className="space-y-0.5 mt-1">
-          <button
-            onClick={() => navigate('/notes')}
-            className={`w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left ${
-              !currentNoteId ? 'bg-primary/10 text-primary' : ''
-            }`}
-          >
-            <Cube size={16} weight="duotone" className={`${!currentNoteId ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span>Knowledge Graph</span>
-          </button>
-          <button className="w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left">
-            <Clock size={16} weight="duotone" className="text-muted-foreground" />
-            <span>Recent</span>
-          </button>
-        </nav>
-      </div>
+      {/* Notes Submenu */}
+      <NotesSubmenu />
 
       {/* Error state */}
       {error && (
@@ -1002,10 +1054,7 @@ export function NotesSidebar() {
 
       {/* Main Sections */}
       <div className="flex-1 overflow-y-auto px-3 py-2">
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Spaces
-        </p>
-        <nav className="space-y-0.5 mt-1">
+        <nav className="space-y-0.5">
           {SECTIONS.map(renderSection)}
           {renderGroups()}
           {renderTrash()}

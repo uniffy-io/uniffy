@@ -1,6 +1,7 @@
 """Note operations extending BaseContentOperations."""
 
 import copy
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -10,11 +11,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.errors import NotFoundError
+from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, VisibilityScope
 from uniffy.domains.notes import queries
+
+
+@dataclass
+class NoteSharingInfo:
+    """Sharing info for a note."""
+
+    owner_info: dict | None = None
+    shared_with: list[dict] | None = None
 
 
 class NoteOperations(BaseContentOperations[Note]):
@@ -41,14 +51,18 @@ class NoteOperations(BaseContentOperations[Note]):
         Build search keywords from note content.
 
         Tags are prefixed with 'tag:' to enable filtered search queries
-        like 'tag:work' to match notes with that tag.
+        like 'tag:work' to match notes with that tag. Both whole-note tags
+        and inline tags are indexed.
 
         Full content is indexed to support complete full-text search.
         """
         parts = [model.title]
         if model.tags:
-            # Prefix tags with 'tag:' for filtered search support
+            # Prefix whole-note tags with 'tag:' for filtered search support
             parts.extend(f"tag:{tag}" for tag in model.tags)
+        if model.inline_tags:
+            # Prefix inline tags with 'tag:' as well (deduplicated at search time)
+            parts.extend(f"tag:{tag}" for tag in model.inline_tags)
         if model.content:
             parts.append(model.content)
         return " ".join(parts)
@@ -68,8 +82,13 @@ class NoteOperations(BaseContentOperations[Note]):
         return None
 
     def _get_search_tags(self, model: Note) -> list[str] | None:
-        """Get tags for search index."""
-        return model.tags if model.tags else None
+        """Get tags for search index (both whole-note and inline tags)."""
+        all_tags: set[str] = set()
+        if model.tags:
+            all_tags.update(model.tags)
+        if model.inline_tags:
+            all_tags.update(model.inline_tags)
+        return sorted(all_tags) if all_tags else None
 
     # ─────────────────────────────────────────────────────────────
     # Note-specific operations
@@ -132,8 +151,9 @@ class NoteOperations(BaseContentOperations[Note]):
         if existing:
             slug = f"{slug}-{int(datetime.now(UTC).timestamp())}"
 
-        # Extract URN references from content
+        # Extract URN references and inline tags from content
         outgoing_refs = queries.extract_urns_from_content(content) if content else None
+        inline_tags = queries.extract_inline_tags_from_content(content) if content else None
 
         note = Note(
             organization_id=organization_id,
@@ -145,6 +165,7 @@ class NoteOperations(BaseContentOperations[Note]):
             node_type=node_type,
             parent_id=parent_id,
             tags=tags,
+            inline_tags=inline_tags,
             note_metadata=metadata,
             outgoing_references=outgoing_refs,
         )
@@ -225,8 +246,9 @@ class NoteOperations(BaseContentOperations[Note]):
             note.title = title
         if content is not None:
             note.content = content
-            # Update outgoing references when content changes
+            # Update outgoing references and inline tags when content changes
             note.outgoing_references = queries.extract_urns_from_content(content) or None
+            note.inline_tags = queries.extract_inline_tags_from_content(content) or None
         if slug is not None:
             note.slug = slug
         if parent_id == "":
@@ -412,8 +434,9 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._require_edit(user_id, organization_id, note)
 
         note.content = content
-        # Update outgoing references when content changes
+        # Update outgoing references and inline tags when content changes
         note.outgoing_references = queries.extract_urns_from_content(content) or None
+        note.inline_tags = queries.extract_inline_tags_from_content(content) or None
         if title is not None:
             note.title = title
         note.version += 1
@@ -636,3 +659,165 @@ class NoteOperations(BaseContentOperations[Note]):
         notes = list(result.scalars().all())
 
         return notes, total
+
+    async def get_notes_sharing_info(
+        self,
+        notes: list[Note],
+        current_user_id: UUID,
+    ) -> dict[UUID, NoteSharingInfo]:
+        """
+        Batch fetch sharing info for multiple notes.
+
+        For notes not owned by current user: returns owner info.
+        For notes owned by current user: returns shared_with list.
+
+        Parameters
+        ----------
+        notes : list[Note]
+            List of notes to fetch sharing info for.
+        current_user_id : UUID
+            Current user ID.
+
+        Returns
+        -------
+        dict[UUID, NoteSharingInfo]
+            Map of note ID to sharing info.
+
+        """
+        from datetime import UTC, datetime
+
+        from sqlalchemy import or_
+
+        from uniffy.core.models.login.group import Group
+        from uniffy.core.models.login.group_member import GroupMember
+        from uniffy.core.models.permissions.content_permission import ContentPermission
+        from uniffy.core.types import SubjectType
+
+        result: dict[UUID, NoteSharingInfo] = {}
+
+        # Separate notes by ownership
+        notes_shared_with_user: list[Note] = []  # Need owner info
+        notes_owned_by_user: list[Note] = []  # Need shared_with list
+
+        for note in notes:
+            if note.owner_id != current_user_id:
+                notes_shared_with_user.append(note)
+            else:
+                notes_owned_by_user.append(note)
+
+        # Fetch owner info for notes shared with current user
+        if notes_shared_with_user:
+            owner_ids = list({note.owner_id for note in notes_shared_with_user})
+            owners_result = await self.session.execute(
+                select(User).where(User.id.in_(owner_ids))
+            )
+            owners_map: dict[UUID, User] = {u.id: u for u in owners_result.scalars().all()}
+
+            for note in notes_shared_with_user:
+                owner = owners_map.get(note.owner_id)
+                result[note.id] = NoteSharingInfo(
+                    owner_info={
+                        "id": str(note.owner_id),
+                        "name": owner.full_name or owner.username if owner else "Unknown",
+                        "email": owner.email if owner else "",
+                    } if owner else None
+                )
+
+        # Fetch shared_with list for notes owned by current user
+        if notes_owned_by_user:
+            note_ids = [note.id for note in notes_owned_by_user]
+
+            # Fetch explicit permissions (users and groups)
+            now = datetime.now(UTC)
+            permissions_result = await self.session.execute(
+                select(ContentPermission)
+                .where(ContentPermission.content_type == self.content_type)
+                .where(ContentPermission.content_id.in_(note_ids))
+                .where(
+                    or_(
+                        ContentPermission.expires_at.is_(None),
+                        ContentPermission.expires_at > now,
+                    )
+                )
+            )
+            permissions = list(permissions_result.scalars().all())
+
+            # Group permissions by note ID
+            permissions_by_note: dict[UUID, list[ContentPermission]] = {
+                nid: [] for nid in note_ids
+            }
+            for perm in permissions:
+                permissions_by_note[perm.content_id].append(perm)
+
+            # Fetch user info for user permissions
+            user_subject_ids = [
+                perm.subject_id for perm in permissions
+                if perm.subject_type == SubjectType.USER
+            ]
+            users_map: dict[UUID, User] = {}
+            if user_subject_ids:
+                users_result = await self.session.execute(
+                    select(User).where(User.id.in_(user_subject_ids))
+                )
+                users_map = {u.id: u for u in users_result.scalars().all()}
+
+            # Fetch group info for group permissions
+            group_subject_ids = [
+                perm.subject_id for perm in permissions
+                if perm.subject_type == SubjectType.GROUP
+            ]
+            groups_map: dict[UUID, Group] = {}
+            group_member_counts: dict[UUID, int] = {}
+            if group_subject_ids:
+                groups_result = await self.session.execute(
+                    select(Group).where(Group.id.in_(group_subject_ids))
+                )
+                groups_map = {g.id: g for g in groups_result.scalars().all()}
+
+                # Get member counts
+                member_counts_result = await self.session.execute(
+                    select(
+                        GroupMember.group_id,
+                        func.count(GroupMember.id).label("count"),
+                    )
+                    .where(GroupMember.group_id.in_(group_subject_ids))
+                    .where(GroupMember.is_active == True)  # noqa: E712
+                    .group_by(GroupMember.group_id)
+                )
+                for row in member_counts_result.all():
+                    group_member_counts[row[0]] = row[1]
+
+            # Build shared_with for each note
+            for note in notes_owned_by_user:
+                note_perms = permissions_by_note.get(note.id, [])
+                shared_with: list[dict] = []
+
+                for perm in note_perms:
+                    if perm.subject_type == SubjectType.USER:
+                        user = users_map.get(perm.subject_id)
+                        if user:
+                            shared_with.append({
+                                "id": str(user.id),
+                                "type": "user",
+                                "name": user.full_name or user.username,
+                                "email": user.email,
+                                "member_count": 0,
+                                "permission_level": perm.permission_level.value,
+                            })
+                    elif perm.subject_type == SubjectType.GROUP:
+                        group = groups_map.get(perm.subject_id)
+                        if group:
+                            shared_with.append({
+                                "id": str(group.id),
+                                "type": "group",
+                                "name": group.name,
+                                "email": "",
+                                "member_count": group_member_counts.get(group.id, 0),
+                                "permission_level": perm.permission_level.value,
+                            })
+
+                result[note.id] = NoteSharingInfo(
+                    shared_with=shared_with if shared_with else None
+                )
+
+        return result

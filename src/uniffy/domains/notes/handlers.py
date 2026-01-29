@@ -127,7 +127,18 @@ class NotesHandlers:
             async for session in get_async_session():
                 ops = NoteOperations(session)
                 note = await ops.get_by_id(user_id, organization_id, note_id)
-                return NoteResponse(note=note_to_proto(note))
+
+                # Fetch sharing info for this note
+                sharing_info = await ops.get_notes_sharing_info([note], user_id)
+                note_sharing = sharing_info.get(note.id)
+
+                return NoteResponse(
+                    note=note_to_proto(
+                        note,
+                        owner_info=note_sharing.owner_info if note_sharing else None,
+                        shared_with=note_sharing.shared_with if note_sharing else None,
+                    )
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Note not found")
@@ -289,18 +300,31 @@ class NotesHandlers:
                     include_deleted=request.include_deleted,
                     tags=list(request.tags) if request.tags else None,
                     page=max(1, request.page or 1),
-                    page_size=min(100, max(1, request.page_size or 50)),
+                    page_size=min(500, max(1, request.page_size or 50)),
                     sort_by=request.sort_by or "updated_at",
                     sort_order=request.sort_order or "desc",
                 )
 
+                # Batch fetch sharing info for all notes
+                sharing_info = await ops.get_notes_sharing_info(notes, user_id)
+
                 total_pages = (total + (request.page_size or 50) - 1) // (request.page_size or 50)
 
+                # Build proto notes with sharing info
+                proto_notes = []
+                for n in notes:
+                    note_share = sharing_info.get(n.id)
+                    proto_notes.append(
+                        note_to_proto(
+                            n,
+                            exclude_content=request.exclude_content,
+                            owner_info=note_share.owner_info if note_share else None,
+                            shared_with=note_share.shared_with if note_share else None,
+                        )
+                    )
+
                 return ListNotesResponse(
-                    notes=[
-                        note_to_proto(n, exclude_content=request.exclude_content)
-                        for n in notes
-                    ],
+                    notes=proto_notes,
                     total_count=total,
                     page=request.page or 1,
                     page_size=request.page_size or 50,

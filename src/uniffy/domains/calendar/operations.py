@@ -536,7 +536,17 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             owner_id_column=CalendarEvent.organizer_id,
             visibility_column=CalendarEvent.visibility,
         )
-        query = query.where(access_filter)
+
+        # Also include events where user is an attendee
+        attendee_subquery = (
+            select(EventAttendee.event_id)
+            .where(EventAttendee.user_id == user_id)
+            .where(EventAttendee.status != AttendeeStatus.DECLINED)
+        )
+        attendee_filter = CalendarEvent.id.in_(attendee_subquery)
+
+        # Combine access filter with attendee filter
+        query = query.where(or_(access_filter, attendee_filter))
 
         # Apply filters
         if calendar_id:

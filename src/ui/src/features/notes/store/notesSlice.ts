@@ -14,6 +14,7 @@ import {
     searchNotes,
     moveNote,
     copyNote,
+    initializeNotesData,
     type SerializedNote,
 } from './notesThunks';
 
@@ -379,6 +380,50 @@ export const notesSlice = createSlice({
             .addCase(copyNote.fulfilled, (state, action) => {
                 state.notes[action.payload.id] = normalizeNote(action.payload);
             });
+
+        // initializeNotesData - unified fetch for both flat store and tree
+        builder
+            .addCase(initializeNotesData.pending, (state, action) => {
+                // Only show loading if not from cache (prevents flash)
+                if (!action.meta.arg?.forceRefresh) {
+                    const hasNotes = Object.keys(state.notes).length > 0;
+                    if (!hasNotes) {
+                        state.loading = true;
+                    }
+                } else {
+                    state.loading = true;
+                }
+                state.error = null;
+            })
+            .addCase(initializeNotesData.fulfilled, (state, action) => {
+                state.loading = false;
+                // Add/update notes in the store
+                action.payload.notes.forEach((note) => {
+                    state.notes[note.id] = normalizeNote(note);
+                });
+                state.pagination = {
+                    page: 1,
+                    pageSize: action.payload.notes.length,
+                    totalCount: action.payload.totalCount,
+                    totalPages: 1,
+                };
+            })
+            .addCase(initializeNotesData.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload ?? 'Failed to initialize notes';
+            })
+            // Handle background refresh (stale-while-revalidate pattern)
+            .addMatcher(
+                (action): action is PayloadAction<{ notes: ReturnType<typeof normalizeNote>[]; totalCount: number }> =>
+                    action.type === 'notes/backgroundRefreshComplete',
+                (state, action) => {
+                    // Update notes silently (no loading state change)
+                    action.payload.notes.forEach((note) => {
+                        state.notes[note.id] = normalizeNote(note);
+                    });
+                    state.pagination.totalCount = action.payload.totalCount;
+                }
+            );
     },
 });
 
@@ -419,4 +464,5 @@ export {
     searchNotes,
     moveNote,
     copyNote,
+    initializeNotesData,
 } from './notesThunks';

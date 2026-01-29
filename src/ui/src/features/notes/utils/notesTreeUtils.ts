@@ -29,6 +29,10 @@ export function noteToTreeNode(note: SerializedNote): TreeNode {
         noteId: note.id,
         visibility: note.visibility,
         updatedAt: note.updatedAt?.seconds?.toString(),
+        // Include owner info for shared notes
+        ownerInfo: note.ownerInfo,
+        // Mark note as shared if it has share targets
+        isShared: note.sharedWith && note.sharedWith.length > 0,
     };
 }
 
@@ -137,6 +141,9 @@ export function organizeNotesByVisibility(
             case VisibilityScope.PRIVATE:
                 if (note.ownerId === currentUserId) {
                     personal.push(note);
+                } else {
+                    // Private note not owned by user - must be explicitly shared with us
+                    shared.push(note);
                 }
                 break;
 
@@ -271,23 +278,33 @@ export function updateNodeInTree(
     });
 }
 
+export interface BreadcrumbItem {
+    id: string;
+    title: string;
+    isFolder: boolean;
+}
+
 /**
  * Build breadcrumb path for a note by traversing parent folders.
- * Returns array of folder titles from root to the note.
+ * Returns array of breadcrumb items from root to the note.
  */
 export function buildBreadcrumbPath(
     notes: SerializedNote[],
     noteId: string
-): string[] {
+): BreadcrumbItem[] {
     const noteMap = new Map<string, SerializedNote>();
     notes.forEach(note => noteMap.set(note.id, note));
 
-    const path: string[] = [];
+    const path: BreadcrumbItem[] = [];
     let currentNote = noteMap.get(noteId);
 
     // Traverse up the parent chain
     while (currentNote) {
-        path.unshift(currentNote.title);
+        path.unshift({
+            id: currentNote.id,
+            title: currentNote.title,
+            isFolder: currentNote.nodeType === NodeType.FOLDER,
+        });
         if (currentNote.parentId) {
             currentNote = noteMap.get(currentNote.parentId);
         } else {

@@ -5,7 +5,7 @@
  * Features glassmorphism and gradient styling matching MentionPreview.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MagnifyingGlass, Tag } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
@@ -77,6 +77,7 @@ export function SearchResultsList({
   copiedUrn = false,
 }: SearchResultsListProps) {
   const [internalIndex, setInternalIndex] = useState(0);
+  const itemRefs = useRef<Map<number, HTMLLIElement>>(new Map());
 
   // Use controlled index if provided, otherwise internal state
   const selectedIndex = controlledIndex ?? internalIndex;
@@ -87,20 +88,34 @@ export function SearchResultsList({
     setSelectedIndex(0);
   }, [results.length, setSelectedIndex]);
 
+  // Scroll selected item into view when navigating with keyboard
+  const scrollToIndex = (index: number) => {
+    const item = itemRefs.current.get(index);
+    if (item) {
+      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  };
+
   // Keyboard navigation (only arrow keys, enter, escape - copy handled by parent)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (results.length === 0) return;
 
       switch (e.key) {
-        case 'ArrowDown':
+        case 'ArrowDown': {
           e.preventDefault();
-          setSelectedIndex((selectedIndex + 1) % results.length);
+          const nextIndex = (selectedIndex + 1) % results.length;
+          setSelectedIndex(nextIndex);
+          scrollToIndex(nextIndex);
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           e.preventDefault();
-          setSelectedIndex((selectedIndex - 1 + results.length) % results.length);
+          const prevIndex = (selectedIndex - 1 + results.length) % results.length;
+          setSelectedIndex(prevIndex);
+          scrollToIndex(prevIndex);
           break;
+        }
         case 'Enter':
           e.preventDefault();
           if (results[selectedIndex]) {
@@ -173,7 +188,16 @@ export function SearchResultsList({
               const isSelected = index === selectedIndex;
 
               return (
-                <li key={result.urn}>
+                <li
+                  key={result.urn}
+                  ref={(el) => {
+                    if (el) {
+                      itemRefs.current.set(index, el);
+                    } else {
+                      itemRefs.current.delete(index);
+                    }
+                  }}
+                >
                   <button
                     onClick={() => onSelect(result)}
                     onMouseEnter={() => setSelectedIndex(index)}

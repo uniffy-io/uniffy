@@ -49,7 +49,9 @@ class Note(SQLModel, table=True):
     parent_id : UUID | None
         Parent note ID for hierarchical organization (nullable).
     tags : list[str] | None
-        Tags for categorization.
+        Tags for categorization (whole-note tags set explicitly by user).
+    inline_tags : list[str] | None
+        Tags extracted from note content (inline #tags in markdown).
     note_metadata : dict | None
         Additional metadata (custom fields, AI-generated summaries, etc).
     outgoing_references : list[str] | None
@@ -99,6 +101,7 @@ class Note(SQLModel, table=True):
     version: int = Field(default=1, nullable=False)
     parent_id: UUID | None = Field(default=None, foreign_key="notes_notes.id", index=True)
     tags: list[str] | None = Field(default=None, sa_column=Column(JSONB))
+    inline_tags: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     note_metadata: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     outgoing_references: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     content_search: Any = Field(

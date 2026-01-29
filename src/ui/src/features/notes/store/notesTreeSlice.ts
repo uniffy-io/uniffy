@@ -5,7 +5,7 @@ import { notesApi } from '../api/notesApi';
 import { organizeNotesByVisibility } from '../utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
-import { updateNote, updateNoteIcon } from './notesThunks';
+import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote } from './notesThunks';
 import type { NoteIcon } from '../utils/noteIconConstants';
 
 // Helper to convert proto Note to PlainMessage
@@ -22,6 +22,7 @@ const noteToPlain = (note: Note) => ({
     version: typeof note.version === 'bigint' ? Number(note.version) : note.version,
     parentId: note.parentId,
     tags: [...note.tags],
+    inlineTags: [...note.inlineTags],
     metadata: { ...note.metadata },
     createdAt: note.createdAt ? {
         seconds: typeof note.createdAt.seconds === 'bigint' ? Number(note.createdAt.seconds) : note.createdAt.seconds,
@@ -43,6 +44,21 @@ const noteToPlain = (note: Note) => ({
         type: note.icon.iconType as 'icon' | 'emoji',
         value: note.icon.value,
     } : undefined,
+    // Owner info for notes shared with current user
+    ownerInfo: note.ownerInfo ? {
+        id: note.ownerInfo.id,
+        name: note.ownerInfo.name,
+        email: note.ownerInfo.email,
+    } : undefined,
+    // Users/groups this note is shared with (only for owner)
+    sharedWith: note.sharedWith.length > 0 ? note.sharedWith.map(target => ({
+        id: target.id,
+        type: target.type as 'user' | 'group',
+        name: target.name,
+        email: target.email || undefined,
+        memberCount: target.memberCount || undefined,
+        permissionLevel: target.permissionLevel,
+    })) : undefined,
 });
 
 export interface TreeNode {
@@ -56,6 +72,14 @@ export interface TreeNode {
     isExpanded?: boolean;
     visibility?: VisibilityScope;
     updatedAt?: string;
+    // Owner info for notes shared with current user
+    ownerInfo?: {
+        id: string;
+        name: string;
+        email: string;
+    };
+    // Whether this note is shared with others (for owned notes)
+    isShared?: boolean;
 }
 
 export interface GroupTreeSection {
@@ -97,6 +121,7 @@ interface NotesTreeState {
 
 /**
  * Fetch and organize notes tree from API.
+ * Automatically fetches all pages to build complete tree.
  */
 export const fetchNotesTree = createAsyncThunk<
     NotesTreeState['tree'],
@@ -112,15 +137,44 @@ export const fetchNotesTree = createAsyncThunk<
             return rejectWithValue('No organization selected');
         }
 
-        // Fetch all notes including deleted (exclude content for performance)
-        const response = await notesApi.listNotes({
+        const pageSize = 100;
+
+        // Fetch first page
+        const firstResponse = await notesApi.listNotes({
             organizationId,
-            pageSize: 500, // Fetch all for tree
+            page: 1,
+            pageSize,
             includeDeleted: true,
             excludeContent: true,
         });
 
-        const notes = response.notes.map(noteToPlain);
+        const allNotes = [...firstResponse.notes];
+
+        // Fetch remaining pages if needed
+        if (firstResponse.totalPages > 1) {
+            const remainingPages = Array.from(
+                { length: firstResponse.totalPages - 1 },
+                (_, i) => i + 2
+            );
+
+            const pageResponses = await Promise.all(
+                remainingPages.map(page =>
+                    notesApi.listNotes({
+                        organizationId,
+                        page,
+                        pageSize,
+                        includeDeleted: true,
+                        excludeContent: true,
+                    })
+                )
+            );
+
+            for (const response of pageResponses) {
+                allNotes.push(...response.notes);
+            }
+        }
+
+        const notes = allNotes.map(noteToPlain);
         const userGroups = params?.userGroups ?? [];
 
         // Organize into tree structure
@@ -144,11 +198,11 @@ const emptyTree: NotesTreeState['tree'] = {
 
 const initialState: NotesTreeState = {
     tree: emptyTree,
-    expandedNodes: ['personal'], // Personal expanded by default
+    expandedNodes: ['personal'], // Personal expanded by default, will be overwritten from localStorage
     selectedNodeId: null,
     draggedNodeId: null,
     dropTargetId: null,
-    treeWidth: 280,
+    treeWidth: 280, // Legacy - not used for panel sizing anymore
     isTreeCollapsed: false,
     loading: false,
     error: null,
@@ -413,7 +467,184 @@ export const notesTreeSlice = createSlice({
                 for (const group of state.tree.groups) {
                     if (updateInArray(group.nodes)) break;
                 }
-            });
+            })
+            // Listen to unified initializeNotesData - updates tree from same API call as notesSlice
+            .addCase(initializeNotesData.pending, (state, action) => {
+                // Only show loading if not already loaded (prevents flash on cache load)
+                const hasNodes = state.tree.personal.length > 0 ||
+                    state.tree.organization.length > 0 ||
+                    state.tree.shared.length > 0;
+                if (!hasNodes && !action.meta.arg?.forceRefresh) {
+                    state.loading = true;
+                } else if (action.meta.arg?.forceRefresh) {
+                    state.loading = true;
+                }
+                state.error = null;
+            })
+            .addCase(initializeNotesData.fulfilled, (state, action) => {
+                state.loading = false;
+                state.tree = action.payload.tree;
+            })
+            .addCase(initializeNotesData.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload ?? 'Failed to load notes tree';
+            })
+            // Sync tree when a note is created
+            .addCase(createNote.fulfilled, (state, action) => {
+                const note = action.payload;
+                const newNode: TreeNode = {
+                    id: note.id,
+                    title: note.title,
+                    type: note.nodeType === 1 ? 'folder' : 'note', // NodeType.FOLDER = 1
+                    icon: note.icon,
+                    noteId: note.id,
+                    visibility: note.visibility,
+                    updatedAt: note.updatedAt?.seconds?.toString(),
+                };
+
+                // Helper to add node to parent or root
+                const addToParent = (nodes: TreeNode[], parentId: string | undefined): boolean => {
+                    if (!parentId) return false;
+                    for (const node of nodes) {
+                        if (node.id === parentId) {
+                            if (!node.children) node.children = [];
+                            node.children.push(newNode);
+                            return true;
+                        }
+                        if (node.children && addToParent(node.children, parentId)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                // Determine target section based on visibility
+                // VisibilityScope: PRIVATE=1, GROUP=2, ORGANIZATION=3
+                let targetSection: 'personal' | 'organization' = 'personal';
+                if (note.visibility === VisibilityScope.ORGANIZATION) {
+                    targetSection = 'organization';
+                }
+
+                // Try to add to parent, or add to root of section
+                if (note.parentId) {
+                    // Try all sections for parent
+                    const sections = ['personal', 'organization'] as const;
+                    let added = false;
+                    for (const section of sections) {
+                        if (addToParent(state.tree[section], note.parentId)) {
+                            added = true;
+                            break;
+                        }
+                    }
+                    // Also check groups
+                    if (!added) {
+                        for (const group of state.tree.groups) {
+                            if (addToParent(group.nodes, note.parentId)) {
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // Add to root of appropriate section
+                    state.tree[targetSection].push(newNode);
+                }
+            })
+            // Sync tree when a note is deleted
+            .addCase(deleteNote.fulfilled, (state, action) => {
+                const { noteId, permanent } = action.payload;
+
+                if (permanent) {
+                    // Permanently deleted - remove from tree entirely
+                    const removeFromArray = (nodes: TreeNode[]): TreeNode[] => {
+                        return nodes
+                            .filter(n => n.id !== noteId)
+                            .map(n => ({
+                                ...n,
+                                children: n.children ? removeFromArray(n.children) : undefined,
+                            }));
+                    };
+
+                    for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
+                        state.tree[section] = removeFromArray(state.tree[section]);
+                    }
+                    for (const group of state.tree.groups) {
+                        group.nodes = removeFromArray(group.nodes);
+                    }
+                } else {
+                    // Soft deleted - move to trash
+                    let removedNode: TreeNode | null = null;
+
+                    const removeAndCapture = (nodes: TreeNode[]): TreeNode[] => {
+                        const result: TreeNode[] = [];
+                        for (const node of nodes) {
+                            if (node.id === noteId) {
+                                removedNode = { ...node };
+                            } else {
+                                result.push({
+                                    ...node,
+                                    children: node.children ? removeAndCapture(node.children) : undefined,
+                                });
+                            }
+                        }
+                        return result;
+                    };
+
+                    // Remove from all non-trash sections
+                    for (const section of ['bookmarked', 'personal', 'shared', 'organization'] as const) {
+                        state.tree[section] = removeAndCapture(state.tree[section]);
+                    }
+                    for (const group of state.tree.groups) {
+                        group.nodes = removeAndCapture(group.nodes);
+                    }
+
+                    // Add to trash if found
+                    if (removedNode) {
+                        state.tree.trash.push(removedNode);
+                    }
+                }
+            })
+            // Sync tree when a note is restored from trash
+            .addCase(restoreNote.fulfilled, (state, action) => {
+                const note = action.payload;
+
+                // Remove from trash
+                state.tree.trash = state.tree.trash.filter(n => n.id !== note.id);
+
+                // Create node from restored note
+                const restoredNode: TreeNode = {
+                    id: note.id,
+                    title: note.title,
+                    type: note.nodeType === 1 ? 'folder' : 'note',
+                    icon: note.icon,
+                    noteId: note.id,
+                    visibility: note.visibility,
+                    updatedAt: note.updatedAt?.seconds?.toString(),
+                };
+
+                // Add to appropriate section based on visibility
+                if (note.visibility === VisibilityScope.ORGANIZATION) {
+                    state.tree.organization.push(restoredNode);
+                } else {
+                    state.tree.personal.push(restoredNode);
+                }
+            })
+            // Handle background refresh (stale-while-revalidate pattern)
+            .addMatcher(
+                (action): action is PayloadAction<{ tree: NotesTreeState['tree'] }> =>
+                    action.type === 'notes/backgroundRefreshComplete',
+                (state, action) => {
+                    // Update tree silently (no loading state change)
+                    state.tree = action.payload.tree;
+                }
+            )
+            // Handle restore expanded nodes from localStorage
+            .addMatcher(
+                (action): action is PayloadAction<string[]> =>
+                    action.type === 'notesTree/setExpandedNodesFromStorage',
+                (state, action) => {
+                    state.expandedNodes = action.payload;
+                }
+            );
     },
 });
 

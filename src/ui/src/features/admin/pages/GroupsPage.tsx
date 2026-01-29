@@ -9,6 +9,6 @@ import { GroupsSection } from '../components/groups/GroupsSection';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export default function GroupsPage() {
-    useDocumentTitle('Groups - Administration');
+    useDocumentTitle('Groups');
     return <GroupsSection />;
 }

@@ -1420,11 +1420,18 @@ export class Note extends Message<Note> {
   parentId?: string;
 
   /**
-   * Tags
+   * Tags (whole-note tags set explicitly by user)
    *
    * @generated from field: repeated string tags = 13;
    */
   tags: string[] = [];
+
+  /**
+   * Inline tags extracted from note content (e.g., #tagname in markdown)
+   *
+   * @generated from field: repeated string inline_tags = 24;
+   */
+  inlineTags: string[] = [];
 
   /**
    * Metadata
@@ -1482,6 +1489,20 @@ export class Note extends Message<Note> {
    */
   icon?: NoteIcon;
 
+  /**
+   * Owner information (populated for notes shared with current user)
+   *
+   * @generated from field: optional notes.v1.NoteOwner owner_info = 22;
+   */
+  ownerInfo?: NoteOwner;
+
+  /**
+   * Users/groups this note is shared with (only populated for owner)
+   *
+   * @generated from field: repeated notes.v1.NoteShareTarget shared_with = 23;
+   */
+  sharedWith: NoteShareTarget[] = [];
+
   constructor(data?: PartialMessage<Note>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1502,6 +1523,7 @@ export class Note extends Message<Note> {
     { no: 11, name: "version", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 12, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 24, name: "inline_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 14, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 15, name: "created_at", kind: "message", T: Timestamp },
     { no: 16, name: "updated_at", kind: "message", T: Timestamp },
@@ -1510,6 +1532,8 @@ export class Note extends Message<Note> {
     { no: 19, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
     { no: 20, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 21, name: "icon", kind: "message", T: NoteIcon, opt: true },
+    { no: 22, name: "owner_info", kind: "message", T: NoteOwner, opt: true },
+    { no: 23, name: "shared_with", kind: "message", T: NoteShareTarget, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {
@@ -2378,6 +2402,144 @@ export class ContentPermission extends Message<ContentPermission> {
 
   static equals(a: ContentPermission | PlainMessage<ContentPermission> | undefined, b: ContentPermission | PlainMessage<ContentPermission> | undefined): boolean {
     return proto3.util.equals(ContentPermission, a, b);
+  }
+}
+
+/**
+ * Lightweight owner information for shared notes
+ *
+ * @generated from message notes.v1.NoteOwner
+ */
+export class NoteOwner extends Message<NoteOwner> {
+  /**
+   * Owner user ID
+   *
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * Owner display name
+   *
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * Owner email
+   *
+   * @generated from field: string email = 3;
+   */
+  email = "";
+
+  constructor(data?: PartialMessage<NoteOwner>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.NoteOwner";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteOwner {
+    return new NoteOwner().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteOwner {
+    return new NoteOwner().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteOwner {
+    return new NoteOwner().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NoteOwner | PlainMessage<NoteOwner> | undefined, b: NoteOwner | PlainMessage<NoteOwner> | undefined): boolean {
+    return proto3.util.equals(NoteOwner, a, b);
+  }
+}
+
+/**
+ * Share target for display (user or group this note is shared with)
+ *
+ * @generated from message notes.v1.NoteShareTarget
+ */
+export class NoteShareTarget extends Message<NoteShareTarget> {
+  /**
+   * User or group ID
+   *
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * Type: "user" or "group"
+   *
+   * @generated from field: string type = 2;
+   */
+  type = "";
+
+  /**
+   * Display name
+   *
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * Email (only for users)
+   *
+   * @generated from field: string email = 4;
+   */
+  email = "";
+
+  /**
+   * Member count (only for groups)
+   *
+   * @generated from field: int32 member_count = 5;
+   */
+  memberCount = 0;
+
+  /**
+   * Permission level: "view", "edit", "admin"
+   *
+   * @generated from field: string permission_level = 6;
+   */
+  permissionLevel = "";
+
+  constructor(data?: PartialMessage<NoteShareTarget>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notes.v1.NoteShareTarget";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "permission_level", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteShareTarget {
+    return new NoteShareTarget().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteShareTarget {
+    return new NoteShareTarget().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteShareTarget {
+    return new NoteShareTarget().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NoteShareTarget | PlainMessage<NoteShareTarget> | undefined, b: NoteShareTarget | PlainMessage<NoteShareTarget> | undefined): boolean {
+    return proto3.util.equals(NoteShareTarget, a, b);
   }
 }
 

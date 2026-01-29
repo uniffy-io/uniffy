@@ -2,7 +2,8 @@ import { useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export function Home() {
-  useDocumentTitle('Home');
+  // Home/dashboard page - shows just "Uniffy" (no suffix)
+  useDocumentTitle();
   const { user } = useAppSelector((state) => state.auth);
 
   return (

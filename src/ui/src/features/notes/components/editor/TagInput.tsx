@@ -7,13 +7,14 @@ interface TagInputProps {
   onTagsChange: (tags: string[]) => void;
   maxTags?: number;
   disabled?: boolean;
+  onTagClick?: (tag: string) => void;
 }
 
 /**
  * Tag Input component for managing note tags.
  * Supports adding tags via Enter key or comma, and removing via click or backspace.
  */
-export function TagInput({ tags, onTagsChange, maxTags = 10, disabled = false }: TagInputProps) {
+export function TagInput({ tags, onTagsChange, maxTags = 10, disabled = false, onTagClick }: TagInputProps) {
   const [inputValue, setInputValue] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -79,10 +80,18 @@ export function TagInput({ tags, onTagsChange, maxTags = 10, disabled = false }:
             disabled ? '' : 'hover:bg-primary/20'
           } transition-colors`}
         >
-          #{tag}
+          <span
+            onClick={() => onTagClick?.(tag)}
+            className={onTagClick ? 'cursor-pointer' : ''}
+          >
+            #{tag}
+          </span>
           {!disabled && (
             <button
-              onClick={() => removeTag(tag)}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeTag(tag);
+              }}
               className="opacity-0 group-hover:opacity-100 -mr-1 p-0.5 rounded-full hover:bg-primary/20 transition-opacity"
               title="Remove tag"
             >

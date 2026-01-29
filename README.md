@@ -17,7 +17,7 @@ For the full vision, see [docs/uniffy-concept.md](docs/uniffy-concept.md).
 ```bash
 git clone git@github.com:uniffy-io/uniffy.git
 cd uniffy
-make install
+./run.sh install
 ```
 
 Configure environment:
@@ -30,16 +30,16 @@ cp .env.example .env
 Start the database:
 
 ```bash
-make db-up
+./run.sh db-up
 ```
 
 Run the application:
 
 ```bash
-make dev        # Backend + Frontend
+./run.sh dev        # Backend + Frontend
 # or separately:
-make run        # Backend only (localhost:8000)
-make ui         # Frontend only (localhost:5173)
+./run.sh run        # Backend only (localhost:8000)
+./run.sh ui         # Frontend only (localhost:5173)
 ```
 
 Migrations run automatically on startup.
@@ -80,20 +80,20 @@ src/
 ### Common Commands
 
 ```bash
-make help       # Show all commands
-make proto      # Generate protobuf code
-make lint       # Run linters
-make format     # Format code
-make test       # Run tests
+./run.sh help       # Show all commands
+./run.sh proto      # Generate protobuf code
+./run.sh lint       # Run linters
+./run.sh format     # Format code
+./run.sh test       # Run tests
 ```
 
 ### Database
 
 ```bash
-make db-up      # Start PostgreSQL
-make db-down    # Stop PostgreSQL
-make db-shell   # Connect to database
-make db-reset   # Reset database (deletes data)
+./run.sh db-up      # Start PostgreSQL
+./run.sh db-down    # Stop PostgreSQL
+./run.sh db-shell   # Connect to database
+./run.sh db-reset   # Reset database (deletes data)
 ```
 
 ### Migrations
@@ -109,7 +109,7 @@ uv run alembic revision --autogenerate -m "description"
 ### Adding a Service
 
 1. Define `.proto` in `src/proto/<service>/v1/`
-2. Run `make proto`
+2. Run `./run.sh proto`
 3. Implement handlers in `src/uniffy/domains/<service>/`
 4. Register in `factory.py`
 

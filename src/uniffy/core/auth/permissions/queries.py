@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.sql import Select
 
-from uniffy.core.types import ContentType, VisibilityScope
+from uniffy.core.types import ContentType, SubjectType, VisibilityScope
 
 
 class ContentAccessQuery:
@@ -94,8 +94,11 @@ class ContentAccessQuery:
 
         """
         # Import here to avoid circular imports
+        from datetime import UTC, datetime
+
         from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_group_link import ContentGroupLink
+        from uniffy.core.models.permissions.content_permission import ContentPermission
 
         # User's own private content
         private_condition = and_(
@@ -125,8 +128,32 @@ class ContentAccessQuery:
             content_id_column.in_(group_subquery),
         )
 
+        # Explicit permission grants (e.g., shared with specific user)
+        now = datetime.now(UTC)
+        explicit_permission_subquery = (
+            select(ContentPermission.content_id)
+            .where(ContentPermission.organization_id == organization_id)
+            .where(ContentPermission.content_type == content_type)
+            .where(ContentPermission.subject_type == SubjectType.USER)
+            .where(ContentPermission.subject_id == user_id)
+            .where(ContentPermission.can_view == True)  # noqa: E712
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
+        )
+
+        explicit_permission_condition = content_id_column.in_(explicit_permission_subquery)
+
         # Combine all conditions with OR
-        return or_(private_condition, org_condition, group_condition)
+        return or_(
+            private_condition,
+            org_condition,
+            group_condition,
+            explicit_permission_condition,
+        )
 
     async def get_accessible_content_ids(
         self,

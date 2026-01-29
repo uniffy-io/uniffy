@@ -90,7 +90,7 @@ function SettingItem({ icon: Icon, title, description, enabled, onChange, badge 
 }
 
 export default function ServerSettingsPage() {
-    useDocumentTitle('Server Settings - Administration');
+    useDocumentTitle('Server Settings');
     const { themeMode, availableModes, setTheme } = useTheme();
 
     // Settings state

@@ -25,7 +25,6 @@ import { fetchEventsInRange, fetchCalendars, fetchCategories, fetchEvent } from 
 import { toDateString } from '../utils';
 
 export function CalendarPage() {
-  useDocumentTitle('Calendar');
   const dispatch = useAppDispatch();
   const { eventId } = useParams<{ eventId: string }>();
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
@@ -39,7 +38,14 @@ export function CalendarPage() {
     isAddCalendarModalOpen,
     isAddCategoryModalOpen,
     isCreateTemplateModalOpen,
+    selectedEventId,
   } = useAppSelector((state) => state.calendarUi);
+
+  // Get selected event for dynamic document title
+  const events = useAppSelector((state) => state.calendar.events);
+  const selectedEvent = selectedEventId ? events[selectedEventId] : null;
+  const pageTitle = selectedEvent?.title || 'Calendar';
+  useDocumentTitle(pageTitle);
 
   // Fetch calendars and categories when the page loads or organization changes
   useEffect(() => {

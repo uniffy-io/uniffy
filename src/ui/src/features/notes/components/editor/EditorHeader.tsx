@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DotsThree,
   ShareNetwork,
@@ -13,6 +14,7 @@ import {
   ArrowsClockwise,
   CheckCircle,
   WarningCircle,
+  DotsThreeOutline,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '../../store/notesThunks';
@@ -20,7 +22,9 @@ import { updateNoteIcon } from '../../store/notesThunks';
 import { setEditorMode, toggleMetadataPanel, toggleSidebar, toggleMarkdownPreview } from '../../store/editorSlice';
 import { updateNote } from '../../store/notesSlice';
 import { useSaveStatus } from '../../hooks/useNotesHooks';
-import { buildBreadcrumbPath } from '../../utils/notesTreeUtils';
+import { buildBreadcrumbPath, type BreadcrumbItem } from '../../utils/notesTreeUtils';
+import { expandNode, setSelectedNode } from '../../store/notesTreeSlice';
+import { setSidebarOpen } from '../../store/editorSlice';
 import type { NoteIcon } from '../../utils/noteIconConstants';
 import { renderNoteIcon } from '../../utils/noteIcons';
 import type { EditorMode } from '../../store/editorSlice';
@@ -29,10 +33,174 @@ import { IconPicker } from './IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { useSharingDialog } from '@/features/sharing';
 import { ContentType } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 
 interface EditorHeaderProps {
   note: SerializedNote;
   canEdit?: boolean;
+}
+
+/**
+ * Collapsible breadcrumb that shows first item, collapsed middle items, and last 2 items
+ * when there are more than 3 levels of nesting.
+ * Clicking on a folder expands it in the tree and selects it.
+ */
+interface CollapsibleBreadcrumbProps {
+  items: BreadcrumbItem[];
+  noteVisibility?: VisibilityScope;
+}
+
+function CollapsibleBreadcrumb({ items, noteVisibility }: CollapsibleBreadcrumbProps) {
+  const dispatch = useAppDispatch();
+  const isSidebarOpen = useAppSelector((state) => state.editor.isSidebarOpen);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
+  // Handle clicking on a breadcrumb item - expand all ancestors and select the folder
+  const handleItemClick = useCallback((item: BreadcrumbItem, itemIndex: number) => {
+    // Only handle clicks on folders (not the current note which is the last item)
+    if (itemIndex === items.length - 1) return;
+
+    // Open sidebar if closed
+    if (!isSidebarOpen) {
+      dispatch(setSidebarOpen(true));
+    }
+
+    // Expand the section containing these notes based on visibility
+    const sectionId = noteVisibility === VisibilityScope.ORGANIZATION
+      ? 'organization'
+      : noteVisibility === VisibilityScope.GROUP
+        ? 'shared' // Group notes appear in shared section for non-owners
+        : 'personal';
+    dispatch(expandNode(sectionId));
+
+    // Expand all folders from root to the clicked item
+    for (let i = 0; i <= itemIndex; i++) {
+      if (items[i].isFolder) {
+        dispatch(expandNode(items[i].id));
+      }
+    }
+
+    // Select the clicked folder (for visual highlight)
+    dispatch(setSelectedNode(item.id));
+
+    // Scroll to the folder in the tree after a short delay to allow expansion
+    setTimeout(() => {
+      const folderElement = document.querySelector(`[data-node-id="${item.id}"]`);
+      if (folderElement) {
+        folderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  }, [dispatch, items, isSidebarOpen, noteVisibility]);
+
+  // If 3 or fewer items, show all
+  if (items.length <= 3) {
+    return (
+      <nav className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          const isClickable = !isLast && item.isFolder;
+          return (
+            <span key={item.id} className="flex items-center gap-1 min-w-0">
+              {index > 0 && <CaretRight size={12} weight="bold" className="shrink-0" />}
+              <span
+                onClick={() => isClickable && handleItemClick(item, index)}
+                className={`truncate max-w-[150px] ${isLast ? 'text-foreground font-medium' : 'hover:text-foreground cursor-pointer hover:underline'}`}
+                title={item.title}
+              >
+                {item.title}
+              </span>
+            </span>
+          );
+        })}
+      </nav>
+    );
+  }
+
+  // For 4+ items: show first, ..., last 2
+  const firstItem = items[0];
+  const collapsedItems = items.slice(1, -2);
+  const lastTwoItems = items.slice(-2);
+  const lastTwoStartIndex = items.length - 2;
+
+  return (
+    <nav className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
+      {/* First item */}
+      <span
+        onClick={() => firstItem.isFolder && handleItemClick(firstItem, 0)}
+        className="truncate max-w-[120px] hover:text-foreground cursor-pointer hover:underline"
+        title={firstItem.title}
+      >
+        {firstItem.title}
+      </span>
+
+      <CaretRight size={12} weight="bold" className="shrink-0" />
+
+      {/* Collapsed items dropdown */}
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"
+          title={`${collapsedItems.length} more folder${collapsedItems.length > 1 ? 's' : ''}`}
+        >
+          <DotsThreeOutline size={14} weight="fill" />
+        </button>
+
+        {isDropdownOpen && (
+          <div className="absolute top-full left-0 mt-1 py-1 min-w-[160px] max-w-[240px] bg-card border border-border rounded-lg shadow-lg z-50">
+            {collapsedItems.map((item, index) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  handleItemClick(item, index + 1); // +1 because firstItem is at index 0
+                  setIsDropdownOpen(false);
+                }}
+                className="w-full px-3 py-1.5 text-left text-sm hover:bg-muted truncate"
+                title={item.title}
+              >
+                {item.title}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <CaretRight size={12} weight="bold" className="shrink-0" />
+
+      {/* Last two items */}
+      {lastTwoItems.map((item, index) => {
+        const actualIndex = lastTwoStartIndex + index;
+        const isLast = actualIndex === items.length - 1;
+        const isClickable = !isLast && item.isFolder;
+        return (
+          <span key={item.id} className="flex items-center gap-1 min-w-0">
+            {index > 0 && <CaretRight size={12} weight="bold" className="shrink-0" />}
+            <span
+              onClick={() => isClickable && handleItemClick(item, actualIndex)}
+              className={`truncate max-w-[150px] ${isLast ? 'text-foreground font-medium' : 'hover:text-foreground cursor-pointer hover:underline'}`}
+              title={item.title}
+            >
+              {item.title}
+            </span>
+          </span>
+        );
+      })}
+    </nav>
+  );
 }
 
 // Mock collaborators for demo
@@ -43,6 +211,7 @@ const mockCollaborators = [
 
 export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const editorState = useAppSelector((state) => state.editor);
   const allNotes = useAppSelector((state) => state.notes.notes);
   const settings = editorState?.settings;
@@ -100,6 +269,10 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
   const handleShare = () => {
     openSharingDialog(ContentType.NOTE, note.id, note.title || 'Untitled');
   };
+
+  const handleTagClick = useCallback((tag: string) => {
+    navigate(`/notes/tags?tag=${encodeURIComponent(tag)}`);
+  }, [navigate]);
   
   // Only show edit modes if user has edit permission
   const viewModes: Array<{
@@ -133,7 +306,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
       {/* Top Bar: Breadcrumb + Actions */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
         {/* Left: Sidebar Toggle + Breadcrumb */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
           {/* Sidebar toggle (show when sidebar is hidden) */}
           {!isSidebarOpen && (
             <button
@@ -146,16 +319,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
           )}
           
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-            {breadcrumb.map((item, index) => (
-              <span key={index} className="flex items-center gap-1">
-                {index > 0 && <CaretRight size={12} weight="bold" />}
-                <span className={index === breadcrumb.length - 1 ? 'text-foreground font-medium' : 'hover:text-foreground cursor-pointer'}>
-                  {item}
-                </span>
-              </span>
-            ))}
-          </nav>
+          <CollapsibleBreadcrumb items={breadcrumb} noteVisibility={note.visibility} />
 
           {/* Save Status */}
           <div className="flex items-center gap-1.5 ml-4 text-xs">
@@ -329,10 +493,30 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
             {/* Meta Info */}
             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
               <span>Created {formatDate(note.createdAt)}</span>
-              <span>·</span>
-              <span>Last edited 2 hours ago by Sarah</span>
-              <span>·</span>
-              <span>4 collaborators</span>
+              {note.updatedAt && (
+                <>
+                  <span>·</span>
+                  <span>Updated {formatDate(note.updatedAt)}</span>
+                </>
+              )}
+              {/* Sharing info: show owner for shared notes (but not org-wide notes) */}
+              {note.ownerInfo && note.visibility !== VisibilityScope.ORGANIZATION && (
+                <>
+                  <span>·</span>
+                  <span className="text-blue-500">
+                    Shared by {note.ownerInfo.name}
+                  </span>
+                </>
+              )}
+              {/* Sharing info: show share count for notes owned by user */}
+              {note.sharedWith && note.sharedWith.length > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="text-blue-500">
+                    Shared with {note.sharedWith.length} {note.sharedWith.length === 1 ? 'person' : 'people'}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -345,6 +529,7 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
               dispatch(updateNote({ noteId: note.id, tags: newTags }));
             }}
             disabled={!canEdit}
+            onTagClick={handleTagClick}
           />
         </div>
       </div>

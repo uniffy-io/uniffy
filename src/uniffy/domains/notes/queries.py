@@ -14,6 +14,10 @@ from uniffy.core.models.shared import NodeType
 # Also handles escaped brackets/pipes from some editors: \[\[\[label\|urn\]\]\]
 MENTION_PATTERN = re.compile(r"\\?\[\\?\[\\?\[(.+?)\\?\|(.+?)\\?\]\\?\]\\?\]")
 
+# Regex pattern for inline tags in markdown: [[[tag|tagname]]]
+# Tags are stored with the "tag|" prefix to distinguish from URN mentions
+INLINE_TAG_PATTERN = re.compile(r"\[\[\[tag\|([^\]]+)\]\]\]")
+
 
 def extract_urns_from_content(content: str) -> list[str]:
     """
@@ -43,6 +47,36 @@ def extract_urns_from_content(content: str) -> list[str]:
             urns.add(urn)
 
     return list(urns)
+
+
+def extract_inline_tags_from_content(content: str) -> list[str]:
+    """
+    Extract all unique inline tags from markdown content.
+
+    Parses the [[[tag|tagname]]] pattern used by the editor's tag plugin
+    and returns a deduplicated, sorted list of tag names.
+
+    Parameters
+    ----------
+    content : str
+        Markdown content to parse.
+
+    Returns
+    -------
+    list[str]
+        Unique tag names found in the content (lowercase, sorted).
+
+    """
+    if not content:
+        return []
+
+    tags: set[str] = set()
+    for match in INLINE_TAG_PATTERN.finditer(content):
+        tag_name = match.group(1).strip().lower()
+        if tag_name:
+            tags.add(tag_name)
+
+    return sorted(tags)
 
 
 def slugify(text: str) -> str:

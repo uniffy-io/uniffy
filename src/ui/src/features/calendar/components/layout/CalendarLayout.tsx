@@ -7,10 +7,11 @@
  * - Right detail panel (300px): Event details (conditional)
  */
 
-import type { ReactNode } from 'react';
+import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useAppSelector } from '@/app/hooks';
 import { LAYOUT } from '../../constants';
+import { loadPanelLayout, savePanelLayout } from '@/utils/panelStorage';
 
 interface CalendarLayoutProps {
   sidebar: ReactNode;
@@ -27,6 +28,11 @@ export function CalendarLayout({
     (state) => state.calendarUi
   );
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+  const [defaultLayout] = useState(() => loadPanelLayout('calendar'));
+
+  const handleLayoutChange = useCallback((layout: Record<string, number>) => {
+    savePanelLayout('calendar', layout);
+  }, []);
 
   // Mobile layout - show one panel at a time
   if (isMobileView) {
@@ -41,7 +47,12 @@ export function CalendarLayout({
 
   return (
     <div className="h-full bg-background overflow-hidden">
-      <Group orientation="horizontal" className="h-full">
+      <Group
+        orientation="horizontal"
+        className="h-full"
+        defaultLayout={defaultLayout}
+        onLayoutChange={handleLayoutChange}
+      >
         {/* Left Sidebar */}
         {!isZenMode && !isSidebarCollapsed && (
           <>

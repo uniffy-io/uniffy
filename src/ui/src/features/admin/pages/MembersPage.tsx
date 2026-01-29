@@ -9,6 +9,6 @@ import { MembersSection } from '../components/members/MembersSection';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export default function MembersPage() {
-    useDocumentTitle('Members - Administration');
+    useDocumentTitle('Members');
     return <MembersSection />;
 }

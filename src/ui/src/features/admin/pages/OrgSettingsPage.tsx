@@ -9,7 +9,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Buildings, Gear } from '@phosphor-icons/react';
 
 export default function OrgSettingsPage() {
-    useDocumentTitle('Organization Settings - Administration');
+    useDocumentTitle('Organization Settings');
 
     return (
         <div className="space-y-6">

@@ -9,6 +9,6 @@ import { PermissionDefaultsSection } from '../components/permissions/PermissionD
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export default function PermissionsPage() {
-    useDocumentTitle('Permissions - Administration');
+    useDocumentTitle('Permissions');
     return <PermissionDefaultsSection />;
 }

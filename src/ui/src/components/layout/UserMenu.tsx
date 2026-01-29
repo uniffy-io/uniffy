@@ -12,6 +12,7 @@ import { logout } from '@/features/auth/store/authSlice';
 import { resetSettings } from '@/features/settings/store/settingsSlice';
 import { clearNotes } from '@/features/notes/store/notesSlice';
 import { clearTree } from '@/features/notes/store/notesTreeSlice';
+import { clearNotesCache } from '@/features/notes';
 import { clearBookmarks } from '@/features/bookmarks';
 import { clearSharing } from '@/features/sharing';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
@@ -62,6 +63,8 @@ export function UserMenu() {
         dispatch(clearBookmarks());
         dispatch(clearSharing());
         dispatch(clearAdmin());
+        // Clear IndexedDB cache (async, fire and forget)
+        clearNotesCache().catch(console.error);
         // Navigate to auth page
         navigate('/auth');
     };

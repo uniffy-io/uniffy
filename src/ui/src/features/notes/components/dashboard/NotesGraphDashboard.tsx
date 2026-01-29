@@ -313,13 +313,35 @@ export function NotesGraphDashboard() {
     /* eslint-disable react-hooks/refs */
     const existingNodes = nodeMapRef.current;
     const newNodeMap = new Map<string, NodeObject>();
-    for (const node of data.nodes) {
+
+    // Pre-calculate initial positions in a spiral pattern to avoid the "big bang" effect
+    // This spreads nodes out before the force simulation starts
+    const getInitialPosition = (index: number) => {
+      // Use golden angle spiral for even distribution
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      const angle = index * goldenAngle;
+      // Radius grows with sqrt to maintain roughly equal density
+      const radius = Math.sqrt(index + 1) * 15;
+      return {
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+      };
+    };
+
+    for (let i = 0; i < data.nodes.length; i++) {
+      const node = data.nodes[i];
       const existing = existingNodes.get(node.id);
       if (existing && typeof existing.x === 'number' && typeof existing.y === 'number') {
+        // Preserve existing position
         node.x = existing.x;
         node.y = existing.y;
         node.vx = existing.vx;
         node.vy = existing.vy;
+      } else {
+        // Assign initial position in spiral pattern
+        const pos = getInitialPosition(i);
+        node.x = pos.x;
+        node.y = pos.y;
       }
       newNodeMap.set(node.id, node as unknown as NodeObject);
     }
@@ -425,6 +447,13 @@ export function NotesGraphDashboard() {
 
     return () => clearTimeout(timer);
   }, [graphData.nodes.length]);
+
+  // Cleanup: pause animation immediately on unmount to prevent navigation delays
+  useEffect(() => {
+    return () => {
+      graphRef.current?.pauseAnimation();
+    };
+  }, []);
 
   // Zoom controls - get current zoom and multiply
   const handleZoomIn = useCallback(() => {
@@ -785,7 +814,6 @@ export function NotesGraphDashboard() {
           </div>
         ) : (
           <ForceGraph2D
-            key={`graph-${graphData.nodes.length}`}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ref={graphRef as any}
             width={dimensions.width}
@@ -805,10 +833,13 @@ export function NotesGraphDashboard() {
             // (canvas-color-tracker bug where certain node indices fail hit detection)
             // We use our own coordinate-based hit detection instead
             enablePointerInteraction={false}
-            warmupTicks={50}
-            cooldownTime={3000}
-            d3AlphaDecay={0.02}
-            d3VelocityDecay={0.3}
+            // No warmupTicks - render immediately and let simulation animate visually
+            // This prevents the jarring "half render then jump" behavior with many nodes
+            warmupTicks={0}
+            cooldownTicks={150}
+            cooldownTime={1500}
+            d3AlphaDecay={0.025}
+            d3VelocityDecay={0.35}
             minZoom={0.1}
             maxZoom={10}
             backgroundColor="transparent"
