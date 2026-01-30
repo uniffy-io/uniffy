@@ -21,6 +21,7 @@ help() {
     echo -e "  ${CYAN}db-shell${NC}    Connect to database shell"
     echo -e "  ${CYAN}db-migrate${NC}  Run database migrations"
     echo -e "  ${CYAN}licenses${NC}    Generate third-party license files"
+    echo -e "  ${CYAN}docker-staging${NC} Build and push Docker images for staging"
 }
 
 install() {
@@ -29,6 +30,21 @@ install() {
     echo "Installing UI dependencies..."
     (cd src/ui && pnpm install)
     echo "Done!"
+}
+
+docker_build_staging() {
+    echo "Building Docker images for staging..."
+    echo "building backend"
+    docker build -f src/uniffy/Dockerfile \
+        -t registry.uniffy.io/uniffy/backend:local-latest .
+    docker push registry.uniffy.io/uniffy/backend:local-latest
+    echo "building frontend"
+    docker build -f src/ui/Dockerfile \
+        --build-arg VITE_API_URL=https://uniffy.local.uniffy.io \
+        --build-arg VITE_ENV=staging \
+        -t registry.uniffy.io/uniffy/frontend:local-latest \
+        src/ui
+    docker push registry.uniffy.io/uniffy/frontend:local-latest
 }
 
 proto() {
@@ -125,5 +141,6 @@ case "${1:-help}" in
     db-shell)   db_shell ;;
     db-migrate) db_migrate ;;
     licenses)   licenses ;;
+    docker-staging) docker_build_staging ;;
     help|*)     help ;;
 esac

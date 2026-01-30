@@ -31,7 +31,7 @@ from uniffy.gen.search.v1.search_connect import SearchServiceASGIApplication
 from uniffy.gen.settings.v1.settings_connect import SettingsServiceASGIApplication
 from uniffy.gen.users.v1.users_connect import UsersServiceASGIApplication
 from uniffy.observability import ObservabilityConfig, setup_observability
-from uniffy.observability.crpc import LoggingInterceptor
+from uniffy.observability.crpc import LoggingInterceptor, http_version_var
 from uniffy.observability.otel import instrument_fastapi
 
 
@@ -108,9 +108,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Add middleware to log ALL requests
+    # Add middleware to capture HTTP version and log requests
     @app.middleware("http")
     async def log_requests(request, call_next):
+        # Set HTTP version in context for ConnectRPC interceptor
+        http_version_var.set(request.scope.get("http_version", "unknown"))
         try:
             response = await call_next(request)
             return response
@@ -132,7 +134,7 @@ def create_app() -> FastAPI:
     # Mount ConnectRPC services
     _mount_connect_services(app)
 
-    @app.get("/api/health")
+    @app.get("/healthz")
     async def health_check():
         return {"status": "ok", "service": "uniffy"}
 

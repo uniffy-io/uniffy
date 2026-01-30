@@ -33,7 +33,18 @@ def main() -> None:
 
     app = create_app()
 
-    print(f"Starting UNIFFY on {host}:{port} (workers={workers}, http2=enabled)")
+    # Check if h2 is available for HTTP/2 support
+    try:
+        import h2  # noqa: F401
+
+        h2_available = True
+    except ImportError:
+        h2_available = False
+
+    print(f"Starting UNIFFY on {host}:{port} (workers={workers}, http2={h2_available})")
+    if not h2_available:
+        print("WARNING: h2 package not installed - HTTP/2 disabled, using HTTP/1.1")
+
     asyncio.run(serve(app, config))
 
 

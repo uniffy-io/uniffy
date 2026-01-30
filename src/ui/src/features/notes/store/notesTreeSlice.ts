@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
 import { notesApi } from '../api/notesApi';
 import { organizeNotesByVisibility } from '../utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
@@ -495,7 +495,7 @@ export const notesTreeSlice = createSlice({
                 const newNode: TreeNode = {
                     id: note.id,
                     title: note.title,
-                    type: note.nodeType === 1 ? 'folder' : 'note', // NodeType.FOLDER = 1
+                    type: note.nodeType === NodeType.FOLDER ? 'folder' : 'note',
                     icon: note.icon,
                     noteId: note.id,
                     visibility: note.visibility,
@@ -614,7 +614,7 @@ export const notesTreeSlice = createSlice({
                 const restoredNode: TreeNode = {
                     id: note.id,
                     title: note.title,
-                    type: note.nodeType === 1 ? 'folder' : 'note',
+                    type: note.nodeType === NodeType.FOLDER ? 'folder' : 'note',
                     icon: note.icon,
                     noteId: note.id,
                     visibility: note.visibility,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Awaitable, Callable
+from contextvars import ContextVar
 from typing import Any
 
 from connectrpc.code import Code
@@ -12,6 +13,9 @@ from connectrpc.request import RequestContext
 from loguru import logger
 
 from uniffy.domains.auth.context import get_user_id_from_context
+
+# Context variable to store HTTP version from ASGI scope
+http_version_var: ContextVar[str] = ContextVar("http_version", default="unknown")
 
 
 class LoggingInterceptor:
@@ -91,6 +95,7 @@ class LoggingInterceptor:
                 f"access {service_name}/{method_name}",
                 user_id=user_id,
                 duration_ms=round(duration * 1000),
+                http=http_version_var.get(),
             )
             return response
 

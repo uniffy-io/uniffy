@@ -8,6 +8,7 @@ COPY pyproject.toml uv.lock README.md .python-version ./
 
 # Copy source code (only python backend)
 COPY src/uniffy /app/src/uniffy
+COPY docs /app/docs
 
 RUN uv sync --compile-bytecode --frozen \
   --no-dev && \

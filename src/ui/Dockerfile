@@ -29,11 +29,19 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration for SPA routing
-RUN echo 'server { \
+RUN echo 'map $http_user_agent $loggable { \
+    ~^kube-probe 0; \
+    default 1; \
+} \
+\
+server { \
     listen 80; \
     server_name localhost; \
     root /usr/share/nginx/html; \
     index index.html; \
+    \
+    # Disable logging for health checks \
+    access_log /var/log/nginx/access.log combined if=$loggable; \
     \
     # Gzip compression \
     gzip on; \
