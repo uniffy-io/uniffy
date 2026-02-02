@@ -59,17 +59,19 @@ export const authSlice = createSlice({
       state.isRehydrating = true;
     },
     /**
-     * Rehydration complete - set tokens from refresh response.
+     * Rehydration complete - set user and tokens from refresh response.
      */
     rehydrateComplete: (
       state,
       action: PayloadAction<{
+        user: PlainMessage<CurrentUserResponse>;
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
         organizationRole?: string;
       }>
     ) => {
+      state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;

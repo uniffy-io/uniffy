@@ -294,6 +294,105 @@ class ContentAccessQuery:
         """
         return visibility_column == VisibilityScope.ORGANIZATION
 
+    def build_shared_with_me_filter(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id_column: InstrumentedAttribute,
+        owner_id_column: InstrumentedAttribute,
+        visibility_column: InstrumentedAttribute,
+    ) -> Any:
+        """
+        Build filter for content shared WITH the user (not owned by user).
+
+        Returns content where:
+        - User is NOT the owner, AND
+        - Content is accessible via GROUP membership, OR
+        - Content is accessible via explicit permission, OR
+        - Content is ORGANIZATION-wide
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID requesting access.
+        organization_id : UUID
+            Organization ID.
+        content_type : ContentType
+            Type of content being queried.
+        content_id_column : InstrumentedAttribute
+            SQLAlchemy column reference for content ID.
+        owner_id_column : InstrumentedAttribute
+            SQLAlchemy column reference for owner ID.
+        visibility_column : InstrumentedAttribute
+            SQLAlchemy column reference for visibility.
+
+        Returns
+        -------
+        Any
+            SQLAlchemy filter expression.
+
+        """
+        from datetime import UTC, datetime
+
+        from uniffy.core.models.login.group_member import GroupMember
+        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
+        from uniffy.core.models.permissions.content_permission import ContentPermission
+
+        # Must NOT be owner
+        not_owner = owner_id_column != user_id
+
+        # Organization-wide content (not owned by user)
+        org_condition = and_(
+            not_owner,
+            visibility_column == VisibilityScope.ORGANIZATION,
+        )
+
+        # Group content where user is member (not owned by user)
+        group_subquery = (
+            select(ContentGroupLink.content_id)
+            .where(ContentGroupLink.organization_id == organization_id)
+            .where(ContentGroupLink.content_type == content_type)
+            .where(
+                ContentGroupLink.group_id.in_(
+                    select(GroupMember.group_id)
+                    .where(GroupMember.user_id == user_id)
+                    .where(GroupMember.is_active == True)  # noqa: E712
+                )
+            )
+        )
+
+        group_condition = and_(
+            not_owner,
+            visibility_column == VisibilityScope.GROUP,
+            content_id_column.in_(group_subquery),
+        )
+
+        # Explicit permission grants (not owned by user)
+        now = datetime.now(UTC)
+        explicit_permission_subquery = (
+            select(ContentPermission.content_id)
+            .where(ContentPermission.organization_id == organization_id)
+            .where(ContentPermission.content_type == content_type)
+            .where(ContentPermission.subject_type == SubjectType.USER)
+            .where(ContentPermission.subject_id == user_id)
+            .where(ContentPermission.can_view == True)  # noqa: E712
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
+        )
+
+        explicit_condition = and_(
+            not_owner,
+            content_id_column.in_(explicit_permission_subquery),
+        )
+
+        # Combine: content shared with user via any mechanism
+        return or_(org_condition, group_condition, explicit_condition)
+
     async def get_user_group_ids(
         self,
         user_id: UUID,

@@ -6,6 +6,10 @@ from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.template import EventTemplate
+from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.models.files.file_version import FileVersion
+from uniffy.core.models.files.folder import Folder
+from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization import Organization
@@ -43,6 +47,13 @@ __all__ = [
     "SSOProvider",
     # Notes models
     "Note",
+    # Files models
+    "File",
+    "Folder",
+    "FileVersion",
+    "MultipartUpload",
+    "ExtractionStatus",
+    "UploadStatus",
     # Bookmarks
     "Bookmark",
     # Calendar models

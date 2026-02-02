@@ -18,6 +18,7 @@ help() {
     echo -e "  ${CYAN}lint${NC}        Run linters"
     echo -e "  ${CYAN}format${NC}      Format code"
     echo -e "  ${CYAN}test${NC}        Run tests"
+    echo -e "  ${CYAN}bench${NC}       Run performance benchmarks"
     echo -e "  ${CYAN}db-shell${NC}    Connect to database shell"
     echo -e "  ${CYAN}db-migrate${NC}  Run database migrations"
     echo -e "  ${CYAN}licenses${NC}    Generate third-party license files"
@@ -96,7 +97,16 @@ format() {
 }
 
 run_test() {
-    uv run pytest
+    uv run pytest src/uniffy/tests/ --ignore=src/uniffy/tests/benchmarks/
+}
+
+run_bench() {
+    echo "Running performance benchmarks..."
+    uv run pytest src/uniffy/tests/benchmarks/ \
+        --benchmark-only \
+        --benchmark-group-by=func \
+        --benchmark-sort=mean \
+        --benchmark-columns=min,max,mean,stddev,rounds
 }
 
 db_shell() {
@@ -138,6 +148,7 @@ case "${1:-help}" in
     lint)       lint ;;
     format)     format ;;
     test)       run_test ;;
+    bench)      run_bench ;;
     db-shell)   db_shell ;;
     db-migrate) db_migrate ;;
     licenses)   licenses ;;

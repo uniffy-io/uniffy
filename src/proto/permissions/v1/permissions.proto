@@ -135,5 +135,5 @@ message ShareTarget {
   string name = 3;
   string email = 4;
   string avatar_url = 5;
-  int32 member_count = 6;  // For groups
+  int32 member_count = 6; // For groups
 }

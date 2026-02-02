@@ -5,6 +5,7 @@
 - [x] Multi-Tenancy Support
 - [x] Global Configurable Keybindings System
 - [x] Global Theming and Appearance Settings
+- [ ] Backend background jobs architecture
 - [ ] OIDC Integration
 - [ ] SSO Support
 - [ ] Advanced Role-Based Access Control (RBAC)
@@ -33,8 +34,8 @@
 - [x] Notes Knowledge Graph
 - [x] Notes Tagging System
 - [X] Notes Tag System
-- [ ] Notes Tags Dashboard with tag management
-- [ ] Notes Single Tag Page showing all notes with that tag and tag details
+- [x] Notes Tags Dashboard with tag management
+- [x] Notes Single Tag Page showing all notes with that tag and tag details
 - [x] Notes Linking and Backlinking trough the Unified Tagging System
 - [x] Icons picker for notes
 - [ ] Notes Versioning and History
@@ -64,3 +65,14 @@
 - [x] Conflict detection for overlapping events
 - [ ] External calendar subscriptions
 - [x] Event templates for quick creation
+
+## Files
+
+- [x] Base Backend Implementation 
+- [x] Fast uploads and download with Browser Workers and chunked stream apis
+- [x] Custom file filters, created by users that are savable and selectable in the UI
+- [X] Files Tag System
+- [x] Files Tags Dashboard with tag management
+- [ ] ...
+- [ ] Metadata extraction for full text search
+- [ ] File Preview generation 

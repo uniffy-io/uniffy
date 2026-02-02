@@ -80,6 +80,7 @@ When adding a new content type (e.g., `TASK`), update these files:
 
 ## Critical Rules
 
+0. NEVER USE EMOJIES IN CODE, DOCUMENTS, COMMENTS, OR COMMIT MESSAGES
 1. Run `./run.sh proto` after editing `.proto` files
 2. Always use async patterns in backend
 3. Always check permissions in domain operations

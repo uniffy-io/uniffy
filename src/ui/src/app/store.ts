@@ -15,6 +15,7 @@ import adminReducer from '@/features/admin/store/adminSlice';
 import { setStoreRef } from './storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
 import zenModeReducer from './zenModeSlice';
+import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer } from '@/features/files';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -71,6 +72,10 @@ const rootReducer = combineReducers({
   calendar: calendarReducer,
   calendarUi: calendarUiReducer,
   zenMode: zenModeReducer,
+  files: filesReducer,
+  filesTree: filesTreeReducer,
+  upload: uploadReducer,
+  savedFilters: savedFiltersReducer,
 });
 
 // Migrations to handle state shape changes across versions

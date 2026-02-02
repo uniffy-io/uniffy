@@ -92,6 +92,8 @@ class ContentType(str, Enum):
         Notes/documents.
     FILE : str
         Files (uploaded documents, images, etc.).
+    FOLDER : str
+        Folders for organizing files.
     CALENDAR_EVENT : str
         Calendar events.
     CHAT_MESSAGE : str
@@ -103,6 +105,7 @@ class ContentType(str, Enum):
 
     NOTE = "NOTE"
     FILE = "FILE"
+    FOLDER = "FOLDER"
     CALENDAR_EVENT = "CALENDAR_EVENT"
     CHAT_MESSAGE = "CHAT_MESSAGE"
     USER = "USER"

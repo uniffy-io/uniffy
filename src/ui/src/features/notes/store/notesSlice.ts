@@ -18,6 +18,29 @@ import {
     type SerializedNote,
 } from './notesThunks';
 
+// LocalStorage key for last opened note
+const LAST_NOTE_STORAGE_KEY = 'uniffy-last-note';
+
+export function loadLastOpenedNote(): string | null {
+    try {
+        return localStorage.getItem(LAST_NOTE_STORAGE_KEY);
+    } catch {
+        return null;
+    }
+}
+
+function saveLastOpenedNote(noteId: string | null): void {
+    try {
+        if (noteId) {
+            localStorage.setItem(LAST_NOTE_STORAGE_KEY, noteId);
+        } else {
+            localStorage.removeItem(LAST_NOTE_STORAGE_KEY);
+        }
+    } catch {
+        // Ignore errors
+    }
+}
+
 /**
  * Normalize a note to ensure all values are serializable for Redux.
  * The note is already serialized from the thunk, just return it.
@@ -134,6 +157,10 @@ export const notesSlice = createSlice({
         // Set current note
         setCurrentNote: (state, action: PayloadAction<string | null>) => {
             state.currentNoteId = action.payload;
+            // Only persist when opening a note, not when clearing
+            if (action.payload) {
+                saveLastOpenedNote(action.payload);
+            }
         },
 
         // Tab management

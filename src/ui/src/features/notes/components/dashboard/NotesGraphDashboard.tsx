@@ -255,7 +255,7 @@ export function NotesGraphDashboard() {
   const lastHoveredNodeRef = useRef<string | null>(null);
 
 
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [themeColors, setThemeColors] = useState(getThemeColors);
 
@@ -366,27 +366,6 @@ export function NotesGraphDashboard() {
 
   // Track layout and calculate dimensions based on sidebar state
   const isSidebarOpen = useAppSelector((state) => state.editor?.isSidebarOpen ?? true);
-  
-  // Calculate dimensions based on viewport and sidebar
-  const calculateDimensions = useCallback(() => {
-    if (!containerRef.current) return { width: 800, height: 600 };
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      return { width: rect.width, height: rect.height };
-    }
-    
-    // Fallback: calculate based on viewport
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const headerHeight = 64; // 4rem
-    const sidebarWidth = isSidebarOpen ? 280 : 0;
-    
-    return {
-      width: Math.max(400, viewportWidth - sidebarWidth - 2), // -2 for separators
-      height: Math.max(400, viewportHeight - headerHeight),
-    };
-  }, [isSidebarOpen]);
 
   // Handle container resize with ResizeObserver
   useEffect(() => {
@@ -403,32 +382,42 @@ export function NotesGraphDashboard() {
 
     resizeObserver.observe(containerRef.current);
 
-    // Set initial dimensions
-    const initialDimensions = calculateDimensions();
-    setDimensions(initialDimensions);
+    // Set initial dimensions from container
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      setDimensions({ width: rect.width, height: rect.height });
+    }
 
     return () => resizeObserver.disconnect();
-  }, [calculateDimensions]);
+  }, []); // Only run once on mount
 
   // Update dimensions when sidebar state changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      const newDimensions = calculateDimensions();
-      setDimensions(newDimensions);
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          setDimensions({ width: rect.width, height: rect.height });
+        }
+      }
     }, 300); // Allow time for sidebar animation
     return () => clearTimeout(timer);
-  }, [isSidebarOpen, calculateDimensions]);
+  }, [isSidebarOpen]);
 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      const newDimensions = calculateDimensions();
-      setDimensions(newDimensions);
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          setDimensions({ width: rect.width, height: rect.height });
+        }
+      }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [calculateDimensions]);
+  }, []);
 
   // Default zoom level
   const DEFAULT_ZOOM = 3;
@@ -436,7 +425,7 @@ export function NotesGraphDashboard() {
   // Set initial zoom and center once on mount
   const hasInitialized = useRef(false);
   useEffect(() => {
-    if (hasInitialized.current || !graphRef.current || graphData.nodes.length === 0) return;
+    if (hasInitialized.current || !graphRef.current || !dimensions || graphData.nodes.length === 0) return;
     hasInitialized.current = true;
 
     // Wait for graph to render, then set default zoom centered at origin
@@ -446,12 +435,14 @@ export function NotesGraphDashboard() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [graphData.nodes.length]);
+  }, [graphData.nodes.length, dimensions]);
 
   // Cleanup: pause animation immediately on unmount to prevent navigation delays
   useEffect(() => {
+    // Capture ref value inside effect to avoid stale reference in cleanup
+    const graph = graphRef.current;
     return () => {
-      graphRef.current?.pauseAnimation();
+      graph?.pauseAnimation();
     };
   }, []);
 
@@ -805,7 +796,7 @@ export function NotesGraphDashboard() {
     <div className="h-full w-full flex flex-col bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden">
       {/* Graph container */}
       <div ref={containerRef} className="flex-1 relative min-h-0 w-full">
-        {loading ? (
+        {loading || !dimensions ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />

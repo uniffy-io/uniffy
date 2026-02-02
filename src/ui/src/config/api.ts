@@ -236,7 +236,7 @@ async function refreshAccessToken(): Promise<string | null> {
  *
  * Called after redux-persist rehydrates state. If we have a refresh token
  * but no access token (normal case after page reload), this gets a new
- * access token from the backend.
+ * access token from the backend and fetches current user data.
  *
  * Security: This validates the user is still active on every app load.
  *
@@ -276,8 +276,22 @@ export async function rehydrateAuth(): Promise<boolean> {
     if (newToken) {
       // Get updated state after refresh
       const state = store.getState();
-      // Use localStorage values as fallback since Redux may not have rehydrated yet
+      // User data is already persisted in localStorage via redux-persist
+      // (only accessToken is excluded from persistence for security)
+      const persistedUser = user as {
+        id: string;
+        email: string;
+        username: string;
+        fullName: string;
+        isActive: boolean;
+        isSystemAdmin: boolean;
+        emailVerified: boolean;
+        accentColor?: string;
+        fontFamily?: string;
+      };
+
       store.dispatch(createRehydrateCompleteAction({
+        user: persistedUser,
         accessToken: newToken,
         refreshToken: state.auth?.refreshToken || refreshToken,
         organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
@@ -291,6 +305,7 @@ export async function rehydrateAuth(): Promise<boolean> {
   } catch (error) {
     console.error('Auth rehydration failed:', error);
     clearMemoryAccessToken();
+    store.dispatch(createRehydrateFailedAction());
     return false;
   }
 }
@@ -389,3 +404,16 @@ export { setMemoryAccessToken };
  * Must be called when user logs out to remove token from memory.
  */
 export { clearMemoryAccessToken };
+
+/**
+ * Get current access token (for passing to workers).
+ */
+export function getAccessToken(): string | null {
+    return memoryAccessToken;
+}
+
+/**
+ * Refresh access token and return the new token.
+ * Used by workers when they receive 401 errors.
+ */
+export { refreshAccessToken };

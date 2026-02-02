@@ -9,10 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from uniffy.core.search import close_meilisearch, init_meilisearch
+from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.db import close_db, init_db, seed_initial_data
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
+from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
@@ -23,6 +25,7 @@ from uniffy.domains.users.service import UsersServiceImpl
 from uniffy.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy.gen.cal.v1.calendar_connect import CalendarServiceASGIApplication
+from uniffy.gen.files.v1.files_connect import FilesServiceASGIApplication
 from uniffy.gen.groups.v1.groups_connect import GroupsServiceASGIApplication
 from uniffy.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy.gen.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
@@ -82,6 +85,13 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
+        await init_s3()
+        logger.info("S3 storage initialized successfully")
+    except Exception as e:
+        logger.exception(f"Failed to initialize S3 storage: {e}")
+        raise
+
+    try:
         await seed_initial_data()
         logger.info("Initial data seeded successfully")
     except Exception as e:
@@ -92,6 +102,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down UNIFFY application...")
+    await close_s3()
     await close_meilisearch()
     await close_db()
 
@@ -240,3 +251,12 @@ def _mount_connect_services(app: FastAPI) -> None:
     )
     app.mount("/cal.v1.CalendarService", calendar_app)
     logger.info("Mounted CalendarService at /cal.v1.CalendarService")
+
+    # Create and mount the files service
+    files_service = FilesServiceImpl()
+    files_app = FilesServiceASGIApplication(
+        files_service,
+        interceptors=[logging_interceptor],
+    )
+    app.mount("/files.v1.FilesService", files_app)
+    logger.info("Mounted FilesService at /files.v1.FilesService")

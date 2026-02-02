@@ -21,7 +21,7 @@ interface EnvConfig {
  */
 function validateEnv(): void {
   const required: string[] = [];
-  
+
   for (const key of required) {
     if (!import.meta.env[key]) {
       throw new Error(`Missing required environment variable: ${key}`);
@@ -34,11 +34,11 @@ function validateEnv(): void {
  */
 function createEnvConfig(): EnvConfig {
   validateEnv();
-  
+
   const mode = import.meta.env.MODE || 'development';
-  
+
   return {
-    apiBaseUrl: import.meta.env.VITE_API_URL || 'http://dev.local.uniffy.io:8000',
+    apiBaseUrl: import.meta.env.VITE_API_URL,
     mode,
     isDev: mode === 'development',
     isProd: mode === 'production',

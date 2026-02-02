@@ -1,0 +1,559 @@
+syntax = "proto3";
+
+package files.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+option go_package = "uniffy/gen/files/v1;filesv1";
+
+// =============================================================================
+// SERVICE
+// =============================================================================
+
+// FilesService provides file management with streaming upload/download.
+service FilesService {
+  // === Upload ===
+
+  // Initialize a new upload session, returns upload_id and chunk parameters.
+  rpc InitiateUpload(InitiateUploadRequest) returns (InitiateUploadResponse);
+
+  // Upload a single chunk (browser-compatible unary RPC).
+  // Call this for each chunk, then call CompleteUpload when done.
+  rpc UploadChunk(UploadChunkRequest) returns (UploadChunkResponse);
+
+  // Complete an upload after all chunks have been sent.
+  rpc CompleteUpload(CompleteUploadRequest) returns (UploadChunksResponse);
+
+  // Stream file chunks to backend (client streaming RPC - server-to-server only).
+  // NOTE: This does not work in browsers due to Fetch API limitations.
+  rpc UploadChunks(stream UploadChunkRequest) returns (UploadChunksResponse);
+
+  // Get status of an in-progress upload (for resuming after disconnect).
+  rpc GetUploadStatus(GetUploadStatusRequest) returns (GetUploadStatusResponse);
+
+  // Abort an in-progress upload.
+  rpc AbortUpload(AbortUploadRequest) returns (AbortUploadResponse);
+
+  // === Download (Server Streaming) ===
+
+  // Stream file content from backend to client (server streaming RPC).
+  rpc DownloadFile(DownloadFileRequest) returns (stream DownloadChunkResponse);
+
+  // === File CRUD ===
+
+  // Get a file by ID.
+  rpc GetFile(GetFileRequest) returns (FileResponse);
+
+  // Update file metadata (rename, tags, description).
+  rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
+
+  // Delete a file (soft delete by default).
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+
+  // Restore a soft-deleted file.
+  rpc RestoreFile(RestoreFileRequest) returns (FileResponse);
+
+  // List files with pagination and filters.
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+
+  // === Folders ===
+
+  // Create a new folder.
+  rpc CreateFolder(CreateFolderRequest) returns (FolderResponse);
+
+  // Update a folder.
+  rpc UpdateFolder(UpdateFolderRequest) returns (FolderResponse);
+
+  // Delete a folder.
+  rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse);
+
+  // Get the full file/folder tree.
+  rpc GetFilesTree(GetFilesTreeRequest) returns (GetFilesTreeResponse);
+
+  // === Bulk Operations ===
+
+  // Move files/folders to a different parent.
+  rpc MoveItems(MoveItemsRequest) returns (MoveItemsResponse);
+
+  // Copy files (not folders) to a different location.
+  rpc CopyItems(CopyItemsRequest) returns (CopyItemsResponse);
+
+  // Bulk delete multiple files/folders.
+  rpc BulkDelete(BulkDeleteRequest) returns (BulkDeleteResponse);
+
+  // Empty trash (permanently delete all soft-deleted files).
+  rpc EmptyTrash(EmptyTrashRequest) returns (EmptyTrashResponse);
+
+  // === Versions ===
+
+  // List version history for a file.
+  rpc ListFileVersions(ListFileVersionsRequest) returns (ListFileVersionsResponse);
+
+  // Restore a previous version of a file.
+  rpc RestoreFileVersion(RestoreFileVersionRequest) returns (FileResponse);
+
+  // === Saved Filters ===
+
+  // Create a new saved filter.
+  rpc CreateSavedFilter(CreateSavedFilterRequest) returns (SavedFilterResponse);
+
+  // Get a saved filter by ID.
+  rpc GetSavedFilter(GetSavedFilterRequest) returns (SavedFilterResponse);
+
+  // Update a saved filter.
+  rpc UpdateSavedFilter(UpdateSavedFilterRequest) returns (SavedFilterResponse);
+
+  // Delete a saved filter.
+  rpc DeleteSavedFilter(DeleteSavedFilterRequest) returns (DeleteSavedFilterResponse);
+
+  // List saved filters for the current user.
+  rpc ListSavedFilters(ListSavedFiltersRequest) returns (ListSavedFiltersResponse);
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+// Upload status for tracking multipart uploads.
+enum UploadStatus {
+  UPLOAD_STATUS_UNSPECIFIED = 0;
+  UPLOAD_STATUS_ACTIVE = 1;
+  UPLOAD_STATUS_COMPLETED = 2;
+  UPLOAD_STATUS_ABORTED = 3;
+  UPLOAD_STATUS_EXPIRED = 4;
+}
+
+// Extraction status for full-text search (future feature).
+enum ExtractionStatus {
+  EXTRACTION_STATUS_UNSPECIFIED = 0;
+  EXTRACTION_STATUS_PENDING = 1;
+  EXTRACTION_STATUS_PROCESSING = 2;
+  EXTRACTION_STATUS_COMPLETED = 3;
+  EXTRACTION_STATUS_FAILED = 4;
+  EXTRACTION_STATUS_SKIPPED = 5;
+}
+
+// =============================================================================
+// UPLOAD MESSAGES
+// =============================================================================
+
+message InitiateUploadRequest {
+  string organization_id = 1;
+  string filename = 2;
+  string mime_type = 3;
+  int64 total_size = 4;
+  optional string folder_id = 5;
+  common.v1.VisibilityScope visibility = 6;
+}
+
+message InitiateUploadResponse {
+  string upload_id = 1;
+  int32 chunk_size = 2;     // Recommended chunk size in bytes
+  int32 total_chunks = 3;   // Expected number of chunks
+}
+
+message UploadChunkRequest {
+  string upload_id = 1;
+  int32 chunk_number = 2;   // 1-indexed
+  bytes data = 3;
+  bool is_last = 4;
+}
+
+message UploadChunkResponse {
+  bool success = 1;
+  int32 chunk_number = 2;   // Confirmed chunk number
+  int32 chunks_received = 3; // Total chunks received so far
+}
+
+message CompleteUploadRequest {
+  string upload_id = 1;
+}
+
+message UploadChunksResponse {
+  File file = 1;            // The completed file
+}
+
+message GetUploadStatusRequest {
+  string upload_id = 1;
+}
+
+message GetUploadStatusResponse {
+  string upload_id = 1;
+  repeated int32 completed_chunks = 2;
+  int32 total_chunks = 3;
+  UploadStatus status = 4;
+  string filename = 5;
+  int64 total_size = 6;
+}
+
+message AbortUploadRequest {
+  string upload_id = 1;
+}
+
+message AbortUploadResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// =============================================================================
+// DOWNLOAD MESSAGES
+// =============================================================================
+
+message DownloadFileRequest {
+  string file_id = 1;
+  string organization_id = 2;
+  optional string version_id = 3;   // Download specific version
+}
+
+message DownloadChunkResponse {
+  bytes data = 1;
+  int32 chunk_number = 2;
+  int32 total_chunks = 3;
+  // First chunk includes metadata
+  optional string filename = 4;
+  optional string mime_type = 5;
+  optional int64 total_size = 6;
+}
+
+// =============================================================================
+// FILE MESSAGES
+// =============================================================================
+
+message File {
+  string id = 1;
+  string urn = 2;
+  string organization_id = 3;
+  string owner_id = 4;
+  common.v1.VisibilityScope visibility = 5;
+  string filename = 6;
+  string original_filename = 7;
+  string mime_type = 8;
+  int64 size_bytes = 9;
+  optional string folder_id = 10;
+  repeated string tags = 11;
+  optional string description = 12;
+  int32 version = 13;
+  ExtractionStatus extraction_status = 14;
+  bool is_deleted = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+  optional google.protobuf.Timestamp deleted_at = 18;
+
+  // Sharing info (populated based on context)
+  repeated string group_ids = 19;
+  common.v1.PermissionLevel user_permission = 20;
+  optional FileOwner owner_info = 21;
+}
+
+message FileOwner {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message FileResponse {
+  File file = 1;
+}
+
+message GetFileRequest {
+  string file_id = 1;
+  string organization_id = 2;
+}
+
+message UpdateFileRequest {
+  string file_id = 1;
+  string organization_id = 2;
+  optional string filename = 3;
+  repeated string tags = 4;
+  optional string description = 5;
+  optional common.v1.VisibilityScope visibility = 6;
+}
+
+message DeleteFileRequest {
+  string file_id = 1;
+  string organization_id = 2;
+  bool permanent = 3;
+}
+
+message DeleteFileResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RestoreFileRequest {
+  string file_id = 1;
+  string organization_id = 2;
+}
+
+message ListFilesRequest {
+  string organization_id = 1;
+  optional string folder_id = 2;      // null = root, "all" = all files
+  repeated string tags = 3;
+  bool include_deleted = 4;
+  bool personal_only = 5;
+  optional common.v1.VisibilityScope visibility = 6;
+  optional string group_id = 7;
+  int32 page = 8;
+  int32 page_size = 9;
+  string sort_by = 10;                // created_at, updated_at, filename, size
+  string sort_order = 11;             // asc, desc
+  bool shared_only = 12;              // Filter for files shared with user (not owned)
+}
+
+message ListFilesResponse {
+  repeated File files = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+// =============================================================================
+// FOLDER MESSAGES
+// =============================================================================
+
+message Folder {
+  string id = 1;
+  string urn = 2;
+  string organization_id = 3;
+  string owner_id = 4;
+  common.v1.VisibilityScope visibility = 5;
+  string name = 6;
+  optional string parent_id = 7;
+  bool is_deleted = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message FolderResponse {
+  Folder folder = 1;
+}
+
+message CreateFolderRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string parent_id = 3;
+  common.v1.VisibilityScope visibility = 4;
+}
+
+message UpdateFolderRequest {
+  string folder_id = 1;
+  string organization_id = 2;
+  optional string name = 3;
+  optional string parent_id = 4;      // "" to move to root
+  optional common.v1.VisibilityScope visibility = 5;
+}
+
+message DeleteFolderRequest {
+  string folder_id = 1;
+  string organization_id = 2;
+  bool permanent = 3;
+  bool recursive = 4;                 // Also delete contents
+}
+
+message DeleteFolderResponse {
+  bool success = 1;
+  string message = 2;
+  int32 files_deleted = 3;
+  int32 folders_deleted = 4;
+}
+
+// =============================================================================
+// TREE MESSAGES
+// =============================================================================
+
+message GetFilesTreeRequest {
+  string organization_id = 1;
+  optional string root_folder_id = 2;  // null = entire tree
+  bool include_files = 3;              // Include files in tree nodes
+  bool personal_only = 4;
+}
+
+message GetFilesTreeResponse {
+  repeated TreeNode nodes = 1;
+}
+
+message TreeNode {
+  string id = 1;
+  string name = 2;
+  bool is_folder = 3;
+  optional string parent_id = 4;
+  common.v1.VisibilityScope visibility = 5;
+  int32 child_count = 6;               // For folders: number of children
+  optional int64 size_bytes = 7;       // For files: file size
+  optional string mime_type = 8;       // For files: MIME type
+  repeated TreeNode children = 9;      // Nested children (if requested)
+}
+
+// =============================================================================
+// BULK OPERATION MESSAGES
+// =============================================================================
+
+message MoveItemsRequest {
+  string organization_id = 1;
+  repeated string file_ids = 2;
+  repeated string folder_ids = 3;
+  optional string target_folder_id = 4;  // null = root
+}
+
+message MoveItemsResponse {
+  bool success = 1;
+  string message = 2;
+  int32 files_moved = 3;
+  int32 folders_moved = 4;
+}
+
+message CopyItemsRequest {
+  string organization_id = 1;
+  repeated string file_ids = 2;          // Only files can be copied
+  optional string target_folder_id = 3;
+}
+
+message CopyItemsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated File copied_files = 3;
+}
+
+message BulkDeleteRequest {
+  string organization_id = 1;
+  repeated string file_ids = 2;
+  repeated string folder_ids = 3;
+  bool permanent = 4;
+}
+
+message BulkDeleteResponse {
+  bool success = 1;
+  string message = 2;
+  int32 files_deleted = 3;
+  int32 folders_deleted = 4;
+}
+
+message EmptyTrashRequest {
+  string organization_id = 1;
+}
+
+message EmptyTrashResponse {
+  bool success = 1;
+  string message = 2;
+  int32 files_deleted = 3;
+  int32 folders_deleted = 4;
+}
+
+// =============================================================================
+// VERSION MESSAGES
+// =============================================================================
+
+message FileVersion {
+  string id = 1;
+  string file_id = 2;
+  int32 version_number = 3;
+  int64 size_bytes = 4;
+  optional string checksum_sha256 = 5;
+  string uploaded_by = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListFileVersionsRequest {
+  string file_id = 1;
+  string organization_id = 2;
+}
+
+message ListFileVersionsResponse {
+  repeated FileVersion versions = 1;
+}
+
+message RestoreFileVersionRequest {
+  string file_id = 1;
+  string organization_id = 2;
+  string version_id = 3;
+}
+
+// =============================================================================
+// SAVED FILTER MESSAGES
+// =============================================================================
+
+// Filter criteria for file search/filtering.
+message FilterCriteria {
+  repeated string extensions = 1;           // File extensions without dot (pdf, docx)
+  repeated string mime_categories = 2;      // document, image, video, audio, archive
+  repeated string owner_ids = 3;            // Filter by owner user IDs
+  optional common.v1.VisibilityScope visibility = 4;  // Filter by visibility scope
+  repeated string tags = 5;                 // Filter by tags
+  optional int64 size_min_bytes = 6;        // Minimum file size
+  optional int64 size_max_bytes = 7;        // Maximum file size
+  optional google.protobuf.Timestamp created_after = 8;   // Created after date
+  optional google.protobuf.Timestamp created_before = 9;  // Created before date
+}
+
+// Icon value for saved filters (Phosphor icon or emoji).
+message IconValue {
+  string type = 1;   // "icon" for Phosphor icons, "emoji" for emojis
+  string value = 2;  // Icon name (e.g., "Funnel") or emoji character
+}
+
+// A saved file filter configuration.
+message SavedFilter {
+  string id = 1;
+  string user_id = 2;
+  string organization_id = 3;
+  string name = 4;
+  optional string description = 5;
+  optional IconValue icon = 12;  // Optional icon for the filter
+  FilterCriteria criteria = 6;
+  bool is_preset = 7;
+  optional string sort_by = 8;
+  optional string sort_order = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message SavedFilterResponse {
+  SavedFilter filter = 1;
+}
+
+message CreateSavedFilterRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional IconValue icon = 7;  // Optional icon for the filter
+  FilterCriteria criteria = 4;
+  optional string sort_by = 5;
+  optional string sort_order = 6;
+}
+
+message GetSavedFilterRequest {
+  string filter_id = 1;
+  string organization_id = 2;
+}
+
+message UpdateSavedFilterRequest {
+  string filter_id = 1;
+  string organization_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional IconValue icon = 8;  // Optional icon for the filter
+  optional FilterCriteria criteria = 5;
+  optional string sort_by = 6;
+  optional string sort_order = 7;
+}
+
+message DeleteSavedFilterRequest {
+  string filter_id = 1;
+  string organization_id = 2;
+}
+
+message DeleteSavedFilterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListSavedFiltersRequest {
+  string organization_id = 1;
+  bool include_presets = 2;  // Include system presets in results
+}
+
+message ListSavedFiltersResponse {
+  repeated SavedFilter filters = 1;
+}

@@ -25,6 +25,7 @@ import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { rehydrateAuth } from '@/config';
 import { useAppSelector } from '@/app/hooks';
 import { CalendarPage } from '@/features/calendar';
+import { FilesPage, FiltersPage, FilesTagsPage } from '@/features/files';
 
 /**
  * AuthInitializer - Handles auth token rehydration on app startup.
@@ -189,6 +190,15 @@ export default function App() {
                     />
 
                     <Route
+                        path="/notes/graph"
+                        element={
+                            <ProtectedRoute>
+                                <NotesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
                         path="/notes/tags"
                         element={
                             <ProtectedRoute>
@@ -202,6 +212,43 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <NotesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    {/* Files routes */}
+                    <Route
+                        path="/files"
+                        element={
+                            <ProtectedRoute>
+                                <FilesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/files/:fileId"
+                        element={
+                            <ProtectedRoute>
+                                <FilesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/files/filters"
+                        element={
+                            <ProtectedRoute>
+                                <FiltersPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/files/tags"
+                        element={
+                            <ProtectedRoute>
+                                <FilesTagsPage />
                             </ProtectedRoute>
                         }
                     />

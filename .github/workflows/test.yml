@@ -69,29 +69,101 @@ jobs:
         working-directory: src/ui
         run: pnpm lint
 
-      # - name: run tests
-      #   shell: bash
-      #   run: |
-      #     # Run pytest via uv producing a JUnit XML report for later analysis
-      #     # Pass extra args to pytest after the double dash
-      #     uv run pytest . --junitxml=reports/pytest-report.xml --color=yes -vv
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
 
-      # - name: Upload pytest JUnit report
-      #   if: always()
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: pytest-report
-      #     path: reports/pytest-report.xml
-      #     if-no-files-found: warn
-      #     retention-days: 14
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
 
-      # - name: Publish test report (native)
-      #   if: success() || failure()
-      #   uses: mikepenz/action-junit-report@v5
-      #   with:
-      #     report_paths: reports/pytest-report.xml
-      #     check_name: Pytest Results
-      #     require_tests: true
-      #     detailed_summary: true
-      #     # fail_on_failure: true # optional; the pytest step already fails the job
-      #     # comment: true        # enable (and add pull-requests: write above) to have a PR comment
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: install dependencies
+        shell: bash
+        run: uv sync --frozen
+
+      - name: prepare reports dir
+        shell: bash
+        run: mkdir -p reports
+
+      - name: run tests
+        shell: bash
+        run: |
+          # Run pytest via uv producing a JUnit XML report for later analysis
+          uv run pytest src/uniffy/tests/ \
+            --ignore=src/uniffy/tests/benchmarks/ \
+            --junitxml=reports/pytest-report.xml \
+            --color=yes -vv
+
+      - name: Upload pytest JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: reports/pytest-report.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish test report (native)
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: reports/pytest-report.xml
+          check_name: Pytest Results
+          require_tests: true
+          detailed_summary: true
+          # fail_on_failure: true # optional; the pytest step already fails the job
+          # comment: true        # enable (and add pull-requests: write above) to have a PR comment
+
+  benchmark-python:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        shell: bash
+        run: uv sync --frozen
+
+      - name: Prepare reports dir
+        shell: bash
+        run: mkdir -p reports
+
+      - name: Run benchmarks
+        shell: bash
+        run: |
+          uv run pytest src/uniffy/tests/benchmarks/ \
+            --benchmark-only \
+            --benchmark-group-by=func \
+            --benchmark-sort=mean \
+            --benchmark-columns=min,max,mean,stddev,rounds \
+            --benchmark-json=reports/benchmark.json \
+            --color=yes
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: reports/benchmark.json
+          if-no-files-found: warn
+          retention-days: 14

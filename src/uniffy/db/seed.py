@@ -105,13 +105,21 @@ async def seed_initial_data() -> None:
 
         try:
             # 1. Create Default Organization
+            org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
+            org_slug = os.getenv("DEFAULT_ORG_SLUG")
+            if not org_slug:
+                # Lazy import to avoid circular dependency
+                from uniffy.domains.notes.queries import slugify
+
+                org_slug = slugify(org_name)
+
             default_org = Organization(
-                name="Default", slug="default", plan="enterprise", is_active=True
+                name=org_name, slug=org_slug, plan="enterprise", is_active=True
             )
             session.add(default_org)
             await session.flush()
             await session.refresh(default_org)
-            logger.info(f"Created default organization: {default_org.name}")
+            logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
 
             # 2. Create System Admin User
             admin_password = os.getenv("INITIAL_ADMIN_PASSWORD")
@@ -339,6 +347,21 @@ async def seed_initial_data() -> None:
                 )
 
             logger.info("Indexed seed notes for search")
+
+            # Development-only seeding for testing
+            environment = os.getenv("ENVIRONMENT", "production")
+            if environment == "development":
+                from uniffy.db.seed_dev import seed_development_data
+
+                logger.info("Development environment detected. Adding test data...")
+                await seed_development_data(
+                    session,
+                    default_org,
+                    admin_user,
+                    admin_password,
+                    search_indexer,
+                )
+                logger.info("Development test data seeding completed")
 
             await session.commit()
             logger.info("Initial data seeding completed successfully.")

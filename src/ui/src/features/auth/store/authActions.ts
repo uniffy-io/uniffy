@@ -33,6 +33,7 @@ export interface SetCredentialsPayload {
 }
 
 export interface RehydrateCompletePayload {
+  user: PlainMessage<CurrentUserResponse>;
   accessToken: string;
   refreshToken: string;
   organizationId?: string;

@@ -71,7 +71,7 @@ interface NotesNavItem {
 }
 
 const notesNavItems: NotesNavItem[] = [
-  { name: 'Graph', path: '/notes', icon: Atom },
+  { name: 'Graph', path: '/notes/graph', icon: Atom },
   { name: 'Tags', path: '/notes/tags', icon: Tag },
 ];
 
@@ -135,10 +135,8 @@ function NotesSubmenu() {
     <div className="px-3 py-2 border-b border-border">
       <nav className="flex items-center gap-0.5">
         {notesNavItems.map((item) => {
-          // Exact match for /notes, startsWith for others
-          const isActive = item.path === '/notes'
-            ? location.pathname === '/notes'
-            : location.pathname.startsWith(item.path);
+          // Exact match for specific routes
+          const isActive = location.pathname === item.path;
 
           return (
             <CompactNavItem key={item.path} item={item} isActive={isActive} />
