@@ -4,10 +4,29 @@
 
 ## Directory Structure
 
+```
+src/
+├── app/           # Redux store, hooks, zen mode state
+├── components/    # Shared UI primitives and reusable components
+├── config/        # App configuration, API setup, theme system
+│   ├── theme/     # Theme engine (dark/light + user accent colors)
+│   └── types/     # TypeScript type declarations
+├── features/      # Domain modules (auth, notes, files, calendar, etc.)
+├── gen/           # Generated ConnectRPC clients (DO NOT EDIT)
+├── shared/        # Shared utilities across the app
+│   ├── hooks/     # Shared React hooks (useDocumentTitle, etc.)
+│   ├── utils/     # Utility functions (urn, navigation, cn, etc.)
+│   ├── layouts/   # Shared layout components
+│   └── assets/    # Static assets
+└── workers/       # Service workers (media streaming)
+```
+
+**Key directories:**
 - `src/app/`: Redux store, hooks, router
 - `src/features/`: Domain modules (auth, notes, etc.) with components, hooks, store
 - `src/components/ui/`: Shared UI primitives
-- `src/theme/`: Theme engine (dark/light + user accent colors)
+- `src/config/theme/`: Theme engine (dark/light + user accent colors)
+- `src/shared/`: Shared hooks, utils, layouts
 - `src/gen/`: Generated ConnectRPC clients (organized by service)
 
 **Generated Code Structure** (`src/gen/`):
@@ -96,15 +115,117 @@ features/{feature}/
 - Hooks abstract store interactions for components
 - Components never call API directly (always through store/hooks)
 
-## Path Aliases
+## Import Rules
 
-Use `@/` for `src/` directory (e.g., `@/components/ui/button`).
+**CRITICAL: Always use absolute imports with the `@/` alias. Never use relative imports.**
+
+```typescript
+// CORRECT - Always use absolute imports
+import { cn } from '@/shared/utils/cn';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
+import { filesApi } from '@/features/files/api/filesApi';
+import { useAppDispatch } from '@/app/hooks';
+
+// WRONG - Never use relative imports
+import { cn } from '../../../shared/utils/cn';        // NO!
+import { filesApi } from '../api/filesApi';           // NO!
+import { useNotesHooks } from './useNotesHooks';      // NO!
+```
+
+**Path alias:** `@/` maps to `src/` directory.
+
+**Common import paths:**
+| What | Import from |
+|------|-------------|
+| Redux hooks | `@/app/hooks` |
+| Redux store | `@/app/store` |
+| Shared utils | `@/shared/utils/cn`, `@/shared/utils/urn`, `@/shared/utils/navigation` |
+| Shared hooks | `@/shared/hooks/useDocumentTitle` |
+| Theme system | `@/config/theme/ThemeProvider`, `@/config/theme/urnColors` |
+| UI components | `@/components/ui/button`, `@/components/ui/select` |
+| Generated types | `@/gen/common/v1/common_pb`, `@/gen/files/v1/files_pb` |
+| Feature APIs | `@/features/{feature}/api/{feature}Api` |
+| Feature store | `@/features/{feature}/store/{feature}Slice` |
+
+## React Hooks Patterns
+
+### NEVER call setState synchronously in useEffect
+
+The linter enforces `react-hooks/set-state-in-effect`. Effects are for syncing with external systems, not for deriving state.
+
+**BAD - setState in effect:**
+```typescript
+const [color, setColor] = useState('default');
+
+useEffect(() => {
+    const computed = getComputedStyle(document.documentElement);
+    setColor(computed.getPropertyValue('--primary')); // LINT ERROR
+}, []);
+```
+
+**GOOD - useState initializer for one-time reads:**
+```typescript
+const [color] = useState(() => {
+    const computed = getComputedStyle(document.documentElement);
+    return computed.getPropertyValue('--primary') || 'default';
+});
+```
+
+**GOOD - useMemo for derived values:**
+```typescript
+const color = useMemo(() => {
+    return someCondition ? 'blue' : 'red';
+}, [someCondition]);
+```
+
+**Exception - Resetting state when props change:**
+
+When you need to reset local state when a prop (like an ID) changes, add an eslint-disable with explanation:
+
+```typescript
+useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when file.id changes is valid
+    setLoaded(false);
+    setData(null);
+}, [file.id]);
+```
+
+### NEVER access refs during render
+
+Refs should only be accessed in effects or event handlers, not during the render phase.
+
+**BAD - ref access during render:**
+```typescript
+const containerRef = useRef<HTMLDivElement>(null);
+
+// This runs during render - BAD
+const width = containerRef.current?.clientWidth ?? 0;
+```
+
+**GOOD - track dimensions in state with ResizeObserver:**
+```typescript
+const containerRef = useRef<HTMLDivElement>(null);
+const [size, setSize] = useState({ width: 0, height: 0 });
+
+useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => {
+        setSize({ width: el.clientWidth, height: el.clientHeight });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+}, []);
+
+// Now use `size.width` instead of ref access
+```
 
 ## Theme System
 
 **IMPORTANT: All new components MUST use the theme engine for colors and styling.**
 
-The theme system (`src/theme/`) provides user-customizable accent colors with automatic text contrast calculation.
+The theme system (`src/config/theme/`) provides user-customizable accent colors with automatic text contrast calculation.
 
 **Available theme colors (use these Tailwind classes):**
 
@@ -131,7 +252,7 @@ The theme system (`src/theme/`) provides user-customizable accent colors with au
 - Error: `bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400`
 - Warning: `bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400`
 
-**URN Type Colors** (`@/theme/urnColors.ts`):
+**URN Type Colors** (`@/config/theme/urnColors.ts`):
 
 Each URN type has a consistent color used across the app. **Never define URN colors inline.**
 
@@ -141,7 +262,7 @@ import {
   getUrnTypeHexColor,    // For canvas/SVG (returns hex string)
   getUrnTypeTheme,       // For components (returns Tailwind classes)
   URN_TYPE_LEGEND,       // For legends/filters
-} from '@/theme/urnColors';
+} from '@/config/theme/urnColors';
 ```
 
 | Type | Hex | Tailwind |
@@ -159,12 +280,53 @@ import {
 
 Use `@phosphor-icons/react` for all icons.
 
+## Logo / Branding
+
+**Logo files** (in `src/ui/public/`):
+
+| File | Purpose |
+|------|---------|
+| `/favicon.svg` | Main logo (white, for dark backgrounds) |
+| `/favicon.ico` | Browser favicon |
+| `/favicon-96x96.png` | PNG favicon |
+| `/apple-touch-icon.png` | iOS home screen icon |
+| `/web-app-manifest-192x192.png` | PWA icon (small) |
+| `/web-app-manifest-512x512.png` | PWA icon (large) |
+
+**Theme-aware logo usage:**
+
+The main logo (`/favicon.svg`) is white/light colored, designed for dark backgrounds. To display it on light backgrounds, use CSS `filter: invert(1)` to make it black.
+
+```typescript
+import { useTheme } from '@/config/theme/ThemeProvider';
+
+function MyComponent() {
+  const { resolvedTheme } = useTheme();
+  const isLightTheme = resolvedTheme !== 'dark';
+
+  return (
+    <img
+      src="/favicon.svg"
+      alt="Uniffy"
+      className="w-12 h-12"
+      style={isLightTheme ? { filter: 'invert(1)' } : undefined}
+    />
+  );
+}
+```
+
+**Rules:**
+- Always use `/favicon.svg` as the source (not separate dark/light files)
+- Apply `filter: invert(1)` on light theme to make the logo black
+- On dark theme, display the logo as-is (white)
+- Never hardcode a specific logo color variant
+
 ## Document Titles
 
 All pages MUST set a proper document title using `useDocumentTitle`. Format: `{Title} | Uniffy`
 
 ```typescript
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 
 // Static page title
 useDocumentTitle('Notes');  // "Notes | Uniffy"
@@ -184,18 +346,26 @@ useDocumentTitle();  // "Uniffy"
 
 ## URN Utilities and Components
 
-**URN Utilities** (`@/utils/urn.ts`):
+**URN Utilities** (`@/shared/utils/urn.ts`):
 ```typescript
-import { parseUrn, buildUrn, urnToPath, getUrnIcon, getUrnTypeLabel, isValidUrn } from '@/utils/urn';
+import { parseUrn, buildUrn, urnToPath, getUrnIcon, getUrnTypeLabel, isValidUrn } from '@/shared/utils/urn';
 
 const parsed = parseUrn('urn:uniffy:content:NOTE:uuid');
 const path = urnToPath(urn); // '/notes/uuid'
 ```
 
-**Navigation Utilities** (`@/utils/navigation.ts`):
+**Navigation Utilities** (`@/shared/utils/navigation.ts`):
 ```typescript
-import { navigateTo, openInNewTab } from '@/utils/navigation';
+import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 navigateTo('/notes/uuid');
+```
+
+**Class Name Utility** (`@/shared/utils/cn.ts`):
+```typescript
+import { cn } from '@/shared/utils/cn';
+
+// Merge Tailwind classes conditionally
+<div className={cn('base-class', isActive && 'active-class', className)} />
 ```
 
 **Mention Components** (`@/features/notes/components/editor/plugins/mention/`):

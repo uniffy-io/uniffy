@@ -6,14 +6,14 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
-import { sharingApi } from '../api/sharingApi';
+import { sharingApi } from '@/features/sharing/api/sharingApi';
 import { ContentType, PermissionLevel, SubjectType } from '@/gen/common/v1/common_pb';
 import {
     serializePermissionInfo,
     serializeShareTarget,
     type SerializedPermissionInfo,
     type SerializedShareTarget,
-} from './sharingSlice';
+} from '@/features/sharing/store/sharingSlice';
 
 /**
  * Fetch all permissions for a piece of content.

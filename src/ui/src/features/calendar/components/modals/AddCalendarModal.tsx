@@ -5,8 +5,8 @@
 
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { createCalendar, updateCalendarThunk } from '../../store';
-import { cn } from '@/utils/cn';
+import { createCalendar, updateCalendarThunk } from '@/features/calendar/store';
+import { cn } from '@/shared/utils/cn';
 
 interface AddCalendarModalProps {
   isOpen: boolean;

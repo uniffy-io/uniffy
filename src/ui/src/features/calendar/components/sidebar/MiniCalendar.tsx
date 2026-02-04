@@ -5,7 +5,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentDate } from '../../store';
+import { setCurrentDate } from '@/features/calendar/store';
 import {
   getMonthColumns,
   formatMonthYear,
@@ -13,8 +13,8 @@ import {
   parseISO,
   isDateToday,
   areSameDay,
-} from '../../utils';
-import { cn } from '@/utils/cn';
+} from '@/features/calendar/utils';
+import { cn } from '@/shared/utils/cn';
 
 const DAY_HEADERS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 

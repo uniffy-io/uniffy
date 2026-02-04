@@ -6,16 +6,16 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { parseUrn, getUrnTypeLabel, UrnType } from '@/utils/urn';
+import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
 import type { Icon } from '@phosphor-icons/react';
 import {
   Clock,
   ArrowSquareOut,
   Link,
 } from '@phosphor-icons/react';
-import type { UrnPreviewData } from './useUrnPreview';
+import type { UrnPreviewData } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
-import { getContentTypeConfig } from '@/theme/contentTypes';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
 
 interface MentionPreviewProps {
   preview: UrnPreviewData | null;

@@ -17,19 +17,19 @@ import {
   DotsThreeOutline,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import type { SerializedNote } from '../../store/notesThunks';
-import { updateNoteIcon } from '../../store/notesThunks';
-import { setEditorMode, toggleMetadataPanel, toggleSidebar, toggleMarkdownPreview } from '../../store/editorSlice';
-import { updateNote } from '../../store/notesSlice';
-import { useSaveStatus } from '../../hooks/useNotesHooks';
-import { buildBreadcrumbPath, type BreadcrumbItem } from '../../utils/notesTreeUtils';
-import { expandNode, setSelectedNode } from '../../store/notesTreeSlice';
-import { setSidebarOpen } from '../../store/editorSlice';
-import type { NoteIcon } from '../../utils/noteIconConstants';
-import { renderNoteIcon } from '../../utils/noteIcons';
-import type { EditorMode } from '../../store/editorSlice';
-import { TagInput } from './TagInput';
-import { IconPicker } from './IconPicker';
+import type { SerializedNote } from '@/features/notes/store/notesThunks';
+import { updateNoteIcon } from '@/features/notes/store/notesThunks';
+import { setEditorMode, toggleMetadataPanel, toggleSidebar, toggleMarkdownPreview } from '@/features/notes/store/editorSlice';
+import { updateNote } from '@/features/notes/store/notesSlice';
+import { useSaveStatus } from '@/features/notes/hooks/useNotesHooks';
+import { buildBreadcrumbPath, type BreadcrumbItem } from '@/features/notes/utils/notesTreeUtils';
+import { expandNode, setSelectedNode } from '@/features/notes/store/notesTreeSlice';
+import { setSidebarOpen } from '@/features/notes/store/editorSlice';
+import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
+import { renderNoteIcon } from '@/features/notes/utils/noteIcons';
+import type { EditorMode } from '@/features/notes/store/editorSlice';
+import { TagInput } from '@/features/notes/components/editor/TagInput';
+import { IconPicker } from '@/features/notes/components/editor/IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { useSharingDialog } from '@/features/sharing';
 import { ContentType } from '@/gen/common/v1/common_pb';
@@ -38,6 +38,7 @@ import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 interface EditorHeaderProps {
   note: SerializedNote;
   canEdit?: boolean;
+  canShare?: boolean;
 }
 
 /**
@@ -209,7 +210,7 @@ const mockCollaborators = [
   { id: '2', initials: 'AM', color: 'bg-green-500' },
 ];
 
-export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
+export function EditorHeader({ note, canEdit = true, canShare = false }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const editorState = useAppSelector((state) => state.editor);
@@ -418,8 +419,8 @@ export function EditorHeader({ note, canEdit = true }: EditorHeaderProps) {
             )}
           </button>
           
-          {/* Share Button - only show if user can edit (requires edit/admin/owner permission) */}
-          {canEdit && (
+          {/* Share Button - only show if user has share permission (admin/owner) */}
+          {canShare && (
             <button
               onClick={handleShare}
               className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"

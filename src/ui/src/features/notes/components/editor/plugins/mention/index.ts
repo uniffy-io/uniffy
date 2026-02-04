@@ -7,10 +7,10 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import React from 'react';
 import { Provider } from 'react-redux';
-import { MentionChip } from './MentionChip';
+import { MentionChip } from '@/features/notes/components/editor/plugins/mention/MentionChip';
 import { getStoreRef } from '@/app/storeRef';
-import { urnToPath } from '@/utils/urn';
-import { navigateTo, openInNewTab } from '@/utils/navigation';
+import { urnToPath } from '@/shared/utils/urn';
+import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
 
@@ -325,8 +325,8 @@ export const mentionView = $view(mentionNode, () => (node: Node, view: EditorVie
 export const mentionPlugins = [...mentionRemarkPlugin, mentionNode, mentionInputRule, mentionView];
 
 // Re-export components and hooks for use in other features
-export { MentionChip, MentionChipBasic, MentionChipCompact } from './MentionChip';
-export { MentionPreview } from './MentionPreview';
-export { MentionSearch } from './MentionSearch';
-export { useUrnPreview, clearPreviewCache, invalidatePreviewCache, invalidateNotePreviewCache } from './useUrnPreview';
-export type { UrnPreviewData } from './useUrnPreview';
+export { MentionChip, MentionChipBasic, MentionChipCompact } from '@/features/notes/components/editor/plugins/mention/MentionChip';
+export { MentionPreview } from '@/features/notes/components/editor/plugins/mention/MentionPreview';
+export { MentionSearch } from '@/features/notes/components/editor/plugins/mention/MentionSearch';
+export { useUrnPreview, clearPreviewCache, invalidatePreviewCache, invalidateNotePreviewCache } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
+export type { UrnPreviewData } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';

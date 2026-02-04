@@ -6,9 +6,9 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
-import type { SerializedTreeNode } from './filesTreeThunks';
-import type { SerializedFilterCriteria } from './savedFiltersSlice';
-import type { SerializedFile } from './filesThunks';
+import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
+import type { SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
+import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
 // MIME category mappings for filter matching

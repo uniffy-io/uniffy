@@ -25,3 +25,8 @@ dist-ssr
 
 # Environment files
 .env.local
+
+# Generated service worker (built by vite plugin)
+public/media-stream-worker.js
+public/media-stream-worker.js.map
+.vite-worker/

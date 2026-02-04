@@ -5,27 +5,27 @@
  */
 
 // API
-export { notesApi } from './api/notesApi';
+export { notesApi } from '@/features/notes/api/notesApi';
 
 // Components
-export { NotesSidebar } from './components/sidebar/NotesSidebar';
-export { NotesEditor } from './components/editor/NotesEditor';
-export { NotesLayout } from './components/NotesLayout';
-export { NotesMetadataPanel } from './components/metadata/NotesMetadataPanel';
-export { CrepeEditor } from './components/editor/CrepeEditor';
-export { MarkdownSplitEditor } from './components/editor/MarkdownSplitEditor';
-export { ReadOnlyViewer } from './components/editor/ReadOnlyViewer';
-export { EditorHeader } from './components/editor/EditorHeader';
-export { NotesGraphDashboard } from './components/dashboard/NotesGraphDashboard';
+export { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
+export { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
+export { NotesLayout } from '@/features/notes/components/NotesLayout';
+export { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMetadataPanel';
+export { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+export { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
+export { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
+export { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
+export { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 
 // Pages
-export { default as NotesPage } from './pages/NotesPage';
-export { NotesTagsPage } from './pages/NotesTagsPage';
+export { default as NotesPage } from '@/features/notes/pages/NotesPage';
+export { NotesTagsPage } from '@/features/notes/pages/NotesTagsPage';
 
 // Store - Slices
-export { default as notesReducer } from './store/notesSlice';
-export { default as notesTreeReducer } from './store/notesTreeSlice';
-export { default as editorReducer } from './store/editorSlice';
+export { default as notesReducer } from '@/features/notes/store/notesSlice';
+export { default as notesTreeReducer } from '@/features/notes/store/notesTreeSlice';
+export { default as editorReducer } from '@/features/notes/store/editorSlice';
 
 // Store - Actions
 export {
@@ -47,7 +47,7 @@ export {
     setShowDeleted,
     setPagination,
     clearNotes,
-} from './store/notesSlice';
+} from '@/features/notes/store/notesSlice';
 
 export {
     setTree,
@@ -73,7 +73,7 @@ export {
     setTreeLoading,
     setTreeError,
     clearTree,
-} from './store/notesTreeSlice';
+} from '@/features/notes/store/notesTreeSlice';
 
 export {
     setDraftContent,
@@ -96,7 +96,7 @@ export {
     setMetadataPanelOpen,
     setMetadataPanelWidth,
     setMetadataPanelTab,
-} from './store/editorSlice';
+} from '@/features/notes/store/editorSlice';
 
 // Store - Thunks
 // Note: Bookmark functionality is now in @/features/bookmarks
@@ -113,11 +113,11 @@ export {
     moveNote,
     copyNote,
     initializeNotesData,
-} from './store/notesSlice';
+} from '@/features/notes/store/notesSlice';
 
-export { updateNoteIcon } from './store/notesThunks';
+export { updateNoteIcon } from '@/features/notes/store/notesThunks';
 
-export { fetchNotesTree } from './store/notesTreeSlice';
+export { fetchNotesTree } from '@/features/notes/store/notesTreeSlice';
 
 // Hooks
 export {
@@ -125,10 +125,10 @@ export {
     useNoteLoader,
     useCurrentNote,
     useSaveStatus,
-} from './hooks/useNotesHooks';
+} from '@/features/notes/hooks/useNotesHooks';
 
-export { useNotesCacheSync } from './hooks/useNotesCacheSync';
-export { useTreeStateSync } from './hooks/useTreeStateSync';
+export { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
+export { useTreeStateSync } from '@/features/notes/hooks/useTreeStateSync';
 
 // Utils
 export {
@@ -136,12 +136,12 @@ export {
     parseMentionsFromContent,
     getNodeSize,
     getGraphStats,
-} from './utils/notesGraphUtils';
+} from '@/features/notes/utils/notesGraphUtils';
 
 export {
     buildBreadcrumbPath,
-} from './utils/notesTreeUtils';
-export type { BreadcrumbItem } from './utils/notesTreeUtils';
+} from '@/features/notes/utils/notesTreeUtils';
+export type { BreadcrumbItem } from '@/features/notes/utils/notesTreeUtils';
 
 // Note icons - constants from noteIconConstants.ts, rendering from noteIcons.tsx
 export {
@@ -152,28 +152,28 @@ export {
     isValidIconName,
     getIconComponent,
     ICON_COMPONENTS,
-} from './utils/noteIconConstants';
-export type { NoteIcon } from './utils/noteIconConstants';
+} from '@/features/notes/utils/noteIconConstants';
+export type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
 
 export {
     renderNoteIcon,
     getIconByName,
     getIconSvgPaths,
     drawIconOnCanvas,
-} from './utils/noteIcons';
+} from '@/features/notes/utils/noteIcons';
 
 // Cache utilities (for logout cleanup)
 export {
     clearAllCache as clearNotesCache,
     clearCachedNotes,
-} from './utils/notesCache';
+} from '@/features/notes/utils/notesCache';
 
 // Tree state persistence
 export {
     clearTreeState,
-} from './utils/treeStateStorage';
+} from '@/features/notes/utils/treeStateStorage';
 
 // Types
-export type { TreeNode, GroupTreeSection } from './store/notesTreeSlice';
-export type { EditorMode, MetadataPanelTab } from './store/editorSlice';
-export type { GraphNode, GraphLink, GraphData } from './utils/notesGraphUtils';
+export type { TreeNode, GroupTreeSection } from '@/features/notes/store/notesTreeSlice';
+export type { EditorMode, MetadataPanelTab } from '@/features/notes/store/editorSlice';
+export type { GraphNode, GraphLink, GraphData } from '@/features/notes/utils/notesGraphUtils';

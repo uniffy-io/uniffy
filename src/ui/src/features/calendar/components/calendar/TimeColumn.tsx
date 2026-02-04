@@ -2,7 +2,7 @@
  * TimeColumn - Left column showing time labels
  */
 
-import { GRID, LAYOUT, DISPLAY_HOURS } from '../../constants';
+import { GRID, LAYOUT, DISPLAY_HOURS } from '@/features/calendar/constants';
 
 // Top padding to prevent first time label from being cut off
 export const TIME_COLUMN_TOP_PADDING = 8;

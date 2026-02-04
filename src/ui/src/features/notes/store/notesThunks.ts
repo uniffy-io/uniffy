@@ -6,16 +6,16 @@
  */
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { notesApi } from '../api/notesApi';
+import { notesApi } from '@/features/notes/api/notesApi';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
 import { NodeType, type VisibilityScope } from '@/gen/notes/v1/notes_pb';
-import { organizeNotesByVisibility, type OrganizedNotes } from '../utils/notesTreeUtils';
+import { organizeNotesByVisibility, type OrganizedNotes } from '@/features/notes/utils/notesTreeUtils';
 import {
     getCachedNotes,
     setCachedNotes,
     isIndexedDBAvailable,
-} from '../utils/notesCache';
+} from '@/features/notes/utils/notesCache';
 
 // Request deduplication - track in-flight requests
 let initializeRequestPromise: Promise<{

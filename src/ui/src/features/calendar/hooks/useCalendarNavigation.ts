@@ -8,8 +8,8 @@ import {
   setCurrentDate,
   setViewMode,
   goToToday,
-} from '../store/calendarUiSlice';
-import type { ViewMode } from '../types';
+} from '@/features/calendar/store/calendarUiSlice';
+import type { ViewMode } from '@/features/calendar/types';
 import {
   navigateDate,
   getWeekDates,
@@ -18,7 +18,7 @@ import {
   formatMonthYear,
   getDateRangeLabel,
   parseISO,
-} from '../utils';
+} from '@/features/calendar/utils';
 
 /**
  * Hook for managing calendar navigation

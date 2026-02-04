@@ -4,4 +4,4 @@
  * Reusable editor components for use across UNIFFY features.
  */
 
-export { MarkdownEditor } from './MarkdownEditor';
+export { MarkdownEditor } from '@/components/editor/MarkdownEditor';

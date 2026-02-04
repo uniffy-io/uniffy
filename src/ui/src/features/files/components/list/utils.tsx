@@ -59,3 +59,34 @@ export function formatDate(timestamp?: { seconds: number; nanos: number }): stri
         year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
     });
 }
+
+/**
+ * MIME types that support server-side thumbnail generation.
+ * Keep in sync with backend workers/utils/mime.py THUMBNAIL_MIME_TYPES.
+ */
+const THUMBNAIL_MIME_TYPES = new Set([
+    // Images
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/bmp',
+    'image/tiff',
+    // PDFs
+    'application/pdf',
+    // Videos
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/x-matroska',
+    'video/mpeg',
+    'video/ogg',
+]);
+
+/**
+ * Check if a MIME type supports thumbnail generation
+ */
+export function supportsThumbnail(mimeType: string): boolean {
+    return THUMBNAIL_MIME_TYPES.has(mimeType);
+}

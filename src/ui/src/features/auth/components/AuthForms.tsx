@@ -3,11 +3,11 @@ import { createClient } from "@connectrpc/connect";
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials } from "../store/authSlice";
-import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
+import { setCredentials } from "@/features/auth/store/authSlice";
+import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { transport, setMemoryAccessToken } from "@/config";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { defaultTheme } from "@/theme/types";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { defaultTheme } from "@/config/theme/types";
 import {
   Envelope,
   Lock,
@@ -18,7 +18,6 @@ import {
 const authClient = createClient(AuthService, transport);
 
 // Static brand colors — not from the theme engine so the auth page stays visually consistent
-const BRAND_BLUE = 'hsl(221.2, 83.2%, 53.3%)';
 const BRAND_ACCENT = '#09090b';
 const BRAND_ACCENT_RING = 'rgba(9, 9, 11, 0.15)';
 
@@ -537,26 +536,24 @@ function AuthInput({
  */
 function BrandContent() {
   return (
-    <div className="px-14 pt-14">
-      {/* Logo mark — large and prominent */}
+    <div className="h-full flex flex-col justify-between px-14 py-14">
+      {/* Logo lockup — horizontal, compact */}
       <div
-        className="mb-5 opacity-0"
+        className="opacity-0"
         style={{ animation: 'auth-slide-up 0.6s ease-out 0.2s forwards' }}
       >
         <div className="flex items-center gap-4">
-          <div className="w-13 h-13 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/10 flex items-center justify-center">
-            <span className="text-white font-bold text-2xl tracking-tight">U</span>
-          </div>
-          <span className="text-white text-4xl font-bold tracking-tight">uniffy</span>
+          <img src="/favicon.svg" alt="Uniffy" className="w-12 h-12" />
+          <span className="text-white text-3xl font-bold tracking-tight">uniffy</span>
         </div>
       </div>
 
-      {/* Tagline — subordinate to logo */}
+      {/* Tagline — anchored at bottom, creates vertical tension */}
       <div
         className="opacity-0"
-        style={{ animation: 'auth-slide-up 0.6s ease-out 0.4s forwards' }}
+        style={{ animation: 'auth-fade-in 0.8s ease-out 0.6s forwards' }}
       >
-        <p className="text-white/60 text-base font-medium tracking-wide">
+        <p className="text-white/50 text-sm font-medium tracking-widest uppercase">
           Work Infrastructure, democratized.
         </p>
       </div>
@@ -773,9 +770,7 @@ export function AuthForms() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-12 lg:px-20 relative z-[2]">
           {/* Mobile logo — only shown on smaller screens */}
           <div className="lg:hidden mb-10 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: BRAND_BLUE }}>
-              <span className="text-white font-bold text-base">U</span>
-            </div>
+            <img src="/favicon.svg" alt="Uniffy" className="w-14 h-14" />
             <span className="text-foreground text-xl font-bold tracking-tight">UNIFFY</span>
           </div>
 

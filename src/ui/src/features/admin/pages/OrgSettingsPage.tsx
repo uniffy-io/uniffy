@@ -5,7 +5,7 @@
  * This is a placeholder for future functionality.
  */
 
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { Buildings, Gear } from '@phosphor-icons/react';
 
 export default function OrgSettingsPage() {

@@ -26,6 +26,7 @@ interface ItemContextMenuProps {
     isBookmarked?: boolean;
     bookmarkToggling?: boolean;
     onEditTags?: () => void;
+    canShare?: boolean;
 }
 
 export function ItemContextMenu({
@@ -40,6 +41,7 @@ export function ItemContextMenu({
     isBookmarked,
     bookmarkToggling,
     onEditTags,
+    canShare = true,
 }: ItemContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -113,13 +115,15 @@ export function ItemContextMenu({
                     </button>
                 )}
 
-                <button
-                    onClick={(e) => handleAction(onShare, e)}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                >
-                    <ShareNetwork size={16} className="text-primary" />
-                    Share
-                </button>
+                {canShare && (
+                    <button
+                        onClick={(e) => handleAction(onShare, e)}
+                        className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                        <ShareNetwork size={16} className="text-primary" />
+                        Share
+                    </button>
+                )}
 
                 <button
                     onClick={(e) => handleAction(onDownload, e)}

@@ -22,8 +22,8 @@ import {
 import type { Icon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { renderIcon } from '@/components/icon-picker';
-import { cn } from '@/utils/cn';
-import type { SerializedSavedFilter, SerializedFilterCriteria } from '../../store/savedFiltersSlice';
+import { cn } from '@/shared/utils/cn';
+import type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
 
 interface FilterCardProps {
     filter: SerializedSavedFilter;
@@ -153,7 +153,7 @@ export function FilterCard({
             if (filter.icon.type === 'emoji') {
                 return <span className="text-lg">{filter.icon.value}</span>;
             }
-            return renderIcon(filter.icon, 20);
+            return renderIcon(filter.icon, undefined, 20);
         }
         return (
             <FilterIcon

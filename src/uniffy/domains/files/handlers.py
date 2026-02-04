@@ -58,6 +58,8 @@ from uniffy.gen.files.v1.files_pb2 import (
     MoveItemsResponse,
     RestoreFileRequest,
     RestoreFileVersionRequest,
+    StreamFileRangeRequest,
+    StreamFileRangeResponse,
     TreeNode,
     UpdateFileRequest,
     UpdateFolderRequest,
@@ -428,6 +430,71 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.error(f"Error downloading file: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def stream_file_range(
+        self,
+        request: StreamFileRangeRequest,
+        ctx: RequestContext,
+    ) -> AsyncIterator[StreamFileRangeResponse]:
+        """
+        Stream file with byte range support for Service Worker.
+
+        This handler supports HTTP Range-like semantics, allowing media
+        players to seek within large files without downloading everything.
+        """
+        try:
+            file_id = UUID(request.file_id)
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        # Parse optional range parameters
+        start_byte = request.start_byte if request.HasField("start_byte") else None
+        end_byte = request.end_byte if request.HasField("end_byte") else None
+
+        try:
+            async for session in get_async_session():
+                ops = FileOperations(session)
+
+                # Get file and check permissions
+                file = await ops.get_by_id(user_id, organization_id, file_id)
+
+                # Stream from S3 with range support
+                s3 = get_s3_client()
+                is_first = True
+
+                async for chunk_data, total_size, range_start, range_end in s3.download_range(
+                    key=file.storage_key,
+                    start_byte=start_byte,
+                    end_byte=end_byte,
+                ):
+                    response = StreamFileRangeResponse(
+                        data=chunk_data,
+                        total_size=total_size,
+                        range_start=range_start,
+                        range_end=range_end,
+                        is_first_chunk=is_first,
+                    )
+
+                    # Include metadata in first chunk
+                    if is_first:
+                        response.mime_type = file.mime_type
+                        response.filename = file.filename
+                        is_first = False
+
+                    yield response
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "File not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error streaming file range: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     # ─────────────────────────────────────────────────────────────

@@ -8,16 +8,16 @@ import {
   addEvent,
   updateEvent,
   removeEvent,
-} from '../store/calendarSlice';
+} from '@/features/calendar/store/calendarSlice';
 import {
   selectEvent,
   deselectEvent,
   openEventModal,
   closeEventModal,
-} from '../store/calendarUiSlice';
-import type { CalendarEvent, EventModalPrefill, PositionedEvent } from '../types';
-import { getPositionedEventsForDay, getPositionedEventsForWeek, areSameDay } from '../utils';
-import { GRID } from '../constants';
+} from '@/features/calendar/store/calendarUiSlice';
+import type { CalendarEvent, EventModalPrefill, PositionedEvent } from '@/features/calendar/types';
+import { getPositionedEventsForDay, getPositionedEventsForWeek, areSameDay } from '@/features/calendar/utils';
+import { GRID } from '@/features/calendar/constants';
 
 /**
  * Hook for managing calendar events and event-related UI state

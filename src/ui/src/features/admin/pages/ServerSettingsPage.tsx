@@ -5,8 +5,8 @@
  */
 
 import { useState } from "react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { useTheme } from "@/theme/ThemeProvider";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { useTheme } from "@/config/theme/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import {
     HardDrives,
@@ -20,7 +20,7 @@ import {
     Sun,
     Moon,
 } from '@phosphor-icons/react';
-import { cn } from "@/utils/cn";
+import { cn } from "@/shared/utils/cn";
 
 interface ToggleSwitchProps {
     enabled: boolean;

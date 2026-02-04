@@ -5,7 +5,7 @@
  */
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { filesApi } from '../api/filesApi';
+import { filesApi } from '@/features/files/api/filesApi';
 import type { RootState } from '@/app/store';
 import type { TreeNode, Folder } from '@/gen/files/v1/files_pb';
 import type { VisibilityScope } from '@/gen/common/v1/common_pb';

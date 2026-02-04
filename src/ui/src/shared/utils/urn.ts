@@ -15,10 +15,10 @@
 
 // Re-export UrnType from dedicated file to avoid circular dependencies
 // Consumers can import from either '@/utils/urn' or '@/utils/urnTypes'
-export { UrnType } from './urnTypes';
+export { UrnType } from '@/shared/utils/urnTypes';
 
 // Local import for use in this file
-import { UrnType } from './urnTypes';
+import { UrnType } from '@/shared/utils/urnTypes';
 
 export interface ParsedUrn {
   /** Full URN string */
@@ -112,7 +112,7 @@ import {
   getContentTypeIcon,
   getContentTypeLabel,
   getContentTypeRoute,
-} from '@/theme/contentTypes';
+} from '@/config/theme/contentTypes';
 
 /**
  * Extract the URL path from a URN

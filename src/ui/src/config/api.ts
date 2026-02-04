@@ -13,7 +13,7 @@
 import { createConnectTransport } from '@connectrpc/connect-web';
 import type { Interceptor } from '@connectrpc/connect';
 import { ConnectError, Code, createClient } from '@connectrpc/connect';
-import { env } from './env';
+import { env } from '@/config/env';
 import { AuthService } from '@/gen/auth/v1/auth_connect';
 import { getStoreRef } from '@/app/storeRef';
 import {
@@ -23,6 +23,7 @@ import {
   createRehydrateFailedAction,
   createLogoutAction,
 } from '@/features/auth/store/authActions';
+import { updateWorkerAuthToken, clearWorkerAuthToken } from '@/workers/registerMediaWorker';
 
 // In-memory access token storage (security: not persisted to localStorage)
 let memoryAccessToken: string | null = null;
@@ -66,16 +67,24 @@ function getAuthState(): {
 
 /**
  * Set access token in memory (not localStorage).
+ * Also syncs with the Service Worker for media streaming.
  */
 function setMemoryAccessToken(token: string | null): void {
   memoryAccessToken = token;
+  // Sync with Service Worker for media streaming
+  if (token) {
+    updateWorkerAuthToken(token);
+  }
 }
 
 /**
  * Clear in-memory access token.
+ * Also clears from the Service Worker.
  */
 function clearMemoryAccessToken(): void {
   memoryAccessToken = null;
+  // Clear from Service Worker
+  clearWorkerAuthToken();
 }
 
 /**

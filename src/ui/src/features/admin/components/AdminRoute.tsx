@@ -10,7 +10,7 @@
 
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '@/app/hooks';
-import { useAdminAccess } from '../hooks/useAdminHooks';
+import { useAdminAccess } from '@/features/admin/hooks/useAdminHooks';
 
 interface AdminRouteProps {
     children: React.ReactNode;

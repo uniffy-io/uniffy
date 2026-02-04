@@ -6,8 +6,8 @@
 
 import { useEffect, useRef } from 'react';
 import { Warning, X } from '@phosphor-icons/react';
-import { Button } from './button';
-import { cn } from '@/utils/cn';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/shared/utils/cn';
 
 export interface ConfirmDialogProps {
     isOpen: boolean;

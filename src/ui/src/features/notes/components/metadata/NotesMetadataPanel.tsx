@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { setMetadataPanelTab } from '../../store/editorSlice';
-import type { MetadataPanelTab } from '../../store/editorSlice';
+import { setMetadataPanelTab } from '@/features/notes/store/editorSlice';
+import type { MetadataPanelTab } from '@/features/notes/store/editorSlice';
 import {
   Link,
   Gear,
@@ -12,9 +12,9 @@ import {
   FileText,
   Cube,
 } from '@phosphor-icons/react';
-import { parseUrn, urnToPath, UrnType } from '@/utils/urn';
+import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
 import { useNavigate } from 'react-router-dom';
-import { getContentTypeConfig } from '@/theme/contentTypes';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
 
 /** Parsed mention from content */
 interface ParsedMention {

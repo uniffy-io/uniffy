@@ -6,15 +6,15 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
 import { useAppSelector } from '@/app/hooks';
-import { useAutosave } from '../../hooks/useNotesHooks';
-import { tagPlugins } from './plugins/tag';
-import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from './plugins/mention';
-import { MentionSearch } from './plugins/mention/MentionSearch';
+import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
+import { tagPlugins } from '@/features/notes/components/editor/plugins/tag';
+import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from '@/features/notes/components/editor/plugins/mention';
+import { MentionSearch } from '@/features/notes/components/editor/plugins/mention/MentionSearch';
 import { createPortal } from 'react-dom';
 import { openSpotlightSearch } from '@/features/search';
 import { useGlobalShortcuts } from '@/features/settings';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
-import type { SerializedNote } from '../../store/notesThunks';
+import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
 // Import only common Crepe styles - frame themes set global html/body styles that break our app
 import '@milkdown/crepe/theme/common/style.css';

@@ -6,12 +6,12 @@
  */
 
 // API
-export { adminApi } from './api/adminApi';
+export { adminApi } from '@/features/admin/api/adminApi';
 
 // Components
-export { PermissionDefaultsSection } from './components/permissions/PermissionDefaultsSection';
-export { GroupsSection } from './components/groups/GroupsSection';
-export { MembersSection } from './components/members/MembersSection';
+export { PermissionDefaultsSection } from '@/features/admin/components/permissions/PermissionDefaultsSection';
+export { GroupsSection } from '@/features/admin/components/groups/GroupsSection';
+export { MembersSection } from '@/features/admin/components/members/MembersSection';
 
 // Hooks
 export {
@@ -25,7 +25,7 @@ export {
     getVisibilityScopeLabel,
     getOrgRoleLabel,
     isOrgAdmin,
-} from './hooks/useAdminHooks';
+} from '@/features/admin/hooks/useAdminHooks';
 
 // Store - Slice & Actions
 export {
@@ -37,7 +37,7 @@ export {
     serializeGroupInfo,
     serializeGroupMemberInfo,
     serializeOrgOverview,
-} from './store/adminSlice';
+} from '@/features/admin/store/adminSlice';
 export type {
     AdminState,
     SerializedContentTypeDefaults,
@@ -45,7 +45,7 @@ export type {
     SerializedGroupInfo,
     SerializedGroupMemberInfo,
     SerializedOrgOverview,
-} from './store/adminSlice';
+} from '@/features/admin/store/adminSlice';
 
 // Store - Thunks
 export {
@@ -62,4 +62,4 @@ export {
     fetchGroupMembers,
     addGroupMember,
     removeGroupMember,
-} from './store/adminThunks';
+} from '@/features/admin/store/adminThunks';

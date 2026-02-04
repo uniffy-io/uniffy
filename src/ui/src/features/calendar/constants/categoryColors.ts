@@ -3,7 +3,7 @@
  * Colors follow the design specification and integrate with Tailwind theme
  */
 
-import type { CategoryColorOption, Category } from '../types';
+import type { CategoryColorOption, Category } from '@/features/calendar/types';
 
 /**
  * Predefined category colors

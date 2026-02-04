@@ -230,6 +230,66 @@ class S3Client:
                 Key=key,
             )
 
+    async def download_range(
+        self,
+        key: str,
+        start_byte: int | None = None,
+        end_byte: int | None = None,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+    ) -> AsyncIterator[tuple[bytes, int, int, int]]:
+        """
+        Download a byte range from S3.
+
+        Supports HTTP Range-like semantics for media streaming.
+        If start_byte is None, starts from beginning.
+        If end_byte is None, reads to end of file.
+
+        Parameters
+        ----------
+        key : str
+            S3 object key.
+        start_byte : int | None
+            Start of range (inclusive). Default: 0.
+        end_byte : int | None
+            End of range (inclusive). Default: end of file.
+        chunk_size : int
+            Size of each chunk in bytes.
+
+        Yields
+        ------
+        tuple[bytes, int, int, int]
+            (chunk_data, total_size, range_start, range_end)
+
+        """
+        async with self._get_client() as client:
+            # Get object metadata for total size
+            head = await client.head_object(
+                Bucket=self.config.bucket_name,
+                Key=key,
+            )
+            total_size = head["ContentLength"]
+
+            # Calculate actual range
+            start = start_byte if start_byte is not None else 0
+            end = end_byte if end_byte is not None else total_size - 1
+
+            # Clamp values
+            start = max(0, min(start, total_size - 1))
+            end = max(start, min(end, total_size - 1))
+
+            # Build range header
+            range_header = f"bytes={start}-{end}"
+
+            response = await client.get_object(
+                Bucket=self.config.bucket_name,
+                Key=key,
+                Range=range_header,
+            )
+
+            body = response["Body"]
+            async for chunk in body.iter_chunks(chunk_size=chunk_size):
+                yield chunk, total_size, start, end
+
     # ─────────────────────────────────────────────────────────────
     # Multipart upload (for large files via streaming)
     # ─────────────────────────────────────────────────────────────
@@ -460,6 +520,45 @@ class S3Client:
                 return True
             except client.exceptions.ClientError:
                 return False
+
+    async def generate_presigned_url(
+        self,
+        key: str,
+        expires_in: int = 3600,
+        content_type: str | None = None,
+    ) -> str:
+        """
+        Generate a presigned URL for accessing an S3 object.
+
+        Parameters
+        ----------
+        key : str
+            S3 object key.
+        expires_in : int
+            URL expiration time in seconds (default: 1 hour).
+        content_type : str | None
+            Optional content type for response.
+
+        Returns
+        -------
+        str
+            Presigned URL for accessing the object.
+
+        """
+        async with self._get_client() as client:
+            params = {
+                "Bucket": self.config.bucket_name,
+                "Key": key,
+            }
+            if content_type:
+                params["ResponseContentType"] = content_type
+
+            url = await client.generate_presigned_url(
+                "get_object",
+                Params=params,
+                ExpiresIn=expires_in,
+            )
+        return url
 
 
 # Global S3 client instance

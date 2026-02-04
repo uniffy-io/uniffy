@@ -16,7 +16,9 @@ FILE_PATH_TO_SLUG: dict[str, str] = {
     "ABOUT.md": "about",
     "PLANS.md": "plans",
     "TRANSPARENCY.md": "transparency",
+    "LICENSES.md": "licenses",
     "documentation/SEARCHING.md": "searching",
+    "documentation/SHARING.md": "sharing",
 }
 
 
@@ -232,6 +234,21 @@ async def seed_initial_data() -> None:
             )
             session.add(transparency_note)
 
+            # Licenses note
+            licenses_note = Note(
+                organization_id=default_org.id,
+                owner_id=admin_user.id,
+                parent_id=uniffy_folder.id,
+                visibility=VisibilityScope.ORGANIZATION,
+                node_type=NodeType.NOTE,
+                title="Licenses",
+                content="",
+                slug="licenses",
+                tags=["documentation", "license", "legal", "open-source"],
+                note_metadata={"system_generated": "true"},
+            )
+            session.add(licenses_note)
+
             # Searching note (in Docs subfolder)
             searching_note = Note(
                 organization_id=default_org.id,
@@ -247,12 +264,29 @@ async def seed_initial_data() -> None:
             )
             session.add(searching_note)
 
+            # Sharing note (in Docs subfolder)
+            sharing_note = Note(
+                organization_id=default_org.id,
+                owner_id=admin_user.id,
+                parent_id=docs_folder.id,
+                visibility=VisibilityScope.ORGANIZATION,
+                node_type=NodeType.NOTE,
+                title="Sharing",
+                content="",
+                slug="sharing",
+                tags=["documentation", "sharing", "permissions", "help"],
+                note_metadata={"system_generated": "true"},
+            )
+            session.add(sharing_note)
+
             # Flush to get all IDs
             await session.flush()
             await session.refresh(about_note)
             await session.refresh(plans_note)
             await session.refresh(transparency_note)
+            await session.refresh(licenses_note)
             await session.refresh(searching_note)
+            await session.refresh(sharing_note)
             logger.info("Created note placeholders")
 
             # 7. Build slug-to-URN mapping for link replacement
@@ -260,7 +294,9 @@ async def seed_initial_data() -> None:
                 "about": build_note_urn(about_note.id),
                 "plans": build_note_urn(plans_note.id),
                 "transparency": build_note_urn(transparency_note.id),
+                "licenses": build_note_urn(licenses_note.id),
                 "searching": build_note_urn(searching_note.id),
+                "sharing": build_note_urn(sharing_note.id),
             }
 
             # 8. Read content, replace markdown links with URN mentions,
@@ -287,6 +323,14 @@ async def seed_initial_data() -> None:
                 extract_urns_from_content(transparency_note.content) or None
             )
 
+            licenses_content = (DOCS_DIR / "LICENSES.md").read_text()
+            licenses_note.content = replace_markdown_links_with_urns(
+                licenses_content, slug_to_urn
+            )
+            licenses_note.outgoing_references = (
+                extract_urns_from_content(licenses_note.content) or None
+            )
+
             searching_content = (DOCS_DIR / "documentation" / "SEARCHING.md").read_text()
             searching_note.content = replace_markdown_links_with_urns(
                 searching_content, slug_to_urn
@@ -295,11 +339,26 @@ async def seed_initial_data() -> None:
                 extract_urns_from_content(searching_note.content) or None
             )
 
+            sharing_content = (DOCS_DIR / "documentation" / "SHARING.md").read_text()
+            sharing_note.content = replace_markdown_links_with_urns(
+                sharing_content, slug_to_urn
+            )
+            sharing_note.outgoing_references = (
+                extract_urns_from_content(sharing_note.content) or None
+            )
+
             await session.flush()
             logger.info("Updated notes with URN-based mentions and outgoing references")
 
             # Collect all notes for indexing
-            all_notes = [about_note, plans_note, transparency_note, searching_note]
+            all_notes = [
+                about_note,
+                plans_note,
+                transparency_note,
+                licenses_note,
+                searching_note,
+                sharing_note,
+            ]
 
             # 9. Index all notes for search
             search_indexer = SearchIndexer(session)

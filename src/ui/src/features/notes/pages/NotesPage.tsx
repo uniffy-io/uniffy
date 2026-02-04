@@ -1,19 +1,19 @@
 import { useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { NotesLayout } from '../components/NotesLayout';
-import { NotesSidebar } from '../components/sidebar/NotesSidebar';
-import { NotesEditor } from '../components/editor/NotesEditor';
-import { NotesMetadataPanel } from '../components/metadata/NotesMetadataPanel';
-import { NotesGraphDashboard } from '../components/dashboard/NotesGraphDashboard';
+import { NotesLayout } from '@/features/notes/components/NotesLayout';
+import { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
+import { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
+import { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMetadataPanel';
+import { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { toggleSidebar, setEditorMode } from '../store/editorSlice';
-import type { EditorMode } from '../store/editorSlice';
-import { setCurrentNote, fetchNote, initializeNotesData, loadLastOpenedNote } from '../store/notesSlice';
+import { toggleSidebar, setEditorMode } from '@/features/notes/store/editorSlice';
+import type { EditorMode } from '@/features/notes/store/editorSlice';
+import { setCurrentNote, fetchNote, initializeNotesData, loadLastOpenedNote } from '@/features/notes/store/notesSlice';
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
 import { SharingDialog } from '@/features/sharing';
-import { useNotesCacheSync } from '../hooks/useNotesCacheSync';
+import { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
 
 export default function NotesPage() {
   const dispatch = useAppDispatch();
@@ -43,12 +43,12 @@ export default function NotesPage() {
   const pageTitle = isGraphRoute ? 'Knowledge Graph' : (currentNote?.title || 'Notes');
   useDocumentTitle(pageTitle);
 
-  // Keyboard shortcut for toggling sidebar
+  // Keyboard shortcut for toggling sidebar (global shortcut)
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
 
-  useShortcutHandler('notes.toggleSidebar', handleToggleSidebar);
+  useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
   // Redirect to last opened note when navigating to /notes (but not /notes/graph)
   useLayoutEffect(() => {

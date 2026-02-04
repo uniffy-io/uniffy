@@ -3,19 +3,19 @@
  */
 
 // API
-export { settingsApi } from './api/settingsApi';
+export { settingsApi } from '@/features/settings/api/settingsApi';
 
 // Components
-export { SettingsLayout } from './components/SettingsLayout';
-export type { SettingsSection } from './components/SettingsLayout';
-export { ProfileSwitcher } from './components/ProfileSwitcher';
-export { AppearanceSection } from './components/AppearanceSection';
-export { KeyboardShortcutsSection } from './components/KeyboardShortcutsSection';
-export { NotificationsSection } from './components/NotificationsSection';
-export { AccountSection } from './components/AccountSection';
+export { SettingsLayout } from '@/features/settings/components/SettingsLayout';
+export type { SettingsSection } from '@/features/settings/components/SettingsLayout';
+export { ProfileSwitcher } from '@/features/settings/components/ProfileSwitcher';
+export { AppearanceSection } from '@/features/settings/components/AppearanceSection';
+export { KeyboardShortcutsSection } from '@/features/settings/components/KeyboardShortcutsSection';
+export { NotificationsSection } from '@/features/settings/components/NotificationsSection';
+export { AccountSection } from '@/features/settings/components/AccountSection';
 
 // Pages
-export { SettingsPage } from './pages/SettingsPage';
+export { SettingsPage } from '@/features/settings/pages/SettingsPage';
 
 // Store - Slice & Actions
 export {
@@ -26,7 +26,7 @@ export {
     clearError,
     resetSettings,
     updateEffectiveSettingsLocal,
-} from './store/settingsSlice';
+} from '@/features/settings/store/settingsSlice';
 
 // Store - Thunks
 export {
@@ -36,18 +36,18 @@ export {
     updateProfile,
     deleteProfile,
     setDefaultProfile,
-} from './store/settingsSlice';
+} from '@/features/settings/store/settingsSlice';
 
 // Store - Types
-export type { SettingsState } from './store/settingsSlice';
-export type { SerializedProfile, SerializedEffectiveSettings } from './store/settingsThunks';
+export type { SettingsState } from '@/features/settings/store/settingsSlice';
+export type { SerializedProfile, SerializedEffectiveSettings } from '@/features/settings/store/settingsThunks';
 
 // Hooks - Settings
 export {
     useSettings,
     useAppearanceSettings,
     useNotificationSettings,
-} from './hooks/useSettings';
+} from '@/features/settings/hooks/useSettings';
 
 // Hooks - Keyboard Shortcuts
 export {
@@ -58,4 +58,4 @@ export {
     useShortcutHandlers,
     useGlobalShortcuts,
     formatShortcut,
-} from './hooks/useKeyboardShortcuts';
+} from '@/features/settings/hooks/useKeyboardShortcuts';

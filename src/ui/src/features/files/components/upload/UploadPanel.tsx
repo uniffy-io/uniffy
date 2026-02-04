@@ -25,7 +25,7 @@ import {
     clearCompletedDownloads,
     type UploadItem,
     type DownloadItem,
-} from '../../store/uploadSlice';
+} from '@/features/files/store/uploadSlice';
 
 // Format file size
 function formatFileSize(bytes: number): string {

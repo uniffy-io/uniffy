@@ -2,7 +2,7 @@
  * UI state type definitions for the Calendar feature
  */
 
-import type { ViewMode, QuickAccessFilter } from './calendar';
+import type { ViewMode, QuickAccessFilter } from '@/features/calendar/types/calendar';
 
 /**
  * Calendar UI state

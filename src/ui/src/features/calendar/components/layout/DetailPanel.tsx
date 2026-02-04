@@ -30,20 +30,20 @@ import {
   Warning,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { closeDetailPanel } from '../../store';
-import { deleteEvent } from '../../store/calendarThunks';
-import { useCalendarEvents } from '../../hooks';
-import { CATEGORY_COLORS } from '../../constants';
+import { closeDetailPanel } from '@/features/calendar/store';
+import { deleteEvent } from '@/features/calendar/store/calendarThunks';
+import { useCalendarEvents } from '@/features/calendar/hooks';
+import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
-import { EventEditor } from '../modals/EventEditor';
+import { EventEditor } from '@/features/calendar/components/modals/EventEditor';
 import { MarkdownEditor } from '@/components/editor';
 import { MentionChipCompact } from '@/features/notes/components/editor/plugins/mention';
 import {
   formatDateWithDay,
   formatTimeRange,
   getTimezoneOffset,
-} from '../../utils';
-import { findConflicts } from '../../utils/eventPositioning';
+} from '@/features/calendar/utils';
+import { findConflicts } from '@/features/calendar/utils/eventPositioning';
 
 /**
  * Extract URN mentions from markdown content.

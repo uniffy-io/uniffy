@@ -7,9 +7,9 @@ import { languages } from '@codemirror/language-data';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { defaultKeymap } from '@codemirror/commands';
 import { useAppSelector } from '@/app/hooks';
-import { useAutosave } from '../../hooks/useNotesHooks';
-import { CrepeEditor } from './CrepeEditor';
-import type { SerializedNote } from '../../store/notesThunks';
+import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
+import { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;

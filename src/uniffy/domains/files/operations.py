@@ -17,6 +17,7 @@ from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadSta
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.storage import get_s3_client
 from uniffy.core.types import ContentType, VisibilityScope
+from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
 
 # Chunk size constants (in bytes)
 MIN_CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB (S3 minimum)
@@ -355,7 +356,46 @@ class FileOperations(BaseContentOperations[File]):
         )
         await self.session.commit()
 
+        # Enqueue background jobs for processing (thumbnails, metadata extraction)
+        if file.extraction_status == ExtractionStatus.PENDING:
+            await self._enqueue_processing_jobs(file)
+
         return file
+
+    async def _enqueue_processing_jobs(self, file: File) -> None:
+        """
+        Enqueue background processing jobs for the file.
+
+        Determines which jobs to run based on MIME type and
+        enqueues them to the job queue. Non-fatal if queue unavailable.
+
+        Parameters
+        ----------
+        file : File
+            The file to process.
+
+        """
+        from loguru import logger
+
+        try:
+            from uniffy.core.queue import get_queue
+
+            queue = get_queue()
+            jobs = get_jobs_for_mime_type(file.mime_type)
+
+            for job_name in jobs:
+                await queue.enqueue_job(
+                    job_name,
+                    str(file.id),
+                    str(file.organization_id),
+                )
+                logger.debug(f"Enqueued {job_name} for file {file.id}")
+
+        except RuntimeError:
+            # Queue not initialized (e.g., in tests or if Valkey unavailable)
+            from loguru import logger
+
+            logger.warning(f"Queue unavailable, skipping job enqueue for file {file.id}")
 
     async def abort_upload(self, upload_id: UUID, user_id: UUID) -> bool:
         """
@@ -398,16 +438,23 @@ class FileOperations(BaseContentOperations[File]):
         """
         Determine initial extraction status based on MIME type.
 
-        For now, all files are marked as SKIPPED since we don't have
-        background extraction. When extraction is implemented, text-based
-        files (PDF, DOCX, etc.) should be marked as PENDING.
+        Returns PENDING for file types that support background processing
+        (thumbnails, metadata extraction), SKIPPED for unsupported types.
+
+        Parameters
+        ----------
+        mime_type : str
+            MIME type of the file.
+
+        Returns
+        -------
+        ExtractionStatus
+            PENDING if background jobs will process this file, SKIPPED otherwise.
+
         """
-        # TODO: When background extraction is implemented, return PENDING
-        # for extractable types like:
-        # - application/pdf
-        # - application/msword
-        # - application/vnd.openxmlformats-officedocument.*
-        # - text/*
+        processable = get_processable_mime_types()
+        if mime_type in processable:
+            return ExtractionStatus.PENDING
         return ExtractionStatus.SKIPPED
 
     # ─────────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@
  */
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { calendarApi } from '../api/calendarApi';
+import { calendarApi } from '@/features/calendar/api/calendarApi';
 import type { RootState } from '@/app/store';
 import type {
     CalendarEvent as ProtoCalendarEvent,
@@ -43,7 +43,7 @@ import type {
     EventTemplate,
     CreateTemplatePayload,
     UpdateTemplatePayload,
-} from '../types';
+} from '@/features/calendar/types';
 
 // ============================================================================
 // Helpers

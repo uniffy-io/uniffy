@@ -3,11 +3,11 @@
  */
 
 import { useMemo, useState } from 'react';
-import { useCalendarNavigation, useCalendarEvents } from '../../hooks';
+import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentDate, setViewMode, startDrag, endDrag, updateEventThunk } from '../../store';
-import { CATEGORY_COLORS } from '../../constants';
-import { cn } from '@/utils/cn';
+import { setCurrentDate, setViewMode, startDrag, endDrag, updateEventThunk } from '@/features/calendar/store';
+import { CATEGORY_COLORS } from '@/features/calendar/constants';
+import { cn } from '@/shared/utils/cn';
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 

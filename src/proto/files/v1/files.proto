@@ -40,6 +40,10 @@ service FilesService {
   // Stream file content from backend to client (server streaming RPC).
   rpc DownloadFile(DownloadFileRequest) returns (stream DownloadChunkResponse);
 
+  // Stream file with byte range support for Service Worker media streaming.
+  // This RPC supports HTTP Range-like semantics for video/audio seeking.
+  rpc StreamFileRange(StreamFileRangeRequest) returns (stream StreamFileRangeResponse);
+
   // === File CRUD ===
 
   // Get a file by ID.
@@ -216,6 +220,25 @@ message DownloadChunkResponse {
   optional int64 total_size = 6;
 }
 
+// Request for range-based file streaming (used by Service Worker for media).
+message StreamFileRangeRequest {
+  string file_id = 1;
+  string organization_id = 2;
+  optional int64 start_byte = 3;  // Range start (inclusive), default 0
+  optional int64 end_byte = 4;    // Range end (inclusive), default EOF
+}
+
+// Response for range-based file streaming.
+message StreamFileRangeResponse {
+  bytes data = 1;
+  int64 total_size = 2;           // Total file size (for Content-Length)
+  int64 range_start = 3;          // Actual range start returned
+  int64 range_end = 4;            // Actual range end returned
+  string mime_type = 5;           // For Content-Type header
+  string filename = 6;            // For Content-Disposition
+  bool is_first_chunk = 7;        // Metadata only meaningful in first chunk
+}
+
 // =============================================================================
 // FILE MESSAGES
 // =============================================================================
@@ -244,6 +267,22 @@ message File {
   repeated string group_ids = 19;
   common.v1.PermissionLevel user_permission = 20;
   optional FileOwner owner_info = 21;
+
+  // Media metadata (extracted from file content)
+  optional FileMetadata metadata = 22;
+}
+
+// Metadata extracted from media files (images, videos, PDFs).
+message FileMetadata {
+  bool has_thumbnail = 1;
+  optional int32 width = 2;           // Image/video width in pixels
+  optional int32 height = 3;          // Image/video height in pixels
+  optional string format = 4;         // Format details (e.g., "JPEG", "PNG")
+  optional string color_mode = 5;     // Color mode (e.g., "RGB", "CMYK")
+  optional float duration_seconds = 6; // Video/audio duration
+  optional int32 page_count = 7;      // PDF page count
+  map<string, string> exif = 8;       // EXIF data for images
+  optional string error = 9;          // Error message if extraction failed
 }
 
 message FileOwner {

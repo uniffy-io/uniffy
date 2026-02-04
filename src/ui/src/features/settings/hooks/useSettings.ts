@@ -14,8 +14,8 @@ import {
     setActiveProfileId,
     clearError,
     updateEffectiveSettingsLocal,
-} from '../store/settingsSlice';
-import type { SerializedEffectiveSettings } from '../store/settingsThunks';
+} from '@/features/settings/store/settingsSlice';
+import type { SerializedEffectiveSettings } from '@/features/settings/store/settingsThunks';
 
 // Local storage key for active profile
 const ACTIVE_PROFILE_KEY = 'uniffy_active_profile_id';

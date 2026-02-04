@@ -16,9 +16,10 @@ import { clearNotesCache } from '@/features/notes';
 import { clearBookmarks } from '@/features/bookmarks';
 import { clearSharing } from '@/features/sharing';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
+import { clearBlobCache } from '@/features/files';
 import { clearMemoryAccessToken } from '@/config/api';
-import { useTheme } from '@/theme/ThemeProvider';
-import { cn } from '@/utils/cn';
+import { useTheme } from '@/config/theme/ThemeProvider';
+import { cn } from '@/shared/utils/cn';
 import { useNavigate } from 'react-router-dom';
 
 export function UserMenu() {
@@ -65,6 +66,8 @@ export function UserMenu() {
         dispatch(clearAdmin());
         // Clear IndexedDB cache (async, fire and forget)
         clearNotesCache().catch(console.error);
+        // Clear file blob cache
+        clearBlobCache();
         // Navigate to auth page
         navigate('/auth');
     };

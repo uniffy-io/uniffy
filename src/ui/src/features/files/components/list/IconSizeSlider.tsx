@@ -6,7 +6,7 @@
 
 import { useCallback } from 'react';
 import { SquaresFour } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 
 interface IconSizeSliderProps {
     value: number;

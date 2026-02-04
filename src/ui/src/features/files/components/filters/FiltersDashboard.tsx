@@ -7,11 +7,11 @@
 import { useState, useCallback } from 'react';
 import { Plus, Star, User } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
-import { SavedFiltersList } from './SavedFiltersList';
-import { FilterBuilder } from './FilterBuilder';
-import { useSavedFilters } from '../../hooks/useSavedFilters';
-import { useApplyFilter } from '../../hooks/useApplyFilter';
-import type { SerializedSavedFilter, SerializedFilterCriteria, SerializedIconValue } from '../../store/savedFiltersSlice';
+import { SavedFiltersList } from '@/features/files/components/filters/SavedFiltersList';
+import { FilterBuilder } from '@/features/files/components/filters/FilterBuilder';
+import { useSavedFilters } from '@/features/files/hooks/useSavedFilters';
+import { useApplyFilter } from '@/features/files/hooks/useApplyFilter';
+import type { SerializedSavedFilter, SerializedFilterCriteria, SerializedIconValue } from '@/features/files/store/savedFiltersSlice';
 
 type ViewMode = 'list' | 'create' | 'edit';
 

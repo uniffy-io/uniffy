@@ -5,7 +5,7 @@
  * for preserving folder structure in zip archives.
  */
 
-import type { SerializedTreeNode } from '../store/filesTreeThunks';
+import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
 
 export interface FileWithPath {
     fileId: string;

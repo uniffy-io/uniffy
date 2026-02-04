@@ -12,15 +12,15 @@ import {
     clearSearchResults,
     type SerializedPermissionInfo,
     type SerializedShareTarget,
-} from '../store/sharingSlice';
+} from '@/features/sharing/store/sharingSlice';
 import {
     fetchContentPermissions,
     grantPermission,
     revokePermission,
     updatePermission,
     searchShareTargets,
-} from '../store/sharingThunks';
-import { sharingApi } from '../api/sharingApi';
+} from '@/features/sharing/store/sharingThunks';
+import { sharingApi } from '@/features/sharing/api/sharingApi';
 import { SubjectType, PermissionLevel, ContentType } from '@/gen/common/v1/common_pb';
 
 // Stable empty array reference to prevent unnecessary re-renders

@@ -4,24 +4,28 @@
  * Main page for file management with sidebar, file list, and upload functionality.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
+import { useShortcutHandler } from '@/features/settings';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { FilesLayout } from '../components/FilesLayout';
-import { FilesSidebar } from '../components/sidebar/FilesSidebar';
-import { FilesList } from '../components/list/FilesList';
-import { UploadPanel } from '../components/upload/UploadPanel';
-import { useUploadProcessor } from '../hooks/useUploadProcessor';
+import { FilesLayout } from '@/features/files/components/FilesLayout';
+import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
+import { FilesList } from '@/features/files/components/list/FilesList';
+import { UploadPanel } from '@/features/files/components/upload/UploadPanel';
+import { FileViewerModal } from '@/features/files/components/viewer';
+import { FileDetailsPanel } from '@/features/files/components/details';
+import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 import { SharingDialog } from '@/features/sharing';
-import { initializeFilesData, setFolderId } from '../store/filesSlice';
-import { fetchFilesTree, setSelectedFolder, createFolder } from '../store/filesTreeSlice';
-import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '../store/selectors';
-import { addToQueue } from '../store/uploadSlice';
-import { storeFile } from '../utils/fileStore';
-import { filesApi } from '../api/filesApi';
-import { downloadAsArchive, type FileDownloadItem } from '../utils/archiveDownload';
+import { initializeFilesData, setFolderId } from '@/features/files/store/filesSlice';
+import { fetchFilesTree, setSelectedFolder, createFolder } from '@/features/files/store/filesTreeSlice';
+import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '@/features/files/store/selectors';
+import { openViewer } from '@/features/files/store/viewerSlice';
+import { addToQueue } from '@/features/files/store/uploadSlice';
+import { storeFile } from '@/features/files/utils/fileStore';
+import { filesApi } from '@/features/files/api/filesApi';
+import { downloadAsArchive, type FileDownloadItem } from '@/features/files/utils/archiveDownload';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
 export function FilesPage() {
@@ -31,6 +35,8 @@ export function FilesPage() {
     useUploadProcessor();
 
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
+    const { fileId: urlFileId } = useParams<{ fileId?: string }>();
     const [searchParams] = useSearchParams();
 
     // Redux state
@@ -41,6 +47,9 @@ export function FilesPage() {
     const folderTree = useAppSelector((state) => state.filesTree.tree);
     const folders = useAppSelector((state) => state.filesTree.folders);
     const loading = useAppSelector((state) => state.files.loading);
+    const isDetailsPanelOpen = useAppSelector((state) => state.files.isDetailsPanelOpen);
+    const currentFileId = useAppSelector((state) => state.files.currentFileId);
+    const filesMap = useAppSelector((state) => state.files.files);
 
     // selectFilesForCurrentFolderAndScope handles:
     // - Folder filtering (currentFolderId or root)
@@ -48,12 +57,24 @@ export function FilesPage() {
     const files = useAppSelector(selectFilesForCurrentFolderAndScope);
     const allFiles = useAppSelector(selectAllFiles);
 
+    // Get the current file for the details panel
+    const currentFile = currentFileId ? filesMap[currentFileId] : null;
+
+    // Viewer state for URL sync
+    const viewerIsOpen = useAppSelector((state) => state.fileViewer.isOpen);
+    const viewerCurrentFileId = useAppSelector((state) => state.fileViewer.currentFileId);
+
     // Local state
     const [showSidebar, setShowSidebar] = useState(true);
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
     // File input ref for upload
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Track when viewer is being closed to prevent URL effect from reopening it
+    const isClosingViewerRef = useRef(false);
+    // Track previous viewer state to detect close vs initial navigation
+    const prevViewerIsOpenRef = useRef(false);
 
     // Initialize data on mount
     useEffect(() => {
@@ -79,6 +100,61 @@ export function FilesPage() {
             dispatch(setSelectedFolder(folderId));
         }
     }, [searchParams, dispatch, currentFolderId]);
+
+    // Set closing flag synchronously BEFORE other effects run
+    // useLayoutEffect runs before useEffect, preventing race conditions
+    useLayoutEffect(() => {
+        // Only set closing flag when viewer transitions from open -> closed
+        // (not when navigating TO a file URL with viewer already closed)
+        if (prevViewerIsOpenRef.current && !viewerIsOpen && urlFileId) {
+            // Viewer JUST closed while URL still has fileId - flag it
+            isClosingViewerRef.current = true;
+        } else if (viewerIsOpen) {
+            // Viewer is open - clear flag
+            isClosingViewerRef.current = false;
+        } else if (!urlFileId) {
+            // URL changed to /files - clear flag
+            isClosingViewerRef.current = false;
+        }
+        // Track previous state for next render
+        prevViewerIsOpenRef.current = viewerIsOpen;
+    }, [viewerIsOpen, urlFileId]);
+
+    // Open viewer when URL has fileId (e.g., /files/:fileId)
+    // Only opens when viewer is CLOSED - if already open, URL sync handles it
+    useEffect(() => {
+        // Skip if we're in the process of closing the viewer
+        if (isClosingViewerRef.current) {
+            return;
+        }
+
+        // Only open from URL when viewer is closed
+        // (if viewer is open, arrow navigation updates the file and URL sync follows)
+        if (urlFileId && !loading && !viewerIsOpen) {
+            // Check if file exists in our store
+            const file = allFiles.find((f) => f.id === urlFileId);
+            if (file) {
+                // Create playlist from all files (or current view)
+                const playlist = allFiles.map((f) => f.id);
+                dispatch(openViewer({ fileId: urlFileId, playlist }));
+            }
+        }
+    }, [urlFileId, loading, allFiles, viewerIsOpen, dispatch]);
+
+    // Sync URL when viewer opens/closes
+    useEffect(() => {
+        if (viewerIsOpen && viewerCurrentFileId) {
+            // Viewer is open - sync URL
+            const currentPath = window.location.pathname;
+            const expectedPath = `/files/${viewerCurrentFileId}`;
+            if (currentPath !== expectedPath) {
+                navigate(expectedPath, { replace: true });
+            }
+        } else if (!viewerIsOpen && urlFileId) {
+            // Viewer closed - navigate back to /files
+            navigate('/files', { replace: true });
+        }
+    }, [viewerIsOpen, viewerCurrentFileId, urlFileId, navigate]);
 
     // Handle file download
     const handleDownload = useCallback(
@@ -142,6 +218,9 @@ export function FilesPage() {
     const handleToggleSidebar = useCallback(() => {
         setShowSidebar((prev) => !prev);
     }, []);
+
+    // Keyboard shortcut for toggling sidebar (global shortcut)
+    useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
     // Uploads should be disabled in "Shared With Me" view
     const canUpload = viewScope !== 'shared';
@@ -237,6 +316,7 @@ export function FilesPage() {
             <AppHeader />
             <FilesLayout
                 showSidebar={!isZenMode && showSidebar}
+                showDetailPanel={!isZenMode && isDetailsPanelOpen}
                 onToggleSidebar={handleToggleSidebar}
                 sidebar={<FilesSidebar onToggleSidebar={handleToggleSidebar} onUpload={handleUpload} />}
                 content={
@@ -251,6 +331,7 @@ export function FilesPage() {
                         folderTree={folderTree}
                     />
                 }
+                detailPanel={<FileDetailsPanel file={currentFile} />}
             />
 
             {/* Hidden file input for upload */}
@@ -267,6 +348,9 @@ export function FilesPage() {
 
             {/* Sharing dialog */}
             <SharingDialog />
+
+            {/* File viewer modal */}
+            <FileViewerModal />
         </>
     );
 }

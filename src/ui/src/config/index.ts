@@ -4,5 +4,5 @@
  * Central export point for all application configuration.
  */
 
-export { env } from './env';
-export { transport, rehydrateAuth, setMemoryAccessToken, clearMemoryAccessToken } from './api';
+export { env } from '@/config/env';
+export { transport, rehydrateAuth, setMemoryAccessToken, clearMemoryAccessToken } from '@/config/api';

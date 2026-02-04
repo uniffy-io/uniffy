@@ -9,7 +9,7 @@
  * - Tailwind classes for component styling
  */
 
-import { UrnType } from '@/utils/urnTypes';
+import { UrnType } from '@/shared/utils/urnTypes';
 
 /**
  * Hex color values for each URN type.

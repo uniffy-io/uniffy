@@ -6,10 +6,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MagnifyingGlass, User, UsersThree } from '@phosphor-icons/react';
-import { useShareTargetSearch, isUserTarget } from '../hooks/useSharingHooks';
+import { useShareTargetSearch, isUserTarget } from '@/features/sharing/hooks/useSharingHooks';
 import { PermissionLevel } from '@/gen/common/v1/common_pb';
-import { PermissionLevelSelect } from './PermissionLevelSelect';
-import type { SerializedShareTarget } from '../store/sharingSlice';
+import { PermissionLevelSelect } from '@/features/sharing/components/PermissionLevelSelect';
+import type { SerializedShareTarget } from '@/features/sharing/store/sharingSlice';
 
 interface ShareTargetSearchProps {
     onSelect: (target: SerializedShareTarget, level: number) => void;

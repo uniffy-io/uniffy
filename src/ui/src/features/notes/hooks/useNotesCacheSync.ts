@@ -8,7 +8,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAppSelector } from '@/app/hooks';
-import { setCachedNotes, isIndexedDBAvailable } from '../utils/notesCache';
+import { setCachedNotes, isIndexedDBAvailable } from '@/features/notes/utils/notesCache';
 
 /**
  * Hook to automatically sync notes to IndexedDB cache.

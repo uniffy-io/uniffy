@@ -15,8 +15,8 @@ import {
     setFolderId,
     setActiveFilter,
     clearActiveFilter,
-} from '../store/filesSlice';
-import type { SerializedSavedFilter, SerializedFilterCriteria } from '../store/savedFiltersSlice';
+} from '@/features/files/store/filesSlice';
+import type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
 /**

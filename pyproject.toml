@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "uniffy"
 version = "0.1.0"
-description = "The Operating System for Work"
+description = "Your Work, connected"
 readme = "README.md"
 authors = [
   { name = "kaibauniffy", email = "326951564+kaibauniffy@users.noreply.github.com" },
@@ -38,16 +38,26 @@ dependencies = [
   "h2>=4.2.0",
   "aioboto3>=13.0.0",
   "types-aiobotocore[s3]>=2.15.0",
+  # Background jobs
+  "arq>=0.26.0",
+  # Image processing
+  "pillow>=11.0.0",
+  # PDF thumbnail generation
+  "pymupdf>=1.25.0",
+  # Video thumbnail generation (requires ffmpeg binary on system)
+  "ffmpeg-python>=0.2.0",
 ]
 
 [dependency-groups]
 dev = [
-    "grpcio-tools>=1.76.0",
-    "pip-licenses>=5.5.0",
-    "pytest>=8.0.0",
-    "pytest-benchmark>=5.0.0",
-    "ruff>=0.14.13",
-    "ty>=0.0.10",
+  "grpcio-tools>=1.76.0",
+  "pip-licenses>=5.5.0",
+  "pytest>=8.0.0",
+  "pytest-benchmark>=5.0.0",
+  "ruff>=0.14.13",
+  "ty>=0.0.10",
+  # Worker hot reload
+  "watchfiles>=1.0.0",
 ]
 
 # Relax rules for test files

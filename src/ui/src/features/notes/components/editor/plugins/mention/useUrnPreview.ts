@@ -6,11 +6,11 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { parseUrn, UrnType } from '@/utils/urn';
+import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { useAppSelector } from '@/app/hooks';
 import { searchApi } from '@/features/search';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
-import { getContentTypeLabel } from '@/theme/contentTypes';
+import { getContentTypeLabel } from '@/config/theme/contentTypes';
 
 export interface UrnPreviewData {
   urn: string;

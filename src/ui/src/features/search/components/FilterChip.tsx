@@ -5,7 +5,7 @@
  */
 
 import { X } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 
 interface FilterChipProps {
     /** Filter label to display */

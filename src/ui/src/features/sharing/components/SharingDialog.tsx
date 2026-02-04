@@ -18,10 +18,10 @@ import {
     useSharingDialog,
     useContentPermissions,
     sortPermissions,
-} from '../hooks/useSharingHooks';
-import { ShareTargetSearch } from './ShareTargetSearch';
-import { PermissionRow } from './PermissionRow';
-import type { SerializedShareTarget } from '../store/sharingSlice';
+} from '@/features/sharing/hooks/useSharingHooks';
+import { ShareTargetSearch } from '@/features/sharing/components/ShareTargetSearch';
+import { PermissionRow } from '@/features/sharing/components/PermissionRow';
+import type { SerializedShareTarget } from '@/features/sharing/store/sharingSlice';
 
 export function SharingDialog() {
     const { isOpen, activeContent, close } = useSharingDialog();

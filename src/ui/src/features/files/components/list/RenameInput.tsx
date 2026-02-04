@@ -6,7 +6,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Check, X } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 
 interface RenameInputProps {
     /** Initial name value */

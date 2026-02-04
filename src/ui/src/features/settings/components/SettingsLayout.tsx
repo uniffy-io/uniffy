@@ -12,7 +12,7 @@ import {
     UserCircle,
     Gear,
 } from '@phosphor-icons/react';
-import { ProfileSwitcher } from './ProfileSwitcher';
+import { ProfileSwitcher } from '@/features/settings/components/ProfileSwitcher';
 
 export type SettingsSection =
     | 'appearance'

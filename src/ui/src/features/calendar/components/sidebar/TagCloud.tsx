@@ -3,9 +3,9 @@
  */
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { toggleTagFilter } from '../../store';
-import { useCalendarEvents } from '../../hooks';
-import { cn } from '@/utils/cn';
+import { toggleTagFilter } from '@/features/calendar/store';
+import { useCalendarEvents } from '@/features/calendar/hooks';
+import { cn } from '@/shared/utils/cn';
 
 export function TagCloud() {
   const dispatch = useAppDispatch();

@@ -11,8 +11,8 @@ import type {
   Category,
   EventTemplate,
   EventFilters,
-} from '../types';
-import { DEFAULT_CATEGORIES, CALENDAR_COLORS } from '../constants';
+} from '@/features/calendar/types';
+import { DEFAULT_CATEGORIES, CALENDAR_COLORS } from '@/features/calendar/constants';
 import {
   fetchEventsInRange,
   fetchEvent,
@@ -33,7 +33,7 @@ import {
   updateEventTemplate,
   deleteEventTemplate,
   listEventTemplates,
-} from './calendarThunks';
+} from '@/features/calendar/store/calendarThunks';
 
 /**
  * Calendar domain state

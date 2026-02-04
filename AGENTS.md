@@ -7,7 +7,7 @@ Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar,
 ```bash
 ./run.sh proto  # generate protos
 ./run.sh lint   # run linters
-./run.sh dev    # run backend + frontend
+./run.sh dev    # run backend + frontend + worker
 ./run.sh        # show all commands
 ```
 
@@ -72,9 +72,9 @@ When adding a new content type (e.g., `TASK`), update these files:
 **Frontend:**
 | File | Update |
 |------|--------|
-| `src/ui/src/utils/urnTypes.ts` | Add to `UrnType` const |
-| `src/ui/src/theme/urnColors.ts` | Add hex color and theme |
-| `src/ui/src/theme/contentTypes.ts` | Add to `CONTENT_TYPE_CONFIG` |
+| `src/ui/src/shared/utils/urnTypes.ts` | Add to `UrnType` const |
+| `src/ui/src/config/theme/urnColors.ts` | Add hex color and theme |
+| `src/ui/src/config/theme/contentTypes.ts` | Add to `CONTENT_TYPE_CONFIG` |
 | `src/ui/src/features/search/utils/queryParser.ts` | Add to `TYPE_KEYWORD_MAP` and `FILTER_PREFIXES` |
 | `src/ui/src/features/search/components/SearchResultsList.tsx` | Add to `SEARCH_RESULT_TYPE_TO_URN_TYPE` |
 
@@ -85,14 +85,17 @@ When adding a new content type (e.g., `TASK`), update these files:
 2. Always use async patterns in backend
 3. Always check permissions in domain operations
 4. Never hardcode colors in frontend - use theme system
-5. Use `@/` path alias in frontend imports
+5. ALWAYS use absolute imports with `@/` alias in frontend - NEVER use relative imports (`../` or `./`)
 6. All content MUST have a URN and be searchable
 7. All user-editable text MUST be stored as Markdown with `[[[label|urn]]]` mention support
-8. Use shared URN utilities (`@/utils/urn.ts`) for parsing and displaying URNs
-9. Use centralized URN type colors from `@/theme/urnColors.ts` - never define URN colors inline
+8. Use shared URN utilities (`@/shared/utils/urn.ts`) for parsing and displaying URNs
+9. Use centralized URN type colors from `@/config/theme/urnColors.ts` - never define URN colors inline
 10. Use the keyboard shortcuts framework from `@/features/settings` - never hardcode keyboard handlers
 11. Use the shared bookmarks system (`@/features/bookmarks`) - never add `is_pinned`/`is_starred`/`is_favorite` fields
 12. Always use `uv` to run python scripts
 13. All domain layouts MUST support Zen Mode - check `state.zenMode.isActive`
 14. Never use `export default` in frontend code - always use named exports
-15. All page components MUST use `useDocumentTitle()` hook for proper browser tab titles
+15. All page components MUST use `useDocumentTitle()` hook from `@/shared/hooks/useDocumentTitle`
+16. Use `pnpm` for package management in frontend (not npm or yarn)
+17. NEVER call setState synchronously in useEffect - use useState initializers or useMemo instead (see frontend.md for patterns)
+18. NEVER access refs during render - track dimensions in state with ResizeObserver instead

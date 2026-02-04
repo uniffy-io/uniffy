@@ -6,9 +6,9 @@
 
 import { useState } from 'react';
 import { UsersThree, Trash, Calendar } from '@phosphor-icons/react';
-import { PermissionLevelSelect } from './PermissionLevelSelect';
-import { isUserPermission, getPermissionLevelLabel } from '../hooks/useSharingHooks';
-import type { SerializedPermissionInfo } from '../store/sharingSlice';
+import { PermissionLevelSelect } from '@/features/sharing/components/PermissionLevelSelect';
+import { isUserPermission, getPermissionLevelLabel } from '@/features/sharing/hooks/useSharingHooks';
+import type { SerializedPermissionInfo } from '@/features/sharing/store/sharingSlice';
 
 interface PermissionRowProps {
     permission: SerializedPermissionInfo;

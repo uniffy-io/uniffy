@@ -13,7 +13,7 @@ import type {
     UploadChunksRequest,
     CompressZipRequest,
     ConcatChunksRequest,
-} from './types';
+} from '@/features/files/workers/types';
 
 // Track aborted operations
 const abortedOperations = new Set<string>();

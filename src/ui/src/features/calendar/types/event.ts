@@ -2,7 +2,7 @@
  * Event type definitions for the Calendar feature
  */
 
-import type { Attendee } from './attendee';
+import type { Attendee } from '@/features/calendar/types/attendee';
 
 /**
  * Recurrence patterns for repeating events

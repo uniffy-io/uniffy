@@ -351,6 +351,29 @@ class PermissionsOperations:
 
         return (permissions, owner)
 
+    async def get_permission_by_id(
+        self,
+        permission_id: UUID,
+    ) -> ContentPermission | None:
+        """
+        Get a permission by its ID.
+
+        Parameters
+        ----------
+        permission_id : UUID
+            ID of the permission.
+
+        Returns
+        -------
+        ContentPermission | None
+            The permission if found, None otherwise.
+
+        """
+        result = await self.session.execute(
+            select(ContentPermission).where(ContentPermission.id == permission_id)
+        )
+        return result.scalar_one_or_none()
+
     async def get_my_permission(
         self,
         user_id: UUID,
@@ -473,8 +496,16 @@ class PermissionsOperations:
         # Map content types to their model classes
         if content_type == ContentType.NOTE:
             from uniffy.core.models.notes.note import Note
+
             result = await self.session.execute(
                 select(Note.owner_id).where(Note.id == content_id)
+            )
+            return result.scalar_one_or_none()
+        elif content_type == ContentType.FILE:
+            from uniffy.core.models.files.file import File
+
+            result = await self.session.execute(
+                select(File.owner_id).where(File.id == content_id)
             )
             return result.scalar_one_or_none()
         # Add other content types as needed

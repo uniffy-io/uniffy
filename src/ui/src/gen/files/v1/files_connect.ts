@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CompleteUploadRequest, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateSavedFilterRequest, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadChunkResponse, DownloadFileRequest, EmptyTrashRequest, EmptyTrashResponse, FileResponse, FolderResponse, GetFileRequest, GetFilesTreeRequest, GetFilesTreeResponse, GetSavedFilterRequest, GetUploadStatusRequest, GetUploadStatusResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, MoveItemsRequest, MoveItemsResponse, RestoreFileRequest, RestoreFileVersionRequest, SavedFilterResponse, UpdateFileRequest, UpdateFolderRequest, UpdateSavedFilterRequest, UploadChunkRequest, UploadChunkResponse, UploadChunksResponse } from "./files_pb.js";
+import { AbortUploadRequest, AbortUploadResponse, BulkDeleteRequest, BulkDeleteResponse, CompleteUploadRequest, CopyItemsRequest, CopyItemsResponse, CreateFolderRequest, CreateSavedFilterRequest, DeleteFileRequest, DeleteFileResponse, DeleteFolderRequest, DeleteFolderResponse, DeleteSavedFilterRequest, DeleteSavedFilterResponse, DownloadChunkResponse, DownloadFileRequest, EmptyTrashRequest, EmptyTrashResponse, FileResponse, FolderResponse, GetFileRequest, GetFilesTreeRequest, GetFilesTreeResponse, GetSavedFilterRequest, GetUploadStatusRequest, GetUploadStatusResponse, InitiateUploadRequest, InitiateUploadResponse, ListFilesRequest, ListFilesResponse, ListFileVersionsRequest, ListFileVersionsResponse, ListSavedFiltersRequest, ListSavedFiltersResponse, MoveItemsRequest, MoveItemsResponse, RestoreFileRequest, RestoreFileVersionRequest, SavedFilterResponse, StreamFileRangeRequest, StreamFileRangeResponse, UpdateFileRequest, UpdateFolderRequest, UpdateSavedFilterRequest, UploadChunkRequest, UploadChunkResponse, UploadChunksResponse } from "./files_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -93,6 +93,18 @@ export const FilesService = {
       name: "DownloadFile",
       I: DownloadFileRequest,
       O: DownloadChunkResponse,
+      kind: MethodKind.ServerStreaming,
+    },
+    /**
+     * Stream file with byte range support for Service Worker media streaming.
+     * This RPC supports HTTP Range-like semantics for video/audio seeking.
+     *
+     * @generated from rpc files.v1.FilesService.StreamFileRange
+     */
+    streamFileRange: {
+      name: "StreamFileRange",
+      I: StreamFileRangeRequest,
+      O: StreamFileRangeResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**

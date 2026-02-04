@@ -6,8 +6,8 @@
  * - Future days: primary dashed line
  */
 
-import { useCurrentTime } from '../../hooks';
-import type { DayColumn } from '../../types';
+import { useCurrentTime } from '@/features/calendar/hooks';
+import type { DayColumn } from '@/features/calendar/types';
 
 interface CurrentTimeIndicatorProps {
   /** Array of day columns to render the indicator across */

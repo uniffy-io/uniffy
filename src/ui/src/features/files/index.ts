@@ -6,16 +6,17 @@
  */
 
 // Pages
-export { FilesPage } from './pages/FilesPage';
-export { FiltersPage } from './pages/FiltersPage';
-export { FilesTagsPage } from './pages/FilesTagsPage';
+export { FilesPage } from '@/features/files/pages/FilesPage';
+export { FiltersPage } from '@/features/files/pages/FiltersPage';
+export { FilesTagsPage } from '@/features/files/pages/FilesTagsPage';
 
 // Components
-export { FilesLayout } from './components/FilesLayout';
-export { FilesSidebar } from './components/sidebar/FilesSidebar';
-export { FilesList } from './components/list/FilesList';
-export { UploadDropzone } from './components/upload/UploadDropzone';
-export { UploadPanel } from './components/upload/UploadPanel';
+export { FilesLayout } from '@/features/files/components/FilesLayout';
+export { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
+export { FilesList } from '@/features/files/components/list/FilesList';
+export { UploadDropzone } from '@/features/files/components/upload/UploadDropzone';
+export { UploadPanel } from '@/features/files/components/upload/UploadPanel';
+export { FileViewerModal } from '@/features/files/components/viewer';
 
 // Store
 export {
@@ -45,8 +46,8 @@ export {
     deleteFile,
     restoreFile,
     initializeFilesData,
-} from './store';
-export type { SerializedFile } from './store';
+} from '@/features/files/store';
+export type { SerializedFile } from '@/features/files/store';
 
 export {
     filesTreeReducer,
@@ -59,8 +60,8 @@ export {
     createFolder,
     updateFolder,
     deleteFolder as deleteFolderThunk,
-} from './store';
-export type { FilesTreeState, SerializedTreeNode, SerializedFolder } from './store';
+} from '@/features/files/store';
+export type { FilesTreeState, SerializedTreeNode, SerializedFolder } from '@/features/files/store';
 
 export {
     uploadReducer,
@@ -78,8 +79,8 @@ export {
     toggleUploadPanel,
     setShowUploadPanel,
     clearUploads,
-} from './store';
-export type { UploadItem } from './store';
+} from '@/features/files/store';
+export type { UploadItem } from '@/features/files/store';
 
 // Selectors
 export {
@@ -90,16 +91,16 @@ export {
     selectAllTreeNodes,
     selectActiveUploadsArray,
     selectTotalPendingUploads,
-} from './store';
+} from '@/features/files/store';
 
 // Hooks
-export { useUploadProcessor } from './hooks/useUploadProcessor';
-export { useSavedFilters } from './hooks/useSavedFilters';
-export { useApplyFilter } from './hooks/useApplyFilter';
+export { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
+export { useSavedFilters } from '@/features/files/hooks/useSavedFilters';
+export { useApplyFilter } from '@/features/files/hooks/useApplyFilter';
 
 // API
-export { filesApi } from './api/filesApi';
-export { savedFiltersApi } from './api/savedFiltersApi';
+export { filesApi } from '@/features/files/api/filesApi';
+export { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
 
 // Saved Filters Store
 export {
@@ -115,8 +116,38 @@ export {
     selectPresetFilters,
     selectSavedFiltersLoading,
     selectSavedFiltersError,
-} from './store';
-export type { SerializedSavedFilter, SerializedFilterCriteria } from './store';
+} from '@/features/files/store';
+export type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store';
 
 // Filter Components
-export { FiltersDashboard, FilterCard, FilterBuilder } from './components/filters';
+export { FiltersDashboard, FilterCard, FilterBuilder } from '@/features/files/components/filters';
+
+// Viewer Store
+export {
+    viewerReducer,
+    openViewer,
+    closeViewer,
+    nextFile,
+    previousFile,
+    toggleFullscreen,
+    setFullscreen,
+    setPlaying,
+    togglePlay,
+    setCurrentTime,
+    setDuration,
+    setVolume,
+    setMuted,
+    toggleMute,
+    setZoom,
+    setPan,
+    setRotation,
+    resetImageView,
+    setPage,
+    setTotalPages,
+    setPdfZoom,
+    setViewerLoading,
+    setViewerError,
+} from '@/features/files/store';
+
+// Blob Cache (for clearing on logout)
+export { clearBlobCache } from '@/features/files/components/viewer/hooks/blobCache';

@@ -17,8 +17,8 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { IconPicker, renderIcon, type IconValue } from '@/components/icon-picker';
-import { cn } from '@/utils/cn';
-import type { SerializedFilterCriteria, SerializedSavedFilter, SerializedIconValue } from '../../store/savedFiltersSlice';
+import { cn } from '@/shared/utils/cn';
+import type { SerializedFilterCriteria, SerializedSavedFilter, SerializedIconValue } from '@/features/files/store/savedFiltersSlice';
 
 interface FilterBuilderProps {
     initialFilter?: SerializedSavedFilter;
@@ -250,7 +250,7 @@ export function FilterBuilder({
                                 icon.type === 'emoji' ? (
                                     <span className="text-lg">{icon.value}</span>
                                 ) : (
-                                    renderIcon(icon, 20)
+                                    renderIcon(icon, undefined, 20)
                                 )
                             ) : (
                                 <Funnel size={20} className="text-muted-foreground" />

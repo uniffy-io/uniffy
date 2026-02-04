@@ -19,14 +19,16 @@ import {
     FileArrowDown,
     Trash,
     Funnel,
+    SidebarSimple,
+    ShareNetwork,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { renderIcon } from '@/components/icon-picker';
 import { useNavigate } from 'react-router-dom';
-import { useSavedFilters } from '../../hooks/useSavedFilters';
-import { useApplyFilter } from '../../hooks/useApplyFilter';
+import { useSavedFilters } from '@/features/files/hooks/useSavedFilters';
+import { useApplyFilter } from '@/features/files/hooks/useApplyFilter';
 import {
     setCurrentFile,
     setViewMode,
@@ -44,21 +46,23 @@ import {
     clearSelection,
     exitSelectMode,
     clearActiveFilter,
-} from '../../store/filesSlice';
-import { updateFile } from '../../store/filesThunks';
-import { IconSizeSlider } from './IconSizeSlider';
-import { setSelectedFolder, deleteFolder, updateFolder } from '../../store/filesTreeSlice';
-import { selectSubfoldersForCurrentFolder } from '../../store/selectors';
-import type { SerializedFile } from '../../store/filesThunks';
-import type { SerializedTreeNode } from '../../store/filesTreeThunks';
-import { useSharingDialog } from '@/features/sharing';
+    toggleDetailsPanel,
+} from '@/features/files/store/filesSlice';
+import { openViewer } from '@/features/files/store/viewerSlice';
+import { updateFile } from '@/features/files/store/filesThunks';
+import { IconSizeSlider } from '@/features/files/components/list/IconSizeSlider';
+import { setSelectedFolder, deleteFolder, updateFolder } from '@/features/files/store/filesTreeSlice';
+import { selectSubfoldersForCurrentFolder } from '@/features/files/store/selectors';
+import type { SerializedFile } from '@/features/files/store/filesThunks';
+import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
+import { useSharingDialog, useMyPermission } from '@/features/sharing';
 import { toggleBookmark } from '@/features/bookmarks';
 import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
-import type { FileDownloadItem } from '../../utils/archiveDownload';
-import { collectAllDownloadFiles, createFileInfoArray } from '../../utils/folderDownload';
-import { FolderCard } from './FolderCard';
-import { FileCard } from './FileCard';
-import { ICON_SIZE_CONFIG, SORT_OPTIONS, SORT_ORDER_OPTIONS, type SortByValue, type SortOrderValue } from './constants';
+import type { FileDownloadItem } from '@/features/files/utils/archiveDownload';
+import { collectAllDownloadFiles, createFileInfoArray } from '@/features/files/utils/folderDownload';
+import { FolderCard } from '@/features/files/components/list/FolderCard';
+import { FileCard } from '@/features/files/components/list/FileCard';
+import { ICON_SIZE_CONFIG, SORT_OPTIONS, SORT_ORDER_OPTIONS, type SortByValue, type SortOrderValue } from '@/features/files/components/list/constants';
 
 
 interface FilesListProps {
@@ -80,6 +84,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const currentFileId = useAppSelector((state) => state.files.currentFileId);
+    const filesMap = useAppSelector((state) => state.files.files);
     const viewMode = useAppSelector((state) => state.files.viewMode);
     const iconSize = useAppSelector((state) => state.files.iconSize);
     const sortBy = useAppSelector((state) => state.files.filters.sortBy);
@@ -87,8 +92,14 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const viewScope = useAppSelector((state) => state.files.filters.viewScope);
     const userId = useAppSelector((state) => state.auth.user?.id);
 
+    // Get current file for share button
+    const currentFile = currentFileId ? filesMap[currentFileId] : null;
+
     // Active filter state
     const activeFilterId = useAppSelector((state) => state.files.activeFilter.id);
+
+    // Details panel state
+    const isDetailsPanelOpen = useAppSelector((state) => state.files.isDetailsPanelOpen);
 
     // Saved filters for dropdown
     const { filters: savedFilters } = useSavedFilters();
@@ -113,6 +124,12 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
 
     // Sharing dialog
     const { open: openSharingDialog } = useSharingDialog();
+
+    // Check if current user can share the selected file
+    const { permission: filePermission } = useMyPermission(
+        ContentType.FILE,
+        currentFile?.id ?? null
+    );
 
     // Close context menu on outside click
     useEffect(() => {
@@ -259,11 +276,22 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         return subfolders;
     }, [subfolders, viewScope, userId]);
 
+    // Single click - just select the file (for details panel)
     const handleSelectFile = useCallback(
         (fileId: string) => {
             dispatch(setCurrentFile(fileId));
         },
         [dispatch]
+    );
+
+    // Double click - open the file viewer
+    const handleOpenFile = useCallback(
+        (fileId: string) => {
+            dispatch(setCurrentFile(fileId));
+            const playlist = scopedFiles.map(f => f.id);
+            dispatch(openViewer({ fileId, playlist }));
+        },
+        [dispatch, scopedFiles]
     );
 
     const handleDeleteFile = useCallback(
@@ -327,7 +355,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                 if (filter.icon.type === 'emoji') {
                     icon = <span className="text-sm leading-none">{filter.icon.value}</span>;
                 } else {
-                    icon = renderIcon(filter.icon, 14);
+                    icon = renderIcon(filter.icon, undefined, 14);
                 }
             } else {
                 icon = <Funnel size={14} weight={filter.isPreset ? 'fill' : 'duotone'} className="text-primary" />;
@@ -732,6 +760,35 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                     />
                                 </>
                             )}
+
+                            {/* Share button (visible when a file is selected and user can share) */}
+                            {currentFile && filePermission?.canShare && (
+                                <>
+                                    <div className="h-6 w-px bg-border" />
+                                    <button
+                                        onClick={() => handleShare(currentFile.id, currentFile.filename)}
+                                        className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
+                                        title="Share"
+                                    >
+                                        <ShareNetwork size={20} weight="duotone" className="text-primary" />
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Details panel toggle */}
+                            <div className="h-6 w-px bg-border" />
+                            <button
+                                onClick={() => dispatch(toggleDetailsPanel())}
+                                className={cn(
+                                    'px-2 py-1 rounded-md transition-colors',
+                                    isDetailsPanelOpen
+                                        ? 'text-primary bg-primary/10'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                                )}
+                                title={isDetailsPanelOpen ? 'Hide details' : 'Show details'}
+                            >
+                                <SidebarSimple size={16} className="transform -scale-x-100" />
+                            </button>
                         </>
                     )}
                 </div>
@@ -823,6 +880,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 isSelectMode={isSelectMode}
                                 isChecked={selectedFolderIds.includes(folder.id)}
                                 onToggleCheck={handleToggleFolderCheck}
+                                canShare={true}
                             />
                         ))}
                         {/* Then files */}
@@ -832,6 +890,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 file={file}
                                 isSelected={currentFileId === file.id}
                                 onSelect={handleSelectFile}
+                                onOpen={handleOpenFile}
                                 onDelete={handleDeleteFile}
                                 onDownload={handleDownload}
                                 onShare={handleShare}
@@ -843,6 +902,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 isSelectMode={isSelectMode}
                                 isChecked={selectedFileIds.includes(file.id)}
                                 onToggleCheck={handleToggleFileCheck}
+                                canShare={file.ownerId === userId}
                             />
                         ))}
                     </div>
@@ -853,7 +913,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                     <div className="flex items-center gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border bg-muted/30">
                         {/* Checkbox column (only in select mode) */}
                         {isSelectMode && <div className="flex-shrink-0 w-5" />}
-                        <div className="w-6" />
+                        <div className="w-8" />
                         <div className="flex-1">Name</div>
                         <div className="w-36">Tags</div>
                         {/* Owner column (only in shared/organization views) */}
@@ -880,6 +940,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             isSelectMode={isSelectMode}
                             isChecked={selectedFolderIds.includes(folder.id)}
                             onToggleCheck={handleToggleFolderCheck}
+                            canShare={true}
                         />
                     ))}
 
@@ -890,6 +951,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             file={file}
                             isSelected={currentFileId === file.id}
                             onSelect={handleSelectFile}
+                            onOpen={handleOpenFile}
                             onDelete={handleDeleteFile}
                             onDownload={handleDownload}
                             onShare={handleShare}
@@ -900,6 +962,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             isSelectMode={isSelectMode}
                             isChecked={selectedFileIds.includes(file.id)}
                             onToggleCheck={handleToggleFileCheck}
+                            canShare={file.ownerId === userId}
                         />
                     ))}
                 </div>

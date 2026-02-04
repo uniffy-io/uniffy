@@ -3,7 +3,7 @@
  */
 
 import { Sun, Moon, Desktop, Check } from '@phosphor-icons/react';
-import { useSettings, useAppearanceSettings } from '../hooks/useSettings';
+import { useSettings, useAppearanceSettings } from '@/features/settings/hooks/useSettings';
 
 // Predefined accent colors (quick picks)
 const ACCENT_COLORS = [

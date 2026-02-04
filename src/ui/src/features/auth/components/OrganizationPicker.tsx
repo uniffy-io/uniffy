@@ -7,16 +7,25 @@ import type { MyOrganization } from "@/gen/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@/gen/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials, logout } from "../store/authSlice";
+import { setCredentials, logout } from "@/features/auth/store/authSlice";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
-import { clearTree } from "@/features/notes/store/notesTreeSlice";
+import { clearTree as clearNotesTree } from "@/features/notes/store/notesTreeSlice";
 import { clearBookmarks } from "@/features/bookmarks";
 import { clearSharing } from "@/features/sharing";
 import { clearAdmin } from "@/features/admin";
-import { setAccentColor, setFontFamily } from "@/theme/themeSlice";
+import {
+    clearBlobCache,
+    clearFiles,
+    clearTree as clearFilesTree,
+    clearUploads,
+    closeViewer,
+    clearSavedFilters,
+} from "@/features/files";
+import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
+import { useTheme } from "@/config/theme/ThemeProvider";
 import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
   Buildings,
   SignOut,
@@ -79,6 +88,8 @@ export function OrganizationPicker() {
   const accessToken = useAppSelector((state) => state.auth?.accessToken);
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
   const user = useAppSelector((state) => state.auth?.user);
+  const { resolvedTheme } = useTheme();
+  const isLightTheme = resolvedTheme !== 'dark';
 
   useEffect(() => {
     if (!accessToken) {
@@ -156,11 +167,21 @@ export function OrganizationPicker() {
     // Clear all user/org-specific state
     dispatch(logout());
     dispatch(resetSettings());
+    // Clear notes state
     dispatch(clearNotes());
-    dispatch(clearTree());
+    dispatch(clearNotesTree());
+    // Clear files state
+    dispatch(clearFiles());
+    dispatch(clearFilesTree());
+    dispatch(clearUploads());
+    dispatch(closeViewer());
+    dispatch(clearSavedFilters());
+    // Clear other state
     dispatch(clearBookmarks());
     dispatch(clearSharing());
     dispatch(clearAdmin());
+    // Clear file blob cache
+    clearBlobCache();
     // Navigate to auth page
     navigate('/auth');
   };
@@ -185,9 +206,12 @@ export function OrganizationPicker() {
             style={{ animation: 'org-slide-up 0.5s ease-out 0.1s forwards' }}
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-base">U</span>
-              </div>
+              <img
+                  src="/favicon.svg"
+                  alt="Uniffy"
+                  className="w-14 h-14"
+                  style={isLightTheme ? { filter: 'invert(1)' } : undefined}
+                />
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-foreground">
                   Select a workspace

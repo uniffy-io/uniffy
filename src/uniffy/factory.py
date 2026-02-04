@@ -1,19 +1,29 @@
+"""
+Application factory for UNIFFY.
+
+Creates and configures the FastAPI application with ConnectRPC services.
+"""
+
 import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
 
 load_dotenv()
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
+from starlette.types import ASGIApp, Receive, Scope, Send
 
+from uniffy.core.queue import close_queue, init_queue
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.db import close_db, init_db, seed_initial_data
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
+from uniffy.domains.files.http_routes import router as thumbnails_router
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
@@ -36,6 +46,59 @@ from uniffy.gen.users.v1.users_connect import UsersServiceASGIApplication
 from uniffy.observability import ObservabilityConfig, setup_observability
 from uniffy.observability.crpc import LoggingInterceptor, http_version_var
 from uniffy.observability.otel import instrument_fastapi
+
+
+class ConnectRPCDispatcher:
+    """
+    ASGI dispatcher for ConnectRPC services.
+
+    Routes requests to the appropriate ConnectRPC service based on path prefix.
+    Handles path stripping when mounted under a prefix (e.g., /api).
+    """
+
+    def __init__(self) -> None:
+        self.services: list[tuple[str, ASGIApp]] = []
+        self.fallback: ASGIApp | None = None
+
+    def add_service(self, prefix: str, app: ASGIApp) -> None:
+        """Add a service that handles paths starting with prefix."""
+        self.services.append((prefix, app))
+
+    def set_fallback(self, app: ASGIApp) -> None:
+        """Set a fallback app for non-ConnectRPC routes."""
+        self.fallback = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            return
+
+        path = scope.get("path", "")
+        root_path = scope.get("root_path", "")
+
+        # Strip the mount prefix from the path
+        # FastAPI's mount() sets root_path but doesn't strip the prefix from path
+        if root_path and path.startswith(root_path):
+            path = path[len(root_path):] or "/"
+
+        # Find matching service by prefix
+        for prefix, service_app in self.services:
+            if path.startswith(prefix):
+                service_scope = dict(scope)
+                service_scope["path"] = path
+                await service_app(service_scope, receive, send)
+                return
+
+        # Try fallback app
+        if self.fallback is not None:
+            fallback_scope = dict(scope)
+            fallback_scope["path"] = path
+            await self.fallback(fallback_scope, receive, send)
+            return
+
+        # No match found
+        if scope["type"] == "http":
+            await send({"type": "http.response.start", "status": 404, "headers": []})
+            await send({"type": "http.response.body", "body": b"Not Found"})
 
 
 def _setup_observability() -> None:
@@ -91,6 +154,13 @@ async def lifespan(app: FastAPI):
         logger.exception(f"Failed to initialize S3 storage: {e}")
         raise
 
+    # Initialize job queue (non-blocking - app can run without it)
+    try:
+        await init_queue()
+        logger.info("Job queue initialized successfully")
+    except Exception as e:
+        logger.warning(f"Job queue not available: {e}")
+
     try:
         await seed_initial_data()
         logger.info("Initial data seeded successfully")
@@ -102,6 +172,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down UNIFFY application...")
+    await close_queue()
     await close_s3()
     await close_meilisearch()
     await close_db()
@@ -109,7 +180,6 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    # Setup observability for this process (important for multi-worker mode)
     _setup_observability()
 
     app = FastAPI(
@@ -119,10 +189,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Add middleware to capture HTTP version and log requests
     @app.middleware("http")
     async def log_requests(request, call_next):
-        # Set HTTP version in context for ConnectRPC interceptor
         http_version_var.set(request.scope.get("http_version", "unknown"))
         try:
             response = await call_next(request)
@@ -131,7 +199,6 @@ def create_app() -> FastAPI:
             logger.exception(f"Unhandled exception in request {e}")
             raise
 
-    # Add CORS middleware
     cors_origins = _get_cors_origins()
     app.add_middleware(
         CORSMiddleware,
@@ -142,121 +209,77 @@ def create_app() -> FastAPI:
         expose_headers=["*"],
     )
 
-    # Mount ConnectRPC services
-    _mount_connect_services(app)
+    api_dispatcher = _create_api_dispatcher()
+    app.mount("/api", api_dispatcher)
 
     @app.get("/healthz")
     async def health_check():
         return {"status": "ok", "service": "uniffy"}
 
-    # Instrument FastAPI for observability
-    instrument_fastapi(app=app, exclude_paths=["/health", "/api/health"])
+    instrument_fastapi(app=app, exclude_paths=["/healthz"])
 
     logger.info(f"CORS allowed origins: {cors_origins}")
     return app
 
 
-def _mount_connect_services(app: FastAPI) -> None:
-    """Mount ConnectRPC services."""
-    logger.info("Mounting ConnectRPC services")
-
-    # Create logging interceptor for all services
+def _create_api_dispatcher() -> ConnectRPCDispatcher:
+    """Create the API dispatcher with all ConnectRPC services and HTTP routes."""
     logging_interceptor = LoggingInterceptor()
+    dispatcher = ConnectRPCDispatcher()
 
-    # Create and mount the auth service with logging interceptor
-    auth_service = AuthServiceImpl()
-    auth_app = AuthServiceASGIApplication(
-        auth_service,
-        interceptors=[logging_interceptor],
+    # ConnectRPC services
+    dispatcher.add_service(
+        "/auth.v1.AuthService",
+        AuthServiceASGIApplication(AuthServiceImpl(), interceptors=[logging_interceptor]),
     )
-    app.mount("/auth.v1.AuthService", auth_app)
-    logger.info("Mounted AuthService at /auth.v1.AuthService")
+    dispatcher.add_service(
+        "/notes.v1.NotesService",
+        NotesServiceASGIApplication(NotesServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/search.v1.SearchService",
+        SearchServiceASGIApplication(SearchServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/settings.v1.SettingsService",
+        SettingsServiceASGIApplication(SettingsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/bookmarks.v1.BookmarksService",
+        BookmarksServiceASGIApplication(BookmarksServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/permissions.v1.PermissionsService",
+        PermissionsServiceASGIApplication(
+            PermissionsServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/users.v1.UsersService",
+        UsersServiceASGIApplication(UsersServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/organizations.v1.OrganizationsService",
+        OrganizationsServiceASGIApplication(
+            OrganizationsServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/groups.v1.GroupsService",
+        GroupsServiceASGIApplication(GroupsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/cal.v1.CalendarService",
+        CalendarServiceASGIApplication(CalendarServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/files.v1.FilesService",
+        FilesServiceASGIApplication(FilesServiceImpl(), interceptors=[logging_interceptor]),
+    )
 
-    # Create and mount the notes service
-    notes_service = NotesServiceImpl()
-    notes_app = NotesServiceASGIApplication(
-        notes_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/notes.v1.NotesService", notes_app)
-    logger.info("Mounted NotesService at /notes.v1.NotesService")
+    # HTTP routes (thumbnails)
+    http_app = FastAPI()
+    http_app.include_router(thumbnails_router)
+    dispatcher.add_service("/thumbnails", http_app)
 
-    # Create and mount the search service
-    search_service = SearchServiceImpl()
-    search_app = SearchServiceASGIApplication(
-        search_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/search.v1.SearchService", search_app)
-    logger.info("Mounted SearchService at /search.v1.SearchService")
-
-    # Create and mount the settings service
-    settings_service = SettingsServiceImpl()
-    settings_app = SettingsServiceASGIApplication(
-        settings_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/settings.v1.SettingsService", settings_app)
-    logger.info("Mounted SettingsService at /settings.v1.SettingsService")
-
-    # Create and mount the bookmarks service
-    bookmarks_service = BookmarksServiceImpl()
-    bookmarks_app = BookmarksServiceASGIApplication(
-        bookmarks_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/bookmarks.v1.BookmarksService", bookmarks_app)
-    logger.info("Mounted BookmarksService at /bookmarks.v1.BookmarksService")
-
-    permissions_service = PermissionsServiceImpl()
-    permissions_app = PermissionsServiceASGIApplication(
-        permissions_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/permissions.v1.PermissionsService", permissions_app)
-    logger.info("Mounted PermissionsService at /permissions.v1.PermissionsService")
-
-    # Create and mount the users service
-    users_service = UsersServiceImpl()
-    users_app = UsersServiceASGIApplication(
-        users_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/users.v1.UsersService", users_app)
-    logger.info("Mounted UsersService at /users.v1.UsersService")
-
-    # Create and mount the organizations service
-    organizations_service = OrganizationsServiceImpl()
-    organizations_app = OrganizationsServiceASGIApplication(
-        organizations_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/organizations.v1.OrganizationsService", organizations_app)
-    logger.info("Mounted OrganizationsService at /organizations.v1.OrganizationsService")
-
-    # Create and mount the groups service
-    groups_service = GroupsServiceImpl()
-    groups_app = GroupsServiceASGIApplication(
-        groups_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/groups.v1.GroupsService", groups_app)
-    logger.info("Mounted GroupsService at /groups.v1.GroupsService")
-
-    # Create and mount the calendar service
-    calendar_service = CalendarServiceImpl()
-    calendar_app = CalendarServiceASGIApplication(
-        calendar_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/cal.v1.CalendarService", calendar_app)
-    logger.info("Mounted CalendarService at /cal.v1.CalendarService")
-
-    # Create and mount the files service
-    files_service = FilesServiceImpl()
-    files_app = FilesServiceASGIApplication(
-        files_service,
-        interceptors=[logging_interceptor],
-    )
-    app.mount("/files.v1.FilesService", files_app)
-    logger.info("Mounted FilesService at /files.v1.FilesService")
+    return dispatcher

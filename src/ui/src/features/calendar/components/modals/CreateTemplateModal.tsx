@@ -5,8 +5,8 @@
 
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/utils/cn';
-import { createEventTemplate, updateEventTemplate } from '../../store/calendarThunks';
+import { cn } from '@/shared/utils/cn';
+import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
 interface CreateTemplateModalProps {

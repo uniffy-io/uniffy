@@ -8,13 +8,13 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { NotesLayout } from '../components/NotesLayout';
-import { NotesSidebar } from '../components/sidebar/NotesSidebar';
+import { NotesLayout } from '@/features/notes/components/NotesLayout';
+import { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { initializeNotesData } from '../store/notesSlice';
-import { useNotesCacheSync } from '../hooks/useNotesCacheSync';
+import { initializeNotesData } from '@/features/notes/store/notesSlice';
+import { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
 import {
   Tag,
   Hash,
@@ -25,7 +25,7 @@ import {
   List,
   X,
 } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 
 interface TagData {
   name: string;

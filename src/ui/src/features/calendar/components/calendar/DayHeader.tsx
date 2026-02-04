@@ -2,8 +2,8 @@
  * DayHeader - Header cell showing day name and date
  */
 
-import type { DayColumn } from '../../types';
-import { cn } from '@/utils/cn';
+import type { DayColumn } from '@/features/calendar/types';
+import { cn } from '@/shared/utils/cn';
 
 interface DayHeaderProps {
   day: DayColumn;

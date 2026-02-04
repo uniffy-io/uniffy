@@ -17,7 +17,7 @@
  */
 
 import type { Store } from '@reduxjs/toolkit';
-import type { RootState, AppDispatch } from './store';
+import type { RootState, AppDispatch } from '@/app/store';
 
 // Store reference - set once during app initialization
 let _store: Store<RootState> | null = null;

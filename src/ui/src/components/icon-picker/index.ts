@@ -5,10 +5,10 @@
  */
 
 // Main component
-export { IconPicker } from './IconPicker';
+export { IconPicker } from '@/components/icon-picker/IconPicker';
 
 // Types
-export type { IconValue, NoteIcon } from './iconConstants';
+export type { IconValue, NoteIcon } from '@/components/icon-picker/iconConstants';
 
 // Constants
 export {
@@ -19,7 +19,7 @@ export {
     getIconCategories,
     getIconsByCategory,
     isValidIconName,
-} from './iconConstants';
+} from '@/components/icon-picker/iconConstants';
 
 // Utilities
 export {
@@ -27,4 +27,4 @@ export {
     getIconByName,
     getIconSvgPaths,
     drawIconOnCanvas,
-} from './iconUtils';
+} from '@/components/icon-picker/iconUtils';

@@ -7,14 +7,14 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 import {
     COMMON_EMOJIS,
     getIconCategories,
     getIconsByCategory,
     type IconValue,
-} from './iconConstants';
-import { getIconByName } from './iconUtils';
+} from '@/components/icon-picker/iconConstants';
+import { getIconByName } from '@/components/icon-picker/iconUtils';
 
 interface IconPickerProps {
     /** Currently selected icon */

@@ -7,9 +7,9 @@
 import { useCallback, useRef, useState } from 'react';
 import { CloudArrowUp } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
-import { cn } from '@/utils/cn';
-import { addToQueue } from '../../store/uploadSlice';
-import { storeFile } from '../../utils/fileStore';
+import { cn } from '@/shared/utils/cn';
+import { addToQueue } from '@/features/files/store/uploadSlice';
+import { storeFile } from '@/features/files/utils/fileStore';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
 interface UploadDropzoneProps {

@@ -4,9 +4,9 @@
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { CopySimple, Plus, PencilSimple, Trash } from '@phosphor-icons/react';
-import { openCreateTemplateModal, openEditTemplateModal, openEventModal } from '../../store';
-import { SidebarSection } from './SidebarSection';
-import { listEventTemplates, deleteEventTemplate } from '../../store/calendarThunks';
+import { openCreateTemplateModal, openEditTemplateModal, openEventModal } from '@/features/calendar/store';
+import { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
+import { listEventTemplates, deleteEventTemplate } from '@/features/calendar/store/calendarThunks';
 import { useEffect } from 'react';
 
 export function TemplateList() {

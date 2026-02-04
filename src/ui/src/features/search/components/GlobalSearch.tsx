@@ -8,9 +8,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
-import { useSearch } from '../hooks/useSearch';
-import { SearchResultsList } from './SearchResultsList';
-import { cn } from '@/utils/cn';
+import { useSearch } from '@/features/search/hooks/useSearch';
+import { SearchResultsList } from '@/features/search/components/SearchResultsList';
+import { cn } from '@/shared/utils/cn';
 import { useFormattedKeybinding } from '@/features/settings';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 

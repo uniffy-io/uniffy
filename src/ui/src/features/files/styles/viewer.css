@@ -1,0 +1,526 @@
+/**
+ * File Viewer Styles
+ *
+ * Cinematic dark theme for media viewing.
+ * Uses direct color values for reliability.
+ */
+
+@reference "tailwindcss";
+
+/* Base viewer container - sets up the dark cinematic context */
+.viewer-context {
+  /* All child elements inherit these color definitions */
+  color: #f8fafc; /* slate-50 - primary text */
+}
+
+.viewer-backdrop {
+  background: #0a0a0f; /* Near black with slight blue */
+}
+
+/* Glassmorphism toolbar */
+.viewer-toolbar {
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid hsl(var(--primary) / 0.15);
+  box-shadow: 0 4px 20px hsl(var(--primary) / 0.05);
+}
+
+/* Viewer button base styles */
+.viewer-btn {
+  @apply inline-flex items-center justify-center rounded-lg transition-all duration-150;
+  color: #f8fafc;
+}
+
+.viewer-btn:hover {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.3);
+}
+
+.viewer-btn:active {
+  background: hsl(var(--primary) / 0.2);
+}
+
+.viewer-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.viewer-btn:disabled:hover {
+  background: transparent;
+  box-shadow: none;
+  color: #f8fafc;
+}
+
+/* Primary action button (play, download) */
+.viewer-btn-primary {
+  @apply rounded-full;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.viewer-btn-primary:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* Navigation arrows */
+.viewer-nav-btn {
+  @apply absolute top-1/2 -translate-y-1/2 z-10 p-3 rounded-full;
+  background: rgba(10, 10, 15, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.viewer-nav-btn:hover {
+  background: hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary) / 0.5);
+  color: hsl(var(--primary));
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+}
+
+.viewer-nav-btn:active {
+  background: hsl(var(--primary) / 0.3);
+}
+
+.viewer-nav-btn.left {
+  left: 1rem;
+}
+
+.viewer-nav-btn.right {
+  right: 1rem;
+}
+
+/* File counter pill */
+.viewer-counter {
+  @apply absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-sm font-medium;
+  background: rgba(10, 10, 15, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid hsl(var(--primary) / 0.2);
+  color: #f8fafc;
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.15);
+}
+
+/* PDF page container */
+.viewer-pdf-content {
+  @apply w-full h-full overflow-auto flex justify-center p-6;
+  background: #0a0a0f;
+}
+
+/* Text viewer container */
+.viewer-text-container {
+  @apply w-full h-full overflow-auto;
+  background: #141420;
+}
+
+/* Audio waveform container */
+.viewer-audio-waveform {
+  @apply rounded-xl overflow-hidden;
+  background: #141420;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Volume slider */
+.viewer-volume-slider {
+  @apply h-1 rounded-full appearance-none cursor-pointer;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.viewer-volume-slider::-webkit-slider-thumb {
+  @apply appearance-none w-3 h-3 rounded-full;
+  background: #f8fafc;
+}
+
+.viewer-volume-slider::-moz-range-thumb {
+  @apply w-3 h-3 rounded-full border-0;
+  background: #f8fafc;
+}
+
+/* Loading states */
+.viewer-loading {
+  @apply w-full h-full flex items-center justify-center;
+  color: #94a3b8;
+}
+
+/* Error states */
+.viewer-error {
+  @apply w-full h-full flex flex-col items-center justify-center gap-4 p-8 text-center;
+  color: #94a3b8;
+}
+
+/* Unsupported file display */
+.viewer-unsupported {
+  @apply text-center max-w-md p-8;
+}
+
+.viewer-unsupported-icon {
+  color: #64748b; /* slate-500 */
+}
+
+.viewer-unsupported-title {
+  @apply text-xl font-semibold mb-2;
+  color: #f8fafc;
+}
+
+.viewer-unsupported-meta {
+  @apply text-sm mb-6 space-y-1;
+  color: #94a3b8;
+}
+
+.viewer-unsupported-message {
+  @apply mb-6;
+  color: #64748b;
+}
+
+/* Zoom display badge */
+.viewer-zoom-display {
+  @apply px-3 py-1 rounded-lg text-sm min-w-[4rem] text-center font-medium transition-all duration-150;
+  color: #f8fafc;
+  border: 1px solid transparent;
+}
+
+.viewer-zoom-display:hover {
+  background: hsl(var(--primary) / 0.15);
+  border-color: hsl(var(--primary) / 0.3);
+  color: hsl(var(--primary));
+}
+
+/* Divider */
+.viewer-divider {
+  @apply w-px h-6;
+  background: hsl(var(--primary) / 0.3);
+}
+
+/* Page indicator text */
+.viewer-page-indicator {
+  @apply text-sm min-w-[100px] text-center;
+  color: #f8fafc;
+}
+
+/* Time display */
+.viewer-time {
+  @apply text-sm;
+  color: #94a3b8;
+}
+
+/* File info in toolbar */
+.viewer-file-info {
+  @apply min-w-0;
+}
+
+.viewer-file-name {
+  @apply text-sm font-medium truncate;
+  color: #f8fafc;
+}
+
+.viewer-file-size {
+  @apply text-xs;
+  color: #94a3b8;
+}
+
+/* Animations */
+@keyframes viewer-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes viewer-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.viewer-animate-fade {
+  animation: viewer-fade-in 0.2s ease-out;
+}
+
+.viewer-animate-scale {
+  animation: viewer-scale-in 0.2s ease-out;
+}
+
+/* ============================================
+   AUDIO PLAYER - Cinematic Design
+   ============================================ */
+
+.audio-player-container {
+  @apply relative w-full h-full flex items-center justify-center overflow-hidden;
+}
+
+/* Ambient background glow */
+.audio-ambient-glow {
+  @apply absolute inset-0 pointer-events-none;
+  background: radial-gradient(ellipse 80% 50% at 50% 30%, hsl(var(--primary) / 0.15) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 40% at 30% 70%, hsl(var(--primary) / 0.1) 0%, transparent 50%),
+              radial-gradient(ellipse 50% 30% at 80% 60%, hsl(var(--primary) / 0.08) 0%, transparent 40%);
+}
+
+/* Floating particles */
+.audio-particles {
+  @apply absolute inset-0 pointer-events-none overflow-hidden;
+}
+
+.audio-particle {
+  @apply absolute w-1 h-1 rounded-full;
+  background: hsl(var(--primary) / 0.4);
+  bottom: -10px;
+  animation: particle-float 5s ease-in-out infinite;
+  box-shadow: 0 0 6px hsl(var(--primary) / 0.6);
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1);
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-400px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.audio-player-content {
+  @apply relative z-10 flex flex-col items-center max-w-lg w-full px-6;
+}
+
+/* Vinyl disc container */
+.audio-disc-container {
+  @apply relative mb-8;
+  width: 240px;
+  height: 240px;
+}
+
+.audio-progress-ring {
+  @apply absolute inset-0 w-full h-full;
+  filter: drop-shadow(0 0 8px hsl(var(--primary) / 0.4));
+}
+
+.audio-progress-arc {
+  transition: stroke-dashoffset 0.1s ease-out;
+}
+
+.audio-vinyl-disc {
+  @apply absolute rounded-full overflow-hidden;
+  top: 10px;
+  left: 10px;
+  width: 220px;
+  height: 220px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 50%, #16162a 100%);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.8),
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+.audio-vinyl-disc.spinning {
+  animation: disc-spin 3s linear infinite;
+}
+
+@keyframes disc-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.audio-disc-grooves {
+  @apply absolute inset-0 flex items-center justify-center;
+}
+
+.audio-disc-groove {
+  @apply absolute rounded-full;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.audio-disc-label {
+  @apply absolute rounded-full flex items-center justify-center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70px;
+  height: 70px;
+  background: hsl(var(--primary));
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    0 4px 12px hsl(var(--primary) / 0.4);
+}
+
+.audio-disc-icon {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.audio-disc-reflection {
+  @apply absolute inset-0 rounded-full pointer-events-none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+/* File info */
+.audio-info {
+  @apply text-center mb-6;
+}
+
+.audio-title {
+  @apply text-lg font-semibold mb-1 truncate max-w-full;
+  color: #f8fafc;
+}
+
+.audio-meta {
+  @apply text-sm;
+  color: #94a3b8;
+}
+
+/* Waveform wrapper */
+.audio-waveform-wrapper {
+  @apply w-full mb-4 rounded-xl overflow-hidden;
+  background: rgba(20, 20, 32, 0.6);
+  border: 1px solid hsl(var(--primary) / 0.15);
+  backdrop-filter: blur(8px);
+}
+
+.audio-waveform {
+  @apply p-4;
+}
+
+/* Time display */
+.audio-time-display {
+  @apply flex items-center justify-center gap-3 mb-6;
+}
+
+.audio-time-current {
+  @apply text-lg font-medium tabular-nums;
+  color: #f8fafc;
+}
+
+.audio-time-duration {
+  @apply text-lg tabular-nums;
+  color: #64748b;
+}
+
+.audio-time-divider {
+  @apply w-4 h-px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Main controls */
+.audio-controls {
+  @apply flex items-center justify-center gap-3 mb-6;
+}
+
+.audio-btn {
+  @apply p-3 rounded-full transition-all duration-200;
+  color: #e2e8f0;
+}
+
+.audio-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.audio-btn:active {
+  transform: scale(0.95);
+}
+
+.audio-btn-secondary {
+  @apply p-2.5 rounded-full transition-all duration-200;
+  color: #64748b;
+}
+
+.audio-btn-secondary:hover {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.audio-btn-secondary.active {
+  color: hsl(var(--primary));
+}
+
+/* Play button - main CTA */
+.audio-btn-play {
+  @apply relative p-1 rounded-full;
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.3), hsl(var(--primary) / 0.2));
+}
+
+.audio-btn-play::before {
+  @apply absolute inset-0 rounded-full opacity-0 transition-opacity duration-300;
+  content: '';
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.5), hsl(var(--primary) / 0.4));
+}
+
+.audio-btn-play:hover::before {
+  opacity: 1;
+}
+
+.audio-btn-play-inner {
+  @apply relative flex items-center justify-center w-14 h-14 rounded-full transition-all duration-200;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 4px 20px hsl(var(--primary) / 0.4);
+}
+
+.audio-btn-play:hover .audio-btn-play-inner {
+  transform: scale(1.05);
+  box-shadow: 0 6px 28px hsl(var(--primary) / 0.5);
+}
+
+.audio-btn-play:active .audio-btn-play-inner {
+  transform: scale(0.95);
+}
+
+/* Volume control */
+.audio-volume {
+  @apply flex items-center gap-3;
+}
+
+.audio-btn-volume {
+  @apply p-2 rounded-lg transition-all duration-200;
+  color: #94a3b8;
+}
+
+.audio-btn-volume:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.audio-volume-track {
+  @apply relative w-24 h-1.5 rounded-full overflow-hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.audio-volume-fill {
+  @apply absolute inset-y-0 left-0 rounded-full;
+  background: hsl(var(--primary));
+  transition: width 0.1s ease-out;
+}
+
+.audio-volume-input {
+  @apply absolute inset-0 w-full h-full opacity-0 cursor-pointer;
+}

@@ -14,7 +14,7 @@ import {
     deleteFolder,
     type SerializedTreeNode,
     type SerializedFolder,
-} from './filesTreeThunks';
+} from '@/features/files/store/filesTreeThunks';
 
 export interface FilesTreeState {
     // Tree nodes indexed by visibility section
@@ -322,4 +322,4 @@ export {
     deleteFolder,
     type SerializedTreeNode,
     type SerializedFolder,
-} from './filesTreeThunks';
+} from '@/features/files/store/filesTreeThunks';

@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppSelector } from '@/app/hooks';
-import { searchApi } from '../api/searchApi';
+import { searchApi } from '@/features/search/api/searchApi';
 import type { UrnMetadata } from '@/gen/search/v1/search_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 

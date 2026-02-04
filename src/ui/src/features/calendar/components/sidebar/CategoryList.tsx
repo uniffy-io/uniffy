@@ -9,9 +9,9 @@ import {
   openAddCategoryModal,
   openEditCategoryModal,
   deleteCategory,
-} from '../../store';
-import { SidebarSection } from './SidebarSection';
-import { cn } from '@/utils/cn';
+} from '@/features/calendar/store';
+import { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
+import { cn } from '@/shared/utils/cn';
 
 export function CategoryList() {
   const dispatch = useAppDispatch();

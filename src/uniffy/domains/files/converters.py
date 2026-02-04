@@ -14,6 +14,9 @@ from uniffy.gen.files.v1.files_pb2 import (
     File as ProtoFile,
 )
 from uniffy.gen.files.v1.files_pb2 import (
+    FileMetadata as ProtoFileMetadata,
+)
+from uniffy.gen.files.v1.files_pb2 import (
     FileOwner as ProtoFileOwner,
 )
 from uniffy.gen.files.v1.files_pb2 import (
@@ -133,7 +136,62 @@ def file_to_proto(
             )
         )
 
+    # Build metadata from file_metadata JSONB field
+    if file.file_metadata:
+        proto_file.metadata.CopyFrom(_build_file_metadata(file.file_metadata))
+
     return proto_file
+
+
+def _build_file_metadata(metadata: dict) -> ProtoFileMetadata:
+    """
+    Build FileMetadata proto from file_metadata dict.
+
+    Parameters
+    ----------
+    metadata : dict
+        The file_metadata JSONB field from the File model.
+
+    Returns
+    -------
+    ProtoFileMetadata
+        Proto message with extracted metadata.
+
+    """
+    proto_meta = ProtoFileMetadata(
+        has_thumbnail="thumbnail_key" in metadata,
+    )
+
+    # Dimensions
+    if "width" in metadata:
+        proto_meta.width = int(metadata["width"])
+    if "height" in metadata:
+        proto_meta.height = int(metadata["height"])
+
+    # Image format and color mode
+    if "format" in metadata:
+        proto_meta.format = str(metadata["format"])
+    if "mode" in metadata:
+        proto_meta.color_mode = str(metadata["mode"])
+
+    # Duration for video/audio
+    if "duration_seconds" in metadata:
+        proto_meta.duration_seconds = float(metadata["duration_seconds"])
+
+    # PDF page count
+    if "page_count" in metadata:
+        proto_meta.page_count = int(metadata["page_count"])
+
+    # EXIF data (convert all values to strings)
+    if "exif" in metadata and isinstance(metadata["exif"], dict):
+        for key, value in metadata["exif"].items():
+            proto_meta.exif[str(key)] = str(value)
+
+    # Error message if extraction failed
+    if "extraction_error" in metadata:
+        proto_meta.error = str(metadata["extraction_error"])
+
+    return proto_meta
 
 
 def folder_to_proto(folder: Folder) -> ProtoFolder:

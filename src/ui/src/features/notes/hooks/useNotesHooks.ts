@@ -9,8 +9,8 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
     autosaveNote,
     fetchNote,
-} from '../store/notesSlice';
-import { invalidateNotePreviewCache } from '../components/editor/plugins/mention/useUrnPreview';
+} from '@/features/notes/store/notesSlice';
+import { invalidateNotePreviewCache } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
 import {
     setDraftContent,
     setAutosaveSaving,
@@ -18,7 +18,7 @@ import {
     setAutosaveError,
     markSaved,
     markUnsaved,
-} from '../store/editorSlice';
+} from '@/features/notes/store/editorSlice';
 
 const AUTOSAVE_DELAY_MS = 2000; // 2 seconds debounce
 

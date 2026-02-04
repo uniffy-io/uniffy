@@ -16,7 +16,7 @@ import {
     copyNote,
     initializeNotesData,
     type SerializedNote,
-} from './notesThunks';
+} from '@/features/notes/store/notesThunks';
 
 // LocalStorage key for last opened note
 const LAST_NOTE_STORAGE_KEY = 'uniffy-last-note';
@@ -492,4 +492,4 @@ export {
     moveNote,
     copyNote,
     initializeNotesData,
-} from './notesThunks';
+} from '@/features/notes/store/notesThunks';

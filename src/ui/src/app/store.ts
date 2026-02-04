@@ -5,17 +5,17 @@ import storage from 'redux-persist/lib/storage';
 import authReducer from '@/features/auth/store/authSlice';
 import type { AuthState } from '@/features/auth/store/authSlice';
 import bookmarksReducer from '@/features/bookmarks/store/bookmarksSlice';
-import themeReducer from '@/theme/themeSlice';
+import themeReducer from '@/config/theme/themeSlice';
 import notesReducer from '@/features/notes/store/notesSlice';
 import notesTreeReducer from '@/features/notes/store/notesTreeSlice';
 import editorReducer from '@/features/notes/store/editorSlice';
 import settingsReducer from '@/features/settings/store/settingsSlice';
 import sharingReducer from '@/features/sharing/store/sharingSlice';
 import adminReducer from '@/features/admin/store/adminSlice';
-import { setStoreRef } from './storeRef';
+import { setStoreRef } from '@/app/storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
-import zenModeReducer from './zenModeSlice';
-import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer } from '@/features/files';
+import zenModeReducer from '@/app/zenModeSlice';
+import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, viewerReducer } from '@/features/files';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -76,6 +76,7 @@ const rootReducer = combineReducers({
   filesTree: filesTreeReducer,
   upload: uploadReducer,
   savedFilters: savedFiltersReducer,
+  fileViewer: viewerReducer,
 });
 
 // Migrations to handle state shape changes across versions

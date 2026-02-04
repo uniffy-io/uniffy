@@ -3,18 +3,11 @@
  */
 
 import React, { useState } from 'react';
-import { useKeyboardBindings, formatShortcut } from '../hooks/useKeyboardShortcuts';
-import { useSettings } from '../hooks/useSettings';
+import { useKeyboardBindings, formatShortcut } from '@/features/settings/hooks/useKeyboardShortcuts';
+import { useSettings } from '@/features/settings/hooks/useSettings';
 
 // Group shortcuts by category
 const SHORTCUT_CATEGORIES = [
-    {
-        id: 'notes',
-        label: 'Notes',
-        shortcuts: [
-            { action: 'notes.toggleSidebar', label: 'Toggle Sidebar' },
-        ],
-    },
     {
         id: 'navigation',
         label: 'Navigation',
@@ -30,6 +23,23 @@ const SHORTCUT_CATEGORIES = [
             { action: 'app.commandPalette', label: 'Command Palette' },
             { action: 'app.help', label: 'Help' },
             { action: 'app.zenMode', label: 'Zen Mode' },
+            { action: 'app.toggleSidebar', label: 'Toggle Sidebar' },
+        ],
+    },
+    {
+        id: 'viewer',
+        label: 'File Viewer',
+        shortcuts: [
+            { action: 'viewer.close', label: 'Close Viewer' },
+            { action: 'viewer.next', label: 'Next File' },
+            { action: 'viewer.previous', label: 'Previous File' },
+            { action: 'viewer.togglePlay', label: 'Play/Pause' },
+            { action: 'viewer.fullscreen', label: 'Toggle Fullscreen' },
+            { action: 'viewer.zoomIn', label: 'Zoom In' },
+            { action: 'viewer.zoomOut', label: 'Zoom Out' },
+            { action: 'viewer.zoomReset', label: 'Reset Zoom' },
+            { action: 'viewer.rotateRight', label: 'Rotate Right' },
+            { action: 'viewer.download', label: 'Download File' },
         ],
     },
 ];

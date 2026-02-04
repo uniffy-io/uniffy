@@ -7,11 +7,11 @@
  * - Calendar grid (week/day/month view)
  */
 
-import { CalendarHeader } from './CalendarHeader';
+import { CalendarHeader } from '@/features/calendar/components/layout/CalendarHeader';
 import { useAppSelector } from '@/app/hooks';
-import { WeekView } from '../calendar/WeekView';
-import { DayView } from '../calendar/DayView';
-import { MonthView } from '../calendar/MonthView';
+import { WeekView } from '@/features/calendar/components/calendar/WeekView';
+import { DayView } from '@/features/calendar/components/calendar/DayView';
+import { MonthView } from '@/features/calendar/components/calendar/MonthView';
 
 export function MainContent() {
   const viewMode = useAppSelector((state) => state.calendarUi.viewMode);

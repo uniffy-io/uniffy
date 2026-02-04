@@ -8,12 +8,12 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { FilesLayout } from '../components/FilesLayout';
-import { FilesSidebar } from '../components/sidebar/FilesSidebar';
+import { FilesLayout } from '@/features/files/components/FilesLayout';
+import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { initializeFilesData } from '../store/filesSlice';
+import { initializeFilesData } from '@/features/files/store/filesSlice';
 import {
     Tag,
     Hash,
@@ -23,9 +23,9 @@ import {
     List,
     X,
 } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
-import { renderFileIcon } from '../components/list/utils';
-import { formatFileSize } from '../components/list/utils';
+import { cn } from '@/shared/utils/cn';
+import { renderFileIcon } from '@/features/files/components/list/utils';
+import { formatFileSize } from '@/features/files/components/list/utils';
 
 interface TagData {
     name: string;

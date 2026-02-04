@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import type { RecurrencePattern, DayOfWeek } from './event';
+import type { RecurrencePattern, DayOfWeek } from '@/features/calendar/types/event';
 
 /**
  * Event form validation schema

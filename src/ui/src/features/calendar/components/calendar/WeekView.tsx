@@ -4,15 +4,15 @@
 
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { updateEventThunk } from '../../store';
-import { useCalendarNavigation, useCalendarEvents } from '../../hooks';
-import { TimeColumn, TIME_COLUMN_TOP_PADDING } from './TimeColumn';
-import { DayHeadersRow } from './DayHeader';
-import { GridLines } from './GridLines';
-import { CurrentTimeIndicator } from './CurrentTimeIndicator';
-import { EventBlock } from './EventBlock';
-import { QuickEventModal } from '../modals/QuickEventModal';
-import { GRID, LAYOUT } from '../../constants';
+import { updateEventThunk } from '@/features/calendar/store';
+import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
+import { TimeColumn, TIME_COLUMN_TOP_PADDING } from '@/features/calendar/components/calendar/TimeColumn';
+import { DayHeadersRow } from '@/features/calendar/components/calendar/DayHeader';
+import { GridLines } from '@/features/calendar/components/calendar/GridLines';
+import { CurrentTimeIndicator } from '@/features/calendar/components/calendar/CurrentTimeIndicator';
+import { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
+import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
+import { GRID, LAYOUT } from '@/features/calendar/constants';
 
 export function WeekView() {
   const dispatch = useAppDispatch();

@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { SquaresFour, Kanban, TreeStructure } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
-import { UserMenu } from './UserMenu';
+import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
-import { cn } from '@/utils/cn';
-import { UrnType } from '@/utils/urn';
-import { getContentTypeConfig } from '@/theme/contentTypes';
+import { cn } from '@/shared/utils/cn';
+import { UrnType } from '@/shared/utils/urn';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
 
 // Get content type configs for nav items

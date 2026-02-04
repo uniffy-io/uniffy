@@ -5,12 +5,12 @@
  */
 
 import { useAppSelector } from '@/app/hooks';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { FilesLayout } from '../components/FilesLayout';
-import { FilesSidebar } from '../components/sidebar/FilesSidebar';
-import { FiltersDashboard } from '../components/filters';
-import { cn } from '@/utils/cn';
+import { FilesLayout } from '@/features/files/components/FilesLayout';
+import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
+import { FiltersDashboard } from '@/features/files/components/filters';
+import { cn } from '@/shared/utils/cn';
 
 export function FiltersPage() {
     useDocumentTitle('Filters');

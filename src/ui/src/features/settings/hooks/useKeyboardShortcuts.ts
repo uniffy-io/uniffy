@@ -9,8 +9,6 @@ import { useAppSelector } from '@/app/hooks';
  * Default keyboard shortcuts (fallback when settings not loaded).
  */
 const DEFAULT_SHORTCUTS: Record<string, string> = {
-    // Notes actions
-    'notes.toggleSidebar': 'Ctrl+B',
     // Navigation actions
     'nav.search': 'Ctrl+K',
     // App actions
@@ -18,6 +16,18 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'app.commandPalette': 'Ctrl+Shift+P',
     'app.help': 'F1',
     'app.zenMode': 'Ctrl+\\',
+    'app.toggleSidebar': 'Ctrl+B',
+    // File viewer actions
+    'viewer.close': 'Escape',
+    'viewer.next': 'ArrowRight',
+    'viewer.previous': 'ArrowLeft',
+    'viewer.togglePlay': 'Space',
+    'viewer.fullscreen': 'F',
+    'viewer.zoomIn': '=',
+    'viewer.zoomOut': '-',
+    'viewer.zoomReset': '0',
+    'viewer.rotateRight': 'R',
+    'viewer.download': 'Ctrl+S',
 };
 
 /**

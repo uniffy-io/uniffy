@@ -2,7 +2,6 @@ from . import config, logger, otel
 from .config import LogLevel, ObservabilityConfig
 from .crpc import LoggingInterceptor
 from .logger import configure_loguru, disable_leveled_namespace
-from .utils import log_timeit
 
 
 def setup_observability(config: ObservabilityConfig):
@@ -68,7 +67,6 @@ __all__ = [
     "config",
     "configure_loguru",
     "disable_leveled_namespace",
-    "log_timeit",
     "LogLevel",
     "LoggingInterceptor",
     "ObservabilityConfig",

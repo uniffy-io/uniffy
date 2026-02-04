@@ -29,8 +29,8 @@ export {
     deleteFile,
     restoreFile,
     initializeFilesData,
-} from './filesSlice';
-export type { SerializedFile } from './filesThunks';
+} from '@/features/files/store/filesSlice';
+export type { SerializedFile } from '@/features/files/store/filesThunks';
 
 export {
     default as filesTreeReducer,
@@ -44,9 +44,9 @@ export {
     createFolder,
     updateFolder,
     deleteFolder,
-} from './filesTreeSlice';
-export type { FilesTreeState, SerializedTreeNode, SerializedFolder } from './filesTreeSlice';
-export type { SerializedTreeNode as TreeNode, SerializedFolder as Folder } from './filesTreeThunks';
+} from '@/features/files/store/filesTreeSlice';
+export type { FilesTreeState, SerializedTreeNode, SerializedFolder } from '@/features/files/store/filesTreeSlice';
+export type { SerializedTreeNode as TreeNode, SerializedFolder as Folder } from '@/features/files/store/filesTreeThunks';
 
 export {
     default as uploadReducer,
@@ -64,8 +64,8 @@ export {
     toggleUploadPanel,
     setShowUploadPanel,
     clearUploads,
-} from './uploadSlice';
-export type { UploadItem } from './uploadSlice';
+} from '@/features/files/store/uploadSlice';
+export type { UploadItem } from '@/features/files/store/uploadSlice';
 
 // Memoized selectors
 export {
@@ -77,7 +77,7 @@ export {
     selectAllTreeNodes,
     selectActiveUploadsArray,
     selectTotalPendingUploads,
-} from './selectors';
+} from '@/features/files/store/selectors';
 
 // Saved filters
 export {
@@ -97,5 +97,32 @@ export {
     selectSavedFiltersLoading,
     selectSavedFiltersError,
     selectSavingFilter,
-} from './savedFiltersSlice';
-export type { SerializedSavedFilter, SerializedFilterCriteria, SerializedIconValue } from './savedFiltersSlice';
+} from '@/features/files/store/savedFiltersSlice';
+export type { SerializedSavedFilter, SerializedFilterCriteria, SerializedIconValue } from '@/features/files/store/savedFiltersSlice';
+
+// File viewer
+export {
+    viewerReducer,
+    openViewer,
+    closeViewer,
+    nextFile,
+    previousFile,
+    toggleFullscreen,
+    setFullscreen,
+    setPlaying,
+    togglePlay,
+    setCurrentTime,
+    setDuration,
+    setVolume,
+    setMuted,
+    toggleMute,
+    setZoom,
+    setPan,
+    setRotation,
+    resetImageView,
+    setPage,
+    setTotalPages,
+    setPdfZoom,
+    setLoading as setViewerLoading,
+    setError as setViewerError,
+} from '@/features/files/store/viewerSlice';

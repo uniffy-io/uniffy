@@ -5,8 +5,8 @@
  */
 
 import { Funnel } from '@phosphor-icons/react';
-import { FilterCard } from './FilterCard';
-import type { SerializedSavedFilter } from '../../store/savedFiltersSlice';
+import { FilterCard } from '@/features/files/components/filters/FilterCard';
+import type { SerializedSavedFilter } from '@/features/files/store/savedFiltersSlice';
 
 interface SavedFiltersListProps {
     filters: SerializedSavedFilter[];

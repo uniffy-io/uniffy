@@ -10,11 +10,11 @@ import { MagnifyingGlass, Tag } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
-import { cn } from '@/utils/cn';
-import { UrnType } from '@/utils/urn';
-import { type UrnTypeTheme } from '@/theme/urnColors';
-import { getContentTypeConfig } from '@/theme/contentTypes';
-import { stripMarkdown } from '../utils/stripMarkdown';
+import { cn } from '@/shared/utils/cn';
+import { UrnType } from '@/shared/utils/urn';
+import { type UrnTypeTheme } from '@/config/theme/urnColors';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
+import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 
 /** Map SearchResultType to UrnType */
 const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {

@@ -15,8 +15,11 @@ import {
     restoreFile,
     initializeFilesData,
     type SerializedFile,
-} from './filesThunks';
-import type { SerializedFilterCriteria } from './savedFiltersSlice';
+} from '@/features/files/store/filesThunks';
+import type { SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
+
+// Details panel tabs
+export type DetailsPanelTab = 'info' | 'metadata' | 'permissions';
 
 // LocalStorage key for files view settings
 const FILES_VIEW_STORAGE_KEY = 'uniffy-files-view';
@@ -108,6 +111,10 @@ interface FilesState {
 
     // Icon size for grid view (0 = small, 1 = medium, 2 = large, 3 = extra large)
     iconSize: number;
+
+    // Details panel state (right side panel for file info/metadata)
+    isDetailsPanelOpen: boolean;
+    detailsPanelTab: DetailsPanelTab;
 }
 
 // Load persisted view settings
@@ -148,6 +155,8 @@ const initialState: FilesState = {
     },
     viewMode: persistedViewSettings.viewMode,
     iconSize: persistedViewSettings.iconSize,
+    isDetailsPanelOpen: false,
+    detailsPanelTab: 'info',
 };
 
 export const filesSlice = createSlice({
@@ -376,6 +385,19 @@ export const filesSlice = createSlice({
             saveFilesViewSettings({ viewMode: state.viewMode, iconSize: state.iconSize });
         },
 
+        // Details panel
+        toggleDetailsPanel: (state) => {
+            state.isDetailsPanelOpen = !state.isDetailsPanelOpen;
+        },
+
+        setDetailsPanelOpen: (state, action: PayloadAction<boolean>) => {
+            state.isDetailsPanelOpen = action.payload;
+        },
+
+        setDetailsPanelTab: (state, action: PayloadAction<DetailsPanelTab>) => {
+            state.detailsPanelTab = action.payload;
+        },
+
         // Clear all files (for logout)
         clearFiles: (state) => {
             state.files = {};
@@ -530,6 +552,9 @@ export const {
     setPagination,
     setViewMode,
     setIconSize,
+    toggleDetailsPanel,
+    setDetailsPanelOpen,
+    setDetailsPanelTab,
     clearFiles,
 } = filesSlice.actions;
 
@@ -543,4 +568,4 @@ export {
     deleteFile,
     restoreFile,
     initializeFilesData,
-} from './filesThunks';
+} from '@/features/files/store/filesThunks';

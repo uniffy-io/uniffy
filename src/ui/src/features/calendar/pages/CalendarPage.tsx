@@ -9,20 +9,21 @@
  * - /calendar/:eventId - Shows the calendar with a specific event selected and detail panel open
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { cn } from '@/utils/cn';
+import { useShortcutHandler } from '@/features/settings';
+import { cn } from '@/shared/utils/cn';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { CalendarLayout, LeftSidebar, MainContent, DetailPanel } from '../components/layout';
-import { QuickEventModal } from '../components/modals/QuickEventModal';
-import { AddCalendarModal } from '../components/modals/AddCalendarModal';
-import { AddCategoryModal } from '../components/modals/AddCategoryModal';
-import { CreateTemplateModal } from '../components/modals/CreateTemplateModal';
-import { closeEventModal, closeAddCalendarModal, closeAddCategoryModal, closeCreateTemplateModal, selectEvent, setCurrentDate } from '../store';
-import { fetchEventsInRange, fetchCalendars, fetchCategories, fetchEvent } from '../store/calendarThunks';
-import { toDateString } from '../utils';
+import { CalendarLayout, LeftSidebar, MainContent, DetailPanel } from '@/features/calendar/components/layout';
+import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
+import { AddCalendarModal } from '@/features/calendar/components/modals/AddCalendarModal';
+import { AddCategoryModal } from '@/features/calendar/components/modals/AddCategoryModal';
+import { CreateTemplateModal } from '@/features/calendar/components/modals/CreateTemplateModal';
+import { closeEventModal, closeAddCalendarModal, closeAddCategoryModal, closeCreateTemplateModal, selectEvent, setCurrentDate, toggleSidebar } from '@/features/calendar/store';
+import { fetchEventsInRange, fetchCalendars, fetchCategories, fetchEvent } from '@/features/calendar/store/calendarThunks';
+import { toDateString } from '@/features/calendar/utils';
 
 export function CalendarPage() {
   const dispatch = useAppDispatch();
@@ -46,6 +47,13 @@ export function CalendarPage() {
   const selectedEvent = selectedEventId ? events[selectedEventId] : null;
   const pageTitle = selectedEvent?.title || 'Calendar';
   useDocumentTitle(pageTitle);
+
+  // Keyboard shortcut for toggling sidebar (global shortcut)
+  const handleToggleSidebar = useCallback(() => {
+    dispatch(toggleSidebar());
+  }, [dispatch]);
+
+  useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
   // Fetch calendars and categories when the page loads or organization changes
   useEffect(() => {

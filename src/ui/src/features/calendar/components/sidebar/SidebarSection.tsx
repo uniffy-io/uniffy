@@ -4,9 +4,9 @@
 
 import { CaretDown } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { toggleSectionCollapse } from '../../store';
-import type { SidebarSectionId } from '../../types';
-import { cn } from '@/utils/cn';
+import { toggleSectionCollapse } from '@/features/calendar/store';
+import type { SidebarSectionId } from '@/features/calendar/types';
+import { cn } from '@/shared/utils/cn';
 import type { ReactNode } from 'react';
 
 interface SidebarSectionProps {

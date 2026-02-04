@@ -3,9 +3,9 @@
  * Handles event block placement, overlap detection, and sizing
  */
 
-import type { CalendarEvent, PositionedEvent, MultiDayPosition } from '../types';
-import { GRID } from '../constants';
-import { parseISO, getDurationMinutes, format } from './dateUtils';
+import type { CalendarEvent, PositionedEvent, MultiDayPosition } from '@/features/calendar/types';
+import { GRID } from '@/features/calendar/constants';
+import { parseISO, getDurationMinutes, format } from '@/features/calendar/utils/dateUtils';
 import { formatInTimeZone } from 'date-fns-tz';
 
 /**

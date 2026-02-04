@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthForms } from '@/features/auth/components/AuthForms';
 import { OrganizationPicker } from '@/features/auth/components/OrganizationPicker';
-import { MainLayout } from '@/layouts/MainLayout';
+import { MainLayout } from '@/shared/layouts/MainLayout';
 import { Home } from '@/features/home/Home';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminRoute } from '@/features/admin/components/AdminRoute';

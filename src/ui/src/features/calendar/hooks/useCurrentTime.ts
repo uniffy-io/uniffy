@@ -3,8 +3,8 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { getCurrentTimeInfo, isDateToday } from '../utils';
-import { GRID } from '../constants';
+import { getCurrentTimeInfo, isDateToday } from '@/features/calendar/utils';
+import { GRID } from '@/features/calendar/constants';
 
 interface CurrentTimeInfo {
   hour: number;

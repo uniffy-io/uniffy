@@ -10,8 +10,8 @@
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useAppSelector } from '@/app/hooks';
-import { LAYOUT } from '../../constants';
-import { loadPanelLayout, savePanelLayout } from '@/utils/panelStorage';
+import { LAYOUT } from '@/features/calendar/constants';
+import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
 
 interface CalendarLayoutProps {
   sidebar: ReactNode;

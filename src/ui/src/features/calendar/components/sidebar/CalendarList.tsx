@@ -9,9 +9,9 @@ import {
   openAddCalendarModal,
   openEditCalendarModal,
   deleteCalendar,
-} from '../../store';
-import { SidebarSection } from './SidebarSection';
-import { cn } from '@/utils/cn';
+} from '@/features/calendar/store';
+import { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
+import { cn } from '@/shared/utils/cn';
 
 export function CalendarList() {
   const dispatch = useAppDispatch();

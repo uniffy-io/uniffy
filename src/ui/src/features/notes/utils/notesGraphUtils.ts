@@ -8,10 +8,10 @@
 import { NodeType } from '@/gen/notes/v1/notes_pb';
 import type { UrnMetadata } from '@/gen/search/v1/search_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
-import { parseUrn, UrnType } from '@/utils/urn';
-import type { SerializedNote } from '../store/notesThunks';
-import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
-import { getContentTypeLabel } from '@/theme/contentTypes';
+import { parseUrn, UrnType } from '@/shared/utils/urn';
+import type { SerializedNote } from '@/features/notes/store/notesThunks';
+import { URN_TYPE_HEX_COLORS } from '@/config/theme/urnColors';
+import { getContentTypeLabel } from '@/config/theme/contentTypes';
 
 /** Custom icon for a note */
 export interface NoteIconData {

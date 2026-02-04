@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import type { MemberInfo } from '@/gen/common/v1/common_pb';
-import { organizationApi } from '../../api/organizationApi';
+import { organizationApi } from '@/features/calendar/api/organizationApi';
 import { User, X } from '@phosphor-icons/react';
-import type { Attendee } from '../../types';
+import type { Attendee } from '@/features/calendar/types';
 
 interface AttendeesSelectorProps {
   attendees: Attendee[];

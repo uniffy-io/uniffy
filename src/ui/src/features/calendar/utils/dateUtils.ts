@@ -37,7 +37,7 @@ import {
   eachDayOfInterval,
 } from 'date-fns';
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
-import type { DayColumn, ViewMode } from '../types';
+import type { DayColumn, ViewMode } from '@/features/calendar/types';
 
 /**
  * Get the dates for a week containing the given date

@@ -10,14 +10,14 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';
-import { searchApi } from '../api/searchApi';
+import { searchApi } from '@/features/search/api/searchApi';
 import type { SearchResultItem, SearchResultType } from '@/gen/search/v1/search_pb';
 import {
     parseSearchQuery,
     hasActiveFilters,
     type ParsedQuery,
     type SearchFilters,
-} from '../utils/queryParser';
+} from '@/features/search/utils/queryParser';
 
 const DEBOUNCE_DELAY_MS = 150;
 
@@ -178,4 +178,4 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
 
 // Re-export types and utilities for convenience
 export type { ParsedQuery, SearchFilters };
-export { parseSearchQuery, hasActiveFilters } from '../utils/queryParser';
+export { parseSearchQuery, hasActiveFilters } from '@/features/search/utils/queryParser';

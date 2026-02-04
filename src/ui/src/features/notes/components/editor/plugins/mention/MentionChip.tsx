@@ -14,10 +14,10 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { parseUrn, getUrnTypeLabel, UrnType } from '@/utils/urn';
-import { MentionPreview } from './MentionPreview';
-import { useUrnPreview } from './useUrnPreview';
-import { getContentTypeConfig } from '@/theme/contentTypes';
+import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
+import { MentionPreview } from '@/features/notes/components/editor/plugins/mention/MentionPreview';
+import { useUrnPreview } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import type { Icon } from '@phosphor-icons/react';
 
 interface MentionChipProps {

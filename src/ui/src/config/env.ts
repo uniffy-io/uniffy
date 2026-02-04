@@ -38,7 +38,9 @@ function createEnvConfig(): EnvConfig {
   const mode = import.meta.env.MODE || 'development';
 
   return {
-    apiBaseUrl: import.meta.env.VITE_API_URL,
+    // Default to /api (all backend routes are under /api/*)
+    // Can be overridden with VITE_API_URL for pointing to a different backend
+    apiBaseUrl: import.meta.env.VITE_API_URL ?? '/api',
     mode,
     isDev: mode === 'development',
     isProd: mode === 'production',

@@ -37,6 +37,9 @@ class FilesService(Protocol):
     def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> AsyncIterator[files_dot_v1_dot_files__pb2.DownloadChunkResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    def stream_file_range(self, request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest, ctx: RequestContext) -> AsyncIterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -172,6 +175,16 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.download_file,
+                ),
+                "/files.v1.FilesService/StreamFileRange": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="StreamFileRange",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
+                        output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.stream_file_range,
                 ),
                 "/files.v1.FilesService/GetFile": Endpoint.unary(
                     method=MethodInfo(
@@ -519,6 +532,26 @@ class FilesServiceClient(ConnectClient):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
                 output=files_dot_v1_dot_files__pb2.DownloadChunkResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def stream_file_range(
+        self,
+        request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="StreamFileRange",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
+                output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -941,6 +974,8 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> Iterator[files_dot_v1_dot_files__pb2.DownloadChunkResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def stream_file_range(self, request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest, ctx: RequestContext) -> Iterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_file(self, request: files_dot_v1_dot_files__pb2.UpdateFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.FileResponse:
@@ -1056,6 +1091,16 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.download_file,
+                ),
+                "/files.v1.FilesService/StreamFileRange": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="StreamFileRange",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
+                        output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.stream_file_range,
                 ),
                 "/files.v1.FilesService/GetFile": EndpointSync.unary(
                     method=MethodInfo(
@@ -1403,6 +1448,26 @@ class FilesServiceClientSync(ConnectClientSync):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
                 output=files_dot_v1_dot_files__pb2.DownloadChunkResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def stream_file_range(
+        self,
+        request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="StreamFileRange",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
+                output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

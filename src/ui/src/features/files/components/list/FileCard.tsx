@@ -12,19 +12,21 @@ import {
     Square,
     Hash,
 } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { TagInput } from '@/components/tag-input';
-import type { SerializedFile } from '../../store/filesThunks';
-import type { ICON_SIZE_CONFIG } from './constants';
-import { renderFileIcon, formatFileSize, formatDate } from './utils';
-import { ItemContextMenu } from './ItemContextMenu';
-import { RenameInput } from './RenameInput';
+import type { SerializedFile } from '@/features/files/store/filesThunks';
+import type { ICON_SIZE_CONFIG } from '@/features/files/components/list/constants';
+import { renderFileIcon, formatFileSize, formatDate, supportsThumbnail } from '@/features/files/components/list/utils';
+import { ItemContextMenu } from '@/features/files/components/list/ItemContextMenu';
+import { RenameInput } from '@/features/files/components/list/RenameInput';
+import { ThumbnailImage } from '@/features/files/components/list/ThumbnailImage';
 
 export interface FileCardProps {
     file: SerializedFile;
     isSelected: boolean;
     onSelect: (id: string) => void;
+    onOpen: (id: string) => void;
     onDelete: (id: string) => void;
     onDownload: (id: string) => void;
     onShare: (id: string, filename: string) => void;
@@ -36,6 +38,7 @@ export interface FileCardProps {
     isSelectMode: boolean;
     isChecked: boolean;
     onToggleCheck: (id: string, shiftKey: boolean) => void;
+    canShare?: boolean;
 }
 
 /** Get initials from a name */
@@ -53,6 +56,7 @@ export function FileCard({
     file,
     isSelected,
     onSelect,
+    onOpen,
     onDelete,
     onDownload,
     onShare,
@@ -64,6 +68,7 @@ export function FileCard({
     isSelectMode,
     isChecked,
     onToggleCheck,
+    canShare = true,
 }: FileCardProps) {
     const navigate = useNavigate();
     const showOwner = viewScope === 'shared' || viewScope === 'organization';
@@ -71,7 +76,7 @@ export function FileCard({
     const [isEditingTags, setIsEditingTags] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const tagsPopoverRef = useRef<HTMLDivElement>(null);
-    const isImage = file.mimeType.startsWith('image/');
+    const hasThumbnail = supportsThumbnail(file.mimeType);
     const config = sizeConfig || { cardMinWidth: 140, iconSize: 48, gap: 16, showDetails: true };
 
     // Bookmark state
@@ -114,7 +119,7 @@ export function FileCard({
         setIsEditingTags(true);
     };
 
-    // Handle click based on select mode
+    // Handle single click - select file (for details panel)
     const handleClick = (e: React.MouseEvent) => {
         // Don't trigger if renaming
         if (isRenaming) return;
@@ -128,6 +133,14 @@ export function FileCard({
         } else {
             onSelect(file.id);
         }
+    };
+
+    // Handle double click - open file viewer
+    const handleDoubleClick = (e: React.MouseEvent) => {
+        // Don't trigger if renaming or in select mode
+        if (isRenaming || isSelectMode) return;
+        e.preventDefault();
+        onOpen(file.id);
     };
 
     // Right-click context menu
@@ -160,6 +173,7 @@ export function FileCard({
                     isSelectMode && "select-none"
                 )}
                 onClick={handleClick}
+                onDoubleClick={handleDoubleClick}
                 onContextMenu={handleContextMenu}
             >
                 {/* Checkbox (only visible in select mode) */}
@@ -180,9 +194,16 @@ export function FileCard({
                     </div>
                 )}
 
-                {/* Icon */}
-                <div className="flex-shrink-0 w-6">
-                    {renderFileIcon(file.mimeType, 24, "text-blue-500")}
+                {/* Icon or Thumbnail */}
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center overflow-hidden rounded">
+                    {hasThumbnail ? (
+                        <ThumbnailImage
+                            file={file}
+                            fallback={renderFileIcon(file.mimeType, 24, "text-blue-500")}
+                        />
+                    ) : (
+                        renderFileIcon(file.mimeType, 24, "text-blue-500")
+                    )}
                 </div>
 
                 {/* Name or Rename Input */}
@@ -299,6 +320,7 @@ export function FileCard({
                         isBookmarked={isBookmarked}
                         bookmarkToggling={bookmarkToggling}
                         onEditTags={handleEditTagsClick}
+                        canShare={canShare}
                     />
                 )}
             </div>
@@ -315,14 +337,20 @@ export function FileCard({
                 isSelectMode && "select-none"
             )}
             onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
             onContextMenu={handleContextMenu}
         >
             {/* Preview area */}
             <div className="relative aspect-[4/3] bg-muted/30 flex items-center justify-center overflow-hidden">
-                {isImage ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        {renderFileIcon(file.mimeType, config.iconSize, "text-blue-500/50")}
-                    </div>
+                {hasThumbnail ? (
+                    <ThumbnailImage
+                        file={file}
+                        fallback={
+                            <div className="w-full h-full flex items-center justify-center">
+                                {renderFileIcon(file.mimeType, config.iconSize, "text-blue-500")}
+                            </div>
+                        }
+                    />
                 ) : (
                     renderFileIcon(file.mimeType, config.iconSize, "text-blue-500")
                 )}
@@ -446,6 +474,7 @@ export function FileCard({
                     isBookmarked={isBookmarked}
                     bookmarkToggling={bookmarkToggling}
                     onEditTags={handleEditTagsClick}
+                    canShare={canShare}
                 />
             )}
         </div>

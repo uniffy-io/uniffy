@@ -12,13 +12,13 @@
 
 import { Plus } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
-import { openEventModal } from '../../store';
-import { QuickAccess } from '../sidebar/QuickAccess';
-import { MiniCalendar } from '../sidebar/MiniCalendar';
-import { CalendarList } from '../sidebar/CalendarList';
-import { CategoryList } from '../sidebar/CategoryList';
-import { TagCloud } from '../sidebar/TagCloud';
-import { TemplateList } from '../sidebar/TemplateList';
+import { openEventModal } from '@/features/calendar/store';
+import { QuickAccess } from '@/features/calendar/components/sidebar/QuickAccess';
+import { MiniCalendar } from '@/features/calendar/components/sidebar/MiniCalendar';
+import { CalendarList } from '@/features/calendar/components/sidebar/CalendarList';
+import { CategoryList } from '@/features/calendar/components/sidebar/CategoryList';
+import { TagCloud } from '@/features/calendar/components/sidebar/TagCloud';
+import { TemplateList } from '@/features/calendar/components/sidebar/TemplateList';
 
 export function LeftSidebar() {
   const dispatch = useAppDispatch();

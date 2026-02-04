@@ -4,9 +4,9 @@
 
 import { BookmarkSimple } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setQuickAccessFilter, goToToday } from '../../store';
-import type { QuickAccessFilter } from '../../types';
-import { cn } from '@/utils/cn';
+import { setQuickAccessFilter, goToToday } from '@/features/calendar/store';
+import type { QuickAccessFilter } from '@/features/calendar/types';
+import { cn } from '@/shared/utils/cn';
 import { useBookmarksByType } from '@/features/bookmarks';
 
 interface QuickAccessItem {

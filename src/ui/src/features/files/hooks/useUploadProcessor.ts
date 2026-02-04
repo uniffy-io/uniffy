@@ -7,9 +7,9 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { filesApi } from '../api/filesApi';
-import { getFile, removeFile as removeStoredFile } from '../utils/fileStore';
-import { fileWorkerManager } from '../workers';
+import { filesApi } from '@/features/files/api/filesApi';
+import { getFile, removeFile as removeStoredFile } from '@/features/files/utils/fileStore';
+import { fileWorkerManager } from '@/features/files/workers';
 import { getAccessToken, refreshAccessToken } from '@/config/api';
 import { env } from '@/config/env';
 import {
@@ -18,9 +18,10 @@ import {
     setCompleting,
     completeUpload,
     failUpload,
-} from '../store/uploadSlice';
-import { setFile } from '../store/filesSlice';
-import type { UploadItem } from '../store/uploadSlice';
+    selectAbortedUploads,
+} from '@/features/files/store/uploadSlice';
+import { setFile } from '@/features/files/store/filesSlice';
+import type { UploadItem } from '@/features/files/store/uploadSlice';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
 /**
@@ -144,6 +145,17 @@ async function processUpload(
                 name: protoFile.ownerInfo.name,
                 email: protoFile.ownerInfo.email,
             } : undefined,
+            metadata: protoFile.metadata ? {
+                hasThumbnail: protoFile.metadata.hasThumbnail,
+                width: protoFile.metadata.width,
+                height: protoFile.metadata.height,
+                format: protoFile.metadata.format,
+                colorMode: protoFile.metadata.colorMode,
+                durationSeconds: protoFile.metadata.durationSeconds,
+                pageCount: protoFile.metadata.pageCount,
+                exif: { ...protoFile.metadata.exif },
+                error: protoFile.metadata.error,
+            } : undefined,
         }));
 
         dispatch(completeUpload({
@@ -248,9 +260,7 @@ export function useUploadProcessor() {
     }, [processQueue]);
 
     // Handle abort requests from uploadSlice
-    const abortedItems = useAppSelector((state) => state.upload.failedUploads.filter(
-        (item) => item.status === 'aborted'
-    ));
+    const abortedItems = useAppSelector(selectAbortedUploads);
 
     useEffect(() => {
         // Abort any uploads that were marked as aborted

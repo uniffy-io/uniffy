@@ -1,0 +1,503 @@
+"""
+Thumbnail generation tasks.
+
+Generates thumbnails for images, PDFs, and videos, storing them in S3
+with a consistent key pattern for easy retrieval.
+"""
+
+import io
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Any
+from uuid import UUID
+
+import fitz  # PyMuPDF
+from arq import Retry
+from loguru import logger
+from PIL import Image
+
+from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.storage.s3_client import get_s3_client
+from uniffy.db.session import get_async_session
+
+# Thumbnail configuration
+THUMB_MAX_SIZE = (400, 400)  # Max dimensions (maintains aspect ratio)
+THUMB_QUALITY = 85  # JPEG quality (1-100)
+THUMB_FORMAT = "JPEG"
+
+
+def get_thumbnail_key(organization_id: UUID, file_id: UUID) -> str:
+    """
+    Generate S3 key for thumbnail.
+
+    Pattern: {org_id}/thumbnails/{file_id}.jpg
+
+    Parameters
+    ----------
+    organization_id : UUID
+        Organization ID for multi-tenant isolation.
+    file_id : UUID
+        File UUID.
+
+    Returns
+    -------
+    str
+        S3 object key for the thumbnail.
+
+    """
+    return f"{organization_id}/thumbnails/{file_id}.jpg"
+
+
+async def generate_image_thumbnail(
+    ctx: dict[str, Any],
+    file_id: str,
+    organization_id: str,
+) -> dict[str, Any]:
+    """
+    Generate thumbnail for an image file.
+
+    Downloads the original image from S3, creates a thumbnail
+    using Pillow, and uploads it back to S3. Updates the file
+    record with the thumbnail key.
+
+    Parameters
+    ----------
+    ctx : dict
+        ARQ context with shared resources and job metadata.
+    file_id : str
+        File UUID as string.
+    organization_id : str
+        Organization UUID as string.
+
+    Returns
+    -------
+    dict
+        Result with status and thumbnail_key if successful.
+
+    """
+    file_uuid = UUID(file_id)
+    org_uuid = UUID(organization_id)
+
+    s3 = get_s3_client()
+
+    async for session in get_async_session():
+        # Fetch file record
+        file = await session.get(File, file_uuid)
+        if not file:
+            logger.warning(f"Thumbnail: File {file_id} not found")
+            return {"status": "not_found", "file_id": file_id}
+
+        # Update status to PROCESSING
+        file.extraction_status = ExtractionStatus.PROCESSING
+        await session.commit()
+
+        try:
+            # Download original image from S3
+            logger.debug(f"Thumbnail: Downloading {file.storage_key}")
+            image_bytes = await s3.download_bytes(file.storage_key)
+
+            # Generate thumbnail
+            thumbnail_bytes, thumb_width, thumb_height = _create_thumbnail(image_bytes)
+
+            # Upload thumbnail to S3
+            thumb_key = get_thumbnail_key(org_uuid, file_uuid)
+            await s3.upload_bytes(
+                key=thumb_key,
+                data=thumbnail_bytes,
+                content_type="image/jpeg",
+            )
+
+            # Update file metadata with thumbnail key and dimensions
+            file.file_metadata = file.file_metadata or {}
+            file.file_metadata["thumbnail_key"] = thumb_key
+            file.file_metadata["thumbnail_width"] = thumb_width
+            file.file_metadata["thumbnail_height"] = thumb_height
+            file.extraction_status = ExtractionStatus.COMPLETED
+            await session.commit()
+
+            logger.info(f"Thumbnail: Generated for file {file_id}")
+            return {"status": "success", "thumbnail_key": thumb_key}
+
+        except Exception as e:
+            logger.error(f"Thumbnail: Failed for {file_id}: {e}")
+
+            # Retry with backoff for transient errors
+            job_try = ctx.get("job_try", 1)
+            if job_try < 3:
+                raise Retry(defer=job_try * 10)
+
+            # Mark as failed after max retries
+            file.extraction_status = ExtractionStatus.FAILED
+            file.file_metadata = file.file_metadata or {}
+            file.file_metadata["extraction_error"] = str(e)
+            await session.commit()
+
+            return {"status": "failed", "error": str(e)}
+
+
+async def generate_pdf_thumbnail(
+    ctx: dict[str, Any],
+    file_id: str,
+    organization_id: str,
+) -> dict[str, Any]:
+    """
+    Generate thumbnail for a PDF file.
+
+    Renders the first page of the PDF using PyMuPDF,
+    converts to image, and uploads to S3.
+
+    Parameters
+    ----------
+    ctx : dict
+        ARQ context with shared resources and job metadata.
+    file_id : str
+        File UUID as string.
+    organization_id : str
+        Organization UUID as string.
+
+    Returns
+    -------
+    dict
+        Result with status and thumbnail_key if successful.
+
+    """
+    file_uuid = UUID(file_id)
+    org_uuid = UUID(organization_id)
+
+    s3 = get_s3_client()
+
+    async for session in get_async_session():
+        # Fetch file record
+        file = await session.get(File, file_uuid)
+        if not file:
+            logger.warning(f"Thumbnail: PDF file {file_id} not found")
+            return {"status": "not_found", "file_id": file_id}
+
+        # Update status to PROCESSING
+        file.extraction_status = ExtractionStatus.PROCESSING
+        await session.commit()
+
+        try:
+            # Download PDF from S3
+            logger.debug(f"Thumbnail: Downloading PDF {file.storage_key}")
+            pdf_bytes = await s3.download_bytes(file.storage_key)
+
+            # Generate thumbnail from first page
+            thumbnail_bytes, thumb_width, thumb_height = _create_pdf_thumbnail(pdf_bytes)
+
+            # Upload thumbnail to S3
+            thumb_key = get_thumbnail_key(org_uuid, file_uuid)
+            await s3.upload_bytes(
+                key=thumb_key,
+                data=thumbnail_bytes,
+                content_type="image/jpeg",
+            )
+
+            # Update file metadata with thumbnail key and dimensions
+            file.file_metadata = file.file_metadata or {}
+            file.file_metadata["thumbnail_key"] = thumb_key
+            file.file_metadata["thumbnail_width"] = thumb_width
+            file.file_metadata["thumbnail_height"] = thumb_height
+            file.extraction_status = ExtractionStatus.COMPLETED
+            await session.commit()
+
+            logger.info(f"Thumbnail: Generated PDF thumbnail for file {file_id}")
+            return {"status": "success", "thumbnail_key": thumb_key}
+
+        except Exception as e:
+            logger.error(f"Thumbnail: PDF failed for {file_id}: {e}")
+
+            # Retry with backoff for transient errors
+            job_try = ctx.get("job_try", 1)
+            if job_try < 3:
+                raise Retry(defer=job_try * 10)
+
+            # Mark as failed after max retries
+            file.extraction_status = ExtractionStatus.FAILED
+            file.file_metadata = file.file_metadata or {}
+            file.file_metadata["extraction_error"] = str(e)
+            await session.commit()
+
+            return {"status": "failed", "error": str(e)}
+
+
+async def generate_video_thumbnail(
+    ctx: dict[str, Any],
+    file_id: str,
+    organization_id: str,
+) -> dict[str, Any]:
+    """
+    Generate thumbnail for a video file.
+
+    Extracts a frame from the video using ffmpeg,
+    converts to JPEG, and uploads to S3.
+
+    Parameters
+    ----------
+    ctx : dict
+        ARQ context with shared resources and job metadata.
+    file_id : str
+        File UUID as string.
+    organization_id : str
+        Organization UUID as string.
+
+    Returns
+    -------
+    dict
+        Result with status and thumbnail_key if successful.
+
+    """
+    file_uuid = UUID(file_id)
+    org_uuid = UUID(organization_id)
+
+    s3 = get_s3_client()
+
+    async for session in get_async_session():
+        # Fetch file record
+        file = await session.get(File, file_uuid)
+        if not file:
+            logger.warning(f"Thumbnail: Video file {file_id} not found")
+            return {"status": "not_found", "file_id": file_id}
+
+        # Update status to PROCESSING
+        file.extraction_status = ExtractionStatus.PROCESSING
+        await session.commit()
+
+        try:
+            # Download video from S3
+            logger.debug(f"Thumbnail: Downloading video {file.storage_key}")
+            video_bytes = await s3.download_bytes(file.storage_key)
+
+            # Generate thumbnail from video frame
+            thumbnail_bytes, thumb_width, thumb_height = _create_video_thumbnail(video_bytes)
+
+            # Upload thumbnail to S3
+            thumb_key = get_thumbnail_key(org_uuid, file_uuid)
+            await s3.upload_bytes(
+                key=thumb_key,
+                data=thumbnail_bytes,
+                content_type="image/jpeg",
+            )
+
+            # Update file metadata with thumbnail key and dimensions
+            file.file_metadata = file.file_metadata or {}
+            file.file_metadata["thumbnail_key"] = thumb_key
+            file.file_metadata["thumbnail_width"] = thumb_width
+            file.file_metadata["thumbnail_height"] = thumb_height
+            file.extraction_status = ExtractionStatus.COMPLETED
+            await session.commit()
+
+            logger.info(f"Thumbnail: Generated video thumbnail for file {file_id}")
+            return {"status": "success", "thumbnail_key": thumb_key}
+
+        except Exception as e:
+            logger.error(f"Thumbnail: Video failed for {file_id}: {e}")
+
+            # Retry with backoff for transient errors
+            job_try = ctx.get("job_try", 1)
+            if job_try < 3:
+                raise Retry(defer=job_try * 10)
+
+            # Mark as failed after max retries
+            file.extraction_status = ExtractionStatus.FAILED
+            file.file_metadata = file.file_metadata or {}
+            file.file_metadata["extraction_error"] = str(e)
+            await session.commit()
+
+            return {"status": "failed", "error": str(e)}
+
+
+def _create_thumbnail(image_bytes: bytes) -> tuple[bytes, int, int]:
+    """
+    Create a thumbnail from image bytes.
+
+    Opens the image, converts to RGB if needed, creates
+    a thumbnail maintaining aspect ratio, and returns
+    the compressed JPEG bytes along with dimensions.
+
+    Parameters
+    ----------
+    image_bytes : bytes
+        Original image data.
+
+    Returns
+    -------
+    tuple[bytes, int, int]
+        Thumbnail image as JPEG bytes, width, and height.
+
+    """
+    with Image.open(io.BytesIO(image_bytes)) as img:
+        # Convert to RGB if necessary (handles RGBA, P, LA, etc.)
+        if img.mode in ("RGBA", "P", "LA", "L"):
+            # Create white background for transparency
+            if img.mode in ("RGBA", "LA", "P"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "P":
+                    img = img.convert("RGBA")
+                background.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
+                img = background
+            else:
+                img = img.convert("RGB")
+
+        # Create thumbnail maintaining aspect ratio
+        img.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)
+
+        # Get final dimensions
+        width, height = img.size
+
+        # Save to bytes buffer
+        buffer = io.BytesIO()
+        img.save(buffer, format=THUMB_FORMAT, quality=THUMB_QUALITY, optimize=True)
+        return buffer.getvalue(), width, height
+
+
+def _create_pdf_thumbnail(pdf_bytes: bytes) -> tuple[bytes, int, int]:
+    """
+    Create a thumbnail from PDF bytes.
+
+    Renders the first page of the PDF using PyMuPDF,
+    scales it to fit within THUMB_MAX_SIZE, and returns
+    the compressed JPEG bytes along with dimensions.
+
+    Parameters
+    ----------
+    pdf_bytes : bytes
+        PDF file data.
+
+    Returns
+    -------
+    tuple[bytes, int, int]
+        Thumbnail image as JPEG bytes, width, and height.
+
+    """
+    # Open PDF from bytes
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        # Get first page
+        page = doc[0]
+
+        # Calculate zoom factor to fit within THUMB_MAX_SIZE
+        # while maintaining aspect ratio
+        page_rect = page.rect
+        width_ratio = THUMB_MAX_SIZE[0] / page_rect.width
+        height_ratio = THUMB_MAX_SIZE[1] / page_rect.height
+        zoom = min(width_ratio, height_ratio, 2.0)  # Cap at 2x for quality
+
+        # Create transformation matrix for rendering
+        mat = fitz.Matrix(zoom, zoom)
+
+        # Render page to pixmap (image)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+
+        # Convert to PIL Image
+        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+        # Create thumbnail maintaining aspect ratio
+        img.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)
+
+        # Get final dimensions
+        width, height = img.size
+
+        # Save to bytes buffer
+        buffer = io.BytesIO()
+        img.save(buffer, format=THUMB_FORMAT, quality=THUMB_QUALITY, optimize=True)
+        return buffer.getvalue(), width, height
+    finally:
+        doc.close()
+
+
+def _create_video_thumbnail(video_bytes: bytes) -> tuple[bytes, int, int]:
+    """
+    Create a thumbnail from video bytes.
+
+    Extracts a frame from the video using ffmpeg,
+    scales it to fit within THUMB_MAX_SIZE, and returns
+    the compressed JPEG bytes along with dimensions.
+
+    Parameters
+    ----------
+    video_bytes : bytes
+        Video file data.
+
+    Returns
+    -------
+    tuple[bytes, int, int]
+        Thumbnail image as JPEG bytes, width, and height.
+
+    Raises
+    ------
+    RuntimeError
+        If ffmpeg fails to extract a frame.
+
+    """
+    # Write video to temp file (ffmpeg needs file input for seeking)
+    with tempfile.NamedTemporaryFile(suffix=".video", delete=True) as video_file:
+        video_file.write(video_bytes)
+        video_file.flush()
+        video_path = Path(video_file.name)
+
+        # Output temp file for the frame
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=True) as output_file:
+            output_path = Path(output_file.name)
+
+            # Extract frame at 1 second (or first frame if video is shorter)
+            # Using subprocess directly for better control over ffmpeg
+            cmd = [
+                "ffmpeg",
+                "-y",  # Overwrite output
+                "-i", str(video_path),
+                "-ss", "1",  # Seek to 1 second
+                "-vframes", "1",  # Extract 1 frame
+                "-vf", f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
+                       ":force_original_aspect_ratio=decrease",
+                "-q:v", "2",  # High quality JPEG
+                str(output_path),
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                timeout=30,  # 30 second timeout
+            )
+
+            if result.returncode != 0:
+                # Try extracting first frame if seeking failed
+                cmd_first_frame = [
+                    "ffmpeg",
+                    "-y",
+                    "-i", str(video_path),
+                    "-vframes", "1",
+                    "-vf", f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
+                           ":force_original_aspect_ratio=decrease",
+                    "-q:v", "2",
+                    str(output_path),
+                ]
+                result = subprocess.run(
+                    cmd_first_frame,
+                    capture_output=True,
+                    timeout=30,
+                )
+
+                if result.returncode != 0:
+                    error_msg = result.stderr.decode("utf-8", errors="replace")
+                    raise RuntimeError(f"ffmpeg failed: {error_msg[:500]}")
+
+            # Read the output frame
+            frame_bytes = output_path.read_bytes()
+
+            # Open with PIL to get dimensions and ensure proper format
+            with Image.open(io.BytesIO(frame_bytes)) as img:
+                # Ensure RGB mode
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+
+                # Apply final thumbnail sizing
+                img.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)
+
+                width, height = img.size
+
+                # Save to bytes buffer
+                buffer = io.BytesIO()
+                img.save(buffer, format=THUMB_FORMAT, quality=THUMB_QUALITY, optimize=True)
+                return buffer.getvalue(), width, height

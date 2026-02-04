@@ -4,9 +4,9 @@
  * Manages saved file filter state including CRUD operations.
  */
 
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { savedFiltersApi } from '../api/savedFiltersApi';
+import { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
 import type { RootState } from '@/app/store';
 import type { VisibilityScope } from '@/gen/common/v1/common_pb';
 
@@ -363,23 +363,28 @@ export const selectSavedFiltersLoading = (state: RootState) => state.savedFilter
 export const selectSavedFiltersError = (state: RootState) => state.savedFilters?.error ?? null;
 export const selectSavingFilter = (state: RootState) => state.savedFilters?.savingFilter ?? false;
 
-export const selectSavedFiltersArray = (state: RootState): SerializedSavedFilter[] => {
-    const filters = state.savedFilters?.filters ?? {};
-    return Object.values(filters).sort((a, b) => {
-        // Presets first
-        if (a.isPreset && !b.isPreset) return -1;
-        if (!a.isPreset && b.isPreset) return 1;
-        // Then by name
-        return a.name.localeCompare(b.name);
-    });
-};
+// Memoized selectors to prevent unnecessary re-renders
+export const selectSavedFiltersArray = createSelector(
+    [selectSavedFilters],
+    (filters): SerializedSavedFilter[] => {
+        return Object.values(filters).sort((a, b) => {
+            // Presets first
+            if (a.isPreset && !b.isPreset) return -1;
+            if (!a.isPreset && b.isPreset) return 1;
+            // Then by name
+            return a.name.localeCompare(b.name);
+        });
+    }
+);
 
-export const selectUserFilters = (state: RootState): SerializedSavedFilter[] => {
-    return selectSavedFiltersArray(state).filter((f) => !f.isPreset);
-};
+export const selectUserFilters = createSelector(
+    [selectSavedFiltersArray],
+    (filters): SerializedSavedFilter[] => filters.filter((f) => !f.isPreset)
+);
 
-export const selectPresetFilters = (state: RootState): SerializedSavedFilter[] => {
-    return selectSavedFiltersArray(state).filter((f) => f.isPreset);
-};
+export const selectPresetFilters = createSelector(
+    [selectSavedFiltersArray],
+    (filters): SerializedSavedFilter[] => filters.filter((f) => f.isPreset)
+);
 
 export default savedFiltersSlice.reducer;

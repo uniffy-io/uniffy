@@ -1,0 +1,104 @@
+/**
+ * PDF Viewer
+ *
+ * PDF viewer using react-pdf with page navigation and zoom.
+ * Controls are in the main toolbar (ViewerToolbar).
+ * Arrow keys navigate pages (handled by parent modal).
+ */
+
+import { useState, useCallback } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { Spinner } from '@phosphor-icons/react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { setTotalPages, setViewerLoading } from '@/features/files/store/viewerSlice';
+import { useFileDownload } from '@/features/files/components/viewer/hooks/useFileDownload';
+import type { SerializedFile } from '@/features/files/store/filesThunks';
+
+// Import react-pdf styles
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// Set up PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+interface PdfViewerProps {
+    file: SerializedFile;
+}
+
+export function PdfViewer({ file }: PdfViewerProps) {
+    const dispatch = useAppDispatch();
+    const { currentPage, pdfZoom } = useAppSelector((state) => state.fileViewer);
+    const { url: pdfUrl, loading: downloadLoading, error: downloadError } = useFileDownload(file.id);
+
+    const [error, setError] = useState<string | null>(null);
+
+    // Handle document load success
+    const handleDocumentLoadSuccess = useCallback(
+        ({ numPages }: { numPages: number }) => {
+            dispatch(setTotalPages(numPages));
+            dispatch(setViewerLoading(false));
+        },
+        [dispatch]
+    );
+
+    // Handle document load error
+    const handleDocumentLoadError = useCallback(
+        (err: Error) => {
+            console.error('PDF load error:', err);
+            setError('Failed to load PDF');
+            dispatch(setViewerLoading(false));
+        },
+        [dispatch]
+    );
+
+    // Show loading while downloading
+    if (downloadLoading) {
+        return (
+            <div className="viewer-loading">
+                <Spinner size={48} className="animate-spin" />
+            </div>
+        );
+    }
+
+    if (downloadError || !pdfUrl) {
+        return (
+            <div className="viewer-error">
+                <p>{downloadError || 'Unable to load PDF'}</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="viewer-error">
+                <p>{error}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="viewer-pdf-content">
+            <Document
+                file={pdfUrl}
+                onLoadSuccess={handleDocumentLoadSuccess}
+                onLoadError={handleDocumentLoadError}
+                loading={
+                    <div className="flex items-center justify-center p-8">
+                        <Spinner size={32} className="animate-spin text-slate-400" />
+                    </div>
+                }
+            >
+                <Page
+                    pageNumber={currentPage}
+                    scale={pdfZoom}
+                    className="shadow-2xl rounded-sm"
+                    loading={
+                        <div className="flex items-center justify-center p-8 min-h-[400px]">
+                            <Spinner size={32} className="animate-spin text-slate-400" />
+                        </div>
+                    }
+                />
+            </Document>
+        </div>
+    );
+}

@@ -4,8 +4,9 @@
  * Manages file upload state including queue, progress, and streaming.
  */
 
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import type { RootState } from '@/app/store';
 
 export interface UploadItem {
     // Unique ID for this upload
@@ -446,5 +447,13 @@ export const {
     failDownload,
     clearCompletedDownloads,
 } = uploadSlice.actions;
+
+// Memoized selectors
+const selectFailedUploads = (state: RootState) => state.upload.failedUploads;
+
+export const selectAbortedUploads = createSelector(
+    [selectFailedUploads],
+    (failedUploads) => failedUploads.filter((item) => item.status === 'aborted')
+);
 
 export default uploadSlice.reducer;

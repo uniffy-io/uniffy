@@ -704,6 +704,154 @@ export class DownloadChunkResponse extends Message<DownloadChunkResponse> {
 }
 
 /**
+ * Request for range-based file streaming (used by Service Worker for media).
+ *
+ * @generated from message files.v1.StreamFileRangeRequest
+ */
+export class StreamFileRangeRequest extends Message<StreamFileRangeRequest> {
+  /**
+   * @generated from field: string file_id = 1;
+   */
+  fileId = "";
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  /**
+   * Range start (inclusive), default 0
+   *
+   * @generated from field: optional int64 start_byte = 3;
+   */
+  startByte?: bigint;
+
+  /**
+   * Range end (inclusive), default EOF
+   *
+   * @generated from field: optional int64 end_byte = 4;
+   */
+  endByte?: bigint;
+
+  constructor(data?: PartialMessage<StreamFileRangeRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.StreamFileRangeRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "file_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "start_byte", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 4, name: "end_byte", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamFileRangeRequest {
+    return new StreamFileRangeRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamFileRangeRequest {
+    return new StreamFileRangeRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamFileRangeRequest {
+    return new StreamFileRangeRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamFileRangeRequest | PlainMessage<StreamFileRangeRequest> | undefined, b: StreamFileRangeRequest | PlainMessage<StreamFileRangeRequest> | undefined): boolean {
+    return proto3.util.equals(StreamFileRangeRequest, a, b);
+  }
+}
+
+/**
+ * Response for range-based file streaming.
+ *
+ * @generated from message files.v1.StreamFileRangeResponse
+ */
+export class StreamFileRangeResponse extends Message<StreamFileRangeResponse> {
+  /**
+   * @generated from field: bytes data = 1;
+   */
+  data = new Uint8Array(0);
+
+  /**
+   * Total file size (for Content-Length)
+   *
+   * @generated from field: int64 total_size = 2;
+   */
+  totalSize = protoInt64.zero;
+
+  /**
+   * Actual range start returned
+   *
+   * @generated from field: int64 range_start = 3;
+   */
+  rangeStart = protoInt64.zero;
+
+  /**
+   * Actual range end returned
+   *
+   * @generated from field: int64 range_end = 4;
+   */
+  rangeEnd = protoInt64.zero;
+
+  /**
+   * For Content-Type header
+   *
+   * @generated from field: string mime_type = 5;
+   */
+  mimeType = "";
+
+  /**
+   * For Content-Disposition
+   *
+   * @generated from field: string filename = 6;
+   */
+  filename = "";
+
+  /**
+   * Metadata only meaningful in first chunk
+   *
+   * @generated from field: bool is_first_chunk = 7;
+   */
+  isFirstChunk = false;
+
+  constructor(data?: PartialMessage<StreamFileRangeResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.StreamFileRangeResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "data", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "total_size", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "range_start", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "range_end", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 5, name: "mime_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "is_first_chunk", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamFileRangeResponse {
+    return new StreamFileRangeResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamFileRangeResponse {
+    return new StreamFileRangeResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamFileRangeResponse {
+    return new StreamFileRangeResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamFileRangeResponse | PlainMessage<StreamFileRangeResponse> | undefined, b: StreamFileRangeResponse | PlainMessage<StreamFileRangeResponse> | undefined): boolean {
+    return proto3.util.equals(StreamFileRangeResponse, a, b);
+  }
+}
+
+/**
  * @generated from message files.v1.File
  */
 export class File extends Message<File> {
@@ -814,6 +962,13 @@ export class File extends Message<File> {
    */
   ownerInfo?: FileOwner;
 
+  /**
+   * Media metadata (extracted from file content)
+   *
+   * @generated from field: optional files.v1.FileMetadata metadata = 22;
+   */
+  metadata?: FileMetadata;
+
   constructor(data?: PartialMessage<File>) {
     super();
     proto3.util.initPartial(data, this);
@@ -843,6 +998,7 @@ export class File extends Message<File> {
     { no: 19, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 20, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
     { no: 21, name: "owner_info", kind: "message", T: FileOwner, opt: true },
+    { no: 22, name: "metadata", kind: "message", T: FileMetadata, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): File {
@@ -859,6 +1015,109 @@ export class File extends Message<File> {
 
   static equals(a: File | PlainMessage<File> | undefined, b: File | PlainMessage<File> | undefined): boolean {
     return proto3.util.equals(File, a, b);
+  }
+}
+
+/**
+ * Metadata extracted from media files (images, videos, PDFs).
+ *
+ * @generated from message files.v1.FileMetadata
+ */
+export class FileMetadata extends Message<FileMetadata> {
+  /**
+   * @generated from field: bool has_thumbnail = 1;
+   */
+  hasThumbnail = false;
+
+  /**
+   * Image/video width in pixels
+   *
+   * @generated from field: optional int32 width = 2;
+   */
+  width?: number;
+
+  /**
+   * Image/video height in pixels
+   *
+   * @generated from field: optional int32 height = 3;
+   */
+  height?: number;
+
+  /**
+   * Format details (e.g., "JPEG", "PNG")
+   *
+   * @generated from field: optional string format = 4;
+   */
+  format?: string;
+
+  /**
+   * Color mode (e.g., "RGB", "CMYK")
+   *
+   * @generated from field: optional string color_mode = 5;
+   */
+  colorMode?: string;
+
+  /**
+   * Video/audio duration
+   *
+   * @generated from field: optional float duration_seconds = 6;
+   */
+  durationSeconds?: number;
+
+  /**
+   * PDF page count
+   *
+   * @generated from field: optional int32 page_count = 7;
+   */
+  pageCount?: number;
+
+  /**
+   * EXIF data for images
+   *
+   * @generated from field: map<string, string> exif = 8;
+   */
+  exif: { [key: string]: string } = {};
+
+  /**
+   * Error message if extraction failed
+   *
+   * @generated from field: optional string error = 9;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<FileMetadata>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "files.v1.FileMetadata";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "has_thumbnail", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "width", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 3, name: "height", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 4, name: "format", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "color_mode", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "duration_seconds", kind: "scalar", T: 2 /* ScalarType.FLOAT */, opt: true },
+    { no: 7, name: "page_count", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 8, name: "exif", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 9, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FileMetadata {
+    return new FileMetadata().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FileMetadata {
+    return new FileMetadata().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FileMetadata {
+    return new FileMetadata().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FileMetadata | PlainMessage<FileMetadata> | undefined, b: FileMetadata | PlainMessage<FileMetadata> | undefined): boolean {
+    return proto3.util.equals(FileMetadata, a, b);
   }
 }
 

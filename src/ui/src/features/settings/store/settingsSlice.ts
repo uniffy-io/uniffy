@@ -4,7 +4,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { SerializedProfile, SerializedEffectiveSettings } from './settingsThunks';
+import type { SerializedProfile, SerializedEffectiveSettings } from '@/features/settings/store/settingsThunks';
 import {
     fetchProfiles,
     fetchEffectiveSettings,
@@ -12,7 +12,7 @@ import {
     updateProfile,
     deleteProfile,
     setDefaultProfile,
-} from './settingsThunks';
+} from '@/features/settings/store/settingsThunks';
 
 // ─────────────────────────────────────────────────────────────
 // Helper types
@@ -314,4 +314,4 @@ export {
     updateProfile,
     deleteProfile,
     setDefaultProfile,
-} from './settingsThunks';
+} from '@/features/settings/store/settingsThunks';

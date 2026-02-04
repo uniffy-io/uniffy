@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
-import { notesApi } from '../api/notesApi';
-import { organizeNotesByVisibility } from '../utils/notesTreeUtils';
+import { notesApi } from '@/features/notes/api/notesApi';
+import { organizeNotesByVisibility } from '@/features/notes/utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
-import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote } from './notesThunks';
-import type { NoteIcon } from '../utils/noteIconConstants';
+import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote } from '@/features/notes/store/notesThunks';
+import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
 
 // Helper to convert proto Note to PlainMessage
 const noteToPlain = (note: Note) => ({

@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useTreeStateSync } from '../../hooks/useTreeStateSync';
+import { useTreeStateSync } from '@/features/notes/hooks/useTreeStateSync';
 import {
   Plus,
   BookmarkSimpleIcon,
@@ -30,8 +30,8 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote, initializeNotesData } from '../../store/notesSlice';
-import { toggleSidebar } from '../../store/editorSlice';
+import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote, initializeNotesData } from '@/features/notes/store/notesSlice';
+import { toggleSidebar } from '@/features/notes/store/editorSlice';
 import {
   toggleNodeExpanded,
   updateNodeTitle,
@@ -40,13 +40,13 @@ import {
   setBookmarkedNodes,
   setSelectedNode,
   type TreeNode,
-} from '../../store/notesTreeSlice';
+} from '@/features/notes/store/notesTreeSlice';
 import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
-import { notesApi } from '../../api/notesApi';
+import { notesApi } from '@/features/notes/api/notesApi';
 import { Button } from '@/components/ui/button';
 import { useBookmarks, useIsBookmarked } from '@/features/bookmarks';
-import { cn } from '@/utils/cn';
-import { renderNoteIcon } from '../../utils/noteIcons';
+import { cn } from '@/shared/utils/cn';
+import { renderNoteIcon } from '@/features/notes/utils/noteIcons';
 
 // Section configuration
 interface SectionConfig {

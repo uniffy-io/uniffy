@@ -6,8 +6,8 @@
  */
 
 import { NodeType, VisibilityScope } from '@/gen/notes/v1/notes_pb';
-import type { TreeNode, GroupTreeSection } from '../store/notesTreeSlice';
-import type { SerializedNote } from '../store/notesThunks';
+import type { TreeNode, GroupTreeSection } from '@/features/notes/store/notesTreeSlice';
+import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
 /**
  * Convert NodeType enum to TreeNode type string.

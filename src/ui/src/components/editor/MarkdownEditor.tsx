@@ -19,7 +19,7 @@ import {
   type MentionTriggerEvent,
 } from '@/features/notes/components/editor/plugins/mention';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 
 // Import Crepe styles
 import '@milkdown/crepe/theme/common/style.css';

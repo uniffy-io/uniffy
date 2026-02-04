@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
-import type { Theme } from './types';
-import { defaultTheme, darkTheme } from './types';
+import type { Theme } from '@/config/theme/types';
+import { defaultTheme, darkTheme } from '@/config/theme/types';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setThemeMode, setAccentColor, setFontFamily, type ThemeMode } from './themeSlice';
+import { setThemeMode, setAccentColor, setFontFamily, type ThemeMode } from '@/config/theme/themeSlice';
 import { updateEffectiveSettingsLocal, updateProfile } from '@/features/settings/store/settingsSlice';
 
 interface ThemeContextType {

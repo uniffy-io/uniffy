@@ -15,7 +15,7 @@ import {
   getNodeSize,
   getGraphStats,
   type GraphNode,
-} from '../../utils/notesGraphUtils';
+} from '@/features/notes/utils/notesGraphUtils';
 import {
   Cube,
   MagnifyingGlassMinus,
@@ -27,12 +27,12 @@ import {
   ChatTeardrop,
   Link,
 } from '@phosphor-icons/react';
-import { getIconComponent } from '../../utils/noteIconConstants';
-import { drawIconOnCanvas } from '../../utils/noteIcons';
-import { UrnType, urnToPath, parseUrn } from '@/utils/urn';
-import { URN_TYPE_HEX_COLORS } from '@/theme/urnColors';
+import { getIconComponent } from '@/features/notes/utils/noteIconConstants';
+import { drawIconOnCanvas } from '@/features/notes/utils/noteIcons';
+import { UrnType, urnToPath, parseUrn } from '@/shared/utils/urn';
+import { URN_TYPE_HEX_COLORS } from '@/config/theme/urnColors';
 import { useUrnResolution } from '@/features/search';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useTheme } from '@/config/theme/ThemeProvider';
 
 /** Cast NodeObject to our GraphNode type */
 function asGraphNode(node: NodeObject): GraphNode {

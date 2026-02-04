@@ -24,7 +24,7 @@ import {
   removeProjectFilterFromQuery,
 } from '@/features/search/utils/queryParser';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 
 interface MentionSearchProps {
   query: string;

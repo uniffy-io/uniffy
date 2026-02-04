@@ -2,7 +2,7 @@
  * Default event templates for quick event creation
  */
 
-import { DEFAULT_DURATIONS } from './timeRanges';
+import { DEFAULT_DURATIONS } from '@/features/calendar/constants/timeRanges';
 
 /**
  * Event template definition

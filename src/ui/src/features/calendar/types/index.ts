@@ -14,7 +14,7 @@ export type {
   DayOfWeek,
   LinkedResource,
   ResourceType,
-} from './event';
+} from '@/features/calendar/types/event';
 
 // Calendar types
 export type {
@@ -26,7 +26,7 @@ export type {
   NavigationDirection,
   TimeSlot,
   DayColumn,
-} from './calendar';
+} from '@/features/calendar/types/calendar';
 
 // Category types
 export type {
@@ -35,8 +35,8 @@ export type {
   UpdateCategoryRequest,
   CategoryColorOption,
   DefaultCategoryId,
-} from './category';
-export { DEFAULT_CATEGORY_IDS } from './category';
+} from '@/features/calendar/types/category';
+export { DEFAULT_CATEGORY_IDS } from '@/features/calendar/types/category';
 
 // Attendee types
 export type {
@@ -45,8 +45,8 @@ export type {
   AttendeeRole,
   AttendeeSuggestion,
   AvatarStackConfig,
-} from './attendee';
-export { ATTENDEE_STATUS_CONFIG } from './attendee';
+} from '@/features/calendar/types/attendee';
+export { ATTENDEE_STATUS_CONFIG } from '@/features/calendar/types/attendee';
 
 // UI types
 export type {
@@ -61,7 +61,7 @@ export type {
   KeyboardAction,
   CalendarToast,
   EventFilters,
-} from './ui';
+} from '@/features/calendar/types/ui';
 
 // Form types
 export type {
@@ -70,7 +70,7 @@ export type {
   ParsedQuickCapture,
   CategoryFormData,
   TemplateFormData,
-} from './forms';
+} from '@/features/calendar/types/forms';
 
 export {
   eventFormSchema,
@@ -80,11 +80,11 @@ export {
   templateFormSchema,
   RECURRENCE_LABELS,
   DAY_OF_WEEK_LABELS,
-} from './forms';
+} from '@/features/calendar/types/forms';
 
 // Template types
 export type {
   EventTemplate,
   CreateTemplatePayload,
   UpdateTemplatePayload,
-} from './template';
+} from '@/features/calendar/types/template';

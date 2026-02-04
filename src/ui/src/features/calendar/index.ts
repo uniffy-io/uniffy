@@ -13,7 +13,7 @@
  */
 
 // Main page
-export { CalendarPage } from './pages/CalendarPage';
+export { CalendarPage } from '@/features/calendar/pages/CalendarPage';
 
 // Layout components
 export {
@@ -22,7 +22,7 @@ export {
   LeftSidebar,
   MainContent,
   DetailPanel,
-} from './components/layout';
+} from '@/features/calendar/components/layout';
 
 // Calendar grid components
 export {
@@ -35,7 +35,7 @@ export {
   DayHeadersRow,
   GridLines,
   CurrentTimeIndicator,
-} from './components/calendar';
+} from '@/features/calendar/components/calendar';
 
 // Sidebar components
 export {
@@ -46,11 +46,11 @@ export {
   CategoryList,
   TemplateList,
   TagCloud,
-} from './components/sidebar';
+} from '@/features/calendar/components/sidebar';
 
 // Modals
-export { QuickEventModal } from './components/modals/QuickEventModal';
-export { EventEditor } from './components/modals/EventEditor';
+export { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
+export { EventEditor } from '@/features/calendar/components/modals/EventEditor';
 
 // Redux store
 export {
@@ -93,10 +93,10 @@ export {
   closeQuickCapture,
   openTimezoneModal,
   closeTimezoneModal,
-} from './store';
+} from '@/features/calendar/store';
 
 // API
-export { calendarApi } from './api/calendarApi';
+export { calendarApi } from '@/features/calendar/api/calendarApi';
 
 // Thunks
 export {
@@ -116,7 +116,7 @@ export {
   updateAttendeeStatus,
   addAttendees,
   removeAttendees,
-} from './store/calendarThunks';
+} from '@/features/calendar/store/calendarThunks';
 
 // Hooks
 export {
@@ -124,7 +124,7 @@ export {
   useCalendarEvents,
   useCurrentTime,
   useIsToday,
-} from './hooks';
+} from '@/features/calendar/hooks';
 
 // Utilities
 export {
@@ -144,7 +144,7 @@ export {
   formatDuration,
   getPositionedEventsForDay,
   getPositionedEventsForWeek,
-} from './utils';
+} from '@/features/calendar/utils';
 
 // Constants
 export {
@@ -158,7 +158,7 @@ export {
   WORKING_HOURS,
   DEFAULT_DURATIONS,
   DEFAULT_TEMPLATES,
-} from './constants';
+} from '@/features/calendar/constants';
 
 // Types
 export type {
@@ -176,4 +176,4 @@ export type {
   EventFormData,
   CalendarUIState,
   EventFilters,
-} from './types';
+} from '@/features/calendar/types';

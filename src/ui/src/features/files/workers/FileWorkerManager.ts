@@ -11,7 +11,7 @@ import type {
     UploadProgress,
     CompressZipProgress,
     ZipFileEntry,
-} from './types';
+} from '@/features/files/workers/types';
 
 /**
  * Generate a unique ID (fallback for environments without crypto.randomUUID).

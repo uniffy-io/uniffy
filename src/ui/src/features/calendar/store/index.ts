@@ -3,8 +3,8 @@
  */
 
 // Reducers
-export { default as calendarReducer } from './calendarSlice';
-export { default as calendarUiReducer } from './calendarUiSlice';
+export { default as calendarReducer } from '@/features/calendar/store/calendarSlice';
+export { default as calendarUiReducer } from '@/features/calendar/store/calendarUiSlice';
 
 // Thunks (API calls)
 export {
@@ -24,7 +24,7 @@ export {
   updateAttendeeStatus,
   addAttendees,
   removeAttendees,
-} from './calendarThunks';
+} from '@/features/calendar/store/calendarThunks';
 
 // Calendar slice actions
 export {
@@ -54,7 +54,7 @@ export {
   clearErrors,
   setPagination,
   resetCalendarState,
-} from './calendarSlice';
+} from '@/features/calendar/store/calendarSlice';
 
 // Calendar UI slice actions
 export {
@@ -98,4 +98,4 @@ export {
   setMobileView,
   setActiveMobilePanel,
   resetCalendarUiState,
-} from './calendarUiSlice';
+} from '@/features/calendar/store/calendarUiSlice';

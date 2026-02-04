@@ -1,5 +1,5 @@
 import { useAppSelector } from '@/app/hooks';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 
 export function Home() {
   // Home/dashboard page - shows just "Uniffy" (no suffix)

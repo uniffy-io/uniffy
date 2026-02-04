@@ -4,8 +4,8 @@
  * Displays available search filter syntax hints in the empty search state.
  */
 
-import { FILTER_HINTS } from '../utils/queryParser';
-import { cn } from '@/utils/cn';
+import { FILTER_HINTS } from '@/features/search/utils/queryParser';
+import { cn } from '@/shared/utils/cn';
 
 interface FilterHintsProps {
     /** Callback when a filter hint is clicked */

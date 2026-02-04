@@ -1,6 +1,0 @@
-# Development Environment Configuration
-# =====================================
-# Automatically loaded when running in development mode (npm run dev)
-
-# Backend API Base URL - Local Development
-VITE_API_URL=http://dev.local.uniffy.io:8000

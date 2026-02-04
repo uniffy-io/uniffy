@@ -5,7 +5,7 @@
  */
 
 import { ShareNetwork } from '@phosphor-icons/react';
-import { useSharingDialog } from '../hooks/useSharingHooks';
+import { useSharingDialog } from '@/features/sharing/hooks/useSharingHooks';
 import { ContentType } from '@/gen/common/v1/common_pb';
 
 interface ShareButtonProps {

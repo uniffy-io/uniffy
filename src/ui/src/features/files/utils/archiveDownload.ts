@@ -7,8 +7,8 @@
  */
 
 import type { AppDispatch } from '@/app/store';
-import { filesApi } from '../api/filesApi';
-import { fileWorkerManager, type ZipFileEntry } from '../workers';
+import { filesApi } from '@/features/files/api/filesApi';
+import { fileWorkerManager, type ZipFileEntry } from '@/features/files/workers';
 import { getAccessToken, refreshAccessToken } from '@/config/api';
 import {
     startDownload,
@@ -16,7 +16,7 @@ import {
     setDownloadArchiving,
     completeDownload,
     failDownload,
-} from '../store/uploadSlice';
+} from '@/features/files/store/uploadSlice';
 
 export interface DownloadProgress {
     current: number;

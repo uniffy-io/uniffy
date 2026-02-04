@@ -6,7 +6,7 @@ import {
     bulkCheckBookmarks,
     clearBookmarks,
     type SerializedBookmark,
-} from '../store/bookmarksSlice';
+} from '@/features/bookmarks/store/bookmarksSlice';
 
 /**
  * Hook for accessing full bookmarks state and actions.

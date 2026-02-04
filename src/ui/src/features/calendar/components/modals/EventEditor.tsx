@@ -6,15 +6,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { updateEvent } from '../../store/calendarThunks';
-import type { CalendarEvent } from '../../types';
-import { cn } from '@/utils/cn';
+import { updateEvent } from '@/features/calendar/store/calendarThunks';
+import type { CalendarEvent } from '@/features/calendar/types';
+import { cn } from '@/shared/utils/cn';
 import { MarkdownEditor } from '@/components/editor';
 import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { MemberInfo } from '@/gen/common/v1/common_pb';
-import { AttendeesSelector } from './AttendeesSelector';
-import type { Attendee } from '../../types';
+import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import type { Attendee } from '@/features/calendar/types';
 
 /**
  * Extract time value (hours as decimal) from ISO string

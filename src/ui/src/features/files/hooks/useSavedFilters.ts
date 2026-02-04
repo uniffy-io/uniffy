@@ -20,7 +20,7 @@ import {
     clearError,
     type SerializedFilterCriteria,
     type SerializedIconValue,
-} from '../store/savedFiltersSlice';
+} from '@/features/files/store/savedFiltersSlice';
 
 /**
  * Hook for accessing and managing saved file filters.

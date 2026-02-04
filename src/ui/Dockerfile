@@ -22,6 +22,12 @@ ENV VITE_ENV=$VITE_ENV
 
 RUN pnpm build
 
+# Build service worker (minified IIFE bundle for production)
+RUN ./node_modules/.bin/esbuild src/workers/mediaStreamWorker.ts \
+    --bundle --outfile=dist/media-stream-worker.js \
+    --format=iife --platform=browser \
+    --target=es2020 --minify --alias:@=./src
+
 # Production stage - serve with nginx
 FROM nginx:alpine
 
@@ -47,10 +53,17 @@ server { \
     gzip on; \
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript; \
     \
-    # Cache static assets \
+    # Cache static assets in /assets/ \
     location /assets/ { \
         expires 1y; \
         add_header Cache-Control "public, immutable"; \
+    } \
+    \
+    # Serve static files at root (service worker, etc.) - must be before SPA fallback \
+    location ~* ^/[^/]+\\.(js|css|map|ico|png|svg|jpg|jpeg|gif|woff|woff2|ttf|eot)$ { \
+        try_files $uri =404; \
+        expires 1d; \
+        add_header Cache-Control "public"; \
     } \
     \
     # SPA fallback - serve index.html for all routes \

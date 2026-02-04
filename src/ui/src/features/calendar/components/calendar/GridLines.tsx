@@ -2,7 +2,7 @@
  * GridLines - Horizontal and vertical grid lines for the calendar
  */
 
-import { GRID } from '../../constants';
+import { GRID } from '@/features/calendar/constants';
 
 interface GridLinesProps {
   columnCount: number;

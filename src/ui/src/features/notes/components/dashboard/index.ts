@@ -4,4 +4,4 @@
  * Export all dashboard-related components.
  */
 
-export { NotesGraphDashboard } from './NotesGraphDashboard';
+export { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';

@@ -6,120 +6,134 @@ CYAN='\033[36m'
 NC='\033[0m'
 
 help() {
-    echo "Usage: ./run.sh <command>"
-    echo ""
-    echo "Available commands:"
-    echo -e "  ${CYAN}install${NC}     Install all dependencies"
-    echo -e "  ${CYAN}proto${NC}       Generate all protobuf code (backend + UI)"
-    echo -e "  ${CYAN}clean${NC}       Clean generated files"
-    echo -e "  ${CYAN}dev${NC}         Run both backend and frontend in development mode"
-    echo -e "  ${CYAN}backend${NC}     Run backend with hot reload"
-    echo -e "  ${CYAN}ui [cmd]${NC}    Run pnpm command (default: dev)"
-    echo -e "  ${CYAN}lint${NC}        Run linters"
-    echo -e "  ${CYAN}format${NC}      Format code"
-    echo -e "  ${CYAN}test${NC}        Run tests"
-    echo -e "  ${CYAN}bench${NC}       Run performance benchmarks"
-    echo -e "  ${CYAN}db-shell${NC}    Connect to database shell"
-    echo -e "  ${CYAN}db-migrate${NC}  Run database migrations"
-    echo -e "  ${CYAN}licenses${NC}    Generate third-party license files"
-    echo -e "  ${CYAN}docker-staging${NC} Build and push Docker images for staging"
+  echo "Usage: ./run.sh <command>"
+  echo ""
+  echo "Available commands:"
+  echo -e "  ${CYAN}install${NC}     Install all dependencies"
+  echo -e "  ${CYAN}proto${NC}       Generate all protobuf code (backend + UI)"
+  echo -e "  ${CYAN}clean${NC}       Clean generated files"
+  echo -e "  ${CYAN}dev${NC}         Run both backend and frontend in development mode"
+  echo -e "  ${CYAN}backend${NC}     Run backend with hot reload"
+  echo -e "  ${CYAN}ui [cmd]${NC}    Run pnpm command (default: dev)"
+  echo -e "  ${CYAN}lint${NC}        Run linters"
+  echo -e "  ${CYAN}format${NC}      Format code"
+  echo -e "  ${CYAN}test${NC}        Run tests"
+  echo -e "  ${CYAN}bench${NC}       Run performance benchmarks"
+  echo -e "  ${CYAN}db-shell${NC}    Connect to database shell"
+  echo -e "  ${CYAN}db-migrate${NC}  Run database migrations"
+  echo -e "  ${CYAN}worker${NC}      Run background worker"
+  echo -e "  ${CYAN}worker-dev${NC}  Run worker with hot reload (development)"
+  echo -e "  ${CYAN}licenses${NC}    Generate third-party license files"
+  echo -e "  ${CYAN}docker-staging${NC} Build and push Docker images for staging"
 }
 
 install() {
-    echo "Installing Python dependencies..."
-    uv sync
-    echo "Installing UI dependencies..."
-    (cd src/ui && pnpm install)
-    echo "Done!"
+  echo "Installing Python dependencies..."
+  uv sync
+  echo "Installing UI dependencies..."
+  (cd src/ui && pnpm install)
+  echo "Done!"
 }
 
 docker_build_staging() {
-    echo "Building Docker images for staging..."
-    echo "building backend"
-    docker build -f src/uniffy/Dockerfile \
-        -t registry.uniffy.io/uniffy/backend:local-latest .
-    docker push registry.uniffy.io/uniffy/backend:local-latest
-    echo "building frontend"
-    docker build -f src/ui/Dockerfile \
-        --build-arg VITE_API_URL=https://uniffy.local.uniffy.io \
-        --build-arg VITE_ENV=staging \
-        -t registry.uniffy.io/uniffy/frontend:local-latest \
-        src/ui
-    docker push registry.uniffy.io/uniffy/frontend:local-latest
+  echo "Building Docker images for staging..."
+  echo "building backend"
+  docker build -f src/uniffy/Dockerfile \
+    -t registry.uniffy.io/uniffy/backend:local-latest .
+  docker push registry.uniffy.io/uniffy/backend:local-latest
+  echo "building frontend"
+  docker build -f src/ui/Dockerfile \
+    --build-arg VITE_API_URL=https://staging.uniffy.io/api \
+    --build-arg VITE_ENV=staging \
+    -t registry.uniffy.io/uniffy/frontend:local-latest \
+    src/ui
+  docker push registry.uniffy.io/uniffy/frontend:local-latest
 }
 
 proto() {
-    echo "Generating protobuf code..."
-    rm -rf src/uniffy/gen src/ui/src/gen
-    PATH="$(pwd)/src/ui/node_modules/.bin:$PATH" buf generate
-    printf "import os\nimport sys\n\nsys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))\n" > src/uniffy/gen/__init__.py
-    for pkg in src/proto/*/; do
-        pkg_name=$(basename "$pkg")
-        touch "src/uniffy/gen/$pkg_name/__init__.py" 2>/dev/null || true
-        touch "src/uniffy/gen/$pkg_name/v1/__init__.py" 2>/dev/null || true
-    done
-    echo "Protobuf code generated for backend and UI!"
+  echo "Generating protobuf code..."
+  rm -rf src/uniffy/gen src/ui/src/gen
+  PATH="$(pwd)/src/ui/node_modules/.bin:$PATH" buf generate
+  printf "import os\nimport sys\n\nsys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))\n" >src/uniffy/gen/__init__.py
+  for pkg in src/proto/*/; do
+    pkg_name=$(basename "$pkg")
+    touch "src/uniffy/gen/$pkg_name/__init__.py" 2>/dev/null || true
+    touch "src/uniffy/gen/$pkg_name/v1/__init__.py" 2>/dev/null || true
+  done
+  echo "Protobuf code generated for backend and UI!"
 }
 
 clean() {
-    echo "Cleaning generated files..."
-    rm -rf src/uniffy/gen src/ui/src/gen
-    rm -rf src/uniffy/__pycache__ src/uniffy/**/__pycache__
-    rm -rf src/ui/dist src/ui/node_modules/.vite
-    echo "Cleaned!"
+  echo "Cleaning generated files..."
+  rm -rf src/uniffy/gen src/ui/src/gen
+  rm -rf src/uniffy/__pycache__ src/uniffy/**/__pycache__
+  rm -rf src/ui/dist src/ui/node_modules/.vite
+  echo "Cleaned!"
 }
 
 dev() {
-    echo "Starting development servers..."
-    echo "Backend: http://0.0.0.0:8000"
-    echo "Frontend: http://0.0.0.0:5173"
-    trap 'kill 0' EXIT
-    uv run hypercorn "uniffy.factory:create_app()" --reload --bind 0.0.0.0:8000 &
-    (cd src/ui && pnpm dev)
+  echo "Starting development servers..."
+  echo "Backend: http://0.0.0.0:8000"
+  echo "Frontend: http://0.0.0.0:5173"
+  echo "Worker: background tasks"
+  trap 'kill 0' EXIT
+  uv run hypercorn "uniffy.factory:create_app()" --reload --bind 0.0.0.0:8000 &
+  uv run watchfiles --filter python "python -m uniffy.worker" src/uniffy/ &
+  (cd src/ui && pnpm dev)
 }
 
 backend() {
-    uv run hypercorn "uniffy.factory:create_app()" --reload --bind 0.0.0.0:8000
+  uv run hypercorn "uniffy.factory:create_app()" --reload --bind 0.0.0.0:8000
 }
 
 ui() {
-    local cmd="${1:-dev}"
-    (cd src/ui && pnpm "$cmd")
+  local cmd="${1:-dev}"
+  (cd src/ui && pnpm "$cmd")
 }
 
 lint() {
-    uv run ruff check src/uniffy/ --exclude src/uniffy/gen --fix
-    (cd src/ui && pnpm run lint)
+  uv run ruff check src/uniffy/ --exclude src/uniffy/gen --fix
+  (cd src/ui && pnpm run lint)
 }
 
 format() {
-    uv run ruff format src/uniffy/ --exclude src/uniffy/gen
+  uv run ruff format src/uniffy/ --exclude src/uniffy/gen
 }
 
 run_test() {
-    uv run pytest src/uniffy/tests/ --ignore=src/uniffy/tests/benchmarks/
+  uv run pytest src/uniffy/tests/ --ignore=src/uniffy/tests/benchmarks/
 }
 
 run_bench() {
-    echo "Running performance benchmarks..."
-    uv run pytest src/uniffy/tests/benchmarks/ \
-        --benchmark-only \
-        --benchmark-group-by=func \
-        --benchmark-sort=mean \
-        --benchmark-columns=min,max,mean,stddev,rounds
+  echo "Running performance benchmarks..."
+  uv run pytest src/uniffy/tests/benchmarks/ \
+    --benchmark-only \
+    --benchmark-group-by=func \
+    --benchmark-sort=mean \
+    --benchmark-columns=min,max,mean,stddev,rounds
 }
 
 db_shell() {
-    docker compose exec postgres psql -U uniffy -d uniffy
+  docker compose exec postgres psql -U uniffy -d uniffy
 }
 
 db_migrate() {
-    uv run alembic -c src/uniffy/alembic.ini upgrade head
+  uv run alembic -c src/uniffy/alembic.ini upgrade head
+}
+
+worker() {
+  echo "Starting background worker..."
+  uv run python -m uniffy.worker
+}
+
+worker_dev() {
+  echo "Starting background worker with hot reload..."
+  uv run watchfiles --filter python "python -m uniffy.worker" src/uniffy/
 }
 
 licenses() {
-    echo "Generating third-party licenses..."
-    cat > docs/LICENSES.md << 'EOF'
+  echo "Generating third-party licenses..."
+  cat >docs/LICENSES.md <<'EOF'
 # Third-Party Licenses
 
 This file lists all third-party dependencies used in Uniffy and their licenses.
@@ -129,29 +143,31 @@ This file is auto-generated by running `./run.sh licenses`.
 ## Python Dependencies
 
 EOF
-    uv run pip-licenses --format=markdown --with-urls --ignore-packages uniffy >> docs/LICENSES.md
-    echo -e "\n## Node.js Dependencies\n" >> docs/LICENSES.md
-    echo "| Package | License | Homepage |" >> docs/LICENSES.md
-    echo "|---------|---------|----------|" >> docs/LICENSES.md
-    (cd src/ui && pnpm licenses list --prod --json 2>/dev/null | node -e "const d=require('fs').readFileSync(0,'utf8');const j=JSON.parse(d);const rows=[];Object.entries(j).forEach(([lic,pkgs])=>pkgs.forEach(p=>rows.push([p.name+'@'+p.versions[0],lic,p.homepage||''])));rows.sort((a,b)=>a[0].localeCompare(b[0])).forEach(r=>console.log('| '+r[0]+' | '+r[1]+' | '+r[2]+' |'));" >> ../../docs/LICENSES.md)
-    echo "Third-party licenses generated in docs/LICENSES.md"
+  uv run pip-licenses --format=markdown --with-urls --ignore-packages uniffy >>docs/LICENSES.md
+  echo -e "\n## Node.js Dependencies\n" >>docs/LICENSES.md
+  echo "| Package | License | Homepage |" >>docs/LICENSES.md
+  echo "|---------|---------|----------|" >>docs/LICENSES.md
+  (cd src/ui && pnpm licenses list --prod --json 2>/dev/null | node -e "const d=require('fs').readFileSync(0,'utf8');const j=JSON.parse(d);const rows=[];Object.entries(j).forEach(([lic,pkgs])=>pkgs.forEach(p=>rows.push([p.name+'@'+p.versions[0],lic,p.homepage||''])));rows.sort((a,b)=>a[0].localeCompare(b[0])).forEach(r=>console.log('| '+r[0]+' | '+r[1]+' | '+r[2]+' |'));" >>../../docs/LICENSES.md)
+  echo "Third-party licenses generated in docs/LICENSES.md"
 }
 
 # Main dispatch
 case "${1:-help}" in
-    install)    install ;;
-    proto)      proto ;;
-    clean)      clean ;;
-    dev)        dev ;;
-    backend)    backend ;;
-    ui)         ui "${2:-}" ;;
-    lint)       lint ;;
-    format)     format ;;
-    test)       run_test ;;
-    bench)      run_bench ;;
-    db-shell)   db_shell ;;
-    db-migrate) db_migrate ;;
-    licenses)   licenses ;;
-    docker-staging) docker_build_staging ;;
-    help|*)     help ;;
+install) install ;;
+proto) proto ;;
+clean) clean ;;
+dev) dev ;;
+backend) backend ;;
+ui) ui "${2:-}" ;;
+lint) lint ;;
+format) format ;;
+test) run_test ;;
+bench) run_bench ;;
+db-shell) db_shell ;;
+db-migrate) db_migrate ;;
+worker) worker ;;
+worker-dev) worker_dev ;;
+licenses) licenses ;;
+docker-staging) docker_build_staging ;;
+help | *) help ;;
 esac

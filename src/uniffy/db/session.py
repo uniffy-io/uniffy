@@ -95,12 +95,19 @@ def run_migrations() -> None:
     logger.info("Migrations completed successfully")
 
 
-async def init_db() -> None:
+async def init_db(*, skip_migrations: bool = False) -> None:
     """
     Initialize the database.
 
-    Creates extensions, runs migrations, and sets up the global engine.
+    Creates extensions, optionally runs migrations, and sets up the global engine.
     This should be called on application startup.
+
+    Parameters
+    ----------
+    skip_migrations : bool
+        If True, skip running Alembic migrations. Useful for worker processes
+        where migrations should only run from the main backend.
+
     """
     global _engine, _async_session_maker
 
@@ -121,8 +128,9 @@ async def init_db() -> None:
     # Create extensions before running migrations
     await create_extensions(_engine)
 
-    # Run migrations
-    run_migrations()
+    # Run migrations (skip for workers - backend handles migrations)
+    if not skip_migrations:
+        run_migrations()
 
     # Create session maker
     _async_session_maker = async_sessionmaker(

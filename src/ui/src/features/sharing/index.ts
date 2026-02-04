@@ -6,14 +6,14 @@
  */
 
 // API
-export { sharingApi } from './api/sharingApi';
+export { sharingApi } from '@/features/sharing/api/sharingApi';
 
 // Components
-export { SharingDialog } from './components/SharingDialog';
-export { ShareButton } from './components/ShareButton';
-export { ShareTargetSearch } from './components/ShareTargetSearch';
-export { PermissionRow } from './components/PermissionRow';
-export { PermissionLevelSelect } from './components/PermissionLevelSelect';
+export { SharingDialog } from '@/features/sharing/components/SharingDialog';
+export { ShareButton } from '@/features/sharing/components/ShareButton';
+export { ShareTargetSearch } from '@/features/sharing/components/ShareTargetSearch';
+export { PermissionRow } from '@/features/sharing/components/PermissionRow';
+export { PermissionLevelSelect } from '@/features/sharing/components/PermissionLevelSelect';
 
 // Hooks
 export {
@@ -28,8 +28,8 @@ export {
     isUserTarget,
     isGroupTarget,
     sortPermissions,
-} from './hooks/useSharingHooks';
-export type { MyPermission } from './hooks/useSharingHooks';
+} from '@/features/sharing/hooks/useSharingHooks';
+export type { MyPermission } from '@/features/sharing/hooks/useSharingHooks';
 
 // Store - Slice & Actions
 export {
@@ -40,12 +40,12 @@ export {
     clearSharing,
     serializePermissionInfo,
     serializeShareTarget,
-} from './store/sharingSlice';
+} from '@/features/sharing/store/sharingSlice';
 export type {
     SharingState,
     SerializedPermissionInfo,
     SerializedShareTarget,
-} from './store/sharingSlice';
+} from '@/features/sharing/store/sharingSlice';
 
 // Store - Thunks
 export {
@@ -54,4 +54,4 @@ export {
     revokePermission,
     updatePermission,
     searchShareTargets,
-} from './store/sharingThunks';
+} from '@/features/sharing/store/sharingThunks';

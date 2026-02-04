@@ -13,9 +13,9 @@ import {
     Trash,
     Warning,
 } from '@phosphor-icons/react';
-import { useOrgMembers } from '../../hooks/useAdminHooks';
+import { useOrgMembers } from '@/features/admin/hooks/useAdminHooks';
 import { OrganizationRole } from '@/gen/common/v1/common_pb';
-import type { SerializedMemberInfo } from '../../store/adminSlice';
+import type { SerializedMemberInfo } from '@/features/admin/store/adminSlice';
 import { useAppSelector } from '@/app/hooks';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';

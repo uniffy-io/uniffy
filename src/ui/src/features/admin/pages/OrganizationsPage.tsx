@@ -14,11 +14,11 @@ import {
     TableLoading,
     TableEmpty,
 } from "@/components/ui/table";
-import { OrganizationEditDialog } from "../components/OrganizationEditDialog";
+import { OrganizationEditDialog } from "@/features/admin/components/OrganizationEditDialog";
 import { transport } from "@/config";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Buildings, Plus, PencilSimple, Clipboard, Check } from '@phosphor-icons/react';
-import { cn } from "@/utils/cn";
+import { cn } from "@/shared/utils/cn";
 
 export default function OrganizationsPage() {
   useDocumentTitle('Organizations');

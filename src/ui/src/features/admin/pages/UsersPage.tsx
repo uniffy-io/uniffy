@@ -14,12 +14,12 @@ import {
     TableLoading,
     TableEmpty,
 } from "@/components/ui/table";
-import { UserEditDialog } from "../components/UserEditDialog";
-import { UserCreateDialog } from "../components/UserCreateDialog";
+import { UserEditDialog } from "@/features/admin/components/UserEditDialog";
+import { UserCreateDialog } from "@/features/admin/components/UserCreateDialog";
 import { transport } from "@/config";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { UsersThree, Plus, PencilSimple, ShieldCheck } from '@phosphor-icons/react';
-import { cn } from "@/utils/cn";
+import { cn } from "@/shared/utils/cn";
 
 export default function UsersPage() {
   useDocumentTitle('Users');

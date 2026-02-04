@@ -17,8 +17,8 @@ import {
   CalendarDots,
   Question,
 } from '@phosphor-icons/react';
-import { UrnType } from '@/utils/urnTypes';
-import { getUrnTypeTheme, getUrnTypeHexColor, type UrnTypeTheme } from './urnColors';
+import { UrnType } from '@/shared/utils/urnTypes';
+import { getUrnTypeTheme, getUrnTypeHexColor, type UrnTypeTheme } from '@/config/theme/urnColors';
 
 /**
  * Configuration for a content type

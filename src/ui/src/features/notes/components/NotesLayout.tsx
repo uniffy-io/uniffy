@@ -1,8 +1,8 @@
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/utils/cn';
-import { loadPanelLayout, savePanelLayout } from '@/utils/panelStorage';
+import { cn } from '@/shared/utils/cn';
+import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
 
 interface NotesLayoutProps {
   sidebar: ReactNode;

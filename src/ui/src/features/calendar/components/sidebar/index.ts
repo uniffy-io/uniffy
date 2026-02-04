@@ -2,10 +2,10 @@
  * Sidebar components exports
  */
 
-export { SidebarSection } from './SidebarSection';
-export { QuickAccess } from './QuickAccess';
-export { MiniCalendar } from './MiniCalendar';
-export { CalendarList } from './CalendarList';
-export { CategoryList } from './CategoryList';
-export { TemplateList } from './TemplateList';
-export { TagCloud } from './TagCloud';
+export { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
+export { QuickAccess } from '@/features/calendar/components/sidebar/QuickAccess';
+export { MiniCalendar } from '@/features/calendar/components/sidebar/MiniCalendar';
+export { CalendarList } from '@/features/calendar/components/sidebar/CalendarList';
+export { CategoryList } from '@/features/calendar/components/sidebar/CategoryList';
+export { TemplateList } from '@/features/calendar/components/sidebar/TemplateList';
+export { TagCloud } from '@/features/calendar/components/sidebar/TagCloud';

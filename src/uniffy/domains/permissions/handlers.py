@@ -89,16 +89,17 @@ class PermissionsHandlers:
             async for session in get_async_session():
                 ops = PermissionsOperations(session)
 
-                # We need to get the content owner ID - for now, we'll need to look it up
-                # This is a limitation - the handler needs to know the content owner.
-                # In a real implementation, we'd look up the content to get its owner.
-                # For now, we'll pass the granting user as owner (share permission).
+                # Get the actual content owner
+                actual_owner_id = await ops._get_content_owner_id(content_type, content_id)
+                if not actual_owner_id:
+                    raise ConnectError(Code.NOT_FOUND, "Content not found")
+
                 permission = await ops.grant_permission(
                     granted_by_user_id=user_id,
                     organization_id=organization_id,
                     content_type=content_type,
                     content_id=content_id,
-                    content_owner_id=user_id,  # Will be checked by permission checker
+                    content_owner_id=actual_owner_id,
                     subject_type=subject_type,
                     subject_id=subject_id,
                     permission_level=permission_level,
@@ -159,11 +160,25 @@ class PermissionsHandlers:
         try:
             async for session in get_async_session():
                 ops = PermissionsOperations(session)
+
+                # Fetch permission to get content info
+                existing_permission = await ops.get_permission_by_id(permission_id)
+                if not existing_permission:
+                    raise ConnectError(Code.NOT_FOUND, "Permission not found")
+
+                # Get the actual content owner
+                actual_owner_id = await ops._get_content_owner_id(
+                    existing_permission.content_type,
+                    existing_permission.content_id,
+                )
+                if not actual_owner_id:
+                    raise ConnectError(Code.NOT_FOUND, "Content not found")
+
                 success = await ops.revoke_permission(
                     revoking_user_id=user_id,
                     organization_id=organization_id,
                     permission_id=permission_id,
-                    content_owner_id=user_id,  # Will be checked by permission checker
+                    content_owner_id=actual_owner_id,
                 )
                 return RevokePermissionResponse(success=success)
 
@@ -217,11 +232,25 @@ class PermissionsHandlers:
         try:
             async for session in get_async_session():
                 ops = PermissionsOperations(session)
+
+                # Fetch permission to get content info
+                existing_permission = await ops.get_permission_by_id(permission_id)
+                if not existing_permission:
+                    raise ConnectError(Code.NOT_FOUND, "Permission not found")
+
+                # Get the actual content owner
+                actual_owner_id = await ops._get_content_owner_id(
+                    existing_permission.content_type,
+                    existing_permission.content_id,
+                )
+                if not actual_owner_id:
+                    raise ConnectError(Code.NOT_FOUND, "Content not found")
+
                 permission = await ops.update_permission(
                     updating_user_id=user_id,
                     organization_id=organization_id,
                     permission_id=permission_id,
-                    content_owner_id=user_id,  # Will be checked by permission checker
+                    content_owner_id=actual_owner_id,
                     permission_level=permission_level,
                     expires_at=expires_at,
                     clear_expiration=request.clear_expiration,

@@ -12,9 +12,9 @@ import type {
   DropTarget,
   SidebarSectionId,
   DetailPanelTab,
-} from '../types';
-import { LAYOUT, SIDEBAR_SECTIONS } from '../constants';
-import { toDateString } from '../utils';
+} from '@/features/calendar/types';
+import { LAYOUT, SIDEBAR_SECTIONS } from '@/features/calendar/constants';
+import { toDateString } from '@/features/calendar/utils';
 
 /**
  * Calendar UI state

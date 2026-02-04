@@ -1,5 +1,5 @@
-import { CrepeEditor } from './CrepeEditor';
-import type { SerializedNote } from '../../store/notesThunks';
+import { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
 interface ReadOnlyViewerProps {
   note: SerializedNote;

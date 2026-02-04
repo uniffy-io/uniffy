@@ -2,7 +2,7 @@
  * Filters Components - Public Exports
  */
 
-export { FiltersDashboard } from './FiltersDashboard';
-export { SavedFiltersList } from './SavedFiltersList';
-export { FilterCard } from './FilterCard';
-export { FilterBuilder } from './FilterBuilder';
+export { FiltersDashboard } from '@/features/files/components/filters/FiltersDashboard';
+export { SavedFiltersList } from '@/features/files/components/filters/SavedFiltersList';
+export { FilterCard } from '@/features/files/components/filters/FilterCard';
+export { FilterBuilder } from '@/features/files/components/filters/FilterBuilder';

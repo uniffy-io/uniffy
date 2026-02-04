@@ -28,7 +28,7 @@ import {
     fetchGroupMembers,
     addGroupMember,
     removeGroupMember,
-} from './adminThunks';
+} from '@/features/admin/store/adminThunks';
 
 /**
  * Serialized content type defaults.

@@ -13,14 +13,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
-import { useSearch } from '../hooks/useSearch';
-import { useSpotlightOpenListener } from '../hooks/useSpotlightTrigger';
-import { SearchResultsList } from './SearchResultsList';
-import { FilterChip } from './FilterChip';
-import { FilterHints } from './FilterHints';
+import { useSearch } from '@/features/search/hooks/useSearch';
+import { useSpotlightOpenListener } from '@/features/search/hooks/useSpotlightTrigger';
+import { SearchResultsList } from '@/features/search/components/SearchResultsList';
+import { FilterChip } from '@/features/search/components/FilterChip';
+import { FilterHints } from '@/features/search/components/FilterHints';
 import { useShortcutHandler, useFormattedKeybinding } from '@/features/settings';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 import {
     getTypeFilterLabel,
     removeTypeFilterFromQuery,
@@ -28,7 +28,7 @@ import {
     removeMyFilterFromQuery,
     removeProjectFilterFromQuery,
     removePhraseFromQuery,
-} from '../utils/queryParser';
+} from '@/features/search/utils/queryParser';
 
 export function SpotlightSearch() {
     const navigate = useNavigate();

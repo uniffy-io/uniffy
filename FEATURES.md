@@ -71,8 +71,11 @@
 - [x] Base Backend Implementation 
 - [x] Fast uploads and download with Browser Workers and chunked stream apis
 - [x] Custom file filters, created by users that are savable and selectable in the UI
+- [X] Files Sharing System integration
 - [X] Files Tag System
 - [x] Files Tags Dashboard with tag management
+- [x] File Thumbnail Generation 
+- [x] Global Application workers for chunked streaming of audio/video files
+- [x] Files viewer for most formats
 - [ ] ...
 - [ ] Metadata extraction for full text search
-- [ ] File Preview generation 

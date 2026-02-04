@@ -12,7 +12,7 @@ import {
     revokePermission,
     updatePermission,
     searchShareTargets,
-} from './sharingThunks';
+} from '@/features/sharing/store/sharingThunks';
 
 /**
  * Serialized permission info for Redux store.

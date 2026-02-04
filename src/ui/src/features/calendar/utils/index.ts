@@ -46,7 +46,7 @@ export {
   getDate,
   getMonth,
   getYear,
-} from './dateUtils';
+} from '@/features/calendar/utils/dateUtils';
 
 // Event positioning
 export {
@@ -58,4 +58,4 @@ export {
   getPositionedEventsForWeek,
   positionAllDayEvents,
   getAllDayRowHeight,
-} from './eventPositioning';
+} from '@/features/calendar/utils/eventPositioning';

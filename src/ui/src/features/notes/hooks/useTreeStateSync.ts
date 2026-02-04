@@ -7,7 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { loadExpandedNodes, saveExpandedNodes } from '../utils/treeStateStorage';
+import { loadExpandedNodes, saveExpandedNodes } from '@/features/notes/utils/treeStateStorage';
 
 // Action to set expanded nodes without triggering a save loop
 const SET_EXPANDED_NODES_FROM_STORAGE = 'notesTree/setExpandedNodesFromStorage';

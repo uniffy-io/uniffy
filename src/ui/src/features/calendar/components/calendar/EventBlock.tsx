@@ -3,11 +3,11 @@
  */
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectEvent, startDrag, endDrag } from '../../store';
-import type { PositionedEvent } from '../../types';
-import { hexToRgba, CATEGORY_COLORS } from '../../constants';
-import { formatTimeRange } from '../../utils';
-import { cn } from '@/utils/cn';
+import { selectEvent, startDrag, endDrag } from '@/features/calendar/store';
+import type { PositionedEvent } from '@/features/calendar/types';
+import { hexToRgba, CATEGORY_COLORS } from '@/features/calendar/constants';
+import { formatTimeRange } from '@/features/calendar/utils';
+import { cn } from '@/shared/utils/cn';
 import { Warning } from '@phosphor-icons/react';
 
 // Default color when category is not found

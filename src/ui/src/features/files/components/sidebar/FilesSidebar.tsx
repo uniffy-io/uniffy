@@ -33,8 +33,8 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 import { useBookmarks } from '@/features/bookmarks';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/utils/cn';
-import { filesApi } from '../../api/filesApi';
+import { cn } from '@/shared/utils/cn';
+import { filesApi } from '@/features/files/api/filesApi';
 import {
     toggleNodeExpanded,
     setSelectedFolder,
@@ -43,11 +43,11 @@ import {
     createFolder,
     updateFolder,
     deleteFolder,
-} from '../../store/filesTreeSlice';
-import { setFolderId, setViewScope, initializeFilesData, restoreFile } from '../../store/filesSlice';
-import { selectDeletedFiles } from '../../store/selectors';
-import { toggleUploadPanel } from '../../store/uploadSlice';
-import type { SerializedTreeNode } from '../../store/filesTreeThunks';
+} from '@/features/files/store/filesTreeSlice';
+import { setFolderId, setViewScope, initializeFilesData, restoreFile } from '@/features/files/store/filesSlice';
+import { selectDeletedFiles } from '@/features/files/store/selectors';
+import { toggleUploadPanel } from '@/features/files/store/uploadSlice';
+import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
 
 // Scope filter configuration
 interface ScopeFilterConfig {

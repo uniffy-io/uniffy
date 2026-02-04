@@ -5,8 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { createCategory, updateCategory } from '../../store/calendarThunks';
-import { cn } from '@/utils/cn';
+import { createCategory, updateCategory } from '@/features/calendar/store/calendarThunks';
+import { cn } from '@/shared/utils/cn';
 
 interface AddCategoryModalProps {
   isOpen: boolean;

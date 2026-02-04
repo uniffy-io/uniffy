@@ -2,24 +2,24 @@
  * Search feature exports
  */
 
-export { searchApi } from './api/searchApi';
-export { useSearch, parseSearchQuery, hasActiveFilters } from './hooks/useSearch';
-export type { ParsedQuery, SearchFilters } from './hooks/useSearch';
+export { searchApi } from '@/features/search/api/searchApi';
+export { useSearch, parseSearchQuery, hasActiveFilters } from '@/features/search/hooks/useSearch';
+export type { ParsedQuery, SearchFilters } from '@/features/search/hooks/useSearch';
 export {
   useUrnResolution,
   clearUrnMetadataCache,
   invalidateUrnMetadataCache,
   hydrateUrnMetadataCache,
-} from './hooks/useUrnResolution';
+} from '@/features/search/hooks/useUrnResolution';
 export {
   openSpotlightSearch,
   useOpenSpotlight,
-} from './hooks/useSpotlightTrigger';
-export { GlobalSearch } from './components/GlobalSearch';
-export { SearchResultsList } from './components/SearchResultsList';
-export { SpotlightSearch } from './components/SpotlightSearch';
-export { FilterChip } from './components/FilterChip';
-export { FilterHints, FilterHintsCompact } from './components/FilterHints';
+} from '@/features/search/hooks/useSpotlightTrigger';
+export { GlobalSearch } from '@/features/search/components/GlobalSearch';
+export { SearchResultsList } from '@/features/search/components/SearchResultsList';
+export { SpotlightSearch } from '@/features/search/components/SpotlightSearch';
+export { FilterChip } from '@/features/search/components/FilterChip';
+export { FilterHints, FilterHintsCompact } from '@/features/search/components/FilterHints';
 
 // Query parser utilities
 export {
@@ -30,7 +30,7 @@ export {
   removeProjectFilterFromQuery,
   removeMyFilterFromQuery,
   FILTER_HINTS,
-} from './utils/queryParser';
+} from '@/features/search/utils/queryParser';
 
 // Text utilities
-export { stripMarkdown, stripMarkdownAndTruncate } from './utils/stripMarkdown';
+export { stripMarkdown, stripMarkdownAndTruncate } from '@/features/search/utils/stripMarkdown';

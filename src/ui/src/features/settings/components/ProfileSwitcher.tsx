@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { CaretDown, Check, Plus } from '@phosphor-icons/react';
-import { useSettings } from '../hooks/useSettings';
+import { useSettings } from '@/features/settings/hooks/useSettings';
 
 interface ProfileSwitcherProps {
     onCreateProfile?: () => void;

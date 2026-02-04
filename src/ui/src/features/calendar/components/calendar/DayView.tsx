@@ -4,16 +4,16 @@
 
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { updateEventThunk } from '../../store';
-import { useCalendarNavigation, useCalendarEvents } from '../../hooks';
-import { TimeColumn, TIME_COLUMN_TOP_PADDING } from './TimeColumn';
-import { DayHeader } from './DayHeader';
-import { GridLines } from './GridLines';
-import { DayCurrentTimeIndicator } from './CurrentTimeIndicator';
-import { EventBlock } from './EventBlock';
-import { QuickEventModal } from '../modals/QuickEventModal';
-import { GRID, LAYOUT } from '../../constants';
-import { parseISO, format } from '../../utils';
+import { updateEventThunk } from '@/features/calendar/store';
+import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
+import { TimeColumn, TIME_COLUMN_TOP_PADDING } from '@/features/calendar/components/calendar/TimeColumn';
+import { DayHeader } from '@/features/calendar/components/calendar/DayHeader';
+import { GridLines } from '@/features/calendar/components/calendar/GridLines';
+import { DayCurrentTimeIndicator } from '@/features/calendar/components/calendar/CurrentTimeIndicator';
+import { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
+import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
+import { GRID, LAYOUT } from '@/features/calendar/constants';
+import { parseISO, format } from '@/features/calendar/utils';
 
 export function DayView() {
   const dispatch = useAppDispatch();

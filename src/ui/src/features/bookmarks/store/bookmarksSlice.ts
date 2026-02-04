@@ -10,7 +10,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
-import { bookmarksApi } from '../api/bookmarksApi';
+import { bookmarksApi } from '@/features/bookmarks/api/bookmarksApi';
 import type { Bookmark } from '@/gen/bookmarks/v1/bookmarks_pb';
 
 

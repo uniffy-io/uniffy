@@ -9,8 +9,8 @@
 
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { cn } from '@/utils/cn';
-import { useAdminAccess } from '../hooks/useAdminHooks';
+import { cn } from '@/shared/utils/cn';
+import { useAdminAccess } from '@/features/admin/hooks/useAdminHooks';
 import type { Icon } from '@phosphor-icons/react';
 import {
     Users,

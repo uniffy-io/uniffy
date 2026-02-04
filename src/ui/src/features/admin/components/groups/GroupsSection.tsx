@@ -13,8 +13,8 @@ import {
     Users,
     X,
 } from '@phosphor-icons/react';
-import { useGroups, useGroupMembers } from '../../hooks/useAdminHooks';
-import type { SerializedGroupInfo } from '../../store/adminSlice';
+import { useGroups, useGroupMembers } from '@/features/admin/hooks/useAdminHooks';
+import type { SerializedGroupInfo } from '@/features/admin/store/adminSlice';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface GroupCardProps {

@@ -15,8 +15,6 @@ from typing import Any
 # Key: action identifier (dot-separated namespace)
 # Value: keyboard shortcut (platform-aware, Ctrl = Cmd on macOS)
 DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
-    # Notes actions
-    "notes.toggleSidebar": "Ctrl+B",
     # Navigation actions
     "nav.search": "Ctrl+K",
     # App actions
@@ -24,6 +22,18 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "app.commandPalette": "Ctrl+Shift+P",
     "app.help": "F1",
     "app.zenMode": "Ctrl+\\",
+    "app.toggleSidebar": "Ctrl+B",
+    # File viewer actions
+    "viewer.close": "Escape",
+    "viewer.next": "ArrowRight",
+    "viewer.previous": "ArrowLeft",
+    "viewer.togglePlay": "Space",
+    "viewer.fullscreen": "F",
+    "viewer.zoomIn": "=",
+    "viewer.zoomOut": "-",
+    "viewer.zoomReset": "0",
+    "viewer.rotateRight": "R",
+    "viewer.download": "Ctrl+S",
 }
 
 

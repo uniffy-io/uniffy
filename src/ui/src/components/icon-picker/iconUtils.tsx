@@ -6,8 +6,8 @@
 
 import { FileText } from '@phosphor-icons/react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { IconValue } from './iconConstants';
-import { ICON_COMPONENTS } from './iconConstants';
+import type { IconValue } from '@/components/icon-picker/iconConstants';
+import { ICON_COMPONENTS } from '@/components/icon-picker/iconConstants';
 
 /**
  * Render an icon (phosphor icon or emoji) with the given className.

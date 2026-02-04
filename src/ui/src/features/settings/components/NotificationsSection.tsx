@@ -2,7 +2,7 @@
  * Notifications settings section.
  */
 
-import { useSettings, useNotificationSettings } from '../hooks/useSettings';
+import { useSettings, useNotificationSettings } from '@/features/settings/hooks/useSettings';
 
 interface ToggleSwitchProps {
     enabled: boolean;

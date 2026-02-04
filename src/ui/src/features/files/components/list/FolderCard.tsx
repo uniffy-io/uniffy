@@ -11,13 +11,13 @@ import {
     CheckSquare,
     Square,
 } from '@phosphor-icons/react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/shared/utils/cn';
 import { useBookmarkToggle } from '@/features/bookmarks';
-import type { SerializedTreeNode } from '../../store/filesTreeThunks';
-import type { ICON_SIZE_CONFIG } from './constants';
-import { RenameInput } from './RenameInput';
-import { ItemContextMenu } from './ItemContextMenu';
-import { formatFileSize } from './utils';
+import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
+import type { ICON_SIZE_CONFIG } from '@/features/files/components/list/constants';
+import { RenameInput } from '@/features/files/components/list/RenameInput';
+import { ItemContextMenu } from '@/features/files/components/list/ItemContextMenu';
+import { formatFileSize } from '@/features/files/components/list/utils';
 
 export interface FolderCardProps {
     folder: SerializedTreeNode;
@@ -32,6 +32,7 @@ export interface FolderCardProps {
     isSelectMode: boolean;
     isChecked: boolean;
     onToggleCheck: (id: string, shiftKey: boolean) => void;
+    canShare?: boolean;
 }
 
 export function FolderCard({
@@ -47,6 +48,7 @@ export function FolderCard({
     isSelectMode,
     isChecked,
     onToggleCheck,
+    canShare = true,
 }: FolderCardProps) {
     const showOwner = viewScope === 'shared' || viewScope === 'organization';
     const [isRenaming, setIsRenaming] = useState(false);
@@ -130,7 +132,7 @@ export function FolderCard({
                 )}
 
                 {/* Icon */}
-                <div className="flex-shrink-0 w-6">
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
                     <Folder size={24} weight="duotone" className="text-primary" />
                 </div>
 
@@ -149,6 +151,11 @@ export function FolderCard({
                         <p className="text-sm font-medium truncate">{folder.name}</p>
                     </div>
                 )}
+
+                {/* Tags column placeholder (folders don't have tags) */}
+                <div className="w-36">
+                    <span className="text-xs text-muted-foreground">--</span>
+                </div>
 
                 {/* Owner column placeholder (only in shared/organization views) */}
                 {showOwner && (
@@ -191,6 +198,7 @@ export function FolderCard({
                         onBookmark={toggleBookmark}
                         isBookmarked={isBookmarked}
                         bookmarkToggling={bookmarkToggling}
+                        canShare={canShare}
                     />
                 )}
             </div>
@@ -288,6 +296,7 @@ export function FolderCard({
                     onBookmark={toggleBookmark}
                     isBookmarked={isBookmarked}
                     bookmarkToggling={bookmarkToggling}
+                    canShare={canShare}
                 />
             )}
         </div>

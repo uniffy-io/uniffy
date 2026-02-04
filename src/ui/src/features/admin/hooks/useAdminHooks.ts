@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { clearAdminError } from '../store/adminSlice';
+import { clearAdminError } from '@/features/admin/store/adminSlice';
 import {
     fetchPermissionDefaults,
     updatePermissionDefaults,
@@ -21,7 +21,7 @@ import {
     fetchGroupMembers,
     addGroupMember,
     removeGroupMember,
-} from '../store/adminThunks';
+} from '@/features/admin/store/adminThunks';
 import { ContentType, VisibilityScope, OrganizationRole } from '@/gen/common/v1/common_pb';
 
 /**

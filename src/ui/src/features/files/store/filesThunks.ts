@@ -6,7 +6,7 @@
  */
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { filesApi } from '../api/filesApi';
+import { filesApi } from '@/features/files/api/filesApi';
 import type { RootState } from '@/app/store';
 import type { File } from '@/gen/files/v1/files_pb';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
@@ -55,6 +55,17 @@ const fileToPlain = (file: File) => ({
         id: file.ownerInfo.id,
         name: file.ownerInfo.name,
         email: file.ownerInfo.email,
+    } : undefined,
+    metadata: file.metadata ? {
+        hasThumbnail: file.metadata.hasThumbnail,
+        width: file.metadata.width,
+        height: file.metadata.height,
+        format: file.metadata.format,
+        colorMode: file.metadata.colorMode,
+        durationSeconds: file.metadata.durationSeconds,
+        pageCount: file.metadata.pageCount,
+        exif: { ...file.metadata.exif },
+        error: file.metadata.error,
     } : undefined,
 });
 

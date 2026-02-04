@@ -6,13 +6,13 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { SettingsLayout, type SettingsSection } from '../components/SettingsLayout';
-import { AppearanceSection } from '../components/AppearanceSection';
-import { KeyboardShortcutsSection } from '../components/KeyboardShortcutsSection';
-import { NotificationsSection } from '../components/NotificationsSection';
-import { AccountSection } from '../components/AccountSection';
-import { useSettings } from '../hooks/useSettings';
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
+import { SettingsLayout, type SettingsSection } from '@/features/settings/components/SettingsLayout';
+import { AppearanceSection } from '@/features/settings/components/AppearanceSection';
+import { KeyboardShortcutsSection } from '@/features/settings/components/KeyboardShortcutsSection';
+import { NotificationsSection } from '@/features/settings/components/NotificationsSection';
+import { AccountSection } from '@/features/settings/components/AccountSection';
+import { useSettings } from '@/features/settings/hooks/useSettings';
 
 export function SettingsPage() {
     useDocumentTitle('Settings');

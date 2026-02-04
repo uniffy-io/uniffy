@@ -9,12 +9,12 @@
  */
 
 import { CaretLeft, CaretRight, GlobeHemisphereWest, CaretDown } from '@phosphor-icons/react';
-import { useCalendarNavigation } from '../../hooks';
+import { useCalendarNavigation } from '@/features/calendar/hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { openTimezoneModal } from '../../store';
-import { getTimezoneOffset } from '../../utils';
-import { cn } from '@/utils/cn';
-import type { ViewMode } from '../../types';
+import { openTimezoneModal } from '@/features/calendar/store';
+import { getTimezoneOffset } from '@/features/calendar/utils';
+import { cn } from '@/shared/utils/cn';
+import type { ViewMode } from '@/features/calendar/types';
 
 export function CalendarHeader() {
   const dispatch = useAppDispatch();

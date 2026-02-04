@@ -1,9 +1,9 @@
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { EditorHeader } from './EditorHeader';
-import { CrepeEditor } from './CrepeEditor';
-import { MarkdownSplitEditor } from './MarkdownSplitEditor';
-import { ReadOnlyViewer } from './ReadOnlyViewer';
-import { toggleSidebar } from '../../store/editorSlice';
+import { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
+import { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+import { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
+import { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
+import { toggleSidebar } from '@/features/notes/store/editorSlice';
 import { CaretDoubleRight } from '@phosphor-icons/react';
 import { useMyPermission } from '@/features/sharing';
 import { ContentType } from '@/gen/common/v1/common_pb';
@@ -31,6 +31,7 @@ export function NotesEditor() {
 
   // Force readonly mode if user doesn't have edit permission
   const canEdit = permission?.canEdit ?? true; // Default to true while loading
+  const canShare = permission?.canShare ?? false; // Only admin/owner can share
   const editorMode = canEdit ? userSelectedMode : 'readonly';
   
   // Show loading state when:
@@ -103,7 +104,7 @@ export function NotesEditor() {
   
   return (
     <div className="flex flex-col h-full bg-card">
-      <EditorHeader note={currentNote} canEdit={canEdit} />
+      <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} />
       <div className="flex-1 overflow-hidden">
         {renderEditor()}
       </div>

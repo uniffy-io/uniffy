@@ -5,8 +5,8 @@
  * Used for instant initial load while revalidating from API in background.
  */
 
-import type { SerializedNote } from '../store/notesThunks';
-import type { OrganizedNotes } from './notesTreeUtils';
+import type { SerializedNote } from '@/features/notes/store/notesThunks';
+import type { OrganizedNotes } from '@/features/notes/utils/notesTreeUtils';
 
 const DB_NAME = 'uniffy-notes-cache';
 const DB_VERSION = 1;

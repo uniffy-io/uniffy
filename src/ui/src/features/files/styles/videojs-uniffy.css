@@ -1,0 +1,232 @@
+/**
+ * Video.js Uniffy Theme
+ *
+ * Custom styles for Video.js player to match the Uniffy design system.
+ */
+
+/* Base theme variables */
+.video-js {
+    --vjs-primary: rgb(var(--primary));
+    --vjs-primary-foreground: rgb(var(--primary-foreground));
+    --vjs-background: rgba(0, 0, 0, 0.8);
+}
+
+/* Big play button */
+.video-js .vjs-big-play-button {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    margin-top: -40px;
+    margin-left: -40px;
+    transition: all 0.2s ease;
+}
+
+.video-js .vjs-big-play-button:hover {
+    background-color: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+}
+
+.video-js .vjs-big-play-button .vjs-icon-placeholder:before {
+    color: #000;
+    font-size: 48px;
+    line-height: 80px;
+}
+
+/* Control bar */
+.video-js .vjs-control-bar {
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    height: 50px;
+    padding: 0 8px;
+}
+
+/* Progress bar */
+.video-js .vjs-progress-control {
+    position: absolute;
+    top: -12px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 12px;
+}
+
+.video-js .vjs-progress-holder {
+    height: 4px;
+    margin: 0;
+    border-radius: 2px;
+}
+
+.video-js .vjs-progress-holder:hover {
+    height: 6px;
+}
+
+.video-js .vjs-load-progress,
+.video-js .vjs-load-progress div {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.video-js .vjs-play-progress {
+    background: #fff;
+    border-radius: 2px;
+}
+
+.video-js .vjs-play-progress:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    margin-top: -6px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.1s ease;
+    opacity: 0;
+}
+
+.video-js:hover .vjs-play-progress:before {
+    opacity: 1;
+}
+
+/* Time display */
+.video-js .vjs-time-control {
+    padding: 0 8px;
+    font-size: 13px;
+    line-height: 50px;
+}
+
+.video-js .vjs-current-time {
+    display: block;
+}
+
+.video-js .vjs-duration {
+    display: block;
+}
+
+.video-js .vjs-time-divider {
+    display: none;
+}
+
+/* Control buttons */
+.video-js .vjs-button {
+    width: 40px;
+    height: 50px;
+}
+
+.video-js .vjs-button > .vjs-icon-placeholder:before {
+    font-size: 20px;
+    line-height: 50px;
+}
+
+.video-js .vjs-play-control {
+    width: 50px;
+}
+
+/* Volume */
+.video-js .vjs-volume-panel {
+    width: 40px;
+    transition: width 0.2s ease;
+}
+
+.video-js .vjs-volume-panel:hover,
+.video-js .vjs-volume-panel.vjs-hover {
+    width: 120px;
+}
+
+.video-js .vjs-volume-bar {
+    height: 4px;
+    margin: 23px 0;
+    border-radius: 2px;
+}
+
+.video-js .vjs-volume-level {
+    background: #fff;
+    border-radius: 2px;
+}
+
+/* Fullscreen button */
+.video-js .vjs-fullscreen-control {
+    order: 99;
+}
+
+/* Playback rate menu */
+.video-js .vjs-playback-rate .vjs-playback-rate-value {
+    font-size: 13px;
+    line-height: 50px;
+}
+
+.video-js .vjs-menu-button-popup .vjs-menu {
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.video-js .vjs-menu li {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.video-js .vjs-menu li:hover,
+.video-js .vjs-menu li.vjs-selected {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Loading spinner */
+.video-js .vjs-loading-spinner {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.video-js .vjs-loading-spinner:before,
+.video-js .vjs-loading-spinner:after {
+    border-top-color: #fff;
+}
+
+/* Captions */
+.video-js .vjs-text-track-display > div > div > div {
+    background: rgba(0, 0, 0, 0.75) !important;
+    border-radius: 4px;
+    padding: 4px 8px !important;
+}
+
+/* Hide poster on play */
+.video-js.vjs-has-started .vjs-poster {
+    display: none;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .video-js .vjs-big-play-button {
+        width: 60px;
+        height: 60px;
+        line-height: 60px;
+        margin-top: -30px;
+        margin-left: -30px;
+    }
+
+    .video-js .vjs-big-play-button .vjs-icon-placeholder:before {
+        font-size: 36px;
+        line-height: 60px;
+    }
+
+    .video-js .vjs-control-bar {
+        height: 40px;
+    }
+
+    .video-js .vjs-button {
+        width: 32px;
+        height: 40px;
+    }
+
+    .video-js .vjs-button > .vjs-icon-placeholder:before {
+        font-size: 18px;
+        line-height: 40px;
+    }
+
+    .video-js .vjs-time-control {
+        font-size: 12px;
+        line-height: 40px;
+    }
+}

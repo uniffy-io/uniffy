@@ -4,7 +4,7 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
-import { settingsApi } from '../api/settingsApi';
+import { settingsApi } from '@/features/settings/api/settingsApi';
 import type {
     SettingsProfile,
     EffectiveSettings,

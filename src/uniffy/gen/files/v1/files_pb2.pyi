@@ -161,8 +161,38 @@ class DownloadChunkResponse(_message.Message):
     total_size: int
     def __init__(self, data: _Optional[bytes] = ..., chunk_number: _Optional[int] = ..., total_chunks: _Optional[int] = ..., filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., total_size: _Optional[int] = ...) -> None: ...
 
+class StreamFileRangeRequest(_message.Message):
+    __slots__ = ("file_id", "organization_id", "start_byte", "end_byte")
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    START_BYTE_FIELD_NUMBER: _ClassVar[int]
+    END_BYTE_FIELD_NUMBER: _ClassVar[int]
+    file_id: str
+    organization_id: str
+    start_byte: int
+    end_byte: int
+    def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., start_byte: _Optional[int] = ..., end_byte: _Optional[int] = ...) -> None: ...
+
+class StreamFileRangeResponse(_message.Message):
+    __slots__ = ("data", "total_size", "range_start", "range_end", "mime_type", "filename", "is_first_chunk")
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_SIZE_FIELD_NUMBER: _ClassVar[int]
+    RANGE_START_FIELD_NUMBER: _ClassVar[int]
+    RANGE_END_FIELD_NUMBER: _ClassVar[int]
+    MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    IS_FIRST_CHUNK_FIELD_NUMBER: _ClassVar[int]
+    data: bytes
+    total_size: int
+    range_start: int
+    range_end: int
+    mime_type: str
+    filename: str
+    is_first_chunk: bool
+    def __init__(self, data: _Optional[bytes] = ..., total_size: _Optional[int] = ..., range_start: _Optional[int] = ..., range_end: _Optional[int] = ..., mime_type: _Optional[str] = ..., filename: _Optional[str] = ..., is_first_chunk: _Optional[bool] = ...) -> None: ...
+
 class File(_message.Message):
-    __slots__ = ("id", "urn", "organization_id", "owner_id", "visibility", "filename", "original_filename", "mime_type", "size_bytes", "folder_id", "tags", "description", "version", "extraction_status", "is_deleted", "created_at", "updated_at", "deleted_at", "group_ids", "user_permission", "owner_info")
+    __slots__ = ("id", "urn", "organization_id", "owner_id", "visibility", "filename", "original_filename", "mime_type", "size_bytes", "folder_id", "tags", "description", "version", "extraction_status", "is_deleted", "created_at", "updated_at", "deleted_at", "group_ids", "user_permission", "owner_info", "metadata")
     ID_FIELD_NUMBER: _ClassVar[int]
     URN_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -184,6 +214,7 @@ class File(_message.Message):
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
     USER_PERMISSION_FIELD_NUMBER: _ClassVar[int]
     OWNER_INFO_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
     id: str
     urn: str
     organization_id: str
@@ -205,7 +236,37 @@ class File(_message.Message):
     group_ids: _containers.RepeatedScalarFieldContainer[str]
     user_permission: _common_pb2.PermissionLevel
     owner_info: FileOwner
-    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., filename: _Optional[str] = ..., original_filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., folder_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., version: _Optional[int] = ..., extraction_status: _Optional[_Union[ExtractionStatus, str]] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., owner_info: _Optional[_Union[FileOwner, _Mapping]] = ...) -> None: ...
+    metadata: FileMetadata
+    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., filename: _Optional[str] = ..., original_filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., folder_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., version: _Optional[int] = ..., extraction_status: _Optional[_Union[ExtractionStatus, str]] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., owner_info: _Optional[_Union[FileOwner, _Mapping]] = ..., metadata: _Optional[_Union[FileMetadata, _Mapping]] = ...) -> None: ...
+
+class FileMetadata(_message.Message):
+    __slots__ = ("has_thumbnail", "width", "height", "format", "color_mode", "duration_seconds", "page_count", "exif", "error")
+    class ExifEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    HAS_THUMBNAIL_FIELD_NUMBER: _ClassVar[int]
+    WIDTH_FIELD_NUMBER: _ClassVar[int]
+    HEIGHT_FIELD_NUMBER: _ClassVar[int]
+    FORMAT_FIELD_NUMBER: _ClassVar[int]
+    COLOR_MODE_FIELD_NUMBER: _ClassVar[int]
+    DURATION_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    PAGE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    EXIF_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    has_thumbnail: bool
+    width: int
+    height: int
+    format: str
+    color_mode: str
+    duration_seconds: float
+    page_count: int
+    exif: _containers.ScalarMap[str, str]
+    error: str
+    def __init__(self, has_thumbnail: _Optional[bool] = ..., width: _Optional[int] = ..., height: _Optional[int] = ..., format: _Optional[str] = ..., color_mode: _Optional[str] = ..., duration_seconds: _Optional[float] = ..., page_count: _Optional[int] = ..., exif: _Optional[_Mapping[str, str]] = ..., error: _Optional[str] = ...) -> None: ...
 
 class FileOwner(_message.Message):
     __slots__ = ("id", "name", "email")

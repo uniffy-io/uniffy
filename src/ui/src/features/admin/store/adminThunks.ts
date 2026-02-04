@@ -6,7 +6,7 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
-import { adminApi } from '../api/adminApi';
+import { adminApi } from '@/features/admin/api/adminApi';
 import {
     ContentType,
     VisibilityScope,
@@ -24,7 +24,7 @@ import {
     type SerializedGroupInfo,
     type SerializedGroupMemberInfo,
     type SerializedOrgOverview,
-} from './adminSlice';
+} from '@/features/admin/store/adminSlice';
 
 // Permission Defaults
 
