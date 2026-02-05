@@ -19,6 +19,9 @@ import { SearchResultsList } from '@/features/search/components/SearchResultsLis
 import { FilterChip } from '@/features/search/components/FilterChip';
 import { FilterHints } from '@/features/search/components/FilterHints';
 import { useShortcutHandler, useFormattedKeybinding } from '@/features/settings';
+import { useAppDispatch } from '@/app/hooks';
+import { openViewerWithFetch } from '@/features/files';
+import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import { cn } from '@/shared/utils/cn';
 import {
@@ -32,6 +35,7 @@ import {
 
 export function SpotlightSearch() {
     const navigate = useNavigate();
+    const dispatch = useAppDispatch();
     const [isOpen, setIsOpen] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [copiedUrn, setCopiedUrn] = useState(false);
@@ -114,9 +118,19 @@ export function SpotlightSearch() {
     }, [clearResults]);
 
     const handleResultSelect = useCallback((result: SearchResultItem) => {
-        navigate(result.url);
+        // For FILE results, open the viewer modal instead of navigating
+        // This keeps the user on their current page
+        if (result.type === SearchResultType.FILE) {
+            // Extract file ID from URN (urn:uniffy:content:FILE:uuid)
+            const fileId = result.urn.split(':').pop();
+            if (fileId) {
+                dispatch(openViewerWithFetch({ fileId }));
+            }
+        } else {
+            navigate(result.url);
+        }
         handleClose();
-    }, [navigate, handleClose]);
+    }, [navigate, dispatch, handleClose]);
 
     useShortcutHandler('nav.search', handleOpen);
     useSpotlightOpenListener(handleOpen);

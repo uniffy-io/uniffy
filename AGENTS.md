@@ -99,3 +99,5 @@ When adding a new content type (e.g., `TASK`), update these files:
 16. Use `pnpm` for package management in frontend (not npm or yarn)
 17. NEVER call setState synchronously in useEffect - use useState initializers or useMemo instead (see frontend.md for patterns)
 18. NEVER access refs during render - track dimensions in state with ResizeObserver instead
+19. For authenticated resources in `<img>`/`<video>` tags, use HTTP routes + service worker auth proxy (see frontend.md)
+20. Use the attachments system (`@/features/attachments`) to link files to content - never store file references directly on content models

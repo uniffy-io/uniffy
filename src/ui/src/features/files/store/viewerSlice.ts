@@ -11,11 +11,16 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import type { SerializedFile } from '@/features/files/store/filesThunks';
 
 interface ViewerState {
     // Modal state
     isOpen: boolean;
     isFullscreen: boolean;
+
+    // File data - stored here so viewer works without files domain loaded
+    // When opening from search, file data is fetched and stored here
+    fileData: SerializedFile | null;
 
     // Playlist state
     currentFileId: string | null;
@@ -29,7 +34,7 @@ interface ViewerState {
     volume: number;
     isMuted: boolean;
 
-    // Image viewer state
+    // Image viewer state (zoom: 1 = fit to screen)
     zoom: number;
     panX: number;
     panY: number;
@@ -49,6 +54,7 @@ interface ViewerState {
 const initialState: ViewerState = {
     isOpen: false,
     isFullscreen: false,
+    fileData: null,
     currentFileId: null,
     playlist: [],
     playlistIndex: 0,
@@ -74,16 +80,18 @@ export const viewerSlice = createSlice({
     initialState,
     reducers: {
         // Open viewer with a file and playlist
+        // fileData is optional - if provided, viewer works standalone without files store
         openViewer: (
             state,
-            action: PayloadAction<{ fileId: string; playlist: string[] }>
+            action: PayloadAction<{ fileId: string; playlist?: string[]; fileData?: SerializedFile }>
         ) => {
-            const { fileId, playlist } = action.payload;
+            const { fileId, playlist = [], fileData } = action.payload;
             state.isOpen = true;
             state.currentFileId = fileId;
             state.playlist = playlist;
-            state.playlistIndex = playlist.indexOf(fileId);
-            state.loading = true;
+            state.playlistIndex = playlist.length > 0 ? playlist.indexOf(fileId) : 0;
+            state.fileData = fileData ?? null;
+            state.loading = !fileData; // Not loading if we already have file data
             state.error = null;
             // Reset viewer state
             state.zoom = 1;
@@ -98,11 +106,18 @@ export const viewerSlice = createSlice({
             state.currentTime = 0;
         },
 
+        // Set file data (used when fetching file async after opening)
+        setFileData: (state, action: PayloadAction<SerializedFile>) => {
+            state.fileData = action.payload;
+            state.loading = false;
+        },
+
         // Close viewer
         closeViewer: (state) => {
             state.isOpen = false;
             state.isFullscreen = false;
             state.currentFileId = null;
+            state.fileData = null;
             state.playlist = [];
             state.playlistIndex = 0;
             state.loading = false;
@@ -237,6 +252,7 @@ export const viewerSlice = createSlice({
 export const {
     openViewer,
     closeViewer,
+    setFileData,
     nextFile,
     previousFile,
     toggleFullscreen,

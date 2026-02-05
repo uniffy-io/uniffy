@@ -377,7 +377,7 @@ class ListFilesResponse(_message.Message):
     def __init__(self, files: _Optional[_Iterable[_Union[File, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., total_pages: _Optional[int] = ...) -> None: ...
 
 class Folder(_message.Message):
-    __slots__ = ("id", "urn", "organization_id", "owner_id", "visibility", "name", "parent_id", "is_deleted", "created_at", "updated_at")
+    __slots__ = ("id", "urn", "organization_id", "owner_id", "visibility", "name", "parent_id", "is_deleted", "created_at", "updated_at", "is_system")
     ID_FIELD_NUMBER: _ClassVar[int]
     URN_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -388,6 +388,7 @@ class Folder(_message.Message):
     IS_DELETED_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    IS_SYSTEM_FIELD_NUMBER: _ClassVar[int]
     id: str
     urn: str
     organization_id: str
@@ -398,7 +399,8 @@ class Folder(_message.Message):
     is_deleted: bool
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., name: _Optional[str] = ..., parent_id: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    is_system: bool
+    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., name: _Optional[str] = ..., parent_id: _Optional[str] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_system: _Optional[bool] = ...) -> None: ...
 
 class FolderResponse(_message.Message):
     __slots__ = ("folder",)

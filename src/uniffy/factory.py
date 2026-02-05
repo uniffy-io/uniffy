@@ -20,10 +20,11 @@ from uniffy.core.queue import close_queue, init_queue
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.db import close_db, init_db, seed_initial_data
+from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
-from uniffy.domains.files.http_routes import router as thumbnails_router
+from uniffy.domains.files.http_routes import files_router, thumbnails_router
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
@@ -32,6 +33,7 @@ from uniffy.domains.permissions.service import PermissionsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
 from uniffy.domains.users.service import UsersServiceImpl
+from uniffy.gen.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
 from uniffy.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy.gen.cal.v1.calendar_connect import CalendarServiceASGIApplication
@@ -45,6 +47,7 @@ from uniffy.gen.settings.v1.settings_connect import SettingsServiceASGIApplicati
 from uniffy.gen.users.v1.users_connect import UsersServiceASGIApplication
 from uniffy.observability import ObservabilityConfig, setup_observability
 from uniffy.observability.crpc import LoggingInterceptor, http_version_var
+from uniffy.observability.fastapi.logger import setup_request_logging
 from uniffy.observability.otel import instrument_fastapi
 
 
@@ -276,10 +279,19 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         "/files.v1.FilesService",
         FilesServiceASGIApplication(FilesServiceImpl(), interceptors=[logging_interceptor]),
     )
+    dispatcher.add_service(
+        "/attachments.v1.AttachmentsService",
+        AttachmentsServiceASGIApplication(
+            AttachmentsServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
 
-    # HTTP routes (thumbnails)
+    # HTTP routes (thumbnails and files)
     http_app = FastAPI()
+    setup_request_logging(http_app)
     http_app.include_router(thumbnails_router)
+    http_app.include_router(files_router)
     dispatcher.add_service("/thumbnails", http_app)
+    dispatcher.add_service("/files", http_app)
 
     return dispatcher

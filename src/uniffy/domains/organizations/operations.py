@@ -140,6 +140,13 @@ class OrganizationOperations:
             await self._user_indexer.index_for_organization(owner, org.id)
             await self._session.commit()
 
+        # Create Attachments folder for the owner
+        from uniffy.domains.attachments.operations import AttachmentOperations
+
+        attachment_ops = AttachmentOperations(self._session)
+        await attachment_ops.get_or_create_attachments_folder(owner_user_id, org.id)
+        await self._session.commit()
+
         return org
 
     async def update(
@@ -586,6 +593,13 @@ class OrganizationOperations:
         if user:
             await self._user_indexer.index_for_organization(user, org_id)
             await self._session.commit()
+
+        # Create Attachments folder for the new member
+        from uniffy.domains.attachments.operations import AttachmentOperations
+
+        attachment_ops = AttachmentOperations(self._session)
+        await attachment_ops.get_or_create_attachments_folder(user_id, org_id)
+        await self._session.commit()
 
         return membership
 

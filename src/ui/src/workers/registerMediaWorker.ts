@@ -4,11 +4,14 @@
  * Handles registration of the media stream service worker and provides
  * utilities for syncing auth tokens with the worker.
  *
- * Token Sync Strategy:
- * - BroadcastChannel: Real-time token updates to active workers
+ * Token Sync Strategy (deterministic request/response):
+ * - Worker REQUESTS token via BroadcastChannel when needed (TOKEN_REQUEST)
+ * - Main thread RESPONDS with token (TOKEN_RESPONSE)
+ * - Main thread also proactively pushes on login/refresh (TOKEN_UPDATE)
  * - Memory only: Tokens never persisted to storage (security best practice)
- * - On cold start (SW restart): SW returns 401, main thread resends token and retries
  */
+
+import { getAccessToken } from '@/config/api';
 
 // BroadcastChannel for real-time token sync with Service Worker
 const TOKEN_CHANNEL_NAME = 'uniffy-auth-token';
@@ -18,13 +21,33 @@ let registration: ServiceWorkerRegistration | null = null;
 
 /**
  * Initialize the BroadcastChannel for token sync.
+ * Also sets up listener for token requests from the worker.
  */
 function initTokenChannel(): BroadcastChannel {
     if (!tokenChannel) {
         tokenChannel = new BroadcastChannel(TOKEN_CHANNEL_NAME);
+
+        // Listen for token requests from the worker
+        tokenChannel.onmessage = (event) => {
+            if (event.data?.type === 'TOKEN_REQUEST') {
+                console.log('[MediaStreamWorker] Worker requested token');
+                const token = getAccessToken();
+                if (token) {
+                    tokenChannel?.postMessage({ type: 'TOKEN_RESPONSE', token });
+                    console.log('[MediaStreamWorker] Token sent to worker');
+                } else {
+                    console.log('[MediaStreamWorker] No token available to send');
+                    // Send null response so worker doesn't wait forever
+                    tokenChannel?.postMessage({ type: 'TOKEN_RESPONSE', token: null });
+                }
+            }
+        };
     }
     return tokenChannel;
 }
+
+// Initialize immediately so we can receive requests from workers
+initTokenChannel();
 
 /**
  * Register the media stream service worker.
@@ -48,6 +71,23 @@ export async function registerMediaStreamWorker(): Promise<void> {
 
         console.log('[MediaStreamWorker] Registered with scope:', registration.scope);
 
+        // Send token immediately if we have one and worker is ready
+        if (navigator.serviceWorker.controller) {
+            const token = getAccessToken();
+            if (token) {
+                updateWorkerAuthToken(token);
+            }
+        }
+
+        // Handle worker becoming ready (new registration or page reload)
+        navigator.serviceWorker.ready.then(() => {
+            const token = getAccessToken();
+            if (token) {
+                console.log('[MediaStreamWorker] Worker ready, sending token');
+                updateWorkerAuthToken(token);
+            }
+        });
+
         // Handle updates
         registration.addEventListener('updatefound', () => {
             const newWorker = registration?.installing;
@@ -55,6 +95,14 @@ export async function registerMediaStreamWorker(): Promise<void> {
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         console.log('[MediaStreamWorker] New version available');
+                    }
+                    // Send token when new worker activates
+                    if (newWorker.state === 'activated') {
+                        const token = getAccessToken();
+                        if (token) {
+                            console.log('[MediaStreamWorker] New worker activated, sending token');
+                            updateWorkerAuthToken(token);
+                        }
                     }
                 });
             }

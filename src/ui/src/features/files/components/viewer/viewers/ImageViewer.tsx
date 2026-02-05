@@ -2,7 +2,8 @@
  * Image Viewer
  *
  * Displays images with zoom, pan, and rotate support.
- * Uses "fit to screen" by default, with CSS transforms for smooth interactions.
+ * Images automatically fit to the container by default.
+ * Zoom is relative to the fitted size (100% = fit to screen).
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -23,54 +24,11 @@ export function ImageViewer({ file }: ImageViewerProps) {
 
     const [isDragging, setIsDragging] = useState(false);
     const [imageLoaded, setImageLoaded] = useState(false);
-    // Track natural dimensions to calculate fit-to-screen scale
-    const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
-    // Track container dimensions in state to avoid ref access during render
-    const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
     const lastPos = useRef({ x: 0, y: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
-    const imageRef = useRef<HTMLImageElement>(null);
-
-    // Track container size with ResizeObserver
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const updateSize = () => {
-            setContainerSize({
-                width: container.clientWidth,
-                height: container.clientHeight,
-            });
-        };
-
-        // Set initial size
-        updateSize();
-
-        const resizeObserver = new ResizeObserver(updateSize);
-        resizeObserver.observe(container);
-
-        return () => resizeObserver.disconnect();
-    }, []);
-
-    // Calculate the scale needed to fit image to screen (from state, not refs)
-    const fitScale = (() => {
-        if (!naturalSize || !containerSize) return 1;
-
-        // Add some padding
-        const maxWidth = containerSize.width * 0.9;
-        const maxHeight = containerSize.height * 0.9;
-
-        const scaleX = maxWidth / naturalSize.width;
-        const scaleY = maxHeight / naturalSize.height;
-
-        // Use the smaller scale to ensure image fits
-        return Math.min(scaleX, scaleY, 1); // Cap at 1 (100%) for small images
-    })();
 
     // Handle image load
-    const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-        const img = e.currentTarget;
-        setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
+    const handleImageLoad = useCallback(() => {
         setImageLoaded(true);
         dispatch(setViewerLoading(false));
     }, [dispatch]);
@@ -80,7 +38,7 @@ export function ImageViewer({ file }: ImageViewerProps) {
         dispatch(setViewerLoading(false));
     }, [dispatch]);
 
-    // Mouse wheel zoom - added via useEffect with { passive: false } to allow preventDefault
+    // Mouse wheel zoom
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -97,7 +55,6 @@ export function ImageViewer({ file }: ImageViewerProps) {
 
     // Start dragging
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        // Only left mouse button
         if (e.button !== 0) return;
         e.preventDefault();
         setIsDragging(true);
@@ -151,22 +108,18 @@ export function ImageViewer({ file }: ImageViewerProps) {
         setIsDragging(false);
     }, []);
 
-    // Double-click to reset view (fit to screen)
+    // Double-click to reset view
     const handleDoubleClick = useCallback(() => {
         dispatch(setZoom(1));
         dispatch(setPan({ x: 0, y: 0 }));
     }, [dispatch]);
 
-    // Reset state when file changes - setState here is intentional for prop-driven reset
+    // Reset state when file changes
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when file.id changes is valid
         setImageLoaded(false);
-        setNaturalSize(null);
         dispatch(setViewerLoading(true));
     }, [file.id, dispatch]);
-
-    // Calculate effective scale: user zoom applied to fit-to-screen base
-    const effectiveScale = fitScale * zoom;
 
     // Show loading spinner while fetching file
     if (downloadLoading) {
@@ -189,7 +142,7 @@ export function ImageViewer({ file }: ImageViewerProps) {
     return (
         <div
             ref={containerRef}
-            className="w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing select-none"
+            className="w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing select-none p-4"
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
@@ -207,13 +160,19 @@ export function ImageViewer({ file }: ImageViewerProps) {
             )}
 
             <img
-                ref={imageRef}
                 src={imageUrl}
                 alt={file.filename}
-                className="max-w-none select-none"
+                className="select-none"
                 style={{
-                    transform: `translate(${panX}px, ${panY}px) scale(${effectiveScale}) rotate(${rotation}deg)`,
-                    transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                    // At zoom=1, image fits naturally within container
+                    // max-width/max-height ensure it never overflows
+                    maxWidth: zoom === 1 && panX === 0 && panY === 0 ? '100%' : 'none',
+                    maxHeight: zoom === 1 && panX === 0 && panY === 0 ? '100%' : 'none',
+                    objectFit: 'contain',
+                    // Apply transforms for zoom, pan, and rotation
+                    transform: `translate(${panX}px, ${panY}px) scale(${zoom}) rotate(${rotation}deg)`,
+                    transformOrigin: 'center center',
+                    transition: isDragging ? 'none' : 'transform 0.15s ease-out',
                     opacity: imageLoaded ? 1 : 0,
                 }}
                 draggable={false}

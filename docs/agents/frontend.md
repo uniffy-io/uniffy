@@ -502,3 +502,19 @@ import { UserProfile } from '@/gen/users/v1/users_pb';
 // Shared types from common
 import { OrganizationRole, GroupRole } from '@/gen/common/v1/common_pb';
 ```
+
+## Service Worker for Auth-Proxied Requests
+
+The media stream service worker (`src/workers/mediaStreamWorker.ts`) intercepts requests to specific URL patterns and adds Authorization headers. This enables `<img>`, `<video>`, and `<audio>` tags to load authenticated resources.
+
+**When to use service worker proxying:**
+
+| Use Case | URL Pattern | Why |
+|----------|-------------|-----|
+| Images in notes | `/api/files/{orgId}/{fileId}` | `<img src>` cannot send auth headers |
+| Thumbnails | `/api/thumbnails/{orgId}/{fileId}` | Browser caching + lazy loading |
+| Video/audio | `/media-stream/{orgId}/{fileId}` | Range-based seeking support |
+
+**Token Synchronization:**
+
+The service worker receives auth tokens via BroadcastChannel (real-time) and postMessage (fallback):

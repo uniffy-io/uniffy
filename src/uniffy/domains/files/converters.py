@@ -224,6 +224,7 @@ def folder_to_proto(folder: Folder) -> ProtoFolder:
         is_deleted=folder.is_deleted,
         created_at=datetime_to_timestamp(folder.created_at),
         updated_at=datetime_to_timestamp(folder.updated_at),
+        is_system=folder.is_system,
     )
 
     if folder.parent_id:

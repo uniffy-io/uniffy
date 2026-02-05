@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthForms } from '@/features/auth/components/AuthForms';
 import { OrganizationPicker } from '@/features/auth/components/OrganizationPicker';
 import { MainLayout } from '@/shared/layouts/MainLayout';
-import { Home } from '@/features/home/Home';
+import { Dashboard } from '@/features/dashboard';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminRoute } from '@/features/admin/components/AdminRoute';
 import { AdminLayout } from '@/features/admin/layouts/AdminLayout';
@@ -25,7 +25,7 @@ import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { rehydrateAuth } from '@/config';
 import { useAppSelector } from '@/app/hooks';
 import { CalendarPage } from '@/features/calendar';
-import { FilesPage, FiltersPage, FilesTagsPage } from '@/features/files';
+import { FilesPage, FiltersPage, FilesTagsPage, FileViewerModal } from '@/features/files';
 
 /**
  * AuthInitializer - Handles auth token rehydration on app startup.
@@ -101,6 +101,8 @@ export default function App() {
             <BrowserRouter>
                 {/* Global Spotlight Search - available on all pages */}
                 <SpotlightSearch />
+                {/* Global File Viewer Modal - can be opened from search without navigating */}
+                <FileViewerModal />
                 {/* Global Zen Mode handler - toggles distraction-free mode */}
                 <ZenModeHandler />
 
@@ -157,7 +159,7 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <MainLayout>
-                                    <Home />
+                                    <Dashboard />
                                 </MainLayout>
                             </ProtectedRoute>
                         }

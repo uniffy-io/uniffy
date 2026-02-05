@@ -1,7 +1,9 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { Crepe } from '@milkdown/crepe';
 import { editorViewCtx } from '@milkdown/core';
 import { Selection } from '@milkdown/prose/state';
+import type { Node } from '@milkdown/prose/model';
+import { upload, uploadConfig, type Uploader } from '@milkdown/kit/plugin/upload';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
@@ -13,6 +15,7 @@ import { MentionSearch } from '@/features/notes/components/editor/plugins/mentio
 import { createPortal } from 'react-dom';
 import { openSpotlightSearch } from '@/features/search';
 import { useGlobalShortcuts } from '@/features/settings';
+import { createImageUploadHandler, uploadNoteImage } from '@/features/notes/utils/imageUploader';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
@@ -40,7 +43,12 @@ function clearContainer(container: HTMLElement) {
 }
 
 /** Creates Crepe configuration */
-function createCrepeConfig(root: HTMLElement, content: string, readonly: boolean) {
+function createCrepeConfig(
+  root: HTMLElement,
+  content: string,
+  readonly: boolean,
+  imageUploadHandler?: (file: File) => Promise<string>
+) {
   return {
     root,
     defaultValue: content,
@@ -69,6 +77,11 @@ function createCrepeConfig(root: HTMLElement, content: string, readonly: boolean
         searchPlaceholder: 'Search language...',
         noResultText: 'No language found',
       },
+      ...(imageUploadHandler && {
+        [Crepe.Feature.ImageBlock]: {
+          onUpload: imageUploadHandler,
+        },
+      }),
     },
   };
 }
@@ -77,6 +90,7 @@ const defaultSettings = { editorMode: 'crepe' as const, showMarkdownPreview: tru
 
 export function CrepeEditor({ note, readonly = false, content: propContent, className }: CrepeEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const settings = editorState?.settings ?? defaultSettings;
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeRef = useRef<Crepe | null>(null);
@@ -85,6 +99,14 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
 
   // Mention popup state
   const [mentionPopup, setMentionPopup] = useState<MentionTriggerEvent | null>(null);
+
+  // Create image upload handler (only for edit mode with valid IDs)
+  const imageUploadHandler = useMemo(() => {
+    if (readonly || !organizationId || !note.id) {
+      return undefined;
+    }
+    return createImageUploadHandler(note.id, organizationId);
+  }, [readonly, organizationId, note.id]);
 
   // Autosave hook - handles debounced saving (only active in edit mode)
   const { scheduleAutosave } = useAutosave(readonly ? null : note.id);
@@ -178,7 +200,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     contentRef.current = content;
     initializedNoteIdRef.current = note.id;
 
-    const crepe = new Crepe(createCrepeConfig(container, content, readonly));
+    const crepe = new Crepe(createCrepeConfig(container, content, readonly, imageUploadHandler));
 
     // CRITICAL: Add plugins BEFORE calling create()
     // Access the underlying Milkdown editor and register our custom plugins
@@ -189,6 +211,56 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       editor.use(tagPlugins);
       // Register mention plugins (includes view capture plugin)
       editor.use(mentionPlugins);
+
+      // Register upload plugin for paste/drop image handling (only in edit mode)
+      if (!readonly && organizationId && note.id) {
+        const noteIdCapture = note.id;
+        const orgIdCapture = organizationId;
+
+        // Create uploader that handles pasted/dropped images
+        const uploader: Uploader = async (files, schema) => {
+          const nodes: Node[] = [];
+
+          for (let i = 0; i < files.length; i++) {
+            const file = files.item(i);
+            if (!file || !file.type.startsWith('image/')) {
+              continue;
+            }
+
+            try {
+              // Upload the image and get the permanent URL
+              const url = await uploadNoteImage({
+                file,
+                organizationId: orgIdCapture,
+                noteId: noteIdCapture,
+              });
+
+              // Create an image node with the uploaded URL
+              const node = schema.nodes.image?.createAndFill({
+                src: url,
+                alt: file.name,
+              });
+              if (node) {
+                nodes.push(node);
+              }
+            } catch (error) {
+              console.error('[CrepeEditor] Failed to upload pasted image:', error);
+            }
+          }
+
+          return nodes;
+        };
+
+        // Configure and register the upload plugin
+        editor.config((ctx) => {
+          ctx.update(uploadConfig.key, (prev) => ({
+            ...prev,
+            uploader,
+          }));
+        });
+        editor.use(upload);
+      }
+
       // Store the editor reference globally so we can access it in plugins
       (window as Window & { __milkdownEditor?: unknown }).__milkdownEditor = editor;
     } catch {
@@ -247,10 +319,10 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       clearContainer(container);
       initializedNoteIdRef.current = null;
     };
-    // Only recreate when note ID or readonly mode changes
+    // Only recreate when note ID, readonly mode, or image upload handler changes
     // Content changes in edit mode are handled by editor's internal state
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id, readonly]);
+  }, [note.id, readonly, imageUploadHandler]);
 
   // Separate effect to handle content updates in readonly mode only
   useEffect(() => {

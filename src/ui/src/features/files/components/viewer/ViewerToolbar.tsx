@@ -41,6 +41,9 @@ export function ViewerToolbar({ file, onDownload }: ViewerToolbarProps) {
         (state) => state.fileViewer
     );
 
+    // Zoom percentage (100% = fit to screen)
+    const zoomPercent = Math.round(zoom * 100);
+
     const closeShortcut = useFormattedKeybinding('viewer.close');
     const fullscreenShortcut = useFormattedKeybinding('viewer.fullscreen');
     const downloadShortcut = useFormattedKeybinding('viewer.download');
@@ -91,9 +94,9 @@ export function ViewerToolbar({ file, onDownload }: ViewerToolbarProps) {
                     <button
                         onClick={() => dispatch(resetImageView())}
                         className="viewer-zoom-display"
-                        title="Reset zoom"
+                        title="Reset zoom (fit to screen)"
                     >
-                        {Math.round(zoom * 100)}%
+                        {zoomPercent}%
                     </button>
                     <button
                         onClick={() => dispatch(setZoom(zoom + 0.25))}

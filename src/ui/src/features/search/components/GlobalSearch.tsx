@@ -12,10 +12,14 @@ import { useSearch } from '@/features/search/hooks/useSearch';
 import { SearchResultsList } from '@/features/search/components/SearchResultsList';
 import { cn } from '@/shared/utils/cn';
 import { useFormattedKeybinding } from '@/features/settings';
+import { useAppDispatch } from '@/app/hooks';
+import { openViewerWithFetch } from '@/features/files';
+import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 
 export function GlobalSearch() {
     const navigate = useNavigate();
+    const dispatch = useAppDispatch();
     const [isOpen, setIsOpen] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +41,17 @@ export function GlobalSearch() {
     }, []);
 
     const handleResultSelect = (result: SearchResultItem) => {
-        navigate(result.url);
+        // For FILE results, open the viewer modal instead of navigating
+        // This keeps the user on their current page
+        if (result.type === SearchResultType.FILE) {
+            // Extract file ID from URN (urn:uniffy:content:FILE:uuid)
+            const fileId = result.urn.split(':').pop();
+            if (fileId) {
+                dispatch(openViewerWithFetch({ fileId }));
+            }
+        } else {
+            navigate(result.url);
+        }
         setIsOpen(false);
         setIsFocused(false);
         clearResults();

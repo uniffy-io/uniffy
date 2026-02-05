@@ -1,5 +1,6 @@
 """Database models package."""
 
+from uniffy.core.models.attachments.attachment import Attachment
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
@@ -35,6 +36,8 @@ from uniffy.core.models.shared import (
 )
 
 __all__ = [
+    # Attachments
+    "Attachment",
     # Login models
     "User",
     "Organization",

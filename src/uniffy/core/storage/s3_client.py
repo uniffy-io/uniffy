@@ -459,6 +459,47 @@ class S3Client:
     # Delete operations
     # ─────────────────────────────────────────────────────────────
 
+    async def copy_object(
+        self,
+        source_key: str,
+        destination_key: str,
+        content_type: str | None = None,
+    ) -> str:
+        """
+        Copy an object within the same bucket.
+
+        Parameters
+        ----------
+        source_key : str
+            Source S3 object key.
+        destination_key : str
+            Destination S3 object key.
+        content_type : str | None
+            Optional content type override.
+
+        Returns
+        -------
+        str
+            The destination key.
+
+        """
+        async with self._get_client() as client:
+            copy_source = {"Bucket": self.config.bucket_name, "Key": source_key}
+
+            extra_args = {}
+            if content_type:
+                extra_args["ContentType"] = content_type
+                extra_args["MetadataDirective"] = "REPLACE"
+
+            await client.copy_object(
+                Bucket=self.config.bucket_name,
+                Key=destination_key,
+                CopySource=copy_source,
+                **extra_args,
+            )
+        logger.debug(f"Copied object {source_key} to {destination_key}")
+        return destination_key
+
     async def delete_object(self, key: str) -> None:
         """
         Delete an object from S3.

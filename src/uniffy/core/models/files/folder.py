@@ -31,6 +31,8 @@ class Folder(SQLModel, table=True):
         Folder name.
     parent_id : UUID | None
         Parent folder ID (nullable for root-level folders).
+    is_system : bool
+        System folder flag (e.g., Attachments folder). System folders cannot be deleted.
     is_deleted : bool
         Soft delete flag.
     deleted_at : datetime | None
@@ -62,6 +64,7 @@ class Folder(SQLModel, table=True):
     )
     name: str = Field(max_length=255, nullable=False)
     parent_id: UUID | None = Field(default=None, foreign_key="files_folders.id", index=True)
+    is_system: bool = Field(default=False, nullable=False)
     is_deleted: bool = Field(default=False, nullable=False)
     deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(

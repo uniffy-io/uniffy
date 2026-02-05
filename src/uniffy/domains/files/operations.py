@@ -1032,10 +1032,24 @@ class FolderOperations:
         tuple[int, int]
             (files_deleted, folders_deleted)
 
+        Raises
+        ------
+        NotFoundError
+            If folder not found.
+        PermissionDeniedError
+            If user cannot delete the folder or if it's a system folder.
+
         """
         folder = await self.get_by_id(folder_id, organization_id)
         if not folder:
             raise NotFoundError("Folder", folder_id)
+
+        # System folders cannot be deleted
+        if folder.is_system:
+            raise PermissionDeniedError(
+                "Cannot delete system folder. System folders are managed automatically.",
+                "folder",
+            )
 
         if folder.owner_id != user_id:
             raise PermissionDeniedError("delete", "folder")

@@ -5,13 +5,14 @@
  * ConnectRPC streaming to fetch file content with Range header support.
  * This enables video/audio seeking while keeping all traffic via ConnectRPC.
  *
- * NOTE: This SW is specifically for video/audio that need Range-based seeking.
- * For images, PDFs, and other files, use useFileDownload hook instead.
+ * Also intercepts /api/thumbnails and /api/files requests to add auth headers.
  *
- * Token Sync Strategy:
- * - BroadcastChannel: Real-time token updates from main thread
+ * Token Sync Strategy (deterministic request/response):
+ * - Worker REQUESTS token via BroadcastChannel when needed (TOKEN_REQUEST)
+ * - Main thread RESPONDS with token (TOKEN_RESPONSE)
+ * - Main thread also proactively pushes on login/refresh (TOKEN_UPDATE)
  * - Memory only: Token never persisted to storage (security best practice)
- * - On cold start: Returns 401, main thread resends token and retries
+ * - No polling or timeouts for initial sync - explicit request/response
  */
 
 /// <reference lib="webworker" />
@@ -29,14 +30,27 @@ const MEDIA_STREAM_PATTERN = /^\/media-stream\/([^/]+)\/([^/]+)$/;
 // Pattern to match thumbnail URLs: /api/thumbnails/{orgId}/{fileId}
 const THUMBNAIL_PATTERN = /^\/api\/thumbnails\/([^/]+)\/([^/]+)$/;
 
+// Pattern to match file URLs: /api/files/{orgId}/{fileId}
+const FILES_PATTERN = /^\/api\/files\/([^/]+)\/([^/]+)$/;
+
 // BroadcastChannel for real-time token sync
 const TOKEN_CHANNEL_NAME = 'uniffy-auth-token';
 
 // Timeouts
 const REQUEST_TIMEOUT_MS = 120000; // 2 minutes for full file requests
+const TOKEN_REQUEST_TIMEOUT_MS = 5000; // 5 seconds to get token from main thread
 
 // In-memory token storage (updated via BroadcastChannel)
 let memoryToken: string | null = null;
+
+// BroadcastChannel instance for sending requests
+let tokenChannel: BroadcastChannel | null = null;
+
+// Pending token request promise (to avoid duplicate requests)
+let pendingTokenRequest: Promise<string | null> | null = null;
+
+// Callbacks waiting for token response
+const tokenResponseCallbacks: Array<(token: string | null) => void> = [];
 
 /**
  * Wrap a promise with a timeout.
@@ -51,32 +65,98 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 }
 
 /**
- * Get the current auth token from memory.
- *
- * Returns null if no token is set (cold start scenario).
- * The main thread should detect the 401 response and resend the token.
+ * Request token from main thread via BroadcastChannel.
+ * Returns a promise that resolves when the main thread responds.
  */
-function getAuthToken(): string | null {
-    return memoryToken;
+function requestTokenFromMainThread(): Promise<string | null> {
+    // If already have token, return immediately
+    if (memoryToken) {
+        return Promise.resolve(memoryToken);
+    }
+
+    // If already requesting, return the existing promise
+    if (pendingTokenRequest) {
+        return pendingTokenRequest;
+    }
+
+    pendingTokenRequest = new Promise<string | null>((resolve) => {
+        // Add callback to be called when token arrives
+        tokenResponseCallbacks.push(resolve);
+
+        // Request token from main thread
+        if (tokenChannel) {
+            console.log('[MediaStreamWorker] Requesting token from main thread');
+            tokenChannel.postMessage({ type: 'TOKEN_REQUEST' });
+        }
+
+        // Timeout after TOKEN_REQUEST_TIMEOUT_MS
+        setTimeout(() => {
+            // Remove this callback if still pending
+            const index = tokenResponseCallbacks.indexOf(resolve);
+            if (index !== -1) {
+                tokenResponseCallbacks.splice(index, 1);
+                console.log('[MediaStreamWorker] Token request timeout');
+                resolve(null);
+            }
+        }, TOKEN_REQUEST_TIMEOUT_MS);
+    }).finally(() => {
+        pendingTokenRequest = null;
+    });
+
+    return pendingTokenRequest;
+}
+
+/**
+ * Get auth token, requesting from main thread if not available.
+ * This is the primary method for getting tokens - deterministic, not polling.
+ */
+async function getAuthToken(): Promise<string | null> {
+    if (memoryToken) {
+        return memoryToken;
+    }
+    return requestTokenFromMainThread();
+}
+
+/**
+ * Resolve all pending token callbacks.
+ */
+function resolveTokenCallbacks(token: string | null): void {
+    while (tokenResponseCallbacks.length > 0) {
+        const callback = tokenResponseCallbacks.shift();
+        if (callback) {
+            callback(token);
+        }
+    }
 }
 
 /**
  * Initialize BroadcastChannel for real-time token updates.
  */
 function initTokenChannel(): void {
-    const channel = new BroadcastChannel(TOKEN_CHANNEL_NAME);
+    tokenChannel = new BroadcastChannel(TOKEN_CHANNEL_NAME);
 
-    channel.onmessage = (event) => {
+    tokenChannel.onmessage = (event) => {
         if (event.data?.type === 'TOKEN_UPDATE') {
             memoryToken = event.data.token;
             console.log('[MediaStreamWorker] Token updated via BroadcastChannel');
+            // Resolve any pending token requests
+            resolveTokenCallbacks(event.data.token);
+        } else if (event.data?.type === 'TOKEN_RESPONSE') {
+            // Explicit response to our request
+            memoryToken = event.data.token;
+            console.log('[MediaStreamWorker] Token received via response');
+            resolveTokenCallbacks(event.data.token);
         } else if (event.data?.type === 'TOKEN_CLEAR') {
             memoryToken = null;
             console.log('[MediaStreamWorker] Token cleared via BroadcastChannel');
+            resolveTokenCallbacks(null);
         }
     };
 
     console.log('[MediaStreamWorker] BroadcastChannel initialized');
+
+    // Request token immediately on init (handles page reload scenario)
+    requestTokenFromMainThread();
 }
 
 // Initialize BroadcastChannel on worker load
@@ -142,8 +222,8 @@ async function handleMediaRequest(
     // Parse range from request
     const { startByte, endByte } = parseRangeRequest(request, requestFullFile);
 
-    // Get auth token from memory (set via BroadcastChannel)
-    const token = getAuthToken();
+    // Get auth token (requests from main thread if not available)
+    const token = await getAuthToken();
     if (!token) {
         return new Response('Unauthorized', { status: 401 });
     }
@@ -263,7 +343,8 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
  * and benefit from browser caching with proper cache headers.
  */
 async function handleThumbnailRequest(request: Request): Promise<Response> {
-    const token = getAuthToken();
+    // Get auth token (requests from main thread if not available)
+    const token = await getAuthToken();
     if (!token) {
         return new Response('Unauthorized', { status: 401 });
     }
@@ -290,7 +371,42 @@ async function handleThumbnailRequest(request: Request): Promise<Response> {
     }
 }
 
-// Fetch event - intercept media stream and thumbnail requests
+/**
+ * Handle a file request by proxying with auth header.
+ *
+ * Similar to thumbnails, files use a standard HTTP endpoint and benefit
+ * from browser caching. Used for images embedded in notes.
+ */
+async function handleFileRequest(request: Request): Promise<Response> {
+    // Get auth token (requests from main thread if not available)
+    const token = await getAuthToken();
+    if (!token) {
+        return new Response('Unauthorized', { status: 401 });
+    }
+
+    try {
+        // Create a new request with the auth header
+        const authRequest = new Request(request.url, {
+            method: request.method,
+            headers: {
+                ...Object.fromEntries(request.headers),
+                Authorization: `Bearer ${token}`,
+            },
+            credentials: 'omit', // Don't send cookies, we use Bearer token
+        });
+
+        // Fetch from the backend
+        const response = await fetch(authRequest);
+
+        // Return the response as-is (preserves cache headers from backend)
+        return response;
+    } catch (error) {
+        console.error('[MediaStreamWorker] File fetch error:', error);
+        return new Response('Internal Server Error', { status: 500 });
+    }
+}
+
+// Fetch event - intercept media stream, thumbnail, and file requests
 self.addEventListener('fetch', (event: FetchEvent) => {
     const url = new URL(event.request.url);
 
@@ -299,6 +415,14 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     if (thumbnailMatch) {
         console.log(`[MediaStreamWorker] Intercepting thumbnail request: ${url.pathname}`);
         event.respondWith(handleThumbnailRequest(event.request));
+        return;
+    }
+
+    // Check for file requests (images embedded in notes, etc.)
+    const filesMatch = url.pathname.match(FILES_PATTERN);
+    if (filesMatch) {
+        console.log(`[MediaStreamWorker] Intercepting file request: ${url.pathname}`);
+        event.respondWith(handleFileRequest(event.request));
         return;
     }
 

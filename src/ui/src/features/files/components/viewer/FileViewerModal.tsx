@@ -33,7 +33,9 @@ export function FileViewerModal() {
     const dispatch = useAppDispatch();
     const {
         isOpen,
+        isFullscreen,
         currentFileId,
+        fileData,
         playlist,
         playlistIndex,
         zoom,
@@ -41,10 +43,13 @@ export function FileViewerModal() {
         currentPage,
         totalPages,
     } = useAppSelector((state) => state.fileViewer);
-    const files = useAppSelector((state) => state.files.files);
+    const filesFromStore = useAppSelector((state) => state.files.files);
 
-    // Get current file from store
-    const file: SerializedFile | null = currentFileId ? files[currentFileId] || null : null;
+    // Get current file - prefer viewer's fileData, fallback to files store
+    // This allows viewer to work when opened from search without files domain loaded
+    const file: SerializedFile | null = currentFileId
+        ? fileData || filesFromStore[currentFileId] || null
+        : null;
 
     const hasNext = playlistIndex < playlist.length - 1;
     const hasPrev = playlistIndex > 0;
@@ -139,31 +144,31 @@ export function FileViewerModal() {
     return (
         <Transition appear show={isOpen}>
             <Dialog onClose={handleClose} className="relative z-50">
-                {/* Backdrop with cinematic dark theme */}
+                {/* Transparent backdrop with blur - see through to content */}
                 <TransitionChild
-                    enter="ease-out duration-200"
+                    enter="ease-out duration-300"
                     enterFrom="opacity-0"
                     enterTo="opacity-100"
-                    leave="ease-in duration-150"
+                    leave="ease-in duration-200"
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
                     <div
-                        className="fixed inset-0 viewer-context viewer-backdrop"
+                        className="fixed inset-0 viewer-backdrop"
                         aria-hidden="true"
                     />
                 </TransitionChild>
 
-                {/* Modal content */}
+                {/* Floating panel */}
                 <TransitionChild
-                    enter="ease-out duration-200"
-                    enterFrom="opacity-0 scale-[0.98]"
-                    enterTo="opacity-100 scale-100"
-                    leave="ease-in duration-150"
-                    leaveFrom="opacity-100 scale-100"
-                    leaveTo="opacity-0 scale-[0.98]"
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0 scale-[0.96] translate-y-4"
+                    enterTo="opacity-100 scale-100 translate-y-0"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100 scale-100 translate-y-0"
+                    leaveTo="opacity-0 scale-[0.96] translate-y-4"
                 >
-                    <DialogPanel className="fixed inset-0 flex flex-col viewer-context">
+                    <DialogPanel className={`viewer-panel viewer-context ${isFullscreen ? 'viewer-panel-fullscreen' : ''}`}>
                         {/* Toolbar */}
                         <ViewerToolbar file={file} onDownload={handleDownload} />
 

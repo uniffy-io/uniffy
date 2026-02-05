@@ -105,6 +105,7 @@ export {
     viewerReducer,
     openViewer,
     closeViewer,
+    setFileData,
     nextFile,
     previousFile,
     toggleFullscreen,
@@ -126,3 +127,6 @@ export {
     setLoading as setViewerLoading,
     setError as setViewerError,
 } from '@/features/files/store/viewerSlice';
+
+// Viewer thunks
+export { openViewerWithFetch } from '@/features/files/store/viewerThunks';

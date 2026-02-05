@@ -1678,6 +1678,13 @@ export class Folder extends Message<Folder> {
    */
   updatedAt?: Timestamp;
 
+  /**
+   * System folders (e.g., Attachments) cannot be deleted
+   *
+   * @generated from field: bool is_system = 11;
+   */
+  isSystem = false;
+
   constructor(data?: PartialMessage<Folder>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1696,6 +1703,7 @@ export class Folder extends Message<Folder> {
     { no: 8, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 9, name: "created_at", kind: "message", T: Timestamp },
     { no: 10, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 11, name: "is_system", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Folder {

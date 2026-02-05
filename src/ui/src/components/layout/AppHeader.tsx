@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { SquaresFour, Kanban, TreeStructure } from '@phosphor-icons/react';
+import { Kanban, TreeStructure } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
@@ -7,6 +7,7 @@ import { cn } from '@/shared/utils/cn';
 import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
+import { useTheme } from '@/config/theme/ThemeProvider';
 
 // Get content type configs for nav items
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
@@ -23,7 +24,6 @@ interface NavItem {
 // Nav items use icons from central config but may have custom paths/names
 // (nav paths like /chat differ from URN paths like /chats/{id})
 const navItems: NavItem[] = [
-  { name: 'Dashboard', path: '/', icon: SquaresFour },
   { name: noteConfig.labelPlural, path: '/notes', icon: noteConfig.icon },
   { name: fileConfig.labelPlural, path: '/files', icon: fileConfig.icon },
   { name: 'Chat', path: '/chat', icon: chatConfig.icon },
@@ -31,6 +31,58 @@ const navItems: NavItem[] = [
   { name: 'Projects', path: '/projects', icon: Kanban },
   { name: 'Workflows', path: '/workflows', icon: TreeStructure },
 ];
+
+// Logo nav item for home/dashboard
+function LogoNavItem({ isActive }: { isActive: boolean }) {
+  const { resolvedTheme } = useTheme();
+  const isLightTheme = resolvedTheme !== 'dark';
+
+  return (
+    <Link
+      to="/"
+      className={cn(
+        "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
+        "hover:px-2.5",
+        isActive && "text-foreground"
+      )}
+    >
+      {/* Active indicator */}
+      <span
+        className={cn(
+          "absolute inset-0 rounded-lg transition-all duration-500",
+          isActive ? "bg-primary/10" : "bg-transparent"
+        )}
+      />
+
+      {/* Hover underline effect */}
+      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+
+      {/* Logo */}
+      <span className={cn(
+        "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
+        isActive
+          ? "bg-primary"
+          : "text-muted-foreground group-hover:text-primary"
+      )}>
+        <img
+          src="/favicon.svg"
+          alt="Uniffy"
+          className="w-5 h-5 transition-all duration-500"
+          style={isLightTheme && !isActive ? { filter: 'invert(1)' } : undefined}
+        />
+      </span>
+
+      {/* Label - hidden by default, shows on hover */}
+      <span className={cn(
+        "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
+        "group-hover:ml-1.5 group-hover:max-w-24",
+        isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+      )}>
+        Home
+      </span>
+    </Link>
+  );
+}
 
 // Nav item that expands on hover to show label
 function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive: boolean }) {
@@ -97,9 +149,9 @@ export function AppHeader() {
         <div className="flex items-center gap-0.5">
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-0.5">
+            <LogoNavItem isActive={location.pathname === '/'} />
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path ||
-                               (item.path !== '/' && location.pathname.startsWith(item.path));
+              const isActive = location.pathname.startsWith(item.path);
 
               return (
                 <CompactNavItem key={item.path} item={item} isActive={isActive} />
@@ -109,9 +161,9 @@ export function AppHeader() {
 
           {/* Mobile: Show only icons */}
           <nav className="flex md:hidden items-center gap-0.5">
-            {navItems.slice(0, 5).map((item) => {
-              const isActive = location.pathname === item.path ||
-                               (item.path !== '/' && location.pathname.startsWith(item.path));
+            <LogoNavItem isActive={location.pathname === '/'} />
+            {navItems.slice(0, 4).map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
               const Icon = item.icon;
 
               return (

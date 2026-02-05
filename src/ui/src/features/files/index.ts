@@ -127,6 +127,7 @@ export {
     viewerReducer,
     openViewer,
     closeViewer,
+    setFileData,
     nextFile,
     previousFile,
     toggleFullscreen,
@@ -147,6 +148,7 @@ export {
     setPdfZoom,
     setViewerLoading,
     setViewerError,
+    openViewerWithFetch,
 } from '@/features/files/store';
 
 // Blob Cache (for clearing on logout)

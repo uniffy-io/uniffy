@@ -79,6 +79,8 @@ The backend is organized into domain-specific ConnectRPC services. Each service 
 | Service | Proto | Purpose |
 |---------|-------|---------|
 | `notes.v1.NotesService` | `src/proto/notes/v1/notes.proto` | Notes/documents |
+| `files.v1.FilesService` | `src/proto/files/v1/files.proto` | File storage, chunked uploads, streaming |
+| `attachments.v1.AttachmentsService` | `src/proto/attachments/v1/attachments.proto` | Link files to content (notes, events, etc.) |
 | `bookmarks.v1.BookmarksService` | `src/proto/bookmarks/v1/bookmarks.proto` | User bookmarks |
 | `search.v1.SearchService` | `src/proto/search/v1/search.proto` | Full-text search |
 | `settings.v1.SettingsService` | `src/proto/settings/v1/settings.proto` | User settings |
@@ -188,3 +190,245 @@ DEFAULT_KEYBOARD_SHORTCUTS = {
     "calendar.weekView": "W",
 }
 ```
+
+## Attachments System (Backend)
+
+The attachments system links files to content (notes, events, etc.) without duplicating storage. Files live in a user's Attachments folder; attachment records track which content uses them.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/proto/attachments/v1/attachments.proto` | API contract (AttachFile, DetachFile, ListAttachments, GetAttachmentsFolder) |
+| `src/uniffy/core/models/attachments/` | Attachment and AttachmentsFolder models |
+| `src/uniffy/domains/attachments/operations.py` | Business logic with permission checks |
+| `src/uniffy/domains/attachments/handlers.py` | RPC handlers |
+
+**Design Pattern:**
+- Each user has one AttachmentsFolder per organization (created on demand)
+- Files uploaded to attachments folder via FilesService
+- AttachFile creates a link record (source_file_id, content_type, content_id)
+- Same file can be attached to multiple content items
+- Deleting attachment record does NOT delete the file
+
+**Permission Model:**
+- Attaching requires EDIT permission on the target content
+- Viewing attachments requires VIEW permission on the content
+- Files inherit visibility from their folder (user's private attachments folder)
+
+
+**Key Pattern:** Always use `get_jobs_for_mime_type()` from `uniffy.workers.utils.mime` to determine which jobs to enqueue. Never hardcode job names.
+
+## HTTP Routes for File Serving
+
+For resources that benefit from HTTP caching (images, thumbnails, PDFs), use standard FastAPI HTTP endpoints instead of ConnectRPC streaming.
+
+**When to use HTTP routes vs ConnectRPC:**
+
+| Use Case | Approach |
+|----------|----------|
+| Images in `<img>` tags | HTTP route (browser caching, service worker auth) |
+| Thumbnails | HTTP route (CDN caching, lazy loading) |
+| Video/audio seeking | ConnectRPC streaming (Range header support) |
+| File downloads with progress | ConnectRPC streaming (chunk callbacks) |
+
+**HTTP Route Pattern** (`domains/{feature}/http_routes.py`):
+
+```python
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi.responses import StreamingResponse
+
+router = APIRouter(prefix="/files", tags=["files"])
+
+async def get_current_user_id(
+    authorization: Annotated[str | None, Header()] = None,
+) -> UUID:
+    """Extract user ID from Bearer token."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing authorization")
+    token = authorization[7:]
+    payload = decode_access_token(token)
+    return UUID(payload["sub"])
+
+@router.get("/{organization_id}/{file_id}")
+async def stream_file(
+    organization_id: UUID,
+    file_id: UUID,
+    user_id: Annotated[UUID, Depends(get_current_user_id)],
+) -> StreamingResponse:
+    async for session in get_async_session():
+        ops = FileOperations(session)
+        file = await ops.get_by_id(user_id, organization_id, file_id)
+
+        s3 = get_s3_client()
+
+        async def stream_content():
+            async for chunk, _, _ in s3.download_stream(key=file.storage_key):
+                yield chunk
+
+        return StreamingResponse(
+            stream_content(),
+            media_type=file.mime_type,
+            headers={
+                "Cache-Control": "public, max-age=86400, immutable",
+                "Content-Disposition": f'inline; filename="{file.filename}"',
+            },
+        )
+```
+
+**Mounting HTTP routes in factory.py:**
+
+```python
+from uniffy.domains.files.http_routes import files_router, thumbnails_router
+
+# Mount under /api prefix for service worker interception
+http_app.include_router(thumbnails_router)  # /api/thumbnails/{org}/{file}
+http_app.include_router(files_router)       # /api/files/{org}/{file}
+```
+
+## Permission Checking with PermissionChecker
+
+When checking permissions outside of `BaseContentOperations`, you must fetch the content first to get `owner_id` and `visibility`.
+
+**CORRECT - Fetch content first, then check with full parameters:**
+```python
+async def _get_content_for_permission_check(
+    self,
+    content_type: ContentType,
+    content_id: UUID,
+) -> tuple[UUID, VisibilityScope]:
+    """Fetch content to get owner_id and visibility for permission check."""
+    if content_type == ContentType.NOTE:
+        result = await self.session.execute(
+            select(Note).where(Note.id == content_id)
+        )
+        note = result.scalar_one_or_none()
+        if not note:
+            raise NotFoundError("Note not found")
+        return note.owner_id, note.visibility
+    # ... handle other content types
+    raise ValueError(f"Unsupported content type: {content_type}")
+
+async def verify_access(self, content_type: ContentType, content_id: UUID) -> None:
+    """Verify user can access the content."""
+    owner_id, visibility = await self._get_content_for_permission_check(
+        content_type, content_id
+    )
+
+    checker = PermissionChecker(self.session, self.user_id, self.organization_id)
+
+    if not await checker.can_access_content(
+        content_type=content_type,
+        content_id=content_id,
+        owner_id=owner_id,
+        visibility=visibility,
+    ):
+        raise PermissionDeniedError("Access denied")
+```
+
+**PermissionChecker methods require these parameters:**
+- `can_access_content(content_type, content_id, owner_id, visibility)` - for VIEW
+- `can_edit_content(content_type, content_id, owner_id, visibility)` - for EDIT
+
+## Background Task Worker (ARQ + Valkey)
+
+The system uses ARQ (Async Redis Queue) with Valkey for background job processing.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/uniffy/core/queue/valkey.py` | Queue pool management |
+| `src/uniffy/workers/settings.py` | ARQ worker configuration |
+| `src/uniffy/workers/tasks/` | Task implementations |
+| `src/uniffy/workers/utils/mime.py` | MIME type to job mapping |
+
+**Enqueuing Jobs from Domain Operations:**
+
+```python
+from uniffy.core.queue import get_queue
+from uniffy.workers.utils.mime import get_jobs_for_mime_type
+
+async def _enqueue_processing_jobs(self, file: File) -> None:
+    """Enqueue background processing jobs for a file."""
+    jobs = get_jobs_for_mime_type(file.mime_type or "")
+    if not jobs:
+        return
+
+    try:
+        queue = get_queue()
+        for job_name in jobs:
+            await queue.enqueue_job(
+                job_name,
+                str(file.id),
+                str(file.organization_id),
+            )
+    except RuntimeError:
+        # Queue not available - non-fatal, file stays PENDING
+        pass
+```
+
+**Adding a New Task:**
+
+1. Create task function in `src/uniffy/workers/tasks/{feature}.py`:
+   ```python
+   from typing import Any
+   from arq import Retry
+   from loguru import logger
+
+   async def my_task(ctx: dict[str, Any], item_id: str, org_id: str) -> dict[str, Any]:
+       """Process an item in the background."""
+       # ctx contains shared resources from worker startup
+       try:
+           # Do work...
+           return {"status": "success", "item_id": item_id}
+       except Exception as e:
+           logger.error(f"Task failed: {e}")
+           # Retry with backoff (10s, 20s, 30s)
+           raise Retry(defer=ctx["job_try"] * 10)
+   ```
+
+2. Register in `src/uniffy/workers/settings.py`:
+   ```python
+   from uniffy.workers.tasks.feature import my_task
+
+   class WorkerSettings:
+       functions = [
+           # ...existing tasks
+           my_task,
+       ]
+   ```
+
+3. Add MIME mapping if applicable (`src/uniffy/workers/utils/mime.py`):
+   ```python
+   FEATURE_MIME_TYPES: dict[str, str] = {
+       "application/x-custom": "my_task",
+   }
+   ```
+
+**ExtractionStatus Flow:**
+
+```
+PENDING     # Queued, waiting for worker
+    |
+    v (worker picks up)
+PROCESSING  # Currently running
+    |
+    v
+COMPLETED   # Success
+    or
+FAILED      # After max retries (3)
+    or
+SKIPPED     # MIME type not supported
+```
+
+**Configuration (Environment Variables):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VALKEY_HOST` | localhost | Valkey server host |
+| `VALKEY_PORT` | 6380 | Valkey server port |
+| `VALKEY_PASSWORD` | uniffy-valkey-dev | Valkey password |
+| `WORKER_MAX_JOBS` | 10 | Concurrent jobs per worker |
+| `WORKER_JOB_TIMEOUT` | 300 | Job timeout in seconds |
+| `WORKER_MAX_TRIES` | 3 | Max retry attempts |

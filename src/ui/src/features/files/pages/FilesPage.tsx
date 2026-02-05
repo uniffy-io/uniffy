@@ -4,8 +4,8 @@
  * Main page for file management with sidebar, file list, and upload functionality.
  */
 
-import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
-import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { useShortcutHandler } from '@/features/settings';
@@ -14,7 +14,6 @@ import { FilesLayout } from '@/features/files/components/FilesLayout';
 import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 import { FilesList } from '@/features/files/components/list/FilesList';
 import { UploadPanel } from '@/features/files/components/upload/UploadPanel';
-import { FileViewerModal } from '@/features/files/components/viewer';
 import { FileDetailsPanel } from '@/features/files/components/details';
 import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 import { SharingDialog } from '@/features/sharing';
@@ -35,7 +34,6 @@ export function FilesPage() {
     useUploadProcessor();
 
     const dispatch = useAppDispatch();
-    const navigate = useNavigate();
     const { fileId: urlFileId } = useParams<{ fileId?: string }>();
     const [searchParams] = useSearchParams();
 
@@ -60,9 +58,8 @@ export function FilesPage() {
     // Get the current file for the details panel
     const currentFile = currentFileId ? filesMap[currentFileId] : null;
 
-    // Viewer state for URL sync
+    // Viewer state - only used for deep link support
     const viewerIsOpen = useAppSelector((state) => state.fileViewer.isOpen);
-    const viewerCurrentFileId = useAppSelector((state) => state.fileViewer.currentFileId);
 
     // Local state
     const [showSidebar, setShowSidebar] = useState(true);
@@ -71,10 +68,8 @@ export function FilesPage() {
     // File input ref for upload
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Track when viewer is being closed to prevent URL effect from reopening it
-    const isClosingViewerRef = useRef(false);
-    // Track previous viewer state to detect close vs initial navigation
-    const prevViewerIsOpenRef = useRef(false);
+    // Track if we've already opened viewer for deep link (prevent re-opening)
+    const deepLinkHandledRef = useRef(false);
 
     // Initialize data on mount
     useEffect(() => {
@@ -101,60 +96,23 @@ export function FilesPage() {
         }
     }, [searchParams, dispatch, currentFolderId]);
 
-    // Set closing flag synchronously BEFORE other effects run
-    // useLayoutEffect runs before useEffect, preventing race conditions
-    useLayoutEffect(() => {
-        // Only set closing flag when viewer transitions from open -> closed
-        // (not when navigating TO a file URL with viewer already closed)
-        if (prevViewerIsOpenRef.current && !viewerIsOpen && urlFileId) {
-            // Viewer JUST closed while URL still has fileId - flag it
-            isClosingViewerRef.current = true;
-        } else if (viewerIsOpen) {
-            // Viewer is open - clear flag
-            isClosingViewerRef.current = false;
-        } else if (!urlFileId) {
-            // URL changed to /files - clear flag
-            isClosingViewerRef.current = false;
-        }
-        // Track previous state for next render
-        prevViewerIsOpenRef.current = viewerIsOpen;
-    }, [viewerIsOpen, urlFileId]);
-
-    // Open viewer when URL has fileId (e.g., /files/:fileId)
-    // Only opens when viewer is CLOSED - if already open, URL sync handles it
+    // Deep link support: Open viewer when navigating directly to /files/:fileId
+    // This only runs once on initial load, not when viewer state changes
     useEffect(() => {
-        // Skip if we're in the process of closing the viewer
-        if (isClosingViewerRef.current) {
+        // Only handle deep link once, and only if viewer isn't already open
+        if (deepLinkHandledRef.current || viewerIsOpen || !urlFileId || loading) {
             return;
         }
 
-        // Only open from URL when viewer is closed
-        // (if viewer is open, arrow navigation updates the file and URL sync follows)
-        if (urlFileId && !loading && !viewerIsOpen) {
-            // Check if file exists in our store
-            const file = allFiles.find((f) => f.id === urlFileId);
-            if (file) {
-                // Create playlist from all files (or current view)
-                const playlist = allFiles.map((f) => f.id);
-                dispatch(openViewer({ fileId: urlFileId, playlist }));
-            }
+        // Check if file exists in our store
+        const file = allFiles.find((f) => f.id === urlFileId);
+        if (file) {
+            deepLinkHandledRef.current = true;
+            // Create playlist from all files
+            const playlist = allFiles.map((f) => f.id);
+            dispatch(openViewer({ fileId: urlFileId, playlist, fileData: file }));
         }
     }, [urlFileId, loading, allFiles, viewerIsOpen, dispatch]);
-
-    // Sync URL when viewer opens/closes
-    useEffect(() => {
-        if (viewerIsOpen && viewerCurrentFileId) {
-            // Viewer is open - sync URL
-            const currentPath = window.location.pathname;
-            const expectedPath = `/files/${viewerCurrentFileId}`;
-            if (currentPath !== expectedPath) {
-                navigate(expectedPath, { replace: true });
-            }
-        } else if (!viewerIsOpen && urlFileId) {
-            // Viewer closed - navigate back to /files
-            navigate('/files', { replace: true });
-        }
-    }, [viewerIsOpen, viewerCurrentFileId, urlFileId, navigate]);
 
     // Handle file download
     const handleDownload = useCallback(
@@ -349,8 +307,7 @@ export function FilesPage() {
             {/* Sharing dialog */}
             <SharingDialog />
 
-            {/* File viewer modal */}
-            <FileViewerModal />
+            {/* FileViewerModal is now global (in App.tsx), no need to render here */}
         </>
     );
 }

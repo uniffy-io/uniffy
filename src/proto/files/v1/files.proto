@@ -363,6 +363,7 @@ message Folder {
   bool is_deleted = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  bool is_system = 11;               // System folders (e.g., Attachments) cannot be deleted
 }
 
 message FolderResponse {
