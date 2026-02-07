@@ -10,7 +10,7 @@ import {
   BookmarkSimple,
   CaretRight,
   CaretDoubleRight,
-  CaretDoubleLeft,
+  SidebarSimple,
   ArrowsClockwise,
   CheckCircle,
   WarningCircle,
@@ -32,6 +32,7 @@ import { TagInput } from '@/features/notes/components/editor/TagInput';
 import { IconPicker } from '@/features/notes/components/editor/IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { useSharingDialog } from '@/features/sharing';
+import { cn } from '@/shared/utils/cn';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 
@@ -441,14 +442,15 @@ export function EditorHeader({ note, canEdit = true, canShare = false }: EditorH
           {/* Right panel toggle */}
           <button
             onClick={() => dispatch(toggleMetadataPanel())}
-            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-            title={isMetadataPanelOpen ? 'Hide panel (⌘])' : 'Show panel (⌘])'}
-          >
-            {isMetadataPanelOpen ? (
-              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-            ) : (
-              <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+            className={cn(
+              'px-2 py-1 rounded-md transition-colors',
+              isMetadataPanelOpen
+                ? 'text-primary bg-primary/10'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
+            title={isMetadataPanelOpen ? 'Hide panel' : 'Show panel'}
+          >
+            <SidebarSimple size={16} className="transform -scale-x-100" />
           </button>
         </div>
       </div>

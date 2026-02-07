@@ -71,6 +71,7 @@
 - [x] Base Backend Implementation 
 - [x] Fast uploads and download with Browser Workers and chunked stream apis
 - [x] Custom file filters, created by users that are savable and selectable in the UI
+- [x] Moving Files
 - [X] Files Sharing System integration
 - [X] Files Tag System
 - [x] Files Tags Dashboard with tag management

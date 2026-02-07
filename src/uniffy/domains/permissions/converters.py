@@ -124,6 +124,7 @@ def permission_to_proto(
     subject: User | Group | None = None,
     granted_by: User | None = None,
     member_count: int = 0,
+    is_owner: bool = False,
 ) -> PermissionInfo:
     """
     Convert ContentPermission model to PermissionInfo proto.
@@ -138,6 +139,8 @@ def permission_to_proto(
         The user who granted the permission.
     member_count : int
         Member count for group subjects.
+    is_owner : bool
+        Whether the subject is the actual content owner.
 
     Returns
     -------
@@ -157,6 +160,7 @@ def permission_to_proto(
         can_share=permission.can_share,
         can_move=permission.can_move,
         granted_at=datetime_to_timestamp(permission.granted_at),
+        is_owner=is_owner,
     )
 
     # Set subject

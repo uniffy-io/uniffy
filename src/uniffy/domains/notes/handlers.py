@@ -490,9 +490,46 @@ class NotesHandlers:
         """Search notes - delegated to search service."""
         raise ConnectError(Code.UNIMPLEMENTED, "Use SearchService for note search")
 
-    async def move_note(self, request, ctx: RequestContext):
-        """Move a note to a different parent."""
-        raise ConnectError(Code.UNIMPLEMENTED, "MoveNote not yet implemented")
+    async def move_note(self, request, ctx: RequestContext) -> NoteResponse:
+        """Move a note to a different visibility scope."""
+        try:
+            note_id = UUID(request.note_id)
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        # Parse target visibility
+        target_visibility = visibility_from_proto(request.target_visibility)
+
+        # Parse group IDs if provided
+        target_group_ids = None
+        if request.target_group_ids:
+            target_group_ids = [UUID(gid) for gid in request.target_group_ids]
+
+        try:
+            async for session in get_async_session():
+                ops = NoteOperations(session)
+                note = await ops.move(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    note_id=note_id,
+                    target_visibility=target_visibility,
+                    target_group_ids=target_group_ids,
+                )
+
+                return NoteResponse(note=note_to_proto(note))
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Note not found")
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.error(f"Error moving note: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
 
     async def copy_note(self, request, ctx: RequestContext):
         """Create a copy of a note."""

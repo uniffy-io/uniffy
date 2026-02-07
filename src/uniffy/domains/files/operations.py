@@ -470,6 +470,7 @@ class FileOperations(BaseContentOperations[File]):
         tags: list[str] | None = None,
         description: str | None = None,
         visibility: VisibilityScope | None = None,
+        target_group_ids: list[UUID] | None = None,
     ) -> File:
         """
         Update file metadata.
@@ -490,6 +491,8 @@ class FileOperations(BaseContentOperations[File]):
             New description.
         visibility : VisibilityScope | None
             New visibility.
+        target_group_ids : list[UUID] | None
+            Groups to share with (required if visibility is GROUP).
 
         Returns
         -------
@@ -509,8 +512,36 @@ class FileOperations(BaseContentOperations[File]):
             file.tags = tags
         if description is not None:
             file.description = description
-        if visibility is not None:
+
+        # Handle visibility change with proper group link management
+        old_visibility = file.visibility
+        if visibility is not None and visibility != old_visibility:
+            # Only owner can change visibility scope
+            if file.owner_id != user_id:
+                raise PermissionDeniedError("change_visibility", "file")
+
             file.visibility = visibility
+
+            # Handle group links based on new visibility
+            if visibility == VisibilityScope.GROUP:
+                if not target_group_ids:
+                    from uniffy.core.errors import ValidationError
+
+                    raise ValidationError("group_ids required for GROUP visibility")
+
+                # Remove old group links
+                await self._remove_group_links(file.id)
+
+                # Create new group links
+                await self._create_group_links(
+                    content_id=file.id,
+                    group_ids=target_group_ids,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                )
+            elif old_visibility == VisibilityScope.GROUP:
+                # Moving away from GROUP visibility - remove all group links
+                await self._remove_group_links(file.id)
 
         file.version += 1
         file.updated_at = datetime.now(UTC)
@@ -518,9 +549,13 @@ class FileOperations(BaseContentOperations[File]):
         await self.session.commit()
         await self.session.refresh(file)
 
-        # Update search index
-        group_ids = await self._get_content_group_ids(file.id)
-        await self._index_for_search(model=file, group_ids=group_ids)
+        # Update search index with current group IDs
+        new_group_ids = (
+            target_group_ids
+            if visibility == VisibilityScope.GROUP
+            else await self._get_content_group_ids(file.id)
+        )
+        await self._index_for_search(model=file, group_ids=new_group_ids)
         await self.session.commit()
 
         return file
@@ -955,6 +990,7 @@ class FolderOperations:
         name: str | None = None,
         parent_id: UUID | None | str = None,
         visibility: VisibilityScope | None = None,
+        target_group_ids: list[UUID] | None = None,
     ) -> Folder:
         """
         Update a folder.
@@ -973,6 +1009,8 @@ class FolderOperations:
             New parent ("" to move to root).
         visibility : VisibilityScope | None
             New visibility.
+        target_group_ids : list[UUID] | None
+            Groups to share with (required if visibility is GROUP).
 
         Returns
         -------
@@ -993,8 +1031,54 @@ class FolderOperations:
             folder.parent_id = None
         elif parent_id is not None:
             folder.parent_id = parent_id
-        if visibility is not None:
+
+        # Handle visibility change with proper group link management
+        old_visibility = folder.visibility
+        if visibility is not None and visibility != old_visibility:
             folder.visibility = visibility
+
+            # Handle group links based on new visibility
+            if visibility == VisibilityScope.GROUP:
+                if not target_group_ids:
+                    from uniffy.core.errors import ValidationError
+
+                    raise ValidationError("group_ids required for GROUP visibility")
+
+                # Remove old group links (folders don't extend BaseContentOperations
+                # so we do it directly)
+                from sqlalchemy import delete
+
+                from uniffy.core.models.permissions.content_group_link import ContentGroupLink
+
+                await self.session.execute(
+                    delete(ContentGroupLink).where(
+                        ContentGroupLink.content_id == folder.id,
+                        ContentGroupLink.content_type == ContentType.FILE,
+                    )
+                )
+
+                # Create new group links
+                for group_id in target_group_ids:
+                    link = ContentGroupLink(
+                        organization_id=organization_id,
+                        content_type=ContentType.FILE,
+                        content_id=folder.id,
+                        group_id=group_id,
+                        linked_by_user_id=user_id,
+                    )
+                    self.session.add(link)
+            elif old_visibility == VisibilityScope.GROUP:
+                # Moving away from GROUP visibility - remove all group links
+                from sqlalchemy import delete
+
+                from uniffy.core.models.permissions.content_group_link import ContentGroupLink
+
+                await self.session.execute(
+                    delete(ContentGroupLink).where(
+                        ContentGroupLink.content_id == folder.id,
+                        ContentGroupLink.content_type == ContentType.FILE,
+                    )
+                )
 
         folder.updated_at = datetime.now(UTC)
 
@@ -1046,10 +1130,7 @@ class FolderOperations:
 
         # System folders cannot be deleted
         if folder.is_system:
-            raise PermissionDeniedError(
-                "Cannot delete system folder. System folders are managed automatically.",
-                "folder",
-            )
+            raise PermissionDeniedError("delete_system", "folder")
 
         if folder.owner_id != user_id:
             raise PermissionDeniedError("delete", "folder")
@@ -1101,10 +1182,7 @@ class FolderOperations:
         # SECURITY CHECK: Verify ownership of each file before deletion
         for file in files:
             if file.owner_id != user_id:
-                raise PermissionDeniedError(
-                    f"delete nested file '{file.filename}' (owned by another user)",
-                    "folder",
-                )
+                raise PermissionDeniedError("delete_nested", "file")
 
         # Safe to delete all files (ownership verified)
         for file in files:
@@ -1129,10 +1207,7 @@ class FolderOperations:
         # SECURITY CHECK: Verify ownership of each folder before deletion
         for child_folder in folders:
             if child_folder.owner_id != user_id:
-                raise PermissionDeniedError(
-                    f"delete nested folder '{child_folder.name}' (owned by another user)",
-                    "folder",
-                )
+                raise PermissionDeniedError("delete_nested", "folder")
 
         # Safe to delete all folders (ownership verified)
         for child_folder in folders:

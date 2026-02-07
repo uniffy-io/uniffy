@@ -558,6 +558,13 @@ export class PermissionInfo extends Message<PermissionInfo> {
    */
   expiresAt?: Timestamp;
 
+  /**
+   * True if the subject is the actual content owner (not just an admin)
+   *
+   * @generated from field: bool is_owner = 15;
+   */
+  isOwner = false;
+
   constructor(data?: PartialMessage<PermissionInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -580,6 +587,7 @@ export class PermissionInfo extends Message<PermissionInfo> {
     { no: 12, name: "granted_by", kind: "message", T: ShareTarget },
     { no: 13, name: "granted_at", kind: "message", T: Timestamp },
     { no: 14, name: "expires_at", kind: "message", T: Timestamp, opt: true },
+    { no: 15, name: "is_owner", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PermissionInfo {

@@ -62,7 +62,11 @@ export function QuickAccess() {
           >
             <div className="flex items-center gap-2">
               {item.useBookmarkIcon ? (
-                <BookmarkSimple size={14} weight="duotone" />
+                <BookmarkSimple
+                  size={14}
+                  weight={activeFilter === item.id ? 'fill' : 'duotone'}
+                  className={activeFilter === item.id ? 'text-primary' : ''}
+                />
               ) : (
                 <span
                   className={cn(

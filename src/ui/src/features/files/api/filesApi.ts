@@ -25,6 +25,7 @@ import type {
     ListFileVersionsRequest,
     UploadChunkRequest,
     CompleteUploadRequest,
+    MoveItemsRequest,
 } from '@/gen/files/v1/files_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
@@ -178,5 +179,12 @@ export const filesApi = {
      */
     listFileVersions: async (request: PartialMessage<ListFileVersionsRequest>) => {
         return filesClient.listFileVersions(request);
+    },
+
+    /**
+     * Move files and folders to a different location and/or visibility scope.
+     */
+    moveItems: async (request: PartialMessage<MoveItemsRequest>) => {
+        return filesClient.moveItems(request);
     },
 };

@@ -15,6 +15,7 @@ import {
     ArrowClockwise,
     CaretLeft,
     CaretRight,
+    PencilSimple,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useFormattedKeybinding } from '@/features/settings';
@@ -33,9 +34,11 @@ import { formatFileSize } from '@/features/files/components/list/utils';
 interface ViewerToolbarProps {
     file: SerializedFile;
     onDownload: () => void;
+    onEdit?: () => void;
+    isEditing?: boolean;
 }
 
-export function ViewerToolbar({ file, onDownload }: ViewerToolbarProps) {
+export function ViewerToolbar({ file, onDownload, onEdit, isEditing }: ViewerToolbarProps) {
     const dispatch = useAppDispatch();
     const { isFullscreen, zoom, rotation, currentPage, totalPages, pdfZoom } = useAppSelector(
         (state) => state.fileViewer
@@ -53,7 +56,8 @@ export function ViewerToolbar({ file, onDownload }: ViewerToolbarProps) {
 
     const isImage = file.mimeType.startsWith('image/');
     const isPdf = file.mimeType === 'application/pdf';
-    const showImageControls = isImage;
+    const showImageControls = isImage && !isEditing;
+    const canEdit = isImage && !isEditing;
 
     const handleFullscreen = async () => {
         if (!document.fullscreenElement) {
@@ -173,6 +177,15 @@ export function ViewerToolbar({ file, onDownload }: ViewerToolbarProps) {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1">
+                {canEdit && onEdit && (
+                    <button
+                        onClick={onEdit}
+                        className="viewer-btn p-2"
+                        title="Edit image (E)"
+                    >
+                        <PencilSimple size={20} />
+                    </button>
+                )}
                 <button
                     onClick={onDownload}
                     className="viewer-btn p-2"

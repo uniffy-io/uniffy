@@ -27,12 +27,14 @@ export function useCalendarEvents() {
 
   // Get events from store
   const events = useAppSelector((state) => state.calendar.events);
-  const visibleCalendarIds = useAppSelector(
-    (state) => state.calendar.visibleCalendarIds
-  );
   const filters = useAppSelector((state) => state.calendar.filters);
   const loading = useAppSelector((state) => state.calendar.loading);
   const errors = useAppSelector((state) => state.calendar.errors);
+
+  // Get event scope filter
+  const eventScope = useAppSelector(
+    (state) => state.calendarUi.eventScope
+  );
 
   // Get UI state
   const selectedEventId = useAppSelector(
@@ -49,14 +51,22 @@ export function useCalendarEvents() {
   );
 
   /**
-   * Get all visible events (filtered by visible calendars and filters)
+   * Get all visible events (filtered by scope and filters)
+   *
+   * Scope filtering:
+   * - 'all': Show all events
+   * - 'personal': Show only events with visibility='private'
+   * - 'organization': Show only events with visibility='organization'
    */
   const visibleEvents = useMemo(() => {
     const allEvents = Object.values(events);
 
     return allEvents.filter((event) => {
-      // Filter by visible calendars
-      if (!visibleCalendarIds.includes(event.calendarId)) {
+      // Filter by event scope (based on event visibility, not organizer)
+      if (eventScope === 'personal' && event.visibility !== 'private') {
+        return false;
+      }
+      if (eventScope === 'organization' && event.visibility !== 'organization') {
         return false;
       }
 
@@ -97,7 +107,7 @@ export function useCalendarEvents() {
 
       return true;
     });
-  }, [events, visibleCalendarIds, filters]);
+  }, [events, filters, eventScope]);
 
   /**
    * Get events for a specific date

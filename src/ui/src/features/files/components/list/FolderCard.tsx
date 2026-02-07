@@ -26,6 +26,7 @@ export interface FolderCardProps {
     onDownload: (id: string) => void;
     onShare: (id: string, name: string) => void;
     onRename: (id: string, newName: string) => void;
+    onMove: (id: string) => void;
     viewMode: 'grid' | 'list';
     viewScope?: 'all' | 'personal' | 'shared' | 'organization';
     sizeConfig?: typeof ICON_SIZE_CONFIG[keyof typeof ICON_SIZE_CONFIG];
@@ -42,6 +43,7 @@ export function FolderCard({
     onDownload,
     onShare,
     onRename,
+    onMove,
     viewMode,
     viewScope,
     sizeConfig,
@@ -198,6 +200,7 @@ export function FolderCard({
                         onBookmark={toggleBookmark}
                         isBookmarked={isBookmarked}
                         bookmarkToggling={bookmarkToggling}
+                        onMove={() => onMove(folder.id)}
                         canShare={canShare}
                     />
                 )}
@@ -296,6 +299,7 @@ export function FolderCard({
                     onBookmark={toggleBookmark}
                     isBookmarked={isBookmarked}
                     bookmarkToggling={bookmarkToggling}
+                    onMove={() => onMove(folder.id)}
                     canShare={canShare}
                 />
             )}

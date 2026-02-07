@@ -14,7 +14,7 @@
 
 import { useState, useMemo } from 'react';
 import {
-  CaretDoubleRight,
+  SidebarSimple,
   BookmarkSimple,
   PencilSimple,
   Trash,
@@ -30,12 +30,11 @@ import {
   Warning,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { closeDetailPanel } from '@/features/calendar/store';
+import { closeDetailPanel, openEditEvent } from '@/features/calendar/store';
 import { deleteEvent } from '@/features/calendar/store/calendarThunks';
 import { useCalendarEvents } from '@/features/calendar/hooks';
 import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
-import { EventEditor } from '@/features/calendar/components/modals/EventEditor';
 import { MarkdownEditor } from '@/components/editor';
 import { MentionChipCompact } from '@/features/notes/components/editor/plugins/mention';
 import {
@@ -79,7 +78,6 @@ export function DetailPanel() {
     (state) => state.calendarUi.displayTimezone
   );
   const categories = useAppSelector((state) => state.calendar.categories);
-  const [isEditingOpen, setIsEditingOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Bookmark state - build URN for the event
@@ -129,10 +127,10 @@ export function DetailPanel() {
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         <button
           onClick={handleBack}
-          className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
+          className="px-2 py-1 rounded-md text-primary bg-primary/10 transition-colors"
           title="Close panel"
         >
-          <CaretDoubleRight size={16} weight="bold" className="text-primary" />
+          <SidebarSimple size={16} className="transform -scale-x-100" />
         </button>
         <div className="flex items-center gap-1">
           <button
@@ -144,7 +142,7 @@ export function DetailPanel() {
             <BookmarkSimple size={20} weight={isBookmarked ? "fill" : "duotone"} className="text-primary" />
           </button>
           <button
-            onClick={() => setIsEditingOpen(true)}
+            onClick={() => dispatch(openEditEvent(selectedEvent.id))}
             className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="Edit event"
           >
@@ -391,13 +389,6 @@ export function DetailPanel() {
           </div>
         </div>
       </div>
-
-      {/* Event Editor Modal */}
-      <EventEditor
-        event={selectedEvent}
-        isOpen={isEditingOpen}
-        onClose={() => setIsEditingOpen(false)}
-      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

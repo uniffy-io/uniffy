@@ -3,12 +3,12 @@
  */
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectEvent, startDrag, endDrag } from '@/features/calendar/store';
+import { selectEvent, startDrag, endDrag, openEditEvent } from '@/features/calendar/store';
 import type { PositionedEvent } from '@/features/calendar/types';
 import { hexToRgba, CATEGORY_COLORS } from '@/features/calendar/constants';
 import { formatTimeRange } from '@/features/calendar/utils';
 import { cn } from '@/shared/utils/cn';
-import { Warning } from '@phosphor-icons/react';
+import { Warning, Users } from '@phosphor-icons/react';
 
 // Default color when category is not found
 const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
@@ -24,8 +24,10 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
     (state) => state.calendarUi.selectedEventId
   );
   const categories = useAppSelector((state) => state.calendar.categories);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
 
   const isSelected = selectedEventId === event.id;
+  const isSharedEvent = event.organizerId !== currentUserId;
   const multiDayPosition = event.multiDayPosition ?? 'single';
 
   // Determine if we should show content (only on start/single)
@@ -34,10 +36,15 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   // Look up category color from Redux state (real categories from backend)
   const category = event.categoryId ? categories[event.categoryId] : null;
   const categoryColor = category?.color ?? DEFAULT_COLOR;
-  const backgroundColor = hexToRgba(categoryColor, 0.1);
+  // Shared events have slightly more transparent background
+  const backgroundColor = hexToRgba(categoryColor, isSharedEvent ? 0.07 : 0.1);
 
   const handleClick = () => {
     dispatch(selectEvent(event.id));
+  };
+
+  const handleDoubleClick = () => {
+    dispatch(openEditEvent(event.id));
   };
 
   // Calculate position as percentages within the column
@@ -121,6 +128,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   return (
     <button
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -140,26 +148,41 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
       }}
     >
       {/* Left color bar - only show on start/single */}
+      {/* Shared events get a dashed pattern instead of solid */}
       {(multiDayPosition === 'start' || multiDayPosition === 'single') && (
         <div
           className={cn(
             'absolute left-0 top-0 bottom-0 w-1',
             multiDayPosition === 'single' && 'rounded-l-md'
           )}
-          style={{ backgroundColor: categoryColor }}
+          style={{
+            backgroundColor: isSharedEvent ? 'transparent' : categoryColor,
+            backgroundImage: isSharedEvent
+              ? `repeating-linear-gradient(to bottom, ${categoryColor} 0px, ${categoryColor} 4px, transparent 4px, transparent 8px)`
+              : undefined,
+          }}
         />
       )}
 
       {/* Content - only show on start/single */}
       {showContent && (
         <div className={cn('pl-2.5 pr-2', isShort ? 'py-0.5' : 'py-1.5')}>
-          {/* Title with conflict indicator */}
+          {/* Title with conflict and shared indicators */}
           <div
             className={cn(
               'font-semibold text-foreground truncate flex items-center gap-1',
               isShort ? 'text-[10px]' : 'text-xs'
             )}
           >
+            {isSharedEvent && (
+              <span title="Shared event">
+                <Users
+                  size={12}
+                  weight="duotone"
+                  className="text-muted-foreground flex-shrink-0"
+                />
+              </span>
+            )}
             {event.hasConflict && (
               <span title={`Conflicts with ${event.conflictingEvents?.length || 0} other event(s)`}>
                 <Warning

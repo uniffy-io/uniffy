@@ -6,7 +6,7 @@
  * Uses a cinematic dark theme optimized for media viewing.
  */
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useShortcutHandlers } from '@/features/settings';
@@ -58,6 +58,27 @@ export function FileViewerModal() {
     const isPdf = useMemo(() => file?.mimeType === 'application/pdf', [file?.mimeType]);
     const isImage = useMemo(() => file?.mimeType.startsWith('image/'), [file?.mimeType]);
 
+    // Image editing mode
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Enter edit mode
+    const handleEdit = useCallback(() => {
+        console.log('[FileViewerModal] Entering edit mode');
+        setIsEditing(true);
+    }, []);
+
+    // Exit edit mode
+    const handleExitEdit = useCallback(() => {
+        console.log('[FileViewerModal] Exiting edit mode');
+        setIsEditing(false);
+    }, []);
+
+    // Reset editing state when file changes
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when currentFileId changes is valid
+        setIsEditing(false);
+    }, [currentFileId]);
+
     // Handle download
     const handleDownload = useCallback(() => {
         if (file) {
@@ -85,9 +106,16 @@ export function FileViewerModal() {
     }, [dispatch, currentPage, totalPages]);
 
     // Keyboard shortcuts - PDF mode changes arrow key behavior
+    // Disable most shortcuts when in edit mode (editor has its own shortcuts)
     useShortcutHandlers(
         {
-            'viewer.close': () => dispatch(closeViewer()),
+            'viewer.close': () => {
+                if (isEditing) {
+                    setIsEditing(false);
+                } else {
+                    dispatch(closeViewer());
+                }
+            },
             'viewer.next': () => {
                 if (isPdf) {
                     // In PDF mode, arrow right goes to next page
@@ -110,13 +138,18 @@ export function FileViewerModal() {
             'viewer.zoomOut': () => dispatch(setZoom(Math.max(0.1, zoom - 0.25))),
             'viewer.zoomReset': () => dispatch(resetImageView()),
             'viewer.rotateRight': () => {
-                if (isImage) {
+                if (isImage && !isEditing) {
                     dispatch(setRotation((rotation + 90) % 360));
                 }
             },
             'viewer.download': handleDownload,
+            'viewer.edit': () => {
+                if (isImage && !isEditing) {
+                    handleEdit();
+                }
+            },
         },
-        { enabled: isOpen }
+        { enabled: isOpen && !isEditing }
     );
 
     // Handle escape key via Dialog's onClose
@@ -169,13 +202,20 @@ export function FileViewerModal() {
                     leaveTo="opacity-0 scale-[0.96] translate-y-4"
                 >
                     <DialogPanel className={`viewer-panel viewer-context ${isFullscreen ? 'viewer-panel-fullscreen' : ''}`}>
-                        {/* Toolbar */}
-                        <ViewerToolbar file={file} onDownload={handleDownload} />
+                        {/* Toolbar - hide when editing (editor has its own toolbar) */}
+                        {!isEditing && (
+                            <ViewerToolbar
+                                file={file}
+                                onDownload={handleDownload}
+                                onEdit={handleEdit}
+                                isEditing={isEditing}
+                            />
+                        )}
 
                         {/* Main content area */}
                         <div className="flex-1 relative overflow-hidden">
-                            {/* Previous file button */}
-                            {hasPrev && (
+                            {/* Previous file button - hide when editing */}
+                            {hasPrev && !isEditing && (
                                 <ViewerNavigation
                                     direction="prev"
                                     onClick={() => dispatch(previousFile())}
@@ -183,10 +223,14 @@ export function FileViewerModal() {
                             )}
 
                             {/* Content */}
-                            <ViewerContent file={file} />
+                            <ViewerContent
+                                file={file}
+                                isEditing={isEditing}
+                                onExitEdit={handleExitEdit}
+                            />
 
-                            {/* Next file button */}
-                            {hasNext && (
+                            {/* Next file button - hide when editing */}
+                            {hasNext && !isEditing && (
                                 <ViewerNavigation
                                     direction="next"
                                     onClick={() => dispatch(nextFile())}
@@ -194,8 +238,8 @@ export function FileViewerModal() {
                             )}
                         </div>
 
-                        {/* File counter - show for playlist with multiple files */}
-                        {playlist.length > 1 && (
+                        {/* File counter - show for playlist with multiple files, hide when editing */}
+                        {playlist.length > 1 && !isEditing && (
                             <div className="viewer-counter">
                                 {playlistIndex + 1} / {playlist.length}
                             </div>

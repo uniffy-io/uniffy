@@ -660,6 +660,97 @@ class NoteOperations(BaseContentOperations[Note]):
 
         return notes, total
 
+    async def move(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        note_id: UUID,
+        target_visibility: VisibilityScope,
+        target_group_ids: list[UUID] | None = None,
+    ) -> Note:
+        """
+        Move a note to a different visibility scope.
+
+        This changes the note's visibility and updates group links accordingly.
+        Requires ADMIN permission on the note.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the move.
+        organization_id : UUID
+            Organization ID.
+        note_id : UUID
+            Note to move.
+        target_visibility : VisibilityScope
+            New visibility scope.
+        target_group_ids : list[UUID] | None
+            Groups to share with (required if target_visibility is GROUP).
+
+        Returns
+        -------
+        Note
+            Updated note with new visibility.
+
+        """
+        note = await self._fetch_by_id(note_id, organization_id)
+        if not note:
+            raise NotFoundError("Note", note_id)
+
+        # Require edit permission and ownership to move notes between scopes
+        await self._require_edit(user_id, organization_id, note)
+
+        # Only owner can change visibility scope
+        if note.owner_id != user_id:
+            from uniffy.core.errors import PermissionDeniedError
+
+            raise PermissionDeniedError(
+                "move",
+                "note",
+                "Only the owner can change visibility scope",
+            )
+
+        old_visibility = note.visibility
+
+        # Update visibility
+        note.visibility = target_visibility
+        note.updated_at = datetime.now(UTC)
+
+        # Handle group links based on new visibility
+        if target_visibility == VisibilityScope.GROUP:
+            if not target_group_ids:
+                from uniffy.core.errors import ValidationError
+
+                raise ValidationError("group_ids required for GROUP visibility")
+
+            # Remove old group links
+            await self._remove_group_links(note.id)
+
+            # Create new group links
+            await self._create_group_links(
+                content_id=note.id,
+                organization_id=organization_id,
+                user_id=user_id,
+                group_ids=target_group_ids,
+            )
+        elif old_visibility == VisibilityScope.GROUP:
+            # Moving away from GROUP visibility - remove all group links
+            await self._remove_group_links(note.id)
+
+        await self.session.commit()
+        await self.session.refresh(note)
+
+        # Re-index for search with new visibility/groups
+        new_group_ids = (
+            target_group_ids
+            if target_visibility == VisibilityScope.GROUP
+            else None
+        )
+        await self._index_for_search(model=note, group_ids=new_group_ids)
+        await self.session.commit()
+
+        return note
+
     async def get_notes_sharing_info(
         self,
         notes: list[Note],

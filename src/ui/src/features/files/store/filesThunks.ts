@@ -232,6 +232,46 @@ export const restoreFile = createAsyncThunk<
 });
 
 /**
+ * Move files and/or folders to a different location and/or visibility scope.
+ */
+export const moveItems = createAsyncThunk<
+    {
+        success: boolean;
+        message: string;
+        filesMoved: number;
+        foldersMoved: number;
+    },
+    {
+        fileIds?: string[];
+        folderIds?: string[];
+        targetFolderId?: string | null;
+        targetVisibility?: VisibilityScope;
+    },
+    { state: RootState; rejectValue: string }
+>('files/moveItems', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+
+        const response = await filesApi.moveItems({
+            organizationId,
+            fileIds: params.fileIds ?? [],
+            folderIds: params.folderIds ?? [],
+            targetFolderId: params.targetFolderId ?? undefined,
+            targetVisibility: params.targetVisibility,
+        });
+
+        return {
+            success: response.success,
+            message: response.message,
+            filesMoved: response.filesMoved,
+            foldersMoved: response.foldersMoved,
+        };
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to move items');
+    }
+});
+
+/**
  * Initialize files data.
  * Load all files for the current organization.
  */

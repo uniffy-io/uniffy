@@ -15,11 +15,6 @@ import type {
     DeleteEventRequest,
     ListEventsRequest,
     GetEventsInRangeRequest,
-    CreateCalendarRequest,
-    GetCalendarRequest,
-    UpdateCalendarRequest,
-    DeleteCalendarRequest,
-    ListCalendarsRequest,
     CreateCategoryRequest,
     GetCategoryRequest,
     UpdateCategoryRequest,
@@ -89,45 +84,6 @@ export const calendarApi = {
      */
     getEventsInRange: async (request: PartialMessage<GetEventsInRangeRequest>) => {
         return calendarClient.getEventsInRange(request);
-    },
-
-    // ========================================================================
-    // Calendar Operations
-    // ========================================================================
-
-    /**
-     * Create a new calendar.
-     */
-    createCalendar: async (request: PartialMessage<CreateCalendarRequest>) => {
-        return calendarClient.createCalendar(request);
-    },
-
-    /**
-     * Get a calendar by ID.
-     */
-    getCalendar: async (request: PartialMessage<GetCalendarRequest>) => {
-        return calendarClient.getCalendar(request);
-    },
-
-    /**
-     * Update a calendar.
-     */
-    updateCalendar: async (request: PartialMessage<UpdateCalendarRequest>) => {
-        return calendarClient.updateCalendar(request);
-    },
-
-    /**
-     * Delete a calendar.
-     */
-    deleteCalendar: async (request: PartialMessage<DeleteCalendarRequest>) => {
-        return calendarClient.deleteCalendar(request);
-    },
-
-    /**
-     * List user's calendars.
-     */
-    listCalendars: async (request: PartialMessage<ListCalendarsRequest>) => {
-        return calendarClient.listCalendars(request);
     },
 
     // ========================================================================

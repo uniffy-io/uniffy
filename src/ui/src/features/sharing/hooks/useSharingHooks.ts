@@ -299,8 +299,8 @@ export function useMyPermission(contentType: number, contentId: string | null): 
                         canShare: response.canShare,
                         canMove: response.canMove,
                         level: response.level,
-                        // Check if user is owner by comparing subject ID
-                        isOwner: response.subject?.id === currentUserId,
+                        // Use is_owner from backend - true only for actual content owner
+                        isOwner: response.isOwner,
                     });
                 }
             } catch (err) {

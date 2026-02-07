@@ -499,16 +499,18 @@ class TreeNode(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., is_folder: _Optional[bool] = ..., parent_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., child_count: _Optional[int] = ..., size_bytes: _Optional[int] = ..., mime_type: _Optional[str] = ..., children: _Optional[_Iterable[_Union[TreeNode, _Mapping]]] = ...) -> None: ...
 
 class MoveItemsRequest(_message.Message):
-    __slots__ = ("organization_id", "file_ids", "folder_ids", "target_folder_id")
+    __slots__ = ("organization_id", "file_ids", "folder_ids", "target_folder_id", "target_visibility")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     FILE_IDS_FIELD_NUMBER: _ClassVar[int]
     FOLDER_IDS_FIELD_NUMBER: _ClassVar[int]
     TARGET_FOLDER_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     file_ids: _containers.RepeatedScalarFieldContainer[str]
     folder_ids: _containers.RepeatedScalarFieldContainer[str]
     target_folder_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., folder_ids: _Optional[_Iterable[str]] = ..., target_folder_id: _Optional[str] = ...) -> None: ...
+    target_visibility: _common_pb2.VisibilityScope
+    def __init__(self, organization_id: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., folder_ids: _Optional[_Iterable[str]] = ..., target_folder_id: _Optional[str] = ..., target_visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
 
 class MoveItemsResponse(_message.Message):
     __slots__ = ("success", "message", "files_moved", "folders_moved")

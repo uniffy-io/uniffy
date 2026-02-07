@@ -2,14 +2,12 @@
 
 from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
 from uniffy.core.models.calendar.attendee import EventAttendee
-from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.shared import (
     AttendeeRole,
     AttendeeStatus,
-    CalendarType,
     RecurrencePattern,
     ResourceType,
     VisibilityScope,
@@ -24,13 +22,7 @@ from uniffy.gen.cal.v1.calendar_pb2 import (
     AttendeeStatus as ProtoAttendeeStatus,
 )
 from uniffy.gen.cal.v1.calendar_pb2 import (
-    Calendar as ProtoCalendar,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
     CalendarEvent as ProtoCalendarEvent,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    CalendarType as ProtoCalendarType,
 )
 from uniffy.gen.cal.v1.calendar_pb2 import (
     Category as ProtoCategory,
@@ -136,25 +128,6 @@ ATTENDEE_ROLE_FROM_PROTO = {
 }
 
 # ============================================================================
-# Calendar type mapping
-# ============================================================================
-
-CALENDAR_TYPE_TO_PROTO = {
-    CalendarType.PERSONAL: ProtoCalendarType.CALENDAR_TYPE_PERSONAL,
-    CalendarType.WORK: ProtoCalendarType.CALENDAR_TYPE_WORK,
-    CalendarType.TEAM: ProtoCalendarType.CALENDAR_TYPE_TEAM,
-    CalendarType.SHARED: ProtoCalendarType.CALENDAR_TYPE_SHARED,
-}
-
-CALENDAR_TYPE_FROM_PROTO = {
-    ProtoCalendarType.CALENDAR_TYPE_UNSPECIFIED: CalendarType.PERSONAL,
-    ProtoCalendarType.CALENDAR_TYPE_PERSONAL: CalendarType.PERSONAL,
-    ProtoCalendarType.CALENDAR_TYPE_WORK: CalendarType.WORK,
-    ProtoCalendarType.CALENDAR_TYPE_TEAM: CalendarType.TEAM,
-    ProtoCalendarType.CALENDAR_TYPE_SHARED: CalendarType.SHARED,
-}
-
-# ============================================================================
 # Resource type mapping
 # ============================================================================
 
@@ -211,11 +184,6 @@ def attendee_status_from_proto(proto_status: ProtoAttendeeStatus) -> AttendeeSta
 def attendee_role_from_proto(proto_role: ProtoAttendeeRole) -> AttendeeRole:
     """Convert proto AttendeeRole to model."""
     return ATTENDEE_ROLE_FROM_PROTO.get(proto_role, AttendeeRole.REQUIRED)
-
-
-def calendar_type_from_proto(proto_type: ProtoCalendarType) -> CalendarType:
-    """Convert proto CalendarType to model."""
-    return CALENDAR_TYPE_FROM_PROTO.get(proto_type, CalendarType.PERSONAL)
 
 
 def resource_type_from_proto(proto_type: ProtoResourceType) -> ResourceType:
@@ -338,40 +306,6 @@ def event_to_proto(
             proto_event.attendees.append(proto_attendee)
 
     return proto_event
-
-
-def calendar_to_proto(calendar: Calendar) -> ProtoCalendar:
-    """
-    Convert Calendar model to proto Calendar.
-
-    Parameters
-    ----------
-    calendar : Calendar
-        Calendar model instance.
-
-    Returns
-    -------
-    ProtoCalendar
-        Proto message.
-
-    """
-    proto_type = CALENDAR_TYPE_TO_PROTO.get(
-        calendar.calendar_type,
-        ProtoCalendarType.CALENDAR_TYPE_PERSONAL,
-    )
-
-    return ProtoCalendar(
-        id=str(calendar.id),
-        organization_id=str(calendar.organization_id),
-        name=calendar.name,
-        color=calendar.color,
-        is_visible=calendar.is_visible,
-        is_default=calendar.is_default,
-        owner_id=str(calendar.owner_id),
-        type=proto_type,
-        created_at=datetime_to_timestamp(calendar.created_at),
-        updated_at=datetime_to_timestamp(calendar.updated_at),
-    )
 
 
 def category_to_proto(category: Category) -> ProtoCategory:

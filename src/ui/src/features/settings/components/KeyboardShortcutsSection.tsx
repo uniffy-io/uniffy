@@ -40,6 +40,23 @@ const SHORTCUT_CATEGORIES = [
             { action: 'viewer.zoomReset', label: 'Reset Zoom' },
             { action: 'viewer.rotateRight', label: 'Rotate Right' },
             { action: 'viewer.download', label: 'Download File' },
+            { action: 'viewer.edit', label: 'Edit Image' },
+        ],
+    },
+    {
+        id: 'imageEditor',
+        label: 'Image Editor',
+        shortcuts: [
+            { action: 'imageEditor.undo', label: 'Undo' },
+            { action: 'imageEditor.redo', label: 'Redo' },
+            { action: 'imageEditor.save', label: 'Save' },
+            { action: 'imageEditor.cancel', label: 'Cancel / Exit' },
+            { action: 'imageEditor.rotateRight', label: 'Rotate Right' },
+            { action: 'imageEditor.rotateLeft', label: 'Rotate Left' },
+            { action: 'imageEditor.flipH', label: 'Flip Horizontal' },
+            { action: 'imageEditor.flipV', label: 'Flip Vertical' },
+            { action: 'imageEditor.crop', label: 'Crop Tool' },
+            { action: 'imageEditor.applyCrop', label: 'Apply Crop' },
         ],
     },
 ];

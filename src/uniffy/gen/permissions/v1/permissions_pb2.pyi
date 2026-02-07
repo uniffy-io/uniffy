@@ -105,7 +105,7 @@ class ShareTargetsResponse(_message.Message):
     def __init__(self, targets: _Optional[_Iterable[_Union[ShareTarget, _Mapping]]] = ...) -> None: ...
 
 class PermissionInfo(_message.Message):
-    __slots__ = ("id", "content_type", "content_id", "subject_type", "subject", "level", "can_view", "can_edit", "can_delete", "can_share", "can_move", "granted_by", "granted_at", "expires_at")
+    __slots__ = ("id", "content_type", "content_id", "subject_type", "subject", "level", "can_view", "can_edit", "can_delete", "can_share", "can_move", "granted_by", "granted_at", "expires_at", "is_owner")
     ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
@@ -120,6 +120,7 @@ class PermissionInfo(_message.Message):
     GRANTED_BY_FIELD_NUMBER: _ClassVar[int]
     GRANTED_AT_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    IS_OWNER_FIELD_NUMBER: _ClassVar[int]
     id: str
     content_type: _common_pb2.ContentType
     content_id: str
@@ -134,7 +135,8 @@ class PermissionInfo(_message.Message):
     granted_by: ShareTarget
     granted_at: _timestamp_pb2.Timestamp
     expires_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ..., subject_type: _Optional[_Union[_common_pb2.SubjectType, str]] = ..., subject: _Optional[_Union[ShareTarget, _Mapping]] = ..., level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., can_view: _Optional[bool] = ..., can_edit: _Optional[bool] = ..., can_delete: _Optional[bool] = ..., can_share: _Optional[bool] = ..., can_move: _Optional[bool] = ..., granted_by: _Optional[_Union[ShareTarget, _Mapping]] = ..., granted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    is_owner: bool
+    def __init__(self, id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ..., subject_type: _Optional[_Union[_common_pb2.SubjectType, str]] = ..., subject: _Optional[_Union[ShareTarget, _Mapping]] = ..., level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., can_view: _Optional[bool] = ..., can_edit: _Optional[bool] = ..., can_delete: _Optional[bool] = ..., can_share: _Optional[bool] = ..., can_move: _Optional[bool] = ..., granted_by: _Optional[_Union[ShareTarget, _Mapping]] = ..., granted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_owner: _Optional[bool] = ...) -> None: ...
 
 class ShareTarget(_message.Message):
     __slots__ = ("id", "type", "name", "email", "avatar_url", "member_count")

@@ -130,6 +130,7 @@ export type SidebarSectionId =
   | 'quick_access'
   | 'mini_calendar'
   | 'calendars'
+  | 'organization'
   | 'categories'
   | 'templates'
   | 'tags';

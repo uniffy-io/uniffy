@@ -130,3 +130,35 @@ export {
 
 // Viewer thunks
 export { openViewerWithFetch } from '@/features/files/store/viewerThunks';
+
+// Image editor
+export {
+    imageEditorReducer,
+    enterEditMode,
+    exitEditMode,
+    rotateRight,
+    rotateLeft,
+    toggleFlipH,
+    toggleFlipV,
+    setBrightness,
+    commitBrightness,
+    setContrast,
+    commitContrast,
+    toggleCropTool,
+    setCropActive,
+    setCropRect,
+    applyCrop,
+    cancelCrop,
+    undo,
+    redo,
+    resetToOriginal,
+    openSaveDialog,
+    closeSaveDialog,
+    setSaving,
+    setSaveError,
+    selectIsEditing,
+    selectCanUndo,
+    selectCanRedo,
+    selectHasChanges,
+} from '@/features/files/store/imageEditorSlice';
+export type { EditorHistoryEntry, CropRect } from '@/features/files/store/imageEditorSlice';

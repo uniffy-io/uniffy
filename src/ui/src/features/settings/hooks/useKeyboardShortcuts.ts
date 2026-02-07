@@ -28,6 +28,18 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'viewer.zoomReset': '0',
     'viewer.rotateRight': 'R',
     'viewer.download': 'Ctrl+S',
+    'viewer.edit': 'E',
+    // Image editor actions
+    'imageEditor.undo': 'Ctrl+Z',
+    'imageEditor.redo': 'Ctrl+Shift+Z',
+    'imageEditor.save': 'Ctrl+S',
+    'imageEditor.cancel': 'Escape',
+    'imageEditor.rotateRight': 'R',
+    'imageEditor.rotateLeft': 'Shift+R',
+    'imageEditor.flipH': 'H',
+    'imageEditor.flipV': 'V',
+    'imageEditor.crop': 'C',
+    'imageEditor.applyCrop': 'Enter',
 };
 
 /**

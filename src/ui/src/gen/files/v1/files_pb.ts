@@ -2205,6 +2205,13 @@ export class MoveItemsRequest extends Message<MoveItemsRequest> {
    */
   targetFolderId?: string;
 
+  /**
+   * Change visibility scope
+   *
+   * @generated from field: optional common.v1.VisibilityScope target_visibility = 5;
+   */
+  targetVisibility?: VisibilityScope;
+
   constructor(data?: PartialMessage<MoveItemsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2217,6 +2224,7 @@ export class MoveItemsRequest extends Message<MoveItemsRequest> {
     { no: 2, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "folder_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "target_folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "target_visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveItemsRequest {

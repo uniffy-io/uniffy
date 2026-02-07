@@ -1,28 +1,23 @@
 /**
  * Calendar Redux slice for domain state
- * Manages events, calendars, categories, and templates
+ * Manages events, categories, and templates
  */
 
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type {
   CalendarEvent,
-  Calendar,
   Category,
   EventTemplate,
   EventFilters,
 } from '@/features/calendar/types';
-import { DEFAULT_CATEGORIES, CALENDAR_COLORS } from '@/features/calendar/constants';
+import { DEFAULT_CATEGORIES } from '@/features/calendar/constants';
 import {
   fetchEventsInRange,
   fetchEvent,
   createEvent as createEventThunk,
   updateEvent as updateEventThunk,
   deleteEvent as deleteEventThunk,
-  fetchCalendars,
-  createCalendar as createCalendarThunk,
-  updateCalendar as updateCalendarThunk,
-  deleteCalendar as deleteCalendarThunk,
   fetchCategories,
   createCategory as createCategoryThunk,
   updateCategory as updateCategoryThunk,
@@ -45,17 +40,11 @@ interface CalendarState {
   // Event IDs for the current view date range
   visibleEventIds: string[];
 
-  // User's calendars indexed by ID
-  calendars: Record<string, Calendar>;
-
   // Categories indexed by ID
   categories: Record<string, Category>;
 
   // Templates indexed by ID
   templates: Record<string, EventTemplate>;
-
-  // Visible calendar IDs (checkboxes in sidebar)
-  visibleCalendarIds: string[];
 
   // Active filters
   filters: EventFilters;
@@ -63,7 +52,6 @@ interface CalendarState {
   // Loading states
   loading: {
     events: boolean;
-    calendars: boolean;
     categories: boolean;
     templates: boolean;
     creating: boolean;
@@ -74,7 +62,6 @@ interface CalendarState {
   // Error states
   errors: {
     events: string | null;
-    calendars: string | null;
     categories: string | null;
     templates: string | null;
     creating: string | null;
@@ -90,36 +77,6 @@ interface CalendarState {
     hasMore: boolean;
   };
 }
-
-/**
- * Default calendars for new users
- */
-const defaultCalendars: Calendar[] = [
-  {
-    id: 'personal',
-    name: 'Personal',
-    color: CALENDAR_COLORS.personal,
-    isVisible: true,
-    isDefault: true,
-    ownerId: '',
-    organizationId: '',
-    type: 'personal',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'work',
-    name: 'Work',
-    color: CALENDAR_COLORS.work,
-    isVisible: true,
-    isDefault: false,
-    ownerId: '',
-    organizationId: '',
-    type: 'work',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
 
 /**
  * Convert default categories to proper Category type
@@ -143,13 +100,8 @@ function createDefaultCategories(): Record<string, Category> {
 const initialState: CalendarState = {
   events: {},
   visibleEventIds: [],
-  calendars: defaultCalendars.reduce((acc, cal) => {
-    acc[cal.id] = cal;
-    return acc;
-  }, {} as Record<string, Calendar>),
   categories: createDefaultCategories(),
   templates: {},
-  visibleCalendarIds: defaultCalendars.map((c) => c.id),
   filters: {
     calendarIds: [],
     categoryIds: [],
@@ -159,7 +111,6 @@ const initialState: CalendarState = {
   },
   loading: {
     events: false,
-    calendars: false,
     categories: false,
     templates: false,
     creating: false,
@@ -168,7 +119,6 @@ const initialState: CalendarState = {
   },
   errors: {
     events: null,
-    calendars: null,
     categories: null,
     templates: null,
     creating: null,
@@ -212,54 +162,6 @@ const calendarSlice = createSlice({
     removeEvent: (state, action: PayloadAction<string>) => {
       delete state.events[action.payload];
       state.visibleEventIds = state.visibleEventIds.filter(
-        (id) => id !== action.payload
-      );
-    },
-
-    // Calendar visibility
-    toggleCalendarVisibility: (state, action: PayloadAction<string>) => {
-      const calendarId = action.payload;
-      const calendar = state.calendars[calendarId];
-
-      if (calendar) {
-        calendar.isVisible = !calendar.isVisible;
-
-        if (calendar.isVisible) {
-          if (!state.visibleCalendarIds.includes(calendarId)) {
-            state.visibleCalendarIds.push(calendarId);
-          }
-        } else {
-          state.visibleCalendarIds = state.visibleCalendarIds.filter(
-            (id) => id !== calendarId
-          );
-        }
-      }
-    },
-
-    setVisibleCalendars: (state, action: PayloadAction<string[]>) => {
-      state.visibleCalendarIds = action.payload;
-      Object.values(state.calendars).forEach((calendar) => {
-        calendar.isVisible = action.payload.includes(calendar.id);
-      });
-    },
-
-    // Calendar CRUD
-    addCalendar: (state, action: PayloadAction<Calendar>) => {
-      state.calendars[action.payload.id] = action.payload;
-      if (action.payload.isVisible) {
-        state.visibleCalendarIds.push(action.payload.id);
-      }
-    },
-
-    updateCalendar: (state, action: PayloadAction<Calendar>) => {
-      if (state.calendars[action.payload.id]) {
-        state.calendars[action.payload.id] = action.payload;
-      }
-    },
-
-    removeCalendar: (state, action: PayloadAction<string>) => {
-      delete state.calendars[action.payload];
-      state.visibleCalendarIds = state.visibleCalendarIds.filter(
         (id) => id !== action.payload
       );
     },
@@ -438,67 +340,6 @@ const calendarSlice = createSlice({
       });
 
     // ========================================================================
-    // Calendar Thunks
-    // ========================================================================
-
-    // Fetch calendars
-    builder
-      .addCase(fetchCalendars.pending, (state) => {
-        state.loading.calendars = true;
-        state.errors.calendars = null;
-      })
-      .addCase(fetchCalendars.fulfilled, (state, action) => {
-        state.loading.calendars = false;
-        state.calendars = action.payload.reduce((acc, cal) => {
-          acc[cal.id] = cal;
-          return acc;
-        }, {} as Record<string, Calendar>);
-        state.visibleCalendarIds = action.payload
-          .filter((c) => c.isVisible)
-          .map((c) => c.id);
-      })
-      .addCase(fetchCalendars.rejected, (state, action) => {
-        state.loading.calendars = false;
-        state.errors.calendars = action.payload || 'Failed to fetch calendars';
-      });
-
-    // Create calendar
-    builder
-      .addCase(createCalendarThunk.fulfilled, (state, action) => {
-        state.calendars[action.payload.id] = action.payload;
-        if (action.payload.isVisible) {
-          state.visibleCalendarIds.push(action.payload.id);
-        }
-      });
-
-    // Update calendar
-    builder
-      .addCase(updateCalendarThunk.fulfilled, (state, action) => {
-        if (state.calendars[action.payload.id]) {
-          state.calendars[action.payload.id] = action.payload;
-          // Update visibility list
-          if (action.payload.isVisible) {
-            if (!state.visibleCalendarIds.includes(action.payload.id)) {
-              state.visibleCalendarIds.push(action.payload.id);
-            }
-          } else {
-            state.visibleCalendarIds = state.visibleCalendarIds.filter(
-              (id) => id !== action.payload.id
-            );
-          }
-        }
-      });
-
-    // Delete calendar
-    builder
-      .addCase(deleteCalendarThunk.fulfilled, (state, action) => {
-        delete state.calendars[action.payload.calendarId];
-        state.visibleCalendarIds = state.visibleCalendarIds.filter(
-          (id) => id !== action.payload.calendarId
-        );
-      });
-
-    // ========================================================================
     // Category Thunks
     // ========================================================================
 
@@ -594,11 +435,6 @@ export const {
   addEvent,
   updateEvent,
   removeEvent,
-  toggleCalendarVisibility,
-  setVisibleCalendars,
-  addCalendar,
-  updateCalendar,
-  removeCalendar,
   addCategory,
   updateCategory,
   removeCategory,

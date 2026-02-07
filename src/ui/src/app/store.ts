@@ -16,6 +16,7 @@ import { setStoreRef } from '@/app/storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
 import zenModeReducer from '@/app/zenModeSlice';
 import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, viewerReducer } from '@/features/files';
+import { imageEditorReducer } from '@/features/files/store/imageEditorSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -77,6 +78,7 @@ const rootReducer = combineReducers({
   upload: uploadReducer,
   savedFilters: savedFiltersReducer,
   fileViewer: viewerReducer,
+  imageEditor: imageEditorReducer,
 });
 
 // Migrations to handle state shape changes across versions

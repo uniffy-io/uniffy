@@ -21,6 +21,7 @@ import {
     Funnel,
     SidebarSimple,
     ShareNetwork,
+    ArrowRight,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
@@ -62,6 +63,7 @@ import type { FileDownloadItem } from '@/features/files/utils/archiveDownload';
 import { collectAllDownloadFiles, createFileInfoArray } from '@/features/files/utils/folderDownload';
 import { FolderCard } from '@/features/files/components/list/FolderCard';
 import { FileCard } from '@/features/files/components/list/FileCard';
+import { MoveDialog } from '@/features/files/components/list/MoveDialog';
 import { ICON_SIZE_CONFIG, SORT_OPTIONS, SORT_ORDER_OPTIONS, type SortByValue, type SortOrderValue } from '@/features/files/components/list/constants';
 
 
@@ -121,6 +123,14 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
 
     // Bulk action loading state
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+    // Move dialog state
+    const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+    const [moveFileIds, setMoveFileIds] = useState<string[]>([]);
+    const [moveFolderIds, setMoveFolderIds] = useState<string[]>([]);
+    const [moveItemName, setMoveItemName] = useState<string | undefined>();
+    const [moveCurrentVisibility, setMoveCurrentVisibility] = useState<VisibilityScope | undefined>();
+    const [moveCurrentFolderId, setMoveCurrentFolderId] = useState<string | null | undefined>();
 
     // Sharing dialog
     const { open: openSharingDialog } = useSharingDialog();
@@ -321,6 +331,77 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         },
         [dispatch]
     );
+
+    // Move file handler (single file from context menu)
+    const handleMoveFile = useCallback(
+        (fileId: string) => {
+            const file = filesMap[fileId];
+            if (file) {
+                setMoveFileIds([fileId]);
+                setMoveFolderIds([]);
+                setMoveItemName(file.filename);
+                setMoveCurrentVisibility(file.visibility as VisibilityScope);
+                setMoveCurrentFolderId(file.folderId ?? null);
+                setMoveDialogOpen(true);
+            }
+        },
+        [filesMap]
+    );
+
+    // Move folder handler (single folder from context menu)
+    const handleMoveFolder = useCallback(
+        (folderId: string) => {
+            // Find folder in the tree
+            const findFolder = (nodes: SerializedTreeNode[]): SerializedTreeNode | null => {
+                for (const node of nodes) {
+                    if (node.id === folderId) return node;
+                    if (node.children) {
+                        const found = findFolder(node.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const folder = folderTree
+                ? findFolder(folderTree.personal) ||
+                  findFolder(folderTree.organization) ||
+                  findFolder(folderTree.shared)
+                : null;
+
+            if (folder) {
+                setMoveFileIds([]);
+                setMoveFolderIds([folderId]);
+                setMoveItemName(folder.name);
+                setMoveCurrentVisibility(folder.visibility as VisibilityScope);
+                setMoveCurrentFolderId(folder.parentId ?? null);
+                setMoveDialogOpen(true);
+            }
+        },
+        [folderTree]
+    );
+
+    // Bulk move handler
+    const handleBulkMove = useCallback(() => {
+        setMoveFileIds([...selectedFileIds]);
+        setMoveFolderIds([...selectedFolderIds]);
+        setMoveItemName(undefined);
+        setMoveCurrentVisibility(undefined);
+        setMoveCurrentFolderId(undefined);
+        setMoveDialogOpen(true);
+    }, [selectedFileIds, selectedFolderIds]);
+
+    // Close move dialog
+    const handleCloseMoveDialog = useCallback(() => {
+        setMoveDialogOpen(false);
+        setMoveFileIds([]);
+        setMoveFolderIds([]);
+        setMoveItemName(undefined);
+        setMoveCurrentVisibility(undefined);
+        setMoveCurrentFolderId(undefined);
+        // Clear selection after successful move
+        dispatch(clearSelection());
+    }, [dispatch]);
 
     const handleUpdateFileTags = useCallback(
         async (fileId: string, tags: string[]) => {
@@ -653,6 +734,17 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 <span className="hidden sm:inline">Bookmark</span>
                             </button>
 
+                            {/* Bulk move */}
+                            <button
+                                onClick={handleBulkMove}
+                                disabled={bulkActionLoading || totalSelectedCount === 0}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                                title="Move selected"
+                            >
+                                <ArrowRight size={16} className="text-muted-foreground" />
+                                <span className="hidden sm:inline">Move</span>
+                            </button>
+
                             {/* Bulk download as archive */}
                             {(onBulkDownload || onDownload) && (
                                 <button
@@ -874,6 +966,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 onDownload={handleDownloadFolder}
                                 onShare={handleShareFolder}
                                 onRename={handleRenameFolder}
+                                onMove={handleMoveFolder}
                                 viewMode="grid"
                                 viewScope={viewScope}
                                 sizeConfig={ICON_SIZE_CONFIG[iconSize as keyof typeof ICON_SIZE_CONFIG]}
@@ -896,6 +989,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 onShare={handleShare}
                                 onRename={handleRenameFile}
                                 onUpdateTags={handleUpdateFileTags}
+                                onMove={handleMoveFile}
                                 viewMode="grid"
                                 viewScope={viewScope}
                                 sizeConfig={ICON_SIZE_CONFIG[iconSize as keyof typeof ICON_SIZE_CONFIG]}
@@ -935,6 +1029,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             onDownload={handleDownloadFolder}
                             onShare={handleShareFolder}
                             onRename={handleRenameFolder}
+                            onMove={handleMoveFolder}
                             viewMode="list"
                             viewScope={viewScope}
                             isSelectMode={isSelectMode}
@@ -957,6 +1052,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             onShare={handleShare}
                             onRename={handleRenameFile}
                             onUpdateTags={handleUpdateFileTags}
+                            onMove={handleMoveFile}
                             viewMode="list"
                             viewScope={viewScope}
                             isSelectMode={isSelectMode}
@@ -967,6 +1063,17 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                     ))}
                 </div>
             )}
+
+            {/* Move Dialog */}
+            <MoveDialog
+                isOpen={moveDialogOpen}
+                onClose={handleCloseMoveDialog}
+                fileIds={moveFileIds}
+                folderIds={moveFolderIds}
+                currentVisibility={moveCurrentVisibility}
+                currentFolderId={moveCurrentFolderId}
+                itemName={moveItemName}
+            />
         </div>
     );
 }

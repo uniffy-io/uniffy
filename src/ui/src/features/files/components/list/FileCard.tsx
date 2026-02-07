@@ -32,6 +32,7 @@ export interface FileCardProps {
     onShare: (id: string, filename: string) => void;
     onRename: (id: string, newName: string) => void;
     onUpdateTags: (id: string, tags: string[]) => void;
+    onMove: (id: string) => void;
     viewMode: 'grid' | 'list';
     viewScope?: 'all' | 'personal' | 'shared' | 'organization';
     sizeConfig?: typeof ICON_SIZE_CONFIG[keyof typeof ICON_SIZE_CONFIG];
@@ -62,6 +63,7 @@ export function FileCard({
     onShare,
     onRename,
     onUpdateTags,
+    onMove,
     viewMode,
     viewScope,
     sizeConfig,
@@ -320,6 +322,7 @@ export function FileCard({
                         isBookmarked={isBookmarked}
                         bookmarkToggling={bookmarkToggling}
                         onEditTags={handleEditTagsClick}
+                        onMove={() => onMove(file.id)}
                         canShare={canShare}
                     />
                 )}
@@ -474,6 +477,7 @@ export function FileCard({
                     isBookmarked={isBookmarked}
                     bookmarkToggling={bookmarkToggling}
                     onEditTags={handleEditTagsClick}
+                    onMove={() => onMove(file.id)}
                     canShare={canShare}
                 />
             )}

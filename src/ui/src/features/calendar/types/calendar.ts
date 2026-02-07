@@ -3,37 +3,6 @@
  */
 
 /**
- * A user's calendar (Personal, Work, Team, etc.)
- */
-export interface Calendar {
-  /** Unique calendar identifier */
-  id: string;
-  /** Calendar display name */
-  name: string;
-  /** Color for calendar events (hex or CSS color) */
-  color: string;
-  /** Whether calendar is visible in the grid */
-  isVisible: boolean;
-  /** Whether this is the default calendar for new events */
-  isDefault: boolean;
-  /** Owner user ID */
-  ownerId: string;
-  /** Organization ID */
-  organizationId: string;
-  /** Calendar type for grouping */
-  type: CalendarType;
-  /** Created timestamp */
-  createdAt: string;
-  /** Last updated timestamp */
-  updatedAt: string;
-}
-
-/**
- * Calendar types
- */
-export type CalendarType = 'personal' | 'work' | 'team' | 'shared';
-
-/**
  * User's calendar preferences
  */
 export interface CalendarPreferences {

@@ -100,6 +100,8 @@ export interface CalendarEvent {
   linkedResources: LinkedResource[];
   /** Organization ID */
   organizationId: string;
+  /** Visibility scope: 'private' for personal, 'organization' for org-wide */
+  visibility: 'private' | 'organization';
   /** Created timestamp (ISO string) */
   createdAt: string;
   /** Last updated timestamp (ISO string) */

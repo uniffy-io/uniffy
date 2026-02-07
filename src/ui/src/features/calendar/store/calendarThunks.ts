@@ -10,7 +10,6 @@ import { calendarApi } from '@/features/calendar/api/calendarApi';
 import type { RootState } from '@/app/store';
 import type {
     CalendarEvent as ProtoCalendarEvent,
-    Calendar as ProtoCalendar,
     Category as ProtoCategory,
     Attendee as ProtoAttendee,
     RecurrenceConfig as ProtoRecurrenceConfig,
@@ -18,7 +17,6 @@ import type {
     EventTemplate as ProtoEventTemplate,
 } from '@/gen/cal/v1/calendar_pb';
 import {
-    CalendarType as ProtoCalendarType,
     RecurrencePattern as ProtoRecurrencePattern,
     AttendeeStatus as ProtoAttendeeStatus,
     AttendeeRole as ProtoAttendeeRole,
@@ -29,7 +27,6 @@ import { VisibilityScope as ProtoVisibilityScope } from '@/gen/common/v1/common_
 import { Timestamp } from '@bufbuild/protobuf';
 import type {
     CalendarEvent,
-    Calendar,
     Category,
     Attendee,
     RecurrenceConfig,
@@ -39,7 +36,6 @@ import type {
     ResourceType,
     AttendeeStatus,
     AttendeeRole,
-    CalendarType,
     EventTemplate,
     CreateTemplatePayload,
     UpdateTemplatePayload,
@@ -152,21 +148,6 @@ const ATTENDEE_ROLE_TO_PROTO: Record<AttendeeRole, ProtoAttendeeRole> = {
     'optional': ProtoAttendeeRole.OPTIONAL,
 };
 
-const CALENDAR_TYPE_FROM_PROTO: Record<ProtoCalendarType, CalendarType> = {
-    [ProtoCalendarType.UNSPECIFIED]: 'personal',
-    [ProtoCalendarType.PERSONAL]: 'personal',
-    [ProtoCalendarType.WORK]: 'work',
-    [ProtoCalendarType.TEAM]: 'team',
-    [ProtoCalendarType.SHARED]: 'shared',
-};
-
-const CALENDAR_TYPE_TO_PROTO: Record<CalendarType, ProtoCalendarType> = {
-    'personal': ProtoCalendarType.PERSONAL,
-    'work': ProtoCalendarType.WORK,
-    'team': ProtoCalendarType.TEAM,
-    'shared': ProtoCalendarType.SHARED,
-};
-
 const RESOURCE_TYPE_FROM_PROTO: Record<ProtoResourceType, ResourceType> = {
     [ProtoResourceType.UNSPECIFIED]: 'note',
     [ProtoResourceType.NOTE]: 'note',
@@ -179,6 +160,14 @@ const VISIBILITY_TO_PROTO: Record<string, ProtoVisibilityScope> = {
     'group': ProtoVisibilityScope.GROUP,
     'organization': ProtoVisibilityScope.ORGANIZATION,
     'public': ProtoVisibilityScope.PUBLIC,
+};
+
+const PROTO_TO_VISIBILITY: Record<ProtoVisibilityScope, 'private' | 'organization'> = {
+    [ProtoVisibilityScope.UNSPECIFIED]: 'private',
+    [ProtoVisibilityScope.PRIVATE]: 'private',
+    [ProtoVisibilityScope.GROUP]: 'organization',
+    [ProtoVisibilityScope.ORGANIZATION]: 'organization',
+    [ProtoVisibilityScope.PUBLIC]: 'organization',
 };
 
 // ============================================================================
@@ -247,22 +236,7 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     isFocusTime: proto.isFocusTime,
     tags: [...proto.tags],
     linkedResources: proto.linkedResources.map(linkedResourceFromProto),
-    createdAt: timestampToIso(proto.createdAt),
-    updatedAt: timestampToIso(proto.updatedAt),
-});
-
-/**
- * Convert proto calendar to domain calendar.
- */
-const calendarFromProto = (proto: ProtoCalendar): Calendar => ({
-    id: proto.id,
-    organizationId: proto.organizationId,
-    name: proto.name,
-    color: proto.color,
-    isVisible: proto.isVisible,
-    isDefault: proto.isDefault,
-    ownerId: proto.ownerId,
-    type: CALENDAR_TYPE_FROM_PROTO[proto.type] || 'personal',
+    visibility: PROTO_TO_VISIBILITY[proto.visibility] || 'private',
     createdAt: timestampToIso(proto.createdAt),
     updatedAt: timestampToIso(proto.updatedAt),
 });
@@ -439,6 +413,7 @@ export const updateEvent = createAsyncThunk<
         recurrence?: RecurrenceConfig;
         isFocusTime?: boolean;
         tags?: string[];
+        visibility?: string;
     },
     { state: RootState; rejectValue: string }
 >('calendar/updateEvent', async (params, { getState, rejectWithValue }) => {
@@ -475,6 +450,7 @@ export const updateEvent = createAsyncThunk<
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime,
             tags: params.tags,
+            visibility: params.visibility ? VISIBILITY_TO_PROTO[params.visibility] : undefined,
         });
 
         if (!response.event) {
@@ -506,116 +482,6 @@ export const deleteEvent = createAsyncThunk<
         return { eventId };
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete event');
-    }
-});
-
-// ============================================================================
-// Calendar Thunks
-// ============================================================================
-
-/**
- * Fetch all calendars for the current user.
- */
-export const fetchCalendars = createAsyncThunk<
-    Calendar[],
-    void,
-    { state: RootState; rejectValue: string }
->('calendar/fetchCalendars', async (_, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await calendarApi.listCalendars({
-            organizationId,
-        });
-        return response.calendars.map(calendarFromProto);
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch calendars');
-    }
-});
-
-/**
- * Create a new calendar.
- */
-export const createCalendar = createAsyncThunk<
-    Calendar,
-    {
-        name: string;
-        color: string;
-        type?: CalendarType;
-        isDefault?: boolean;
-    },
-    { state: RootState; rejectValue: string }
->('calendar/createCalendar', async (params, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await calendarApi.createCalendar({
-            organizationId,
-            name: params.name,
-            color: params.color,
-            type: CALENDAR_TYPE_TO_PROTO[params.type || 'personal'],
-            isDefault: params.isDefault || false,
-        });
-        if (!response.calendar) {
-            return rejectWithValue('Failed to create calendar');
-        }
-        return calendarFromProto(response.calendar);
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to create calendar');
-    }
-});
-
-/**
- * Update a calendar.
- */
-export const updateCalendar = createAsyncThunk<
-    Calendar,
-    {
-        calendarId: string;
-        name?: string;
-        color?: string;
-        isVisible?: boolean;
-        isDefault?: boolean;
-    },
-    { state: RootState; rejectValue: string }
->('calendar/updateCalendar', async (params, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await calendarApi.updateCalendar({
-            calendarId: params.calendarId,
-            organizationId,
-            name: params.name,
-            color: params.color,
-            isVisible: params.isVisible,
-            isDefault: params.isDefault,
-        });
-        if (!response.calendar) {
-            return rejectWithValue('Failed to update calendar');
-        }
-        return calendarFromProto(response.calendar);
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to update calendar');
-    }
-});
-
-/**
- * Delete a calendar.
- */
-export const deleteCalendar = createAsyncThunk<
-    { calendarId: string },
-    string,
-    { state: RootState; rejectValue: string }
->('calendar/deleteCalendar', async (calendarId, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await calendarApi.deleteCalendar({
-            calendarId,
-            organizationId,
-        });
-        if (!response.success) {
-            return rejectWithValue('Failed to delete calendar');
-        }
-        return { calendarId };
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete calendar');
     }
 });
 

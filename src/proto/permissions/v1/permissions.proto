@@ -126,6 +126,8 @@ message PermissionInfo {
   ShareTarget granted_by = 12;
   google.protobuf.Timestamp granted_at = 13;
   optional google.protobuf.Timestamp expires_at = 14;
+  // True if the subject is the actual content owner (not just an admin)
+  bool is_owner = 15;
 }
 
 // Share target (user or group)

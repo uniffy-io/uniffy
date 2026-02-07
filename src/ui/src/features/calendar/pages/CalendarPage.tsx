@@ -18,11 +18,11 @@ import { cn } from '@/shared/utils/cn';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { CalendarLayout, LeftSidebar, MainContent, DetailPanel } from '@/features/calendar/components/layout';
 import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
-import { AddCalendarModal } from '@/features/calendar/components/modals/AddCalendarModal';
 import { AddCategoryModal } from '@/features/calendar/components/modals/AddCategoryModal';
 import { CreateTemplateModal } from '@/features/calendar/components/modals/CreateTemplateModal';
-import { closeEventModal, closeAddCalendarModal, closeAddCategoryModal, closeCreateTemplateModal, selectEvent, setCurrentDate, toggleSidebar } from '@/features/calendar/store';
-import { fetchEventsInRange, fetchCalendars, fetchCategories, fetchEvent } from '@/features/calendar/store/calendarThunks';
+import { EventEditor } from '@/features/calendar/components/modals/EventEditor';
+import { closeEventModal, closeAddCategoryModal, closeCreateTemplateModal, closeEditEvent, selectEvent, setCurrentDate, toggleSidebar } from '@/features/calendar/store';
+import { fetchEventsInRange, fetchCategories, fetchEvent } from '@/features/calendar/store/calendarThunks';
 import { toDateString } from '@/features/calendar/utils';
 
 export function CalendarPage() {
@@ -36,9 +36,9 @@ export function CalendarPage() {
   const handledEventIdRef = useRef<string | null>(null);
   const {
     isEventModalOpen,
-    isAddCalendarModalOpen,
     isAddCategoryModalOpen,
     isCreateTemplateModalOpen,
+    isEditingEventOpen,
     selectedEventId,
   } = useAppSelector((state) => state.calendarUi);
 
@@ -55,11 +55,10 @@ export function CalendarPage() {
 
   useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
-  // Fetch calendars and categories when the page loads or organization changes
+  // Fetch categories when the page loads or organization changes
   useEffect(() => {
     if (!currentOrganizationId) return;
 
-    dispatch(fetchCalendars());
     dispatch(fetchCategories());
   }, [dispatch, currentOrganizationId]);
 
@@ -122,12 +121,6 @@ export function CalendarPage() {
         onClose={() => dispatch(closeEventModal())}
       />
 
-      {/* Add Calendar Modal */}
-      <AddCalendarModal
-        isOpen={isAddCalendarModalOpen}
-        onClose={() => dispatch(closeAddCalendarModal())}
-      />
-
       {/* Add Category Modal */}
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
@@ -139,7 +132,15 @@ export function CalendarPage() {
         isOpen={isCreateTemplateModalOpen}
         onClose={() => dispatch(closeCreateTemplateModal())}
       />
+
+      {/* Event Editor Modal (double-click or edit button) */}
+      {isEditingEventOpen && selectedEvent && (
+        <EventEditor
+          event={selectedEvent}
+          isOpen={isEditingEventOpen}
+          onClose={() => dispatch(closeEditEvent())}
+        />
+      )}
     </>
   );
 }
-

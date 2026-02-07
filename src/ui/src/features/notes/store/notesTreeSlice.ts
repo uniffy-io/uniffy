@@ -5,7 +5,7 @@ import { notesApi } from '@/features/notes/api/notesApi';
 import { organizeNotesByVisibility } from '@/features/notes/utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
-import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote } from '@/features/notes/store/notesThunks';
+import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote, moveNote } from '@/features/notes/store/notesThunks';
 import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
 
 // Helper to convert proto Note to PlainMessage
@@ -626,6 +626,76 @@ export const notesTreeSlice = createSlice({
                     state.tree.organization.push(restoredNode);
                 } else {
                     state.tree.personal.push(restoredNode);
+                }
+            })
+            // Sync tree when a note is moved between visibility scopes
+            .addCase(moveNote.fulfilled, (state, action) => {
+                const note = action.payload;
+
+                // Helper to find and remove a node from a tree array (recursively)
+                const findAndRemoveNode = (nodes: TreeNode[], nodeId: string): TreeNode | null => {
+                    for (let i = 0; i < nodes.length; i++) {
+                        if (nodes[i].id === nodeId) {
+                            const [removed] = nodes.splice(i, 1);
+                            return removed;
+                        }
+                        if (nodes[i].children) {
+                            const found = findAndRemoveNode(nodes[i].children!, nodeId);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+
+                // Try to find and remove the node from all sections
+                let movedNode: TreeNode | null = null;
+                for (const section of ['bookmarked', 'personal', 'shared', 'organization'] as const) {
+                    movedNode = findAndRemoveNode(state.tree[section], note.id);
+                    if (movedNode) break;
+                }
+                // Also check groups
+                if (!movedNode) {
+                    for (const group of state.tree.groups) {
+                        movedNode = findAndRemoveNode(group.nodes, note.id);
+                        if (movedNode) break;
+                    }
+                }
+
+                // If not found, create a new node
+                if (!movedNode) {
+                    movedNode = {
+                        id: note.id,
+                        title: note.title,
+                        type: note.nodeType === NodeType.FOLDER ? 'folder' : 'note',
+                        icon: note.icon,
+                        noteId: note.id,
+                    };
+                }
+
+                // Update the node's visibility
+                movedNode.visibility = note.visibility;
+                movedNode.updatedAt = note.updatedAt?.seconds?.toString();
+
+                // Add to the appropriate section based on new visibility
+                // Note: We add to root level; parentId update happens separately via updateNote
+                switch (note.visibility) {
+                    case VisibilityScope.ORGANIZATION:
+                        state.tree.organization.push(movedNode);
+                        break;
+                    case VisibilityScope.GROUP:
+                        // For GROUP visibility, add to each group's nodes
+                        // Note: groupIds should be updated by the backend
+                        for (const groupId of note.groupIds || []) {
+                            const group = state.tree.groups.find(g => g.groupId === groupId);
+                            if (group) {
+                                group.nodes.push(movedNode);
+                            }
+                        }
+                        break;
+                    case VisibilityScope.PRIVATE:
+                    default:
+                        state.tree.personal.push(movedNode);
+                        break;
                 }
             })
             // Handle background refresh (stale-while-revalidate pattern)

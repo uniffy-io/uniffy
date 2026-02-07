@@ -17,8 +17,6 @@ from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.converters import (
     attendee_role_from_proto,
     attendee_status_from_proto,
-    calendar_to_proto,
-    calendar_type_from_proto,
     category_to_proto,
     event_to_proto,
     recurrence_config_from_proto,
@@ -28,20 +26,15 @@ from uniffy.domains.calendar.converters import (
 )
 from uniffy.domains.calendar.operations import (
     CalendarEventOperations,
-    CalendarOperations,
     CategoryOperations,
     EventTemplateOperations,
 )
 from uniffy.gen.cal.v1.calendar_pb2 import (
     AddAttendeesRequest,
-    CalendarResponse,
     CategoryResponse,
-    CreateCalendarRequest,
     CreateCategoryRequest,
     CreateEventRequest,
     CreateEventTemplateRequest,
-    DeleteCalendarRequest,
-    DeleteCalendarResponse,
     DeleteCategoryRequest,
     DeleteCategoryResponse,
     DeleteEventRequest,
@@ -50,14 +43,11 @@ from uniffy.gen.cal.v1.calendar_pb2 import (
     DeleteEventTemplateResponse,
     EventResponse,
     EventTemplateResponse,
-    GetCalendarRequest,
     GetCategoryRequest,
     GetEventRequest,
     GetEventsInRangeRequest,
     GetEventsInRangeResponse,
     GetEventTemplateRequest,
-    ListCalendarsRequest,
-    ListCalendarsResponse,
     ListCategoriesRequest,
     ListCategoriesResponse,
     ListEventsRequest,
@@ -67,7 +57,6 @@ from uniffy.gen.cal.v1.calendar_pb2 import (
     RemoveAttendeesRequest,
     UpdateAttendeeStatusRequest,
     UpdateAttendeeStatusResponse,
-    UpdateCalendarRequest,
     UpdateCategoryRequest,
     UpdateEventRequest,
     UpdateEventTemplateRequest,
@@ -89,15 +78,28 @@ class CalendarHandlers:
         """Create a new calendar event."""
         try:
             organization_id = UUID(request.organization_id)
-            calendar_id = UUID(request.calendar_id)
         except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         user_id = get_user_id_from_context(ctx)
 
         try:
             async for session in get_async_session():
                 ops = CalendarEventOperations(session)
+
+                # Auto-fetch/create default calendar if not provided
+                calendar_id = None
+                if request.calendar_id:
+                    try:
+                        calendar_id = UUID(request.calendar_id)
+                    except ValueError:
+                        pass  # Will use default calendar
+
+                if not calendar_id:
+                    default_calendar = await queries.ensure_default_calendar(
+                        session, organization_id, user_id
+                    )
+                    calendar_id = default_calendar.id
 
                 # Parse optional fields
                 visibility = VisibilityScope.PRIVATE
@@ -429,183 +431,28 @@ class CalendarHandlers:
             raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
 
     # ─────────────────────────────────────────────────────────────
-    # Calendar Operations
+    # Calendar Operations (deprecated - single calendar per user)
     # ─────────────────────────────────────────────────────────────
 
-    async def create_calendar(
-        self,
-        request: CreateCalendarRequest,
-        ctx: RequestContext,
-    ) -> CalendarResponse:
-        """Create a new calendar."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+    async def create_calendar(self, request, ctx: RequestContext):
+        """Deprecated: Calendars are auto-created per user."""
+        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
-        user_id = get_user_id_from_context(ctx)
+    async def get_calendar(self, request, ctx: RequestContext):
+        """Deprecated: Calendars are auto-created per user."""
+        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
-        try:
-            async for session in get_async_session():
-                ops = CalendarOperations(session)
+    async def update_calendar(self, request, ctx: RequestContext):
+        """Deprecated: Calendars are auto-created per user."""
+        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
-                calendar_type = None
-                if request.HasField("type"):
-                    calendar_type = calendar_type_from_proto(request.type)
+    async def delete_calendar(self, request, ctx: RequestContext):
+        """Deprecated: Calendars are auto-created per user."""
+        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
-                calendar = await ops.create(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    name=request.name,
-                    color=request.color if request.HasField("color") else "#3b82f6",
-                    calendar_type=calendar_type,
-                    is_default=request.is_default,
-                )
-
-                return CalendarResponse(calendar=calendar_to_proto(calendar))
-
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error creating calendar: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
-
-    async def get_calendar(
-        self,
-        request: GetCalendarRequest,
-        ctx: RequestContext,
-    ) -> CalendarResponse:
-        """Get a calendar by ID."""
-        try:
-            calendar_id = UUID(request.calendar_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                ops = CalendarOperations(session)
-                calendar = await ops.get_by_id(calendar_id, organization_id, user_id)
-                return CalendarResponse(calendar=calendar_to_proto(calendar))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Calendar not found")
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error getting calendar: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def update_calendar(
-        self,
-        request: UpdateCalendarRequest,
-        ctx: RequestContext,
-    ) -> CalendarResponse:
-        """Update a calendar."""
-        try:
-            calendar_id = UUID(request.calendar_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                ops = CalendarOperations(session)
-
-                calendar_type = None
-                if request.HasField("type"):
-                    calendar_type = calendar_type_from_proto(request.type)
-
-                calendar = await ops.update(
-                    calendar_id=calendar_id,
-                    organization_id=organization_id,
-                    user_id=user_id,
-                    name=request.name if request.HasField("name") else None,
-                    color=request.color if request.HasField("color") else None,
-                    is_visible=request.is_visible if request.HasField("is_visible") else None,
-                    is_default=request.is_default if request.HasField("is_default") else None,
-                    calendar_type=calendar_type,
-                )
-
-                return CalendarResponse(calendar=calendar_to_proto(calendar))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Calendar not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error updating calendar: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def delete_calendar(
-        self,
-        request: DeleteCalendarRequest,
-        ctx: RequestContext,
-    ) -> DeleteCalendarResponse:
-        """Delete a calendar."""
-        try:
-            calendar_id = UUID(request.calendar_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                ops = CalendarOperations(session)
-                await ops.delete(calendar_id, organization_id, user_id)
-                return DeleteCalendarResponse(success=True, message="Calendar deleted")
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Calendar not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error deleting calendar: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def list_calendars(
-        self,
-        request: ListCalendarsRequest,
-        ctx: RequestContext,
-    ) -> ListCalendarsResponse:
-        """List user's calendars."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                ops = CalendarOperations(session)
-
-                # Ensure user has a default calendar
-                await ops.ensure_default(organization_id, user_id)
-
-                calendars = await ops.list_calendars(
-                    organization_id=organization_id,
-                    user_id=user_id,
-                    visible_only=request.visible_only,
-                )
-
-                return ListCalendarsResponse(calendars=[calendar_to_proto(c) for c in calendars])
-
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error listing calendars: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+    async def list_calendars(self, request, ctx: RequestContext):
+        """Deprecated: Calendars are auto-created per user."""
+        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
     # ─────────────────────────────────────────────────────────────
     # Category Operations

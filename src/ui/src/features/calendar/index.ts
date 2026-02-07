@@ -4,12 +4,12 @@
  * A full-featured calendar module for UNIFFY with:
  * - Day/Week/Month views
  * - Event management (create, edit, delete)
- * - Multiple calendars support
  * - Categories and color coding
  * - Templates for quick event creation
  * - Focus time blocks
  * - Attendee management
  * - Resource linking (notes, files, chats)
+ * - Organization-wide event visibility
  */
 
 // Main page
@@ -42,10 +42,10 @@ export {
   SidebarSection,
   QuickAccess,
   MiniCalendar,
-  CalendarList,
   CategoryList,
   TemplateList,
   TagCloud,
+  EventScopeFilter,
 } from '@/features/calendar/components/sidebar';
 
 // Modals
@@ -56,19 +56,16 @@ export { EventEditor } from '@/features/calendar/components/modals/EventEditor';
 export {
   calendarReducer,
   calendarUiReducer,
-  // Calendar actions
+  // Event actions
   setEvents,
   addEvent,
   updateEvent,
   removeEvent,
-  toggleCalendarVisibility,
-  setVisibleCalendars,
-  addCalendar,
-  updateCalendar,
-  removeCalendar,
+  // Category actions
   addCategory,
   updateCategory,
   removeCategory,
+  // Filter actions
   setFilters,
   clearFilters,
   setSearchQuery,
@@ -93,6 +90,7 @@ export {
   closeQuickCapture,
   openTimezoneModal,
   closeTimezoneModal,
+  setEventScope,
 } from '@/features/calendar/store';
 
 // API
@@ -105,10 +103,6 @@ export {
   createEvent as createEventAsync,
   updateEvent as updateEventAsync,
   deleteEvent as deleteEventAsync,
-  fetchCalendars,
-  createCalendar as createCalendarAsync,
-  updateCalendar as updateCalendarAsync,
-  deleteCalendar as deleteCalendarAsync,
   fetchCategories,
   createCategory as createCategoryAsync,
   updateCategory as updateCategoryAsync,
@@ -163,7 +157,6 @@ export {
 // Types
 export type {
   CalendarEvent,
-  Calendar,
   Category,
   Attendee,
   ViewMode,

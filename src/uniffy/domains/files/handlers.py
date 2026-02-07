@@ -1,6 +1,7 @@
 """Files RPC handlers - thin layer delegating to operations."""
 
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -567,11 +568,13 @@ class FilesHandlers:
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "File not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
         except ConnectError:
             raise
         except Exception as e:
+            if "ValidationError" in type(e).__name__:
+                raise ConnectError(Code.INVALID_ARGUMENT, str(e))
             logger.error(f"Error updating file: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
@@ -823,11 +826,13 @@ class FilesHandlers:
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Folder not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
         except ConnectError:
             raise
         except Exception as e:
+            if "ValidationError" in type(e).__name__:
+                raise ConnectError(Code.INVALID_ARGUMENT, str(e))
             logger.error(f"Error updating folder: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
@@ -1053,8 +1058,143 @@ class FilesHandlers:
         request: MoveItemsRequest,
         ctx: RequestContext,
     ) -> MoveItemsResponse:
-        """Move files/folders to a different parent."""
-        raise ConnectError(Code.UNIMPLEMENTED, "MoveItems not yet implemented")
+        """Move files/folders to a different parent and/or visibility scope."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        # Parse target folder ID
+        target_folder_id = None
+        if request.HasField("target_folder_id") and request.target_folder_id:
+            try:
+                target_folder_id = UUID(request.target_folder_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid target folder ID")
+
+        # Parse target visibility
+        target_visibility = None
+        if request.HasField("target_visibility"):
+            target_visibility = visibility_from_proto(request.target_visibility)
+
+        # Parse file and folder IDs
+        file_ids = []
+        for fid in request.file_ids:
+            try:
+                file_ids.append(UUID(fid))
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid file ID: {fid}")
+
+        folder_ids = []
+        for fid in request.folder_ids:
+            try:
+                folder_ids.append(UUID(fid))
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid folder ID: {fid}")
+
+        if not file_ids and not folder_ids:
+            return MoveItemsResponse(
+                success=True,
+                message="No items to move",
+                files_moved=0,
+                folders_moved=0,
+            )
+
+        try:
+            files_moved = 0
+            folders_moved = 0
+
+            async for session in get_async_session():
+                file_ops = FileOperations(session)
+                folder_ops = FolderOperations(session)
+
+                # Move files
+                for file_id in file_ids:
+                    file = await file_ops._fetch_by_id(file_id, organization_id)
+                    if not file:
+                        continue
+
+                    # Check if visibility is actually changing
+                    visibility_changing = (
+                        target_visibility is not None and
+                        target_visibility != file.visibility
+                    )
+
+                    # Check ownership only for visibility changes
+                    if visibility_changing and file.owner_id != user_id:
+                        raise PermissionDeniedError("change_visibility", "file")
+
+                    # Update folder if specified
+                    if target_folder_id is not None or request.HasField("target_folder_id"):
+                        file.folder_id = target_folder_id
+
+                    # Update visibility if actually changing (this also handles group links)
+                    if visibility_changing:
+                        await file_ops.update(
+                            user_id=user_id,
+                            organization_id=organization_id,
+                            file_id=file_id,
+                            visibility=target_visibility,
+                        )
+                    else:
+                        # Just update folder
+                        file.updated_at = datetime.now(UTC)
+                        await session.commit()
+
+                    files_moved += 1
+
+                # Move folders
+                for folder_id in folder_ids:
+                    folder = await folder_ops.get_by_id(folder_id, organization_id)
+                    if not folder:
+                        continue
+
+                    # Check if visibility is actually changing
+                    visibility_changing = (
+                        target_visibility is not None and
+                        target_visibility != folder.visibility
+                    )
+
+                    # Check ownership only for visibility changes
+                    if visibility_changing and folder.owner_id != user_id:
+                        raise PermissionDeniedError("change_visibility", "folder")
+
+                    # Update parent if specified
+                    if target_folder_id is not None or request.HasField("target_folder_id"):
+                        folder.parent_id = target_folder_id
+
+                    # Update visibility if actually changing (this also handles group links)
+                    if visibility_changing:
+                        await folder_ops.update(
+                            user_id=user_id,
+                            organization_id=organization_id,
+                            folder_id=folder_id,
+                            visibility=target_visibility,
+                        )
+                    else:
+                        folder.updated_at = datetime.now(UTC)
+                        await session.commit()
+
+                    folders_moved += 1
+
+                return MoveItemsResponse(
+                    success=True,
+                    message=f"Moved {files_moved} files and {folders_moved} folders",
+                    files_moved=files_moved,
+                    folders_moved=folders_moved,
+                )
+
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
+        except ConnectError:
+            raise
+        except Exception as e:
+            if "ValidationError" in type(e).__name__:
+                raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+            logger.error(f"Error moving items: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def copy_items(
         self,

@@ -14,7 +14,7 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models import ContentPermission, Group, User
 from uniffy.core.models.login.group_member import GroupMember
-from uniffy.core.models.shared import ContentType, PermissionLevel, SubjectType
+from uniffy.core.models.shared import ContentType, PermissionLevel, SubjectType, VisibilityScope
 
 
 class PermissionsOperations:
@@ -385,9 +385,12 @@ class PermissionsOperations:
         Get the current user's effective permission on content.
 
         This method checks permissions in order of precedence:
-        1. Organization owner/admin - full access
-        2. Content owner - owner-level access
-        3. Explicit permission grant
+        1. Content owner - owner-level access
+        2. Explicit permission grant (respected for all users including admins)
+        3. Organization owner/admin - full access ONLY for ORGANIZATION-scoped content
+
+        For PRIVATE content, org admins only have access if explicitly granted.
+        This ensures personal/private content remains private even from admins.
 
         Parameters
         ----------
@@ -409,36 +412,13 @@ class PermissionsOperations:
         """
         from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 
-        # Check if user is org owner/admin - they have full access
-        org_member_result = await self.session.execute(
-            select(OrganizationMember)
-            .where(OrganizationMember.user_id == user_id)
-            .where(OrganizationMember.organization_id == organization_id)
-            .where(OrganizationMember.is_active == True)  # noqa: E712
+        # Get content owner and visibility
+        content_owner_id, content_visibility = await self._get_content_owner_and_visibility(
+            content_type, content_id
         )
-        org_member = org_member_result.scalar_one_or_none()
 
-        if org_member and org_member.role in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
-            # Return synthetic permission with full access for org admins
-            return ContentPermission(
-                organization_id=organization_id,
-                content_type=content_type,
-                content_id=content_id,
-                subject_type=SubjectType.USER,
-                subject_id=user_id,
-                permission_level=PermissionLevel.ADMIN,
-                can_view=True,
-                can_edit=True,
-                can_delete=True,
-                can_share=True,
-                can_move=True,
-                granted_by_user_id=user_id,
-            )
-
-        # Check if user is content owner - fetch content to verify
-        content_owner_id = await self._get_content_owner_id(content_type, content_id)
+        # 1. Check if user is content owner - they always have full access
         if content_owner_id and content_owner_id == user_id:
-            # Return synthetic permission with owner-level access
             return ContentPermission(
                 organization_id=organization_id,
                 content_type=content_type,
@@ -454,7 +434,7 @@ class PermissionsOperations:
                 granted_by_user_id=user_id,
             )
 
-        # Check for explicit permission grant
+        # 2. Check for explicit permission grant - this takes precedence for non-owners
         now = datetime.now(UTC)
         result = await self.session.execute(
             select(ContentPermission)
@@ -470,7 +450,39 @@ class PermissionsOperations:
                 )
             )
         )
-        return result.scalar_one_or_none()
+        explicit_permission = result.scalar_one_or_none()
+        if explicit_permission:
+            return explicit_permission
+
+        # 3. Check if user is org admin - they get full access ONLY for ORGANIZATION-scoped content
+        # For PRIVATE or GROUP content, admins need explicit permission (checked above)
+        if content_visibility == VisibilityScope.ORGANIZATION:
+            org_member_result = await self.session.execute(
+                select(OrganizationMember)
+                .where(OrganizationMember.user_id == user_id)
+                .where(OrganizationMember.organization_id == organization_id)
+                .where(OrganizationMember.is_active == True)  # noqa: E712
+            )
+            org_member = org_member_result.scalar_one_or_none()
+
+            if org_member and org_member.role in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
+                return ContentPermission(
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
+                    subject_type=SubjectType.USER,
+                    subject_id=user_id,
+                    permission_level=PermissionLevel.ADMIN,
+                    can_view=True,
+                    can_edit=True,
+                    can_delete=True,
+                    can_share=True,
+                    can_move=True,
+                    granted_by_user_id=user_id,
+                )
+
+        # No permission found
+        return None
 
     async def _get_content_owner_id(
         self,
@@ -510,6 +522,53 @@ class PermissionsOperations:
             return result.scalar_one_or_none()
         # Add other content types as needed
         return None
+
+    async def _get_content_owner_and_visibility(
+        self,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> tuple[UUID | None, VisibilityScope]:
+        """
+        Get the owner ID and visibility scope for a piece of content.
+
+        Parameters
+        ----------
+        content_type : ContentType
+            Type of content.
+        content_id : UUID
+            ID of the content.
+
+        Returns
+        -------
+        tuple[UUID | None, VisibilityScope]
+            (owner_id, visibility) - The owner user ID and visibility scope.
+            Returns (None, PRIVATE) if content not found.
+
+        """
+        if content_type == ContentType.NOTE:
+            from uniffy.core.models.notes.note import Note
+
+            result = await self.session.execute(
+                select(Note.owner_id, Note.visibility).where(Note.id == content_id)
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
+        elif content_type == ContentType.FILE:
+            from uniffy.core.models.files.file import File
+
+            result = await self.session.execute(
+                select(File.owner_id, File.visibility).where(File.id == content_id)
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
+        # Default to PRIVATE for unknown content types
+        return None, VisibilityScope.PRIVATE
 
     async def search_share_targets(
         self,

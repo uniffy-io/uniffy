@@ -18,8 +18,6 @@ export type {
 
 // Calendar types
 export type {
-  Calendar,
-  CalendarType,
   CalendarPreferences,
   ViewMode,
   QuickAccessFilter,

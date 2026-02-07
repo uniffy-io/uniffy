@@ -153,3 +153,41 @@ export {
 
 // Blob Cache (for clearing on logout)
 export { clearBlobCache } from '@/features/files/components/viewer/hooks/blobCache';
+
+// Image Editor
+export {
+    imageEditorReducer,
+    enterEditMode,
+    exitEditMode,
+    rotateRight,
+    rotateLeft,
+    toggleFlipH,
+    toggleFlipV,
+    setBrightness,
+    commitBrightness,
+    setContrast,
+    commitContrast,
+    toggleCropTool,
+    setCropActive,
+    setCropRect,
+    applyCrop,
+    cancelCrop,
+    undo,
+    redo,
+    resetToOriginal,
+    openSaveDialog,
+    closeSaveDialog,
+    setSaving,
+    setSaveError,
+    selectIsEditing,
+    selectCanUndo,
+    selectCanRedo,
+    selectHasChanges,
+} from '@/features/files/store';
+export type { EditorHistoryEntry, CropRect } from '@/features/files/store';
+
+// Image Editor Components
+export { ImageEditor } from '@/features/files/components/viewer/editor';
+
+// Image Editor Hook
+export { useImageEditor } from '@/features/files/hooks/useImageEditor';

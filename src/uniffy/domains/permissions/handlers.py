@@ -8,6 +8,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.shared import PermissionLevel
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.permissions.converters import (
@@ -315,12 +316,18 @@ class PermissionsHandlers:
         try:
             async for session in get_async_session():
                 ops = PermissionsOperations(session)
+
+                # Get actual content owner ID
+                actual_owner_id = await ops._get_content_owner_id(content_type, content_id)
+                if not actual_owner_id:
+                    raise ConnectError(Code.NOT_FOUND, "Content not found")
+
                 permissions, owner = await ops.list_content_permissions(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=content_type,
                     content_id=content_id,
-                    content_owner_id=user_id,  # Not used in list
+                    content_owner_id=actual_owner_id,
                 )
 
                 response = PermissionListResponse()
@@ -399,10 +406,14 @@ class PermissionsHandlers:
                 subject = await ops.get_user_by_id(user_id)
                 granted_by = await ops.get_user_by_id(permission.granted_by_user_id)
 
+                # Check if user is the actual content owner (not just admin)
+                is_owner = permission.permission_level == PermissionLevel.OWNER
+
                 return permission_to_proto(
                     permission,
                     subject=subject,
                     granted_by=granted_by,
+                    is_owner=is_owner,
                 )
 
         except ConnectError:

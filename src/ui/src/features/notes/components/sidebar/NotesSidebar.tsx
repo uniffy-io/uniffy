@@ -30,7 +30,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote, initializeNotesData } from '@/features/notes/store/notesSlice';
+import { setCurrentNote, createNote, fetchNote, deleteNote, updateNote, restoreNote, initializeNotesData, moveNote } from '@/features/notes/store/notesSlice';
 import { toggleSidebar } from '@/features/notes/store/editorSlice';
 import {
   toggleNodeExpanded,
@@ -598,36 +598,66 @@ export function NotesSidebar() {
     [dispatch]
   );
 
+  // Helper to recursively find a node in the tree by ID
+  const findNodeRecursively = useCallback(
+    (nodes: TreeNode[], nodeId: string): TreeNode | null => {
+      for (const node of nodes) {
+        if (node.id === nodeId) return node;
+        if (node.children) {
+          const found = findNodeRecursively(node.children, nodeId);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    []
+  );
+
+  // Helper to find a node's visibility by searching all tree sections
+  const findNodeVisibility = useCallback(
+    (nodeId: string): VisibilityScope => {
+      // Check each section with its known visibility
+      // Personal section = PRIVATE
+      const inPersonal = findNodeRecursively(tree.personal, nodeId);
+      if (inPersonal) return VisibilityScope.PRIVATE;
+
+      // Organization section = ORGANIZATION
+      const inOrg = findNodeRecursively(tree.organization, nodeId);
+      if (inOrg) return VisibilityScope.ORGANIZATION;
+
+      // Shared section = PRIVATE (shared with us, but our creations default to private)
+      const inShared = findNodeRecursively(tree.shared, nodeId);
+      if (inShared) return VisibilityScope.PRIVATE;
+
+      // Groups = GROUP visibility
+      for (const group of tree.groups) {
+        const inGroup = findNodeRecursively(group.nodes, nodeId);
+        if (inGroup) return VisibilityScope.GROUP;
+      }
+
+      // Bookmarked - check the node's actual visibility or default to PRIVATE
+      const inBookmarked = findNodeRecursively(tree.bookmarked, nodeId);
+      if (inBookmarked) return inBookmarked.visibility || VisibilityScope.PRIVATE;
+
+      // Default to PRIVATE
+      return VisibilityScope.PRIVATE;
+    },
+    [tree, findNodeRecursively]
+  );
+
   // Create subfolder inside a parent folder
   const handleCreateSubfolder = useCallback(
     async (parentId: string) => {
-      // Find the parent node to get its visibility
-      const allNotes = Object.values(tree.bookmarked)
-        .concat(Object.values(tree.personal))
-        .concat(Object.values(tree.shared))
-        .concat(Object.values(tree.organization))
-        .concat(Object.values(tree.trash));
-      
-      const parentNode = allNotes.find((n) => n.id === parentId);
-      const visibility = parentNode?.visibility || VisibilityScope.PRIVATE;
-
+      const visibility = findNodeVisibility(parentId);
       await handleNewFolder(visibility, parentId);
     },
-    [tree, handleNewFolder]
+    [findNodeVisibility, handleNewFolder]
   );
 
   // Create note inside a parent folder
   const handleCreateNoteInFolder = useCallback(
     async (parentId: string) => {
-      // Find the parent node to get its visibility
-      const allNotes = Object.values(tree.bookmarked)
-        .concat(Object.values(tree.personal))
-        .concat(Object.values(tree.shared))
-        .concat(Object.values(tree.organization))
-        .concat(Object.values(tree.trash));
-
-      const parentNode = allNotes.find((n) => n.id === parentId);
-      const visibility = parentNode?.visibility || VisibilityScope.PRIVATE;
+      const visibility = findNodeVisibility(parentId);
 
       try {
         const result = await dispatch(
@@ -650,7 +680,7 @@ export function NotesSidebar() {
         console.error('Failed to create note:', err);
       }
     },
-    [tree, dispatch, navigate]
+    [findNodeVisibility, dispatch, navigate]
   );
 
   // Rename a note/folder
@@ -676,19 +706,31 @@ export function NotesSidebar() {
     [dispatch, organizationId]
   );
 
-  // Handle drop - move note into folder
+  // Handle drop - move note into folder (and optionally change visibility)
   const handleDrop = useCallback(
     async (targetFolderId: string, droppedNodeId: string) => {
       if (!organizationId) return;
 
       try {
-        // Update via thunk to move note into folder (updates Redux + cache)
+        // Get the current visibility of the dropped node and target folder
+        const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
+        const targetFolderVisibility = findNodeVisibility(targetFolderId);
+
+        // If visibility changes, use moveNote to change visibility scope
+        if (droppedNodeVisibility !== targetFolderVisibility) {
+          await dispatch(moveNote({
+            noteId: droppedNodeId,
+            targetVisibility: targetFolderVisibility,
+          })).unwrap();
+        }
+
+        // Update parent to move into the folder
         await dispatch(updateNote({
           noteId: droppedNodeId,
           parentId: targetFolderId,
         })).unwrap();
 
-        // Force refresh to get updated tree structure (parent change affects tree)
+        // Force refresh to get updated tree structure
         dispatch(initializeNotesData({ forceRefresh: true }));
       } catch (err) {
         console.error('Failed to move note:', err);
@@ -696,7 +738,7 @@ export function NotesSidebar() {
         dispatch(initializeNotesData({ forceRefresh: true }));
       }
     },
-    [dispatch, organizationId]
+    [dispatch, organizationId, findNodeVisibility]
   );
 
   // Drag handlers
@@ -732,6 +774,42 @@ export function NotesSidebar() {
     dispatch(initializeNotesData({ forceRefresh: true }));
   }, [dispatch]);
 
+  // Handle drop on section header - moves note to root of that section with new visibility
+  const handleDropOnSection = useCallback(
+    async (targetVisibility: VisibilityScope, droppedNodeId: string) => {
+      if (!organizationId) return;
+
+      try {
+        // Get the current visibility of the dropped node
+        const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
+
+        // If visibility changes, use moveNote to change visibility scope
+        if (droppedNodeVisibility !== targetVisibility) {
+          await dispatch(moveNote({
+            noteId: droppedNodeId,
+            targetVisibility: targetVisibility,
+          })).unwrap();
+        }
+
+        // Remove parent to move to root level
+        await dispatch(updateNote({
+          noteId: droppedNodeId,
+          parentId: '', // Empty string signals remove parent
+        })).unwrap();
+
+        // Force refresh to get updated tree structure
+        dispatch(initializeNotesData({ forceRefresh: true }));
+      } catch (err) {
+        console.error('Failed to move note to section:', err);
+        dispatch(initializeNotesData({ forceRefresh: true }));
+      }
+    },
+    [dispatch, organizationId, findNodeVisibility]
+  );
+
+  // Track section drop state
+  const [sectionDropTarget, setSectionDropTarget] = useState<string | null>(null);
+
   // Render a section
   const renderSection = (config: SectionConfig) => {
     const nodes = tree[config.id];
@@ -743,11 +821,32 @@ export function NotesSidebar() {
       (sectionExpanded ? BookmarkSimpleIcon : BookmarkSimpleIcon) :
       IconComponent;
 
+    // Can drop on sections with a defined scope (personal, organization)
+    const canDropOnSection = config.scope && draggedNodeId;
+    const isDropTarget = sectionDropTarget === config.id;
+
     return (
       <div key={config.id}>
-        <button
+        <div
           onClick={() => handleToggle(config.id)}
-          className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group"
+          onDragOver={(e) => {
+            if (canDropOnSection) {
+              e.preventDefault();
+              setSectionDropTarget(config.id);
+            }
+          }}
+          onDragLeave={() => setSectionDropTarget(null)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setSectionDropTarget(null);
+            if (canDropOnSection && draggedNodeId && config.scope) {
+              handleDropOnSection(config.scope, draggedNodeId);
+            }
+          }}
+          className={cn(
+            "w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer",
+            isDropTarget && "bg-primary/10 ring-2 ring-primary"
+          )}
         >
           {sectionExpanded ? (
             <CaretDown size={16} weight="bold" className="text-muted-foreground" />
@@ -780,7 +879,7 @@ export function NotesSidebar() {
               </span>
             </div>
           )}
-        </button>
+        </div>
 
         {sectionExpanded && nodes.length > 0 && (
           <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">

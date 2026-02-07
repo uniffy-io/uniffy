@@ -1,20 +1,32 @@
 /**
  * Event Editor Modal
- * Full form for editing event details
+ * Modern design with visibility selector and reorganized layout
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { X } from '@phosphor-icons/react';
+import {
+  X,
+  LockSimple,
+  Buildings,
+  Clock,
+  Tag,
+  TextAa,
+  Users,
+  MapPin,
+  Link as LinkIcon,
+  Timer,
+} from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEvent } from '@/features/calendar/store/calendarThunks';
-import type { CalendarEvent } from '@/features/calendar/types';
+import type { CalendarEvent, Attendee } from '@/features/calendar/types';
 import { cn } from '@/shared/utils/cn';
 import { MarkdownEditor } from '@/components/editor';
+import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import type { MemberInfo } from '@/gen/common/v1/common_pb';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
-import type { Attendee } from '@/features/calendar/types';
+
+type EventVisibility = 'private' | 'organization';
 
 /**
  * Extract time value (hours as decimal) from ISO string
@@ -54,7 +66,6 @@ function generateDateOptions(): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
   const today = new Date();
 
-  // Past 30 days
   for (let i = 30; i >= 1; i--) {
     const date = new Date(today);
     date.setDate(today.getDate() - i);
@@ -62,7 +73,6 @@ function generateDateOptions(): { value: string; label: string }[] {
     options.push({ value: dateString, label: formatDateLabel(dateString) });
   }
 
-  // Today and next 60 days
   for (let i = 0; i <= 60; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
@@ -109,42 +119,32 @@ interface EventEditorProps {
 
 export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const dispatch = useAppDispatch();
-  const calendars = useAppSelector((state) => state.calendar.calendars);
   const categories = useAppSelector((state) => state.calendar.categories);
 
   const [formData, setFormData] = useState(event);
-  const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'attendees'>('basic');
-
-  // Build options for Select components
-  const calendarOptions = useMemo(
-    () =>
-      Object.entries(calendars).map(([id, cal]) => ({
-        value: id,
-        label: cal.name,
-      })),
-    [calendars]
+  const [visibility, setVisibility] = useState<EventVisibility>(
+    (event.visibility as EventVisibility) || 'private'
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categoryOptions = useMemo(
     () =>
       Object.entries(categories).map(([id, cat]) => ({
         value: id,
         label: cat.name,
+        color: cat.color,
       })),
     [categories]
   );
 
-  // Date and time options for selectors
   const dateOptions = useMemo(() => generateDateOptions(), []);
   const timeOptions = useMemo(() => generateTimeOptions(), []);
 
-  // Extract current date and time values from formData
   const startDate = useMemo(() => getDateString(formData.startTime), [formData.startTime]);
   const startTime = useMemo(() => getTimeValue(formData.startTime), [formData.startTime]);
   const endDate = useMemo(() => getDateString(formData.endTime), [formData.endTime]);
   const endTime = useMemo(() => getTimeValue(formData.endTime), [formData.endTime]);
 
-  // Handlers for date/time changes
   const handleStartDateChange = (newDate: string) => {
     const current = new Date(formData.startTime);
     const [year, month, day] = newDate.split('-').map(Number);
@@ -159,7 +159,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
     current.setHours(hours, minutes, 0, 0);
     handleChange('startTime', current.toISOString());
 
-    // Auto-adjust end time if needed
     const endDateTime = new Date(formData.endTime);
     if (current >= endDateTime) {
       const newEnd = new Date(current);
@@ -183,12 +182,12 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
     handleChange('endTime', current.toISOString());
   };
 
-  // Reset form when modal opens or event changes - this is a valid pattern for modals
   useEffect(() => {
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(event);
-      setActiveTab('basic');
+      setVisibility((event.visibility as EventVisibility) || 'private');
+      setIsSubmitting(false);
     }
   }, [event, isOpen]);
 
@@ -226,22 +225,28 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await dispatch(updateEvent({
-      eventId: formData.id,
-      title: formData.title,
-      description: formData.description,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      isAllDay: formData.isAllDay,
-      timezone: formData.timezone,
-      location: formData.location,
-      meetingUrl: formData.meetingUrl,
-      calendarId: formData.calendarId,
-      categoryId: formData.categoryId,
-      isFocusTime: formData.isFocusTime,
-      tags: formData.tags,
-      attendeeIds: formData.attendees.map(a => a.id),
-    }));
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    await dispatch(
+      updateEvent({
+        eventId: formData.id,
+        title: formData.title,
+        description: formData.description,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        isAllDay: formData.isAllDay,
+        timezone: formData.timezone,
+        location: formData.location,
+        meetingUrl: formData.meetingUrl,
+        calendarId: formData.calendarId,
+        categoryId: formData.categoryId,
+        isFocusTime: formData.isFocusTime,
+        tags: formData.tags,
+        attendeeIds: formData.attendees.map((a) => a.id),
+        visibility,
+      })
+    );
     onClose();
   };
 
@@ -250,131 +255,153 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+        onClick={onClose}
+      />
 
       {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg shadow-xl z-50 w-[640px] max-h-[85vh] overflow-hidden flex flex-col border border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Edit Event</h2>
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl animate-in zoom-in-95 fade-in duration-200">
+        <div className="bg-background rounded-xl shadow-2xl border border-border overflow-hidden relative">
+          {/* Close button */}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="absolute top-3 right-3 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-10"
           >
-            <X size={20} weight="bold" />
+            <X size={18} weight="bold" />
           </button>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 border-b border-border px-6">
-          <button
-            onClick={() => setActiveTab('basic')}
-            className={cn(
-              'px-1 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-              activeTab === 'basic'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Basic
-          </button>
-          <button
-            onClick={() => setActiveTab('details')}
-            className={cn(
-              'px-1 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-              activeTab === 'details'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Details
-          </button>
-          <button
-            onClick={() => setActiveTab('attendees')}
-            className={cn(
-              'px-1 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-              activeTab === 'attendees'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Attendees
-          </button>
-        </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="max-h-[calc(85vh-80px)] overflow-y-auto">
+            <div className="p-5 pt-12 space-y-5">
+              {/* Visibility Selector */}
+              <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setVisibility('private')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
+                    visibility === 'private'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  )}
+                >
+                  <LockSimple size={16} weight={visibility === 'private' ? 'fill' : 'duotone'} />
+                  <span>Personal</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisibility('organization')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
+                    visibility === 'organization'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  )}
+                >
+                  <Buildings size={16} weight={visibility === 'organization' ? 'fill' : 'duotone'} />
+                  <span>Organization</span>
+                </button>
+              </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4">
-          {activeTab === 'basic' && (
-            <div className="space-y-4">
               {/* Title */}
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">
-                  Title
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <TextAa size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Title</span>
+                </div>
                 <input
-                  id="title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleChange('title', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 />
               </div>
 
-              {/* Calendar & Category */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Calendar
-                  </label>
-                  <Select
-                    value={formData.calendarId}
-                    onChange={(value) => handleChange('calendarId', value)}
-                    options={calendarOptions}
-                    className="w-full"
-                  />
+              {/* Attendees - Moved up */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Users size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Attendees</span>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Category
-                  </label>
-                  <Select
-                    value={formData.categoryId}
-                    onChange={(value) => handleChange('categoryId', value)}
-                    options={categoryOptions}
-                    className="w-full"
-                  />
-                </div>
+                <AttendeesSelector
+                  attendees={formData.attendees}
+                  onAdd={handleAttendeeAdd}
+                  onRemove={handleAttendeeRemove}
+                />
               </div>
 
-              {/* Multi-day toggle */}
-              <Checkbox
-                id="allday-basic"
-                checked={formData.isAllDay}
-                onChange={(e) => handleChange('isAllDay', e.target.checked)}
-                label="Multi-day event"
-              />
+              {/* Date & Time */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Clock size={16} weight="duotone" className="text-muted-foreground" />
+                    <span>Date & Time</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleChange('isAllDay', !formData.isAllDay)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <span
+                      className={cn(
+                        'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+                        formData.isAllDay
+                          ? 'border-primary bg-primary'
+                          : 'border-muted-foreground'
+                      )}
+                    />
+                    <span>Multi-day</span>
+                  </button>
+                </div>
 
-              {/* Date and Time */}
-              {formData.isAllDay ? (
-                <div className="space-y-3">
-                  {/* Multi-day: Start Date & Time */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        Start Date
-                      </label>
-                      <Select
-                        value={startDate}
-                        onChange={handleStartDateChange}
-                        options={dateOptions}
-                        className="w-full"
-                      />
+                {formData.isAllDay ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">Start Date</label>
+                        <Select
+                          value={startDate}
+                          onChange={handleStartDateChange}
+                          options={dateOptions}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">Start Time</label>
+                        <Select
+                          value={startTime}
+                          onChange={handleStartTimeChange}
+                          options={timeOptions}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">End Date</label>
+                        <Select
+                          value={endDate}
+                          onChange={handleEndDateChange}
+                          options={dateOptions}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">End Time</label>
+                        <Select
+                          value={endTime}
+                          onChange={handleEndTimeChange}
+                          options={timeOptions}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        Start Time
-                      </label>
+                      <label className="block text-xs text-muted-foreground mb-1.5">Start</label>
                       <Select
                         value={startTime}
                         onChange={handleStartTimeChange}
@@ -382,25 +409,8 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                         className="w-full"
                       />
                     </div>
-                  </div>
-
-                  {/* Multi-day: End Date & Time */}
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        End Date
-                      </label>
-                      <Select
-                        value={endDate}
-                        onChange={handleEndDateChange}
-                        options={dateOptions}
-                        className="w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">
-                        End Time
-                      </label>
+                      <label className="block text-xs text-muted-foreground mb-1.5">End</label>
                       <Select
                         value={endTime}
                         onChange={handleEndTimeChange}
@@ -409,120 +419,122 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                       />
                     </div>
                   </div>
-                </div>
-              ) : (
-                /* Single-day: Time selectors only */
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      Start
-                    </label>
-                    <Select
-                      value={startTime}
-                      onChange={handleStartTimeChange}
-                      options={timeOptions}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      End
-                    </label>
-                    <Select
-                      value={endTime}
-                      onChange={handleEndTimeChange}
-                      options={timeOptions}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Description with @ mention support and formatting toolbar */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Description
-                </label>
-                <MarkdownEditor
-                  value={formData.description}
-                  onChange={(markdown) => handleChange('description', markdown)}
-                  placeholder="Add notes, use @ to reference content..."
-                  minHeight="180px"
-                  maxHeight="250px"
-                  showBottomToolbar={true}
-                />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'details' && (
-            <div className="space-y-4">
-              {/* Location */}
-              <div>
-                <label htmlFor="location" className="block text-sm font-medium text-foreground mb-1">
-                  Location
-                </label>
-                <input
-                  id="location"
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
-                  placeholder="Add location or video call link..."
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                )}
               </div>
 
-              {/* Meeting URL */}
-              <div>
-                <label htmlFor="meetingUrl" className="block text-sm font-medium text-foreground mb-1">
-                  Meeting URL
-                </label>
-                <input
-                  id="meetingUrl"
-                  type="url"
-                  value={formData.meetingUrl || ''}
-                  onChange={(e) => handleChange('meetingUrl', e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+              {/* Category */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Tag size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Category</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {categoryOptions.map((cat) => (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() => handleChange('categoryId', cat.value)}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-lg border transition-all',
+                        formData.categoryId === cat.value
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <span
+                        className="inline-block w-2 h-2 rounded-full mr-2"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Location & Meeting URL */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <MapPin size={16} weight="duotone" className="text-muted-foreground" />
+                    <span>Location</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => handleChange('location', e.target.value)}
+                    placeholder="Add location..."
+                    className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <LinkIcon size={16} weight="duotone" className="text-muted-foreground" />
+                    <span>Meeting URL</span>
+                  </div>
+                  <input
+                    type="url"
+                    value={formData.meetingUrl || ''}
+                    onChange={(e) => handleChange('meetingUrl', e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                </div>
               </div>
 
               {/* Focus Time */}
-              <Checkbox
-                id="focusTime"
-                checked={formData.isFocusTime}
-                onChange={(e) => handleChange('isFocusTime', e.target.checked)}
-                label="This is focus/deep work time"
-              />
-            </div>
-          )}
+              <button
+                type="button"
+                onClick={() => handleChange('isFocusTime', !formData.isFocusTime)}
+                className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg w-full hover:bg-muted/50 transition-colors"
+              >
+                <Timer size={20} weight="duotone" className="text-muted-foreground" />
+                <span
+                  className={cn(
+                    'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+                    formData.isFocusTime
+                      ? 'border-primary bg-primary'
+                      : 'border-muted-foreground'
+                  )}
+                />
+                <span className="text-sm text-foreground">Focus/Deep Work Time</span>
+              </button>
 
-          {activeTab === 'attendees' && (
-            <div className="h-full">
-              <AttendeesSelector
-                attendees={formData.attendees}
-                onAdd={handleAttendeeAdd}
-                onRemove={handleAttendeeRemove}
-              />
+              {/* Description */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <TextAa size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Description</span>
+                  <span className="text-xs text-muted-foreground">(optional)</span>
+                </div>
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <MarkdownEditor
+                    value={formData.description}
+                    onChange={(markdown) => handleChange('description', markdown)}
+                    placeholder="Add notes, use @ to reference content..."
+                    minHeight="120px"
+                    maxHeight="200px"
+                    showBottomToolbar={true}
+                  />
+                </div>
+              </div>
             </div>
-          )}
-        </form>
 
-        {/* Footer */}
-        <div className="flex gap-2 px-6 py-4 border-t border-border">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
-          >
-            Save Changes
-          </button>
+            {/* Footer */}
+            <div className="flex gap-3 px-5 py-4 border-t border-border bg-muted/20">
+              <Button type="button" variant="outline" size="md" onClick={onClose} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="default"
+                size="md"
+                disabled={!formData.title.trim() || isSubmitting}
+                className="flex-1"
+              >
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </>

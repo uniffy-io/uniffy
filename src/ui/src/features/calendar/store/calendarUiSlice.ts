@@ -42,6 +42,9 @@ interface CalendarUiState {
   eventModalMode: 'create' | 'edit';
   eventModalPrefill: EventModalPrefill | null;
 
+  // Event editor modal (edit existing event)
+  isEditingEventOpen: boolean;
+
   // Sidebar state
   isSidebarCollapsed: boolean;
   sidebarWidth: number;
@@ -62,9 +65,7 @@ interface CalendarUiState {
   // Timezone modal
   isTimezoneModalOpen: boolean;
 
-  // Calendar/Category/Template modals
-  isAddCalendarModalOpen: boolean;
-  editingCalendarId: string | null;
+  // Category/Template modals
   isAddCategoryModalOpen: boolean;
   editingCategoryId: string | null;
   isCreateTemplateModalOpen: boolean;
@@ -73,6 +74,9 @@ interface CalendarUiState {
   // Mobile state
   isMobileView: boolean;
   activeMobilePanel: 'sidebar' | 'calendar' | 'detail';
+
+  // Event scope filter: all, personal, organization
+  eventScope: 'all' | 'personal' | 'organization';
 }
 
 /**
@@ -95,6 +99,7 @@ const initialState: CalendarUiState = {
   isEventModalOpen: false,
   eventModalMode: 'create',
   eventModalPrefill: null,
+  isEditingEventOpen: false,
   isSidebarCollapsed: false,
   sidebarWidth: LAYOUT.SIDEBAR_WIDTH,
   collapsedSections: getDefaultCollapsedSections(),
@@ -105,14 +110,13 @@ const initialState: CalendarUiState = {
   isTravelingMode: false,
   isQuickCaptureOpen: false,
   isTimezoneModalOpen: false,
-  isAddCalendarModalOpen: false,
-  editingCalendarId: null,
   isAddCategoryModalOpen: false,
   editingCategoryId: null,
   isCreateTemplateModalOpen: false,
   editingTemplateId: null,
   isMobileView: false,
   activeMobilePanel: 'calendar',
+  eventScope: 'all',
 };
 
 const calendarUiSlice = createSlice({
@@ -197,6 +201,16 @@ const calendarUiSlice = createSlice({
     closeEventModal: (state) => {
       state.isEventModalOpen = false;
       state.eventModalPrefill = null;
+    },
+
+    // Edit event modal
+    openEditEvent: (state, action: PayloadAction<string>) => {
+      state.selectedEventId = action.payload;
+      state.isEditingEventOpen = true;
+    },
+
+    closeEditEvent: (state) => {
+      state.isEditingEventOpen = false;
     },
 
     // Sidebar
@@ -287,22 +301,7 @@ const calendarUiSlice = createSlice({
       state.isTimezoneModalOpen = false;
     },
 
-    // Calendar/Category/Template modals
-    openAddCalendarModal: (state) => {
-      state.isAddCalendarModalOpen = true;
-      state.editingCalendarId = null;
-    },
-
-    openEditCalendarModal: (state, action: PayloadAction<string>) => {
-      state.isAddCalendarModalOpen = true;
-      state.editingCalendarId = action.payload;
-    },
-
-    closeAddCalendarModal: (state) => {
-      state.isAddCalendarModalOpen = false;
-      state.editingCalendarId = null;
-    },
-
+    // Category/Template modals
     openAddCategoryModal: (state) => {
       state.isAddCategoryModalOpen = true;
       state.editingCategoryId = null;
@@ -348,6 +347,11 @@ const calendarUiSlice = createSlice({
       state.activeMobilePanel = action.payload;
     },
 
+    // Event scope filter
+    setEventScope: (state, action: PayloadAction<'all' | 'personal' | 'organization'>) => {
+      state.eventScope = action.payload;
+    },
+
     // Reset
     resetCalendarUiState: () => initialState,
   },
@@ -367,6 +371,8 @@ export const {
   setActiveDetailTab,
   openEventModal,
   closeEventModal,
+  openEditEvent,
+  closeEditEvent,
   toggleSidebar,
   setSidebarCollapsed,
   setSidebarWidth,
@@ -382,9 +388,6 @@ export const {
   closeQuickCapture,
   openTimezoneModal,
   closeTimezoneModal,
-  openAddCalendarModal,
-  openEditCalendarModal,
-  closeAddCalendarModal,
   openAddCategoryModal,
   openEditCategoryModal,
   closeAddCategoryModal,
@@ -393,6 +396,7 @@ export const {
   closeCreateTemplateModal,
   setMobileView,
   setActiveMobilePanel,
+  setEventScope,
   resetCalendarUiState,
 } = calendarUiSlice.actions;
 

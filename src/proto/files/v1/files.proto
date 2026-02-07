@@ -435,6 +435,7 @@ message MoveItemsRequest {
   repeated string file_ids = 2;
   repeated string folder_ids = 3;
   optional string target_folder_id = 4;  // null = root
+  optional common.v1.VisibilityScope target_visibility = 5;  // Change visibility scope
 }
 
 message MoveItemsResponse {

@@ -510,6 +510,19 @@ class BaseContentOperations[TModel](ABC):
         )
         return [row[0] for row in result.all()]
 
+    async def _remove_group_links(self, content_id: UUID) -> None:
+        """Remove all group links for a content item."""
+        from sqlalchemy import delete
+
+        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
+
+        await self.session.execute(
+            delete(ContentGroupLink).where(
+                ContentGroupLink.content_id == content_id,
+                ContentGroupLink.content_type == self.content_type,
+            )
+        )
+
     # ─────────────────────────────────────────────────────────────
     # Column accessors (for query building)
     # ─────────────────────────────────────────────────────────────

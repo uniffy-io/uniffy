@@ -158,48 +158,6 @@ def _get_initials(name: str) -> str:
     return name[0].upper()
 
 
-async def get_user_calendars(
-    session: AsyncSession,
-    organization_id: UUID,
-    owner_id: UUID,
-    visible_only: bool = False,
-) -> list[Calendar]:
-    """
-    Get calendars for a user.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    organization_id : UUID
-        Organization ID.
-    owner_id : UUID
-        Owner user ID.
-    visible_only : bool
-        Only return visible calendars.
-
-    Returns
-    -------
-    list[Calendar]
-        User's calendars.
-
-    """
-    query = select(Calendar).where(
-        and_(
-            Calendar.organization_id == organization_id,
-            Calendar.owner_id == owner_id,
-        )
-    )
-
-    if visible_only:
-        query = query.where(Calendar.is_visible == True)  # noqa: E712
-
-    query = query.order_by(Calendar.is_default.desc(), Calendar.name.asc())
-
-    result = await session.execute(query)
-    return list(result.scalars().all())
-
-
 async def get_categories(
     session: AsyncSession,
     organization_id: UUID,

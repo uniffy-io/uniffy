@@ -13,6 +13,9 @@ import type { SerializedFile } from '@/features/files/store/filesThunks';
 const ImageViewer = lazy(() =>
     import('./viewers/ImageViewer').then((m) => ({ default: m.ImageViewer }))
 );
+const ImageEditor = lazy(() =>
+    import('./editor/ImageEditor').then((m) => ({ default: m.ImageEditor }))
+);
 const VideoViewer = lazy(() =>
     import('./viewers/VideoViewer').then((m) => ({ default: m.VideoViewer }))
 );
@@ -31,6 +34,8 @@ const UnsupportedViewer = lazy(() =>
 
 interface ViewerContentProps {
     file: SerializedFile;
+    isEditing?: boolean;
+    onExitEdit?: () => void;
 }
 
 /**
@@ -74,10 +79,18 @@ function ViewerLoading() {
     );
 }
 
-export function ViewerContent({ file }: ViewerContentProps) {
+export function ViewerContent({ file, isEditing, onExitEdit }: ViewerContentProps) {
     const { mimeType } = file;
 
+    console.log('[ViewerContent] Render:', { isEditing, mimeType, fileId: file.id });
+
     const getViewer = () => {
+        // Image editing mode
+        if (mimeType.startsWith('image/') && isEditing && onExitEdit) {
+            console.log('[ViewerContent] Rendering ImageEditor for file:', file.id);
+            return <ImageEditor file={file} onClose={onExitEdit} />;
+        }
+
         // Images
         if (mimeType.startsWith('image/')) {
             return <ImageViewer file={file} />;

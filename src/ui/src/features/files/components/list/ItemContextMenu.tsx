@@ -12,6 +12,7 @@ import {
     ShareNetwork,
     BookmarkSimple,
     Tag,
+    ArrowRight,
 } from '@phosphor-icons/react';
 
 interface ItemContextMenuProps {
@@ -26,6 +27,7 @@ interface ItemContextMenuProps {
     isBookmarked?: boolean;
     bookmarkToggling?: boolean;
     onEditTags?: () => void;
+    onMove?: () => void;
     canShare?: boolean;
 }
 
@@ -41,6 +43,7 @@ export function ItemContextMenu({
     isBookmarked,
     bookmarkToggling,
     onEditTags,
+    onMove,
     canShare = true,
 }: ItemContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
@@ -112,6 +115,16 @@ export function ItemContextMenu({
                     >
                         <Tag size={16} className="text-primary" />
                         Edit Tags
+                    </button>
+                )}
+
+                {onMove && (
+                    <button
+                        onClick={(e) => handleAction(onMove, e)}
+                        className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                        <ArrowRight size={16} className="text-muted-foreground" />
+                        Move to...
                     </button>
                 )}
 

@@ -10,7 +10,6 @@ from sqlalchemy.orm import InstrumentedAttribute
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.calendar.attendee import EventAttendee
-from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.template import EventTemplate
@@ -18,7 +17,6 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.shared import (
     AttendeeRole,
     AttendeeStatus,
-    CalendarType,
     RecurrencePattern,
     VisibilityScope,
 )
@@ -428,6 +426,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         """
         Get events in a date range with permission filtering.
 
+        Returns all events the user can access based on:
+        - Events they own (organizer)
+        - Events with ORGANIZATION visibility
+        - Events with GROUP visibility where user is a member
+        - Events where user is an attendee (not DECLINED)
+
         Parameters
         ----------
         user_id : UUID
@@ -439,7 +443,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         end_date : datetime
             End of range.
         calendar_ids : list[UUID] | None
-            Filter by calendars.
+            Filter by calendars (optional, returns all accessible if not specified).
         category_ids : list[UUID] | None
             Filter by categories.
 
@@ -449,30 +453,49 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Events the user can access.
 
         """
-        all_events = await queries.get_events_in_range(
-            session=self.session,
-            organization_id=organization_id,
-            start_date=start_date,
-            end_date=end_date,
-            calendar_ids=calendar_ids,
-            category_ids=category_ids,
+        query = select(CalendarEvent).where(
+            and_(
+                CalendarEvent.organization_id == organization_id,
+                CalendarEvent.is_deleted == False,  # noqa: E712
+                CalendarEvent.start_time < end_date,
+                CalendarEvent.end_time > start_date,
+            )
         )
 
-        # Filter by permissions
-        accessible = []
-        for event in all_events:
-            can_access = await self.permission_checker.can_access_content(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id=event.id,
-                content_owner_id=event.organizer_id,
-                content_visibility=event.visibility,
-            )
-            if can_access:
-                accessible.append(event)
+        # Apply access filter (owner, org visibility, group visibility)
+        access_filter = self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=CalendarEvent.id,
+            owner_id_column=CalendarEvent.organizer_id,
+            visibility_column=CalendarEvent.visibility,
+        )
 
-        return accessible
+        # Also include events where user is an attendee (not declined)
+        attendee_subquery = (
+            select(EventAttendee.event_id)
+            .where(EventAttendee.user_id == user_id)
+            .where(EventAttendee.status != AttendeeStatus.DECLINED)
+        )
+        attendee_filter = CalendarEvent.id.in_(attendee_subquery)
+
+        # Combine: user can access OR user is attendee
+        query = query.where(or_(access_filter, attendee_filter))
+
+        # Apply optional calendar filter
+        if calendar_ids:
+            query = query.where(CalendarEvent.calendar_id.in_(calendar_ids))
+
+        # Apply optional category filter
+        if category_ids:
+            query = query.where(CalendarEvent.category_id.in_(category_ids))
+
+        # Order by start time
+        query = query.order_by(CalendarEvent.start_time.asc())
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
 
     async def list_events(
         self,
@@ -779,156 +802,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self.session.commit()
         return True
-
-
-class CalendarOperations:
-    """
-    Calendar CRUD operations.
-
-    Calendars are user-owned and don't have visibility/permission
-    complexity like events, so simpler operations.
-    """
-
-    def __init__(self, session: AsyncSession) -> None:
-        """Initialize calendar operations."""
-        self.session = session
-
-    async def create(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        name: str,
-        color: str = "#3b82f6",
-        calendar_type: CalendarType = CalendarType.PERSONAL,
-        is_default: bool = False,
-    ) -> Calendar:
-        """Create a new calendar."""
-        # If this is the default, unset other defaults
-        if is_default:
-            result = await self.session.execute(
-                select(Calendar).where(
-                    and_(
-                        Calendar.organization_id == organization_id,
-                        Calendar.owner_id == user_id,
-                        Calendar.is_default == True,  # noqa: E712
-                    )
-                )
-            )
-            for cal in result.scalars().all():
-                cal.is_default = False
-
-        calendar = Calendar(
-            organization_id=organization_id,
-            owner_id=user_id,
-            name=name,
-            color=color,
-            calendar_type=calendar_type,
-            is_visible=True,
-            is_default=is_default,
-        )
-        self.session.add(calendar)
-        await self.session.commit()
-        await self.session.refresh(calendar)
-        return calendar
-
-    async def get_by_id(
-        self,
-        calendar_id: UUID,
-        organization_id: UUID,
-        user_id: UUID,
-    ) -> Calendar:
-        """Get calendar by ID (must be owner)."""
-        result = await self.session.execute(
-            select(Calendar).where(
-                and_(
-                    Calendar.id == calendar_id,
-                    Calendar.organization_id == organization_id,
-                    Calendar.owner_id == user_id,
-                )
-            )
-        )
-        calendar = result.scalar_one_or_none()
-        if not calendar:
-            raise NotFoundError("Calendar", calendar_id)
-        return calendar
-
-    async def update(
-        self,
-        calendar_id: UUID,
-        organization_id: UUID,
-        user_id: UUID,
-        name: str | None = None,
-        color: str | None = None,
-        is_visible: bool | None = None,
-        is_default: bool | None = None,
-        calendar_type: CalendarType | None = None,
-    ) -> Calendar:
-        """Update a calendar."""
-        calendar = await self.get_by_id(calendar_id, organization_id, user_id)
-
-        if name is not None:
-            calendar.name = name
-        if color is not None:
-            calendar.color = color
-        if is_visible is not None:
-            calendar.is_visible = is_visible
-        if is_default is not None:
-            if is_default:
-                # Unset other defaults
-                result = await self.session.execute(
-                    select(Calendar).where(
-                        and_(
-                            Calendar.organization_id == organization_id,
-                            Calendar.owner_id == user_id,
-                            Calendar.is_default == True,  # noqa: E712
-                            Calendar.id != calendar_id,
-                        )
-                    )
-                )
-                for cal in result.scalars().all():
-                    cal.is_default = False
-            calendar.is_default = is_default
-        if calendar_type is not None:
-            calendar.calendar_type = calendar_type
-
-        calendar.updated_at = datetime.now(UTC)
-        await self.session.commit()
-        await self.session.refresh(calendar)
-        return calendar
-
-    async def delete(
-        self,
-        calendar_id: UUID,
-        organization_id: UUID,
-        user_id: UUID,
-    ) -> bool:
-        """Delete a calendar."""
-        calendar = await self.get_by_id(calendar_id, organization_id, user_id)
-
-        # Don't allow deleting the default calendar
-        if calendar.is_default:
-            raise PermissionDeniedError("delete", "default calendar")
-
-        await self.session.delete(calendar)
-        await self.session.commit()
-        return True
-
-    async def list_calendars(
-        self,
-        organization_id: UUID,
-        user_id: UUID,
-        visible_only: bool = False,
-    ) -> list[Calendar]:
-        """List user's calendars."""
-        return await queries.get_user_calendars(self.session, organization_id, user_id, visible_only)
-
-    async def ensure_default(
-        self,
-        organization_id: UUID,
-        user_id: UUID,
-    ) -> Calendar:
-        """Ensure user has a default calendar."""
-        return await queries.ensure_default_calendar(self.session, organization_id, user_id)
 
 
 class CategoryOperations:
