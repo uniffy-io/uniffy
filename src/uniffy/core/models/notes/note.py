@@ -2,13 +2,14 @@
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Enum, text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import NodeType, VisibilityScope
+from uniffy.core.types import generate_id
 
 
 class Note(SQLModel, table=True):
@@ -71,7 +72,7 @@ class Note(SQLModel, table=True):
 
     __tablename__ = "notes_notes"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     visibility: VisibilityScope = Field(

@@ -24,7 +24,7 @@ def upgrade() -> None:
     # Organizations
     op.create_table(
         "login_organizations",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("slug", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("domain", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
@@ -47,7 +47,7 @@ def upgrade() -> None:
     # Users
     op.create_table(
         "login_users",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("email", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("username", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("full_name", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
@@ -68,7 +68,7 @@ def upgrade() -> None:
     # Organization Members
     op.create_table(
         "login_organization_members",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column(
@@ -99,7 +99,7 @@ def upgrade() -> None:
     # Groups
     op.create_table(
         "login_groups",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("slug", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
@@ -121,7 +121,7 @@ def upgrade() -> None:
     # Group Members
     op.create_table(
         "login_group_members",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("group_id", sa.Uuid(), nullable=False),
         sa.Column(
@@ -146,7 +146,7 @@ def upgrade() -> None:
     # SSO Configurations
     op.create_table(
         "login_sso_configurations",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column(
             "provider",

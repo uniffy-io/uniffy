@@ -1,12 +1,13 @@
 """Content-Group association model."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import ContentType
+from uniffy.core.types import generate_id
 
 
 class ContentGroupLink(SQLModel, table=True):
@@ -40,7 +41,7 @@ class ContentGroupLink(SQLModel, table=True):
 
     __tablename__ = "permissions_content_group_links"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     content_type: ContentType = Field(nullable=False, index=True)
     content_id: UUID = Field(nullable=False, index=True)

@@ -120,7 +120,7 @@ export function CropOverlay({
                 const deltaX = e.clientX - startPos.x;
                 const deltaY = e.clientY - startPos.y;
 
-                let newRect = { ...startRect };
+                const newRect = { ...startRect };
 
                 switch (dragHandle) {
                     case 'move':

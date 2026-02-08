@@ -1,0 +1,201 @@
+syntax = "proto3";
+
+package notifications.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// NotificationsService provides notification management and real-time streaming
+service NotificationsService {
+  // List notifications for the current user with pagination and filters
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {}
+
+  // Get the count of unread notifications
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse) {}
+
+  // Mark a single notification as read
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse) {}
+
+  // Mark all notifications as read in an organization
+  rpc MarkAllAsRead(MarkAllAsReadRequest) returns (MarkAllAsReadResponse) {}
+
+  // Delete a notification
+  rpc DeleteNotification(DeleteNotificationRequest) returns (DeleteNotificationResponse) {}
+
+  // Register a Web Push subscription for the current user
+  rpc RegisterPushSubscription(RegisterPushSubscriptionRequest) returns (RegisterPushSubscriptionResponse) {}
+
+  // Unregister a Web Push subscription
+  rpc UnregisterPushSubscription(UnregisterPushSubscriptionRequest) returns (UnregisterPushSubscriptionResponse) {}
+
+  // Server streaming: real-time notification feed via Valkey Pub/Sub
+  rpc StreamNotifications(StreamNotificationsRequest) returns (stream StreamNotificationEvent) {}
+}
+
+// Notification type enum
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_CONTENT_SHARED = 1;
+  NOTIFICATION_TYPE_CONTENT_MENTIONED = 2;
+  NOTIFICATION_TYPE_CONTENT_EDITED = 3;
+  NOTIFICATION_TYPE_CALENDAR_REMINDER = 4;
+  NOTIFICATION_TYPE_CALENDAR_INVITE = 5;
+  NOTIFICATION_TYPE_CALENDAR_RESPONSE = 6;
+  NOTIFICATION_TYPE_PERMISSION_GRANTED = 7;
+  NOTIFICATION_TYPE_PERMISSION_REVOKED = 8;
+  NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT = 9;
+}
+
+// Notification model
+message Notification {
+  // Unique identifier
+  string id = 1;
+  // Organization context
+  string organization_id = 2;
+  // Recipient user ID
+  string user_id = 3;
+  // Notification type
+  NotificationType notification_type = 4;
+  // Short title
+  string title = 5;
+  // Body content (Markdown with URN mentions)
+  string body = 6;
+  // URN of the related content
+  string source_urn = 7;
+  // User who triggered the notification
+  string actor_id = 8;
+  // Whether the notification has been read
+  bool is_read = 9;
+  // When the notification was read
+  google.protobuf.Timestamp read_at = 10;
+  // When the notification was created
+  google.protobuf.Timestamp created_at = 11;
+  // When the notification expires
+  google.protobuf.Timestamp expires_at = 12;
+}
+
+// Request to list notifications
+message ListNotificationsRequest {
+  // Organization context
+  string organization_id = 1;
+  // Page number (1-indexed)
+  int32 page = 2;
+  // Page size (default 20)
+  int32 page_size = 3;
+  // Filter by read status (omit for all)
+  optional bool is_read = 4;
+  // Filter by notification type
+  repeated NotificationType notification_types = 5;
+}
+
+// Response for listing notifications
+message ListNotificationsResponse {
+  // List of notifications
+  repeated Notification notifications = 1;
+  // Total count matching filters
+  int32 total_count = 2;
+  // Number of unread notifications (regardless of filters)
+  int32 unread_count = 3;
+}
+
+// Request to get unread count
+message GetUnreadCountRequest {
+  // Organization context
+  string organization_id = 1;
+}
+
+// Response with unread count
+message GetUnreadCountResponse {
+  // Number of unread notifications
+  int32 unread_count = 1;
+}
+
+// Request to mark a notification as read
+message MarkAsReadRequest {
+  // Notification ID
+  string notification_id = 1;
+}
+
+// Response for mark as read
+message MarkAsReadResponse {
+  // The updated notification
+  Notification notification = 1;
+}
+
+// Request to mark all notifications as read
+message MarkAllAsReadRequest {
+  // Organization context
+  string organization_id = 1;
+}
+
+// Response for mark all as read
+message MarkAllAsReadResponse {
+  // Number of notifications marked as read
+  int32 updated_count = 1;
+}
+
+// Request to delete a notification
+message DeleteNotificationRequest {
+  // Notification ID
+  string notification_id = 1;
+}
+
+// Response for delete
+message DeleteNotificationResponse {
+  // Success flag
+  bool success = 1;
+}
+
+// Request to register a push subscription
+message RegisterPushSubscriptionRequest {
+  // Web Push endpoint URL
+  string endpoint = 1;
+  // VAPID p256dh public key
+  string p256dh_key = 2;
+  // VAPID auth secret
+  string auth_key = 3;
+  // Browser user agent (optional)
+  string user_agent = 4;
+}
+
+// Response for push subscription registration
+message RegisterPushSubscriptionResponse {
+  // Subscription ID
+  string id = 1;
+}
+
+// Request to unregister a push subscription
+message UnregisterPushSubscriptionRequest {
+  // Web Push endpoint URL to unregister
+  string endpoint = 1;
+}
+
+// Response for push subscription unregistration
+message UnregisterPushSubscriptionResponse {
+  // Success flag
+  bool success = 1;
+}
+
+// Request to start streaming notifications
+message StreamNotificationsRequest {
+  // Organization context
+  string organization_id = 1;
+}
+
+// Event sent via the streaming RPC
+message StreamNotificationEvent {
+  // Event type
+  enum EventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    // New notification received
+    EVENT_TYPE_NEW_NOTIFICATION = 1;
+    // Heartbeat (keep-alive)
+    EVENT_TYPE_HEARTBEAT = 2;
+  }
+
+  // Type of this event
+  EventType event_type = 1;
+  // The notification (present for NEW_NOTIFICATION events)
+  Notification notification = 2;
+  // Server timestamp (present for HEARTBEAT events)
+  google.protobuf.Timestamp timestamp = 3;
+}

@@ -12,9 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models import ContentPermission, Group, User
 from uniffy.core.models.login.group_member import GroupMember
-from uniffy.core.models.shared import ContentType, PermissionLevel, SubjectType, VisibilityScope
+from uniffy.core.models.shared import (
+    ContentType,
+    NotificationType,
+    PermissionLevel,
+    SubjectType,
+    VisibilityScope,
+)
+from uniffy.core.search.indexer import build_content_urn
 
 
 class PermissionsOperations:
@@ -37,6 +45,42 @@ class PermissionsOperations:
         """
         self.session = session
         self.permission_checker = PermissionChecker(session)
+
+    async def _resolve_notification_targets(
+        self,
+        subject_type: SubjectType,
+        subject_id: UUID,
+    ) -> list[UUID]:
+        """
+        Resolve notification target user IDs from a permission subject.
+
+        For USER subjects, returns the user ID directly.
+        For GROUP subjects, resolves all active group members.
+
+        Parameters
+        ----------
+        subject_type : SubjectType
+            Type of subject (USER or GROUP).
+        subject_id : UUID
+            ID of the user or group.
+
+        Returns
+        -------
+        list[UUID]
+            List of user IDs to notify.
+
+        """
+        if subject_type == SubjectType.USER:
+            return [subject_id]
+
+        # GROUP: resolve active members
+        result = await self.session.execute(
+            select(GroupMember.user_id).where(
+                GroupMember.group_id == subject_id,
+                GroupMember.is_active == True,  # noqa: E712
+            )
+        )
+        return [row[0] for row in result.all()]
 
     async def grant_permission(
         self,
@@ -132,6 +176,20 @@ class PermissionsOperations:
             existing.updated_at = datetime.now(UTC)
             await self.session.commit()
             await self.session.refresh(existing)
+
+            # Notify subject of updated permission
+            target_ids = await self._resolve_notification_targets(
+                subject_type, subject_id
+            )
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.PERMISSION_GRANTED,
+                organization_id=organization_id,
+                actor_id=granted_by_user_id,
+                title=f"Permission updated: {permission_level.value}",
+                source_urn=build_content_urn(content_type, content_id),
+                target_user_ids=target_ids,
+            ))
+
             return existing
 
         # Create new permission
@@ -153,6 +211,20 @@ class PermissionsOperations:
         self.session.add(permission)
         await self.session.commit()
         await self.session.refresh(permission)
+
+        # Notify subject of granted permission
+        target_ids = await self._resolve_notification_targets(
+            subject_type, subject_id
+        )
+        await emit_notification(NotificationEvent(
+            notification_type=NotificationType.PERMISSION_GRANTED,
+            organization_id=organization_id,
+            actor_id=granted_by_user_id,
+            title=f"Permission granted: {permission_level.value}",
+            source_urn=build_content_urn(content_type, content_id),
+            target_user_ids=target_ids,
+        ))
+
         return permission
 
     async def revoke_permission(
@@ -202,8 +274,26 @@ class PermissionsOperations:
         if not can_share_content:
             raise PermissionDeniedError("revoke_permission", "content")
 
+        # Capture details and resolve targets before deletion
+        revoked_content_type = permission.content_type
+        revoked_content_id = permission.content_id
+        target_ids = await self._resolve_notification_targets(
+            permission.subject_type, permission.subject_id
+        )
+
         await self.session.delete(permission)
         await self.session.commit()
+
+        # Notify subject of revoked permission
+        await emit_notification(NotificationEvent(
+            notification_type=NotificationType.PERMISSION_REVOKED,
+            organization_id=organization_id,
+            actor_id=revoking_user_id,
+            title="Permission revoked",
+            source_urn=build_content_urn(revoked_content_type, revoked_content_id),
+            target_user_ids=target_ids,
+        ))
+
         return True
 
     async def update_permission(

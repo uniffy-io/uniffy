@@ -2,13 +2,14 @@
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Enum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import RecurrencePattern, VisibilityScope
+from uniffy.core.types import generate_id
 
 
 class CalendarEvent(SQLModel, table=True):
@@ -73,7 +74,7 @@ class CalendarEvent(SQLModel, table=True):
 
     __tablename__ = "calendar_events"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     organizer_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     calendar_id: UUID = Field(foreign_key="calendar_calendars.id", nullable=False, index=True)

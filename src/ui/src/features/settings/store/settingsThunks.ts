@@ -47,6 +47,22 @@ const keyboardShortcutsToPlain = (shortcuts?: KeyboardShortcutsSettings) => {
  */
 const notificationsToPlain = (notifications?: NotificationsSettings) => {
     if (!notifications) return undefined;
+
+    // Convert channel overrides from proto to plain object
+    const channelOverrides: Record<string, Record<string, boolean>> = {};
+    if (notifications.channelOverrides) {
+        for (const [notifType, pref] of Object.entries(notifications.channelOverrides)) {
+            const channels: Record<string, boolean> = {};
+            if (pref.inApp !== undefined) channels.in_app = pref.inApp;
+            if (pref.desktop !== undefined) channels.desktop = pref.desktop;
+            if (pref.push !== undefined) channels.push = pref.push;
+            if (pref.email !== undefined) channels.email = pref.email;
+            if (Object.keys(channels).length > 0) {
+                channelOverrides[notifType] = channels;
+            }
+        }
+    }
+
     return {
         desktopEnabled: notifications.desktopEnabled,
         emailEnabled: notifications.emailEnabled,
@@ -54,6 +70,7 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
         emailFrequency: notifications.emailFrequency || undefined,
         quietHoursStart: notifications.quietHoursStart || undefined,
         quietHoursEnd: notifications.quietHoursEnd || undefined,
+        channelOverrides,
     };
 };
 
@@ -94,6 +111,7 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         emailFrequency: 'instant',
         quietHoursStart: undefined,
         quietHoursEnd: undefined,
+        channelOverrides: {},
     },
 });
 

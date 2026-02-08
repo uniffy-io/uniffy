@@ -13,6 +13,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.observability.metrics import RPC_REQUEST_DURATION, RPC_REQUESTS_TOTAL
 
 # Context variable to store HTTP version from ASGI scope
 http_version_var: ContextVar[str] = ContextVar("http_version", default="unknown")
@@ -90,6 +91,10 @@ class LoggingInterceptor:
             # Calculate duration
             duration = time.time() - start_time
 
+            # Record Prometheus metrics
+            RPC_REQUESTS_TOTAL.labels(service=service_name, method=method_name, code="OK").inc()
+            RPC_REQUEST_DURATION.labels(service=service_name, method=method_name).observe(duration)
+
             # Log successful completion
             logger.info(
                 f"access {service_name}/{method_name}",
@@ -102,6 +107,12 @@ class LoggingInterceptor:
         except ConnectError as e:
             # Calculate duration
             duration = time.time() - start_time
+
+            # Record Prometheus metrics
+            RPC_REQUESTS_TOTAL.labels(
+                service=service_name, method=method_name, code=e.code.name
+            ).inc()
+            RPC_REQUEST_DURATION.labels(service=service_name, method=method_name).observe(duration)
 
             # Log error
             logger.error(
@@ -116,6 +127,13 @@ class LoggingInterceptor:
         except Exception as e:
             # Calculate duration
             duration = time.time() - start_time
+
+            # Record Prometheus metrics
+            RPC_REQUESTS_TOTAL.labels(
+                service=service_name, method=method_name, code="INTERNAL"
+            ).inc()
+            RPC_REQUEST_DURATION.labels(service=service_name, method=method_name).observe(duration)
+
             logger.error(
                 f"error {service_name}/{method_name}",
                 user_id=user_id,

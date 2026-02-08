@@ -39,7 +39,7 @@ class SearchResult:
     search_score: float | None  # Meilisearch ranking score
 
     @classmethod
-    def from_meilisearch_hit(cls, hit: dict[str, Any]) -> "SearchResult":
+    def from_meilisearch_hit(cls, hit: dict[str, Any]) -> SearchResult:
         """
         Create SearchResult from Meilisearch hit document.
 

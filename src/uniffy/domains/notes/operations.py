@@ -11,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.errors import NotFoundError
+from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
-from uniffy.core.models.shared import NodeType
+from uniffy.core.models.shared import NodeType, NotificationType
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, VisibilityScope
 from uniffy.domains.notes import queries
@@ -191,6 +192,31 @@ class NoteOperations(BaseContentOperations[Note]):
         )
         await self.session.commit()
 
+        # Notify if note is shared (GROUP or ORGANIZATION visibility)
+        if visibility != VisibilityScope.PRIVATE:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CONTENT_SHARED,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Shared note: {note.title}",
+                source_urn=build_content_urn(ContentType.NOTE, note.id),
+                content_type=ContentType.NOTE,
+                content_id=note.id,
+            ))
+
+        # Notify mentioned users
+        mentioned_ids = extract_mentioned_user_ids(outgoing_refs)
+        mentioned_ids.discard(user_id)
+        if mentioned_ids:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CONTENT_MENTIONED,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Mentioned you in: {note.title}",
+                source_urn=build_content_urn(ContentType.NOTE, note.id),
+                target_user_ids=list(mentioned_ids),
+            ))
+
         return note
 
     async def update(
@@ -241,6 +267,11 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_edit(user_id, organization_id, note)
 
+        # Snapshot old mentions before content update for diff
+        old_mentioned = (
+            extract_mentioned_user_ids(note.outgoing_references) if content is not None else set()
+        )
+
         # Apply updates
         if title is not None:
             note.title = title
@@ -274,6 +305,33 @@ class NoteOperations(BaseContentOperations[Note]):
         group_ids = await self._get_content_group_ids(note.id)
         await self._index_for_search(model=note, group_ids=group_ids)
         await self.session.commit()
+
+        # Notify collaborators of edit (only for shared notes)
+        if note.visibility != VisibilityScope.PRIVATE:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CONTENT_EDITED,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Edited note: {note.title}",
+                source_urn=build_content_urn(ContentType.NOTE, note.id),
+                content_type=ContentType.NOTE,
+                content_id=note.id,
+            ))
+
+        # Notify newly mentioned users (only for content changes)
+        if content is not None:
+            new_mentioned = extract_mentioned_user_ids(note.outgoing_references)
+            new_mentioned.discard(user_id)
+            newly_mentioned = new_mentioned - old_mentioned
+            if newly_mentioned:
+                await emit_notification(NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Mentioned you in: {note.title}",
+                    source_urn=build_content_urn(ContentType.NOTE, note.id),
+                    target_user_ids=list(newly_mentioned),
+                ))
 
         return note
 
@@ -433,6 +491,9 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_edit(user_id, organization_id, note)
 
+        # Snapshot old mentions before content update for diff
+        old_mentioned = extract_mentioned_user_ids(note.outgoing_references)
+
         note.content = content
         # Update outgoing references and inline tags when content changes
         note.outgoing_references = queries.extract_urns_from_content(content) or None
@@ -449,6 +510,20 @@ class NoteOperations(BaseContentOperations[Note]):
         group_ids = await self._get_content_group_ids(note.id)
         await self._index_for_search(model=note, group_ids=group_ids)
         await self.session.commit()
+
+        # Notify newly mentioned users (diff avoids duplicates on each autosave)
+        new_mentioned = extract_mentioned_user_ids(note.outgoing_references)
+        new_mentioned.discard(user_id)
+        newly_mentioned = new_mentioned - old_mentioned
+        if newly_mentioned:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CONTENT_MENTIONED,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Mentioned you in: {note.title}",
+                source_urn=build_content_urn(ContentType.NOTE, note.id),
+                target_user_ids=list(newly_mentioned),
+            ))
 
         return note
 
@@ -748,6 +823,18 @@ class NoteOperations(BaseContentOperations[Note]):
         )
         await self._index_for_search(model=note, group_ids=new_group_ids)
         await self.session.commit()
+
+        # Notify when note becomes shared
+        if target_visibility != VisibilityScope.PRIVATE:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CONTENT_SHARED,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Shared note: {note.title}",
+                source_urn=build_content_urn(ContentType.NOTE, note.id),
+                content_type=ContentType.NOTE,
+                content_id=note.id,
+            ))
 
         return note
 

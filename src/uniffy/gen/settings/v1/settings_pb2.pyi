@@ -173,17 +173,38 @@ class KeyboardShortcutsSettings(_message.Message):
     def __init__(self, bindings: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class NotificationsSettings(_message.Message):
-    __slots__ = ("desktop_enabled", "email_enabled", "sound_enabled", "email_frequency", "quiet_hours_start", "quiet_hours_end")
+    __slots__ = ("desktop_enabled", "email_enabled", "sound_enabled", "email_frequency", "quiet_hours_start", "quiet_hours_end", "channel_overrides")
+    class ChannelOverridesEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: NotificationChannelPreference
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[NotificationChannelPreference, _Mapping]] = ...) -> None: ...
     DESKTOP_ENABLED_FIELD_NUMBER: _ClassVar[int]
     EMAIL_ENABLED_FIELD_NUMBER: _ClassVar[int]
     SOUND_ENABLED_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FREQUENCY_FIELD_NUMBER: _ClassVar[int]
     QUIET_HOURS_START_FIELD_NUMBER: _ClassVar[int]
     QUIET_HOURS_END_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_OVERRIDES_FIELD_NUMBER: _ClassVar[int]
     desktop_enabled: bool
     email_enabled: bool
     sound_enabled: bool
     email_frequency: str
     quiet_hours_start: str
     quiet_hours_end: str
-    def __init__(self, desktop_enabled: _Optional[bool] = ..., email_enabled: _Optional[bool] = ..., sound_enabled: _Optional[bool] = ..., email_frequency: _Optional[str] = ..., quiet_hours_start: _Optional[str] = ..., quiet_hours_end: _Optional[str] = ...) -> None: ...
+    channel_overrides: _containers.MessageMap[str, NotificationChannelPreference]
+    def __init__(self, desktop_enabled: _Optional[bool] = ..., email_enabled: _Optional[bool] = ..., sound_enabled: _Optional[bool] = ..., email_frequency: _Optional[str] = ..., quiet_hours_start: _Optional[str] = ..., quiet_hours_end: _Optional[str] = ..., channel_overrides: _Optional[_Mapping[str, NotificationChannelPreference]] = ...) -> None: ...
+
+class NotificationChannelPreference(_message.Message):
+    __slots__ = ("in_app", "desktop", "push", "email")
+    IN_APP_FIELD_NUMBER: _ClassVar[int]
+    DESKTOP_FIELD_NUMBER: _ClassVar[int]
+    PUSH_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    in_app: bool
+    desktop: bool
+    push: bool
+    email: bool
+    def __init__(self, in_app: _Optional[bool] = ..., desktop: _Optional[bool] = ..., push: _Optional[bool] = ..., email: _Optional[bool] = ...) -> None: ...

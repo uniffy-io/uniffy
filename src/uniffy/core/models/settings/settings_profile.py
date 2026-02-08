@@ -2,11 +2,13 @@
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
+
+from uniffy.core.types import generate_id
 
 
 class SettingsProfile(SQLModel, table=True):
@@ -45,7 +47,7 @@ class SettingsProfile(SQLModel, table=True):
         UniqueConstraint("user_id", "name", name="uq_settings_profiles_user_name"),
     )
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     name: str = Field(max_length=100, nullable=False)
     appearance: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))

@@ -1,6 +1,6 @@
 """Attachment operations for linking files to content."""
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -15,6 +15,7 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import ContentType, VisibilityScope
 from uniffy.core.storage import get_s3_client
+from uniffy.core.types import generate_id
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, supports_thumbnail
 
 # Name of the system Attachments folder
@@ -578,7 +579,7 @@ class AttachmentOperations:
     ) -> File:
         """Copy a file to a target folder with thumbnail handling."""
         # Generate new storage key
-        new_file_id = uuid4()
+        new_file_id = generate_id()
         new_storage_key = f"{organization_id}/{user_id}/{new_file_id}/{source_file.filename}"
 
         # Copy file content in S3

@@ -973,6 +973,14 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
    */
   quietHoursEnd?: string;
 
+  /**
+   * Per-notification-type channel preferences (sparse overrides)
+   * Key: notification type name (e.g., "CONTENT_SHARED")
+   *
+   * @generated from field: map<string, settings.v1.NotificationChannelPreference> channel_overrides = 7;
+   */
+  channelOverrides: { [key: string]: NotificationChannelPreference } = {};
+
   constructor(data?: PartialMessage<NotificationsSettings>) {
     super();
     proto3.util.initPartial(data, this);
@@ -987,6 +995,7 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
     { no: 4, name: "email_frequency", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "quiet_hours_start", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "quiet_hours_end", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "channel_overrides", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: NotificationChannelPreference} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NotificationsSettings {
@@ -1003,6 +1012,71 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
 
   static equals(a: NotificationsSettings | PlainMessage<NotificationsSettings> | undefined, b: NotificationsSettings | PlainMessage<NotificationsSettings> | undefined): boolean {
     return proto3.util.equals(NotificationsSettings, a, b);
+  }
+}
+
+/**
+ * Per-channel preference for a notification type
+ *
+ * @generated from message settings.v1.NotificationChannelPreference
+ */
+export class NotificationChannelPreference extends Message<NotificationChannelPreference> {
+  /**
+   * Enable in-app notifications
+   *
+   * @generated from field: optional bool in_app = 1;
+   */
+  inApp?: boolean;
+
+  /**
+   * Enable desktop notifications
+   *
+   * @generated from field: optional bool desktop = 2;
+   */
+  desktop?: boolean;
+
+  /**
+   * Enable push notifications
+   *
+   * @generated from field: optional bool push = 3;
+   */
+  push?: boolean;
+
+  /**
+   * Enable email notifications
+   *
+   * @generated from field: optional bool email = 4;
+   */
+  email?: boolean;
+
+  constructor(data?: PartialMessage<NotificationChannelPreference>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "settings.v1.NotificationChannelPreference";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "in_app", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 2, name: "desktop", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 3, name: "push", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NotificationChannelPreference {
+    return new NotificationChannelPreference().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NotificationChannelPreference {
+    return new NotificationChannelPreference().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NotificationChannelPreference {
+    return new NotificationChannelPreference().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NotificationChannelPreference | PlainMessage<NotificationChannelPreference> | undefined, b: NotificationChannelPreference | PlainMessage<NotificationChannelPreference> | undefined): boolean {
+    return proto3.util.equals(NotificationChannelPreference, a, b);
   }
 }
 

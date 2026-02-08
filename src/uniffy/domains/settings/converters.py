@@ -14,6 +14,9 @@ from uniffy.gen.settings.v1.settings_pb2 import (
     KeyboardShortcutsSettings as ProtoKeyboardShortcuts,
 )
 from uniffy.gen.settings.v1.settings_pb2 import (
+    NotificationChannelPreference as ProtoChannelPreference,
+)
+from uniffy.gen.settings.v1.settings_pb2 import (
     NotificationsSettings as ProtoNotifications,
 )
 from uniffy.gen.settings.v1.settings_pb2 import (
@@ -165,6 +168,20 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
     if settings.get("quiet_hours_end") is not None:
         proto.quiet_hours_end = settings["quiet_hours_end"]
 
+    # Channel overrides
+    channel_overrides = settings.get("channel_overrides", {})
+    for notif_type, channels in channel_overrides.items():
+        pref = ProtoChannelPreference()
+        if channels.get("in_app") is not None:
+            pref.in_app = channels["in_app"]
+        if channels.get("desktop") is not None:
+            pref.desktop = channels["desktop"]
+        if channels.get("push") is not None:
+            pref.push = channels["push"]
+        if channels.get("email") is not None:
+            pref.email = channels["email"]
+        proto.channel_overrides[notif_type].CopyFrom(pref)
+
     return proto
 
 
@@ -296,5 +313,23 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
 
     if proto.HasField("quiet_hours_end"):
         result["quiet_hours_end"] = proto.quiet_hours_end
+
+    # Channel overrides
+    if proto.channel_overrides:
+        overrides: dict[str, dict[str, bool]] = {}
+        for notif_type, pref in proto.channel_overrides.items():
+            channels: dict[str, bool] = {}
+            if pref.HasField("in_app"):
+                channels["in_app"] = pref.in_app
+            if pref.HasField("desktop"):
+                channels["desktop"] = pref.desktop
+            if pref.HasField("push"):
+                channels["push"] = pref.push
+            if pref.HasField("email"):
+                channels["email"] = pref.email
+            if channels:
+                overrides[notif_type] = channels
+        if overrides:
+            result["channel_overrides"] = overrides
 
     return result if result else None

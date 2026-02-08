@@ -226,6 +226,7 @@ export function FileViewerModal() {
                             <ViewerContent
                                 file={file}
                                 isEditing={isEditing}
+                                initialRotation={rotation}
                                 onExitEdit={handleExitEdit}
                             />
 

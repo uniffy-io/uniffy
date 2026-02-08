@@ -1,12 +1,13 @@
 """EventAttendee model for event attendees."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Enum
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import AttendeeRole, AttendeeStatus
+from uniffy.core.types import generate_id
 
 
 class EventAttendee(SQLModel, table=True):
@@ -39,7 +40,7 @@ class EventAttendee(SQLModel, table=True):
 
     __tablename__ = "calendar_event_attendees"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     event_id: UUID = Field(foreign_key="calendar_events.id", nullable=False, index=True)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     status: AttendeeStatus = Field(

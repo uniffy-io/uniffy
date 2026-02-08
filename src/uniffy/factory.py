@@ -13,9 +13,11 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from loguru import logger
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from uniffy.core.pubsub import close_pubsub, init_pubsub
 from uniffy.core.queue import close_queue, init_queue
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
@@ -28,6 +30,8 @@ from uniffy.domains.files.http_routes import files_router, thumbnails_router
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
+from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
+from uniffy.domains.notifications.service import NotificationsServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
 from uniffy.domains.permissions.service import PermissionsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
@@ -40,6 +44,7 @@ from uniffy.gen.cal.v1.calendar_connect import CalendarServiceASGIApplication
 from uniffy.gen.files.v1.files_connect import FilesServiceASGIApplication
 from uniffy.gen.groups.v1.groups_connect import GroupsServiceASGIApplication
 from uniffy.gen.notes.v1.notes_connect import NotesServiceASGIApplication
+from uniffy.gen.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
 from uniffy.gen.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
 from uniffy.gen.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
 from uniffy.gen.search.v1.search_connect import SearchServiceASGIApplication
@@ -48,7 +53,28 @@ from uniffy.gen.users.v1.users_connect import UsersServiceASGIApplication
 from uniffy.observability import ObservabilityConfig, setup_observability
 from uniffy.observability.crpc import LoggingInterceptor, http_version_var
 from uniffy.observability.fastapi.logger import setup_request_logging
+from uniffy.observability.metrics import get_metrics
 from uniffy.observability.otel import instrument_fastapi
+
+
+class HttpVersionMiddleware:
+    """
+    Pure ASGI middleware that sets the HTTP version context variable.
+
+    This MUST be a raw ASGI middleware -- NOT Starlette's BaseHTTPMiddleware.
+    BaseHTTPMiddleware wraps every response in an internal anyio channel,
+    which breaks long-lived server streaming (buffers chunks, deadlocks
+    on the internal pipe, and conflicts with StreamDisconnectMiddleware's
+    receive interception).
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            http_version_var.set(scope.get("http_version", "unknown"))
+        await self.app(scope, receive, send)
 
 
 class ConnectRPCDispatcher:
@@ -164,6 +190,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Job queue not available: {e}")
 
+    # Initialize Pub/Sub (non-blocking - app can run without it)
+    try:
+        await init_pubsub()
+        logger.info("Pub/Sub initialized successfully")
+    except Exception as e:
+        logger.warning(f"Pub/Sub not available: {e}")
+
     try:
         await seed_initial_data()
         logger.info("Initial data seeded successfully")
@@ -175,6 +208,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down UNIFFY application...")
+    await close_pubsub()
     await close_queue()
     await close_s3()
     await close_meilisearch()
@@ -192,16 +226,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    @app.middleware("http")
-    async def log_requests(request, call_next):
-        http_version_var.set(request.scope.get("http_version", "unknown"))
-        try:
-            response = await call_next(request)
-            return response
-        except Exception as e:
-            logger.exception(f"Unhandled exception in request {e}")
-            raise
-
     cors_origins = _get_cors_origins()
     app.add_middleware(
         CORSMiddleware,
@@ -211,6 +235,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["*"],
     )
+    app.add_middleware(HttpVersionMiddleware)
 
     api_dispatcher = _create_api_dispatcher()
     app.mount("/api", api_dispatcher)
@@ -219,7 +244,11 @@ def create_app() -> FastAPI:
     async def health_check():
         return {"status": "ok", "service": "uniffy"}
 
-    instrument_fastapi(app=app, exclude_paths=["/healthz"])
+    @app.get("/metrics")
+    async def metrics():
+        return Response(content=get_metrics(), media_type="text/plain; version=0.0.4; charset=utf-8")
+
+    instrument_fastapi(app=app, exclude_paths=["/healthz", "/metrics"])
 
     logger.info(f"CORS allowed origins: {cors_origins}")
     return app
@@ -283,6 +312,14 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         "/attachments.v1.AttachmentsService",
         AttachmentsServiceASGIApplication(
             AttachmentsServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/notifications.v1.NotificationsService",
+        StreamDisconnectMiddleware(
+            NotificationsServiceASGIApplication(
+                NotificationsServiceImpl(), interceptors=[logging_interceptor]
+            )
         ),
     )
 

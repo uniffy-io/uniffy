@@ -6,12 +6,12 @@ to ensure consistency across all content types.
 """
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Enum
 from sqlmodel import Field
 
-from uniffy.core.types import VisibilityScope
+from uniffy.core.types import VisibilityScope, generate_id
 
 
 def content_id_field() -> UUID:
@@ -24,7 +24,7 @@ def content_id_field() -> UUID:
         Field definition for content ID.
 
     """
-    return Field(default_factory=uuid4, primary_key=True, nullable=False)
+    return Field(default_factory=generate_id, primary_key=True, nullable=False)
 
 
 def organization_id_field(foreign_key: str = "login_organizations.id") -> UUID:

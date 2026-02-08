@@ -125,6 +125,11 @@ async def init_db(*, skip_migrations: bool = False) -> None:
         max_overflow=20,
     )
 
+    # Expose pool stats to Prometheus gauges
+    from uniffy.observability.metrics import register_db_pool
+
+    register_db_pool(_engine.pool)
+
     # Create extensions before running migrations
     await create_extensions(_engine)
 

@@ -2,10 +2,12 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
+
+from uniffy.core.types import generate_id
 
 
 class OrganizationRole(str, Enum):
@@ -43,7 +45,7 @@ class OrganizationMember(SQLModel, table=True):
 
     __tablename__ = "login_organization_members"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     role: OrganizationRole = Field(default=OrganizationRole.MEMBER, nullable=False)

@@ -1,13 +1,14 @@
 """Folder model for the files feature."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import VisibilityScope
+from uniffy.core.types import generate_id
 
 
 class Folder(SQLModel, table=True):
@@ -46,7 +47,7 @@ class Folder(SQLModel, table=True):
 
     __tablename__ = "files_folders"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     visibility: VisibilityScope = Field(

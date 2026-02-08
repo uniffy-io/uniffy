@@ -23,6 +23,12 @@ from meilisearch_python_sdk.models.settings import (
     TypoTolerance,
 )
 
+from uniffy.observability.metrics import (
+    SEARCH_OPERATION_DURATION,
+    SEARCH_OPERATION_ERRORS_TOTAL,
+    SEARCH_OPERATIONS_TOTAL,
+)
+
 # Index name for all Uniffy content
 UNIFFY_INDEX_NAME = "uniffy"
 
@@ -36,7 +42,7 @@ class MeilisearchConfig:
     index_name: str = UNIFFY_INDEX_NAME
 
     @classmethod
-    def from_env(cls) -> "MeilisearchConfig":
+    def from_env(cls) -> MeilisearchConfig:
         """
         Create config from environment variables.
 
@@ -190,7 +196,7 @@ class MeilisearchClient:
         self.config = config or MeilisearchConfig.from_env()
         self._client: AsyncClient | None = None
 
-    async def __aenter__(self) -> "MeilisearchClient":
+    async def __aenter__(self) -> MeilisearchClient:
         """Async context manager entry."""
         self._client = AsyncClient(self.config.url, self.config.master_key)
         return self
@@ -323,6 +329,8 @@ class MeilisearchClient:
         index = self.client.index(self.config.index_name)
         await index.add_documents([document])
         elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="index").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="index").observe(elapsed_ms / 1000)
         logger.info(
             f"Meilisearch: index_document type={entity_type}",
             ms=f"{elapsed_ms:.1f}",
@@ -354,6 +362,8 @@ class MeilisearchClient:
             doc_id = build_document_id(urn, organization_id)
             await index.delete_document(doc_id)
             elapsed_ms = (time.perf_counter() - start) * 1000
+            SEARCH_OPERATIONS_TOTAL.labels(operation="delete").inc()
+            SEARCH_OPERATION_DURATION.labels(operation="delete").observe(elapsed_ms / 1000)
             logger.info(
                 "Meilisearch: delete_document",
                 ms=f"{elapsed_ms:.1f}",
@@ -364,6 +374,8 @@ class MeilisearchClient:
             # Use filter-based deletion
             await index.delete_documents_by_filter(f'urn = "{urn}"')
             elapsed_ms = (time.perf_counter() - start) * 1000
+            SEARCH_OPERATIONS_TOTAL.labels(operation="delete").inc()
+            SEARCH_OPERATION_DURATION.labels(operation="delete").observe(elapsed_ms / 1000)
             logger.info(
                 "Meilisearch: delete_documents_by_filter",
                 ms=f"{elapsed_ms:.1f}",
@@ -447,6 +459,8 @@ class MeilisearchClient:
             show_ranking_score=True,
         )
         elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="search").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="search").observe(elapsed_ms / 1000)
         logger.info(
             f"Meilisearch: search hits={len(results.hits)}",
             ms=f"{elapsed_ms:.1f}",
@@ -545,6 +559,8 @@ class MeilisearchClient:
         try:
             result = await index.get_document(doc_id)
             elapsed_ms = (time.perf_counter() - start) * 1000
+            SEARCH_OPERATIONS_TOTAL.labels(operation="get").inc()
+            SEARCH_OPERATION_DURATION.labels(operation="get").observe(elapsed_ms / 1000)
             logger.info(
                 f"Meilisearch: get_document found={result is not None}",
                 ms=f"{elapsed_ms:.1f}",
@@ -553,6 +569,9 @@ class MeilisearchClient:
             return result
         except Exception:
             elapsed_ms = (time.perf_counter() - start) * 1000
+            SEARCH_OPERATIONS_TOTAL.labels(operation="get").inc()
+            SEARCH_OPERATION_DURATION.labels(operation="get").observe(elapsed_ms / 1000)
+            SEARCH_OPERATION_ERRORS_TOTAL.labels(operation="get").inc()
             logger.info(
                 "Meilisearch: get_document found=False",
                 ms=f"{elapsed_ms:.1f}",
@@ -604,6 +623,8 @@ class MeilisearchClient:
             )
             result = {doc["urn"]: doc for doc in docs.results if "urn" in doc}
             elapsed_ms = (time.perf_counter() - start) * 1000
+            SEARCH_OPERATIONS_TOTAL.labels(operation="get_batch").inc()
+            SEARCH_OPERATION_DURATION.labels(operation="get_batch").observe(elapsed_ms / 1000)
             logger.info(
                 f"Meilisearch: get_documents_by_urns found={len(result)}/{len(urns)}",
                 ms=f"{elapsed_ms:.1f}",
@@ -611,6 +632,9 @@ class MeilisearchClient:
             return result
         except Exception as e:
             elapsed_ms = (time.perf_counter() - start) * 1000
+            SEARCH_OPERATIONS_TOTAL.labels(operation="get_batch").inc()
+            SEARCH_OPERATION_DURATION.labels(operation="get_batch").observe(elapsed_ms / 1000)
+            SEARCH_OPERATION_ERRORS_TOTAL.labels(operation="get_batch").inc()
             logger.warning(
                 f"Meilisearch: get_documents_by_urns failed: {e}",
                 ms=f"{elapsed_ms:.1f}",
@@ -639,6 +663,7 @@ class MeilisearchClient:
             return is_healthy
         except Exception as e:
             elapsed_ms = (time.perf_counter() - start) * 1000
+            SEARCH_OPERATION_ERRORS_TOTAL.labels(operation="health_check").inc()
             logger.warning(
                 f"Meilisearch: health_check failed: {e}",
                 ms=f"{elapsed_ms:.1f}",

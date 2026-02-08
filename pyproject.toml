@@ -11,7 +11,7 @@ authors = [
   { name = "kaibauniffy", email = "326951564+kaibauniffy@users.noreply.github.com" },
   { name = "yugiuniffy", email = "326952762+yugiuniffy@users.noreply.github.com" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
   "aiofiles>=25.1.0",
   "alembic>=1.13.0",
@@ -46,6 +46,8 @@ dependencies = [
   "pymupdf>=1.25.0",
   # Video thumbnail generation (requires ffmpeg binary on system)
   "ffmpeg-python>=0.2.0",
+  # Prometheus metrics
+  "prometheus-client>=0.21.0",
 ]
 
 [dependency-groups]

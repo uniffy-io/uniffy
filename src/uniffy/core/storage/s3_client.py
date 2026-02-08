@@ -8,6 +8,7 @@ Provides a high-level interface for S3 operations including:
 """
 
 import os
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -15,6 +16,13 @@ from dataclasses import dataclass
 import aioboto3
 from loguru import logger
 from types_aiobotocore_s3.client import S3Client as S3ClientType
+
+from uniffy.observability.metrics import (
+    S3_BYTES_TRANSFERRED,
+    S3_OPERATION_DURATION,
+    S3_OPERATION_ERRORS_TOTAL,
+    S3_OPERATIONS_TOTAL,
+)
 
 # Default chunk size: 5MB (S3 minimum for multipart)
 DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024
@@ -32,7 +40,7 @@ class S3Config:
     use_ssl: bool = False
 
     @classmethod
-    def from_env(cls) -> "S3Config":
+    def from_env(cls) -> S3Config:
         """Load S3 configuration from environment variables."""
         return cls(
             endpoint_url=os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"),
@@ -96,9 +104,9 @@ class S3Client:
                 logger.info(f"Creating bucket {self.config.bucket_name}")
                 await client.create_bucket(Bucket=self.config.bucket_name)
 
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
     # Simple upload/download (for small files or testing)
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
 
     async def upload_bytes(
         self,
@@ -124,15 +132,25 @@ class S3Client:
             The S3 object key.
 
         """
-        async with self._get_client() as client:
-            await client.put_object(
-                Bucket=self.config.bucket_name,
-                Key=key,
-                Body=data,
-                ContentType=content_type,
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="upload_bytes").inc()
+        try:
+            async with self._get_client() as client:
+                await client.put_object(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                    Body=data,
+                    ContentType=content_type,
+                )
+            S3_BYTES_TRANSFERRED.labels(direction="upload").inc(len(data))
+            S3_OPERATION_DURATION.labels(operation="upload_bytes").observe(
+                time.perf_counter() - start
             )
-        logger.debug(f"Uploaded {len(data)} bytes to {key}")
-        return key
+            logger.debug(f"Uploaded {len(data)} bytes to {key}")
+            return key
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="upload_bytes").inc()
+            raise
 
     async def download_bytes(self, key: str) -> bytes:
         """
@@ -149,19 +167,29 @@ class S3Client:
             File content.
 
         """
-        async with self._get_client() as client:
-            response = await client.get_object(
-                Bucket=self.config.bucket_name,
-                Key=key,
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="download_bytes").inc()
+        try:
+            async with self._get_client() as client:
+                response = await client.get_object(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                )
+                async with response["Body"] as stream:
+                    data = await stream.read()
+            S3_BYTES_TRANSFERRED.labels(direction="download").inc(len(data))
+            S3_OPERATION_DURATION.labels(operation="download_bytes").observe(
+                time.perf_counter() - start
             )
-            async with response["Body"] as stream:
-                data = await stream.read()
-        logger.debug(f"Downloaded {len(data)} bytes from {key}")
-        return data
+            logger.debug(f"Downloaded {len(data)} bytes from {key}")
+            return data
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="download_bytes").inc()
+            raise
 
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
     # Streaming download (for ConnectRPC server streaming)
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
 
     async def download_stream(
         self,
@@ -186,28 +214,37 @@ class S3Client:
             (chunk_data, chunk_number, total_chunks)
 
         """
-        async with self._get_client() as client:
-            # Get object metadata first
-            head = await client.head_object(
-                Bucket=self.config.bucket_name,
-                Key=key,
-            )
-            total_size = head["ContentLength"]
-            total_chunks = (total_size + chunk_size - 1) // chunk_size
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="download_stream").inc()
+        try:
+            async with self._get_client() as client:
+                # Get object metadata first
+                head = await client.head_object(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                )
+                total_size = head["ContentLength"]
+                total_chunks = (total_size + chunk_size - 1) // chunk_size
 
-            # Stream the object
-            response = await client.get_object(
-                Bucket=self.config.bucket_name,
-                Key=key,
-            )
+                # Stream the object
+                response = await client.get_object(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                )
 
-            chunk_number = 0
-            body = response["Body"]
-            # Use iter_chunks for proper async chunked reading
-            # (aioboto3's read() doesn't accept size parameter like sync boto3)
-            async for chunk in body.iter_chunks(chunk_size=chunk_size):
-                chunk_number += 1
-                yield chunk, chunk_number, total_chunks
+                chunk_number = 0
+                body = response["Body"]
+                async for chunk in body.iter_chunks(chunk_size=chunk_size):
+                    chunk_number += 1
+                    S3_BYTES_TRANSFERRED.labels(direction="download").inc(len(chunk))
+                    yield chunk, chunk_number, total_chunks
+
+            S3_OPERATION_DURATION.labels(operation="download_stream").observe(
+                time.perf_counter() - start
+            )
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="download_stream").inc()
+            raise
 
     async def get_object_info(self, key: str) -> dict:
         """
@@ -261,38 +298,49 @@ class S3Client:
             (chunk_data, total_size, range_start, range_end)
 
         """
-        async with self._get_client() as client:
-            # Get object metadata for total size
-            head = await client.head_object(
-                Bucket=self.config.bucket_name,
-                Key=key,
+        op_start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="download_range").inc()
+        try:
+            async with self._get_client() as client:
+                # Get object metadata for total size
+                head = await client.head_object(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                )
+                total_size = head["ContentLength"]
+
+                # Calculate actual range
+                start = start_byte if start_byte is not None else 0
+                end = end_byte if end_byte is not None else total_size - 1
+
+                # Clamp values
+                start = max(0, min(start, total_size - 1))
+                end = max(start, min(end, total_size - 1))
+
+                # Build range header
+                range_header = f"bytes={start}-{end}"
+
+                response = await client.get_object(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                    Range=range_header,
+                )
+
+                body = response["Body"]
+                async for chunk in body.iter_chunks(chunk_size=chunk_size):
+                    S3_BYTES_TRANSFERRED.labels(direction="download").inc(len(chunk))
+                    yield chunk, total_size, start, end
+
+            S3_OPERATION_DURATION.labels(operation="download_range").observe(
+                time.perf_counter() - op_start
             )
-            total_size = head["ContentLength"]
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="download_range").inc()
+            raise
 
-            # Calculate actual range
-            start = start_byte if start_byte is not None else 0
-            end = end_byte if end_byte is not None else total_size - 1
-
-            # Clamp values
-            start = max(0, min(start, total_size - 1))
-            end = max(start, min(end, total_size - 1))
-
-            # Build range header
-            range_header = f"bytes={start}-{end}"
-
-            response = await client.get_object(
-                Bucket=self.config.bucket_name,
-                Key=key,
-                Range=range_header,
-            )
-
-            body = response["Body"]
-            async for chunk in body.iter_chunks(chunk_size=chunk_size):
-                yield chunk, total_size, start, end
-
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
     # Multipart upload (for large files via streaming)
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
 
     async def create_multipart_upload(
         self,
@@ -315,15 +363,24 @@ class S3Client:
             The S3 upload ID.
 
         """
-        async with self._get_client() as client:
-            response = await client.create_multipart_upload(
-                Bucket=self.config.bucket_name,
-                Key=key,
-                ContentType=content_type,
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="create_multipart_upload").inc()
+        try:
+            async with self._get_client() as client:
+                response = await client.create_multipart_upload(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                    ContentType=content_type,
+                )
+            upload_id = response["UploadId"]
+            S3_OPERATION_DURATION.labels(operation="create_multipart_upload").observe(
+                time.perf_counter() - start
             )
-        upload_id = response["UploadId"]
-        logger.debug(f"Created multipart upload {upload_id} for {key}")
-        return upload_id
+            logger.debug(f"Created multipart upload {upload_id} for {key}")
+            return upload_id
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="create_multipart_upload").inc()
+            raise
 
     async def upload_part(
         self,
@@ -352,17 +409,27 @@ class S3Client:
             The ETag of the uploaded part.
 
         """
-        async with self._get_client() as client:
-            response = await client.upload_part(
-                Bucket=self.config.bucket_name,
-                Key=key,
-                UploadId=upload_id,
-                PartNumber=part_number,
-                Body=data,
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="upload_part").inc()
+        try:
+            async with self._get_client() as client:
+                response = await client.upload_part(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                    UploadId=upload_id,
+                    PartNumber=part_number,
+                    Body=data,
+                )
+            etag = response["ETag"]
+            S3_BYTES_TRANSFERRED.labels(direction="upload").inc(len(data))
+            S3_OPERATION_DURATION.labels(operation="upload_part").observe(
+                time.perf_counter() - start
             )
-        etag = response["ETag"]
-        logger.debug(f"Uploaded part {part_number} ({len(data)} bytes) for upload {upload_id}")
-        return etag
+            logger.debug(f"Uploaded part {part_number} ({len(data)} bytes) for upload {upload_id}")
+            return etag
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="upload_part").inc()
+            raise
 
     async def complete_multipart_upload(
         self,
@@ -388,19 +455,28 @@ class S3Client:
             The ETag of the completed object.
 
         """
-        # Sort parts by part number
-        sorted_parts = sorted(parts, key=lambda p: p["PartNumber"])
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="complete_multipart_upload").inc()
+        try:
+            # Sort parts by part number
+            sorted_parts = sorted(parts, key=lambda p: p["PartNumber"])
 
-        async with self._get_client() as client:
-            response = await client.complete_multipart_upload(
-                Bucket=self.config.bucket_name,
-                Key=key,
-                UploadId=upload_id,
-                MultipartUpload={"Parts": sorted_parts},
+            async with self._get_client() as client:
+                response = await client.complete_multipart_upload(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                    UploadId=upload_id,
+                    MultipartUpload={"Parts": sorted_parts},
+                )
+            etag = response.get("ETag", "")
+            S3_OPERATION_DURATION.labels(operation="complete_multipart_upload").observe(
+                time.perf_counter() - start
             )
-        etag = response.get("ETag", "")
-        logger.info(f"Completed multipart upload {upload_id} for {key}")
-        return etag
+            logger.info(f"Completed multipart upload {upload_id} for {key}")
+            return etag
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="complete_multipart_upload").inc()
+            raise
 
     async def abort_multipart_upload(
         self,
@@ -418,13 +494,22 @@ class S3Client:
             The multipart upload ID.
 
         """
-        async with self._get_client() as client:
-            await client.abort_multipart_upload(
-                Bucket=self.config.bucket_name,
-                Key=key,
-                UploadId=upload_id,
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="abort_multipart_upload").inc()
+        try:
+            async with self._get_client() as client:
+                await client.abort_multipart_upload(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                    UploadId=upload_id,
+                )
+            S3_OPERATION_DURATION.labels(operation="abort_multipart_upload").observe(
+                time.perf_counter() - start
             )
-        logger.info(f"Aborted multipart upload {upload_id} for {key}")
+            logger.info(f"Aborted multipart upload {upload_id} for {key}")
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="abort_multipart_upload").inc()
+            raise
 
     async def list_multipart_parts(
         self,
@@ -455,9 +540,9 @@ class S3Client:
             )
         return response.get("Parts", [])
 
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
     # Delete operations
-    # ─────────────────────────────────────────────────────────────
+    # -----------------------------------------------------------------
 
     async def copy_object(
         self,
@@ -483,22 +568,31 @@ class S3Client:
             The destination key.
 
         """
-        async with self._get_client() as client:
-            copy_source = {"Bucket": self.config.bucket_name, "Key": source_key}
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="copy_object").inc()
+        try:
+            async with self._get_client() as client:
+                copy_source = {"Bucket": self.config.bucket_name, "Key": source_key}
 
-            extra_args = {}
-            if content_type:
-                extra_args["ContentType"] = content_type
-                extra_args["MetadataDirective"] = "REPLACE"
+                extra_args = {}
+                if content_type:
+                    extra_args["ContentType"] = content_type
+                    extra_args["MetadataDirective"] = "REPLACE"
 
-            await client.copy_object(
-                Bucket=self.config.bucket_name,
-                Key=destination_key,
-                CopySource=copy_source,
-                **extra_args,
+                await client.copy_object(
+                    Bucket=self.config.bucket_name,
+                    Key=destination_key,
+                    CopySource=copy_source,
+                    **extra_args,
+                )
+            S3_OPERATION_DURATION.labels(operation="copy_object").observe(
+                time.perf_counter() - start
             )
-        logger.debug(f"Copied object {source_key} to {destination_key}")
-        return destination_key
+            logger.debug(f"Copied object {source_key} to {destination_key}")
+            return destination_key
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="copy_object").inc()
+            raise
 
     async def delete_object(self, key: str) -> None:
         """
@@ -510,12 +604,21 @@ class S3Client:
             S3 object key.
 
         """
-        async with self._get_client() as client:
-            await client.delete_object(
-                Bucket=self.config.bucket_name,
-                Key=key,
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="delete_object").inc()
+        try:
+            async with self._get_client() as client:
+                await client.delete_object(
+                    Bucket=self.config.bucket_name,
+                    Key=key,
+                )
+            S3_OPERATION_DURATION.labels(operation="delete_object").observe(
+                time.perf_counter() - start
             )
-        logger.debug(f"Deleted object {key}")
+            logger.debug(f"Deleted object {key}")
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="delete_object").inc()
+            raise
 
     async def delete_objects(self, keys: list[str]) -> None:
         """
@@ -530,12 +633,21 @@ class S3Client:
         if not keys:
             return
 
-        async with self._get_client() as client:
-            await client.delete_objects(
-                Bucket=self.config.bucket_name,
-                Delete={"Objects": [{"Key": k} for k in keys]},
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="delete_objects").inc()
+        try:
+            async with self._get_client() as client:
+                await client.delete_objects(
+                    Bucket=self.config.bucket_name,
+                    Delete={"Objects": [{"Key": k} for k in keys]},
+                )
+            S3_OPERATION_DURATION.labels(operation="delete_objects").observe(
+                time.perf_counter() - start
             )
-        logger.debug(f"Deleted {len(keys)} objects")
+            logger.debug(f"Deleted {len(keys)} objects")
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="delete_objects").inc()
+            raise
 
     async def object_exists(self, key: str) -> bool:
         """
@@ -552,15 +664,27 @@ class S3Client:
             True if object exists.
 
         """
-        async with self._get_client() as client:
-            try:
-                await client.head_object(
-                    Bucket=self.config.bucket_name,
-                    Key=key,
-                )
-                return True
-            except client.exceptions.ClientError:
-                return False
+        start = time.perf_counter()
+        S3_OPERATIONS_TOTAL.labels(operation="object_exists").inc()
+        try:
+            async with self._get_client() as client:
+                try:
+                    await client.head_object(
+                        Bucket=self.config.bucket_name,
+                        Key=key,
+                    )
+                    S3_OPERATION_DURATION.labels(operation="object_exists").observe(
+                        time.perf_counter() - start
+                    )
+                    return True
+                except client.exceptions.ClientError:
+                    S3_OPERATION_DURATION.labels(operation="object_exists").observe(
+                        time.perf_counter() - start
+                    )
+                    return False
+        except Exception:
+            S3_OPERATION_ERRORS_TOTAL.labels(operation="object_exists").inc()
+            raise
 
     async def generate_presigned_url(
         self,

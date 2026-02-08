@@ -1,10 +1,12 @@
 """Bookmark model for user-scoped content bookmarks."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
+
+from uniffy.core.types import generate_id
 
 
 class Bookmark(SQLModel, table=True):
@@ -34,7 +36,7 @@ class Bookmark(SQLModel, table=True):
         UniqueConstraint("user_id", "urn", name="uq_bookmarks_user_urn"),
     )
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     organization_id: UUID = Field(
         foreign_key="login_organizations.id", nullable=False, index=True

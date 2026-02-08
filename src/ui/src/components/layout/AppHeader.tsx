@@ -3,6 +3,7 @@ import { Kanban, TreeStructure } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
+import { NotificationBell } from '@/features/notifications';
 import { cn } from '@/shared/utils/cn';
 import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
@@ -189,8 +190,9 @@ export function AppHeader() {
           <GlobalSearch />
         </div>
 
-        {/* Right: User */}
-        <div className="flex items-center">
+        {/* Right: Notifications + User */}
+        <div className="flex items-center gap-0.5">
+          <NotificationBell />
           <UserMenu />
         </div>
       </div>

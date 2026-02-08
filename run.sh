@@ -77,13 +77,13 @@ dev() {
   echo "Frontend: http://0.0.0.0:5173"
   echo "Worker: background tasks"
   trap 'kill 0' EXIT
-  uv run hypercorn "uniffy.factory:create_app()" --reload --bind 0.0.0.0:8000 &
+  uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ &
   uv run watchfiles --filter python "python -m uniffy.worker" src/uniffy/ &
   (cd src/ui && pnpm dev)
 }
 
 backend() {
-  uv run hypercorn "uniffy.factory:create_app()" --reload --bind 0.0.0.0:8000
+  uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/
 }
 
 ui() {

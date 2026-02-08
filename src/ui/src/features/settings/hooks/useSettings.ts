@@ -207,5 +207,6 @@ export function useNotificationSettings() {
         emailFrequency: effectiveSettings?.notifications.emailFrequency ?? 'instant',
         quietHoursStart: effectiveSettings?.notifications.quietHoursStart ?? undefined,
         quietHoursEnd: effectiveSettings?.notifications.quietHoursEnd ?? undefined,
+        channelOverrides: effectiveSettings?.notifications.channelOverrides ?? {},
     };
 }

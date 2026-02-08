@@ -2,7 +2,60 @@
  * Notifications settings section.
  */
 
+import { cn } from '@/shared/utils/cn';
 import { useSettings, useNotificationSettings } from '@/features/settings/hooks/useSettings';
+
+const NOTIFICATION_TYPE_ROWS = [
+    { type: 'CONTENT_SHARED', label: 'Content Shared' },
+    { type: 'CONTENT_MENTIONED', label: 'Content Mentioned' },
+    { type: 'CONTENT_EDITED', label: 'Content Edited' },
+    { type: 'CALENDAR_REMINDER', label: 'Calendar Reminder' },
+    { type: 'CALENDAR_INVITE', label: 'Calendar Invite' },
+    { type: 'CALENDAR_RESPONSE', label: 'Calendar Response' },
+    { type: 'PERMISSION_GRANTED', label: 'Permission Granted' },
+    { type: 'PERMISSION_REVOKED', label: 'Permission Revoked' },
+    { type: 'SYSTEM_ANNOUNCEMENT', label: 'System Announcement' },
+] as const;
+
+const DEFAULT_CHANNELS: Record<string, Record<string, boolean>> = {
+    CONTENT_SHARED: { in_app: true, desktop: true, push: true, email: true },
+    CONTENT_MENTIONED: { in_app: true, desktop: true, push: true, email: true },
+    CONTENT_EDITED: { in_app: true, desktop: false, push: false, email: false },
+    CALENDAR_REMINDER: { in_app: true, desktop: true, push: true, email: false },
+    CALENDAR_INVITE: { in_app: true, desktop: true, push: true, email: true },
+    CALENDAR_RESPONSE: { in_app: true, desktop: true, push: false, email: false },
+    PERMISSION_GRANTED: { in_app: true, desktop: true, push: false, email: true },
+    PERMISSION_REVOKED: { in_app: true, desktop: true, push: false, email: true },
+    SYSTEM_ANNOUNCEMENT: { in_app: true, desktop: true, push: true, email: true },
+};
+
+interface ChannelCheckboxProps {
+    checked: boolean;
+    disabled?: boolean;
+    onChange: (checked: boolean) => void;
+}
+
+function ChannelCheckbox({ checked, disabled, onChange }: ChannelCheckboxProps) {
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+                'w-5 h-5 rounded border-2 transition-colors flex items-center justify-center',
+                checked && !disabled ? 'bg-primary border-primary' : 'border-border',
+                disabled && 'opacity-40 cursor-not-allowed',
+                !disabled && 'cursor-pointer hover:border-primary/60'
+            )}
+            onClick={() => !disabled && onChange(!checked)}
+        >
+            {checked && (
+                <svg className="w-3 h-3 text-primary-foreground" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            )}
+        </button>
+    );
+}
 
 interface ToggleSwitchProps {
     enabled: boolean;
@@ -44,6 +97,29 @@ export function NotificationsSection() {
     const handleFrequencyChange = (frequency: string) => {
         updateSettings({
             notifications: { emailFrequency: frequency },
+        });
+    };
+
+    const handleChannelToggle = (notifType: string, channel: string, enabled: boolean) => {
+        const existing = notifications.channelOverrides ?? {};
+        const typeOverrides = existing[notifType] ?? {};
+
+        updateSettings({
+            notifications: {
+                channelOverrides: {
+                    ...existing,
+                    [notifType]: {
+                        ...typeOverrides,
+                        [channel]: enabled,
+                    },
+                },
+            },
+        });
+    };
+
+    const handleResetChannels = () => {
+        updateSettings({
+            notifications: { channelOverrides: {} },
         });
     };
 
@@ -140,6 +216,66 @@ export function NotificationsSection() {
                         </div>
                     )}
                 </div>
+            </section>
+
+            {/* Channel Preferences */}
+            <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">Notification Types</h2>
+                <p className="text-sm text-muted-foreground">
+                    Control which channels are used for each notification type.
+                    Disabled master switches above override per-type settings.
+                </p>
+
+                <div className="bg-card rounded-lg border border-border overflow-hidden">
+                    {/* Header row */}
+                    <div className="grid grid-cols-[1fr_4rem_4rem_4rem_4rem] gap-0 px-4 py-2.5 border-b border-border bg-muted/30">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</div>
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">App</div>
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Desktop</div>
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Push</div>
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Email</div>
+                    </div>
+
+                    {/* Channel rows */}
+                    {NOTIFICATION_TYPE_ROWS.map(({ type, label }) => {
+                        const channels = notifications.channelOverrides?.[type] ?? {};
+                        const defaults = DEFAULT_CHANNELS[type] ?? { in_app: true, desktop: true, push: true, email: true };
+
+                        return (
+                            <div
+                                key={type}
+                                className="grid grid-cols-[1fr_4rem_4rem_4rem_4rem] gap-0 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors"
+                            >
+                                <div className="text-sm text-foreground">{label}</div>
+                                {(['in_app', 'desktop', 'push', 'email'] as const).map((channel) => {
+                                    const isEnabled = channels[channel] ?? defaults[channel] ?? true;
+                                    const isMasterDisabled =
+                                        (channel === 'desktop' && !notifications.desktopEnabled) ||
+                                        (channel === 'email' && !notifications.emailEnabled);
+
+                                    return (
+                                        <div key={channel} className="flex justify-center">
+                                            <ChannelCheckbox
+                                                checked={isEnabled}
+                                                disabled={saving || isMasterDisabled}
+                                                onChange={(v) => handleChannelToggle(type, channel, v)}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <button
+                    type="button"
+                    disabled={saving}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={handleResetChannels}
+                >
+                    Reset to defaults
+                </button>
             </section>
 
             {/* Quiet Hours */}

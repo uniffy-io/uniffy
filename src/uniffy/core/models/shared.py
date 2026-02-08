@@ -257,6 +257,44 @@ class CalendarType(str, Enum):
     SHARED = "SHARED"
 
 
+class NotificationType(str, Enum):
+    """
+    Types of notifications in the system.
+
+    Attributes
+    ----------
+    CONTENT_SHARED : str
+        Content was shared with the user.
+    CONTENT_MENTIONED : str
+        User was mentioned in content.
+    CONTENT_EDITED : str
+        Content the user follows was edited.
+    CALENDAR_REMINDER : str
+        Calendar event reminder.
+    CALENDAR_INVITE : str
+        User was invited to a calendar event.
+    CALENDAR_RESPONSE : str
+        An attendee responded to an event invitation.
+    PERMISSION_GRANTED : str
+        Permission was granted to the user.
+    PERMISSION_REVOKED : str
+        Permission was revoked from the user.
+    SYSTEM_ANNOUNCEMENT : str
+        System-wide announcement.
+
+    """
+
+    CONTENT_SHARED = "CONTENT_SHARED"
+    CONTENT_MENTIONED = "CONTENT_MENTIONED"
+    CONTENT_EDITED = "CONTENT_EDITED"
+    CALENDAR_REMINDER = "CALENDAR_REMINDER"
+    CALENDAR_INVITE = "CALENDAR_INVITE"
+    CALENDAR_RESPONSE = "CALENDAR_RESPONSE"
+    PERMISSION_GRANTED = "PERMISSION_GRANTED"
+    PERMISSION_REVOKED = "PERMISSION_REVOKED"
+    SYSTEM_ANNOUNCEMENT = "SYSTEM_ANNOUNCEMENT"
+
+
 class ResourceType(str, Enum):
     """
     Types of linked resources for calendar events.

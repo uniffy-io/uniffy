@@ -1,13 +1,14 @@
 """Attachment model for linking files to content."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Index
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import ContentType
+from uniffy.core.types import generate_id
 
 
 class Attachment(SQLModel, table=True):
@@ -39,7 +40,7 @@ class Attachment(SQLModel, table=True):
 
     __tablename__ = "attachments_attachments"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     file_id: UUID = Field(foreign_key="files_files.id", unique=True, nullable=False, index=True)
     content_type: ContentType = Field(

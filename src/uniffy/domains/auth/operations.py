@@ -17,6 +17,7 @@ from uniffy.domains.auth.tokens import (
     decode_access_token,
 )
 from uniffy.domains.auth.types import AuthResult
+from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 
 
 class AuthOperations:
@@ -63,45 +64,50 @@ class AuthOperations:
             If authentication fails.
 
         """
-        # Get user by email
-        user = await self._get_user_by_email(email)
-        if not user:
-            raise AuthenticationError("Invalid email or password")
+        try:
+            # Get user by email
+            user = await self._get_user_by_email(email)
+            if not user:
+                raise AuthenticationError("Invalid email or password")
 
-        # Check if user is active
-        if not user.is_active:
-            raise AuthenticationError("User account is deactivated")
+            # Check if user is active
+            if not user.is_active:
+                raise AuthenticationError("User account is deactivated")
 
-        # Verify password
-        if not user.hashed_password:
-            raise AuthenticationError("Password login not available. Please use SSO.")
+            # Verify password
+            if not user.hashed_password:
+                raise AuthenticationError("Password login not available. Please use SSO.")
 
-        if not verify_password(password, user.hashed_password):
-            raise AuthenticationError("Invalid email or password")
+            if not verify_password(password, user.hashed_password):
+                raise AuthenticationError("Invalid email or password")
 
-        # Handle organization context
-        organization_id = None
-        organization_role = None
-        if organization_slug:
-            organization_id, organization_role = await self._verify_org_membership(
-                user.id, organization_slug
+            # Handle organization context
+            organization_id = None
+            organization_role = None
+            if organization_slug:
+                organization_id, organization_role = await self._verify_org_membership(
+                    user.id, organization_slug
+                )
+
+            # Create tokens with token_version for revocation support
+            access_token = create_access_token(
+                user.id, organization_id, token_version=user.token_version
             )
+            refresh_token = create_refresh_token(user.id, token_version=user.token_version)
 
-        # Create tokens with token_version for revocation support
-        access_token = create_access_token(
-            user.id, organization_id, token_version=user.token_version
-        )
-        refresh_token = create_refresh_token(user.id, token_version=user.token_version)
+            logger.info(f"User {user.email} authenticated successfully")
+            AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="success").inc()
 
-        logger.info(f"User {user.email} authenticated successfully")
-
-        return AuthResult(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            user_id=user.id,
-            organization_id=organization_id,
-            organization_role=organization_role,
-        )
+            return AuthResult(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                user_id=user.id,
+                organization_id=organization_id,
+                organization_role=organization_role,
+            )
+        except AuthenticationError:
+            AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="failure").inc()
+            raise
 
     async def register(
         self,
@@ -135,42 +141,48 @@ class AuthOperations:
             If registration fails.
 
         """
-        # Check if email already exists
-        existing_user = await self._get_user_by_email(email)
-        if existing_user:
-            raise RegistrationError("Email already registered")
+        try:
+            # Check if email already exists
+            existing_user = await self._get_user_by_email(email)
+            if existing_user:
+                raise RegistrationError("Email already registered")
 
-        # Check if username already exists
-        existing_username = await self._get_user_by_username(username)
-        if existing_username:
-            raise RegistrationError("Username already taken")
+            # Check if username already exists
+            existing_username = await self._get_user_by_username(username)
+            if existing_username:
+                raise RegistrationError("Username already taken")
 
-        # Hash password and create user
-        hashed_password = hash_password(password)
+            # Hash password and create user
+            hashed_password = hash_password(password)
 
-        user = User(
-            email=email,
-            username=username,
-            hashed_password=hashed_password,
-            full_name=full_name,
-        )
-        self._session.add(user)
-        await self._session.commit()
-        await self._session.refresh(user)
+            user = User(
+                email=email,
+                username=username,
+                hashed_password=hashed_password,
+                full_name=full_name,
+            )
+            self._session.add(user)
+            await self._session.commit()
+            await self._session.refresh(user)
 
-        logger.info(f"User {user.email} registered successfully")
+            logger.info(f"User {user.email} registered successfully")
 
-        # Create tokens with token_version for revocation support
-        access_token = create_access_token(
-            user.id, token_version=user.token_version
-        )
-        refresh_token = create_refresh_token(user.id, token_version=user.token_version)
+            # Create tokens with token_version for revocation support
+            access_token = create_access_token(
+                user.id, token_version=user.token_version
+            )
+            refresh_token = create_refresh_token(user.id, token_version=user.token_version)
 
-        return AuthResult(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            user_id=user.id,
-        )
+            AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="success").inc()
+
+            return AuthResult(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                user_id=user.id,
+            )
+        except RegistrationError:
+            AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="failure").inc()
+            raise
 
     async def refresh_token(
         self,
@@ -202,55 +214,61 @@ class AuthOperations:
 
         """
         try:
-            payload = decode_access_token(refresh_token)
-        except Exception as e:
-            raise TokenError(f"Invalid refresh token: {e}")
+            try:
+                payload = decode_access_token(refresh_token)
+            except Exception as e:
+                raise TokenError(f"Invalid refresh token: {e}")
 
-        if payload.get("type") != "refresh":
-            raise TokenError("Invalid token type")
+            if payload.get("type") != "refresh":
+                raise TokenError("Invalid token type")
 
-        user_id = UUID(payload["sub"])
-        token_version_in_jwt = payload.get("tkv")
+            user_id = UUID(payload["sub"])
+            token_version_in_jwt = payload.get("tkv")
 
-        # Verify user exists and is active (security checkpoint)
-        user = await self._get_user_by_id(user_id)
-        if not user:
-            raise TokenError("User not found")
+            # Verify user exists and is active (security checkpoint)
+            user = await self._get_user_by_id(user_id)
+            if not user:
+                raise TokenError("User not found")
 
-        if not user.is_active:
-            raise TokenError("User account is deactivated")
+            if not user.is_active:
+                raise TokenError("User account is deactivated")
 
-        # Verify token version matches (for immediate revocation)
-        if token_version_in_jwt is not None and token_version_in_jwt != user.token_version:
-            logger.warning(
-                f"Token version mismatch for user {user_id}: "
-                f"token has {token_version_in_jwt}, user has {user.token_version}"
+            # Verify token version matches (for immediate revocation)
+            if token_version_in_jwt is not None and token_version_in_jwt != user.token_version:
+                logger.warning(
+                    f"Token version mismatch for user {user_id}: "
+                    f"token has {token_version_in_jwt}, user has {user.token_version}"
+                )
+                raise TokenError("Token has been revoked")
+
+            # Handle organization context
+            organization_id = None
+            organization_role = None
+            if organization_slug:
+                organization_id, organization_role = await self._verify_org_membership(
+                    user_id, organization_slug
+                )
+
+            # Create new tokens with current token_version
+            access_token = create_access_token(
+                user_id, organization_id, token_version=user.token_version
             )
-            raise TokenError("Token has been revoked")
-
-        # Handle organization context
-        organization_id = None
-        organization_role = None
-        if organization_slug:
-            organization_id, organization_role = await self._verify_org_membership(
-                user_id, organization_slug
+            new_refresh_token = create_refresh_token(
+                user_id, token_version=user.token_version
             )
 
-        # Create new tokens with current token_version
-        access_token = create_access_token(
-            user_id, organization_id, token_version=user.token_version
-        )
-        new_refresh_token = create_refresh_token(
-            user_id, token_version=user.token_version
-        )
+            AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="success").inc()
 
-        return AuthResult(
-            access_token=access_token,
-            refresh_token=new_refresh_token,
-            user_id=user_id,
-            organization_id=organization_id,
-            organization_role=organization_role,
-        )
+            return AuthResult(
+                access_token=access_token,
+                refresh_token=new_refresh_token,
+                user_id=user_id,
+                organization_id=organization_id,
+                organization_role=organization_role,
+            )
+        except TokenError:
+            AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="failure").inc()
+            raise
 
     # -------------------------------------------------------------------------
     # Private helpers

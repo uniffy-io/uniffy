@@ -23,7 +23,7 @@ def upgrade() -> None:
     """Create notes table."""
     op.create_table(
         "notes_notes",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
         sa.Column(

@@ -305,7 +305,7 @@ def sink(message):
     print(serialized, file=sys.stderr)
 
 
-def configure_loguru(config: "ObservabilityConfig") -> None:
+def configure_loguru(config: ObservabilityConfig) -> None:
     """Configure loguru logger with custom format similar to golang logrus."""
 
     global app_name, app_version

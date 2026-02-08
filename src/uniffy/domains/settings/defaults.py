@@ -73,6 +73,21 @@ class NotificationsDefaults:
     quiet_hours_end: str | None = None
 
 
+# Default per-notification-type channel preferences.
+# Keys are NotificationType values, values are channel -> enabled mappings.
+DEFAULT_NOTIFICATION_CHANNELS: dict[str, dict[str, bool]] = {
+    "CONTENT_SHARED": {"in_app": True, "desktop": True, "push": True, "email": True},
+    "CONTENT_MENTIONED": {"in_app": True, "desktop": True, "push": True, "email": True},
+    "CONTENT_EDITED": {"in_app": True, "desktop": False, "push": False, "email": False},
+    "CALENDAR_REMINDER": {"in_app": True, "desktop": True, "push": True, "email": False},
+    "CALENDAR_INVITE": {"in_app": True, "desktop": True, "push": True, "email": True},
+    "CALENDAR_RESPONSE": {"in_app": True, "desktop": True, "push": False, "email": False},
+    "PERMISSION_GRANTED": {"in_app": True, "desktop": True, "push": False, "email": True},
+    "PERMISSION_REVOKED": {"in_app": True, "desktop": True, "push": False, "email": True},
+    "SYSTEM_ANNOUNCEMENT": {"in_app": True, "desktop": True, "push": True, "email": True},
+}
+
+
 # Singleton instances for easy access
 APPEARANCE_DEFAULTS = AppearanceDefaults()
 NOTIFICATIONS_DEFAULTS = NotificationsDefaults()
@@ -99,6 +114,7 @@ def get_notifications_defaults_dict() -> dict[str, Any]:
         "email_frequency": NOTIFICATIONS_DEFAULTS.email_frequency,
         "quiet_hours_start": NOTIFICATIONS_DEFAULTS.quiet_hours_start,
         "quiet_hours_end": NOTIFICATIONS_DEFAULTS.quiet_hours_end,
+        "channel_overrides": {},
     }
 
 
@@ -170,3 +186,51 @@ def get_effective_keyboard_shortcuts(overrides: dict[str, Any] | None) -> dict[s
 def get_effective_notifications(overrides: dict[str, Any] | None) -> dict[str, Any]:
     """Get effective notification settings with defaults merged."""
     return merge_with_defaults(overrides, get_notifications_defaults_dict())
+
+
+def get_effective_notification_channels(
+    notification_type: str,
+    overrides: dict[str, Any] | None,
+) -> dict[str, bool]:
+    """
+    Get effective channel preferences for a notification type.
+
+    Merges user channel_overrides with DEFAULT_NOTIFICATION_CHANNELS,
+    then applies master switches (desktop_enabled, email_enabled).
+
+    Parameters
+    ----------
+    notification_type : str
+        The NotificationType value (e.g., "CONTENT_SHARED").
+    overrides : dict | None
+        User's notification settings (including channel_overrides).
+
+    Returns
+    -------
+    dict[str, bool]
+        Effective channel preferences: {"in_app", "desktop", "push", "email"}.
+
+    """
+    # Start with defaults for this notification type
+    defaults = DEFAULT_NOTIFICATION_CHANNELS.get(
+        notification_type,
+        {"in_app": True, "desktop": True, "push": True, "email": True},
+    )
+    channels = defaults.copy()
+
+    # Apply user overrides for this notification type
+    effective = get_effective_notifications(overrides)
+    user_channel_overrides = effective.get("channel_overrides", {})
+    if notification_type in user_channel_overrides:
+        type_overrides = user_channel_overrides[notification_type]
+        for channel, enabled in type_overrides.items():
+            if enabled is not None:
+                channels[channel] = enabled
+
+    # Apply master switches
+    if not effective.get("desktop_enabled", True):
+        channels["desktop"] = False
+    if not effective.get("email_enabled", True):
+        channels["email"] = False
+
+    return channels

@@ -1,13 +1,14 @@
 """EventTemplate model for calendar event templates."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Enum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import VisibilityScope
+from uniffy.core.types import generate_id
 
 
 class EventTemplate(SQLModel, table=True):
@@ -48,7 +49,7 @@ class EventTemplate(SQLModel, table=True):
 
     __tablename__ = "calendar_event_templates"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    id: UUID = Field(default_factory=generate_id, primary_key=True)
     organization_id: UUID = Field(index=True, nullable=False)
 
     title: str = Field(nullable=False)

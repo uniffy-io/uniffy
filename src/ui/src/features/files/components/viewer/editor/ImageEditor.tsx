@@ -17,10 +17,11 @@ import { useShortcutHandlers } from '@/features/settings';
 
 interface ImageEditorProps {
     file: SerializedFile;
+    initialRotation?: number;
     onClose: () => void;
 }
 
-export function ImageEditor({ file, onClose }: ImageEditorProps) {
+export function ImageEditor({ file, initialRotation, onClose }: ImageEditorProps) {
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
     const editor = useImageEditor({
@@ -28,6 +29,7 @@ export function ImageEditor({ file, onClose }: ImageEditorProps) {
         organizationId: organizationId || '',
         filename: file.filename,
         mimeType: file.mimeType,
+        initialRotation,
     });
 
     // Debug logging
@@ -38,17 +40,19 @@ export function ImageEditor({ file, onClose }: ImageEditorProps) {
         imageUrl: editor.imageUrl,
     });
 
+    const { isEditing, isImageReady, startEditing } = editor;
+
     // Start editing when image is ready
     useEffect(() => {
         console.log('[ImageEditor] Effect - checking start conditions:', {
-            isEditing: editor.isEditing,
-            isImageReady: editor.isImageReady,
+            isEditing: isEditing,
+            isImageReady: isImageReady,
         });
-        if (!editor.isEditing && editor.isImageReady) {
+        if (!isEditing && isImageReady) {
             console.log('[ImageEditor] Calling startEditing');
-            editor.startEditing();
+            startEditing();
         }
-    }, [editor.isEditing, editor.isImageReady, editor.startEditing]);
+    }, [isEditing, isImageReady, startEditing]);
 
     // Handle cancel - exit edit mode and close
     const handleCancel = useCallback(() => {

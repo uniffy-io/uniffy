@@ -6,6 +6,11 @@ across domains and avoid circular imports.
 """
 
 from enum import Enum
+from uuid import uuid7
+
+# Central ID generator for all models. Using UUIDv7 (time-ordered, RFC 9562).
+# Change this single binding if the ID generation strategy ever changes.
+generate_id = uuid7
 
 
 class VisibilityScope(str, Enum):

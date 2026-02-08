@@ -9,6 +9,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -17,6 +18,7 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.shared import (
     AttendeeRole,
     AttendeeStatus,
+    NotificationType,
     RecurrencePattern,
     VisibilityScope,
 )
@@ -228,6 +230,34 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         await self.session.commit()
 
+        # Notify invited attendees
+        if attendee_ids:
+            invited = [aid for aid in attendee_ids if aid != user_id]
+            if invited:
+                await emit_notification(NotificationEvent(
+                    notification_type=NotificationType.CALENDAR_INVITE,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Invited to: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=invited,
+                ))
+
+        # Notify mentioned users (excluding attendees who get CALENDAR_INVITE)
+        mentioned_ids = extract_mentioned_user_ids(outgoing_refs)
+        mentioned_ids.discard(user_id)
+        if attendee_ids:
+            mentioned_ids -= set(attendee_ids)
+        if mentioned_ids:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CONTENT_MENTIONED,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Mentioned you in: {event.title}",
+                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                target_user_ids=list(mentioned_ids),
+            ))
+
         return event
 
     async def update(
@@ -280,6 +310,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_edit(user_id, organization_id, event)
 
+        # Snapshot old mentions before description update for diff
+        old_mentioned: set[UUID] = set()
+        if description is not None:
+            old_mentioned = extract_mentioned_user_ids(event.outgoing_references)
+
         # Apply updates
         if title is not None:
             event.title = title
@@ -316,6 +351,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.visibility = visibility
 
         # Update attendees
+        newly_invited_ids: list[UUID] = []
         if attendee_ids is not None:
             # Fetch existing attendees
             stmt = select(EventAttendee).where(EventAttendee.event_id == event.id)
@@ -323,40 +359,27 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             existing_attendees = result.scalars().all()
             existing_map = {a.user_id: a for a in existing_attendees}
 
-            # Don't touch the organizer (who is also an attendee usually)
-            # but let's handle if organizer is passed or not in the list.
-            # Logic: If passing a new list, synchronize it.
-
             # Identify current and new sets
             current_ids = set(existing_map.keys())
-
-            # Ensure organizer is implicitly in the new list if they are an attendee?
-            # Or just rely on what frontend sends.
-            # Usually organizer is an attendee with role=ORGANIZER.
-            # If the backend previously added organizer as attendee, we should probably keep them.
-            # But simpler logic: sync to what is provided, but handle organizer separately or
-            # assume frontend sends full list.
-
-            # Let's trust the input list but skip re-adding existing ones.
             new_ids = set(attendee_ids)
 
-            # Remove attendees not in new list (except maybe organizer if not in list?)
-            # Usually organizer cannot be removed.
-            for user_id in current_ids - new_ids:
-                attendee = existing_map[user_id]
-                if attendee.user_id != event.organizer_id:  # Prevent removing organizer
+            # Remove attendees not in new list (organizer cannot be removed)
+            for uid in current_ids - new_ids:
+                attendee = existing_map[uid]
+                if attendee.user_id != event.organizer_id:
                     await self.session.delete(attendee)
 
             # Add new attendees
-            for user_id in new_ids - current_ids:
-                if user_id != event.organizer_id:  # Organizer added on create, or check if missing
+            for uid in new_ids - current_ids:
+                if uid != event.organizer_id:
                     attendee = EventAttendee(
                         event_id=event.id,
-                        user_id=user_id,
+                        user_id=uid,
                         status=AttendeeStatus.PENDING,
                         role=AttendeeRole.REQUIRED,
                     )
                     self.session.add(attendee)
+                    newly_invited_ids.append(uid)
 
         event.updated_at = datetime.now(UTC)
 
@@ -367,6 +390,39 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         group_ids = await self._get_content_group_ids(event.id)
         await self._index_for_search(model=event, group_ids=group_ids)
         await self.session.commit()
+
+        # Notify newly invited attendees
+        if newly_invited_ids:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CALENDAR_INVITE,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Invited to: {event.title}",
+                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                target_user_ids=newly_invited_ids,
+            ))
+
+        # Notify newly mentioned users (excluding attendees)
+        if description is not None:
+            new_mentioned = extract_mentioned_user_ids(event.outgoing_references)
+            new_mentioned.discard(user_id)
+            # Exclude current attendees from mention notifications
+            if attendee_ids is not None:
+                new_mentioned -= set(attendee_ids)
+            else:
+                stmt = select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
+                result = await self.session.execute(stmt)
+                new_mentioned -= set(result.scalars().all())
+            newly_mentioned = new_mentioned - old_mentioned
+            if newly_mentioned:
+                await emit_notification(NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Mentioned you in: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=list(newly_mentioned),
+                ))
 
         return event
 
@@ -681,6 +737,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         existing_ids = {row[0] for row in result.all()}
 
         # Add new attendees
+        added_ids: list[UUID] = []
         for attendee_id in attendee_ids:
             if attendee_id not in existing_ids:
                 attendee = EventAttendee(
@@ -690,10 +747,22 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     role=role,
                 )
                 self.session.add(attendee)
+                added_ids.append(attendee_id)
 
         event.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(event)
+
+        # Notify newly added attendees
+        if added_ids:
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CALENDAR_INVITE,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"Invited to: {event.title}",
+                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                target_user_ids=added_ids,
+            ))
 
         return event
 
@@ -801,6 +870,19 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         attendee.updated_at = datetime.now(UTC)
 
         await self.session.commit()
+
+        # Notify organizer of RSVP response
+        if event.organizer_id != user_id:
+            status_label = status.value.lower()
+            await emit_notification(NotificationEvent(
+                notification_type=NotificationType.CALENDAR_RESPONSE,
+                organization_id=organization_id,
+                actor_id=user_id,
+                title=f"RSVP {status_label}: {event.title}",
+                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                target_user_ids=[event.organizer_id],
+            ))
+
         return True
 
 

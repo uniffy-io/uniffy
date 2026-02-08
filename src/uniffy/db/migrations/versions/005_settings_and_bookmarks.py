@@ -30,7 +30,7 @@ def upgrade() -> None:
     # ─────────────────────────────────────────────────────────────────────────
     op.create_table(
         "settings_profiles",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
         sa.Column("appearance", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -96,7 +96,7 @@ def upgrade() -> None:
     # ─────────────────────────────────────────────────────────────────────────
     op.create_table(
         "bookmarks",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("urn", sa.String(length=500), nullable=False),

@@ -30,6 +30,8 @@ setup_observability(
     )
 )
 from uniffy.workers.tasks import (
+    deliver_email_notification,
+    deliver_push_notification,
     extract_image_metadata,
     generate_image_thumbnail,
     generate_pdf_thumbnail,
@@ -38,6 +40,8 @@ from uniffy.workers.tasks import (
     on_job_start,
     on_shutdown,
     on_startup,
+    process_notification_event,
+    send_email_digest,
 )
 
 
@@ -81,9 +85,11 @@ class WorkerSettings:
         generate_video_thumbnail,
         # Metadata extraction
         extract_image_metadata,
-        # Future tasks:
-        # extract_pdf_metadata,
-        # extract_video_metadata,
+        # Notifications
+        process_notification_event,
+        deliver_push_notification,
+        deliver_email_notification,
+        send_email_digest,
     ]
 
     # Lifecycle hooks

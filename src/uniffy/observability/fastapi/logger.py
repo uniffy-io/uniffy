@@ -1,5 +1,6 @@
 """FastAPI middleware for request logging matching ConnectRPC format."""
 
+import re
 import time
 from collections.abc import Callable
 
@@ -13,6 +14,17 @@ except ImportError:
 
 from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.observability.crpc import http_version_var
+from uniffy.observability.metrics import HTTP_REQUEST_DURATION, HTTP_REQUESTS_TOTAL
+
+# Pattern to replace UUIDs in paths with a placeholder to prevent cardinality explosion
+_UUID_PATTERN = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+)
+
+
+def _normalize_path(path: str) -> str:
+    """Replace UUIDs in a URL path with `:id` to limit metric cardinality."""
+    return _UUID_PATTERN.sub(":id", path)
 
 
 def _extract_user_id_from_request(request: Request) -> str:
@@ -62,9 +74,17 @@ class LoggingMiddleware:
         # Build route name (e.g., "GET /thumbnails/{org_id}/{file_id}")
         route_name = f"{method} {path}"
 
+        normalized_path = _normalize_path(path)
+
         try:
             response = await call_next(request)
             duration = time.time() - start_time
+
+            # Record Prometheus metrics
+            HTTP_REQUESTS_TOTAL.labels(
+                method=method, path=normalized_path, status=str(response.status_code)
+            ).inc()
+            HTTP_REQUEST_DURATION.labels(method=method, path=normalized_path).observe(duration)
 
             # Log successful completion (matching ConnectRPC format)
             logger.info(
@@ -79,6 +99,12 @@ class LoggingMiddleware:
 
         except Exception as e:
             duration = time.time() - start_time
+
+            # Record Prometheus metrics
+            HTTP_REQUESTS_TOTAL.labels(
+                method=method, path=normalized_path, status="500"
+            ).inc()
+            HTTP_REQUEST_DURATION.labels(method=method, path=normalized_path).observe(duration)
 
             # Log error (matching ConnectRPC format)
             logger.error(

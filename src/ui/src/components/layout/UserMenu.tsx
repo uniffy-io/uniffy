@@ -14,6 +14,7 @@ import { clearNotes } from '@/features/notes/store/notesSlice';
 import { clearTree } from '@/features/notes/store/notesTreeSlice';
 import { clearNotesCache } from '@/features/notes';
 import { clearBookmarks } from '@/features/bookmarks';
+import { clearNotifications } from '@/features/notifications';
 import { clearSharing } from '@/features/sharing';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
@@ -62,6 +63,7 @@ export function UserMenu() {
         dispatch(clearNotes());
         dispatch(clearTree());
         dispatch(clearBookmarks());
+        dispatch(clearNotifications());
         dispatch(clearSharing());
         dispatch(clearAdmin());
         // Clear IndexedDB cache (async, fire and forget)

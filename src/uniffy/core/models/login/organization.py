@@ -2,11 +2,13 @@
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
+
+from uniffy.core.types import generate_id
 
 
 class Organization(SQLModel, table=True):
@@ -43,7 +45,7 @@ class Organization(SQLModel, table=True):
 
     __tablename__ = "login_organizations"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     name: str = Field(max_length=255, nullable=False)
     slug: str = Field(max_length=255, unique=True, index=True, nullable=False)
     domain: str | None = Field(default=None, max_length=255, index=True)

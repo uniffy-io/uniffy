@@ -1,10 +1,12 @@
 """User model."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
+
+from uniffy.core.types import generate_id
 
 
 class User(SQLModel, table=True):
@@ -44,7 +46,7 @@ class User(SQLModel, table=True):
 
     __tablename__ = "login_users"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     email: str = Field(max_length=255, unique=True, index=True, nullable=False)
     username: str = Field(max_length=255, unique=True, index=True, nullable=False)
     full_name: str | None = Field(default=None, max_length=255)

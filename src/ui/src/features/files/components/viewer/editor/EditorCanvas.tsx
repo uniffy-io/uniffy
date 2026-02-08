@@ -46,6 +46,7 @@ export function EditorCanvas({
     contrast,
     cropActive,
     cropRect,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     isCropped,
     onCropChange,
 }: EditorCanvasProps) {
@@ -65,6 +66,7 @@ export function EditorCanvas({
         if (!containerElement) return;
 
         // Initial size
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setContainerSize({
             width: containerElement.clientWidth,
             height: containerElement.clientHeight,

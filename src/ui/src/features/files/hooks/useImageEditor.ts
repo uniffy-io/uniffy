@@ -5,7 +5,7 @@
  * Handles canvas operations, transforms, and export functionality.
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
     enterEditMode,
@@ -50,13 +50,14 @@ interface UseImageEditorOptions {
     organizationId: string;
     filename: string;
     mimeType: string;
+    initialRotation?: number;
 }
 
 /**
  * Hook for image editor functionality.
  */
 export function useImageEditor(options: UseImageEditorOptions) {
-    const { fileId, organizationId, filename, mimeType } = options;
+    const { fileId, organizationId, filename, initialRotation } = options;
     const dispatch = useAppDispatch();
 
     // Get editor state from Redux
@@ -88,9 +89,9 @@ export function useImageEditor(options: UseImageEditorOptions) {
     // Enter edit mode when image is available
     const startEditing = useCallback(() => {
         if (downloadedImageUrl) {
-            dispatch(enterEditMode({ imageUrl: downloadedImageUrl }));
+            dispatch(enterEditMode({ imageUrl: downloadedImageUrl, initialRotation }));
         }
-    }, [dispatch, downloadedImageUrl]);
+    }, [dispatch, downloadedImageUrl, initialRotation]);
 
     // Exit edit mode
     const stopEditing = useCallback(() => {

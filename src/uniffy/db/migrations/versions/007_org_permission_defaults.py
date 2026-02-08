@@ -25,7 +25,7 @@ def upgrade() -> None:
     """Create permissions_org_defaults table."""
     op.create_table(
         "permissions_org_defaults",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column(
             "content_type",

@@ -134,11 +134,14 @@ export const imageEditorSlice = createSlice({
         /**
          * Enter edit mode for an image.
          */
-        enterEditMode: (state, action: PayloadAction<{ imageUrl: string }>) => {
+        enterEditMode: (
+            state,
+            action: PayloadAction<{ imageUrl: string; initialRotation?: number }>
+        ) => {
             state.isEditing = true;
             state.originalImageUrl = action.payload.imageUrl;
             // Reset all editing state
-            state.rotation = 0;
+            state.rotation = action.payload.initialRotation || 0;
             state.flipH = false;
             state.flipV = false;
             state.brightness = 0;

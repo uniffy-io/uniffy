@@ -35,6 +35,7 @@ const UnsupportedViewer = lazy(() =>
 interface ViewerContentProps {
     file: SerializedFile;
     isEditing?: boolean;
+    initialRotation?: number;
     onExitEdit?: () => void;
 }
 
@@ -79,7 +80,7 @@ function ViewerLoading() {
     );
 }
 
-export function ViewerContent({ file, isEditing, onExitEdit }: ViewerContentProps) {
+export function ViewerContent({ file, isEditing, initialRotation, onExitEdit }: ViewerContentProps) {
     const { mimeType } = file;
 
     console.log('[ViewerContent] Render:', { isEditing, mimeType, fileId: file.id });
@@ -88,7 +89,7 @@ export function ViewerContent({ file, isEditing, onExitEdit }: ViewerContentProp
         // Image editing mode
         if (mimeType.startsWith('image/') && isEditing && onExitEdit) {
             console.log('[ViewerContent] Rendering ImageEditor for file:', file.id);
-            return <ImageEditor file={file} onClose={onExitEdit} />;
+            return <ImageEditor file={file} initialRotation={initialRotation} onClose={onExitEdit} />;
         }
 
         // Images

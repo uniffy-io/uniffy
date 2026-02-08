@@ -2,7 +2,7 @@
 
 import os
 from datetime import UTC, datetime, timedelta
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.storage import get_s3_client
-from uniffy.core.types import ContentType, VisibilityScope
+from uniffy.core.types import ContentType, VisibilityScope, generate_id
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
 
 # Chunk size constants (in bytes)
@@ -163,7 +163,7 @@ class FileOperations(BaseContentOperations[File]):
 
         """
         # Generate storage key
-        storage_key = f"{organization_id}/{user_id}/{uuid4()}/{filename}"
+        storage_key = f"{organization_id}/{user_id}/{generate_id()}/{filename}"
 
         # Initiate S3 multipart upload
         s3_upload_id = await self.s3.create_multipart_upload(

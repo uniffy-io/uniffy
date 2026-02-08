@@ -37,7 +37,7 @@ class ValkeyConfig:
     database: int = 0
 
     @classmethod
-    def from_env(cls) -> "ValkeyConfig":
+    def from_env(cls) -> ValkeyConfig:
         """
         Create config from environment variables.
 

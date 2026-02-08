@@ -1,12 +1,13 @@
 """Organization permission defaults model for default content permissions."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import ContentType, VisibilityScope
+from uniffy.core.types import generate_id
 
 
 class OrganizationPermissionDefaults(SQLModel, table=True):
@@ -54,7 +55,7 @@ class OrganizationPermissionDefaults(SQLModel, table=True):
         UniqueConstraint("organization_id", "content_type", name="uq_org_content_type"),
     )
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     content_type: ContentType = Field(nullable=False)
     default_visibility: VisibilityScope = Field(default=VisibilityScope.PRIVATE, nullable=False)

@@ -205,4 +205,19 @@ message NotificationsSettings {
   optional string quiet_hours_start = 5;
   // Quiet hours end (24h format, e.g., "08:00")
   optional string quiet_hours_end = 6;
+  // Per-notification-type channel preferences (sparse overrides)
+  // Key: notification type name (e.g., "CONTENT_SHARED")
+  map<string, NotificationChannelPreference> channel_overrides = 7;
+}
+
+// Per-channel preference for a notification type
+message NotificationChannelPreference {
+  // Enable in-app notifications
+  optional bool in_app = 1;
+  // Enable desktop notifications
+  optional bool desktop = 2;
+  // Enable push notifications
+  optional bool push = 3;
+  // Enable email notifications
+  optional bool email = 4;
 }

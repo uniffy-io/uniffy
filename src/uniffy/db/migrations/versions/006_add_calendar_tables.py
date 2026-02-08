@@ -59,7 +59,7 @@ def upgrade() -> None:
     # Create calendar_calendars table
     op.create_table(
         'calendar_calendars',
-        sa.Column('id', sa.Uuid(), nullable=False),
+        sa.Column('id', sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column('organization_id', sa.Uuid(), nullable=False),
         sa.Column('owner_id', sa.Uuid(), nullable=False),
         sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=False),
@@ -89,7 +89,7 @@ def upgrade() -> None:
     # Create calendar_categories table
     op.create_table(
         'calendar_categories',
-        sa.Column('id', sa.Uuid(), nullable=False),
+        sa.Column('id', sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column('organization_id', sa.Uuid(), nullable=False),
         sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
         sa.Column('color', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
@@ -109,7 +109,7 @@ def upgrade() -> None:
     # Create calendar_events table
     op.create_table(
         'calendar_events',
-        sa.Column('id', sa.Uuid(), nullable=False),
+        sa.Column('id', sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column('organization_id', sa.Uuid(), nullable=False),
         sa.Column('organizer_id', sa.Uuid(), nullable=False),
         sa.Column('calendar_id', sa.Uuid(), nullable=False),
@@ -150,7 +150,7 @@ def upgrade() -> None:
     # Create calendar_event_attendees table
     op.create_table(
         'calendar_event_attendees',
-        sa.Column('id', sa.Uuid(), nullable=False),
+        sa.Column('id', sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column('event_id', sa.Uuid(), nullable=False),
         sa.Column('user_id', sa.Uuid(), nullable=False),
         sa.Column('status', attendeestatus_enum, nullable=False),

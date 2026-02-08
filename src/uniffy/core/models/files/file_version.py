@@ -1,10 +1,12 @@
 """FileVersion model for version history."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import BigInteger, Column, DateTime
 from sqlmodel import Field, SQLModel
+
+from uniffy.core.types import generate_id
 
 
 class FileVersion(SQLModel, table=True):
@@ -39,7 +41,7 @@ class FileVersion(SQLModel, table=True):
 
     __tablename__ = "files_file_versions"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     file_id: UUID = Field(foreign_key="files_files.id", nullable=False, index=True)
     version_number: int = Field(nullable=False)
     size_bytes: int = Field(sa_column=Column(BigInteger, nullable=False))

@@ -23,7 +23,7 @@ def upgrade() -> None:
     # Content Permissions (fine-grained access control)
     op.create_table(
         "permissions_content_permissions",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column(
             "content_type",
@@ -102,7 +102,7 @@ def upgrade() -> None:
     # Content Group Links (associate content with groups for GROUP visibility)
     op.create_table(
         "permissions_content_group_links",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column(
             "content_type",

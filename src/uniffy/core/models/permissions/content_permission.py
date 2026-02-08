@@ -1,12 +1,13 @@
 """Content permission model for granular access control."""
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import ContentType, PermissionLevel, SubjectType
+from uniffy.core.types import generate_id
 
 
 class ContentPermission(SQLModel, table=True):
@@ -57,7 +58,7 @@ class ContentPermission(SQLModel, table=True):
 
     __tablename__ = "permissions_content_permissions"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     content_type: ContentType = Field(nullable=False, index=True)
     content_id: UUID = Field(nullable=False, index=True)

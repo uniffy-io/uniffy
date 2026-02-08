@@ -18,6 +18,8 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.login.sso_configuration import SSOConfiguration, SSOProvider
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.notifications.notification import Notification
+from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.permissions.content_group_link import ContentGroupLink
 from uniffy.core.models.permissions.content_permission import ContentPermission
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
@@ -28,6 +30,7 @@ from uniffy.core.models.shared import (
     CalendarType,
     ContentType,
     DayOfWeek,
+    NotificationType,
     PermissionLevel,
     RecurrencePattern,
     ResourceType,
@@ -59,6 +62,10 @@ __all__ = [
     "UploadStatus",
     # Bookmarks
     "Bookmark",
+    # Notifications
+    "Notification",
+    "NotificationType",
+    "PushSubscription",
     # Calendar models
     "Calendar",
     "Category",

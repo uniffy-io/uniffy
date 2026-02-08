@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import BigInteger, Column, DateTime
 from sqlalchemy import Enum as SAEnum
@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import VisibilityScope
+from uniffy.core.types import generate_id
 
 
 class UploadStatus(str, Enum):
@@ -87,7 +88,7 @@ class MultipartUpload(SQLModel, table=True):
 
     __tablename__ = "files_multipart_uploads"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, nullable=False)
+    id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     s3_upload_id: str = Field(max_length=500, nullable=False)

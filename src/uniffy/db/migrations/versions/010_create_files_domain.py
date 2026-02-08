@@ -55,7 +55,7 @@ def upgrade() -> None:
     # Create folders table first (files references it)
     op.create_table(
         "files_folders",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
         sa.Column(
@@ -89,7 +89,7 @@ def upgrade() -> None:
     # Create file versions table (files references it for current_version_id)
     op.create_table(
         "files_file_versions",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         # Note: file_id FK added after files table exists
         sa.Column("file_id", sa.Uuid(), nullable=False),
         sa.Column("version_number", sa.Integer(), nullable=False),
@@ -107,7 +107,7 @@ def upgrade() -> None:
     # Create files table
     op.create_table(
         "files_files",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
         sa.Column(
@@ -177,7 +177,7 @@ def upgrade() -> None:
     # Create multipart uploads table
     op.create_table(
         "files_multipart_uploads",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("s3_upload_id", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
@@ -234,7 +234,7 @@ def upgrade() -> None:
     # Create saved file filters table
     op.create_table(
         "files_saved_filters",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),

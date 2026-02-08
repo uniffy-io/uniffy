@@ -90,10 +90,8 @@ class CalendarHandlers:
                 # Auto-fetch/create default calendar if not provided
                 calendar_id = None
                 if request.calendar_id:
-                    try:
+                    with contextlib.suppress(ValueError):
                         calendar_id = UUID(request.calendar_id)
-                    except ValueError:
-                        pass  # Will use default calendar
 
                 if not calendar_id:
                     default_calendar = await queries.ensure_default_calendar(

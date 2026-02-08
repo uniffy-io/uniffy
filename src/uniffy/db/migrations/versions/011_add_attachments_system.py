@@ -33,7 +33,7 @@ def upgrade() -> None:
     # Create attachments table
     op.create_table(
         "attachments_attachments",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("file_id", sa.Uuid(), nullable=False),
         sa.Column(
