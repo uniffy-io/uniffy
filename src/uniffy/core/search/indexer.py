@@ -7,7 +7,6 @@ content from the unified search index using Meilisearch.
 
 from uuid import UUID
 
-from uniffy.core.search.meilisearch import get_meilisearch_client
 from uniffy.core.types import ContentType
 
 
@@ -85,6 +84,8 @@ class SearchIndexer:
             Relevance booster (default 1.0).
 
         """
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
         client = get_meilisearch_client()
         await client.index_document(
             urn=urn,
@@ -119,6 +120,8 @@ class SearchIndexer:
             If None, removes all entries for this URN across all orgs.
 
         """
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
         client = get_meilisearch_client()
         await client.delete_document(urn, organization_id)
 
