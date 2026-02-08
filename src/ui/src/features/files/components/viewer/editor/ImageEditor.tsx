@@ -110,8 +110,8 @@ export function ImageEditor({ file, initialRotation, onClose }: ImageEditorProps
             },
             'imageEditor.rotateRight': editor.rotateRight,
             'imageEditor.rotateLeft': editor.rotateLeft,
-            'imageEditor.flipH': editor.flipH,
-            'imageEditor.flipV': editor.flipV,
+            'imageEditor.flipH': editor.toggleFlipH,
+            'imageEditor.flipV': editor.toggleFlipV,
             'imageEditor.crop': editor.toggleCrop,
             'imageEditor.applyCrop': () => {
                 if (editor.cropActive && editor.cropRect) {
@@ -148,8 +148,8 @@ export function ImageEditor({ file, initialRotation, onClose }: ImageEditorProps
                 isSaving={editor.isSaving}
                 onRotateLeft={editor.rotateLeft}
                 onRotateRight={editor.rotateRight}
-                onFlipH={editor.flipH}
-                onFlipV={editor.flipV}
+                onFlipH={editor.toggleFlipH}
+                onFlipV={editor.toggleFlipV}
                 onBrightnessChange={editor.setBrightness}
                 onBrightnessCommit={editor.commitBrightness}
                 onContrastChange={editor.setContrast}

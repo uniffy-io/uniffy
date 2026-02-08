@@ -46,8 +46,6 @@ export function EditorCanvas({
     contrast,
     cropActive,
     cropRect,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    isCropped,
     onCropChange,
 }: EditorCanvasProps) {
     const imageRef = useRef<HTMLImageElement>(null);

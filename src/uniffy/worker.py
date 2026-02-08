@@ -14,7 +14,11 @@ load_dotenv()
 
 from arq import run_worker
 
-from uniffy.observability import ObservabilityConfig, setup_observability
+from uniffy.observability import (
+    ObservabilityConfig,
+    setup_observability,
+)
+from uniffy.observability.metrics import start_worker_metrics_server
 from uniffy.workers.settings import WorkerSettings
 
 # Setup observability
@@ -33,6 +37,7 @@ def main() -> None:
     # Python 3.14 removed implicit event loop creation in get_event_loop().
     # arq's run_worker still calls get_event_loop() internally, so we
     # ensure a loop exists before handing off.
+    start_worker_metrics_server()
     asyncio.set_event_loop(asyncio.new_event_loop())
     run_worker(WorkerSettings)
 

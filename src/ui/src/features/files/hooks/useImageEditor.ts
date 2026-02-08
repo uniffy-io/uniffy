@@ -244,7 +244,7 @@ export function useImageEditor(options: UseImageEditorOptions) {
                 const initResponse = await filesApi.initiateUpload({
                     organizationId,
                     filename: finalFilename,
-                    sizeBytes: BigInt(file.size),
+                    totalSize: BigInt(file.size),
                     mimeType: format,
                 });
 
@@ -259,7 +259,7 @@ export function useImageEditor(options: UseImageEditorOptions) {
 
                     await filesApi.uploadChunk({
                         uploadId,
-                        chunkIndex: i,
+                        chunkNumber: i + 1,
                         data: new Uint8Array(arrayBuffer),
                     });
                 }
@@ -308,7 +308,7 @@ export function useImageEditor(options: UseImageEditorOptions) {
                 const initResponse = await filesApi.initiateUpload({
                     organizationId,
                     filename: finalFilename,
-                    sizeBytes: BigInt(file.size),
+                    totalSize: BigInt(file.size),
                     mimeType: format,
                 });
 
@@ -323,7 +323,7 @@ export function useImageEditor(options: UseImageEditorOptions) {
 
                     await filesApi.uploadChunk({
                         uploadId,
-                        chunkIndex: i,
+                        chunkNumber: i + 1,
                         data: new Uint8Array(arrayBuffer),
                     });
                 }
@@ -392,8 +392,8 @@ export function useImageEditor(options: UseImageEditorOptions) {
         stopEditing,
         rotateRight: handleRotateRight,
         rotateLeft: handleRotateLeft,
-        flipH: handleFlipH,
-        flipV: handleFlipV,
+        toggleFlipH: handleFlipH,
+        toggleFlipV: handleFlipV,
         setBrightness: handleBrightnessChange,
         commitBrightness: handleBrightnessCommit,
         setContrast: handleContrastChange,
