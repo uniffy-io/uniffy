@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.base_operations import BaseContentOperations
@@ -119,6 +120,37 @@ class FileOperations(BaseContentOperations[File]):
     def _get_search_tags(self, model: File) -> list[str] | None:
         """Get tags for search index."""
         return model.tags if model.tags else None
+
+    async def _fetch_by_id(
+        self,
+        content_id: UUID,
+        organization_id: UUID,
+    ) -> File | None:
+        """
+        Fetch file by ID with eager-loaded media_info.
+
+        Overrides base to add selectinload for the media_info relationship.
+
+        Parameters
+        ----------
+        content_id : UUID
+            File ID.
+        organization_id : UUID
+            Organization ID.
+
+        Returns
+        -------
+        File | None
+            The file with media_info loaded, or None.
+
+        """
+        result = await self.session.execute(
+            select(File)
+            .where(File.id == content_id)
+            .where(File.organization_id == organization_id)
+            .options(selectinload(File.media_info))
+        )
+        return result.scalar_one_or_none()
 
     # ─────────────────────────────────────────────────────────────
     # Upload initiation
@@ -378,7 +410,7 @@ class FileOperations(BaseContentOperations[File]):
         from loguru import logger
 
         try:
-            from uniffy.core.queue import get_queue
+            from uniffy.core.valkey import get_queue
 
             queue = get_queue()
             jobs = get_jobs_for_mime_type(file.mime_type)
@@ -808,6 +840,9 @@ class FileOperations(BaseContentOperations[File]):
 
         # Paginate
         query = query.offset((page - 1) * page_size).limit(page_size)
+
+        # Eager-load media_info for converter
+        query = query.options(selectinload(File.media_info))
 
         result = await self.session.execute(query)
         files = list(result.scalars().all())

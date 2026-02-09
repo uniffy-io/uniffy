@@ -141,14 +141,14 @@ async def get_thumbnail(
             # Get file and check permissions (this validates access)
             file = await ops.get_by_id(user_id, organization_id, file_id)
 
-            # Check if thumbnail exists
-            if not file.file_metadata or "thumbnail_key" not in file.file_metadata:
+            # Check if thumbnail exists in media_info
+            if not file.media_info or not file.media_info.thumbnail_key:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Thumbnail not available",
                 )
 
-            thumbnail_key = file.file_metadata["thumbnail_key"]
+            thumbnail_key = file.media_info.thumbnail_key
 
             # Get S3 client and stream the thumbnail
             s3 = get_s3_client()

@@ -32,24 +32,11 @@ export function ImageEditor({ file, initialRotation, onClose }: ImageEditorProps
         initialRotation,
     });
 
-    // Debug logging
-    console.log('[ImageEditor] State:', {
-        isEditing: editor.isEditing,
-        isImageReady: editor.isImageReady,
-        imageLoading: editor.imageLoading,
-        imageUrl: editor.imageUrl,
-    });
-
     const { isEditing, isImageReady, startEditing } = editor;
 
     // Start editing when image is ready
     useEffect(() => {
-        console.log('[ImageEditor] Effect - checking start conditions:', {
-            isEditing: isEditing,
-            isImageReady: isImageReady,
-        });
         if (!isEditing && isImageReady) {
-            console.log('[ImageEditor] Calling startEditing');
             startEditing();
         }
     }, [isEditing, isImageReady, startEditing]);

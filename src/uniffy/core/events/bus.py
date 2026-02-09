@@ -11,7 +11,7 @@ from typing import Any
 from loguru import logger
 
 from uniffy.core.events.types import NotificationEvent
-from uniffy.core.queue import get_queue
+from uniffy.core.valkey import get_queue
 
 
 def _event_to_json(event: NotificationEvent) -> str:

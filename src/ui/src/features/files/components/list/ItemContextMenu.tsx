@@ -89,7 +89,7 @@ export function ItemContextMenu({
                     onClick={(e) => handleAction(onRename, e)}
                     className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                 >
-                    <PencilSimple size={16} className="text-muted-foreground" />
+                    <PencilSimple size={16} className="text-primary" />
                     Rename
                 </button>
 
@@ -123,7 +123,7 @@ export function ItemContextMenu({
                         onClick={(e) => handleAction(onMove, e)}
                         className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                     >
-                        <ArrowRight size={16} className="text-muted-foreground" />
+                        <ArrowRight size={16} className="text-primary" />
                         Move to...
                     </button>
                 )}
@@ -142,7 +142,7 @@ export function ItemContextMenu({
                     onClick={(e) => handleAction(onDownload, e)}
                     className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                 >
-                    <Download size={16} className="text-muted-foreground" />
+                    <Download size={16} className="text-primary" />
                     Download
                 </button>
 

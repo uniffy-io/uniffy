@@ -22,6 +22,7 @@ import {
     SidebarSimple,
     ShareNetwork,
     ArrowRight,
+    CaretRight,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
@@ -52,10 +53,10 @@ import {
 import { openViewer } from '@/features/files/store/viewerSlice';
 import { updateFile } from '@/features/files/store/filesThunks';
 import { IconSizeSlider } from '@/features/files/components/list/IconSizeSlider';
-import { setSelectedFolder, deleteFolder, updateFolder } from '@/features/files/store/filesTreeSlice';
+import { setSelectedFolder, deleteFolder, updateFolder, fetchFilesTree } from '@/features/files/store/filesTreeSlice';
 import { selectSubfoldersForCurrentFolder } from '@/features/files/store/selectors';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
-import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
+import type { SerializedTreeNode, SerializedFolder } from '@/features/files/store/filesTreeThunks';
 import { useSharingDialog, useMyPermission } from '@/features/sharing';
 import { toggleBookmark } from '@/features/bookmarks';
 import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
@@ -66,6 +67,27 @@ import { FileCard } from '@/features/files/components/list/FileCard';
 import { MoveDialog } from '@/features/files/components/list/MoveDialog';
 import { ICON_SIZE_CONFIG, SORT_OPTIONS, SORT_ORDER_OPTIONS, type SortByValue, type SortOrderValue } from '@/features/files/components/list/constants';
 
+/**
+ * Build breadcrumb path by walking up folder parentId chain.
+ */
+function buildFolderBreadcrumb(
+    folders: Record<string, SerializedFolder>,
+    currentFolderId: string | null,
+): Array<{ id: string; name: string }> {
+    if (!currentFolderId || currentFolderId === 'all') return [];
+
+    const path: Array<{ id: string; name: string }> = [];
+    let folderId: string | undefined = currentFolderId;
+
+    while (folderId) {
+        const folder: SerializedFolder | undefined = folders[folderId];
+        if (!folder) break;
+        path.unshift({ id: folder.id, name: folder.name });
+        folderId = folder.parentId;
+    }
+
+    return path;
+}
 
 interface FilesListProps {
     files: SerializedFile[];
@@ -116,6 +138,27 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
 
     // Get subfolders for current folder
     const subfolders = useAppSelector(selectSubfoldersForCurrentFolder);
+
+    // Folder breadcrumb
+    const currentFolderId = useAppSelector((state) => state.files.filters.folderId);
+    const folders = useAppSelector((state) => state.filesTree.folders);
+    const breadcrumbItems = useMemo(
+        () => buildFolderBreadcrumb(folders, currentFolderId),
+        [folders, currentFolderId],
+    );
+
+    const handleBreadcrumbNavigate = useCallback(
+        (folderId: string | null) => {
+            dispatch(setSelectedFolder(folderId));
+            dispatch(setFolderId(folderId));
+            if (folderId) {
+                navigate(`/files?folder=${folderId}`);
+            } else {
+                navigate('/files');
+            }
+        },
+        [dispatch, navigate]
+    );
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -307,6 +350,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const handleDeleteFile = useCallback(
         async (fileId: string) => {
             await dispatch(deleteFile({ fileId }));
+            dispatch(fetchFilesTree({ includeFiles: false }));
         },
         [dispatch]
     );
@@ -453,9 +497,8 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     // Handle filter selection from dropdown
     const handleFilterChange = useCallback((filterId: string) => {
         if (!filterId) {
-            // Clear filter
+            // Clear filter (preserve current folder)
             dispatch(clearActiveFilter());
-            dispatch(setFolderId(null));
         } else {
             // Find and apply the filter
             const filter = savedFilters.find(f => f.id === filterId);
@@ -542,6 +585,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                 await dispatch(deleteFile({ fileId }));
             }
             dispatch(clearSelection());
+            dispatch(fetchFilesTree({ includeFiles: false }));
         } finally {
             setBulkActionLoading(false);
         }
@@ -596,6 +640,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const handleDeleteFolderAction = useCallback(
         async (folderId: string) => {
             await dispatch(deleteFolder({ folderId, recursive: true }));
+            dispatch(fetchFilesTree({ includeFiles: false }));
         },
         [dispatch]
     );
@@ -727,10 +772,10 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             <button
                                 onClick={handleBulkBookmark}
                                 disabled={bulkActionLoading || selectedFileIds.length === 0}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                                 title="Bookmark selected"
                             >
-                                <BookmarkSimple size={16} weight="duotone" className="text-primary" />
+                                <BookmarkSimple size={16} weight="duotone" />
                                 <span className="hidden sm:inline">Bookmark</span>
                             </button>
 
@@ -738,10 +783,10 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             <button
                                 onClick={handleBulkMove}
                                 disabled={bulkActionLoading || totalSelectedCount === 0}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                                 title="Move selected"
                             >
-                                <ArrowRight size={16} className="text-muted-foreground" />
+                                <ArrowRight size={16} />
                                 <span className="hidden sm:inline">Move</span>
                             </button>
 
@@ -750,10 +795,10 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 <button
                                     onClick={handleBulkDownload}
                                     disabled={bulkActionLoading || totalSelectedCount === 0}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                                     title="Download selected files as zip"
                                 >
-                                    <FileArrowDown size={16} className="text-muted-foreground" />
+                                    <FileArrowDown size={16} />
                                     <span className="hidden sm:inline">Download Zip</span>
                                 </button>
                             )}
@@ -762,10 +807,10 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             <button
                                 onClick={handleBulkDelete}
                                 disabled={bulkActionLoading || totalSelectedCount === 0}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                                 title="Delete selected"
                             >
-                                <Trash size={16} className="text-destructive" />
+                                <Trash size={16} />
                                 <span className="hidden sm:inline">Delete</span>
                             </button>
                         </>
@@ -785,7 +830,6 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                         <button
                                             onClick={() => {
                                                 dispatch(clearActiveFilter());
-                                                dispatch(setFolderId(null));
                                             }}
                                             className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                                             title="Clear filter"
@@ -885,6 +929,38 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                     )}
                 </div>
             </div>
+
+            {/* Folder breadcrumb */}
+            {breadcrumbItems.length > 0 && (
+                <nav className="flex items-center gap-1 px-4 py-1.5 text-sm text-muted-foreground border-b border-border bg-muted/30 min-w-0">
+                    <span
+                        onClick={() => handleBreadcrumbNavigate(null)}
+                        className="hover:text-foreground cursor-pointer hover:underline shrink-0"
+                    >
+                        Files
+                    </span>
+                    {breadcrumbItems.map((item, index) => {
+                        const isLast = index === breadcrumbItems.length - 1;
+                        return (
+                            <span key={item.id} className="flex items-center gap-1 min-w-0">
+                                <CaretRight size={12} weight="bold" className="shrink-0 text-muted-foreground/50" />
+                                <span
+                                    onClick={() => !isLast && handleBreadcrumbNavigate(item.id)}
+                                    className={cn(
+                                        'truncate max-w-[200px]',
+                                        isLast
+                                            ? 'text-foreground font-medium'
+                                            : 'hover:text-foreground cursor-pointer hover:underline',
+                                    )}
+                                    title={item.name}
+                                >
+                                    {item.name}
+                                </span>
+                            </span>
+                        );
+                    })}
+                </nav>
+            )}
 
             {/* Context Menu */}
             {contextMenu && (

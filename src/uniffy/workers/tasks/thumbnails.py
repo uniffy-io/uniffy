@@ -15,10 +15,13 @@ from uuid import UUID
 import fitz  # PyMuPDF
 from arq import Retry
 from loguru import logger
-from PIL import Image
+from PIL import Image, ImageOps
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage.s3_client import get_s3_client
+from uniffy.core.valkey import publish_notification
 from uniffy.db.session import get_async_session
 
 # Thumbnail configuration
@@ -76,6 +79,9 @@ async def generate_image_thumbnail(
         Result with status and thumbnail_key if successful.
 
     """
+    log = logger.bind(task="thumbnail", kind="image", file_id=file_id)
+    log.info("Started")
+
     file_uuid = UUID(file_id)
     org_uuid = UUID(organization_id)
 
@@ -85,7 +91,7 @@ async def generate_image_thumbnail(
         # Fetch file record
         file = await session.get(File, file_uuid)
         if not file:
-            logger.warning(f"Thumbnail: File {file_id} not found")
+            log.warning("File not found")
             return {"status": "not_found", "file_id": file_id}
 
         # Update status to PROCESSING
@@ -94,11 +100,17 @@ async def generate_image_thumbnail(
 
         try:
             # Download original image from S3
-            logger.debug(f"Thumbnail: Downloading {file.storage_key}")
             image_bytes = await s3.download_bytes(file.storage_key)
+            log.info("Downloaded image", bytes=len(image_bytes))
 
             # Generate thumbnail
             thumbnail_bytes, thumb_width, thumb_height = _create_thumbnail(image_bytes)
+            log.info(
+                "Generated thumbnail",
+                thumb_bytes=len(thumbnail_bytes),
+                thumb_width=thumb_width,
+                thumb_height=thumb_height,
+            )
 
             # Upload thumbnail to S3
             thumb_key = get_thumbnail_key(org_uuid, file_uuid)
@@ -108,19 +120,40 @@ async def generate_image_thumbnail(
                 content_type="image/jpeg",
             )
 
-            # Update file metadata with thumbnail key and dimensions
-            file.file_metadata = file.file_metadata or {}
-            file.file_metadata["thumbnail_key"] = thumb_key
-            file.file_metadata["thumbnail_width"] = thumb_width
-            file.file_metadata["thumbnail_height"] = thumb_height
+            # UPSERT only thumbnail columns into FileMediaInfo
+            stmt = pg_insert(FileMediaInfo).values(
+                file_id=file_uuid,
+                thumbnail_key=thumb_key,
+                thumbnail_width=thumb_width,
+                thumbnail_height=thumb_height,
+            )
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["file_id"],
+                set_={
+                    "thumbnail_key": stmt.excluded.thumbnail_key,
+                    "thumbnail_width": stmt.excluded.thumbnail_width,
+                    "thumbnail_height": stmt.excluded.thumbnail_height,
+                },
+            )
+            await session.execute(stmt)
+
             file.extraction_status = ExtractionStatus.COMPLETED
             await session.commit()
 
-            logger.info(f"Thumbnail: Generated for file {file_id}")
+            try:
+                await publish_notification(file.owner_id, {
+                    "_type": "file_updated",
+                    "file_id": str(file.id),
+                    "organization_id": str(file.organization_id),
+                })
+            except Exception:
+                log.warning("Failed to publish file update event")
+
+            log.info("Done")
             return {"status": "success", "thumbnail_key": thumb_key}
 
         except Exception as e:
-            logger.error(f"Thumbnail: Failed for {file_id}: {e}")
+            log.error("Failed", error=str(e))
 
             # Retry with backoff for transient errors
             job_try = ctx.get("job_try", 1)
@@ -129,8 +162,15 @@ async def generate_image_thumbnail(
 
             # Mark as failed after max retries
             file.extraction_status = ExtractionStatus.FAILED
-            file.file_metadata = file.file_metadata or {}
-            file.file_metadata["extraction_error"] = str(e)
+            error_stmt = pg_insert(FileMediaInfo).values(
+                file_id=file_uuid,
+                extraction_error=str(e)[:2000],
+            )
+            error_stmt = error_stmt.on_conflict_do_update(
+                index_elements=["file_id"],
+                set_={"extraction_error": error_stmt.excluded.extraction_error},
+            )
+            await session.execute(error_stmt)
             await session.commit()
 
             return {"status": "failed", "error": str(e)}
@@ -162,6 +202,9 @@ async def generate_pdf_thumbnail(
         Result with status and thumbnail_key if successful.
 
     """
+    log = logger.bind(task="thumbnail", kind="pdf", file_id=file_id)
+    log.info("Started")
+
     file_uuid = UUID(file_id)
     org_uuid = UUID(organization_id)
 
@@ -171,7 +214,7 @@ async def generate_pdf_thumbnail(
         # Fetch file record
         file = await session.get(File, file_uuid)
         if not file:
-            logger.warning(f"Thumbnail: PDF file {file_id} not found")
+            log.warning("File not found")
             return {"status": "not_found", "file_id": file_id}
 
         # Update status to PROCESSING
@@ -180,8 +223,8 @@ async def generate_pdf_thumbnail(
 
         try:
             # Download PDF from S3
-            logger.debug(f"Thumbnail: Downloading PDF {file.storage_key}")
             pdf_bytes = await s3.download_bytes(file.storage_key)
+            log.info("Downloaded PDF", bytes=len(pdf_bytes))
 
             # Generate thumbnail from first page
             thumbnail_bytes, thumb_width, thumb_height = _create_pdf_thumbnail(pdf_bytes)
@@ -194,19 +237,40 @@ async def generate_pdf_thumbnail(
                 content_type="image/jpeg",
             )
 
-            # Update file metadata with thumbnail key and dimensions
-            file.file_metadata = file.file_metadata or {}
-            file.file_metadata["thumbnail_key"] = thumb_key
-            file.file_metadata["thumbnail_width"] = thumb_width
-            file.file_metadata["thumbnail_height"] = thumb_height
+            # UPSERT only thumbnail columns into FileMediaInfo
+            stmt = pg_insert(FileMediaInfo).values(
+                file_id=file_uuid,
+                thumbnail_key=thumb_key,
+                thumbnail_width=thumb_width,
+                thumbnail_height=thumb_height,
+            )
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["file_id"],
+                set_={
+                    "thumbnail_key": stmt.excluded.thumbnail_key,
+                    "thumbnail_width": stmt.excluded.thumbnail_width,
+                    "thumbnail_height": stmt.excluded.thumbnail_height,
+                },
+            )
+            await session.execute(stmt)
+
             file.extraction_status = ExtractionStatus.COMPLETED
             await session.commit()
 
-            logger.info(f"Thumbnail: Generated PDF thumbnail for file {file_id}")
+            try:
+                await publish_notification(file.owner_id, {
+                    "_type": "file_updated",
+                    "file_id": str(file.id),
+                    "organization_id": str(file.organization_id),
+                })
+            except Exception:
+                log.warning("Failed to publish file update event")
+
+            log.info("Done")
             return {"status": "success", "thumbnail_key": thumb_key}
 
         except Exception as e:
-            logger.error(f"Thumbnail: PDF failed for {file_id}: {e}")
+            log.error("Failed", error=str(e))
 
             # Retry with backoff for transient errors
             job_try = ctx.get("job_try", 1)
@@ -215,8 +279,15 @@ async def generate_pdf_thumbnail(
 
             # Mark as failed after max retries
             file.extraction_status = ExtractionStatus.FAILED
-            file.file_metadata = file.file_metadata or {}
-            file.file_metadata["extraction_error"] = str(e)
+            error_stmt = pg_insert(FileMediaInfo).values(
+                file_id=file_uuid,
+                extraction_error=str(e)[:2000],
+            )
+            error_stmt = error_stmt.on_conflict_do_update(
+                index_elements=["file_id"],
+                set_={"extraction_error": error_stmt.excluded.extraction_error},
+            )
+            await session.execute(error_stmt)
             await session.commit()
 
             return {"status": "failed", "error": str(e)}
@@ -248,6 +319,9 @@ async def generate_video_thumbnail(
         Result with status and thumbnail_key if successful.
 
     """
+    log = logger.bind(task="thumbnail", kind="video", file_id=file_id)
+    log.info("Started")
+
     file_uuid = UUID(file_id)
     org_uuid = UUID(organization_id)
 
@@ -257,7 +331,7 @@ async def generate_video_thumbnail(
         # Fetch file record
         file = await session.get(File, file_uuid)
         if not file:
-            logger.warning(f"Thumbnail: Video file {file_id} not found")
+            log.warning("File not found")
             return {"status": "not_found", "file_id": file_id}
 
         # Update status to PROCESSING
@@ -266,8 +340,8 @@ async def generate_video_thumbnail(
 
         try:
             # Download video from S3
-            logger.debug(f"Thumbnail: Downloading video {file.storage_key}")
             video_bytes = await s3.download_bytes(file.storage_key)
+            log.info("Downloaded video", bytes=len(video_bytes))
 
             # Generate thumbnail from video frame
             thumbnail_bytes, thumb_width, thumb_height = _create_video_thumbnail(video_bytes)
@@ -280,19 +354,40 @@ async def generate_video_thumbnail(
                 content_type="image/jpeg",
             )
 
-            # Update file metadata with thumbnail key and dimensions
-            file.file_metadata = file.file_metadata or {}
-            file.file_metadata["thumbnail_key"] = thumb_key
-            file.file_metadata["thumbnail_width"] = thumb_width
-            file.file_metadata["thumbnail_height"] = thumb_height
+            # UPSERT only thumbnail columns into FileMediaInfo
+            stmt = pg_insert(FileMediaInfo).values(
+                file_id=file_uuid,
+                thumbnail_key=thumb_key,
+                thumbnail_width=thumb_width,
+                thumbnail_height=thumb_height,
+            )
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["file_id"],
+                set_={
+                    "thumbnail_key": stmt.excluded.thumbnail_key,
+                    "thumbnail_width": stmt.excluded.thumbnail_width,
+                    "thumbnail_height": stmt.excluded.thumbnail_height,
+                },
+            )
+            await session.execute(stmt)
+
             file.extraction_status = ExtractionStatus.COMPLETED
             await session.commit()
 
-            logger.info(f"Thumbnail: Generated video thumbnail for file {file_id}")
+            try:
+                await publish_notification(file.owner_id, {
+                    "_type": "file_updated",
+                    "file_id": str(file.id),
+                    "organization_id": str(file.organization_id),
+                })
+            except Exception:
+                log.warning("Failed to publish file update event")
+
+            log.info("Done")
             return {"status": "success", "thumbnail_key": thumb_key}
 
         except Exception as e:
-            logger.error(f"Thumbnail: Video failed for {file_id}: {e}")
+            log.error("Failed", error=str(e))
 
             # Retry with backoff for transient errors
             job_try = ctx.get("job_try", 1)
@@ -301,8 +396,15 @@ async def generate_video_thumbnail(
 
             # Mark as failed after max retries
             file.extraction_status = ExtractionStatus.FAILED
-            file.file_metadata = file.file_metadata or {}
-            file.file_metadata["extraction_error"] = str(e)
+            error_stmt = pg_insert(FileMediaInfo).values(
+                file_id=file_uuid,
+                extraction_error=str(e)[:2000],
+            )
+            error_stmt = error_stmt.on_conflict_do_update(
+                index_elements=["file_id"],
+                set_={"extraction_error": error_stmt.excluded.extraction_error},
+            )
+            await session.execute(error_stmt)
             await session.commit()
 
             return {"status": "failed", "error": str(e)}
@@ -328,6 +430,9 @@ def _create_thumbnail(image_bytes: bytes) -> tuple[bytes, int, int]:
 
     """
     with Image.open(io.BytesIO(image_bytes)) as img:
+        # Apply EXIF orientation (phone cameras store rotation in EXIF metadata)
+        img = ImageOps.exif_transpose(img)
+
         # Convert to RGB if necessary (handles RGBA, P, LA, etc.)
         if img.mode in ("RGBA", "P", "LA", "L"):
             # Create white background for transparency

@@ -6,7 +6,8 @@
  * Backend serves thumbnails with HTTP cache headers for browser caching.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ExtractionStatus } from '@/gen/files/v1/files_pb';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 
@@ -19,9 +20,16 @@ export function ThumbnailImage({ file, fallback }: ThumbnailImageProps) {
     const [error, setError] = useState(false);
     const { url, loading } = useThumbnailUrl(file.id);
 
-    // Always try to load thumbnail for images
-    // If backend returns 404 (no thumbnail), onError will show fallback
-    // This handles both new files with extractionStatus and legacy files
+    // Reset error when extraction status changes (file was re-processed)
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when extractionStatus changes is valid
+        setError(false);
+    }, [file.extractionStatus]);
+
+    // Don't attempt loading until worker has finished processing
+    if (file.extractionStatus !== ExtractionStatus.COMPLETED) {
+        return <>{fallback}</>;
+    }
 
     // Still waiting for service worker
     if (loading) {
@@ -42,9 +50,12 @@ export function ThumbnailImage({ file, fallback }: ThumbnailImageProps) {
         return <>{fallback}</>;
     }
 
+    // Cache-bust with extractionStatus so browser doesn't serve a cached 404
+    const cacheBustedUrl = `${url}?v=${file.extractionStatus}`;
+
     return (
         <img
-            src={url}
+            src={cacheBustedUrl}
             alt={file.filename}
             className="w-full h-full object-cover"
             loading="lazy"

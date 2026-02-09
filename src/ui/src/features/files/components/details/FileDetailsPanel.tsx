@@ -35,6 +35,8 @@ import {
     Timer,
     File as FileIcon,
     CircleNotch,
+    Waveform,
+    SpeakerHigh,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 
@@ -97,6 +99,7 @@ const EXIF_LABELS: Record<string, string> = {
     Model: 'Camera Model',
     DateTime: 'Date Taken',
     DateTimeOriginal: 'Date Taken',
+    DateTimeDigitized: 'Date Digitized',
     ExposureTime: 'Shutter Speed',
     FNumber: 'Aperture',
     ISO: 'ISO',
@@ -106,10 +109,16 @@ const EXIF_LABELS: Record<string, string> = {
     Flash: 'Flash',
     WhiteBalance: 'White Balance',
     ExposureProgram: 'Exposure Program',
+    ExposureMode: 'Exposure Mode',
+    ExposureBiasValue: 'Exposure Bias',
     MeteringMode: 'Metering Mode',
-    GPSLatitude: 'GPS Latitude',
-    GPSLongitude: 'GPS Longitude',
-    GPSAltitude: 'GPS Altitude',
+    SceneCaptureType: 'Scene Type',
+    SubjectDistanceRange: 'Subject Distance',
+    GPSLatitude: 'Latitude',
+    GPSLongitude: 'Longitude',
+    GPSAltitude: 'Altitude',
+    GPSLatitudeRef: 'Latitude Ref',
+    GPSLongitudeRef: 'Longitude Ref',
     Software: 'Software',
     Artist: 'Artist',
     Copyright: 'Copyright',
@@ -121,15 +130,40 @@ const EXIF_LABELS: Record<string, string> = {
     ColorSpace: 'Color Space',
     LensModel: 'Lens Model',
     LensMake: 'Lens Make',
+    BrightnessValue: 'Brightness',
+    MaxApertureValue: 'Max Aperture',
+    DigitalZoomRatio: 'Digital Zoom',
+    ImageWidth: 'Width',
+    ImageLength: 'Height',
+    ShutterSpeedValue: 'Shutter Speed',
+    ApertureValue: 'Aperture Value',
 };
+
+/** EXIF keys to hide (internal/redundant data) */
+const EXIF_HIDDEN_KEYS = new Set([
+    'MakerNote',
+    'UserComment',
+    'ComponentsConfiguration',
+    'FlashPixVersion',
+    'ExifVersion',
+    'InteropOffset',
+    'PrintImageMatching',
+    'Padding',
+]);
 
 /** Get icon for EXIF field */
 function getExifIcon(key: string) {
-    if (key.includes('GPS')) return MapPin;
+    if (key.startsWith('GPS')) return MapPin;
     if (key.includes('Aperture') || key.includes('FNumber')) return Aperture;
     if (key.includes('Exposure') || key.includes('Shutter')) return Timer;
-    if (key.includes('Camera') || key.includes('Make') || key.includes('Model')) return Camera;
+    if (key.includes('Make') || key.includes('Model') || key.includes('Lens')) return Camera;
     return null;
+}
+
+/** Format EXIF value for display */
+function formatExifValue(_key: string, value: string): string {
+    if (!value && value !== '0') return '-';
+    return String(value);
 }
 
 export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
@@ -171,6 +205,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
     // Determine file type for metadata display
     const isImage = file.mimeType.startsWith('image/');
     const isVideo = file.mimeType.startsWith('video/');
+    const isAudio = file.mimeType.startsWith('audio/');
     const metadata = file.metadata;
 
     const renderInfoTab = () => (
@@ -232,6 +267,41 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                             <MusicNote size={16} weight="duotone" className="text-muted-foreground" />
                         )}
                         <span className="text-sm">{formatDuration(metadata.durationSeconds)}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Bitrate (for audio) */}
+            {metadata?.bitrate != null && (
+                <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Bitrate</label>
+                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                        <Waveform size={16} weight="duotone" className="text-muted-foreground" />
+                        <span className="text-sm">{Math.round(metadata.bitrate / 1000)} kbps</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Sample Rate (for audio) */}
+            {metadata?.sampleRate != null && (
+                <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Sample Rate</label>
+                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                        <Waveform size={16} weight="duotone" className="text-muted-foreground" />
+                        <span className="text-sm">{(metadata.sampleRate / 1000).toFixed(1)} kHz</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Channels (for audio) */}
+            {metadata?.channels != null && (
+                <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Channels</label>
+                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                        <SpeakerHigh size={16} weight="duotone" className="text-muted-foreground" />
+                        <span className="text-sm">
+                            {metadata.channels === 1 ? 'Mono' : metadata.channels === 2 ? 'Stereo' : `${metadata.channels} channels`}
+                        </span>
                     </div>
                 </div>
             )}
@@ -308,7 +378,10 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
 
     const renderMetadataTab = () => {
         const exif = metadata?.exif;
-        const hasExif = exif && Object.keys(exif).length > 0;
+        const exifEntries = exif
+            ? Object.entries(exif).filter(([key]) => !EXIF_HIDDEN_KEYS.has(key))
+            : [];
+        const hasExif = exifEntries.length > 0;
 
         return (
             <div className="space-y-4">
@@ -339,23 +412,24 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                 {hasExif ? (
                     <div>
                         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                            EXIF Data
+                            EXIF Data ({exifEntries.length})
                         </h4>
                         <div className="space-y-1">
-                            {Object.entries(exif).map(([key, value]) => {
+                            {exifEntries.map(([key, value]) => {
                                 const label = EXIF_LABELS[key] || key;
                                 const Icon = getExifIcon(key);
+                                const displayValue = formatExifValue(key, value);
                                 return (
                                     <div
                                         key={key}
                                         className="flex justify-between items-start gap-2 p-2 rounded-md bg-muted/50"
                                     >
-                                        <div className="flex items-center gap-2 min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0 shrink-0">
                                             {Icon && <Icon size={14} weight="duotone" className="text-muted-foreground shrink-0" />}
-                                            <span className="text-sm text-muted-foreground truncate">{label}</span>
+                                            <span className="text-xs text-muted-foreground">{label}</span>
                                         </div>
-                                        <span className="text-sm font-medium text-right break-all max-w-[50%]">
-                                            {value}
+                                        <span className="text-xs font-medium text-right break-all min-w-0">
+                                            {displayValue}
                                         </span>
                                     </div>
                                 );
@@ -369,7 +443,9 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                         <p className="text-xs text-muted-foreground mt-1">
                             {isImage
                                 ? 'This image does not contain EXIF metadata'
-                                : 'EXIF data is only available for images'}
+                                : isAudio
+                                    ? 'Audio files do not contain EXIF metadata'
+                                    : 'EXIF data is only available for images'}
                         </p>
                     </div>
                 )}

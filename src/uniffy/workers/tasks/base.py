@@ -10,9 +10,9 @@ from typing import Any
 
 from loguru import logger
 
-from uniffy.core.pubsub import close_pubsub, init_pubsub
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
+from uniffy.core.valkey import close_pubsub, init_pubsub
 from uniffy.db import close_db, init_db
 from uniffy.observability.metrics import (
     WORKER_JOB_DURATION,

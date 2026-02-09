@@ -1,22 +1,100 @@
 /**
  * Single notification item rendered in the notification panel.
+ *
+ * Displays actor avatar with type icon overlay, notification content,
+ * source URN context, and hover actions.
  */
 
-import { Check, Trash, Clock } from '@phosphor-icons/react';
+import {
+    Check,
+    Trash,
+    ShareNetwork,
+    At,
+    PencilSimple,
+    Bell,
+    CalendarPlus,
+    CalendarCheck,
+    ShieldCheck,
+    ShieldSlash,
+    Megaphone,
+} from '@phosphor-icons/react';
+import type { Icon } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { parseUrn } from '@/shared/utils/urn';
+import { getContentTypeConfig } from '@/config/theme/contentTypes';
+import { getUrnTypeTheme } from '@/config/theme/urnColors';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { NotificationType } from '@/gen/notifications/v1/notifications_pb';
 
-const NOTIFICATION_TYPE_LABELS: Record<number, string> = {
-    [NotificationType.CONTENT_SHARED]: 'Shared',
-    [NotificationType.CONTENT_MENTIONED]: 'Mention',
-    [NotificationType.CONTENT_EDITED]: 'Edited',
-    [NotificationType.CALENDAR_REMINDER]: 'Reminder',
-    [NotificationType.CALENDAR_INVITE]: 'Invite',
-    [NotificationType.CALENDAR_RESPONSE]: 'Response',
-    [NotificationType.PERMISSION_GRANTED]: 'Permission',
-    [NotificationType.PERMISSION_REVOKED]: 'Permission',
-    [NotificationType.SYSTEM_ANNOUNCEMENT]: 'System',
+interface NotificationTypeConfig {
+    icon: Icon;
+    label: string;
+    color: string;
+    bgColor: string;
+}
+
+const NOTIFICATION_TYPE_CONFIG: Record<number, NotificationTypeConfig> = {
+    [NotificationType.CONTENT_SHARED]: {
+        icon: ShareNetwork,
+        label: 'Shared',
+        color: 'text-blue-400',
+        bgColor: 'bg-blue-500',
+    },
+    [NotificationType.CONTENT_MENTIONED]: {
+        icon: At,
+        label: 'Mentioned',
+        color: 'text-primary',
+        bgColor: 'bg-primary',
+    },
+    [NotificationType.CONTENT_EDITED]: {
+        icon: PencilSimple,
+        label: 'Edited',
+        color: 'text-amber-400',
+        bgColor: 'bg-amber-500',
+    },
+    [NotificationType.CALENDAR_REMINDER]: {
+        icon: Bell,
+        label: 'Reminder',
+        color: 'text-rose-400',
+        bgColor: 'bg-rose-500',
+    },
+    [NotificationType.CALENDAR_INVITE]: {
+        icon: CalendarPlus,
+        label: 'Invite',
+        color: 'text-rose-400',
+        bgColor: 'bg-rose-500',
+    },
+    [NotificationType.CALENDAR_RESPONSE]: {
+        icon: CalendarCheck,
+        label: 'Response',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-500',
+    },
+    [NotificationType.PERMISSION_GRANTED]: {
+        icon: ShieldCheck,
+        label: 'Access granted',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-500',
+    },
+    [NotificationType.PERMISSION_REVOKED]: {
+        icon: ShieldSlash,
+        label: 'Access revoked',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500',
+    },
+    [NotificationType.SYSTEM_ANNOUNCEMENT]: {
+        icon: Megaphone,
+        label: 'System',
+        color: 'text-violet-400',
+        bgColor: 'bg-violet-500',
+    },
+};
+
+const DEFAULT_TYPE_CONFIG: NotificationTypeConfig = {
+    icon: Bell,
+    label: 'Notification',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted',
 };
 
 function formatRelativeTime(dateStr: string): string {
@@ -28,10 +106,22 @@ function formatRelativeTime(dateStr: string): string {
     const days = Math.floor(diff / 86400000);
 
     if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return new Date(dateStr).toLocaleDateString();
+    if (minutes < 60) return `${minutes}m`;
+    if (hours < 24) return `${hours}h`;
+    if (days < 7) return `${days}d`;
+    return new Date(dateStr).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+    });
+}
+
+function getInitials(name: string): string {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
 }
 
 interface NotificationItemProps {
@@ -47,40 +137,82 @@ export function NotificationItem({
     onDelete,
     onClick,
 }: NotificationItemProps) {
-    const typeLabel = NOTIFICATION_TYPE_LABELS[notification.notificationType] ?? 'Notification';
+    const typeConfig = NOTIFICATION_TYPE_CONFIG[notification.notificationType] ?? DEFAULT_TYPE_CONFIG;
+    const TypeIcon = typeConfig.icon;
+
+    // Resolve source URN for contextual display
+    const parsedUrn = notification.sourceUrn ? parseUrn(notification.sourceUrn) : null;
+    const sourceConfig = parsedUrn?.isValid ? getContentTypeConfig(parsedUrn.type) : null;
+    const sourceTheme = parsedUrn?.isValid ? getUrnTypeTheme(parsedUrn.type) : null;
+    const SourceIcon = sourceConfig?.icon;
 
     return (
         <div
             className={cn(
-                'group relative flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer',
+                'group relative flex gap-3 px-4 py-3 transition-colors cursor-pointer',
                 'hover:bg-muted/50',
-                !notification.isRead && 'bg-primary/5'
+                !notification.isRead && 'bg-gradient-to-r from-primary/[0.06] to-transparent'
             )}
             onClick={() => onClick?.(notification)}
         >
-            {/* Unread indicator */}
+            {/* Unread accent bar */}
             {!notification.isRead && (
-                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-primary" />
             )}
 
-            <div className="flex-1 min-w-0">
-                {/* Type badge + timestamp */}
-                <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {typeLabel}
-                    </span>
-                    <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                        <Clock size={10} />
-                        {formatRelativeTime(notification.createdAt)}
-                    </span>
-                </div>
+            {/* Avatar with type badge */}
+            <div className="relative shrink-0 mt-0.5">
+                {notification.actorAvatarUrl ? (
+                    <img
+                        src={notification.actorAvatarUrl}
+                        alt={notification.actorName}
+                        className="w-8 h-8 rounded-full object-cover"
+                    />
+                ) : (
+                    <div className={cn(
+                        'flex items-center justify-center w-8 h-8 rounded-full',
+                        'bg-muted text-muted-foreground text-xs font-semibold',
+                        notification.actorId && 'bg-primary/15 text-primary'
+                    )}>
+                        {notification.actorName
+                            ? getInitials(notification.actorName)
+                            : <TypeIcon size={16} weight="duotone" />
+                        }
+                    </div>
+                )}
 
-                {/* Title */}
+                {/* Type icon badge (only when avatar shows actor, not type icon) */}
+                {notification.actorName && (
+                    <span className={cn(
+                        'absolute -bottom-0.5 -right-0.5 flex items-center justify-center',
+                        'w-4 h-4 rounded-full border-2 border-card',
+                        typeConfig.bgColor,
+                    )}>
+                        <TypeIcon size={9} weight="bold" className="text-white" />
+                    </span>
+                )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                {/* Title line */}
                 <p className={cn(
-                    'text-sm leading-snug truncate',
-                    notification.isRead ? 'text-foreground/70' : 'text-foreground font-medium'
+                    'text-[13px] leading-snug',
+                    notification.isRead
+                        ? 'text-muted-foreground'
+                        : 'text-foreground'
                 )}>
-                    {notification.title}
+                    {notification.actorName && (
+                        <span className={cn(
+                            'font-semibold',
+                            notification.isRead ? 'text-foreground/70' : 'text-foreground'
+                        )}>
+                            {notification.actorName}{' '}
+                        </span>
+                    )}
+                    <span className={notification.isRead ? undefined : 'text-foreground/80'}>
+                        {notification.title}
+                    </span>
                 </p>
 
                 {/* Body preview */}
@@ -89,10 +221,30 @@ export function NotificationItem({
                         {notification.body}
                     </p>
                 )}
+
+                {/* Meta row: source pill + time */}
+                <div className="flex items-center gap-2 mt-1.5">
+                    {sourceConfig && SourceIcon && sourceTheme && (
+                        <span className={cn(
+                            'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium',
+                            sourceTheme.badgeBg,
+                            sourceTheme.accentText,
+                        )}>
+                            <SourceIcon size={10} weight="fill" />
+                            {sourceConfig.label}
+                        </span>
+                    )}
+                    <span className="text-[11px] text-muted-foreground/70">
+                        {formatRelativeTime(notification.createdAt)}
+                    </span>
+                </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Hover actions */}
+            <div className={cn(
+                'flex items-start gap-0.5 pt-0.5 shrink-0',
+                'opacity-0 group-hover:opacity-100 transition-opacity'
+            )}>
                 {!notification.isRead && (
                     <button
                         onClick={(e) => {
@@ -102,7 +254,7 @@ export function NotificationItem({
                         className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         title="Mark as read"
                     >
-                        <Check size={14} />
+                        <Check size={13} weight="bold" />
                     </button>
                 )}
                 <button
@@ -110,10 +262,10 @@ export function NotificationItem({
                         e.stopPropagation();
                         onDelete(notification.id);
                     }}
-                    className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors"
+                    className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
                     title="Delete"
                 >
-                    <Trash size={14} />
+                    <Trash size={13} />
                 </button>
             </div>
         </div>

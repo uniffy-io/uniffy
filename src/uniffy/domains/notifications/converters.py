@@ -69,7 +69,11 @@ def notification_type_from_proto(proto_val: int) -> NotificationType | None:
     return NOTIFICATION_TYPE_FROM_PROTO.get(proto_val)
 
 
-def notification_to_proto(notification: Notification) -> ProtoNotification:
+def notification_to_proto(
+    notification: Notification,
+    actor_name: str = "",
+    actor_avatar_url: str = "",
+) -> ProtoNotification:
     """
     Convert Notification model to proto Notification.
 
@@ -77,6 +81,10 @@ def notification_to_proto(notification: Notification) -> ProtoNotification:
     ----------
     notification : Notification
         Notification model instance.
+    actor_name : str
+        Display name of the actor who triggered the notification.
+    actor_avatar_url : str
+        Avatar URL of the actor.
 
     Returns
     -------
@@ -93,6 +101,8 @@ def notification_to_proto(notification: Notification) -> ProtoNotification:
         body=notification.body or "",
         is_read=notification.is_read,
         created_at=datetime_to_timestamp(notification.created_at),
+        actor_name=actor_name,
+        actor_avatar_url=actor_avatar_url,
     )
 
     if notification.source_urn:

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Load .env before any imports that read environment variables
 load_dotenv()
 
-from uniffy.core.queue.valkey import ValkeyConfig
+from uniffy.core.valkey import ValkeyConfig
 from uniffy.observability import ObservabilityConfig, setup_observability
 
 # Setup observability for worker process
@@ -32,6 +32,7 @@ setup_observability(
 from uniffy.workers.tasks import (
     deliver_email_notification,
     deliver_push_notification,
+    extract_audio_metadata,
     extract_image_metadata,
     generate_image_thumbnail,
     generate_pdf_thumbnail,
@@ -85,6 +86,7 @@ class WorkerSettings:
         generate_video_thumbnail,
         # Metadata extraction
         extract_image_metadata,
+        extract_audio_metadata,
         # Notifications
         process_notification_event,
         deliver_push_notification,

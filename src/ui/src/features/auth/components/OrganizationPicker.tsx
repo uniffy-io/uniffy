@@ -23,7 +23,7 @@ import {
     clearSavedFilters,
 } from "@/features/files";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { transport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
@@ -88,8 +88,6 @@ export function OrganizationPicker() {
   const accessToken = useAppSelector((state) => state.auth?.accessToken);
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
   const user = useAppSelector((state) => state.auth?.user);
-  const { resolvedTheme } = useTheme();
-  const isLightTheme = resolvedTheme !== 'dark';
 
   useEffect(() => {
     if (!accessToken) {
@@ -206,12 +204,7 @@ export function OrganizationPicker() {
             style={{ animation: 'org-slide-up 0.5s ease-out 0.1s forwards' }}
           >
             <div className="flex items-center gap-3">
-              <img
-                  src="/favicon.svg"
-                  alt="Uniffy"
-                  className="w-14 h-14"
-                  style={isLightTheme ? { filter: 'invert(1)' } : undefined}
-                />
+              <UniffyLogo className="w-14 h-14" />
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-foreground">
                   Select a workspace

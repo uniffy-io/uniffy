@@ -103,6 +103,41 @@ class SearchIndexer:
             rank_score=rank_score,
         )
 
+    async def update_sharing(
+        self,
+        urn: str,
+        organization_id: UUID,
+        shared_user_ids: list[UUID],
+        shared_group_ids: list[UUID],
+    ) -> None:
+        """
+        Partial update of sharing metadata in the search index.
+
+        Only updates shared_user_ids and shared_group_ids without
+        touching any other fields in the document.
+
+        Parameters
+        ----------
+        urn : str
+            Universal Resource Name.
+        organization_id : UUID
+            Organization ID.
+        shared_user_ids : list[UUID]
+            Current list of user IDs with explicit access.
+        shared_group_ids : list[UUID]
+            Current list of group IDs with access.
+
+        """
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
+        client = get_meilisearch_client()
+        await client.update_document_sharing(
+            urn=urn,
+            organization_id=organization_id,
+            shared_user_ids=shared_user_ids,
+            shared_group_ids=shared_group_ids,
+        )
+
     async def remove(
         self,
         urn: str,

@@ -22,6 +22,8 @@ export interface SerializedNotification {
     body: string;
     sourceUrn: string;
     actorId: string;
+    actorName: string;
+    actorAvatarUrl: string;
     isRead: boolean;
     readAt: string | null;
     createdAt: string;
@@ -70,6 +72,8 @@ const notificationToPlain = (n: Notification): SerializedNotification => ({
     body: n.body,
     sourceUrn: n.sourceUrn,
     actorId: n.actorId,
+    actorName: n.actorName,
+    actorAvatarUrl: n.actorAvatarUrl,
     isRead: n.isRead,
     readAt: n.readAt?.toDate().toISOString() ?? null,
     createdAt: n.createdAt?.toDate().toISOString() ?? new Date().toISOString(),

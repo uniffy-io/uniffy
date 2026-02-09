@@ -34,7 +34,7 @@ NOTIFICATION_TYPE_PERMISSION_REVOKED: NotificationType
 NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT: NotificationType
 
 class Notification(_message.Message):
-    __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at")
+    __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at", "actor_name", "actor_avatar_url")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -47,6 +47,8 @@ class Notification(_message.Message):
     READ_AT_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_NAME_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     user_id: str
@@ -59,7 +61,9 @@ class Notification(_message.Message):
     read_at: _timestamp_pb2.Timestamp
     created_at: _timestamp_pb2.Timestamp
     expires_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., notification_type: _Optional[_Union[NotificationType, str]] = ..., title: _Optional[str] = ..., body: _Optional[str] = ..., source_urn: _Optional[str] = ..., actor_id: _Optional[str] = ..., is_read: _Optional[bool] = ..., read_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    actor_name: str
+    actor_avatar_url: str
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., notification_type: _Optional[_Union[NotificationType, str]] = ..., title: _Optional[str] = ..., body: _Optional[str] = ..., source_urn: _Optional[str] = ..., actor_id: _Optional[str] = ..., is_read: _Optional[bool] = ..., read_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., actor_name: _Optional[str] = ..., actor_avatar_url: _Optional[str] = ...) -> None: ...
 
 class ListNotificationsRequest(_message.Message):
     __slots__ = ("organization_id", "page", "page_size", "is_read", "notification_types")
@@ -169,20 +173,32 @@ class StreamNotificationsRequest(_message.Message):
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
+class FileUpdatePayload(_message.Message):
+    __slots__ = ("file_id", "organization_id")
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    file_id: str
+    organization_id: str
+    def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
 class StreamNotificationEvent(_message.Message):
-    __slots__ = ("event_type", "notification", "timestamp")
+    __slots__ = ("event_type", "notification", "timestamp", "file_update")
     class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         EVENT_TYPE_UNSPECIFIED: _ClassVar[StreamNotificationEvent.EventType]
         EVENT_TYPE_NEW_NOTIFICATION: _ClassVar[StreamNotificationEvent.EventType]
         EVENT_TYPE_HEARTBEAT: _ClassVar[StreamNotificationEvent.EventType]
+        EVENT_TYPE_FILE_UPDATED: _ClassVar[StreamNotificationEvent.EventType]
     EVENT_TYPE_UNSPECIFIED: StreamNotificationEvent.EventType
     EVENT_TYPE_NEW_NOTIFICATION: StreamNotificationEvent.EventType
     EVENT_TYPE_HEARTBEAT: StreamNotificationEvent.EventType
+    EVENT_TYPE_FILE_UPDATED: StreamNotificationEvent.EventType
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    FILE_UPDATE_FIELD_NUMBER: _ClassVar[int]
     event_type: StreamNotificationEvent.EventType
     notification: Notification
     timestamp: _timestamp_pb2.Timestamp
-    def __init__(self, event_type: _Optional[_Union[StreamNotificationEvent.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    file_update: FileUpdatePayload
+    def __init__(self, event_type: _Optional[_Union[StreamNotificationEvent.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ...) -> None: ...

@@ -166,6 +166,20 @@ export class Notification extends Message<Notification> {
    */
   expiresAt?: Timestamp;
 
+  /**
+   * Display name of the actor who triggered the notification
+   *
+   * @generated from field: string actor_name = 13;
+   */
+  actorName = "";
+
+  /**
+   * Avatar URL of the actor (optional)
+   *
+   * @generated from field: string actor_avatar_url = 14;
+   */
+  actorAvatarUrl = "";
+
   constructor(data?: PartialMessage<Notification>) {
     super();
     proto3.util.initPartial(data, this);
@@ -186,6 +200,8 @@ export class Notification extends Message<Notification> {
     { no: 10, name: "read_at", kind: "message", T: Timestamp },
     { no: 11, name: "created_at", kind: "message", T: Timestamp },
     { no: 12, name: "expires_at", kind: "message", T: Timestamp },
+    { no: 13, name: "actor_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 14, name: "actor_avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Notification {
@@ -893,6 +909,55 @@ export class StreamNotificationsRequest extends Message<StreamNotificationsReque
 }
 
 /**
+ * Payload for file update events (processing completed)
+ *
+ * @generated from message notifications.v1.FileUpdatePayload
+ */
+export class FileUpdatePayload extends Message<FileUpdatePayload> {
+  /**
+   * File ID that was updated
+   *
+   * @generated from field: string file_id = 1;
+   */
+  fileId = "";
+
+  /**
+   * Organization context
+   *
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId = "";
+
+  constructor(data?: PartialMessage<FileUpdatePayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.FileUpdatePayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "file_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FileUpdatePayload {
+    return new FileUpdatePayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FileUpdatePayload {
+    return new FileUpdatePayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FileUpdatePayload {
+    return new FileUpdatePayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FileUpdatePayload | PlainMessage<FileUpdatePayload> | undefined, b: FileUpdatePayload | PlainMessage<FileUpdatePayload> | undefined): boolean {
+    return proto3.util.equals(FileUpdatePayload, a, b);
+  }
+}
+
+/**
  * Event sent via the streaming RPC
  *
  * @generated from message notifications.v1.StreamNotificationEvent
@@ -919,6 +984,13 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
    */
   timestamp?: Timestamp;
 
+  /**
+   * File update payload (present for FILE_UPDATED events)
+   *
+   * @generated from field: notifications.v1.FileUpdatePayload file_update = 4;
+   */
+  fileUpdate?: FileUpdatePayload;
+
   constructor(data?: PartialMessage<StreamNotificationEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -930,6 +1002,7 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
     { no: 1, name: "event_type", kind: "enum", T: proto3.getEnumType(StreamNotificationEvent_EventType) },
     { no: 2, name: "notification", kind: "message", T: Notification },
     { no: 3, name: "timestamp", kind: "message", T: Timestamp },
+    { no: 4, name: "file_update", kind: "message", T: FileUpdatePayload },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamNotificationEvent {
@@ -973,11 +1046,19 @@ export enum StreamNotificationEvent_EventType {
    * @generated from enum value: EVENT_TYPE_HEARTBEAT = 2;
    */
   HEARTBEAT = 2,
+
+  /**
+   * File processing completed
+   *
+   * @generated from enum value: EVENT_TYPE_FILE_UPDATED = 3;
+   */
+  FILE_UPDATED = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(StreamNotificationEvent_EventType)
 proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.StreamNotificationEvent.EventType", [
   { no: 0, name: "EVENT_TYPE_UNSPECIFIED" },
   { no: 1, name: "EVENT_TYPE_NEW_NOTIFICATION" },
   { no: 2, name: "EVENT_TYPE_HEARTBEAT" },
+  { no: 3, name: "EVENT_TYPE_FILE_UPDATED" },
 ]);
 

@@ -1085,6 +1085,27 @@ export class FileMetadata extends Message<FileMetadata> {
    */
   error?: string;
 
+  /**
+   * Audio bitrate in bits/sec
+   *
+   * @generated from field: optional int32 bitrate = 10;
+   */
+  bitrate?: number;
+
+  /**
+   * Audio sample rate in Hz
+   *
+   * @generated from field: optional int32 sample_rate = 11;
+   */
+  sampleRate?: number;
+
+  /**
+   * Number of audio channels
+   *
+   * @generated from field: optional int32 channels = 12;
+   */
+  channels?: number;
+
   constructor(data?: PartialMessage<FileMetadata>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1102,6 +1123,9 @@ export class FileMetadata extends Message<FileMetadata> {
     { no: 7, name: "page_count", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 8, name: "exif", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 9, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "bitrate", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 11, name: "sample_rate", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 12, name: "channels", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FileMetadata {

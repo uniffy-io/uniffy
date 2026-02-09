@@ -6,7 +6,8 @@ Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar,
 
 ```bash
 ./run.sh proto  # generate protos
-./run.sh lint   # run linters
+./run.sh lint-backend # run backend linters
+./run.sh lint-frontend # run frontend linters
 ./run.sh dev    # run backend + frontend + worker
 ./run.sh        # show all commands
 ```

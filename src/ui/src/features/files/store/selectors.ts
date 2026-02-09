@@ -142,11 +142,15 @@ export const selectFilesForCurrentFolderAndScope = createSelector(
         // Start with non-deleted files only
         let filtered = files.filter(f => !f.isDeleted);
 
-        // If an active filter is set, apply it first (across all files, ignoring folder)
+        // If an active filter is set, apply criteria AND respect folder navigation
         if (activeFilterCriteria) {
             filtered = filtered.filter(f => matchesFilterCriteria(f, activeFilterCriteria));
-            // When filter is active, we show all matching files regardless of folder
-            // (folderId is set to "all" when applying a filter)
+            // Apply folder filtering (treat "all" as root)
+            if (folderId === 'all' || !folderId) {
+                filtered = filtered.filter(f => !f.folderId);
+            } else {
+                filtered = filtered.filter(f => f.folderId === folderId);
+            }
         } else {
             // No active filter - apply folder filtering
             // For "Shared With Me", show ALL shared files regardless of folder
@@ -218,6 +222,41 @@ export const selectAllTreeNodes = createSelector(
 );
 
 /**
+ * Build a set of folder IDs that contain matching files at any depth.
+ * Walks up from each matching file's folder to root, marking every
+ * ancestor folder as "has matching content".
+ */
+function collectFolderIdsWithMatches(
+    matchingFiles: SerializedFile[],
+    treeNodes: SerializedTreeNode[],
+): Set<string> {
+    const result = new Set<string>();
+
+    // Build folder -> parent lookup
+    const parentMap = new Map<string, string | null>();
+    function buildMap(nodes: SerializedTreeNode[]) {
+        for (const node of nodes) {
+            if (node.isFolder) {
+                parentMap.set(node.id, node.parentId || null);
+                if (node.children) buildMap(node.children);
+            }
+        }
+    }
+    buildMap(treeNodes);
+
+    for (const file of matchingFiles) {
+        let id: string | null = file.folderId || null;
+        while (id) {
+            if (result.has(id)) break;
+            result.add(id);
+            id = parentMap.get(id) ?? null;
+        }
+    }
+
+    return result;
+}
+
+/**
  * Helper to find folders from tree nodes recursively.
  */
 function findFoldersWithParent(nodes: SerializedTreeNode[], parentId: string | null): SerializedTreeNode[] {
@@ -242,11 +281,26 @@ function findFoldersWithParent(nodes: SerializedTreeNode[], parentId: string | n
 
 /**
  * Select subfolders for the current folder (memoized).
+ * When a filter is active, only returns folders that contain
+ * at least one matching file at any depth.
  */
 export const selectSubfoldersForCurrentFolder = createSelector(
-    [selectAllTreeNodes, selectCurrentFolderId],
-    (treeNodes, folderId) => {
-        return findFoldersWithParent(treeNodes, folderId);
+    [selectAllTreeNodes, selectCurrentFolderId, selectActiveFilterCriteria, selectAllFiles],
+    (treeNodes, folderId, activeFilterCriteria, allFiles) => {
+        // When filter is active, treat "all" as root
+        const parentId = (activeFilterCriteria && folderId === 'all') ? null : folderId;
+        const folders = findFoldersWithParent(treeNodes, parentId);
+
+        if (!activeFilterCriteria) {
+            return folders;
+        }
+
+        // Only keep folders that contain at least one matching file (at any depth)
+        const matchingFiles = allFiles.filter(f =>
+            !f.isDeleted && matchesFilterCriteria(f, activeFilterCriteria)
+        );
+        const relevantIds = collectFolderIdsWithMatches(matchingFiles, treeNodes);
+        return folders.filter(f => relevantIds.has(f.id));
     }
 );
 

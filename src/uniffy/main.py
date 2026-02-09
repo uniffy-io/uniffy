@@ -62,7 +62,7 @@ async def _serve_with_shutdown(app, config: Config) -> None:
     streaming handlers keep running for the full graceful_timeout, during
     which the frontend cannot open any new connections.
     """
-    from uniffy.core.pubsub import signal_pubsub_shutdown
+    from uniffy.core.valkey import signal_pubsub_shutdown
 
     shutdown_event = asyncio.Event()
     loop = asyncio.get_running_loop()

@@ -11,10 +11,11 @@ import type { Icon } from '@phosphor-icons/react';
 import { SearchResultType } from '@/gen/search/v1/search_pb';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import { cn } from '@/shared/utils/cn';
-import { UrnType } from '@/shared/utils/urn';
+import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { type UrnTypeTheme } from '@/config/theme/urnColors';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
+import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 
 /** Map SearchResultType to UrnType */
 const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
@@ -42,6 +43,35 @@ function getResultTheme(type: SearchResultType): ResultTheme {
     icon: config.icon,
     label: config.label,
   };
+}
+
+/**
+ * Thumbnail icon for FILE search results.
+ * Falls back to the standard icon badge on error or missing thumbnail.
+ */
+function SearchFileIcon({ urn, isSelected, fallback }: {
+    urn: string;
+    isSelected: boolean;
+    fallback: React.ReactNode;
+}) {
+    const { id: fileId } = parseUrn(urn);
+    const { url } = useThumbnailUrl(fileId || null);
+    const [error, setError] = useState(false);
+
+    if (!url || error) return <>{fallback}</>;
+
+    return (
+        <img
+            src={url}
+            alt=""
+            className={cn(
+                'w-8 h-8 object-cover rounded-md shrink-0',
+                isSelected ? 'ring-1 ring-white/20' : ''
+            )}
+            loading="lazy"
+            onError={() => setError(true)}
+        />
+    );
 }
 
 interface SearchResultsListProps {
@@ -216,16 +246,34 @@ export function SearchResultsList({
                       )} />
                     )}
 
-                    {/* Icon badge */}
-                    <div className={cn(
-                      'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
-                      'transition-all duration-200',
-                      isSelected ? theme.iconBg : 'bg-muted'
-                    )}>
-                      <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
-                        isSelected ? 'text-white' : 'text-muted-foreground'
-                      )} />
-                    </div>
+                    {/* Icon badge / thumbnail */}
+                    {result.type === SearchResultType.FILE ? (
+                      <SearchFileIcon
+                        urn={result.urn}
+                        isSelected={isSelected}
+                        fallback={
+                          <div className={cn(
+                            'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
+                            'transition-all duration-200',
+                            isSelected ? theme.iconBg : 'bg-muted'
+                          )}>
+                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
+                              isSelected ? 'text-white' : 'text-muted-foreground'
+                            )} />
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <div className={cn(
+                        'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
+                        'transition-all duration-200',
+                        isSelected ? theme.iconBg : 'bg-muted'
+                      )}>
+                        <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
+                          isSelected ? 'text-white' : 'text-muted-foreground'
+                        )} />
+                      </div>
+                    )}
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">

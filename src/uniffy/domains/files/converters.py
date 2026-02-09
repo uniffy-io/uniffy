@@ -4,6 +4,7 @@ from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.shared import VisibilityScope
 from uniffy.gen.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
@@ -136,21 +137,21 @@ def file_to_proto(
             )
         )
 
-    # Build metadata from file_metadata JSONB field
-    if file.file_metadata:
-        proto_file.metadata.CopyFrom(_build_file_metadata(file.file_metadata))
+    # Build metadata from FileMediaInfo relationship
+    if file.media_info:
+        proto_file.metadata.CopyFrom(_build_file_metadata_from_model(file.media_info))
 
     return proto_file
 
 
-def _build_file_metadata(metadata: dict) -> ProtoFileMetadata:
+def _build_file_metadata_from_model(info: FileMediaInfo) -> ProtoFileMetadata:
     """
-    Build FileMetadata proto from file_metadata dict.
+    Build FileMetadata proto from a FileMediaInfo model instance.
 
     Parameters
     ----------
-    metadata : dict
-        The file_metadata JSONB field from the File model.
+    info : FileMediaInfo
+        The FileMediaInfo model.
 
     Returns
     -------
@@ -159,37 +160,32 @@ def _build_file_metadata(metadata: dict) -> ProtoFileMetadata:
 
     """
     proto_meta = ProtoFileMetadata(
-        has_thumbnail="thumbnail_key" in metadata,
+        has_thumbnail=info.thumbnail_key is not None,
     )
 
-    # Dimensions
-    if "width" in metadata:
-        proto_meta.width = int(metadata["width"])
-    if "height" in metadata:
-        proto_meta.height = int(metadata["height"])
-
-    # Image format and color mode
-    if "format" in metadata:
-        proto_meta.format = str(metadata["format"])
-    if "mode" in metadata:
-        proto_meta.color_mode = str(metadata["mode"])
-
-    # Duration for video/audio
-    if "duration_seconds" in metadata:
-        proto_meta.duration_seconds = float(metadata["duration_seconds"])
-
-    # PDF page count
-    if "page_count" in metadata:
-        proto_meta.page_count = int(metadata["page_count"])
-
-    # EXIF data (convert all values to strings)
-    if "exif" in metadata and isinstance(metadata["exif"], dict):
-        for key, value in metadata["exif"].items():
+    if info.width is not None:
+        proto_meta.width = info.width
+    if info.height is not None:
+        proto_meta.height = info.height
+    if info.format:
+        proto_meta.format = info.format
+    if info.color_mode:
+        proto_meta.color_mode = info.color_mode
+    if info.duration_seconds is not None:
+        proto_meta.duration_seconds = info.duration_seconds
+    if info.page_count is not None:
+        proto_meta.page_count = info.page_count
+    if info.exif and isinstance(info.exif, dict):
+        for key, value in info.exif.items():
             proto_meta.exif[str(key)] = str(value)
-
-    # Error message if extraction failed
-    if "extraction_error" in metadata:
-        proto_meta.error = str(metadata["extraction_error"])
+    if info.bitrate is not None:
+        proto_meta.bitrate = info.bitrate
+    if info.sample_rate is not None:
+        proto_meta.sample_rate = info.sample_rate
+    if info.channels is not None:
+        proto_meta.channels = info.channels
+    if info.extraction_error:
+        proto_meta.error = info.extraction_error
 
     return proto_meta
 

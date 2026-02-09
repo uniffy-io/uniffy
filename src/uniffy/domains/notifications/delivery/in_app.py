@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.notifications.notification import Notification
-from uniffy.core.pubsub import publish_notification
+from uniffy.core.valkey import publish_notification
 from uniffy.domains.notifications.converters import notification_type_to_proto
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter
 
@@ -103,6 +103,7 @@ class InAppAdapter(DeliveryAdapter):
     async def publish_realtime(
         self,
         notification: Notification,
+        actor_name: str = "",
     ) -> None:
         """
         Publish notification to Valkey Pub/Sub for real-time delivery.
@@ -113,6 +114,8 @@ class InAppAdapter(DeliveryAdapter):
         ----------
         notification : Notification
             The persisted notification (with DB-generated ID).
+        actor_name : str
+            Display name of the actor who triggered the notification.
 
         """
         payload = {
@@ -126,6 +129,7 @@ class InAppAdapter(DeliveryAdapter):
             "body": notification.body or "",
             "source_urn": notification.source_urn or "",
             "actor_id": str(notification.actor_id) if notification.actor_id else "",
+            "actor_name": actor_name,
             "is_read": False,
             "created_at": notification.created_at.isoformat(),
         }

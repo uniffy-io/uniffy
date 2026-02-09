@@ -201,10 +201,10 @@ export function FileCard({
                     {hasThumbnail ? (
                         <ThumbnailImage
                             file={file}
-                            fallback={renderFileIcon(file.mimeType, 24, "text-blue-500")}
+                            fallback={renderFileIcon(file.mimeType, 24, "text-primary")}
                         />
                     ) : (
-                        renderFileIcon(file.mimeType, 24, "text-blue-500")
+                        renderFileIcon(file.mimeType, 24, "text-primary")
                     )}
                 </div>
 
@@ -350,12 +350,12 @@ export function FileCard({
                         file={file}
                         fallback={
                             <div className="w-full h-full flex items-center justify-center">
-                                {renderFileIcon(file.mimeType, config.iconSize, "text-blue-500")}
+                                {renderFileIcon(file.mimeType, config.iconSize, "text-primary")}
                             </div>
                         }
                     />
                 ) : (
-                    renderFileIcon(file.mimeType, config.iconSize, "text-blue-500")
+                    renderFileIcon(file.mimeType, config.iconSize, "text-primary")
                 )}
 
                 {/* Checkbox (only visible in select mode) */}

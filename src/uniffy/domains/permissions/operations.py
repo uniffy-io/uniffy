@@ -7,6 +7,7 @@ grant, revoke, update, list, and search operations.
 from datetime import UTC, datetime
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +23,7 @@ from uniffy.core.models.shared import (
     SubjectType,
     VisibilityScope,
 )
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 
 
 class PermissionsOperations:
@@ -45,6 +46,66 @@ class PermissionsOperations:
         """
         self.session = session
         self.permission_checker = PermissionChecker(session)
+
+    async def _sync_search_sharing(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> None:
+        """
+        Sync sharing metadata in the search index after permission changes.
+
+        Queries all current ContentPermission records for the content and
+        sends a partial update to Meilisearch with the latest shared_user_ids
+        and shared_group_ids.
+
+        Parameters
+        ----------
+        organization_id : UUID
+            Organization context.
+        content_type : ContentType
+            Type of content.
+        content_id : UUID
+            ID of the content.
+
+        """
+        try:
+            # Get all current permissions for this content
+            result = await self.session.execute(
+                select(
+                    ContentPermission.subject_type,
+                    ContentPermission.subject_id,
+                ).where(
+                    ContentPermission.organization_id == organization_id,
+                    ContentPermission.content_type == content_type,
+                    ContentPermission.content_id == content_id,
+                )
+            )
+            rows = result.all()
+
+            shared_user_ids: list[UUID] = []
+            shared_group_ids: list[UUID] = []
+            for subject_type, subject_id in rows:
+                if subject_type == SubjectType.USER:
+                    shared_user_ids.append(subject_id)
+                elif subject_type == SubjectType.GROUP:
+                    shared_group_ids.append(subject_id)
+
+            urn = build_content_urn(content_type, content_id)
+            indexer = SearchIndexer()
+            await indexer.update_sharing(
+                urn=urn,
+                organization_id=organization_id,
+                shared_user_ids=shared_user_ids,
+                shared_group_ids=shared_group_ids,
+            )
+        except Exception:
+            # Non-fatal: search index will be stale but permissions still work
+            logger.warning(
+                "Failed to sync search sharing metadata",
+                exc_info=True,
+            )
 
     async def _resolve_notification_targets(
         self,
@@ -190,6 +251,7 @@ class PermissionsOperations:
                 target_user_ids=target_ids,
             ))
 
+            await self._sync_search_sharing(organization_id, content_type, content_id)
             return existing
 
         # Create new permission
@@ -225,6 +287,7 @@ class PermissionsOperations:
             target_user_ids=target_ids,
         ))
 
+        await self._sync_search_sharing(organization_id, content_type, content_id)
         return permission
 
     async def revoke_permission(
@@ -294,6 +357,9 @@ class PermissionsOperations:
             target_user_ids=target_ids,
         ))
 
+        await self._sync_search_sharing(
+            organization_id, revoked_content_type, revoked_content_id
+        )
         return True
 
     async def update_permission(

@@ -147,21 +147,6 @@ export function EditorCanvas({
 
     const transform = transforms.length > 0 ? transforms.join(' ') : undefined;
 
-    // Debug logging
-    console.log('[EditorCanvas] Props:', {
-        imageUrl: imageUrl ? 'exists' : null,
-        loading,
-        rotation,
-        cropActive,
-    });
-    console.log('[EditorCanvas] Dimensions:',
-        'container:', containerSize.width, 'x', containerSize.height,
-        'image:', imageDimensions.width, 'x', imageDimensions.height,
-        'display:', displayDims.width, 'x', displayDims.height,
-        'offset:', displayDims.offsetX, displayDims.offsetY,
-        'imageLoaded:', imageLoaded
-    );
-
     // Show loading state
     if (loading || !imageUrl) {
         console.log('[EditorCanvas] Showing loading spinner');
@@ -200,13 +185,8 @@ export function EditorCanvas({
                         opacity: imageLoaded ? 1 : 0,
                         transition: 'opacity 0.2s ease-out',
                     }}
-                    onLoad={() => {
-                        console.log('[EditorCanvas] Image loaded!');
-                        handleImageLoad();
-                    }}
-                    onError={(e) => {
-                        console.error('[EditorCanvas] Image load error:', e);
-                    }}
+                    onLoad={handleImageLoad}
+                    onError={() => {}}
                     draggable={false}
                 />
 

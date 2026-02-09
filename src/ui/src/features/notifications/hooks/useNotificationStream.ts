@@ -9,6 +9,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { fetchFile } from '@/features/files/store/filesSlice';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
 import { addRealtimeNotification } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
@@ -32,6 +33,7 @@ export function useNotificationStream() {
 
         let backoff = INITIAL_BACKOFF_MS;
         let mounted = true;
+        const pendingFileUpdates = new Map<string, ReturnType<typeof setTimeout>>();
 
         async function connect() {
             while (mounted) {
@@ -62,12 +64,27 @@ export function useNotificationStream() {
                                 body: n.body,
                                 sourceUrn: n.sourceUrn,
                                 actorId: n.actorId,
+                                actorName: n.actorName,
+                                actorAvatarUrl: n.actorAvatarUrl,
                                 isRead: n.isRead,
                                 readAt: n.readAt?.toDate().toISOString() ?? null,
                                 createdAt: n.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
                                 expiresAt: n.expiresAt?.toDate().toISOString() ?? null,
                             };
                             dispatch(addRealtimeNotification(serialized));
+                        }
+
+                        // File processing completed -- debounce per file
+                        if (event.eventType === StreamNotificationEvent_EventType.FILE_UPDATED && event.fileUpdate) {
+                            const fileId = event.fileUpdate.fileId;
+                            if (fileId) {
+                                const existing = pendingFileUpdates.get(fileId);
+                                if (existing) clearTimeout(existing);
+                                pendingFileUpdates.set(fileId, setTimeout(() => {
+                                    pendingFileUpdates.delete(fileId);
+                                    dispatch(fetchFile(fileId));
+                                }, 500));
+                            }
                         }
                         // Heartbeats are silently consumed (keep-alive)
                     }
@@ -89,6 +106,10 @@ export function useNotificationStream() {
             mounted = false;
             abortRef.current?.abort();
             abortRef.current = null;
+            for (const timer of pendingFileUpdates.values()) {
+                clearTimeout(timer);
+            }
+            pendingFileUpdates.clear();
         };
     }, [dispatch, organizationId, isAuthenticated]);
 }

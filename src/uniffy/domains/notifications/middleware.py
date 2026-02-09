@@ -22,7 +22,6 @@ import asyncio
 import contextlib
 import contextvars
 
-from loguru import logger
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 # Context variable holding the disconnect event for the current request.
@@ -79,7 +78,6 @@ class StreamDisconnectMiddleware:
             while True:
                 msg = await receive()
                 if msg.get("type") == "http.disconnect":
-                    logger.info("client disconnect detected")
                     disconnect.set()
                     return
 

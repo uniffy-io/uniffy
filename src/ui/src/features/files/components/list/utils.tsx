@@ -82,6 +82,18 @@ const THUMBNAIL_MIME_TYPES = new Set([
     'video/x-matroska',
     'video/mpeg',
     'video/ogg',
+    // Audio (album art thumbnails)
+    'audio/mpeg',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/flac',
+    'audio/x-flac',
+    'audio/aac',
+    'audio/ogg',
+    'audio/mp4',
+    'audio/x-m4a',
+    'audio/opus',
+    'audio/webm',
 ]);
 
 /**

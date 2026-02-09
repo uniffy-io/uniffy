@@ -63,13 +63,11 @@ export function FileViewerModal() {
 
     // Enter edit mode
     const handleEdit = useCallback(() => {
-        console.log('[FileViewerModal] Entering edit mode');
         setIsEditing(true);
     }, []);
 
     // Exit edit mode
     const handleExitEdit = useCallback(() => {
-        console.log('[FileViewerModal] Exiting edit mode');
         setIsEditing(false);
     }, []);
 

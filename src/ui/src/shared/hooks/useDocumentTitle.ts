@@ -7,10 +7,6 @@ const APP_NAME = 'Uniffy';
  *
  * Format: "{Title} | Uniffy" (content first, brand last)
  *
- * This follows the pattern used by modern SaaS applications like:
- * - Notion: "Page Name | Notion"
- * - Linear: "Issue Title | Linear"
- * - Figma: "File Name – Figma"
  *
  * @param title - The page/content title. If not provided, shows just "Uniffy"
  *

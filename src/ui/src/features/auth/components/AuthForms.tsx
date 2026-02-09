@@ -7,6 +7,7 @@ import { setCredentials } from "@/features/auth/store/authSlice";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { transport, setMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { defaultTheme } from "@/config/theme/types";
 import {
   Envelope,
@@ -543,7 +544,7 @@ function BrandContent() {
         style={{ animation: 'auth-slide-up 0.6s ease-out 0.2s forwards' }}
       >
         <div className="flex items-center gap-4">
-          <img src="/favicon.svg" alt="Uniffy" className="w-12 h-12" />
+          <UniffyLogo className="w-12 h-12" variant="dark" />
           <span className="text-white text-3xl font-bold tracking-tight">uniffy</span>
         </div>
       </div>
@@ -770,7 +771,7 @@ export function AuthForms() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-12 lg:px-20 relative z-[2]">
           {/* Mobile logo — only shown on smaller screens */}
           <div className="lg:hidden mb-10 flex items-center gap-3">
-            <img src="/favicon.svg" alt="Uniffy" className="w-14 h-14" />
+            <UniffyLogo className="w-14 h-14" />
             <span className="text-foreground text-xl font-bold tracking-tight">UNIFFY</span>
           </div>
 

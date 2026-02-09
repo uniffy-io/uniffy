@@ -10,7 +10,6 @@ Channel naming: notifications:{user_id}
 import asyncio
 import contextlib
 import json
-import os
 from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
@@ -18,6 +17,7 @@ from uuid import UUID
 import redis.asyncio as aioredis
 from loguru import logger
 
+from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.observability.metrics import PUBSUB_ACTIVE_SUBSCRIBERS
 
 # Socket-level timeouts (seconds) for all Valkey connections.
@@ -39,28 +39,18 @@ _shutdown_event: asyncio.Event | None = None
 LOGGER_COMPONENT = "pubsub"
 
 
-def _get_valkey_url() -> str:
-    """Build Valkey URL from environment variables."""
-    host = os.getenv("VALKEY_HOST", "localhost")
-    port = os.getenv("VALKEY_PORT", "6380")
-    password = os.getenv("VALKEY_PASSWORD", "uniffy-valkey-dev")
-    db = os.getenv("VALKEY_PUBSUB_DATABASE", "1")
-    return f"redis://:{password}@{host}:{port}/{db}"
-
-
 async def init_pubsub() -> None:
     """
     Initialize the global Pub/Sub publisher connection.
 
     Should be called during application/worker startup.
-    Uses a separate database from ARQ to avoid conflicts.
 
     """
     global _publisher, _shutdown_event
 
     _shutdown_event = asyncio.Event()
 
-    url = _get_valkey_url()
+    url = ValkeyConfig.from_env().to_url()
     _publisher = aioredis.from_url(
         url,
         decode_responses=True,
@@ -172,7 +162,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
     """
     PUBSUB_ACTIVE_SUBSCRIBERS.inc()
 
-    url = _get_valkey_url()
+    url = ValkeyConfig.from_env().to_url()
     subscriber = aioredis.from_url(
         url,
         decode_responses=True,
@@ -200,7 +190,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
                 try:
                     data = json.loads(message["data"])
                     yield data
-                except json.JSONDecodeError, TypeError:
+                except (json.JSONDecodeError, TypeError):
                     logger.warning(f"Invalid message on channel {channel}")
             else:
                 # Timeout tick -- caller can use for heartbeats / cancellation
@@ -213,7 +203,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
                 _close_subscriber(pubsub, subscriber, channel),
                 timeout=_CLEANUP_TIMEOUT,
             )
-        except TimeoutError, BaseException:
+        except (TimeoutError, BaseException):
             logger.warning(f"cleanup timed out for {channel}", component=LOGGER_COMPONENT)
         logger.info(f"unsubscribed from {channel} ", component=LOGGER_COMPONENT)
 

@@ -461,6 +461,7 @@ class BaseContentOperations[TModel](ABC):
         group_ids: list[UUID],
     ) -> None:
         """Index content for unified search."""
+        shared_user_ids = await self._get_shared_user_ids(model.id)
         await self.search_indexer.index(
             urn=build_content_urn(self.content_type, model.id),
             organization_id=model.organization_id,
@@ -472,8 +473,23 @@ class BaseContentOperations[TModel](ABC):
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),
             shared_group_ids=group_ids if group_ids else None,
+            shared_user_ids=shared_user_ids if shared_user_ids else None,
             tags=self._get_search_tags(model),
         )
+
+    async def _get_shared_user_ids(self, content_id: UUID) -> list[UUID]:
+        """Get user IDs with explicit permissions on this content."""
+        from uniffy.core.models.permissions.content_permission import ContentPermission
+        from uniffy.core.models.shared import SubjectType
+
+        result = await self.session.execute(
+            select(ContentPermission.subject_id).where(
+                ContentPermission.content_type == self.content_type,
+                ContentPermission.content_id == content_id,
+                ContentPermission.subject_type == SubjectType.USER,
+            )
+        )
+        return [row[0] for row in result.all()]
 
     # ─────────────────────────────────────────────────────────────
     # Group link management

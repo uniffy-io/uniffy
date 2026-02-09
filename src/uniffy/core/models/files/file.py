@@ -2,14 +2,14 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy import BigInteger, Column, DateTime
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
+from uniffy.core.models.files.media_info import FileMediaInfo  # noqa: F401
 from uniffy.core.models.shared import VisibilityScope
 from uniffy.core.types import generate_id
 
@@ -80,8 +80,6 @@ class File(SQLModel, table=True):
         Tags for categorization.
     description : str | None
         Optional description for search.
-    file_metadata : dict | None
-        Additional metadata (dimensions, duration, exif, etc).
     version : int
         Version number for optimistic locking.
     current_version_id : UUID | None
@@ -126,7 +124,6 @@ class File(SQLModel, table=True):
     folder_id: UUID | None = Field(default=None, foreign_key="files_folders.id", index=True)
     tags: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     description: str | None = Field(default=None, max_length=2000)
-    file_metadata: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     version: int = Field(default=1, nullable=False)
     current_version_id: UUID | None = Field(
         default=None, foreign_key="files_file_versions.id", nullable=True
@@ -152,6 +149,14 @@ class File(SQLModel, table=True):
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
+    )
+
+    media_info: FileMediaInfo | None = Relationship(
+        sa_relationship_kwargs={
+            "uselist": False,
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+        },
     )
 
     @property

@@ -45,6 +45,7 @@ import {
     deleteFolder,
 } from '@/features/files/store/filesTreeSlice';
 import { setFolderId, setViewScope, initializeFilesData, restoreFile } from '@/features/files/store/filesSlice';
+import { openViewer } from '@/features/files/store/viewerSlice';
 import { selectDeletedFiles } from '@/features/files/store/selectors';
 import { toggleUploadPanel } from '@/features/files/store/uploadSlice';
 import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
@@ -550,6 +551,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                 if (selectedFolderId === folderId) {
                     handleSelectFolder(null);
                 }
+                dispatch(fetchFilesTree({ includeFiles: false }));
             } catch (err) {
                 console.error('Failed to delete folder:', err);
             }
@@ -580,17 +582,12 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
         }
     }, [dispatch, hasTransferActivity, onUpload]);
 
-    // Navigate to a file
-    const handleNavigateToFile = useCallback(
+    // Open bookmarked file in viewer
+    const handleOpenBookmarkedFile = useCallback(
         (fileId: string) => {
-            const file = files[fileId];
-            if (file?.folderId) {
-                navigate(`/files?folder=${file.folderId}`);
-            } else {
-                navigate('/files');
-            }
+            dispatch(openViewer({ fileId }));
         },
-        [files, navigate]
+        [dispatch]
     );
 
     // Restore file from trash
@@ -600,6 +597,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
             try {
                 setRestoringFileId(fileId);
                 await dispatch(restoreFile(fileId)).unwrap();
+                dispatch(fetchFilesTree({ includeFiles: false }));
             } catch (error) {
                 console.error('Failed to restore file:', error);
             } finally {
@@ -668,7 +666,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                                     <div
                                         key={node.id}
                                         className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left cursor-pointer group"
-                                        onClick={() => handleNavigateToFile(node.id)}
+                                        onClick={() => handleOpenBookmarkedFile(node.id)}
                                     >
                                         <File size={16} weight="duotone" className="text-muted-foreground flex-shrink-0" />
                                         <BookmarkSimple size={12} weight="fill" className="text-primary flex-shrink-0" />

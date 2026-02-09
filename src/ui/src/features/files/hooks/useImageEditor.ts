@@ -67,15 +67,7 @@ export function useImageEditor(options: UseImageEditorOptions) {
     const hasChanges = useAppSelector(selectHasChanges);
 
     // Get the image URL from file download hook
-    const { url: downloadedImageUrl, loading: downloadLoading, error: downloadError } = useFileDownload(fileId);
-
-    // Debug logging
-    console.log('[useImageEditor] Download state:', {
-        fileId,
-        downloadedImageUrl: downloadedImageUrl ? 'exists' : null,
-        downloadLoading,
-        downloadError,
-    });
+    const { url: downloadedImageUrl, loading: downloadLoading } = useFileDownload(fileId);
 
     // Local state for canvas reference
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -83,8 +75,6 @@ export function useImageEditor(options: UseImageEditorOptions) {
 
     // Track if the downloaded URL is ready (not just loading=false, but URL is actually available)
     const isImageReady = !downloadLoading && !!downloadedImageUrl;
-
-    console.log('[useImageEditor] isImageReady:', isImageReady);
 
     // Enter edit mode when image is available
     const startEditing = useCallback(() => {
@@ -236,11 +226,11 @@ export function useImageEditor(options: UseImageEditorOptions) {
                     : `${newFilename}.${extension}`;
                 const file = new File([blob], finalFilename, { type: format });
 
-                // Calculate chunk size (1MB chunks)
-                const CHUNK_SIZE = 1024 * 1024;
-                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                if (file.size === 0) {
+                    throw new Error('Export produced an empty image');
+                }
 
-                // Initiate upload
+                // Initiate upload - server returns optimal chunk size
                 const initResponse = await filesApi.initiateUpload({
                     organizationId,
                     filename: finalFilename,
@@ -249,11 +239,13 @@ export function useImageEditor(options: UseImageEditorOptions) {
                 });
 
                 const uploadId = initResponse.uploadId;
+                const chunkSize = initResponse.chunkSize;
+                const totalChunks = initResponse.totalChunks;
 
-                // Upload chunks
+                // Upload chunks using server-provided chunk size
                 for (let i = 0; i < totalChunks; i++) {
-                    const start = i * CHUNK_SIZE;
-                    const end = Math.min(start + CHUNK_SIZE, file.size);
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, file.size);
                     const chunk = file.slice(start, end);
                     const arrayBuffer = await chunk.arrayBuffer();
 
@@ -300,11 +292,11 @@ export function useImageEditor(options: UseImageEditorOptions) {
                 const finalFilename = `${baseName}.${extension}`;
                 const file = new File([blob], finalFilename, { type: format });
 
-                // Calculate chunk size (1MB chunks)
-                const CHUNK_SIZE = 1024 * 1024;
-                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                if (file.size === 0) {
+                    throw new Error('Export produced an empty image');
+                }
 
-                // Initiate upload
+                // Initiate upload - server returns optimal chunk size
                 const initResponse = await filesApi.initiateUpload({
                     organizationId,
                     filename: finalFilename,
@@ -313,11 +305,13 @@ export function useImageEditor(options: UseImageEditorOptions) {
                 });
 
                 const uploadId = initResponse.uploadId;
+                const chunkSize = initResponse.chunkSize;
+                const totalChunks = initResponse.totalChunks;
 
-                // Upload chunks
+                // Upload chunks using server-provided chunk size
                 for (let i = 0; i < totalChunks; i++) {
-                    const start = i * CHUNK_SIZE;
-                    const end = Math.min(start + CHUNK_SIZE, file.size);
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, file.size);
                     const chunk = file.slice(start, end);
                     const arrayBuffer = await chunk.arrayBuffer();
 

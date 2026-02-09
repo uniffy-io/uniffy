@@ -35,9 +35,18 @@ EXTRACTION_MIME_TYPES: dict[str, str] = {
     "image/webp": "extract_image_metadata",
     "image/bmp": "extract_image_metadata",
     "image/tiff": "extract_image_metadata",
-    # Future: PDF and video metadata
-    # "application/pdf": "extract_pdf_metadata",
-    # "video/mp4": "extract_video_metadata",
+    # Audio (metadata + album art thumbnail)
+    "audio/mpeg": "extract_audio_metadata",
+    "audio/wav": "extract_audio_metadata",
+    "audio/x-wav": "extract_audio_metadata",
+    "audio/flac": "extract_audio_metadata",
+    "audio/x-flac": "extract_audio_metadata",
+    "audio/aac": "extract_audio_metadata",
+    "audio/ogg": "extract_audio_metadata",
+    "audio/mp4": "extract_audio_metadata",
+    "audio/x-m4a": "extract_audio_metadata",
+    "audio/opus": "extract_audio_metadata",
+    "audio/webm": "extract_audio_metadata",
 }
 
 

@@ -535,6 +535,51 @@ class MeilisearchClient:
         permission_filter = " OR ".join(permission_conditions)
         return f'{org_filter} AND ({permission_filter})'
 
+    async def update_document_sharing(
+        self,
+        urn: str,
+        organization_id: UUID,
+        shared_user_ids: list[UUID],
+        shared_group_ids: list[UUID],
+    ) -> None:
+        """
+        Partial update of sharing metadata on an existing document.
+
+        Uses Meilisearch's update_documents which merges fields into
+        the existing document without replacing other fields.
+
+        Parameters
+        ----------
+        urn : str
+            Universal Resource Name.
+        organization_id : UUID
+            Organization ID.
+        shared_user_ids : list[UUID]
+            Current list of user IDs this content is shared with.
+        shared_group_ids : list[UUID]
+            Current list of group IDs this content is shared with.
+
+        """
+        doc_id = build_document_id(urn, organization_id)
+        partial = {
+            "id": doc_id,
+            "shared_user_ids": [str(uid) for uid in shared_user_ids],
+            "shared_group_ids": [str(gid) for gid in shared_group_ids],
+        }
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        await index.update_documents([partial])
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_sharing").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="update_sharing").observe(elapsed_ms / 1000)
+        logger.info(
+            "Meilisearch: update_sharing "
+            f"users={len(shared_user_ids)} groups={len(shared_group_ids)}",
+            ms=f"{elapsed_ms:.1f}",
+            urn=urn,
+        )
+
     async def get_document(self, urn: str, organization_id: UUID) -> dict[str, Any] | None:
         """
         Get a single document by URN and organization.

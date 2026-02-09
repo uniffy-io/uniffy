@@ -941,7 +941,9 @@ class FilesHandlers:
                             for file in child_files:
                                 child_nodes.append(tree_node_from_file(file))
 
-                        child_count = len(child_nodes)
+                        # Count subfolders + files (files already in child_nodes when include_files)
+                        file_count = 0 if request.include_files else len(child_files)
+                        child_count = len(child_nodes) + file_count
                         node = tree_node_from_folder(folder, child_count, folder_total_size)
                         node.children.extend(child_nodes)
                         nodes.append(node)

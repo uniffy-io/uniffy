@@ -12,8 +12,10 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
+from sqlalchemy import select
 
-from uniffy.core.pubsub import subscribe_user
+from uniffy.core.models.login.user import User
+from uniffy.core.valkey import subscribe_user
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.notifications.converters import (
@@ -28,6 +30,7 @@ from uniffy.domains.notifications.operations import (
 from uniffy.gen.notifications.v1.notifications_pb2 import (
     DeleteNotificationRequest,
     DeleteNotificationResponse,
+    FileUpdatePayload,
     GetUnreadCountRequest,
     GetUnreadCountResponse,
     ListNotificationsRequest,
@@ -109,8 +112,26 @@ class NotificationsHandlers:
                     notification_types=notification_types,
                 )
 
+                # Resolve actor display names
+                actor_ids = {n.actor_id for n in notifications if n.actor_id}
+                actor_map: dict[UUID, str] = {}
+                if actor_ids:
+                    result = await session.execute(
+                        select(User.id, User.full_name, User.username).where(
+                            User.id.in_(actor_ids)
+                        )
+                    )
+                    for row in result.all():
+                        actor_map[row[0]] = row[1] or row[2]
+
                 return ListNotificationsResponse(
-                    notifications=[notification_to_proto(n) for n in notifications],
+                    notifications=[
+                        notification_to_proto(
+                            n,
+                            actor_name=actor_map.get(n.actor_id, "") if n.actor_id else "",
+                        )
+                        for n in notifications
+                    ],
                     total_count=total_count,
                     unread_count=unread_count,
                 )
@@ -448,6 +469,18 @@ class NotificationsHandlers:
                             last_send = now
                         continue
 
+                    # File update event (from worker tasks)
+                    if payload.get("_type") == "file_updated":
+                        yield StreamNotificationEvent(
+                            event_type=StreamNotificationEvent.EVENT_TYPE_FILE_UPDATED,
+                            file_update=FileUpdatePayload(
+                                file_id=payload.get("file_id", ""),
+                                organization_id=payload.get("organization_id", ""),
+                            ),
+                        )
+                        last_send = now
+                        continue
+
                     # Real notification payload
                     logger.debug(
                         f"delivering notification {payload.get('id', '?')} to user {user_id}",
@@ -462,6 +495,7 @@ class NotificationsHandlers:
                         body=payload.get("body", ""),
                         source_urn=payload.get("source_urn", ""),
                         actor_id=payload.get("actor_id", ""),
+                        actor_name=payload.get("actor_name", ""),
                         is_read=False,
                     )
 
@@ -476,7 +510,7 @@ class NotificationsHandlers:
                     )
                     last_send = now
 
-        except asyncio.CancelledError, GeneratorExit:
+        except (asyncio.CancelledError, GeneratorExit):
             logger.info(
                 f"cancelled for user {user_id} (client disconnect)",
                 component="notifications handler",

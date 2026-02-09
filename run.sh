@@ -9,21 +9,23 @@ help() {
   echo "Usage: ./run.sh <command>"
   echo ""
   echo "Available commands:"
-  echo -e "  ${CYAN}install${NC}     Install all dependencies"
-  echo -e "  ${CYAN}proto${NC}       Generate all protobuf code (backend + UI)"
-  echo -e "  ${CYAN}clean${NC}       Clean generated files"
-  echo -e "  ${CYAN}dev${NC}         Run both backend and frontend in development mode"
-  echo -e "  ${CYAN}backend${NC}     Run backend with hot reload"
-  echo -e "  ${CYAN}ui [cmd]${NC}    Run pnpm command (default: dev)"
-  echo -e "  ${CYAN}lint${NC}        Run linters"
-  echo -e "  ${CYAN}format${NC}      Format code"
-  echo -e "  ${CYAN}test${NC}        Run tests"
-  echo -e "  ${CYAN}bench${NC}       Run performance benchmarks"
-  echo -e "  ${CYAN}db-shell${NC}    Connect to database shell"
-  echo -e "  ${CYAN}db-migrate${NC}  Run database migrations"
-  echo -e "  ${CYAN}worker${NC}      Run background worker"
-  echo -e "  ${CYAN}worker-dev${NC}  Run worker with hot reload (development)"
-  echo -e "  ${CYAN}licenses${NC}    Generate third-party license files"
+  echo -e "  ${CYAN}install${NC}       Install all dependencies"
+  echo -e "  ${CYAN}proto${NC}         Generate all protobuf code (backend + UI)"
+  echo -e "  ${CYAN}clean${NC}         Clean generated files"
+  echo -e "  ${CYAN}dev${NC}           Run both backend and frontend in development mode"
+  echo -e "  ${CYAN}backend${NC}       Run backend with hot reload"
+  echo -e "  ${CYAN}ui [cmd]${NC}      Run pnpm command (default: dev)"
+  echo -e "  ${CYAN}lint${NC}          Run linters"
+  echo -e "  ${CYAN}lint-backend${NC}  Run backend linters"
+  echo -e "  ${CYAN}lint-frontend${NC} Run frontend linters"
+  echo -e "  ${CYAN}format${NC}        Format code"
+  echo -e "  ${CYAN}test${NC}          Run tests"
+  echo -e "  ${CYAN}bench${NC}         Run performance benchmarks"
+  echo -e "  ${CYAN}db-shell${NC}      Connect to database shell"
+  echo -e "  ${CYAN}db-migrate${NC}    Run database migrations"
+  echo -e "  ${CYAN}worker${NC}        Run background worker"
+  echo -e "  ${CYAN}worker-dev${NC}    Run worker with hot reload (development)"
+  echo -e "  ${CYAN}licenses${NC}      Generate third-party license files"
   echo -e "  ${CYAN}docker-staging${NC} Build and push Docker images for staging"
 }
 
@@ -92,7 +94,15 @@ ui() {
 }
 
 lint() {
+  lint_backend  
+  lint_frontend
+}
+
+lint_backend() {
   uv run ruff check src/uniffy/ --exclude src/uniffy/gen --fix
+}
+
+lint_frontend() {
   (cd src/ui && pnpm run lint)
 }
 
@@ -160,6 +170,8 @@ dev) dev ;;
 backend) backend ;;
 ui) ui "${2:-}" ;;
 lint) lint ;;
+lint-frontend) lint_frontend ;;
+lint-backend) lint_backend ;;
 format) format ;;
 test) run_test ;;
 bench) run_bench ;;

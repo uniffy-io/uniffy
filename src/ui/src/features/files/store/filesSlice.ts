@@ -27,7 +27,15 @@ const FILES_VIEW_STORAGE_KEY = 'uniffy-files-view';
 interface FilesViewSettings {
     viewMode: 'grid' | 'list';
     iconSize: number;
+    sortBy: 'filename' | 'updated_at' | 'created_at' | 'size_bytes';
+    sortOrder: 'asc' | 'desc';
+    activeFilterId: string | null;
+    activeFilterName: string | null;
+    activeFilterCriteria: SerializedFilterCriteria | null;
 }
+
+const VALID_SORT_BY = ['filename', 'updated_at', 'created_at', 'size_bytes'];
+const VALID_SORT_ORDER = ['asc', 'desc'];
 
 function loadFilesViewSettings(): FilesViewSettings {
     try {
@@ -39,20 +47,52 @@ function loadFilesViewSettings(): FilesViewSettings {
                 iconSize: typeof parsed.iconSize === 'number'
                     ? Math.max(0, Math.min(3, parsed.iconSize))
                     : 1,
+                sortBy: VALID_SORT_BY.includes(parsed.sortBy)
+                    ? parsed.sortBy
+                    : 'updated_at',
+                sortOrder: VALID_SORT_ORDER.includes(parsed.sortOrder)
+                    ? parsed.sortOrder
+                    : 'desc',
+                activeFilterId: parsed.activeFilterId ?? null,
+                activeFilterName: parsed.activeFilterName ?? null,
+                activeFilterCriteria: parsed.activeFilterCriteria ?? null,
             };
         }
     } catch {
         // Ignore errors
     }
-    return { viewMode: 'grid', iconSize: 1 };
+    return {
+        viewMode: 'grid',
+        iconSize: 1,
+        sortBy: 'updated_at',
+        sortOrder: 'desc',
+        activeFilterId: null,
+        activeFilterName: null,
+        activeFilterCriteria: null,
+    };
 }
 
 function saveFilesViewSettings(settings: FilesViewSettings): void {
     try {
-        localStorage.setItem(FILES_VIEW_STORAGE_KEY, JSON.stringify(settings));
+        localStorage.setItem(
+            FILES_VIEW_STORAGE_KEY,
+            JSON.stringify(settings),
+        );
     } catch {
         // Ignore errors
     }
+}
+
+function persistViewState(state: FilesState): void {
+    saveFilesViewSettings({
+        viewMode: state.viewMode,
+        iconSize: state.iconSize,
+        sortBy: state.filters.sortBy,
+        sortOrder: state.filters.sortOrder,
+        activeFilterId: state.activeFilter.id,
+        activeFilterName: state.activeFilter.name,
+        activeFilterCriteria: state.activeFilter.criteria,
+    });
 }
 
 interface FilesState {
@@ -136,16 +176,16 @@ const initialState: FilesState = {
     filters: {
         searchQuery: '',
         visibility: 'all',
-        sortBy: 'updated_at',
-        sortOrder: 'desc',
+        sortBy: persistedViewSettings.sortBy,
+        sortOrder: persistedViewSettings.sortOrder,
         showDeleted: false,
         folderId: null,
         viewScope: 'all',
     },
     activeFilter: {
-        id: null,
-        name: null,
-        criteria: null,
+        id: persistedViewSettings.activeFilterId,
+        name: persistedViewSettings.activeFilterName,
+        criteria: persistedViewSettings.activeFilterCriteria,
     },
     pagination: {
         page: 1,
@@ -331,10 +371,12 @@ export const filesSlice = createSlice({
 
         setSortBy: (state, action: PayloadAction<'filename' | 'updated_at' | 'created_at' | 'size_bytes'>) => {
             state.filters.sortBy = action.payload;
+            persistViewState(state);
         },
 
         setSortOrder: (state, action: PayloadAction<'asc' | 'desc'>) => {
             state.filters.sortOrder = action.payload;
+            persistViewState(state);
         },
 
         setShowDeleted: (state, action: PayloadAction<boolean>) => {
@@ -358,6 +400,7 @@ export const filesSlice = createSlice({
                 name: action.payload.name,
                 criteria: action.payload.criteria,
             };
+            persistViewState(state);
         },
 
         clearActiveFilter: (state) => {
@@ -366,6 +409,7 @@ export const filesSlice = createSlice({
                 name: null,
                 criteria: null,
             };
+            persistViewState(state);
         },
 
         // Pagination
@@ -376,13 +420,13 @@ export const filesSlice = createSlice({
         // View mode
         setViewMode: (state, action: PayloadAction<'grid' | 'list'>) => {
             state.viewMode = action.payload;
-            saveFilesViewSettings({ viewMode: state.viewMode, iconSize: state.iconSize });
+            persistViewState(state);
         },
 
         // Icon size (0-3: small, medium, large, xlarge)
         setIconSize: (state, action: PayloadAction<number>) => {
             state.iconSize = Math.max(0, Math.min(3, action.payload));
-            saveFilesViewSettings({ viewMode: state.viewMode, iconSize: state.iconSize });
+            persistViewState(state);
         },
 
         // Details panel

@@ -10,6 +10,7 @@ from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
@@ -55,6 +56,7 @@ __all__ = [
     "Note",
     # Files models
     "File",
+    "FileMediaInfo",
     "Folder",
     "FileVersion",
     "MultipartUpload",

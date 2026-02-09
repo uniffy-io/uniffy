@@ -283,6 +283,9 @@ message FileMetadata {
   optional int32 page_count = 7;      // PDF page count
   map<string, string> exif = 8;       // EXIF data for images
   optional string error = 9;          // Error message if extraction failed
+  optional int32 bitrate = 10;        // Audio bitrate in bits/sec
+  optional int32 sample_rate = 11;    // Audio sample rate in Hz
+  optional int32 channels = 12;       // Number of audio channels
 }
 
 message FileOwner {

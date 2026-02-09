@@ -46,6 +46,8 @@ dependencies = [
   "pymupdf>=1.25.0",
   # Video thumbnail generation (requires ffmpeg binary on system)
   "ffmpeg-python>=0.2.0",
+  # Audio metadata extraction
+  "mutagen>=1.47.0",
   # Prometheus metrics
   "prometheus-client>=0.21.0",
 ]

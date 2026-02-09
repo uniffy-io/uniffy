@@ -140,24 +140,31 @@ export const filesTreeSlice = createSlice({
             .addCase(fetchFilesTree.fulfilled, (state, action) => {
                 state.loading = false;
 
-                // Organize nodes by visibility
+                // Recursively index all folders into the flat lookup map
+                const indexFolders = (nodes: SerializedTreeNode[]) => {
+                    for (const node of nodes) {
+                        if (node.isFolder) {
+                            state.folders[node.id] = {
+                                id: node.id,
+                                name: node.name,
+                                parentId: node.parentId,
+                                visibility: node.visibility,
+                                isDeleted: false,
+                            };
+                        }
+                        if (node.children) {
+                            indexFolders(node.children);
+                        }
+                    }
+                };
+                indexFolders(action.payload.nodes);
+
+                // Organize top-level nodes by visibility
                 const personal: SerializedTreeNode[] = [];
                 const shared: SerializedTreeNode[] = [];
                 const organization: SerializedTreeNode[] = [];
 
                 for (const node of action.payload.nodes) {
-                    if (node.isFolder) {
-                        // Store folder in folders map
-                        state.folders[node.id] = {
-                            id: node.id,
-                            name: node.name,
-                            parentId: node.parentId,
-                            visibility: node.visibility,
-                            isDeleted: false,
-                        };
-                    }
-
-                    // Organize by visibility
                     if (node.visibility === VisibilityScope.PRIVATE) {
                         personal.push(node);
                     } else if (node.visibility === VisibilityScope.ORGANIZATION) {

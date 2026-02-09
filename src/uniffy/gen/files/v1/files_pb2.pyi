@@ -240,7 +240,7 @@ class File(_message.Message):
     def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., filename: _Optional[str] = ..., original_filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., folder_id: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., version: _Optional[int] = ..., extraction_status: _Optional[_Union[ExtractionStatus, str]] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_permission: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., owner_info: _Optional[_Union[FileOwner, _Mapping]] = ..., metadata: _Optional[_Union[FileMetadata, _Mapping]] = ...) -> None: ...
 
 class FileMetadata(_message.Message):
-    __slots__ = ("has_thumbnail", "width", "height", "format", "color_mode", "duration_seconds", "page_count", "exif", "error")
+    __slots__ = ("has_thumbnail", "width", "height", "format", "color_mode", "duration_seconds", "page_count", "exif", "error", "bitrate", "sample_rate", "channels")
     class ExifEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -257,6 +257,9 @@ class FileMetadata(_message.Message):
     PAGE_COUNT_FIELD_NUMBER: _ClassVar[int]
     EXIF_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    BITRATE_FIELD_NUMBER: _ClassVar[int]
+    SAMPLE_RATE_FIELD_NUMBER: _ClassVar[int]
+    CHANNELS_FIELD_NUMBER: _ClassVar[int]
     has_thumbnail: bool
     width: int
     height: int
@@ -266,7 +269,10 @@ class FileMetadata(_message.Message):
     page_count: int
     exif: _containers.ScalarMap[str, str]
     error: str
-    def __init__(self, has_thumbnail: _Optional[bool] = ..., width: _Optional[int] = ..., height: _Optional[int] = ..., format: _Optional[str] = ..., color_mode: _Optional[str] = ..., duration_seconds: _Optional[float] = ..., page_count: _Optional[int] = ..., exif: _Optional[_Mapping[str, str]] = ..., error: _Optional[str] = ...) -> None: ...
+    bitrate: int
+    sample_rate: int
+    channels: int
+    def __init__(self, has_thumbnail: _Optional[bool] = ..., width: _Optional[int] = ..., height: _Optional[int] = ..., format: _Optional[str] = ..., color_mode: _Optional[str] = ..., duration_seconds: _Optional[float] = ..., page_count: _Optional[int] = ..., exif: _Optional[_Mapping[str, str]] = ..., error: _Optional[str] = ..., bitrate: _Optional[int] = ..., sample_rate: _Optional[int] = ..., channels: _Optional[int] = ...) -> None: ...
 
 class FileOwner(_message.Message):
     __slots__ = ("id", "name", "email")

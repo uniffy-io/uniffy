@@ -147,6 +147,12 @@ class OrganizationOperations:
         await attachment_ops.get_or_create_attachments_folder(owner_user_id, org.id)
         await self._session.commit()
 
+        # Seed default file filter presets
+        from uniffy.domains.files.filters.presets import create_default_presets
+
+        await create_default_presets(self._session, org.id, owner_user_id)
+        await self._session.commit()
+
         return org
 
     async def update(

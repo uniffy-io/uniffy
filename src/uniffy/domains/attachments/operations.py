@@ -5,6 +5,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
@@ -12,6 +13,7 @@ from uniffy.core.models.attachments.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import ContentType, VisibilityScope
 from uniffy.core.storage import get_s3_client
@@ -539,13 +541,15 @@ class AttachmentOperations:
         organization_id: UUID,
         file_id: UUID,
     ) -> File | None:
-        """Get a file if user has access."""
+        """Get a file if user has access, with media_info eager-loaded."""
         result = await self._session.execute(
-            select(File).where(
+            select(File)
+            .where(
                 File.id == file_id,
                 File.organization_id == organization_id,
                 File.is_deleted == False,  # noqa: E712
             )
+            .options(selectinload(File.media_info))
         )
         file = result.scalar_one_or_none()
         if not file:
@@ -562,11 +566,13 @@ class AttachmentOperations:
         )
 
         result = await self._session.execute(
-            select(File).where(
+            select(File)
+            .where(
                 File.id == file_id,
                 File.organization_id == organization_id,
                 access_filter,
             )
+            .options(selectinload(File.media_info))
         )
         return result.scalar_one_or_none()
 
@@ -589,54 +595,69 @@ class AttachmentOperations:
             content_type=source_file.mime_type,
         )
 
-        # Determine extraction status and prepare file_metadata
-        # We don't copy the thumbnail_key from source - it points to wrong file
-        file_metadata: dict | None = None
         extraction_status = ExtractionStatus.SKIPPED
-
-        # Copy non-thumbnail metadata from source
-        if source_file.file_metadata:
-            file_metadata = {
-                k: v
-                for k, v in source_file.file_metadata.items()
-                if not k.startswith("thumbnail_")
-            }
-            if not file_metadata:
-                file_metadata = None
+        new_media_info: FileMediaInfo | None = None
+        source_info = source_file.media_info
 
         # Handle thumbnail: copy if exists, or mark for processing
         if (
             source_file.extraction_status == ExtractionStatus.COMPLETED
-            and source_file.file_metadata
-            and "thumbnail_key" in source_file.file_metadata
+            and source_info
+            and source_info.thumbnail_key
         ):
             # Source has a completed thumbnail - copy it to new location
-            source_thumb_key = source_file.file_metadata["thumbnail_key"]
             new_thumb_key = f"{organization_id}/thumbnails/{new_file_id}.jpg"
 
             try:
                 await self._s3.copy_object(
-                    source_key=source_thumb_key,
+                    source_key=source_info.thumbnail_key,
                     destination_key=new_thumb_key,
                     content_type="image/jpeg",
                 )
-                # Update metadata with new thumbnail key
-                if file_metadata is None:
-                    file_metadata = {}
-                file_metadata["thumbnail_key"] = new_thumb_key
-                if "thumbnail_width" in source_file.file_metadata:
-                    file_metadata["thumbnail_width"] = source_file.file_metadata["thumbnail_width"]
-                if "thumbnail_height" in source_file.file_metadata:
-                    file_metadata["thumbnail_height"] = source_file.file_metadata["thumbnail_height"]
+                # Build new media info from source, with updated thumbnail key
+                new_media_info = FileMediaInfo(
+                    file_id=new_file_id,
+                    thumbnail_key=new_thumb_key,
+                    thumbnail_width=source_info.thumbnail_width,
+                    thumbnail_height=source_info.thumbnail_height,
+                    width=source_info.width,
+                    height=source_info.height,
+                    format=source_info.format,
+                    color_mode=source_info.color_mode,
+                    duration_seconds=source_info.duration_seconds,
+                    page_count=source_info.page_count,
+                    exif=source_info.exif.copy() if source_info.exif else None,
+                )
                 extraction_status = ExtractionStatus.COMPLETED
             except Exception as e:
                 logger.warning(f"Failed to copy thumbnail for attachment: {e}")
-                # Fall back to processing
+                # Copy non-thumbnail metadata if available
+                if source_info and (source_info.width or source_info.exif):
+                    new_media_info = FileMediaInfo(
+                        file_id=new_file_id,
+                        width=source_info.width,
+                        height=source_info.height,
+                        format=source_info.format,
+                        color_mode=source_info.color_mode,
+                        exif=source_info.exif.copy() if source_info.exif else None,
+                    )
                 if supports_thumbnail(source_file.mime_type or ""):
                     extraction_status = ExtractionStatus.PENDING
+        elif source_info and (source_info.width or source_info.exif):
+            # Copy non-thumbnail metadata from source
+            new_media_info = FileMediaInfo(
+                file_id=new_file_id,
+                width=source_info.width,
+                height=source_info.height,
+                format=source_info.format,
+                color_mode=source_info.color_mode,
+                duration_seconds=source_info.duration_seconds,
+                page_count=source_info.page_count,
+                exif=source_info.exif.copy() if source_info.exif else None,
+            )
+            if supports_thumbnail(source_file.mime_type or ""):
+                extraction_status = ExtractionStatus.PENDING
         elif supports_thumbnail(source_file.mime_type or ""):
-            # Source doesn't have thumbnail but MIME type supports it
-            # Mark for processing
             extraction_status = ExtractionStatus.PENDING
 
         # Create new file record (no search indexing for attachments)
@@ -654,11 +675,15 @@ class AttachmentOperations:
             folder_id=target_folder_id,
             tags=source_file.tags.copy() if source_file.tags else None,
             description=source_file.description,
-            file_metadata=file_metadata,
             extraction_status=extraction_status,
         )
         self._session.add(new_file)
         await self._session.flush()
+
+        # Create FileMediaInfo row if we have data to copy
+        if new_media_info:
+            self._session.add(new_media_info)
+            await self._session.flush()
 
         # Create file version
         version = FileVersion(
@@ -691,7 +716,7 @@ class AttachmentOperations:
             The file to process.
 
         """
-        from uniffy.core.queue import get_queue
+        from uniffy.core.valkey import get_queue
 
         jobs = get_jobs_for_mime_type(file.mime_type or "")
         if not jobs:

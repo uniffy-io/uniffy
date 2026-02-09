@@ -8,7 +8,7 @@ import { cn } from '@/shared/utils/cn';
 import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
-import { useTheme } from '@/config/theme/ThemeProvider';
+import { UniffyLogo } from '@/components/ui/uniffy-logo';
 
 // Get content type configs for nav items
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
@@ -35,8 +35,6 @@ const navItems: NavItem[] = [
 
 // Logo nav item for home/dashboard
 function LogoNavItem({ isActive }: { isActive: boolean }) {
-  const { resolvedTheme } = useTheme();
-  const isLightTheme = resolvedTheme !== 'dark';
 
   return (
     <Link
@@ -65,11 +63,9 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
           ? "bg-primary"
           : "text-muted-foreground group-hover:text-primary"
       )}>
-        <img
-          src="/favicon.svg"
-          alt="Uniffy"
+        <UniffyLogo
           className="w-5 h-5 transition-all duration-500"
-          style={isLightTheme && !isActive ? { filter: 'invert(1)' } : undefined}
+          variant={isActive ? 'dark' : undefined}
         />
       </span>
 

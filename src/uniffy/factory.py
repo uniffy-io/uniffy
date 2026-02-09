@@ -17,10 +17,9 @@ from fastapi.responses import Response
 from loguru import logger
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from uniffy.core.pubsub import close_pubsub, init_pubsub
-from uniffy.core.queue import close_queue, init_queue
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
+from uniffy.core.valkey import close_pubsub, close_queue, init_pubsub, init_queue
 from uniffy.db import close_db, init_db, seed_initial_data
 from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl

@@ -71,6 +71,10 @@ message Notification {
   google.protobuf.Timestamp created_at = 11;
   // When the notification expires
   google.protobuf.Timestamp expires_at = 12;
+  // Display name of the actor who triggered the notification
+  string actor_name = 13;
+  // Avatar URL of the actor (optional)
+  string actor_avatar_url = 14;
 }
 
 // Request to list notifications
@@ -181,6 +185,14 @@ message StreamNotificationsRequest {
   string organization_id = 1;
 }
 
+// Payload for file update events (processing completed)
+message FileUpdatePayload {
+  // File ID that was updated
+  string file_id = 1;
+  // Organization context
+  string organization_id = 2;
+}
+
 // Event sent via the streaming RPC
 message StreamNotificationEvent {
   // Event type
@@ -190,6 +202,8 @@ message StreamNotificationEvent {
     EVENT_TYPE_NEW_NOTIFICATION = 1;
     // Heartbeat (keep-alive)
     EVENT_TYPE_HEARTBEAT = 2;
+    // File processing completed
+    EVENT_TYPE_FILE_UPDATED = 3;
   }
 
   // Type of this event
@@ -198,4 +212,6 @@ message StreamNotificationEvent {
   Notification notification = 2;
   // Server timestamp (present for HEARTBEAT events)
   google.protobuf.Timestamp timestamp = 3;
+  // File update payload (present for FILE_UPDATED events)
+  FileUpdatePayload file_update = 4;
 }

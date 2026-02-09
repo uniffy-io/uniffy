@@ -30,7 +30,9 @@ import {
 } from '@/features/files/store/viewerSlice';
 import { useMediaStream } from '@/features/files/components/viewer/hooks/useMediaStream';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
-import { formatFileSize } from '@/features/files/components/list/utils';
+import { formatFileSize, supportsThumbnail } from '@/features/files/components/list/utils';
+import { ExtractionStatus } from '@/gen/files/v1/files_pb';
+import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 
 interface AudioViewerProps {
     file: SerializedFile;
@@ -56,9 +58,34 @@ export function AudioViewer({ file }: AudioViewerProps) {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
+    const discRef = useRef<HTMLDivElement>(null);
+    const rotationRef = useRef(0);
+    const animFrameRef = useRef(0);
+    const isPlayingRef = useRef(isPlaying);
+    const scratchRef = useRef({
+        isDragging: false,
+        lastAngle: 0,
+        wasPlaying: false,
+    });
     const [isReady, setIsReady] = useState(false);
     const [isLooping, setIsLooping] = useState(false);
     const [isShuffled, setIsShuffled] = useState(false);
+    const [isScratching, setIsScratching] = useState(false);
+    const [albumArtError, setAlbumArtError] = useState(false);
+
+    // Keep ref in sync with play state for rAF loop
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+    }, [isPlaying]);
+
+    // Album art thumbnail from audio metadata
+    const hasAlbumArt = file.extractionStatus === ExtractionStatus.COMPLETED
+        && supportsThumbnail(file.mimeType)
+        && !albumArtError;
+    const { url: thumbnailUrl } = useThumbnailUrl(hasAlbumArt ? file.id : null);
+    const albumArtUrl = hasAlbumArt && thumbnailUrl
+        ? `${thumbnailUrl}?v=${file.extractionStatus}`
+        : null;
 
     // Get the computed primary color from CSS variables (read once during initialization)
     const [primaryColor] = useState(() => {
@@ -84,7 +111,7 @@ export function AudioViewer({ file }: AudioViewerProps) {
         if (!containerRef.current || !streamUrl) return;
 
         dispatch(setViewerLoading(true));
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when streamUrl changes
         setIsReady(false);
 
         // Create AbortController for fetch cancellation
@@ -181,6 +208,116 @@ export function AudioViewer({ file }: AudioViewerProps) {
 
         ws.setVolume(isMuted ? 0 : volume);
     }, [volume, isMuted]);
+
+    // JS-driven disc rotation (replaces CSS animation for scratch support)
+    useEffect(() => {
+        if (!isReady) return;
+
+        const DEGREES_PER_SECOND = 120; // 360deg / 3s, same speed as the old CSS animation
+        let lastTimestamp = 0;
+
+        function spin(timestamp: number) {
+            if (lastTimestamp === 0) lastTimestamp = timestamp;
+            const delta = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            if (isPlayingRef.current && !scratchRef.current.isDragging) {
+                rotationRef.current += DEGREES_PER_SECOND * delta;
+            }
+
+            if (discRef.current) {
+                discRef.current.style.transform = `rotate(${rotationRef.current}deg)`;
+            }
+
+            animFrameRef.current = requestAnimationFrame(spin);
+        }
+
+        animFrameRef.current = requestAnimationFrame(spin);
+
+        return () => {
+            cancelAnimationFrame(animFrameRef.current);
+        };
+    }, [isReady]);
+
+    // Calculate angle from disc center to a point
+    const getAngleFromCenter = useCallback((clientX: number, clientY: number) => {
+        const disc = discRef.current;
+        if (!disc) return 0;
+        const rect = disc.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        return Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+    }, []);
+
+    // Scratch: mousedown on disc
+    const handleScratchStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        const ws = wavesurferRef.current;
+        if (!ws || !isReady) return;
+
+        scratchRef.current.isDragging = true;
+        scratchRef.current.wasPlaying = isPlaying;
+        scratchRef.current.lastAngle = getAngleFromCenter(e.clientX, e.clientY);
+
+        if (isPlaying) {
+            ws.pause();
+        }
+
+        setIsScratching(true);
+        document.body.style.cursor = 'grabbing';
+    }, [isPlaying, isReady, getAngleFromCenter]);
+
+    // Scratch: mousemove (global)
+    const handleScratchMove = useCallback((e: MouseEvent) => {
+        if (!scratchRef.current.isDragging) return;
+        const ws = wavesurferRef.current;
+        if (!ws) return;
+
+        const currentAngle = getAngleFromCenter(e.clientX, e.clientY);
+        let delta = currentAngle - scratchRef.current.lastAngle;
+
+        // Handle wrapping around -180/180
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+
+        scratchRef.current.lastAngle = currentAngle;
+
+        // Apply rotation to the disc
+        rotationRef.current += delta;
+        if (discRef.current) {
+            discRef.current.style.transform = `rotate(${rotationRef.current}deg)`;
+        }
+
+        // Map rotation to time: one full turn = 5 seconds of audio
+        const SECONDS_PER_REVOLUTION = 5;
+        const timeChange = (delta / 360) * SECONDS_PER_REVOLUTION;
+        const newTime = Math.max(0, Math.min(ws.getDuration(), ws.getCurrentTime() + timeChange));
+        ws.setTime(newTime);
+    }, [getAngleFromCenter]);
+
+    // Scratch: mouseup (global)
+    const handleScratchEnd = useCallback(() => {
+        if (!scratchRef.current.isDragging) return;
+        scratchRef.current.isDragging = false;
+
+        setIsScratching(false);
+        document.body.style.cursor = '';
+
+        if (scratchRef.current.wasPlaying) {
+            wavesurferRef.current?.play();
+        }
+    }, []);
+
+    // Global mouse listeners for scratch
+    useEffect(() => {
+        window.addEventListener('mousemove', handleScratchMove);
+        window.addEventListener('mouseup', handleScratchEnd);
+        return () => {
+            window.removeEventListener('mousemove', handleScratchMove);
+            window.removeEventListener('mouseup', handleScratchEnd);
+            document.body.style.cursor = '';
+        };
+    }, [handleScratchMove, handleScratchEnd]);
 
     // Control handlers
     const handlePlayPause = useCallback(() => {
@@ -300,8 +437,22 @@ export function AudioViewer({ file }: AudioViewerProps) {
                         />
                     </svg>
 
-                    {/* Vinyl disc */}
-                    <div className={`audio-vinyl-disc ${isPlaying ? 'spinning' : ''}`}>
+                    {/* Vinyl disc - draggable for DJ scratching */}
+                    <div
+                        ref={discRef}
+                        className={`audio-vinyl-disc ${isScratching ? 'scratching' : ''}`}
+                        onMouseDown={handleScratchStart}
+                    >
+                        {/* Album art background (visible through grooves) */}
+                        {albumArtUrl && (
+                            <img
+                                src={albumArtUrl}
+                                alt=""
+                                className="audio-disc-art"
+                                onError={() => setAlbumArtError(true)}
+                            />
+                        )}
+
                         {/* Disc grooves */}
                         <div className="audio-disc-grooves">
                             {[...Array(8)].map((_, i) => (
@@ -318,7 +469,16 @@ export function AudioViewer({ file }: AudioViewerProps) {
 
                         {/* Center label */}
                         <div className="audio-disc-label">
-                            <MusicNote size={32} weight="fill" className="audio-disc-icon" />
+                            {albumArtUrl ? (
+                                <img
+                                    src={albumArtUrl}
+                                    alt=""
+                                    className="audio-disc-label-art"
+                                    onError={() => setAlbumArtError(true)}
+                                />
+                            ) : (
+                                <MusicNote size={32} weight="fill" className="audio-disc-icon" />
+                            )}
                         </div>
 
                         {/* Light reflection */}

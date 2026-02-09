@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.bus import event_from_json
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import ContentType
@@ -106,11 +107,23 @@ async def process_notification_event(
         if pending_notifications:
             await session.commit()
 
+        # Resolve actor display name for real-time payload
+        actor_name = ""
+        if event.actor_id:
+            result = await session.execute(
+                select(User.full_name, User.username).where(
+                    User.id == event.actor_id
+                )
+            )
+            row = result.first()
+            if row:
+                actor_name = row[0] or row[1]
+
         # Phase 2: Real-time delivery (Valkey Pub/Sub) -- after DB commit
         # Notification IDs are now populated by the DB commit above
         if isinstance(in_app_adapter, InAppAdapter):
             for notification in pending_notifications:
-                await in_app_adapter.publish_realtime(notification)
+                await in_app_adapter.publish_realtime(notification, actor_name=actor_name)
 
         NOTIFICATION_EVENTS_TOTAL.labels(status="success").inc()
         logger.info(

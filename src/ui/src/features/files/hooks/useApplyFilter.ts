@@ -92,13 +92,8 @@ export function useApplyFilter() {
                 dispatch(setSortOrder(sortOrder));
             }
 
-            // Clear folder filter to show all files matching criteria
-            dispatch(setFolderId('all'));
-
-            // Navigate to files page
-            navigate('/files');
         },
-        [dispatch, navigate, buildSearchQuery]
+        [dispatch, buildSearchQuery]
     );
 
     /**
@@ -124,10 +119,8 @@ export function useApplyFilter() {
                 dispatch(setSortOrder(sortOrder));
             }
 
-            dispatch(setFolderId('all'));
-            navigate('/files');
         },
-        [dispatch, navigate, buildSearchQuery]
+        [dispatch, buildSearchQuery]
     );
 
     /**
