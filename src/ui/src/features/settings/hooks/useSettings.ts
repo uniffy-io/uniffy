@@ -208,5 +208,6 @@ export function useNotificationSettings() {
         quietHoursStart: effectiveSettings?.notifications.quietHoursStart ?? undefined,
         quietHoursEnd: effectiveSettings?.notifications.quietHoursEnd ?? undefined,
         channelOverrides: effectiveSettings?.notifications.channelOverrides ?? {},
+        defaultReminderIntervals: effectiveSettings?.notifications.defaultReminderIntervals ?? [15],
     };
 }

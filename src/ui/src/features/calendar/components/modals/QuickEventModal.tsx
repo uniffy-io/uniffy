@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import type { MemberInfo } from '@/gen/common/v1/common_pb';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 import type { Attendee } from '@/features/calendar/types';
 
 type EventVisibility = 'private' | 'organization';
@@ -83,22 +84,6 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-/**
- * Generate time options for 30-minute increments
- */
-function generateTimeOptions() {
-  return Array.from({ length: 48 }, (_, i) => {
-    const timeValue = i * 0.5;
-    const hour = Math.floor(timeValue);
-    const minutes = timeValue % 1 === 0.5 ? '30' : '00';
-    const period = hour < 12 ? 'AM' : 'PM';
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return {
-      value: timeValue,
-      label: `${displayHour}:${minutes} ${period}`,
-    };
-  });
-}
 
 interface QuickEventModalProps {
   isOpen: boolean;
@@ -133,7 +118,6 @@ export function QuickEventModal({
   const categories = useAppSelector((state) => state.calendar.categories);
 
   const dateOptions = useMemo(() => generateDateOptions(), []);
-  const timeOptions = useMemo(() => generateTimeOptions(), []);
 
   const categoryOptions = useMemo(
     () =>
@@ -208,23 +192,23 @@ export function QuickEventModal({
 
     if (isMultiDay) {
       const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-      const startMinutes = startHour % 1 === 0.5 ? 30 : 0;
+      const startMinutes = Math.round((startHour % 1) * 60);
       eventStartTime = new Date(startYear, startMonth - 1, startDay);
       eventStartTime.setHours(Math.floor(startHour), startMinutes, 0, 0);
 
       const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-      const endMinutes = endHour % 1 === 0.5 ? 30 : 0;
+      const endMinutes = Math.round((endHour % 1) * 60);
       eventEndTime = new Date(endYear, endMonth - 1, endDay);
       eventEndTime.setHours(Math.floor(endHour), endMinutes, 0, 0);
     } else {
       const [year, month, day] = startDate.split('-').map(Number);
 
       eventStartTime = new Date(year, month - 1, day);
-      const startMinutes = startHour % 1 === 0.5 ? 30 : 0;
+      const startMinutes = Math.round((startHour % 1) * 60);
       eventStartTime.setHours(Math.floor(startHour), startMinutes, 0, 0);
 
       eventEndTime = new Date(year, month - 1, day);
-      const endMinutes = endHour % 1 === 0.5 ? 30 : 0;
+      const endMinutes = Math.round((endHour % 1) * 60);
       eventEndTime.setHours(Math.floor(endHour), endMinutes, 0, 0);
     }
 
@@ -377,7 +361,7 @@ export function QuickEventModal({
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1.5">Start Time</label>
-                        <Select
+                        <TimeSelect
                           value={startHour}
                           onChange={(value) => {
                             setStartHour(value);
@@ -385,7 +369,6 @@ export function QuickEventModal({
                               setEndHour(value + 0.5);
                             }
                           }}
-                          options={timeOptions}
                           className="w-full"
                         />
                       </div>
@@ -403,10 +386,9 @@ export function QuickEventModal({
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1.5">End Time</label>
-                        <Select
+                        <TimeSelect
                           value={endHour}
                           onChange={setEndHour}
-                          options={timeOptions.filter((opt) => opt.value > startHour)}
                           className="w-full"
                         />
                       </div>
@@ -416,7 +398,7 @@ export function QuickEventModal({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-muted-foreground mb-1.5">Start</label>
-                      <Select
+                      <TimeSelect
                         value={startHour}
                         onChange={(value) => {
                           setStartHour(value);
@@ -424,16 +406,14 @@ export function QuickEventModal({
                             setEndHour(value + 0.5);
                           }
                         }}
-                        options={timeOptions}
                         className="w-full"
                       />
                     </div>
                     <div>
                       <label className="block text-xs text-muted-foreground mb-1.5">End</label>
-                      <Select
+                      <TimeSelect
                         value={endHour}
                         onChange={setEndHour}
-                        options={timeOptions.filter((opt) => opt.value > startHour)}
                         className="w-full"
                       />
                     </div>

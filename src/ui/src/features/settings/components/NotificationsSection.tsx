@@ -5,6 +5,7 @@
 import { cn } from '@/shared/utils/cn';
 import { useSettings, useNotificationSettings } from '@/features/settings/hooks/useSettings';
 import { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
+import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
 
 const NOTIFICATION_TYPE_ROWS = [
     { type: 'CONTENT_SHARED', label: 'Content Shared' },
@@ -300,6 +301,24 @@ export function NotificationsSection() {
                 >
                     Reset to defaults
                 </button>
+            </section>
+
+            {/* Default Reminders */}
+            <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">Default Reminders</h2>
+                <p className="text-sm text-muted-foreground">
+                    Set the default reminder intervals for new calendar events.
+                </p>
+                <div className="bg-card rounded-lg border border-border p-4">
+                    <ReminderSelector
+                        value={notifications.defaultReminderIntervals ?? [15]}
+                        onChange={(reminders) => {
+                            updateSettings({
+                                notifications: { defaultReminderIntervals: reminders },
+                            });
+                        }}
+                    />
+                </div>
             </section>
 
             {/* Quiet Hours */}

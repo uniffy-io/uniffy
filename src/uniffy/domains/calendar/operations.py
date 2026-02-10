@@ -1,9 +1,9 @@
 """Calendar operations extending BaseContentOperations."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -13,6 +13,7 @@ from uniffy.core.events import NotificationEvent, emit_notification, extract_men
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.shared import (
@@ -84,6 +85,74 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         return CalendarEvent.organizer_id
 
     # ─────────────────────────────────────────────────────────────
+    # Reminder helpers
+    # ─────────────────────────────────────────────────────────────
+
+    async def _create_reminder_rows(
+        self,
+        event_id: UUID,
+        user_ids: list[UUID],
+        intervals: list[int],
+        start_time: datetime,
+    ) -> None:
+        """
+        Create EventReminder rows for each user/interval combination.
+
+        Skips reminders that would be scheduled in the past.
+
+        Parameters
+        ----------
+        event_id : UUID
+            The event to create reminders for.
+        user_ids : list[UUID]
+            Users who should receive reminders.
+        intervals : list[int]
+            Minutes-before values (e.g., [15, 30]).
+        start_time : datetime
+            Event start time for computing scheduled_at.
+
+        """
+        now = datetime.now(UTC)
+        for user_id in user_ids:
+            for minutes in intervals:
+                scheduled_at = start_time - timedelta(minutes=minutes)
+                if scheduled_at <= now:
+                    continue
+                reminder = EventReminder(
+                    event_id=event_id,
+                    user_id=user_id,
+                    minutes_before=minutes,
+                    scheduled_at=scheduled_at,
+                )
+                self.session.add(reminder)
+
+    async def _delete_reminder_rows(
+        self,
+        event_id: UUID,
+        user_ids: list[UUID] | None = None,
+    ) -> None:
+        """
+        Delete unsent reminders for an event.
+
+        Parameters
+        ----------
+        event_id : UUID
+            The event whose reminders to delete.
+        user_ids : list[UUID] | None
+            If provided, only delete reminders for these users.
+
+        """
+        stmt = delete(EventReminder).where(
+            and_(
+                EventReminder.event_id == event_id,
+                EventReminder.sent_at.is_(None),
+            )
+        )
+        if user_ids is not None:
+            stmt = stmt.where(EventReminder.user_id.in_(user_ids))
+        await self.session.execute(stmt)
+
+    # ─────────────────────────────────────────────────────────────
     # Event-specific operations
     # ─────────────────────────────────────────────────────────────
 
@@ -109,6 +178,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         linked_resources: list[dict] | None = None,
         visibility: VisibilityScope = VisibilityScope.PRIVATE,
         group_ids: list[UUID] | None = None,
+        reminders: list[int] | None = None,
     ) -> CalendarEvent:
         """
         Create a new calendar event.
@@ -165,6 +235,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         # Extract URN references from description
         outgoing_refs = queries.extract_urns_from_content(description) if description else None
 
+        # Resolve reminder intervals (use user defaults if not specified)
+        if reminders is None:
+            from uniffy.domains.settings.defaults import DEFAULT_REMINDER_INTERVALS
+
+            reminders = list(DEFAULT_REMINDER_INTERVALS)
+
         event = CalendarEvent(
             organization_id=organization_id,
             organizer_id=user_id,
@@ -185,6 +261,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             tags=tags,
             linked_resources=linked_resources,
             outgoing_references=outgoing_refs,
+            reminders=reminders,
         )
         self.session.add(event)
         await self.session.flush()
@@ -218,6 +295,20 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 organization_id=organization_id,
                 user_id=user_id,
                 group_ids=group_ids,
+            )
+
+        # Create reminder rows for organizer + attendees
+        if reminders:
+            reminder_user_ids = [user_id]
+            if attendee_ids:
+                reminder_user_ids.extend(
+                    aid for aid in attendee_ids if aid != user_id
+                )
+            await self._create_reminder_rows(
+                event_id=event.id,
+                user_ids=reminder_user_ids,
+                intervals=reminders,
+                start_time=start_time,
             )
 
         await self.session.commit()
@@ -281,6 +372,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         linked_resources: list[dict] | None = None,
         attendee_ids: list[UUID] | None = None,
         visibility: VisibilityScope | None = None,
+        reminders: list[int] | None = None,
     ) -> CalendarEvent:
         """
         Update an existing event.
@@ -349,6 +441,34 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.linked_resources = linked_resources
         if visibility is not None:
             event.visibility = visibility
+        if reminders is not None:
+            event.reminders = reminders
+
+        # Recalculate reminders if intervals or start_time changed
+        reminders_changed = reminders is not None
+        start_changed = start_time is not None
+        if reminders_changed or start_changed:
+            effective_start = start_time if start_time is not None else event.start_time
+            effective_reminders = reminders if reminders is not None else (event.reminders or [])
+            # Delete unsent reminders and recreate
+            await self._delete_reminder_rows(event.id)
+            if effective_reminders:
+                # Get all current attendee user IDs
+                stmt = select(EventAttendee.user_id).where(
+                    and_(
+                        EventAttendee.event_id == event.id,
+                        EventAttendee.status != AttendeeStatus.DECLINED,
+                    )
+                )
+                result = await self.session.execute(stmt)
+                active_user_ids = [row[0] for row in result.all()]
+                if active_user_ids:
+                    await self._create_reminder_rows(
+                        event_id=event.id,
+                        user_ids=active_user_ids,
+                        intervals=effective_reminders,
+                        start_time=effective_start,
+                    )
 
         # Update attendees
         newly_invited_ids: list[UUID] = []
@@ -459,6 +579,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_delete(user_id, organization_id, event)
 
+        # Delete all reminder rows for this event
+        await self.session.execute(
+            delete(EventReminder).where(EventReminder.event_id == event_id)
+        )
+
         if permanent:
             await queries.permanent_delete_event(self.session, event)
         else:
@@ -528,11 +653,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             visibility_column=CalendarEvent.visibility,
         )
 
-        # Also include events where user is an attendee (not declined)
+        # Also include events where user is an attendee (including declined)
         attendee_subquery = (
             select(EventAttendee.event_id)
             .where(EventAttendee.user_id == user_id)
-            .where(EventAttendee.status != AttendeeStatus.DECLINED)
         )
         attendee_filter = CalendarEvent.id.in_(attendee_subquery)
 
@@ -616,11 +740,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             visibility_column=CalendarEvent.visibility,
         )
 
-        # Also include events where user is an attendee
+        # Also include events where user is an attendee (including declined)
         attendee_subquery = (
             select(EventAttendee.event_id)
             .where(EventAttendee.user_id == user_id)
-            .where(EventAttendee.status != AttendeeStatus.DECLINED)
         )
         attendee_filter = CalendarEvent.id.in_(attendee_subquery)
 
@@ -749,6 +872,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 self.session.add(attendee)
                 added_ids.append(attendee_id)
 
+        # Create reminder rows for newly added attendees
+        if added_ids and event.reminders:
+            await self._create_reminder_rows(
+                event_id=event_id,
+                user_ids=added_ids,
+                intervals=event.reminders,
+                start_time=event.start_time,
+            )
+
         event.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(event)
@@ -815,6 +947,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         for attendee in result.scalars().all():
             await self.session.delete(attendee)
 
+        # Delete unsent reminders for removed attendees
+        await self._delete_reminder_rows(event_id, user_ids=attendee_ids)
+
         event.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(event)
@@ -865,9 +1000,27 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if not attendee:
             raise NotFoundError("EventAttendee", user_id)
 
+        old_status = attendee.status
         attendee.status = status
         attendee.responded_at = datetime.now(UTC)
         attendee.updated_at = datetime.now(UTC)
+
+        # Handle reminder rows based on status change
+        if status == AttendeeStatus.DECLINED:
+            # Delete user's unsent reminders when they decline
+            await self._delete_reminder_rows(event_id, user_ids=[user_id])
+        elif (
+            old_status == AttendeeStatus.DECLINED
+            and status in (AttendeeStatus.ACCEPTED, AttendeeStatus.TENTATIVE)
+            and event.reminders
+        ):
+            # Recreate reminders when un-declining
+            await self._create_reminder_rows(
+                event_id=event_id,
+                user_ids=[user_id],
+                intervals=event.reminders,
+                start_time=event.start_time,
+            )
 
         await self.session.commit()
 

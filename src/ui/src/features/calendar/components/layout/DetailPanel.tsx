@@ -31,7 +31,8 @@ import {
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { closeDetailPanel, openEditEvent } from '@/features/calendar/store';
-import { deleteEvent } from '@/features/calendar/store/calendarThunks';
+import { deleteEvent, updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
+import { cn } from '@/shared/utils/cn';
 import { useCalendarEvents } from '@/features/calendar/hooks';
 import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
@@ -78,6 +79,7 @@ export function DetailPanel() {
     (state) => state.calendarUi.displayTimezone
   );
   const categories = useAppSelector((state) => state.calendar.categories);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Bookmark state - build URN for the event
@@ -91,6 +93,31 @@ export function DetailPanel() {
     if (!eventDescription) return [];
     return extractMentionsFromMarkdown(eventDescription);
   }, [eventDescription]);
+
+  // Compute RSVP summary counts (excluding organizer)
+  const rsvpSummary = useMemo(() => {
+    if (!selectedEvent) return { accepted: 0, declined: 0, tentative: 0, pending: 0 };
+    const nonOrganizer = selectedEvent.attendees.filter((a) => a.role !== 'organizer');
+    return {
+      accepted: nonOrganizer.filter((a) => a.status === 'accepted').length,
+      declined: nonOrganizer.filter((a) => a.status === 'declined').length,
+      tentative: nonOrganizer.filter((a) => a.status === 'tentative').length,
+      pending: nonOrganizer.filter((a) => a.status === 'pending').length,
+    };
+  }, [selectedEvent]);
+
+  // Current user's attendee record (null if organizer or not an attendee)
+  const currentUserAttendee = useMemo(() => {
+    if (!selectedEvent || !currentUserId) return null;
+    return selectedEvent.attendees.find(
+      (a) => a.id === currentUserId && a.role !== 'organizer'
+    ) ?? null;
+  }, [selectedEvent, currentUserId]);
+
+  const handleRsvp = (status: 'accepted' | 'tentative' | 'declined') => {
+    if (!selectedEvent) return;
+    dispatch(updateAttendeeStatus({ eventId: selectedEvent.id, status }));
+  };
 
   // Calculate conflicts for the selected event
   const conflictingEvents = useMemo(() => {
@@ -243,12 +270,87 @@ export function DetailPanel() {
             )}
           </div>
 
+          {/* RSVP Action Bar (for non-organizer attendees) */}
+          {currentUserAttendee && (
+            <div className="px-5 py-3 border-t border-border">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Your Response
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRsvp('accepted')}
+                  className={cn(
+                    'flex-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+                    currentUserAttendee.status === 'accepted'
+                      ? 'bg-green-100 border-green-300 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-400'
+                      : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRsvp('tentative')}
+                  className={cn(
+                    'flex-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+                    currentUserAttendee.status === 'tentative'
+                      ? 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400'
+                      : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  Maybe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRsvp('declined')}
+                  className={cn(
+                    'flex-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+                    currentUserAttendee.status === 'declined'
+                      ? 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-400'
+                      : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Attendees */}
           {selectedEvent.attendees.length > 0 && (
             <div className="px-5 py-3 border-t border-border">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Attendees
               </h3>
+              {/* RSVP Summary */}
+              {(rsvpSummary.accepted > 0 || rsvpSummary.declined > 0 || rsvpSummary.tentative > 0 || rsvpSummary.pending > 0) && (
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {rsvpSummary.accepted > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                      <Check size={12} weight="bold" />
+                      {rsvpSummary.accepted}
+                    </span>
+                  )}
+                  {rsvpSummary.declined > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                      <X size={12} weight="bold" />
+                      {rsvpSummary.declined}
+                    </span>
+                  )}
+                  {rsvpSummary.tentative > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                      <Question size={12} weight="bold" />
+                      {rsvpSummary.tentative}
+                    </span>
+                  )}
+                  {rsvpSummary.pending > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      {rsvpSummary.pending} pending
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="space-y-2">
                 {selectedEvent.attendees.map((attendee) => (
                   <div
@@ -273,18 +375,30 @@ export function DetailPanel() {
                     </div>
                     {attendee.role === 'organizer' ? (
                       <span className="text-xs text-muted-foreground">
-                        (organizer)
+                        Organizer
                       </span>
                     ) : (
-                      <span>
+                      <span className="inline-flex items-center gap-1">
                         {attendee.status === 'accepted' && (
-                          <Check size={16} weight="bold" className="text-green-500" />
+                          <>
+                            <Check size={14} weight="bold" className="text-green-500" />
+                            <span className="text-xs text-green-600 dark:text-green-400">Accepted</span>
+                          </>
                         )}
                         {attendee.status === 'declined' && (
-                          <X size={16} weight="bold" className="text-red-500" />
+                          <>
+                            <X size={14} weight="bold" className="text-red-500" />
+                            <span className="text-xs text-red-600 dark:text-red-400">Declined</span>
+                          </>
                         )}
                         {attendee.status === 'tentative' && (
-                          <Question size={16} weight="duotone" className="text-yellow-500" />
+                          <>
+                            <Question size={14} weight="bold" className="text-yellow-500" />
+                            <span className="text-xs text-yellow-600 dark:text-yellow-400">Maybe</span>
+                          </>
+                        )}
+                        {attendee.status === 'pending' && (
+                          <span className="text-xs text-muted-foreground">Pending</span>
                         )}
                       </span>
                     )}

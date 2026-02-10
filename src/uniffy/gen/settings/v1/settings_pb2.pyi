@@ -173,7 +173,7 @@ class KeyboardShortcutsSettings(_message.Message):
     def __init__(self, bindings: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class NotificationsSettings(_message.Message):
-    __slots__ = ("browser_enabled", "email_enabled", "sound_enabled", "email_frequency", "quiet_hours_start", "quiet_hours_end", "channel_overrides")
+    __slots__ = ("browser_enabled", "email_enabled", "sound_enabled", "email_frequency", "quiet_hours_start", "quiet_hours_end", "channel_overrides", "default_reminder_intervals")
     class ChannelOverridesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -188,6 +188,7 @@ class NotificationsSettings(_message.Message):
     QUIET_HOURS_START_FIELD_NUMBER: _ClassVar[int]
     QUIET_HOURS_END_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_OVERRIDES_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_REMINDER_INTERVALS_FIELD_NUMBER: _ClassVar[int]
     browser_enabled: bool
     email_enabled: bool
     sound_enabled: bool
@@ -195,7 +196,8 @@ class NotificationsSettings(_message.Message):
     quiet_hours_start: str
     quiet_hours_end: str
     channel_overrides: _containers.MessageMap[str, NotificationChannelPreference]
-    def __init__(self, browser_enabled: _Optional[bool] = ..., email_enabled: _Optional[bool] = ..., sound_enabled: _Optional[bool] = ..., email_frequency: _Optional[str] = ..., quiet_hours_start: _Optional[str] = ..., quiet_hours_end: _Optional[str] = ..., channel_overrides: _Optional[_Mapping[str, NotificationChannelPreference]] = ...) -> None: ...
+    default_reminder_intervals: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, browser_enabled: _Optional[bool] = ..., email_enabled: _Optional[bool] = ..., sound_enabled: _Optional[bool] = ..., email_frequency: _Optional[str] = ..., quiet_hours_start: _Optional[str] = ..., quiet_hours_end: _Optional[str] = ..., channel_overrides: _Optional[_Mapping[str, NotificationChannelPreference]] = ..., default_reminder_intervals: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class NotificationChannelPreference(_message.Message):
     __slots__ = ("in_app", "browser", "email")

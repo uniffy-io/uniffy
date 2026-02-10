@@ -19,6 +19,7 @@ export function MonthView() {
   const { monthColumns } = useCalendarNavigation();
   const { getEventsForDate, events } = useCalendarEvents();
   const categories = useAppSelector((state) => state.calendar.categories);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const draggedEventId = useAppSelector((state) => state.calendarUi.draggedEventId);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
@@ -155,6 +156,12 @@ export function MonthView() {
                       // Look up category color from Redux state
                       const eventCategory = event.categoryId ? categories[event.categoryId] : null;
                       const eventColor = eventCategory?.color ?? DEFAULT_COLOR;
+                      const attendee = currentUserId
+                        ? event.attendees.find((a) => a.id === currentUserId)
+                        : null;
+                      const declined = attendee?.status === 'declined';
+                      const pendingOrTentative = attendee != null
+                        && (attendee.status === 'pending' || attendee.status === 'tentative');
                       return (
                         <div
                           key={event.id}
@@ -162,10 +169,14 @@ export function MonthView() {
                           onDragStart={(e) => handleDragStart(e, event.id)}
                           onDragEnd={handleDragEnd}
                           onClick={(e) => { e.stopPropagation(); /* Prevent day click */ }}
-                          className="text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing"
+                          className={cn(
+                            'text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing',
+                            declined && 'line-through',
+                          )}
                           style={{
                             backgroundColor: `${eventColor}20`,
                             color: eventColor,
+                            opacity: declined ? 0.35 : pendingOrTentative ? 0.6 : 1,
                           }}
                         >
                           {event.title}

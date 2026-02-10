@@ -70,6 +70,9 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
         quietHoursStart: notifications.quietHoursStart || undefined,
         quietHoursEnd: notifications.quietHoursEnd || undefined,
         channelOverrides,
+        defaultReminderIntervals: notifications.defaultReminderIntervals?.length
+            ? [...notifications.defaultReminderIntervals]
+            : [15],
     };
 };
 
@@ -111,6 +114,7 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         quietHoursStart: undefined,
         quietHoursEnd: undefined,
         channelOverrides: {},
+        defaultReminderIntervals: [15],
     },
 });
 

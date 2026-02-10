@@ -15,6 +15,7 @@ import {
   MapPin,
   Link as LinkIcon,
   Timer,
+  Bell,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEvent } from '@/features/calendar/store/calendarThunks';
@@ -25,15 +26,18 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import type { MemberInfo } from '@/gen/common/v1/common_pb';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
+import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 
 type EventVisibility = 'private' | 'organization';
 
 /**
- * Extract time value (hours as decimal) from ISO string
+ * Extract time value (hours as decimal) from ISO string.
+ * Preserves exact minutes (e.g. 9:15 -> 9.25, 14:45 -> 14.75).
  */
 function getTimeValue(isoString: string): number {
   const date = new Date(isoString);
-  return date.getHours() + (date.getMinutes() >= 30 ? 0.5 : 0);
+  return date.getHours() + date.getMinutes() / 60;
 }
 
 /**
@@ -84,22 +88,6 @@ function generateDateOptions(): { value: string; label: string }[] {
   return options;
 }
 
-/**
- * Generate time options for 30-minute increments
- */
-function generateTimeOptions(): { value: number; label: string }[] {
-  return Array.from({ length: 48 }, (_, i) => {
-    const timeValue = i * 0.5;
-    const hour = Math.floor(timeValue);
-    const minutes = timeValue % 1 === 0.5 ? '30' : '00';
-    const period = hour < 12 ? 'AM' : 'PM';
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return {
-      value: timeValue,
-      label: `${displayHour}:${minutes} ${period}`,
-    };
-  });
-}
 
 function getInitials(name: string): string {
   return name
@@ -138,7 +126,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   );
 
   const dateOptions = useMemo(() => generateDateOptions(), []);
-  const timeOptions = useMemo(() => generateTimeOptions(), []);
 
   const startDate = useMemo(() => getDateString(formData.startTime), [formData.startTime]);
   const startTime = useMemo(() => getTimeValue(formData.startTime), [formData.startTime]);
@@ -155,7 +142,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const handleStartTimeChange = (newTime: number) => {
     const current = new Date(formData.startTime);
     const hours = Math.floor(newTime);
-    const minutes = newTime % 1 === 0.5 ? 30 : 0;
+    const minutes = Math.round((newTime % 1) * 60);
     current.setHours(hours, minutes, 0, 0);
     handleChange('startTime', current.toISOString());
 
@@ -177,7 +164,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const handleEndTimeChange = (newTime: number) => {
     const current = new Date(formData.endTime);
     const hours = Math.floor(newTime);
-    const minutes = newTime % 1 === 0.5 ? 30 : 0;
+    const minutes = Math.round((newTime % 1) * 60);
     current.setHours(hours, minutes, 0, 0);
     handleChange('endTime', current.toISOString());
   };
@@ -245,6 +232,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         tags: formData.tags,
         attendeeIds: formData.attendees.map((a) => a.id),
         visibility,
+        reminders: formData.reminders,
       })
     );
     onClose();
@@ -369,10 +357,9 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1.5">Start Time</label>
-                        <Select
+                        <TimeSelect
                           value={startTime}
                           onChange={handleStartTimeChange}
-                          options={timeOptions}
                           className="w-full"
                         />
                       </div>
@@ -389,10 +376,9 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1.5">End Time</label>
-                        <Select
+                        <TimeSelect
                           value={endTime}
                           onChange={handleEndTimeChange}
-                          options={timeOptions}
                           className="w-full"
                         />
                       </div>
@@ -402,19 +388,17 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-muted-foreground mb-1.5">Start</label>
-                      <Select
+                      <TimeSelect
                         value={startTime}
                         onChange={handleStartTimeChange}
-                        options={timeOptions}
                         className="w-full"
                       />
                     </div>
                     <div>
                       <label className="block text-xs text-muted-foreground mb-1.5">End</label>
-                      <Select
+                      <TimeSelect
                         value={endTime}
                         onChange={handleEndTimeChange}
-                        options={timeOptions}
                         className="w-full"
                       />
                     </div>
@@ -498,6 +482,18 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 />
                 <span className="text-sm text-foreground">Focus/Deep Work Time</span>
               </button>
+
+              {/* Reminders */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Bell size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Reminders</span>
+                </div>
+                <ReminderSelector
+                  value={formData.reminders}
+                  onChange={(reminders) => handleChange('reminders', reminders)}
+                />
+              </div>
 
               {/* Description */}
               <div className="space-y-2">

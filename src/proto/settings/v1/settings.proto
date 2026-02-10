@@ -208,6 +208,8 @@ message NotificationsSettings {
   // Per-notification-type channel preferences (sparse overrides)
   // Key: notification type name (e.g., "CONTENT_SHARED")
   map<string, NotificationChannelPreference> channel_overrides = 7;
+  // Default reminder intervals in minutes for new calendar events
+  repeated int32 default_reminder_intervals = 8;
 }
 
 // Per-channel preference for a notification type

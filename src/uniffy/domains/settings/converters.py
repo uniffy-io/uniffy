@@ -180,6 +180,11 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
             pref.email = channels["email"]
         proto.channel_overrides[notif_type].CopyFrom(pref)
 
+    # Default reminder intervals
+    reminder_intervals = settings.get("default_reminder_intervals")
+    if reminder_intervals:
+        proto.default_reminder_intervals.extend(reminder_intervals)
+
     return proto
 
 
@@ -327,5 +332,9 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
                 overrides[notif_type] = channels
         if overrides:
             result["channel_overrides"] = overrides
+
+    # Default reminder intervals
+    if proto.default_reminder_intervals:
+        result["default_reminder_intervals"] = list(proto.default_reminder_intervals)
 
     return result if result else None

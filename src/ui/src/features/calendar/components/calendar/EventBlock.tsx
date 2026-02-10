@@ -30,6 +30,14 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const isSharedEvent = event.organizerId !== currentUserId;
   const multiDayPosition = event.multiDayPosition ?? 'single';
 
+  // Current user's RSVP status for this event
+  const currentUserAttendee = currentUserId
+    ? event.attendees.find((a) => a.id === currentUserId)
+    : null;
+  const isDeclined = currentUserAttendee?.status === 'declined';
+  const isPendingOrTentative = currentUserAttendee != null
+    && (currentUserAttendee.status === 'pending' || currentUserAttendee.status === 'tentative');
+
   // Determine if we should show content (only on start/single)
   const showContent = multiDayPosition === 'start' || multiDayPosition === 'single';
 
@@ -144,6 +152,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         height: event.height,
         backgroundColor,
         borderRadius: getBorderRadius(),
+        opacity: isDeclined ? 0.35 : isPendingOrTentative ? 0.6 : 1,
         ...getSelectionBorderStyle(),
       }}
     >
@@ -192,7 +201,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
                 />
               </span>
             )}
-            <span className="truncate">{event.title}</span>
+            <span className={cn('truncate', isDeclined && 'line-through')}>{event.title}</span>
           </div>
 
           {/* Time (hide for short events) */}

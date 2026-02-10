@@ -2,9 +2,11 @@
  * Single notification item rendered in the notification panel.
  *
  * Displays actor avatar with type icon overlay, notification content,
- * source URN context, and hover actions.
+ * source URN context, and hover actions. CALENDAR_INVITE notifications
+ * include inline RSVP buttons (Accept/Maybe/Decline).
  */
 
+import { useState } from 'react';
 import {
     Check,
     Trash,
@@ -19,12 +21,17 @@ import {
     Megaphone,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
+import { useAppDispatch } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { parseUrn } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { getUrnTypeTheme } from '@/config/theme/urnColors';
+import { updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
+import { markNotificationAsRead } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { NotificationType } from '@/gen/notifications/v1/notifications_pb';
+import type { AttendeeStatus } from '@/features/calendar/types';
+import { UrnType } from '@/shared/utils/urnTypes';
 
 interface NotificationTypeConfig {
     icon: Icon;
@@ -137,8 +144,27 @@ export function NotificationItem({
     onDelete,
     onClick,
 }: NotificationItemProps) {
+    const dispatch = useAppDispatch();
     const typeConfig = NOTIFICATION_TYPE_CONFIG[notification.notificationType] ?? DEFAULT_TYPE_CONFIG;
     const TypeIcon = typeConfig.icon;
+    const [rsvpStatus, setRsvpStatus] = useState<AttendeeStatus | null>(null);
+
+    // Determine if this is a calendar invite that supports RSVP
+    const isCalendarInvite = notification.notificationType === NotificationType.CALENDAR_INVITE;
+    const inviteParsedUrn = isCalendarInvite && notification.sourceUrn
+        ? parseUrn(notification.sourceUrn)
+        : null;
+    const canRsvp = isCalendarInvite && inviteParsedUrn?.isValid && inviteParsedUrn.type === UrnType.CALENDAR_EVENT;
+
+    const handleRsvp = async (status: AttendeeStatus) => {
+        if (!inviteParsedUrn?.isValid) return;
+        setRsvpStatus(status);
+        await dispatch(updateAttendeeStatus({
+            eventId: inviteParsedUrn.id,
+            status,
+        }));
+        dispatch(markNotificationAsRead(notification.id));
+    };
 
     // Resolve source URN for contextual display
     const parsedUrn = notification.sourceUrn ? parseUrn(notification.sourceUrn) : null;
@@ -238,6 +264,49 @@ export function NotificationItem({
                         {formatRelativeTime(notification.createdAt)}
                     </span>
                 </div>
+
+                {/* RSVP Buttons for Calendar Invites */}
+                {canRsvp && (
+                    <div className="mt-2">
+                        {rsvpStatus ? (
+                            <span className="text-xs text-muted-foreground">
+                                {rsvpStatus === 'accepted' && 'Accepted'}
+                                {rsvpStatus === 'tentative' && 'Tentatively accepted'}
+                                {rsvpStatus === 'declined' && 'Declined'}
+                            </span>
+                        ) : (
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRsvp('accepted');
+                                    }}
+                                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 transition-colors"
+                                >
+                                    Accept
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRsvp('tentative');
+                                    }}
+                                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50 transition-colors"
+                                >
+                                    Maybe
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRsvp('declined');
+                                    }}
+                                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
+                                >
+                                    Decline
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Hover actions */}

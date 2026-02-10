@@ -439,6 +439,13 @@ export class CalendarEvent extends Message<CalendarEvent> {
    */
   deletedAt?: Timestamp;
 
+  /**
+   * Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
+   *
+   * @generated from field: repeated int32 reminders = 25;
+   */
+  reminders: number[] = [];
+
   constructor(data?: PartialMessage<CalendarEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -471,6 +478,7 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 22, name: "created_at", kind: "message", T: Timestamp },
     { no: 23, name: "updated_at", kind: "message", T: Timestamp },
     { no: 24, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
+    { no: 25, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CalendarEvent {
@@ -858,6 +866,13 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
    */
   visibility?: VisibilityScope;
 
+  /**
+   * Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
+   *
+   * @generated from field: repeated int32 reminders = 18;
+   */
+  reminders: number[] = [];
+
   constructor(data?: PartialMessage<CreateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -883,6 +898,7 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
     { no: 15, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 18, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventRequest {
@@ -1083,6 +1099,13 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
    */
   attendeeIds: string[] = [];
 
+  /**
+   * Updated reminder intervals in minutes before event
+   *
+   * @generated from field: repeated int32 reminders = 19;
+   */
+  reminders: number[] = [];
+
   constructor(data?: PartialMessage<UpdateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1109,6 +1132,7 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
     { no: 18, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 19, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventRequest {

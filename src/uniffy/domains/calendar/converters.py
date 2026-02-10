@@ -242,6 +242,9 @@ def event_to_proto(
         updated_at=datetime_to_timestamp(event.updated_at),
     )
 
+    if event.reminders:
+        proto_event.reminders.extend(event.reminders)
+
     if event.meeting_url:
         proto_event.meeting_url = event.meeting_url
 

@@ -981,6 +981,13 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
    */
   channelOverrides: { [key: string]: NotificationChannelPreference } = {};
 
+  /**
+   * Default reminder intervals in minutes for new calendar events
+   *
+   * @generated from field: repeated int32 default_reminder_intervals = 8;
+   */
+  defaultReminderIntervals: number[] = [];
+
   constructor(data?: PartialMessage<NotificationsSettings>) {
     super();
     proto3.util.initPartial(data, this);
@@ -996,6 +1003,7 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
     { no: 5, name: "quiet_hours_start", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "quiet_hours_end", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "channel_overrides", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: NotificationChannelPreference} },
+    { no: 8, name: "default_reminder_intervals", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NotificationsSettings {

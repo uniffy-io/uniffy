@@ -7,6 +7,7 @@ from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
@@ -78,6 +79,7 @@ __all__ = [
     "Category",
     "CalendarEvent",
     "EventAttendee",
+    "EventReminder",
     # Permission models
     "ContentGroupLink",
     "ContentPermission",

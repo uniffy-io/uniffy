@@ -24,6 +24,7 @@ import {
   deleteCategory as deleteCategoryThunk,
   addAttendees,
   removeAttendees,
+  updateAttendeeStatus,
   createEventTemplate,
   updateEventTemplate,
   deleteEventTemplate,
@@ -284,6 +285,9 @@ const calendarSlice = createSlice({
     builder
       .addCase(fetchEvent.fulfilled, (state, action) => {
         state.events[action.payload.id] = action.payload;
+        if (!state.visibleEventIds.includes(action.payload.id)) {
+          state.visibleEventIds.push(action.payload.id);
+        }
       });
 
     // Create event
@@ -398,6 +402,21 @@ const calendarSlice = createSlice({
       .addCase(removeAttendees.fulfilled, (state, action) => {
         if (state.events[action.payload.id]) {
           state.events[action.payload.id] = action.payload;
+        }
+      });
+
+    // Update attendee status (optimistic local update)
+    builder
+      .addCase(updateAttendeeStatus.fulfilled, (state, action) => {
+        const { eventId, userId, status } = action.payload;
+        const event = state.events[eventId];
+        if (event) {
+          state.events[eventId] = {
+            ...event,
+            attendees: event.attendees.map((a) =>
+              a.id === userId ? { ...a, status } : a
+            ),
+          };
         }
       });
 

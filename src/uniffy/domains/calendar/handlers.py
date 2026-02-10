@@ -148,6 +148,7 @@ class CalendarHandlers:
                     tags=list(request.tags) if request.tags else None,
                     linked_resources=linked_resources,
                     visibility=visibility,
+                    reminders=list(request.reminders) if request.reminders else None,
                 )
 
                 # Fetch attendees for response
@@ -249,6 +250,8 @@ class CalendarHandlers:
                     kwargs["visibility"] = visibility_from_proto(request.visibility)
                 if request.attendee_ids:
                     kwargs["attendee_ids"] = [UUID(id) for id in request.attendee_ids]
+                if request.reminders:
+                    kwargs["reminders"] = list(request.reminders)
 
                 event = await ops.update(
                     user_id=user_id,

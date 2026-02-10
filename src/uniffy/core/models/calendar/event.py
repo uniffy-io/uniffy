@@ -120,6 +120,7 @@ class CalendarEvent(SQLModel, table=True):
             nullable=False,
         ),
     )
+    reminders: list[int] | None = Field(default=None, sa_column=Column(JSONB))
     recurrence_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

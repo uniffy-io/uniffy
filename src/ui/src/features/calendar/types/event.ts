@@ -106,6 +106,8 @@ export interface CalendarEvent {
   createdAt: string;
   /** Last updated timestamp (ISO string) */
   updatedAt: string;
+  /** Reminder intervals in minutes before event */
+  reminders: number[];
 }
 
 /**
@@ -127,6 +129,7 @@ export interface CreateEventRequest {
   isFocusTime?: boolean;
   tags?: string[];
   linkedResourceIds?: string[];
+  reminders?: number[];
 }
 
 /**
@@ -149,6 +152,7 @@ export interface UpdateEventRequest {
   isFocusTime?: boolean;
   tags?: string[];
   linkedResourceIds?: string[];
+  reminders?: number[];
 }
 
 /**

@@ -61,6 +61,9 @@ class AppearanceDefaults:
     default_editor: str = "crepe"  # Default editor for notes: "crepe", "markdown", "readonly"
 
 
+DEFAULT_REMINDER_INTERVALS: list[int] = [15]
+
+
 @dataclass(frozen=True)
 class NotificationsDefaults:
     """Default notification settings."""
@@ -115,6 +118,7 @@ def get_notifications_defaults_dict() -> dict[str, Any]:
         "quiet_hours_start": NOTIFICATIONS_DEFAULTS.quiet_hours_start,
         "quiet_hours_end": NOTIFICATIONS_DEFAULTS.quiet_hours_end,
         "channel_overrides": {},
+        "default_reminder_intervals": DEFAULT_REMINDER_INTERVALS,
     }
 
 

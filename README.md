@@ -66,6 +66,10 @@ docker compose up -d
 
 ## System Architecture
 
+- For production deployments, it is recommended to support HTTP/2 at all levels of the stack. This is especially important for large deployments, as ConnectRPC benefits significantly from HTTP/2 multiplexing to avoid head-of-line blocking and reduce connection overhead.
+
+- **Note on Valkey:** While Redis should in theory work as a drop-in replacement for Valkey, this has not been tested and is not recommended by us. We only support and test against Valkey.
+
 ```
                +--------------+       +-------+
                | Browser      |       |  TUI  |

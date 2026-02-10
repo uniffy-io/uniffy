@@ -29,7 +29,10 @@ setup_observability(
         console_log_level=_log_level,
     )
 )
+from arq.cron import cron
+
 from uniffy.workers.tasks import (
+    check_calendar_reminders,
     deliver_email_notification,
     deliver_push_notification,
     extract_audio_metadata,
@@ -92,6 +95,11 @@ class WorkerSettings:
         deliver_push_notification,
         deliver_email_notification,
         send_email_digest,
+    ]
+
+    # Cron jobs
+    cron_jobs = [
+        cron(check_calendar_reminders, minute=None),  # Every minute
     ]
 
     # Lifecycle hooks

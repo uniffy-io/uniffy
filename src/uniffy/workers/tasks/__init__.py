@@ -8,6 +8,7 @@ from uniffy.workers.tasks.notifications import (
     process_notification_event,
     send_email_digest,
 )
+from uniffy.workers.tasks.reminders import check_calendar_reminders
 from uniffy.workers.tasks.thumbnails import (
     generate_image_thumbnail,
     generate_pdf_thumbnail,
@@ -32,4 +33,6 @@ __all__ = [
     "deliver_push_notification",
     "deliver_email_notification",
     "send_email_digest",
+    # Calendar reminders
+    "check_calendar_reminders",
 ]

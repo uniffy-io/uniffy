@@ -37,16 +37,16 @@ export const defaultTheme: Theme = {
 export const darkTheme: Theme = {
   name: 'dark',
   colors: {
-    primary: '217.2 91.2% 59.8%', // Blue 500
+    primary: '217.2 91.2% 59.8%',
     primaryForeground: '222.2 47.4% 11.2%',
-    background: '222.2 84% 4.9%',
-    foreground: '210 40% 98%',
-    muted: '217.2 32.6% 17.5%',
-    mutedForeground: '215 20.2% 65.1%',
-    card: '222.2 84% 4.9%', // Dark background
-    cardForeground: '210 40% 98%',
-    border: '217.2 32.6% 17.5%',
-    input: '217.2 32.6% 17.5%',
+    background: '228 16% 8%',
+    foreground: '220 14% 95%',
+    muted: '228 10% 16%',
+    mutedForeground: '225 10% 64%',
+    card: '228 12% 12%',
+    cardForeground: '220 14% 95%',
+    border: '228 10% 21%',
+    input: '228 12% 10%',
     ring: '224.3 76.3% 48%',
   },
 };

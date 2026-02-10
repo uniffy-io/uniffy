@@ -134,11 +134,11 @@
 - [x] Calendar Event single page view (navigates to calendar with event selected)
 - [x] Multi-day event support with continuous visual spanning across days
 - [ ] Recurring events with customizable patterns
-- [ ] Event reminders and notifications
+- [x] Event reminders and notifications
 - [x] Drag and drop event rescheduling
 - [x] Personal and Organization calendar separation
 - [x] Event attendees management
-- [ ] Event invitations with RSVP tracking
+- [x] Event invitations with RSVP tracking
 - [x] Conflict detection for overlapping events
 - [ ] External calendar subscriptions
 - [x] Event templates for quick creation

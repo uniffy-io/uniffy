@@ -239,6 +239,7 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     visibility: PROTO_TO_VISIBILITY[proto.visibility] || 'private',
     createdAt: timestampToIso(proto.createdAt),
     updatedAt: timestampToIso(proto.updatedAt),
+    reminders: [...(proto.reminders || [])],
 });
 
 /**
@@ -345,6 +346,7 @@ export const createEvent = createAsyncThunk<
         isFocusTime?: boolean;
         tags?: string[];
         visibility?: string;
+        reminders?: number[];
     },
     { state: RootState; rejectValue: string }
 >('calendar/createEvent', async (params, { getState, rejectWithValue }) => {
@@ -381,6 +383,7 @@ export const createEvent = createAsyncThunk<
             isFocusTime: params.isFocusTime || false,
             tags: params.tags || [],
             visibility: VISIBILITY_TO_PROTO[params.visibility || 'private'] || ProtoVisibilityScope.PRIVATE,
+            reminders: params.reminders || [],
         });
 
         if (!response.event) {
@@ -414,6 +417,7 @@ export const updateEvent = createAsyncThunk<
         isFocusTime?: boolean;
         tags?: string[];
         visibility?: string;
+        reminders?: number[];
     },
     { state: RootState; rejectValue: string }
 >('calendar/updateEvent', async (params, { getState, rejectWithValue }) => {
@@ -451,6 +455,7 @@ export const updateEvent = createAsyncThunk<
             isFocusTime: params.isFocusTime,
             tags: params.tags,
             visibility: params.visibility ? VISIBILITY_TO_PROTO[params.visibility] : undefined,
+            reminders: params.reminders,
         });
 
         if (!response.event) {
@@ -604,7 +609,7 @@ export const updateAttendeeStatus = createAsyncThunk<
     { eventId: string; userId: string; status: AttendeeStatus },
     { eventId: string; status: AttendeeStatus },
     { state: RootState; rejectValue: string }
->('calendar/updateAttendeeStatus', async (params, { getState, rejectWithValue }) => {
+>('calendar/updateAttendeeStatus', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const userId = getState().auth.user?.id;
@@ -621,6 +626,10 @@ export const updateAttendeeStatus = createAsyncThunk<
         if (!response.success) {
             return rejectWithValue('Failed to update attendee status');
         }
+
+        // Fetch the full event to ensure it is in the store (e.g. when
+        // accepting from a notification while the event was not yet loaded)
+        dispatch(fetchEvent(params.eventId));
 
         return {
             eventId: params.eventId,

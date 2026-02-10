@@ -12,7 +12,7 @@ from loguru import logger
 
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
-from uniffy.core.valkey import close_pubsub, init_pubsub
+from uniffy.core.valkey import close_pubsub, close_queue, init_pubsub, init_queue
 from uniffy.db import close_db, init_db
 from uniffy.observability.metrics import (
     WORKER_JOB_DURATION,
@@ -56,6 +56,13 @@ async def on_startup(ctx: dict[str, Any]) -> None:
     await init_meilisearch()
     logger.info("Worker: Meilisearch initialized")
 
+    # Initialize queue pool so cron jobs can enqueue notifications
+    try:
+        await init_queue()
+        logger.info("Worker: Queue pool initialized")
+    except Exception as e:
+        logger.warning(f"Worker: Queue pool not available: {e}")
+
     # Initialize Pub/Sub publisher for notification delivery
     try:
         await init_pubsub()
@@ -88,6 +95,7 @@ async def on_shutdown(ctx: dict[str, Any]) -> None:
     """
     logger.info("Worker shutting down - cleaning up resources...")
 
+    await close_queue()
     await close_pubsub()
     await close_meilisearch()
     await close_s3()
