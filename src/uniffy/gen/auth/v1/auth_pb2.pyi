@@ -1,6 +1,8 @@
+from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Optional as _Optional
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -46,21 +48,37 @@ class LogoutRequest(_message.Message):
     refresh_token: str
     def __init__(self, refresh_token: _Optional[str] = ...) -> None: ...
 
+class ListSessionsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class RevokeSessionRequest(_message.Message):
+    __slots__ = ("session_id",)
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    session_id: str
+    def __init__(self, session_id: _Optional[str] = ...) -> None: ...
+
+class RevokeOtherSessionsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
 class AuthResponse(_message.Message):
-    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role")
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     access_token: str
     refresh_token: str
     token_type: str
     user_id: str
     organization_id: str
     organization_role: str
-    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ...) -> None: ...
+    session_id: str
+    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ...) -> None: ...
 
 class CurrentUserResponse(_message.Message):
     __slots__ = ("id", "email", "username", "full_name", "is_active", "is_system_admin", "email_verified", "accent_color", "font_family", "avatar_url")
@@ -91,3 +109,37 @@ class LogoutResponse(_message.Message):
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class SessionInfo(_message.Message):
+    __slots__ = ("id", "user_agent", "device_label", "created_at", "last_activity", "is_current")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    USER_AGENT_FIELD_NUMBER: _ClassVar[int]
+    DEVICE_LABEL_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
+    IS_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    user_agent: str
+    device_label: str
+    created_at: str
+    last_activity: str
+    is_current: bool
+    def __init__(self, id: _Optional[str] = ..., user_agent: _Optional[str] = ..., device_label: _Optional[str] = ..., created_at: _Optional[str] = ..., last_activity: _Optional[str] = ..., is_current: _Optional[bool] = ...) -> None: ...
+
+class ListSessionsResponse(_message.Message):
+    __slots__ = ("sessions",)
+    SESSIONS_FIELD_NUMBER: _ClassVar[int]
+    sessions: _containers.RepeatedCompositeFieldContainer[SessionInfo]
+    def __init__(self, sessions: _Optional[_Iterable[_Union[SessionInfo, _Mapping]]] = ...) -> None: ...
+
+class RevokeSessionResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class RevokeOtherSessionsResponse(_message.Message):
+    __slots__ = ("revoked_count",)
+    REVOKED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    revoked_count: int
+    def __init__(self, revoked_count: _Optional[int] = ...) -> None: ...

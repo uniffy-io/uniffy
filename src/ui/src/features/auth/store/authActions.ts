@@ -30,6 +30,7 @@ export interface SetCredentialsPayload {
   refreshToken: string;
   organizationId?: string;
   organizationRole?: string;
+  sessionId?: string;
 }
 
 export interface RehydrateCompletePayload {
@@ -38,6 +39,7 @@ export interface RehydrateCompletePayload {
   refreshToken: string;
   organizationId?: string;
   organizationRole?: string;
+  sessionId?: string;
 }
 
 // Action creators that return plain action objects

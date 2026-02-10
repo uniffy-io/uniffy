@@ -7,9 +7,7 @@ import "common/v1/common.proto";
 
 option go_package = "uniffy/gen/attachments/v1;attachmentsv1";
 
-// =============================================================================
 // SERVICE
-// =============================================================================
 
 // AttachmentsService provides file attachment management for content.
 // Attachments allow files to be linked to notes, chat messages, calendar events, etc.
@@ -35,9 +33,7 @@ service AttachmentsService {
   rpc GetAttachmentsFolder(GetAttachmentsFolderRequest) returns (GetAttachmentsFolderResponse);
 }
 
-// =============================================================================
 // ATTACHMENT MESSAGES
-// =============================================================================
 
 // Attachment represents a file attached to content.
 message Attachment {
@@ -62,9 +58,7 @@ message AttachedFileOwner {
   string email = 3;
 }
 
-// =============================================================================
 // ATTACH FILE
-// =============================================================================
 
 message AttachFileRequest {
   string organization_id = 1;
@@ -77,9 +71,7 @@ message AttachFileResponse {
   Attachment attachment = 1;
 }
 
-// =============================================================================
 // DETACH FILE
-// =============================================================================
 
 message DetachFileRequest {
   string organization_id = 1;
@@ -91,9 +83,7 @@ message DetachFileResponse {
   string message = 2;
 }
 
-// =============================================================================
 // LIST ATTACHMENTS
-// =============================================================================
 
 message ListAttachmentsRequest {
   string organization_id = 1;
@@ -106,9 +96,7 @@ message ListAttachmentsResponse {
   int32 total_count = 2;
 }
 
-// =============================================================================
 // LIST SHARED ATTACHMENTS
-// =============================================================================
 
 message ListSharedAttachmentsRequest {
   string organization_id = 1;
@@ -138,9 +126,7 @@ message SharedAttachment {
   string content_owner_name = 3;     // Owner of the parent content
 }
 
-// =============================================================================
 // GET ATTACHMENTS FOLDER
-// =============================================================================
 
 message GetAttachmentsFolderRequest {
   string organization_id = 1;

@@ -7,9 +7,7 @@ import "common/v1/common.proto";
 
 option go_package = "uniffy/gen/files/v1;filesv1";
 
-// =============================================================================
 // SERVICE
-// =============================================================================
 
 // FilesService provides file management with streaming upload/download.
 service FilesService {
@@ -115,9 +113,7 @@ service FilesService {
   rpc ListSavedFilters(ListSavedFiltersRequest) returns (ListSavedFiltersResponse);
 }
 
-// =============================================================================
 // ENUMS
-// =============================================================================
 
 // Upload status for tracking multipart uploads.
 enum UploadStatus {
@@ -138,9 +134,7 @@ enum ExtractionStatus {
   EXTRACTION_STATUS_SKIPPED = 5;
 }
 
-// =============================================================================
 // UPLOAD MESSAGES
-// =============================================================================
 
 message InitiateUploadRequest {
   string organization_id = 1;
@@ -200,9 +194,7 @@ message AbortUploadResponse {
   string message = 2;
 }
 
-// =============================================================================
 // DOWNLOAD MESSAGES
-// =============================================================================
 
 message DownloadFileRequest {
   string file_id = 1;
@@ -239,9 +231,7 @@ message StreamFileRangeResponse {
   bool is_first_chunk = 7;        // Metadata only meaningful in first chunk
 }
 
-// =============================================================================
 // FILE MESSAGES
-// =============================================================================
 
 message File {
   string id = 1;
@@ -351,9 +341,7 @@ message ListFilesResponse {
   int32 total_pages = 5;
 }
 
-// =============================================================================
 // FOLDER MESSAGES
-// =============================================================================
 
 message Folder {
   string id = 1;
@@ -402,9 +390,7 @@ message DeleteFolderResponse {
   int32 folders_deleted = 4;
 }
 
-// =============================================================================
 // TREE MESSAGES
-// =============================================================================
 
 message GetFilesTreeRequest {
   string organization_id = 1;
@@ -429,9 +415,7 @@ message TreeNode {
   repeated TreeNode children = 9;      // Nested children (if requested)
 }
 
-// =============================================================================
 // BULK OPERATION MESSAGES
-// =============================================================================
 
 message MoveItemsRequest {
   string organization_id = 1;
@@ -485,9 +469,7 @@ message EmptyTrashResponse {
   int32 folders_deleted = 4;
 }
 
-// =============================================================================
 // VERSION MESSAGES
-// =============================================================================
 
 message FileVersion {
   string id = 1;
@@ -514,9 +496,7 @@ message RestoreFileVersionRequest {
   string version_id = 3;
 }
 
-// =============================================================================
 // SAVED FILTER MESSAGES
-// =============================================================================
 
 // Filter criteria for file search/filtering.
 message FilterCriteria {

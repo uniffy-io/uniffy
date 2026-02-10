@@ -17,10 +17,10 @@ from uniffy.domains.notifications.delivery.push import PushAdapter
 
 # Registry: channel_name -> adapter instance
 # The worker looks up adapters by the channel names returned from
-# _get_delivery_channels() (e.g., {"in_app", "push", "email"}).
+# _get_delivery_channels() (e.g., {"in_app", "browser", "email"}).
 DELIVERY_ADAPTERS: dict[str, DeliveryAdapter] = {
     "in_app": InAppAdapter(),
-    "push": PushAdapter(),
+    "browser": PushAdapter(),
     "email": EmailAdapter(),
 }
 

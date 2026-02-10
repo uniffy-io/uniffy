@@ -7,9 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "uniffy/gen/permissions/v1;permissionsv1";
 
-// =============================================================================
 // PermissionsService - Fine-grained content permission management
-// =============================================================================
 
 service PermissionsService {
   // Grant permission to a user or group on content
@@ -31,9 +29,7 @@ service PermissionsService {
   rpc SearchShareTargets(SearchShareTargetsRequest) returns (ShareTargetsResponse);
 }
 
-// =============================================================================
 // Request Messages
-// =============================================================================
 
 // Request to grant permission
 message GrantPermissionRequest {
@@ -84,9 +80,7 @@ message SearchShareTargetsRequest {
   bool include_groups = 5;
 }
 
-// =============================================================================
 // Response Messages
-// =============================================================================
 
 // Response for revoke operation
 message RevokePermissionResponse {
@@ -104,9 +98,7 @@ message ShareTargetsResponse {
   repeated ShareTarget targets = 1;
 }
 
-// =============================================================================
 // Data Messages
-// =============================================================================
 
 // Permission information
 message PermissionInfo {

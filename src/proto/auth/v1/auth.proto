@@ -4,9 +4,7 @@ package auth.v1;
 
 option go_package = "uniffy/gen/auth/v1;authv1";
 
-// =============================================================================
 // AuthService - Authentication only
-// =============================================================================
 
 // AuthService handles user authentication (login, register, token refresh).
 // For user management, see users.v1.UsersService.
@@ -27,11 +25,18 @@ service AuthService {
 
   // Logout (invalidate tokens)
   rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+  // List active sessions for the current user
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // Revoke a specific session
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+
+  // Revoke all sessions except the current one
+  rpc RevokeOtherSessions(RevokeOtherSessionsRequest) returns (RevokeOtherSessionsResponse);
 }
 
-// =============================================================================
 // Request Messages
-// =============================================================================
 
 // Request to register a new user
 message RegisterRequest {
@@ -63,9 +68,18 @@ message LogoutRequest {
   optional string refresh_token = 1;  // If provided, invalidates specific token
 }
 
-// =============================================================================
+// Request to list active sessions
+message ListSessionsRequest {}
+
+// Request to revoke a specific session
+message RevokeSessionRequest {
+  string session_id = 1;
+}
+
+// Request to revoke all other sessions
+message RevokeOtherSessionsRequest {}
+
 // Response Messages
-// =============================================================================
 
 // Authentication response with tokens
 message AuthResponse {
@@ -75,6 +89,7 @@ message AuthResponse {
   string user_id = 4;
   optional string organization_id = 5;  // If authenticated into specific org
   optional string organization_role = 6;  // User's role in the org: MEMBER, ADMIN, or OWNER
+  optional string session_id = 7;  // Server-side session identifier
 }
 
 // Current user info response
@@ -94,4 +109,30 @@ message CurrentUserResponse {
 // Logout response
 message LogoutResponse {
   bool success = 1;
+}
+
+// Active session information
+message SessionInfo {
+  string id = 1;
+  reserved 2;  // removed ip_address
+  string user_agent = 3;
+  string device_label = 4;
+  string created_at = 5;  // ISO 8601 timestamp
+  string last_activity = 6;  // ISO 8601 timestamp
+  bool is_current = 7;
+}
+
+// Response containing list of active sessions
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+}
+
+// Response after revoking a session
+message RevokeSessionResponse {
+  bool success = 1;
+}
+
+// Response after revoking other sessions
+message RevokeOtherSessionsResponse {
+  int32 revoked_count = 1;
 }

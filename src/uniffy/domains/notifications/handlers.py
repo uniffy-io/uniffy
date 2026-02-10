@@ -14,6 +14,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.config.push import get_vapid_config
 from uniffy.core.models.login.user import User
 from uniffy.core.valkey import subscribe_user
 from uniffy.db import get_async_session
@@ -33,6 +34,8 @@ from uniffy.gen.notifications.v1.notifications_pb2 import (
     FileUpdatePayload,
     GetUnreadCountRequest,
     GetUnreadCountResponse,
+    GetVapidPublicKeyRequest,
+    GetVapidPublicKeyResponse,
     ListNotificationsRequest,
     ListNotificationsResponse,
     MarkAllAsReadRequest,
@@ -397,6 +400,39 @@ class NotificationsHandlers:
         except Exception as e:
             logger.error(f"Error unregistering push subscription: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_vapid_public_key(
+        self,
+        request: GetVapidPublicKeyRequest,
+        ctx: RequestContext,
+    ) -> GetVapidPublicKeyResponse:
+        """
+        Handle get_vapid_public_key RPC call.
+
+        Returns the server's VAPID public key so the browser can subscribe
+        to push notifications. Does not require authentication so the
+        subscription flow can start before full context is loaded.
+
+        Parameters
+        ----------
+        request : GetVapidPublicKeyRequest
+            Empty request.
+        ctx : RequestContext
+            RPC request context.
+
+        Returns
+        -------
+        GetVapidPublicKeyResponse
+            The base64url-encoded VAPID public key.
+
+        """
+        config = get_vapid_config()
+        if not config:
+            raise ConnectError(
+                Code.FAILED_PRECONDITION,
+                "Push notifications are not configured on this server",
+            )
+        return GetVapidPublicKeyResponse(public_key=config.public_key)
 
     async def stream_notifications(
         self,

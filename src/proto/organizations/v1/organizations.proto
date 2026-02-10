@@ -7,9 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "uniffy/gen/organizations/v1;organizationsv1";
 
-// =============================================================================
 // OrganizationsService - Organization CRUD, membership, and settings
-// =============================================================================
 
 service OrganizationsService {
   // User's organizations
@@ -36,9 +34,7 @@ service OrganizationsService {
   rpc UpdatePermissionDefaults(UpdatePermissionDefaultsRequest) returns (ContentTypeDefaults);
 }
 
-// =============================================================================
 // User's Organizations Messages
-// =============================================================================
 
 message ListMyOrganizationsRequest {}
 
@@ -52,9 +48,7 @@ message MyOrganization {
   google.protobuf.Timestamp joined_at = 3;
 }
 
-// =============================================================================
 // Organization CRUD Messages (System Admin)
-// =============================================================================
 
 message ListOrganizationsRequest {
   optional common.v1.PaginationRequest pagination = 1;
@@ -100,9 +94,7 @@ message DeleteOrganizationResponse {
   bool success = 1;
 }
 
-// =============================================================================
 // Organization Overview Messages (Org Admin)
-// =============================================================================
 
 message GetOrganizationOverviewRequest {
   string organization_id = 1;
@@ -120,9 +112,7 @@ message ContentTypeCount {
   int32 count = 2;
 }
 
-// =============================================================================
 // Member Management Messages (Org Admin)
-// =============================================================================
 
 message ListMembersRequest {
   string organization_id = 1;
@@ -158,9 +148,7 @@ message RemoveMemberResponse {
   bool success = 1;
 }
 
-// =============================================================================
 // Permission Defaults Messages (Org Admin)
-// =============================================================================
 
 message GetPermissionDefaultsRequest {
   string organization_id = 1;

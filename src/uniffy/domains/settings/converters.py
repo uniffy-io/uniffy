@@ -150,8 +150,8 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
 
     proto = ProtoNotifications()
 
-    if settings.get("desktop_enabled") is not None:
-        proto.desktop_enabled = settings["desktop_enabled"]
+    if settings.get("browser_enabled") is not None:
+        proto.browser_enabled = settings["browser_enabled"]
 
     if settings.get("email_enabled") is not None:
         proto.email_enabled = settings["email_enabled"]
@@ -174,10 +174,8 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
         pref = ProtoChannelPreference()
         if channels.get("in_app") is not None:
             pref.in_app = channels["in_app"]
-        if channels.get("desktop") is not None:
-            pref.desktop = channels["desktop"]
-        if channels.get("push") is not None:
-            pref.push = channels["push"]
+        if channels.get("browser") is not None:
+            pref.browser = channels["browser"]
         if channels.get("email") is not None:
             pref.email = channels["email"]
         proto.channel_overrides[notif_type].CopyFrom(pref)
@@ -296,8 +294,8 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
 
     result: dict[str, Any] = {}
 
-    if proto.HasField("desktop_enabled"):
-        result["desktop_enabled"] = proto.desktop_enabled
+    if proto.HasField("browser_enabled"):
+        result["browser_enabled"] = proto.browser_enabled
 
     if proto.HasField("email_enabled"):
         result["email_enabled"] = proto.email_enabled
@@ -321,10 +319,8 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
             channels: dict[str, bool] = {}
             if pref.HasField("in_app"):
                 channels["in_app"] = pref.in_app
-            if pref.HasField("desktop"):
-                channels["desktop"] = pref.desktop
-            if pref.HasField("push"):
-                channels["push"] = pref.push
+            if pref.HasField("browser"):
+                channels["browser"] = pref.browser
             if pref.HasField("email"):
                 channels["email"] = pref.email
             if channels:

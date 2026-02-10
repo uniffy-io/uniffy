@@ -1,6 +1,6 @@
 """Base delivery adapter for notification channels.
 
-Each notification channel (in-app, push, email) implements this interface.
+Each notification channel (in-app, browser, email) implements this interface.
 The worker iterates over enabled adapters per recipient, calling deliver().
 """
 
@@ -15,8 +15,8 @@ class DeliveryAdapter(ABC):
     Abstract base class for notification delivery channels.
 
     Each subclass handles delivery to a single channel type
-    (in_app, push, email, desktop). The worker resolves which
-    channels are enabled per recipient and calls deliver() on each.
+    (in_app, browser, email). The worker resolves which channels
+    are enabled per recipient and calls deliver() on each.
     """
 
     @property
@@ -26,7 +26,7 @@ class DeliveryAdapter(ABC):
         Channel identifier matching preference keys.
 
         Must match the keys used in DEFAULT_NOTIFICATION_CHANNELS
-        and the channel_overrides settings: "in_app", "push", "email".
+        and the channel_overrides settings: "in_app", "browser", "email".
         """
 
     @abstractmethod

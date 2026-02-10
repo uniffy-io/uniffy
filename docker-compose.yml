@@ -116,45 +116,6 @@ services:
     networks:
       - uniffy-network
 
-  # Background worker for thumbnail generation and metadata extraction
-  # For local development, run: ./run.sh worker-dev
-  # Uncomment below for Docker-based worker deployment
-  # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: src/uniffy/Dockerfile
-  #   container_name: uniffy-worker
-  #   restart: unless-stopped
-  #   command: ["python", "-m", "uniffy.worker"]
-  #   environment:
-  #     POSTGRES_HOST: postgres
-  #     POSTGRES_PORT: 5432
-  #     POSTGRES_USER: uniffy
-  #     POSTGRES_PASSWORD: uniffy
-  #     POSTGRES_DB: uniffy
-  #     VALKEY_HOST: valkey
-  #     VALKEY_PORT: 6379
-  #     VALKEY_PASSWORD: uniffy-valkey-dev
-  #     S3_ENDPOINT_URL: http://rustfs:9000
-  #     S3_ACCESS_KEY: rustfsadmin
-  #     S3_SECRET_KEY: rustfsadmin
-  #     S3_BUCKET_NAME: uniffy-files
-  #     MEILISEARCH_URL: http://meilisearch:7700
-  #     MEILISEARCH_MASTER_KEY: uniffy-dev-master-key
-  #     LOG_LEVEL: INFO
-  #     ENVIRONMENT: development
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     valkey:
-  #       condition: service_healthy
-  #     meilisearch:
-  #       condition: service_healthy
-  #     rustfs:
-  #       condition: service_healthy
-  #   networks:
-  #     - uniffy-network
-
 volumes:
   postgres_data:
     driver: local

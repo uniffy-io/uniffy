@@ -104,10 +104,6 @@ class S3Client:
                 logger.info(f"Creating bucket {self.config.bucket_name}")
                 await client.create_bucket(Bucket=self.config.bucket_name)
 
-    # -----------------------------------------------------------------
-    # Simple upload/download (for small files or testing)
-    # -----------------------------------------------------------------
-
     async def upload_bytes(
         self,
         key: str,
@@ -186,10 +182,6 @@ class S3Client:
         except Exception:
             S3_OPERATION_ERRORS_TOTAL.labels(operation="download_bytes").inc()
             raise
-
-    # -----------------------------------------------------------------
-    # Streaming download (for ConnectRPC server streaming)
-    # -----------------------------------------------------------------
 
     async def download_stream(
         self,
@@ -337,10 +329,6 @@ class S3Client:
         except Exception:
             S3_OPERATION_ERRORS_TOTAL.labels(operation="download_range").inc()
             raise
-
-    # -----------------------------------------------------------------
-    # Multipart upload (for large files via streaming)
-    # -----------------------------------------------------------------
 
     async def create_multipart_upload(
         self,
@@ -539,10 +527,6 @@ class S3Client:
                 UploadId=upload_id,
             )
         return response.get("Parts", [])
-
-    # -----------------------------------------------------------------
-    # Delete operations
-    # -----------------------------------------------------------------
 
     async def copy_object(
         self,

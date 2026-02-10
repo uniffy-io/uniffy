@@ -57,6 +57,7 @@ def create_access_token(
     user_id: UUID,
     organization_id: UUID | None = None,
     token_version: int | None = None,
+    session_id: UUID | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
     """
@@ -70,6 +71,8 @@ def create_access_token(
         Optional organization ID for organization context.
     token_version : int | None
         User's current token version for revocation support.
+    session_id : UUID | None
+        Optional session ID for per-session tracking.
     expires_delta : timedelta | None
         Token expiration time. Defaults to JWT_ACCESS_TOKEN_EXPIRE_MINUTES env var
         or 15 minutes if not set.
@@ -96,6 +99,9 @@ def create_access_token(
 
     if token_version is not None:
         payload["tkv"] = token_version
+
+    if session_id is not None:
+        payload["sid"] = str(session_id)
 
     secret_key = get_secret_key()
     token = jwt.encode(payload, secret_key, algorithm="HS256")
@@ -130,6 +136,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
 def create_refresh_token(
     user_id: UUID,
     token_version: int | None = None,
+    session_id: UUID | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
     """
@@ -141,6 +148,8 @@ def create_refresh_token(
         User ID to encode in the token.
     token_version : int | None
         User's current token version for revocation support.
+    session_id : UUID | None
+        Optional session ID for per-session tracking.
     expires_delta : timedelta | None
         Token expiration time. Defaults to 90 days if not provided.
 
@@ -163,6 +172,9 @@ def create_refresh_token(
 
     if token_version is not None:
         payload["tkv"] = token_version
+
+    if session_id is not None:
+        payload["sid"] = str(session_id)
 
     secret_key = get_secret_key()
     token = jwt.encode(payload, secret_key, algorithm="HS256")

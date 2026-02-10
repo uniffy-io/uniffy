@@ -50,35 +50,58 @@ cp .env.example .env
 docker compose up -d
 ```
 
-- Migrations run automatically on backend startup.
+- Start the services
 
+```bash
+./run.sh backend
+./run.sh ui dev
+./run.sh worker-dev
+
+# if you don't want to run all on separate terminals
+# you can launch all service from a single command
+./run.sh dev
+```
+
+- Migrations run automatically on backend startup.
 
 ## System Architecture
 
 ```
-                        +---------+
-                        | Browser |
-                        +----+----+
-                             |
-              +--------------+--------------+
-              |                             |
-              v                             v
-        +-----------+               +-----------+
-        | Frontend  |  ConnectRPC   |  Backend  |
-        | React     +-------------->|  FastAPI  |
-        +-----------+               +-----+-----+
-                                          |
-              +-------------+-------------+-------------+
-              |             |             |             |
-              v             v             v             v
-        +----------+  +------------+  +--------+  +---------+
-        | Postgres |  | Meilisearch|  | Valkey |  | RustFS  |
-        | Database |  | Search     |  | Queue  |  | Storage |
-        +----------+  +------------+  +----+---+  +---------+
-                                          |
-                                          v
-                                    +-----------+
-                                    |  Worker   |
-                                    | (bg jobs) |
-                                    +-----------+
+               +--------------+       +-------+
+               | Browser      |       |  TUI  |
+               | (React)      |       +---+---+
+               +------+-------+           |
+                      |                   |
+                      +--------+----------+
+                               |
+                             HTTP/2
+                               |
+                               v
+                     +--------------------+
+                     | Reverse Proxy      |
+                     | (Caddy / Envoy)    |
+                     +--------+-----------+
+                              |
+                          h2c (HTTP/2
+                          plain text)
+                              |
+                              v
+                        +-----------+
+                        |  Backend  |
+                        |  FastAPI  |
+                        +-----+-----+
+                              |
+        +-------------+-------------+-------------+
+        |             |             |             |
+        v             v             v             v
+  +----------+  +------------+  +--------+  +---------+
+  | Postgres |  | Meilisearch|  | Valkey |  | RustFS  |
+  | Database |  | Search     |  | Queue  |  | Storage |
+  +----------+  +------------+  +----+---+  +---------+
+                                     |
+                                     v
+                               +-----------+
+                               |  Worker   |
+                               | (bg jobs) |
+                               +-----------+
 ```

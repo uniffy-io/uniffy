@@ -2,17 +2,18 @@
 
 Sends browser push notifications via the Web Push protocol (VAPID).
 Requires pywebpush and VAPID keys configured in environment variables.
-
-This is a placeholder -- actual pywebpush integration is deferred to Phase 6.
 """
 
+import json
 from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
+from pywebpush import WebPushException, webpush
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.config.push import get_vapid_config
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter
@@ -30,7 +31,7 @@ class PushAdapter(DeliveryAdapter):
     @property
     def channel_name(self) -> str:
         """Return channel identifier."""
-        return "push"
+        return "browser"
 
     async def deliver(
         self,
@@ -39,6 +40,9 @@ class PushAdapter(DeliveryAdapter):
     ) -> bool:
         """
         Send push notification to all registered endpoints for a user.
+
+        This variant has no DB session, so it cannot query subscriptions.
+        The worker always uses deliver_with_session() instead.
 
         Parameters
         ----------
@@ -50,12 +54,11 @@ class PushAdapter(DeliveryAdapter):
         Returns
         -------
         bool
-            True if at least one push was sent.
+            Always False -- use deliver_with_session() for actual delivery.
 
         """
-        # Phase 6: full pywebpush integration
         logger.debug(
-            f"Push delivery deferred: user={user_id} title={event.title}"
+            f"Push deliver() called without session: user={user_id} title={event.title}"
         )
         return False
 
@@ -68,7 +71,7 @@ class PushAdapter(DeliveryAdapter):
         """
         Send push notification using a shared DB session.
 
-        Fetches push subscriptions, sends to each endpoint,
+        Fetches push subscriptions, sends to each endpoint via pywebpush,
         and cleans up stale subscriptions.
 
         Parameters
@@ -86,46 +89,62 @@ class PushAdapter(DeliveryAdapter):
             True if at least one push was sent.
 
         """
+        vapid_config = get_vapid_config()
+        if not vapid_config:
+            logger.debug("Push skipped: VAPID not configured")
+            return False
+
         result = await session.execute(
             select(PushSubscription).where(PushSubscription.user_id == user_id)
         )
         subscriptions = list(result.scalars().all())
 
         if not subscriptions:
+            logger.debug(f"Push skipped: no subscriptions for user {user_id}")
             return False
+
+        payload = json.dumps({
+            "title": event.title,
+            "body": event.body or "",
+            "url": event.source_urn or "",
+            "notification_type": event.notification_type.value
+            if hasattr(event.notification_type, "value")
+            else str(event.notification_type),
+        })
 
         delivered = 0
         stale: list[PushSubscription] = []
 
         for sub in subscriptions:
             try:
-                # Phase 6: replace with pywebpush.webpush() call
-                # payload = json.dumps({
-                #     "title": event.title,
-                #     "body": event.body,
-                #     "url": event.source_urn or "",
-                # })
-                # webpush(
-                #     subscription_info={
-                #         "endpoint": sub.endpoint,
-                #         "keys": {
-                #             "p256dh": sub.p256dh_key,
-                #             "auth": sub.auth_key,
-                #         },
-                #     },
-                #     data=payload,
-                #     vapid_private_key=VAPID_PRIVATE_KEY,
-                #     vapid_claims={"sub": f"mailto:{VAPID_EMAIL}"},
-                # )
-                logger.debug(
-                    f"Would push to endpoint={sub.endpoint[:50]}... "
-                    f"title={event.title}"
+                webpush(
+                    subscription_info={
+                        "endpoint": sub.endpoint,
+                        "keys": {
+                            "p256dh": sub.p256dh_key,
+                            "auth": sub.auth_key,
+                        },
+                    },
+                    data=payload,
+                    vapid_private_key=vapid_config.private_key,
+                    vapid_claims={"sub": vapid_config.contact_email},
                 )
                 delivered += 1
                 sub.last_used_at = datetime.now(UTC)
+            except WebPushException as e:
+                if e.response and e.response.status_code == 410:
+                    logger.info(
+                        f"Push subscription expired (410), removing: {sub.endpoint[:60]}"
+                    )
+                    stale.append(sub)
+                else:
+                    status = e.response.status_code if e.response else "N/A"
+                    logger.warning(
+                        f"Push delivery failed for {sub.endpoint[:60]}: "
+                        f"status={status} {e}"
+                    )
             except Exception as e:
-                logger.warning(f"Push delivery failed for {sub.endpoint[:50]}: {e}")
-                stale.append(sub)
+                logger.warning(f"Push delivery error for {sub.endpoint[:60]}: {e}")
 
         # Remove stale subscriptions (e.g., 410 Gone)
         for sub in stale:

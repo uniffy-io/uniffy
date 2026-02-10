@@ -10,10 +10,6 @@ from typing import Any
 from loguru import logger
 from prometheus_client import Counter, Gauge, Histogram, generate_latest
 
-# ---------------------------------------------------------------------------
-# Phase 1: RPC / HTTP / PubSub (existing)
-# ---------------------------------------------------------------------------
-
 PUBSUB_ACTIVE_SUBSCRIBERS = Gauge(
     "uniffy_pubsub_active_subscribers",
     "Number of active Pub/Sub streaming connections",
@@ -43,9 +39,6 @@ HTTP_REQUEST_DURATION = Histogram(
     ["method", "path"],
 )
 
-# ---------------------------------------------------------------------------
-# Phase 2: DB Connection Pool
-# ---------------------------------------------------------------------------
 
 DB_POOL_SIZE = Gauge(
     "uniffy_db_pool_size",
@@ -86,10 +79,6 @@ def _update_pool_gauges() -> None:
     DB_POOL_CHECKED_IN.set(_db_pool.checkedin())
 
 
-# ---------------------------------------------------------------------------
-# Phase 2: S3 Storage
-# ---------------------------------------------------------------------------
-
 S3_OPERATIONS_TOTAL = Counter(
     "uniffy_s3_operations_total",
     "Total S3 operations",
@@ -114,9 +103,6 @@ S3_BYTES_TRANSFERRED = Counter(
     ["direction"],
 )
 
-# ---------------------------------------------------------------------------
-# Phase 2: Meilisearch
-# ---------------------------------------------------------------------------
 
 SEARCH_OPERATIONS_TOTAL = Counter(
     "uniffy_search_operations_total",
@@ -136,9 +122,6 @@ SEARCH_OPERATION_ERRORS_TOTAL = Counter(
     ["operation"],
 )
 
-# ---------------------------------------------------------------------------
-# Phase 2: Worker Jobs
-# ---------------------------------------------------------------------------
 
 WORKER_JOBS_STARTED_TOTAL = Counter(
     "uniffy_worker_jobs_started_total",
@@ -164,9 +147,6 @@ WORKER_JOBS_IN_PROGRESS = Gauge(
     ["job_name"],
 )
 
-# ---------------------------------------------------------------------------
-# Phase 2: Auth
-# ---------------------------------------------------------------------------
 
 AUTH_ATTEMPTS_TOTAL = Counter(
     "uniffy_auth_attempts_total",
@@ -174,9 +154,6 @@ AUTH_ATTEMPTS_TOTAL = Counter(
     ["operation", "outcome"],
 )
 
-# ---------------------------------------------------------------------------
-# Phase 2: Notifications
-# ---------------------------------------------------------------------------
 
 NOTIFICATION_EVENTS_TOTAL = Counter(
     "uniffy_notification_events_total",
@@ -191,20 +168,10 @@ NOTIFICATION_DELIVERIES_TOTAL = Counter(
 )
 
 
-# ---------------------------------------------------------------------------
-# Scrape endpoint helper
-# ---------------------------------------------------------------------------
-
-
 def get_metrics() -> bytes:
     """Render all registered Prometheus metrics in text exposition format."""
     _update_pool_gauges()
     return generate_latest()
-
-
-# ---------------------------------------------------------------------------
-# Worker metrics HTTP server
-# ---------------------------------------------------------------------------
 
 
 def start_worker_metrics_server() -> None:

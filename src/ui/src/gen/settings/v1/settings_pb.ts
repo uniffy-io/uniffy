@@ -932,11 +932,11 @@ export class KeyboardShortcutsSettings extends Message<KeyboardShortcutsSettings
  */
 export class NotificationsSettings extends Message<NotificationsSettings> {
   /**
-   * Enable desktop notifications
+   * Enable browser push notifications
    *
-   * @generated from field: optional bool desktop_enabled = 1;
+   * @generated from field: optional bool browser_enabled = 1;
    */
-  desktopEnabled?: boolean;
+  browserEnabled?: boolean;
 
   /**
    * Enable email notifications
@@ -989,7 +989,7 @@ export class NotificationsSettings extends Message<NotificationsSettings> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "settings.v1.NotificationsSettings";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "desktop_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 1, name: "browser_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 2, name: "email_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 3, name: "sound_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "email_frequency", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -1029,18 +1029,11 @@ export class NotificationChannelPreference extends Message<NotificationChannelPr
   inApp?: boolean;
 
   /**
-   * Enable desktop notifications
+   * Enable browser push notifications
    *
-   * @generated from field: optional bool desktop = 2;
+   * @generated from field: optional bool browser = 3;
    */
-  desktop?: boolean;
-
-  /**
-   * Enable push notifications
-   *
-   * @generated from field: optional bool push = 3;
-   */
-  push?: boolean;
+  browser?: boolean;
 
   /**
    * Enable email notifications
@@ -1058,8 +1051,7 @@ export class NotificationChannelPreference extends Message<NotificationChannelPr
   static readonly typeName = "settings.v1.NotificationChannelPreference";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "in_app", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 2, name: "desktop", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 3, name: "push", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 3, name: "browser", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 

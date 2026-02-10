@@ -5,9 +5,7 @@ package cal.v1;
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
 
-// ============================================================================
 // Enums
-// ============================================================================
 
 // Recurrence patterns for repeating events
 enum RecurrencePattern {
@@ -66,9 +64,7 @@ enum ResourceType {
   RESOURCE_TYPE_CHAT        = 3;
 }
 
-// ============================================================================
 // Service Definition
-// ============================================================================
 
 // CalendarService provides calendar and event management functionality
 service CalendarService {
@@ -155,9 +151,7 @@ service CalendarService {
   rpc ListEventTemplates(ListEventTemplatesRequest) returns (ListEventTemplatesResponse) {}
 }
 
-// ============================================================================
 // Event Messages
-// ============================================================================
 
 // Calendar event
 message CalendarEvent {
@@ -420,9 +414,7 @@ message GetEventsInRangeResponse {
   repeated CalendarEvent events = 1;
 }
 
-// ============================================================================
 // Calendar Messages
-// ============================================================================
 
 // A user's calendar
 message Calendar {
@@ -520,9 +512,7 @@ message ListCalendarsResponse {
   repeated Calendar calendars = 1;
 }
 
-// ============================================================================
 // Category Messages
-// ============================================================================
 
 // Event category for color coding and filtering
 message Category {
@@ -612,9 +602,7 @@ message ListCategoriesResponse {
   repeated Category categories = 1;
 }
 
-// ============================================================================
 // Attendee Messages
-// ============================================================================
 
 // Request to update attendee status
 message UpdateAttendeeStatusRequest {
@@ -654,9 +642,7 @@ message RemoveAttendeesRequest {
   repeated string user_ids = 3;
 }
 
-// ============================================================================
 // Template Messages
-// ============================================================================
 
 // Event template
 message EventTemplate {

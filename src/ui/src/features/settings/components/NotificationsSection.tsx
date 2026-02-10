@@ -4,6 +4,7 @@
 
 import { cn } from '@/shared/utils/cn';
 import { useSettings, useNotificationSettings } from '@/features/settings/hooks/useSettings';
+import { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
 
 const NOTIFICATION_TYPE_ROWS = [
     { type: 'CONTENT_SHARED', label: 'Content Shared' },
@@ -18,15 +19,15 @@ const NOTIFICATION_TYPE_ROWS = [
 ] as const;
 
 const DEFAULT_CHANNELS: Record<string, Record<string, boolean>> = {
-    CONTENT_SHARED: { in_app: true, desktop: true, push: true, email: true },
-    CONTENT_MENTIONED: { in_app: true, desktop: true, push: true, email: true },
-    CONTENT_EDITED: { in_app: true, desktop: false, push: false, email: false },
-    CALENDAR_REMINDER: { in_app: true, desktop: true, push: true, email: false },
-    CALENDAR_INVITE: { in_app: true, desktop: true, push: true, email: true },
-    CALENDAR_RESPONSE: { in_app: true, desktop: true, push: false, email: false },
-    PERMISSION_GRANTED: { in_app: true, desktop: true, push: false, email: true },
-    PERMISSION_REVOKED: { in_app: true, desktop: true, push: false, email: true },
-    SYSTEM_ANNOUNCEMENT: { in_app: true, desktop: true, push: true, email: true },
+    CONTENT_SHARED: { in_app: true, browser: true, email: true },
+    CONTENT_MENTIONED: { in_app: true, browser: true, email: true },
+    CONTENT_EDITED: { in_app: true, browser: false, email: false },
+    CALENDAR_REMINDER: { in_app: true, browser: true, email: false },
+    CALENDAR_INVITE: { in_app: true, browser: true, email: true },
+    CALENDAR_RESPONSE: { in_app: true, browser: false, email: false },
+    PERMISSION_GRANTED: { in_app: true, browser: false, email: true },
+    PERMISSION_REVOKED: { in_app: true, browser: false, email: true },
+    SYSTEM_ANNOUNCEMENT: { in_app: true, browser: true, email: true },
 };
 
 interface ChannelCheckboxProps {
@@ -87,8 +88,17 @@ function ToggleSwitch({ enabled, onChange, disabled }: ToggleSwitchProps) {
 export function NotificationsSection() {
     const { updateSettings, saving } = useSettings();
     const notifications = useNotificationSettings();
+    const { subscribe, unsubscribe, permissionState, isSupported } = usePushSubscription();
 
-    const handleToggle = (field: string, value: boolean) => {
+    const handleToggle = async (field: string, value: boolean) => {
+        // When toggling desktop notifications, manage push subscription
+        if (field === 'browserEnabled') {
+            if (value) {
+                await subscribe();
+            } else {
+                await unsubscribe();
+            }
+        }
         updateSettings({
             notifications: { [field]: value },
         });
@@ -132,22 +142,37 @@ export function NotificationsSection() {
                 </p>
             </div>
 
-            {/* Desktop Notifications */}
+            {/* Browser Notifications */}
             <section className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Desktop Notifications</h2>
+                <h2 className="text-lg font-semibold text-foreground">Browser Notifications</h2>
 
                 <div className="space-y-4 bg-card rounded-lg border border-border p-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="font-medium text-foreground">Enable Desktop Notifications</div>
+                            <div className="font-medium text-foreground">Enable Browser Notifications</div>
                             <div className="text-sm text-muted-foreground">
-                                Show notifications in your system tray
+                                Show push notifications in your browser
                             </div>
+                            {isSupported && permissionState === 'denied' && (
+                                <div className="text-xs text-red-500 dark:text-red-400 mt-1">
+                                    Notifications are blocked by your browser. Re-enable in browser site settings.
+                                </div>
+                            )}
+                            {isSupported && permissionState === 'granted' && notifications.browserEnabled && (
+                                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                    Permission granted
+                                </div>
+                            )}
+                            {!isSupported && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    Push notifications are not supported in this browser.
+                                </div>
+                            )}
                         </div>
                         <ToggleSwitch
-                            enabled={notifications.desktopEnabled}
-                            onChange={(v) => handleToggle('desktopEnabled', v)}
-                            disabled={saving}
+                            enabled={notifications.browserEnabled}
+                            onChange={(v) => handleToggle('browserEnabled', v)}
+                            disabled={saving || (!isSupported) || permissionState === 'denied'}
                         />
                     </div>
 
@@ -228,29 +253,28 @@ export function NotificationsSection() {
 
                 <div className="bg-card rounded-lg border border-border overflow-hidden">
                     {/* Header row */}
-                    <div className="grid grid-cols-[1fr_4rem_4rem_4rem_4rem] gap-0 px-4 py-2.5 border-b border-border bg-muted/30">
+                    <div className="grid grid-cols-[1fr_4rem_4rem_4rem] gap-0 px-4 py-2.5 border-b border-border bg-muted/30">
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</div>
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">App</div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Desktop</div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Push</div>
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Browser</div>
                         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Email</div>
                     </div>
 
                     {/* Channel rows */}
                     {NOTIFICATION_TYPE_ROWS.map(({ type, label }) => {
                         const channels = notifications.channelOverrides?.[type] ?? {};
-                        const defaults = DEFAULT_CHANNELS[type] ?? { in_app: true, desktop: true, push: true, email: true };
+                        const defaults = DEFAULT_CHANNELS[type] ?? { in_app: true, browser: true, email: true };
 
                         return (
                             <div
                                 key={type}
-                                className="grid grid-cols-[1fr_4rem_4rem_4rem_4rem] gap-0 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors"
+                                className="grid grid-cols-[1fr_4rem_4rem_4rem] gap-0 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors"
                             >
                                 <div className="text-sm text-foreground">{label}</div>
-                                {(['in_app', 'desktop', 'push', 'email'] as const).map((channel) => {
+                                {(['in_app', 'browser', 'email'] as const).map((channel) => {
                                     const isEnabled = channels[channel] ?? defaults[channel] ?? true;
                                     const isMasterDisabled =
-                                        (channel === 'desktop' && !notifications.desktopEnabled) ||
+                                        (channel === 'browser' && !notifications.browserEnabled) ||
                                         (channel === 'email' && !notifications.emailEnabled);
 
                                     return (

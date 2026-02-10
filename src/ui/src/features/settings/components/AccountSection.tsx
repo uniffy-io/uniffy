@@ -1,8 +1,9 @@
 /**
- * Account settings section - displays user account information.
+ * Account settings section - displays user account information and active sessions.
  */
 
 import { useAppSelector } from '@/app/hooks';
+import { SessionsSection } from '@/features/settings/components/SessionsSection';
 
 export function AccountSection() {
     const { user } = useAppSelector((state) => state.auth);
@@ -20,7 +21,7 @@ export function AccountSection() {
             <div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">Account</h1>
                 <p className="text-muted-foreground">
-                    View your account information and status.
+                    View your account information and manage sessions.
                 </p>
             </div>
 
@@ -96,16 +97,8 @@ export function AccountSection() {
                 </div>
             </section>
 
-            {/* Security Section */}
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Security</h2>
-                <div className="bg-card rounded-lg border border-border p-4">
-                    <p className="text-sm text-muted-foreground">
-                        Password management and two-factor authentication settings coming soon.
-                    </p>
-                </div>
-            </section>
+            {/* Sessions */}
+            <SessionsSection />
         </div>
     );
 }
-

@@ -616,7 +616,7 @@ export function AuthForms() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
-  const fetchUserAndDispatch = async (accessToken: string, refreshToken: string, organizationId?: string) => {
+  const fetchUserAndDispatch = async (accessToken: string, refreshToken: string, organizationId?: string, sessionId?: string) => {
     try {
       // Store access token in memory (security: not persisted to localStorage)
       setMemoryAccessToken(accessToken);
@@ -657,7 +657,8 @@ export function AuthForms() {
         user: plainUser,
         accessToken,
         refreshToken,
-        organizationId
+        organizationId,
+        sessionId,
       }));
 
     } catch (err: unknown) {
@@ -679,7 +680,7 @@ export function AuthForms() {
         fullName: fullName || undefined,
       });
 
-      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId);
+      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId, response.sessionId);
 
       // Navigation will be handled by the useEffect above
     } catch (err: unknown) {
@@ -702,7 +703,7 @@ export function AuthForms() {
         password,
       });
 
-      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId);
+      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId, response.sessionId);
 
       // Navigation will be handled by the useEffect above
     } catch (err: unknown) {

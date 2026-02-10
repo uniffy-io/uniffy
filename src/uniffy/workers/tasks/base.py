@@ -63,6 +63,14 @@ async def on_startup(ctx: dict[str, Any]) -> None:
     except Exception as e:
         logger.warning(f"Worker: Pub/Sub not available: {e}")
 
+    # Load VAPID config from DB/env (non-blocking - push works without it)
+    try:
+        from uniffy.core.config.push import load_vapid_config
+
+        await load_vapid_config()
+    except Exception as e:
+        logger.warning(f"Worker: VAPID config not available: {e}")
+
     logger.info("Worker startup complete")
 
 

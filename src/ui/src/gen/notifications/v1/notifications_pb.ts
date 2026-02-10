@@ -1062,3 +1062,77 @@ proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.Str
   { no: 3, name: "EVENT_TYPE_FILE_UPDATED" },
 ]);
 
+/**
+ * Request to get VAPID public key
+ *
+ * @generated from message notifications.v1.GetVapidPublicKeyRequest
+ */
+export class GetVapidPublicKeyRequest extends Message<GetVapidPublicKeyRequest> {
+  constructor(data?: PartialMessage<GetVapidPublicKeyRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.GetVapidPublicKeyRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetVapidPublicKeyRequest {
+    return new GetVapidPublicKeyRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetVapidPublicKeyRequest {
+    return new GetVapidPublicKeyRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetVapidPublicKeyRequest {
+    return new GetVapidPublicKeyRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetVapidPublicKeyRequest | PlainMessage<GetVapidPublicKeyRequest> | undefined, b: GetVapidPublicKeyRequest | PlainMessage<GetVapidPublicKeyRequest> | undefined): boolean {
+    return proto3.util.equals(GetVapidPublicKeyRequest, a, b);
+  }
+}
+
+/**
+ * Response with VAPID public key
+ *
+ * @generated from message notifications.v1.GetVapidPublicKeyResponse
+ */
+export class GetVapidPublicKeyResponse extends Message<GetVapidPublicKeyResponse> {
+  /**
+   * Base64url-encoded VAPID public key for pushManager.subscribe()
+   *
+   * @generated from field: string public_key = 1;
+   */
+  publicKey = "";
+
+  constructor(data?: PartialMessage<GetVapidPublicKeyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.GetVapidPublicKeyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "public_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetVapidPublicKeyResponse {
+    return new GetVapidPublicKeyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetVapidPublicKeyResponse {
+    return new GetVapidPublicKeyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetVapidPublicKeyResponse {
+    return new GetVapidPublicKeyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetVapidPublicKeyResponse | PlainMessage<GetVapidPublicKeyResponse> | undefined, b: GetVapidPublicKeyResponse | PlainMessage<GetVapidPublicKeyResponse> | undefined): boolean {
+    return proto3.util.equals(GetVapidPublicKeyResponse, a, b);
+  }
+}
+

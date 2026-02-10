@@ -96,7 +96,8 @@ function updateAuthState(
   accessToken: string,
   refreshToken: string,
   organizationId?: string,
-  organizationRole?: string
+  organizationRole?: string,
+  sessionId?: string,
 ): void {
   // Store access token in memory only (security)
   setMemoryAccessToken(accessToken);
@@ -121,6 +122,7 @@ function updateAuthState(
       // Preserve existing org ID and role if not provided (important for token refresh)
       organizationId: organizationId ?? currentOrgId ?? undefined,
       organizationRole: organizationRole ?? currentOrgRole ?? undefined,
+      sessionId,
     }));
   }
 }
@@ -212,12 +214,13 @@ async function refreshAccessToken(): Promise<string | null> {
       // Store access token in memory
       setMemoryAccessToken(response.accessToken);
 
-      // Update Redux state (including organization role from response)
+      // Update Redux state (including organization role and session ID from response)
       updateAuthState(
         response.accessToken,
         response.refreshToken,
         response.organizationId,
-        response.organizationRole
+        response.organizationRole,
+        response.sessionId,
       );
 
       return response.accessToken;
@@ -305,6 +308,7 @@ export async function rehydrateAuth(): Promise<boolean> {
         refreshToken: state.auth?.refreshToken || refreshToken,
         organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
         organizationRole: state.auth?.currentOrganizationRole || persistedOrgRole || undefined,
+        sessionId: state.auth?.currentSessionId || undefined,
       }));
       return true;
     } else {

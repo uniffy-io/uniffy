@@ -85,16 +85,16 @@ async def process_notification_event(
                 pending_notifications.append(notification)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="in_app").inc()
 
-            # Push: delegate to adapter
-            if "push" in channels:
-                push_adapter = DELIVERY_ADAPTERS.get("push")
+            # Browser push: delegate to adapter
+            if "browser" in channels:
+                push_adapter = DELIVERY_ADAPTERS.get("browser")
                 if isinstance(push_adapter, PushAdapter):
                     await push_adapter.deliver_with_session(
                         session, user_id, event
                     )
                 elif push_adapter:
                     await push_adapter.deliver(user_id, event)
-                NOTIFICATION_DELIVERIES_TOTAL.labels(channel="push").inc()
+                NOTIFICATION_DELIVERIES_TOTAL.labels(channel="browser").inc()
 
             # Email: delegate to adapter
             if "email" in channels:
@@ -170,7 +170,7 @@ async def deliver_push_notification(
         Delivery result.
 
     """
-    push_adapter = DELIVERY_ADAPTERS.get("push")
+    push_adapter = DELIVERY_ADAPTERS.get("browser")
     if not push_adapter:
         return {"status": "skipped", "reason": "no_push_adapter"}
 
@@ -354,6 +354,7 @@ async def _get_delivery_channels(
     Resolve which channels to deliver to for a user + notification type.
 
     Loads user settings, merges with defaults, applies master switches.
+    Uses a Valkey cache (15-min TTL) to avoid hitting the DB on every call.
 
     Parameters
     ----------
@@ -367,22 +368,31 @@ async def _get_delivery_channels(
     Returns
     -------
     set[str]
-        Set of enabled channels: {"in_app", "desktop", "push", "email"}.
+        Set of enabled channels: {"in_app", "browser", "email"}.
 
     """
-    from uniffy.core.models.settings.settings_profile import SettingsProfile
+    from uniffy.core.valkey.cache import CACHE_MISS
+    from uniffy.domains.notifications.cache import get_cached_settings, set_cached_settings
     from uniffy.domains.settings.defaults import get_effective_notification_channels
 
-    # Load user's settings profile
-    result = await session.execute(
-        select(SettingsProfile).where(
-            SettingsProfile.user_id == user_id,
-            SettingsProfile.is_default == True,  # noqa: E712
-        )
-    )
-    profile = result.scalars().first()
+    # Try cache first
+    cached = await get_cached_settings(user_id)
 
-    overrides = profile.notifications if profile else None
+    if cached is not CACHE_MISS:
+        overrides = cached
+    else:
+        # Cache miss -- query DB and populate cache
+        from uniffy.core.models.settings.settings_profile import SettingsProfile
+
+        result = await session.execute(
+            select(SettingsProfile).where(
+                SettingsProfile.user_id == user_id,
+                SettingsProfile.is_default == True,  # noqa: E712
+            )
+        )
+        profile = result.scalars().first()
+        overrides = profile.notifications if profile else None
+        await set_cached_settings(user_id, overrides)
 
     channels = get_effective_notification_channels(
         notification_type.value, overrides

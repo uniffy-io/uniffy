@@ -201,7 +201,7 @@ export function useNotificationSettings() {
     const effectiveSettings = useAppSelector(state => state.settings.effectiveSettings);
 
     return {
-        desktopEnabled: effectiveSettings?.notifications.desktopEnabled ?? true,
+        browserEnabled: effectiveSettings?.notifications.browserEnabled ?? true,
         emailEnabled: effectiveSettings?.notifications.emailEnabled ?? true,
         soundEnabled: effectiveSettings?.notifications.soundEnabled ?? true,
         emailFrequency: effectiveSettings?.notifications.emailFrequency ?? 'instant',

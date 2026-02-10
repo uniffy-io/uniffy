@@ -19,6 +19,9 @@ import { clearSharing } from '@/features/sharing';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
 import { clearMemoryAccessToken } from '@/config/api';
+import { createClient } from '@connectrpc/connect';
+import { transport } from '@/config/api';
+import { AuthService } from '@/gen/auth/v1/auth_connect';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { cn } from '@/shared/utils/cn';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +29,7 @@ import { useNavigate } from 'react-router-dom';
 export function UserMenu() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { user } = useAppSelector((state) => state.auth);
+    const { user, refreshToken } = useAppSelector((state) => state.auth);
     const { canAccessAdmin } = useAdminAccess();
     const { themeMode, setTheme, availableModes } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
@@ -55,6 +58,11 @@ export function UserMenu() {
     if (!user) return null;
 
     const handleLogout = () => {
+        // Notify backend to revoke the session (fire-and-forget)
+        if (refreshToken) {
+            const client = createClient(AuthService, transport);
+            client.logout({ refreshToken }).catch(() => {});
+        }
         // Clear memory access token (security: remove from memory)
         clearMemoryAccessToken();
         // Clear all user/org-specific state

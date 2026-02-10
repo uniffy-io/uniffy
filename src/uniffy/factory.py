@@ -203,6 +203,14 @@ async def lifespan(app: FastAPI):
         logger.exception(f"Failed to seed initial data: {e}")
         raise
 
+    # Load VAPID config from DB/env (non-blocking - push works without it)
+    try:
+        from uniffy.core.config.push import load_vapid_config
+
+        await load_vapid_config()
+    except Exception as e:
+        logger.warning(f"VAPID config not available: {e}")
+
     yield
 
     # Shutdown

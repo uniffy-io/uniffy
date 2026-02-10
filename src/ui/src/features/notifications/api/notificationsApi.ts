@@ -11,6 +11,7 @@ import type {
     RegisterPushSubscriptionRequest,
     UnregisterPushSubscriptionRequest,
     StreamNotificationsRequest,
+    GetVapidPublicKeyRequest,
 } from '@/gen/notifications/v1/notifications_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
@@ -70,6 +71,13 @@ export const notificationsApi = {
      */
     unregisterPushSubscription: async (request: PartialMessage<UnregisterPushSubscriptionRequest>) => {
         return notificationsClient.unregisterPushSubscription(request);
+    },
+
+    /**
+     * Get the VAPID public key for Web Push subscription.
+     */
+    getVapidPublicKey: async (request: PartialMessage<GetVapidPublicKeyRequest>) => {
+        return notificationsClient.getVapidPublicKey(request);
     },
 
     /**

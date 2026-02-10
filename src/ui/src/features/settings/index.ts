@@ -13,6 +13,10 @@ export { AppearanceSection } from '@/features/settings/components/AppearanceSect
 export { KeyboardShortcutsSection } from '@/features/settings/components/KeyboardShortcutsSection';
 export { NotificationsSection } from '@/features/settings/components/NotificationsSection';
 export { AccountSection } from '@/features/settings/components/AccountSection';
+export { SessionsSection } from '@/features/settings/components/SessionsSection';
+
+// Sessions API
+export { sessionsApi } from '@/features/settings/api/sessionsApi';
 
 // Pages
 export { SettingsPage } from '@/features/settings/pages/SettingsPage';

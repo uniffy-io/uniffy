@@ -461,6 +461,57 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     event.respondWith(safeHandler());
 });
 
+// Push event - show OS-level notification when a push message arrives
+self.addEventListener('push', (event: PushEvent) => {
+    if (!event.data) return;
+
+    let payload: { title?: string; body?: string; url?: string; notification_type?: string };
+    try {
+        payload = event.data.json();
+    } catch {
+        payload = { title: 'Uniffy', body: event.data.text() };
+    }
+
+    const title = payload.title || 'Uniffy';
+    const options = {
+        body: payload.body || '',
+        icon: '/favicon-96x96.png',
+        badge: '/favicon-96x96.png',
+        data: { url: payload.url || '/' },
+        tag: payload.notification_type || 'uniffy-notification',
+        renotify: true,
+    } satisfies NotificationOptions & { renotify: boolean };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click - focus or open the app at the relevant URL
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+    event.notification.close();
+
+    const url: string = (event.notification.data as { url?: string })?.url || '/';
+
+    event.waitUntil(
+        self.clients
+            .matchAll({ type: 'window', includeUncontrolled: true })
+            .then((windowClients) => {
+                for (const client of windowClients) {
+                    if (client.url.includes(self.location.origin) && 'focus' in client) {
+                        client.focus();
+                        client.postMessage({ type: 'PUSH_NOTIFICATION_CLICK', url });
+                        return;
+                    }
+                }
+                return self.clients.openWindow(url);
+            }),
+    );
+});
+
+// Push subscription change - browser revoked or expired the subscription
+self.addEventListener('pushsubscriptionchange', () => {
+    console.warn('[MediaStreamWorker] pushsubscriptionchange -- subscription lost');
+});
+
 // Message event - handle token updates from main thread (legacy postMessage fallback)
 // Note: BroadcastChannel is the primary mechanism, this is kept for compatibility
 self.addEventListener('message', (event: ExtendableMessageEvent) => {

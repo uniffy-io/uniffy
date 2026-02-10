@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AuthResponse, CurrentUserResponse, GetCurrentUserRequest, LoginRequest, LogoutRequest, LogoutResponse, RefreshTokenRequest, RegisterRequest } from "./auth_pb.js";
+import { AuthResponse, CurrentUserResponse, GetCurrentUserRequest, ListSessionsRequest, ListSessionsResponse, LoginRequest, LogoutRequest, LogoutResponse, RefreshTokenRequest, RegisterRequest, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -70,6 +70,39 @@ export const AuthService = {
       name: "Logout",
       I: LogoutRequest,
       O: LogoutResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * List active sessions for the current user
+     *
+     * @generated from rpc auth.v1.AuthService.ListSessions
+     */
+    listSessions: {
+      name: "ListSessions",
+      I: ListSessionsRequest,
+      O: ListSessionsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Revoke a specific session
+     *
+     * @generated from rpc auth.v1.AuthService.RevokeSession
+     */
+    revokeSession: {
+      name: "RevokeSession",
+      I: RevokeSessionRequest,
+      O: RevokeSessionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Revoke all sessions except the current one
+     *
+     * @generated from rpc auth.v1.AuthService.RevokeOtherSessions
+     */
+    revokeOtherSessions: {
+      name: "RevokeOtherSessions",
+      I: RevokeOtherSessionsRequest,
+      O: RevokeOtherSessionsResponse,
       kind: MethodKind.Unary,
     },
   }

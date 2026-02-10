@@ -38,10 +38,6 @@ from uniffy.gen.users.v1.users_pb2 import (
 class UsersHandlers:
     """Users RPC handlers."""
 
-    # -------------------------------------------------------------------------
-    # Self-service profile operations
-    # -------------------------------------------------------------------------
-
     async def get_my_profile(
         self,
         request: GetMyProfileRequest,
@@ -85,10 +81,6 @@ class UsersHandlers:
         except Exception as e:
             logger.error(f"Error updating profile: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    # -------------------------------------------------------------------------
-    # System Admin operations
-    # -------------------------------------------------------------------------
 
     async def list_users(
         self,
@@ -289,10 +281,6 @@ class UsersHandlers:
         except Exception as e:
             logger.error(f"Error deleting user: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    # -------------------------------------------------------------------------
-    # User-Organization operations (System Admin)
-    # -------------------------------------------------------------------------
 
     async def list_user_organizations(
         self,

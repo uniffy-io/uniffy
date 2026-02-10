@@ -7,9 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "uniffy/gen/groups/v1;groupsv1";
 
-// =============================================================================
 // GroupsService - Single source of truth for group management
-// =============================================================================
 
 service GroupsService {
   // Group CRUD operations
@@ -29,9 +27,7 @@ service GroupsService {
   rpc GetUserGroups(GetUserGroupsRequest) returns (GetUserGroupsResponse);
 }
 
-// =============================================================================
 // Group CRUD Messages
-// =============================================================================
 
 message ListGroupsRequest {
   string                               organization_id = 1;
@@ -76,9 +72,7 @@ message DeleteGroupResponse {
   bool success = 1;
 }
 
-// =============================================================================
 // Group Membership Messages
-// =============================================================================
 
 message ListGroupMembersRequest {
   string                               organization_id = 1;
@@ -116,9 +110,7 @@ message RemoveGroupMemberResponse {
   bool success = 1;
 }
 
-// =============================================================================
 // Bulk Operations Messages
-// =============================================================================
 
 message GetUserGroupsRequest {
   string organization_id = 1;

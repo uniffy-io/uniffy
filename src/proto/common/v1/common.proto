@@ -6,9 +6,7 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "uniffy/gen/common/v1;commonv1";
 
-// =============================================================================
 // ENUMS - Shared across all services
-// =============================================================================
 
 // ContentType defines the types of content in the system.
 // Used for polymorphic references in permission tables.
@@ -66,9 +64,7 @@ enum GroupRole {
   GROUP_ROLE_ADMIN = 2;
 }
 
-// =============================================================================
 // MESSAGES - Common data structures
-// =============================================================================
 
 // UserInfo represents basic user information.
 message UserInfo {
@@ -125,9 +121,7 @@ message GroupMemberInfo {
   google.protobuf.Timestamp joined_at = 6;
 }
 
-// =============================================================================
 // PAGINATION - Common pagination structures
-// =============================================================================
 
 // PaginationRequest for paginated list requests.
 message PaginationRequest {

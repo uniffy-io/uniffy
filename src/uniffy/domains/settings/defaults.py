@@ -65,7 +65,7 @@ class AppearanceDefaults:
 class NotificationsDefaults:
     """Default notification settings."""
 
-    desktop_enabled: bool = True
+    browser_enabled: bool = True
     email_enabled: bool = True
     sound_enabled: bool = True
     email_frequency: str = "instant"
@@ -76,15 +76,15 @@ class NotificationsDefaults:
 # Default per-notification-type channel preferences.
 # Keys are NotificationType values, values are channel -> enabled mappings.
 DEFAULT_NOTIFICATION_CHANNELS: dict[str, dict[str, bool]] = {
-    "CONTENT_SHARED": {"in_app": True, "desktop": True, "push": True, "email": True},
-    "CONTENT_MENTIONED": {"in_app": True, "desktop": True, "push": True, "email": True},
-    "CONTENT_EDITED": {"in_app": True, "desktop": False, "push": False, "email": False},
-    "CALENDAR_REMINDER": {"in_app": True, "desktop": True, "push": True, "email": False},
-    "CALENDAR_INVITE": {"in_app": True, "desktop": True, "push": True, "email": True},
-    "CALENDAR_RESPONSE": {"in_app": True, "desktop": True, "push": False, "email": False},
-    "PERMISSION_GRANTED": {"in_app": True, "desktop": True, "push": False, "email": True},
-    "PERMISSION_REVOKED": {"in_app": True, "desktop": True, "push": False, "email": True},
-    "SYSTEM_ANNOUNCEMENT": {"in_app": True, "desktop": True, "push": True, "email": True},
+    "CONTENT_SHARED": {"in_app": True, "browser": True, "email": True},
+    "CONTENT_MENTIONED": {"in_app": True, "browser": True, "email": True},
+    "CONTENT_EDITED": {"in_app": True, "browser": False, "email": False},
+    "CALENDAR_REMINDER": {"in_app": True, "browser": True, "email": False},
+    "CALENDAR_INVITE": {"in_app": True, "browser": True, "email": True},
+    "CALENDAR_RESPONSE": {"in_app": True, "browser": False, "email": False},
+    "PERMISSION_GRANTED": {"in_app": True, "browser": False, "email": True},
+    "PERMISSION_REVOKED": {"in_app": True, "browser": False, "email": True},
+    "SYSTEM_ANNOUNCEMENT": {"in_app": True, "browser": True, "email": True},
 }
 
 
@@ -108,7 +108,7 @@ def get_appearance_defaults_dict() -> dict[str, Any]:
 def get_notifications_defaults_dict() -> dict[str, Any]:
     """Get notifications defaults as a dictionary."""
     return {
-        "desktop_enabled": NOTIFICATIONS_DEFAULTS.desktop_enabled,
+        "browser_enabled": NOTIFICATIONS_DEFAULTS.browser_enabled,
         "email_enabled": NOTIFICATIONS_DEFAULTS.email_enabled,
         "sound_enabled": NOTIFICATIONS_DEFAULTS.sound_enabled,
         "email_frequency": NOTIFICATIONS_DEFAULTS.email_frequency,
@@ -196,7 +196,7 @@ def get_effective_notification_channels(
     Get effective channel preferences for a notification type.
 
     Merges user channel_overrides with DEFAULT_NOTIFICATION_CHANNELS,
-    then applies master switches (desktop_enabled, email_enabled).
+    then applies master switches (browser_enabled, email_enabled).
 
     Parameters
     ----------
@@ -208,13 +208,13 @@ def get_effective_notification_channels(
     Returns
     -------
     dict[str, bool]
-        Effective channel preferences: {"in_app", "desktop", "push", "email"}.
+        Effective channel preferences: {"in_app", "browser", "email"}.
 
     """
     # Start with defaults for this notification type
     defaults = DEFAULT_NOTIFICATION_CHANNELS.get(
         notification_type,
-        {"in_app": True, "desktop": True, "push": True, "email": True},
+        {"in_app": True, "browser": True, "email": True},
     )
     channels = defaults.copy()
 
@@ -228,8 +228,8 @@ def get_effective_notification_channels(
                 channels[channel] = enabled
 
     # Apply master switches
-    if not effective.get("desktop_enabled", True):
-        channels["desktop"] = False
+    if not effective.get("browser_enabled", True):
+        channels["browser"] = False
     if not effective.get("email_enabled", True):
         channels["email"] = False
 

@@ -18,6 +18,7 @@ import zenModeReducer from '@/app/zenModeSlice';
 import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, viewerReducer } from '@/features/files';
 import { imageEditorReducer } from '@/features/files/store/imageEditorSlice';
 import notificationsReducer from '@/features/notifications/store/notificationsSlice';
+import sessionsReducer from '@/features/settings/store/sessionsSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -81,6 +82,7 @@ const rootReducer = combineReducers({
   fileViewer: viewerReducer,
   imageEditor: imageEditorReducer,
   notifications: notificationsReducer,
+  sessions: sessionsReducer,
 });
 
 // Migrations to handle state shape changes across versions

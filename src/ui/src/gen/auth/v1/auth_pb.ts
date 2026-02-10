@@ -248,6 +248,111 @@ export class LogoutRequest extends Message<LogoutRequest> {
 }
 
 /**
+ * Request to list active sessions
+ *
+ * @generated from message auth.v1.ListSessionsRequest
+ */
+export class ListSessionsRequest extends Message<ListSessionsRequest> {
+  constructor(data?: PartialMessage<ListSessionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListSessionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSessionsRequest {
+    return new ListSessionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSessionsRequest {
+    return new ListSessionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSessionsRequest {
+    return new ListSessionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListSessionsRequest | PlainMessage<ListSessionsRequest> | undefined, b: ListSessionsRequest | PlainMessage<ListSessionsRequest> | undefined): boolean {
+    return proto3.util.equals(ListSessionsRequest, a, b);
+  }
+}
+
+/**
+ * Request to revoke a specific session
+ *
+ * @generated from message auth.v1.RevokeSessionRequest
+ */
+export class RevokeSessionRequest extends Message<RevokeSessionRequest> {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId = "";
+
+  constructor(data?: PartialMessage<RevokeSessionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RevokeSessionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokeSessionRequest {
+    return new RevokeSessionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokeSessionRequest {
+    return new RevokeSessionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokeSessionRequest {
+    return new RevokeSessionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokeSessionRequest | PlainMessage<RevokeSessionRequest> | undefined, b: RevokeSessionRequest | PlainMessage<RevokeSessionRequest> | undefined): boolean {
+    return proto3.util.equals(RevokeSessionRequest, a, b);
+  }
+}
+
+/**
+ * Request to revoke all other sessions
+ *
+ * @generated from message auth.v1.RevokeOtherSessionsRequest
+ */
+export class RevokeOtherSessionsRequest extends Message<RevokeOtherSessionsRequest> {
+  constructor(data?: PartialMessage<RevokeOtherSessionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RevokeOtherSessionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokeOtherSessionsRequest {
+    return new RevokeOtherSessionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokeOtherSessionsRequest {
+    return new RevokeOtherSessionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokeOtherSessionsRequest {
+    return new RevokeOtherSessionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokeOtherSessionsRequest | PlainMessage<RevokeOtherSessionsRequest> | undefined, b: RevokeOtherSessionsRequest | PlainMessage<RevokeOtherSessionsRequest> | undefined): boolean {
+    return proto3.util.equals(RevokeOtherSessionsRequest, a, b);
+  }
+}
+
+/**
  * Authentication response with tokens
  *
  * @generated from message auth.v1.AuthResponse
@@ -289,6 +394,13 @@ export class AuthResponse extends Message<AuthResponse> {
    */
   organizationRole?: string;
 
+  /**
+   * Server-side session identifier
+   *
+   * @generated from field: optional string session_id = 7;
+   */
+  sessionId?: string;
+
   constructor(data?: PartialMessage<AuthResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -303,6 +415,7 @@ export class AuthResponse extends Message<AuthResponse> {
     { no: 4, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "organization_role", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuthResponse {
@@ -451,6 +564,196 @@ export class LogoutResponse extends Message<LogoutResponse> {
 
   static equals(a: LogoutResponse | PlainMessage<LogoutResponse> | undefined, b: LogoutResponse | PlainMessage<LogoutResponse> | undefined): boolean {
     return proto3.util.equals(LogoutResponse, a, b);
+  }
+}
+
+/**
+ * Active session information
+ *
+ * @generated from message auth.v1.SessionInfo
+ */
+export class SessionInfo extends Message<SessionInfo> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string user_agent = 3;
+   */
+  userAgent = "";
+
+  /**
+   * @generated from field: string device_label = 4;
+   */
+  deviceLabel = "";
+
+  /**
+   * ISO 8601 timestamp
+   *
+   * @generated from field: string created_at = 5;
+   */
+  createdAt = "";
+
+  /**
+   * ISO 8601 timestamp
+   *
+   * @generated from field: string last_activity = 6;
+   */
+  lastActivity = "";
+
+  /**
+   * @generated from field: bool is_current = 7;
+   */
+  isCurrent = false;
+
+  constructor(data?: PartialMessage<SessionInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.SessionInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "user_agent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "device_label", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "last_activity", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "is_current", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SessionInfo {
+    return new SessionInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SessionInfo {
+    return new SessionInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SessionInfo {
+    return new SessionInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SessionInfo | PlainMessage<SessionInfo> | undefined, b: SessionInfo | PlainMessage<SessionInfo> | undefined): boolean {
+    return proto3.util.equals(SessionInfo, a, b);
+  }
+}
+
+/**
+ * Response containing list of active sessions
+ *
+ * @generated from message auth.v1.ListSessionsResponse
+ */
+export class ListSessionsResponse extends Message<ListSessionsResponse> {
+  /**
+   * @generated from field: repeated auth.v1.SessionInfo sessions = 1;
+   */
+  sessions: SessionInfo[] = [];
+
+  constructor(data?: PartialMessage<ListSessionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.ListSessionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "sessions", kind: "message", T: SessionInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSessionsResponse {
+    return new ListSessionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSessionsResponse {
+    return new ListSessionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSessionsResponse {
+    return new ListSessionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListSessionsResponse | PlainMessage<ListSessionsResponse> | undefined, b: ListSessionsResponse | PlainMessage<ListSessionsResponse> | undefined): boolean {
+    return proto3.util.equals(ListSessionsResponse, a, b);
+  }
+}
+
+/**
+ * Response after revoking a session
+ *
+ * @generated from message auth.v1.RevokeSessionResponse
+ */
+export class RevokeSessionResponse extends Message<RevokeSessionResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  constructor(data?: PartialMessage<RevokeSessionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RevokeSessionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokeSessionResponse {
+    return new RevokeSessionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokeSessionResponse {
+    return new RevokeSessionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokeSessionResponse {
+    return new RevokeSessionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokeSessionResponse | PlainMessage<RevokeSessionResponse> | undefined, b: RevokeSessionResponse | PlainMessage<RevokeSessionResponse> | undefined): boolean {
+    return proto3.util.equals(RevokeSessionResponse, a, b);
+  }
+}
+
+/**
+ * Response after revoking other sessions
+ *
+ * @generated from message auth.v1.RevokeOtherSessionsResponse
+ */
+export class RevokeOtherSessionsResponse extends Message<RevokeOtherSessionsResponse> {
+  /**
+   * @generated from field: int32 revoked_count = 1;
+   */
+  revokedCount = 0;
+
+  constructor(data?: PartialMessage<RevokeOtherSessionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RevokeOtherSessionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "revoked_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokeOtherSessionsResponse {
+    return new RevokeOtherSessionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokeOtherSessionsResponse {
+    return new RevokeOtherSessionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokeOtherSessionsResponse {
+    return new RevokeOtherSessionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokeOtherSessionsResponse | PlainMessage<RevokeOtherSessionsResponse> | undefined, b: RevokeOtherSessionsResponse | PlainMessage<RevokeOtherSessionsResponse> | undefined): boolean {
+    return proto3.util.equals(RevokeOtherSessionsResponse, a, b);
   }
 }
 

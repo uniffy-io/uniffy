@@ -1,14 +1,17 @@
-"""Authentication operations - login, register, refresh token."""
+"""Authentication operations - login, register, refresh token, session management."""
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.core.models.login.user_session import UserSession
+from uniffy.domains.auth.context import parse_device_label
 from uniffy.domains.auth.errors import AuthenticationError, RegistrationError, TokenError
 from uniffy.domains.auth.passwords import hash_password, verify_password
 from uniffy.domains.auth.tokens import (
@@ -40,6 +43,7 @@ class AuthOperations:
         email: str,
         password: str,
         organization_slug: str | None = None,
+        user_agent: str = "",
     ) -> AuthResult:
         """
         Authenticate a user with email and password.
@@ -52,6 +56,8 @@ class AuthOperations:
             User password.
         organization_slug : str | None
             Optional organization slug to authenticate into.
+        user_agent : str
+            Client User-Agent for session tracking.
 
         Returns
         -------
@@ -89,11 +95,21 @@ class AuthOperations:
                     user.id, organization_slug
                 )
 
-            # Create tokens with token_version for revocation support
+            # Create session record
+            session_record = await self._create_session(user.id, user_agent)
+
+            # Create tokens with token_version and session_id
             access_token = create_access_token(
-                user.id, organization_id, token_version=user.token_version
+                user.id,
+                organization_id,
+                token_version=user.token_version,
+                session_id=session_record.id,
             )
-            refresh_token = create_refresh_token(user.id, token_version=user.token_version)
+            refresh_token = create_refresh_token(
+                user.id,
+                token_version=user.token_version,
+                session_id=session_record.id,
+            )
 
             logger.info(f"User {user.email} authenticated successfully")
             AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="success").inc()
@@ -104,6 +120,7 @@ class AuthOperations:
                 user_id=user.id,
                 organization_id=organization_id,
                 organization_role=organization_role,
+                session_id=session_record.id,
             )
         except AuthenticationError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="failure").inc()
@@ -115,6 +132,7 @@ class AuthOperations:
         username: str,
         password: str,
         full_name: str | None = None,
+        user_agent: str = "",
     ) -> AuthResult:
         """
         Register a new user.
@@ -129,6 +147,8 @@ class AuthOperations:
             User password.
         full_name : str | None
             Optional full name.
+        user_agent : str
+            Client User-Agent for session tracking.
 
         Returns
         -------
@@ -167,11 +187,20 @@ class AuthOperations:
 
             logger.info(f"User {user.email} registered successfully")
 
-            # Create tokens with token_version for revocation support
+            # Create session record
+            session_record = await self._create_session(user.id, user_agent)
+
+            # Create tokens with token_version and session_id
             access_token = create_access_token(
-                user.id, token_version=user.token_version
+                user.id,
+                token_version=user.token_version,
+                session_id=session_record.id,
             )
-            refresh_token = create_refresh_token(user.id, token_version=user.token_version)
+            refresh_token = create_refresh_token(
+                user.id,
+                token_version=user.token_version,
+                session_id=session_record.id,
+            )
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="success").inc()
 
@@ -179,6 +208,7 @@ class AuthOperations:
                 access_token=access_token,
                 refresh_token=refresh_token,
                 user_id=user.id,
+                session_id=session_record.id,
             )
         except RegistrationError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="failure").inc()
@@ -193,7 +223,7 @@ class AuthOperations:
         Refresh an access token.
 
         Validates that the user still exists, is active, and the token version
-        matches. This is the security checkpoint for token revocation.
+        matches. Also validates the session is still active (if session_id present).
 
         Parameters
         ----------
@@ -224,6 +254,7 @@ class AuthOperations:
 
             user_id = UUID(payload["sub"])
             token_version_in_jwt = payload.get("tkv")
+            session_id_str = payload.get("sid")
 
             # Verify user exists and is active (security checkpoint)
             user = await self._get_user_by_id(user_id)
@@ -241,6 +272,12 @@ class AuthOperations:
                 )
                 raise TokenError("Token has been revoked")
 
+            # Validate session is still active (if session_id present)
+            session_id: UUID | None = None
+            if session_id_str:
+                session_id = UUID(session_id_str)
+                await self._validate_and_touch_session(session_id, user_id)
+
             # Handle organization context
             organization_id = None
             organization_role = None
@@ -249,12 +286,17 @@ class AuthOperations:
                     user_id, organization_slug
                 )
 
-            # Create new tokens with current token_version
+            # Create new tokens with current token_version, preserving session_id
             access_token = create_access_token(
-                user_id, organization_id, token_version=user.token_version
+                user_id,
+                organization_id,
+                token_version=user.token_version,
+                session_id=session_id,
             )
             new_refresh_token = create_refresh_token(
-                user_id, token_version=user.token_version
+                user_id,
+                token_version=user.token_version,
+                session_id=session_id,
             )
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="success").inc()
@@ -265,14 +307,187 @@ class AuthOperations:
                 user_id=user_id,
                 organization_id=organization_id,
                 organization_role=organization_role,
+                session_id=session_id,
             )
         except TokenError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="failure").inc()
             raise
 
-    # -------------------------------------------------------------------------
-    # Private helpers
-    # -------------------------------------------------------------------------
+    async def list_sessions(self, user_id: UUID) -> list[UserSession]:
+        """
+        List active (non-revoked) sessions for a user.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID.
+
+        Returns
+        -------
+        list[UserSession]
+            Active sessions ordered by last_activity descending.
+
+        """
+        result = await self._session.execute(
+            select(UserSession)
+            .where(
+                UserSession.user_id == user_id,
+                UserSession.is_revoked.is_(False),
+            )
+            .order_by(UserSession.last_activity.desc())
+        )
+        return list(result.scalars().all())
+
+    async def revoke_session(self, user_id: UUID, session_id: UUID) -> bool:
+        """
+        Revoke a specific session.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID (for ownership verification).
+        session_id : UUID
+            Session to revoke.
+
+        Returns
+        -------
+        bool
+            True if the session was revoked.
+
+        Raises
+        ------
+        TokenError
+            If session not found or not owned by user.
+
+        """
+        result = await self._session.execute(
+            select(UserSession).where(
+                UserSession.id == session_id,
+                UserSession.user_id == user_id,
+                UserSession.is_revoked.is_(False),
+            )
+        )
+        session_record = result.scalar_one_or_none()
+
+        if not session_record:
+            raise TokenError("Session not found")
+
+        session_record.is_revoked = True
+        session_record.revoked_at = datetime.now(UTC)
+        await self._session.commit()
+
+        logger.info(f"Session {session_id} revoked for user {user_id}")
+        return True
+
+    async def revoke_other_sessions(
+        self,
+        user_id: UUID,
+        current_session_id: UUID,
+    ) -> int:
+        """
+        Revoke all sessions except the current one.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID.
+        current_session_id : UUID
+            Session to keep active.
+
+        Returns
+        -------
+        int
+            Number of sessions revoked.
+
+        """
+        now = datetime.now(UTC)
+        result = await self._session.execute(
+            update(UserSession)
+            .where(
+                UserSession.user_id == user_id,
+                UserSession.id != current_session_id,
+                UserSession.is_revoked.is_(False),
+            )
+            .values(is_revoked=True, revoked_at=now)
+        )
+        await self._session.commit()
+        revoked_count = result.rowcount  # type: ignore[union-attr]
+
+        logger.info(
+            f"Revoked {revoked_count} other sessions for user {user_id}, "
+            f"kept session {current_session_id}"
+        )
+        return revoked_count
+
+    async def logout_session(self, user_id: UUID, session_id: UUID) -> None:
+        """
+        Revoke the current session on logout.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID.
+        session_id : UUID
+            Session to revoke.
+
+        """
+        result = await self._session.execute(
+            select(UserSession).where(
+                UserSession.id == session_id,
+                UserSession.user_id == user_id,
+                UserSession.is_revoked.is_(False),
+            )
+        )
+        session_record = result.scalar_one_or_none()
+        if session_record:
+            session_record.is_revoked = True
+            session_record.revoked_at = datetime.now(UTC)
+            await self._session.commit()
+            logger.info(f"Logout: session {session_id} revoked for user {user_id}")
+
+    async def _create_session(
+        self,
+        user_id: UUID,
+        user_agent: str,
+    ) -> UserSession:
+        """Create a new session record."""
+        device_label = parse_device_label(user_agent)
+        session_record = UserSession(
+            user_id=user_id,
+            user_agent=user_agent[:512],  # Truncate to max length
+            device_label=device_label,
+        )
+        self._session.add(session_record)
+        await self._session.commit()
+        await self._session.refresh(session_record)
+        return session_record
+
+    async def _validate_and_touch_session(
+        self,
+        session_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """
+        Validate session is still active and update last_activity.
+
+        Raises TokenError if session is revoked or not found.
+        """
+        result = await self._session.execute(
+            select(UserSession).where(
+                UserSession.id == session_id,
+                UserSession.user_id == user_id,
+            )
+        )
+        session_record = result.scalar_one_or_none()
+
+        if not session_record:
+            raise TokenError("Session not found")
+
+        if session_record.is_revoked:
+            raise TokenError("Session has been revoked")
+
+        session_record.last_activity = datetime.now(UTC)
+        await self._session.commit()
 
     async def _get_user_by_id(self, user_id: UUID) -> User | None:
         """Get user by ID."""

@@ -224,6 +224,11 @@ class SettingsOperations:
         await self.session.commit()
         await self.session.refresh(profile)
 
+        if notifications is not None:
+            from uniffy.domains.notifications.cache import invalidate_cached_settings
+
+            await invalidate_cached_settings(user_id)
+
         return profile
 
     async def delete_profile(
@@ -263,6 +268,10 @@ class SettingsOperations:
 
         await self.session.delete(profile)
         await self.session.commit()
+
+        from uniffy.domains.notifications.cache import invalidate_cached_settings
+
+        await invalidate_cached_settings(user_id)
 
         return True
 

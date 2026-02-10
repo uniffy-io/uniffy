@@ -54,8 +54,7 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
         for (const [notifType, pref] of Object.entries(notifications.channelOverrides)) {
             const channels: Record<string, boolean> = {};
             if (pref.inApp !== undefined) channels.in_app = pref.inApp;
-            if (pref.desktop !== undefined) channels.desktop = pref.desktop;
-            if (pref.push !== undefined) channels.push = pref.push;
+            if (pref.browser !== undefined) channels.browser = pref.browser;
             if (pref.email !== undefined) channels.email = pref.email;
             if (Object.keys(channels).length > 0) {
                 channelOverrides[notifType] = channels;
@@ -64,7 +63,7 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
     }
 
     return {
-        desktopEnabled: notifications.desktopEnabled,
+        browserEnabled: notifications.browserEnabled,
         emailEnabled: notifications.emailEnabled,
         soundEnabled: notifications.soundEnabled,
         emailFrequency: notifications.emailFrequency || undefined,
@@ -105,7 +104,7 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
         bindings: {},
     },
     notifications: notificationsToPlain(settings.notifications) ?? {
-        desktopEnabled: true,
+        browserEnabled: true,
         emailEnabled: true,
         soundEnabled: true,
         emailFrequency: 'instant',

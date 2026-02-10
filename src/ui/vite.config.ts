@@ -125,9 +125,8 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ["dev.local.uniffy.io", "localhost"],
     proxy: {
-      // Proxy all /api/* paths to backend (ConnectRPC services, thumbnails, etc.)
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,
       },
     },

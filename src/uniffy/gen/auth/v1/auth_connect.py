@@ -31,6 +31,15 @@ class AuthService(Protocol):
     async def logout(self, request: auth_dot_v1_dot_auth__pb2.LogoutRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.LogoutResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_sessions(self, request: auth_dot_v1_dot_auth__pb2.ListSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.ListSessionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def revoke_session(self, request: auth_dot_v1_dot_auth__pb2.RevokeSessionRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeSessionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def revoke_other_sessions(self, request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
     def __init__(self, service: AuthService | AsyncGenerator[AuthService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -86,6 +95,36 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.logout,
+                ),
+                "/auth.v1.AuthService/ListSessions": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListSessions",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.ListSessionsRequest,
+                        output=auth_dot_v1_dot_auth__pb2.ListSessionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_sessions,
+                ),
+                "/auth.v1.AuthService/RevokeSession": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RevokeSession",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.RevokeSessionRequest,
+                        output=auth_dot_v1_dot_auth__pb2.RevokeSessionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.revoke_session,
+                ),
+                "/auth.v1.AuthService/RevokeOtherSessions": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RevokeOtherSessions",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
+                        output=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.revoke_other_sessions,
                 ),
             },
             interceptors=interceptors,
@@ -199,6 +238,66 @@ class AuthServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_sessions(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.ListSessionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.ListSessionsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSessions",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.ListSessionsRequest,
+                output=auth_dot_v1_dot_auth__pb2.ListSessionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def revoke_session(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.RevokeSessionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.RevokeSessionResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeSession",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.RevokeSessionRequest,
+                output=auth_dot_v1_dot_auth__pb2.RevokeSessionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def revoke_other_sessions(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeOtherSessions",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
+                output=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class AuthServiceSync(Protocol):
     def register(self, request: auth_dot_v1_dot_auth__pb2.RegisterRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
@@ -210,6 +309,12 @@ class AuthServiceSync(Protocol):
     def get_current_user(self, request: auth_dot_v1_dot_auth__pb2.GetCurrentUserRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.CurrentUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def logout(self, request: auth_dot_v1_dot_auth__pb2.LogoutRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.LogoutResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_sessions(self, request: auth_dot_v1_dot_auth__pb2.ListSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.ListSessionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def revoke_session(self, request: auth_dot_v1_dot_auth__pb2.RevokeSessionRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeSessionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def revoke_other_sessions(self, request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -266,6 +371,36 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.logout,
+                ),
+                "/auth.v1.AuthService/ListSessions": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListSessions",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.ListSessionsRequest,
+                        output=auth_dot_v1_dot_auth__pb2.ListSessionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_sessions,
+                ),
+                "/auth.v1.AuthService/RevokeSession": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RevokeSession",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.RevokeSessionRequest,
+                        output=auth_dot_v1_dot_auth__pb2.RevokeSessionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.revoke_session,
+                ),
+                "/auth.v1.AuthService/RevokeOtherSessions": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RevokeOtherSessions",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
+                        output=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.revoke_other_sessions,
                 ),
             },
             interceptors=interceptors,
@@ -373,6 +508,66 @@ class AuthServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.LogoutRequest,
                 output=auth_dot_v1_dot_auth__pb2.LogoutResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_sessions(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.ListSessionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.ListSessionsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSessions",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.ListSessionsRequest,
+                output=auth_dot_v1_dot_auth__pb2.ListSessionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def revoke_session(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.RevokeSessionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.RevokeSessionResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeSession",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.RevokeSessionRequest,
+                output=auth_dot_v1_dot_auth__pb2.RevokeSessionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def revoke_other_sessions(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeOtherSessions",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
+                output=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

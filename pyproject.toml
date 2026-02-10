@@ -48,6 +48,8 @@ dependencies = [
   "ffmpeg-python>=0.2.0",
   # Audio metadata extraction
   "mutagen>=1.47.0",
+  # Web Push notifications (VAPID)
+  "pywebpush>=2.0.0",
   # Prometheus metrics
   "prometheus-client>=0.21.0",
 ]
@@ -77,6 +79,7 @@ reportAny = false
 reportExplicitAny = false
 reportGeneralTypeIssues = false
 reportUnknownParameterType = false
+reportPrivateImportUsage = false
 reportMissingImports = false
 reportImplicitStringConcatenation = false
 reportFunctionMemberAccess = false

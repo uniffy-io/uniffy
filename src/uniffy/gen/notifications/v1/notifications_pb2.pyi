@@ -202,3 +202,13 @@ class StreamNotificationEvent(_message.Message):
     timestamp: _timestamp_pb2.Timestamp
     file_update: FileUpdatePayload
     def __init__(self, event_type: _Optional[_Union[StreamNotificationEvent.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ...) -> None: ...
+
+class GetVapidPublicKeyRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetVapidPublicKeyResponse(_message.Message):
+    __slots__ = ("public_key",)
+    PUBLIC_KEY_FIELD_NUMBER: _ClassVar[int]
+    public_key: str
+    def __init__(self, public_key: _Optional[str] = ...) -> None: ...

@@ -16,6 +16,7 @@ export interface AuthState {
   refreshToken: string | null; // Persisted for session continuity
   currentOrganizationId: string | null;
   currentOrganizationRole: string | null; // MEMBER, ADMIN, or OWNER
+  currentSessionId: string | null; // Server-side session identifier
   isAuthenticated: boolean;
   isRehydrating: boolean; // True while refreshing token on app startup
 }
@@ -26,6 +27,7 @@ const initialState: AuthState = {
   refreshToken: null,
   currentOrganizationId: null,
   currentOrganizationRole: null,
+  currentSessionId: null,
   isAuthenticated: false,
   isRehydrating: false,
 };
@@ -42,6 +44,7 @@ export const authSlice = createSlice({
         refreshToken: string;
         organizationId?: string;
         organizationRole?: string;
+        sessionId?: string;
       }>
     ) => {
       state.user = action.payload.user;
@@ -49,6 +52,7 @@ export const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || null;
       state.currentOrganizationRole = action.payload.organizationRole || null;
+      state.currentSessionId = action.payload.sessionId || state.currentSessionId;
       state.isAuthenticated = true;
       state.isRehydrating = false;
     },
@@ -69,6 +73,7 @@ export const authSlice = createSlice({
         refreshToken: string;
         organizationId?: string;
         organizationRole?: string;
+        sessionId?: string;
       }>
     ) => {
       state.user = action.payload.user;
@@ -76,6 +81,7 @@ export const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;
       state.currentOrganizationRole = action.payload.organizationRole || state.currentOrganizationRole;
+      state.currentSessionId = action.payload.sessionId || state.currentSessionId;
       state.isAuthenticated = true;
       state.isRehydrating = false;
     },
@@ -88,6 +94,7 @@ export const authSlice = createSlice({
       state.refreshToken = null;
       state.currentOrganizationId = null;
       state.currentOrganizationRole = null;
+      state.currentSessionId = null;
       state.isAuthenticated = false;
       state.isRehydrating = false;
     },
@@ -97,6 +104,7 @@ export const authSlice = createSlice({
       state.refreshToken = null;
       state.currentOrganizationId = null;
       state.currentOrganizationRole = null;
+      state.currentSessionId = null;
       state.isAuthenticated = false;
       state.isRehydrating = false;
     },

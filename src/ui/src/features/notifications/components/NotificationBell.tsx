@@ -9,6 +9,7 @@ import { cn } from '@/shared/utils/cn';
 import { useNotifications } from '@/features/notifications/hooks/useNotifications';
 import { useUnreadCountPolling } from '@/features/notifications/hooks/useNotifications';
 import { useNotificationStream } from '@/features/notifications/hooks/useNotificationStream';
+import { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
 import { NotificationPanel } from '@/features/notifications/components/NotificationPanel';
 
 export function NotificationBell() {
@@ -18,6 +19,9 @@ export function NotificationBell() {
 
     // Start real-time streaming
     useNotificationStream();
+
+    // Keep push subscription active (re-subscribes if permission granted but no subscription)
+    usePushSubscription();
 
     return (
         <div className="relative" ref={bellRef}>

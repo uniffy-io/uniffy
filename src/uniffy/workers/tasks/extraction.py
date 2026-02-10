@@ -74,18 +74,12 @@ async def extract_image_metadata(
         try:
             # Download image from S3
             image_bytes = await s3.download_bytes(file.storage_key)
-            log.info("Downloaded image", bytes=len(image_bytes))
+            log.info(f"downloaded image bytes: {len(image_bytes)}")
 
             # Extract metadata
             metadata = _extract_image_metadata(image_bytes)
-            exif_keys = list(metadata.get("exif", {}).keys())
             log.info(
                 "Extracted metadata",
-                width=metadata.get("width"),
-                height=metadata.get("height"),
-                format=metadata.get("format"),
-                exif_count=len(exif_keys),
-                exif_keys=exif_keys,
             )
 
             # UPSERT only extraction columns into FileMediaInfo
@@ -113,11 +107,14 @@ async def extract_image_metadata(
             await session.commit()
 
             try:
-                await publish_notification(file.owner_id, {
-                    "_type": "file_updated",
-                    "file_id": str(file.id),
-                    "organization_id": str(file.organization_id),
-                })
+                await publish_notification(
+                    file.owner_id,
+                    {
+                        "_type": "file_updated",
+                        "file_id": str(file.id),
+                        "organization_id": str(file.organization_id),
+                    },
+                )
             except Exception:
                 log.warning("Failed to publish file update event")
 
@@ -336,9 +333,9 @@ async def extract_audio_metadata(
                     upsert_values["thumbnail_key"] = thumb_key
                     upsert_values["thumbnail_width"] = thumb_w
                     upsert_values["thumbnail_height"] = thumb_h
-                    log.info("Generated album art thumbnail", thumb_w=thumb_w, thumb_h=thumb_h)
+                    log.info("Generated album art thumbnail")
                 except Exception as e:
-                    log.warning("Failed to generate album art thumbnail", error=str(e))
+                    log.exception("Failed to generate album art thumbnail", error=str(e))
 
             stmt = pg_insert(FileMediaInfo).values(**upsert_values)
 
@@ -361,11 +358,14 @@ async def extract_audio_metadata(
             await session.commit()
 
             try:
-                await publish_notification(file.owner_id, {
-                    "_type": "file_updated",
-                    "file_id": str(file.id),
-                    "organization_id": str(file.organization_id),
-                })
+                await publish_notification(
+                    file.owner_id,
+                    {
+                        "_type": "file_updated",
+                        "file_id": str(file.id),
+                        "organization_id": str(file.organization_id),
+                    },
+                )
             except Exception:
                 log.warning("Failed to publish file update event")
 
@@ -373,7 +373,7 @@ async def extract_audio_metadata(
             return {"status": "success", "metadata": metadata}
 
         except Exception as e:
-            log.error("Failed", error=str(e))
+            log.exception("task failed", error=str(e))
 
             job_try = ctx.get("job_try", 1)
             if job_try < 3:

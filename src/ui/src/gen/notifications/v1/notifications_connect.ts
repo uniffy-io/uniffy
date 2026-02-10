@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeleteNotificationRequest, DeleteNotificationResponse, GetUnreadCountRequest, GetUnreadCountResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse, RegisterPushSubscriptionRequest, RegisterPushSubscriptionResponse, StreamNotificationEvent, StreamNotificationsRequest, UnregisterPushSubscriptionRequest, UnregisterPushSubscriptionResponse } from "./notifications_pb.js";
+import { DeleteNotificationRequest, DeleteNotificationResponse, GetUnreadCountRequest, GetUnreadCountResponse, GetVapidPublicKeyRequest, GetVapidPublicKeyResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse, RegisterPushSubscriptionRequest, RegisterPushSubscriptionResponse, StreamNotificationEvent, StreamNotificationsRequest, UnregisterPushSubscriptionRequest, UnregisterPushSubscriptionResponse } from "./notifications_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -101,6 +101,17 @@ export const NotificationsService = {
       I: StreamNotificationsRequest,
       O: StreamNotificationEvent,
       kind: MethodKind.ServerStreaming,
+    },
+    /**
+     * Get the VAPID public key for Web Push subscription
+     *
+     * @generated from rpc notifications.v1.NotificationsService.GetVapidPublicKey
+     */
+    getVapidPublicKey: {
+      name: "GetVapidPublicKey",
+      I: GetVapidPublicKeyRequest,
+      O: GetVapidPublicKeyResponse,
+      kind: MethodKind.Unary,
     },
   }
 } as const;

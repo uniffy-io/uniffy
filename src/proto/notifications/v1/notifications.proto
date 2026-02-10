@@ -29,6 +29,9 @@ service NotificationsService {
 
   // Server streaming: real-time notification feed via Valkey Pub/Sub
   rpc StreamNotifications(StreamNotificationsRequest) returns (stream StreamNotificationEvent) {}
+
+  // Get the VAPID public key for Web Push subscription
+  rpc GetVapidPublicKey(GetVapidPublicKeyRequest) returns (GetVapidPublicKeyResponse) {}
 }
 
 // Notification type enum
@@ -214,4 +217,13 @@ message StreamNotificationEvent {
   google.protobuf.Timestamp timestamp = 3;
   // File update payload (present for FILE_UPDATED events)
   FileUpdatePayload file_update = 4;
+}
+
+// Request to get VAPID public key
+message GetVapidPublicKeyRequest {}
+
+// Response with VAPID public key
+message GetVapidPublicKeyResponse {
+  // Base64url-encoded VAPID public key for pushManager.subscribe()
+  string public_key = 1;
 }

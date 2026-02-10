@@ -40,6 +40,9 @@ class NotificationsService(Protocol):
     def stream_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest, ctx: RequestContext) -> AsyncIterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_vapid_public_key(self, request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class NotificationsServiceASGIApplication(ConnectASGIApplication[NotificationsService]):
     def __init__(self, service: NotificationsService | AsyncGenerator[NotificationsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -125,6 +128,16 @@ class NotificationsServiceASGIApplication(ConnectASGIApplication[NotificationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.stream_notifications,
+                ),
+                "/notifications.v1.NotificationsService/GetVapidPublicKey": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetVapidPublicKey",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_vapid_public_key,
                 ),
             },
             interceptors=interceptors,
@@ -298,6 +311,26 @@ class NotificationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_vapid_public_key(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetVapidPublicKey",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class NotificationsServiceSync(Protocol):
     def list_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.ListNotificationsRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.ListNotificationsResponse:
@@ -315,6 +348,8 @@ class NotificationsServiceSync(Protocol):
     def unregister_push_subscription(self, request: notifications_dot_v1_dot_notifications__pb2.UnregisterPushSubscriptionRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.UnregisterPushSubscriptionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def stream_notifications(self, request: notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest, ctx: RequestContext) -> Iterator[notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_vapid_public_key(self, request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest, ctx: RequestContext) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -401,6 +436,16 @@ class NotificationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.stream_notifications,
+                ),
+                "/notifications.v1.NotificationsService/GetVapidPublicKey": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetVapidPublicKey",
+                        service_name="notifications.v1.NotificationsService",
+                        input=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest,
+                        output=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_vapid_public_key,
                 ),
             },
             interceptors=interceptors,
@@ -568,6 +613,26 @@ class NotificationsServiceClientSync(ConnectClientSync):
                 service_name="notifications.v1.NotificationsService",
                 input=notifications_dot_v1_dot_notifications__pb2.StreamNotificationsRequest,
                 output=notifications_dot_v1_dot_notifications__pb2.StreamNotificationEvent,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_vapid_public_key(
+        self,
+        request: notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetVapidPublicKey",
+                service_name="notifications.v1.NotificationsService",
+                input=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyRequest,
+                output=notifications_dot_v1_dot_notifications__pb2.GetVapidPublicKeyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

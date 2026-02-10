@@ -1,12 +1,18 @@
 """Initial data seeding for the database."""
 
+from __future__ import annotations
+
 import os
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 # Path to docs folder in repository root
 DOCS_DIR = Path(__file__).parent.parent.parent.parent / "docs"
@@ -132,8 +138,10 @@ async def seed_initial_data() -> None:
                 )
                 admin_password = "admin"
 
+            admin_email = os.getenv("INITIAL_ADMIN_EMAIL", "admin@uniffy.io")
+
             admin_user = User(
-                email="admin@uniffy.io",
+                email=admin_email,
                 username="admin",
                 full_name="System Administrator",
                 hashed_password=hash_password(admin_password),
@@ -422,6 +430,9 @@ async def seed_initial_data() -> None:
                 )
                 logger.info("Development test data seeding completed")
 
+            # 10. Auto-generate VAPID keys for push notifications
+            await _seed_vapid_keys(session, admin_email)
+
             await session.commit()
             logger.info("Initial data seeding completed successfully.")
 
@@ -429,3 +440,65 @@ async def seed_initial_data() -> None:
             await session.rollback()
             logger.error(f"Failed to seed initial data: {e}")
             raise
+
+
+async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
+    """Generate a VAPID keypair and store it in application_settings.
+
+    Parameters
+    ----------
+    session : AsyncSession
+        Active database session (caller manages commit/rollback).
+    admin_email : str
+        Admin contact email for VAPID claims.
+
+    """
+    import base64
+
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+    from uniffy.core.crypto import encrypt_value
+    from uniffy.core.models.app_settings.application_setting import ApplicationSetting
+
+    private_key = ec.generate_private_key(ec.SECP256R1())
+
+    # Raw 32-byte private scalar, base64url-encoded (no padding)
+    priv_numbers = private_key.private_numbers()
+    priv_bytes = priv_numbers.private_value.to_bytes(32, byteorder="big")
+    priv_b64 = base64.urlsafe_b64encode(priv_bytes).rstrip(b"=").decode("ascii")
+
+    # Uncompressed public key point, base64url-encoded (no padding)
+    pub_bytes = private_key.public_key().public_bytes(
+        Encoding.X962, PublicFormat.UncompressedPoint
+    )
+    pub_b64 = base64.urlsafe_b64encode(pub_bytes).rstrip(b"=").decode("ascii")
+
+    contact = f"mailto:{admin_email}"
+
+    session.add(
+        ApplicationSetting(
+            key="vapid_private_key",
+            value=encrypt_value(priv_b64),
+            is_encrypted=True,
+            description="VAPID private key (ECDSA P-256, base64url, encrypted).",
+        )
+    )
+    session.add(
+        ApplicationSetting(
+            key="vapid_public_key",
+            value=pub_b64,
+            is_encrypted=False,
+            description="VAPID public key (ECDSA P-256, base64url, uncompressed point).",
+        )
+    )
+    session.add(
+        ApplicationSetting(
+            key="vapid_contact_email",
+            value=contact,
+            is_encrypted=False,
+            description="VAPID contact email (mailto: URI for push service).",
+        )
+    )
+    await session.flush()
+    logger.info("Generated and stored VAPID keypair in application_settings")

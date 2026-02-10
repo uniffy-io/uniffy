@@ -13,6 +13,7 @@ class AuthResult:
     user_id: UUID
     organization_id: UUID | None = None
     organization_role: str | None = None  # MEMBER, ADMIN, or OWNER
+    session_id: UUID | None = None
 
 
 @dataclass(frozen=True)

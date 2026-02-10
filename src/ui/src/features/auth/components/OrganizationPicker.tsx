@@ -148,6 +148,7 @@ export function OrganizationPicker() {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
           organizationId: response.organizationId,
+          sessionId: response.sessionId,
         }));
       }
 
