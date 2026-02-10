@@ -35,7 +35,7 @@ Uniffy uses URNs to uniquely identify all content. This enables universal `@` me
 
 **Format:** `urn:uniffy:content:{TYPE}:{uuid}`
 
-**Supported Types:** `NOTE`, `FILE`, `CHAT`, `USER`, `BOOK`, `CALENDAR_EVENT`, `PASSWORD`, `SPACE`
+**Supported Types:** `NOTE`, `FILE`, `CHAT`, `USER`, `CALENDAR_EVENT`
 
 **Requirements:**
 - All content models MUST have a `urn` property

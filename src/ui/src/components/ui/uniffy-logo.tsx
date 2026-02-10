@@ -14,8 +14,10 @@ interface UniffyLogoProps {
  * CSS media queries and base64 PNGs that cause filter:invert() to break
  * in Safari. PNGs handle CSS filters reliably across all browsers.
  *
- * The PNG is the dark (black) logo on a transparent background.
- * In dark theme we apply filter:invert(1) to make it white.
+ * The PNG is a dark (black) logo on an opaque white background.
+ * mix-blend-mode eliminates the background:
+ *   - Light theme: multiply (white bg becomes transparent, black logo stays)
+ *   - Dark theme: screen + invert (black bg becomes transparent, white logo stays)
  */
 export function UniffyLogo({ className, variant }: UniffyLogoProps) {
   const { resolvedTheme } = useTheme();
@@ -29,7 +31,10 @@ export function UniffyLogo({ className, variant }: UniffyLogoProps) {
       src="/web-app-manifest-512x512.png"
       alt="Uniffy"
       className={cn('select-none', className)}
-      style={isDark ? { filter: 'invert(1)' } : undefined}
+      style={{
+        filter: isDark ? 'invert(1)' : undefined,
+        mixBlendMode: isDark ? 'screen' : 'multiply',
+      }}
     />
   );
 }
