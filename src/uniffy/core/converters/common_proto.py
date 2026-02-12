@@ -50,10 +50,6 @@ from uniffy.gen.common.v1.common_pb2 import (
     VisibilityScope as ProtoVisibilityScope,
 )
 
-# =============================================================================
-# ENUM MAPPINGS - Domain <-> Proto
-# =============================================================================
-
 # ContentType mappings
 CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.NOTE: ProtoContentType.CONTENT_TYPE_NOTE,
@@ -122,11 +118,6 @@ GROUP_ROLE_FROM_PROTO: dict[ProtoGroupRole.ValueType, DomainGroupRole] = {
 }
 
 
-# =============================================================================
-# ENUM CONVERTER FUNCTIONS
-# =============================================================================
-
-
 def content_type_to_proto(ct: DomainContentType) -> ProtoContentType.ValueType:
     """Convert domain ContentType to proto."""
     return CONTENT_TYPE_TO_PROTO.get(ct, ProtoContentType.CONTENT_TYPE_UNSPECIFIED)
@@ -185,11 +176,6 @@ def group_role_to_proto(role: DomainGroupRole) -> ProtoGroupRole.ValueType:
 def group_role_from_proto(role: ProtoGroupRole.ValueType) -> DomainGroupRole | None:
     """Convert proto GroupRole to domain."""
     return GROUP_ROLE_FROM_PROTO.get(role)
-
-
-# =============================================================================
-# MESSAGE CONVERTER FUNCTIONS
-# =============================================================================
 
 
 def timestamp_to_proto(dt):

@@ -44,6 +44,7 @@ import {
 import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
 import { notesApi } from '@/features/notes/api/notesApi';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useBookmarks, useIsBookmarked } from '@/features/bookmarks';
 import { cn } from '@/shared/utils/cn';
 import { renderNoteIcon } from '@/features/notes/utils/noteIcons';
@@ -511,6 +512,11 @@ export function NotesSidebar() {
   const [showEmptyTrashConfirm, setShowEmptyTrashConfirm] = useState(false);
   const [restoringNoteId, setRestoringNoteId] = useState<string | null>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [pendingOrgMove, setPendingOrgMove] = useState<{
+    noteId: string;
+    targetVisibility: VisibilityScope;
+    targetFolderId: string | null;
+  } | null>(null);
 
   // Check if a node is expanded
   const isExpanded = useCallback(
@@ -711,12 +717,21 @@ export function NotesSidebar() {
     async (targetFolderId: string, droppedNodeId: string) => {
       if (!organizationId) return;
 
-      try {
-        // Get the current visibility of the dropped node and target folder
-        const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
-        const targetFolderVisibility = findNodeVisibility(targetFolderId);
+      const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
+      const targetFolderVisibility = findNodeVisibility(targetFolderId);
 
-        // If visibility changes, use moveNote to change visibility scope
+      // Confirm before moving to organization scope
+      if (targetFolderVisibility === VisibilityScope.ORGANIZATION &&
+          droppedNodeVisibility !== VisibilityScope.ORGANIZATION) {
+        setPendingOrgMove({
+          noteId: droppedNodeId,
+          targetVisibility: targetFolderVisibility,
+          targetFolderId,
+        });
+        return;
+      }
+
+      try {
         if (droppedNodeVisibility !== targetFolderVisibility) {
           await dispatch(moveNote({
             noteId: droppedNodeId,
@@ -724,17 +739,14 @@ export function NotesSidebar() {
           })).unwrap();
         }
 
-        // Update parent to move into the folder
         await dispatch(updateNote({
           noteId: droppedNodeId,
           parentId: targetFolderId,
         })).unwrap();
 
-        // Force refresh to get updated tree structure
         dispatch(initializeNotesData({ forceRefresh: true }));
       } catch (err) {
         console.error('Failed to move note:', err);
-        // Force refresh to revert to server state on error
         dispatch(initializeNotesData({ forceRefresh: true }));
       }
     },
@@ -779,11 +791,20 @@ export function NotesSidebar() {
     async (targetVisibility: VisibilityScope, droppedNodeId: string) => {
       if (!organizationId) return;
 
-      try {
-        // Get the current visibility of the dropped node
-        const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
+      const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
 
-        // If visibility changes, use moveNote to change visibility scope
+      // Confirm before moving to organization scope
+      if (targetVisibility === VisibilityScope.ORGANIZATION &&
+          droppedNodeVisibility !== VisibilityScope.ORGANIZATION) {
+        setPendingOrgMove({
+          noteId: droppedNodeId,
+          targetVisibility,
+          targetFolderId: null,
+        });
+        return;
+      }
+
+      try {
         if (droppedNodeVisibility !== targetVisibility) {
           await dispatch(moveNote({
             noteId: droppedNodeId,
@@ -791,13 +812,11 @@ export function NotesSidebar() {
           })).unwrap();
         }
 
-        // Remove parent to move to root level
         await dispatch(updateNote({
           noteId: droppedNodeId,
-          parentId: '', // Empty string signals remove parent
+          parentId: '',
         })).unwrap();
 
-        // Force refresh to get updated tree structure
         dispatch(initializeNotesData({ forceRefresh: true }));
       } catch (err) {
         console.error('Failed to move note to section:', err);
@@ -806,6 +825,32 @@ export function NotesSidebar() {
     },
     [dispatch, organizationId, findNodeVisibility]
   );
+
+  // Execute pending organization move after user confirmation
+  const handleOrgMoveConfirm = useCallback(async () => {
+    if (!pendingOrgMove || !organizationId) return;
+
+    const { noteId, targetVisibility, targetFolderId } = pendingOrgMove;
+
+    try {
+      await dispatch(moveNote({
+        noteId,
+        targetVisibility,
+      })).unwrap();
+
+      await dispatch(updateNote({
+        noteId,
+        parentId: targetFolderId ?? '',
+      })).unwrap();
+
+      dispatch(initializeNotesData({ forceRefresh: true }));
+    } catch (err) {
+      console.error('Failed to move note:', err);
+      dispatch(initializeNotesData({ forceRefresh: true }));
+    } finally {
+      setPendingOrgMove(null);
+    }
+  }, [pendingOrgMove, organizationId, dispatch]);
 
   // Track section drop state
   const [sectionDropTarget, setSectionDropTarget] = useState<string | null>(null);
@@ -1157,6 +1202,18 @@ export function NotesSidebar() {
           {renderTrash()}
         </nav>
       </div>
+
+      {/* Organization Move Confirmation */}
+      <ConfirmDialog
+        isOpen={pendingOrgMove !== null}
+        onClose={() => setPendingOrgMove(null)}
+        onConfirm={handleOrgMoveConfirm}
+        title="Move to Organization"
+        message="Moving this note to Organization will make it visible to all organization members. Any content referenced within (attached files, mentioned notes, inline media) will also become visible to the organization."
+        confirmLabel="Move to Organization"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
 
       {/* Empty Trash Confirmation Modal */}
       {showEmptyTrashConfirm && (

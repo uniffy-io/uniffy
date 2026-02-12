@@ -123,4 +123,5 @@ message UrnMetadata {
   string description = 2;
   SearchResultType type = 3;
   string url = 4;
+  map<string, string> metadata = 5;
 }

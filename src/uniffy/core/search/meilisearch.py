@@ -271,6 +271,7 @@ class MeilisearchClient:
         shared_user_ids: list[UUID] | None = None,
         tags: list[str] | None = None,
         rank_score: float = 1.0,
+        metadata: dict[str, str] | None = None,
     ) -> None:
         """
         Index or update a document in Meilisearch.
@@ -303,6 +304,8 @@ class MeilisearchClient:
             Content tags.
         rank_score : float
             Relevance booster (default 1.0).
+        metadata : dict[str, str] | None
+            Extra key-value metadata (e.g. mime_type, start_time).
 
         """
         doc_id = build_document_id(urn, organization_id)
@@ -322,6 +325,7 @@ class MeilisearchClient:
             "shared_user_ids": [str(uid) for uid in (shared_user_ids or [])],
             "tags": tags or [],
             "rank_score": rank_score,
+            "metadata": metadata or {},
             "updated_at": int(datetime.now(UTC).timestamp()),
         }
 

@@ -143,6 +143,10 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
         while ((match = MENTION_REGEX.exec(value)) !== null) {
           // Skip tag patterns — handled by tag remark plugin
           if (match[1] === 'tag') continue;
+          // Skip video patterns — handled by video remark plugin
+          if (match[1] === 'video') continue;
+          // Skip audio patterns — handled by audio remark plugin
+          if (match[1] === 'audio') continue;
 
           // Add text before the match
           if (match.index > lastIndex) {
@@ -258,6 +262,56 @@ class MentionNodeView implements NodeView {
     this.render();
   }
 
+  /**
+   * Replace this mention node with an inline media block (image, video, or audio).
+   * Called from the MentionChip when the user clicks "Embed" in the hover preview.
+   */
+  handleReplaceWithMedia = (mediaType: 'image' | 'video' | 'audio', url: string, title: string) => {
+    const pos = this.getPos();
+    if (pos === undefined) return;
+
+    const { state } = this.view;
+    const { schema } = state;
+
+    let mediaNode: Node | null = null;
+
+    if (mediaType === 'image') {
+      const imageType = schema.nodes['image-block'] ?? schema.nodes.image;
+      mediaNode = imageType?.createAndFill?.({ src: url, alt: title }) ?? null;
+    } else if (mediaType === 'video') {
+      const videoType = schema.nodes.video_block;
+      mediaNode = videoType?.create({ src: url, title }) ?? null;
+    } else if (mediaType === 'audio') {
+      const audioType = schema.nodes.audio_block;
+      mediaNode = audioType?.create({ src: url, title }) ?? null;
+    }
+
+    if (!mediaNode) return;
+
+    // Delete the inline mention node first
+    const tr = state.tr.delete(pos, pos + this.node.nodeSize);
+
+    // Resolve position to find the parent paragraph
+    const mappedPos = tr.mapping.map(pos);
+    const $pos = tr.doc.resolve(mappedPos);
+
+    if ($pos.depth >= 1) {
+      const parentNode = $pos.node(1);
+      const parentStart = $pos.before(1);
+      const parentEnd = $pos.after(1);
+
+      if (parentNode.textContent.trim() === '') {
+        // Paragraph is empty after removing mention -- replace with media block
+        tr.replaceWith(parentStart, parentEnd, mediaNode);
+      } else {
+        // Paragraph has other content -- insert media block after it
+        tr.insert(parentEnd, mediaNode);
+      }
+    }
+
+    this.view.dispatch(tr);
+  };
+
   render(selected = false) {
     // Don't render if already destroyed
     if (this.destroyed) return;
@@ -269,6 +323,7 @@ class MentionNodeView implements NodeView {
       urn,
       label,
       selected,
+      onReplaceWithMedia: this.handleReplaceWithMedia,
     });
 
     // Get store from storeRef - should always be available at render time

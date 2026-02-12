@@ -677,6 +677,11 @@ export class UrnMetadata extends Message<UrnMetadata> {
    */
   url = "";
 
+  /**
+   * @generated from field: map<string, string> metadata = 5;
+   */
+  metadata: { [key: string]: string } = {};
+
   constructor(data?: PartialMessage<UrnMetadata>) {
     super();
     proto3.util.initPartial(data, this);
@@ -689,6 +694,7 @@ export class UrnMetadata extends Message<UrnMetadata> {
     { no: 2, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type", kind: "enum", T: proto3.getEnumType(SearchResultType) },
     { no: 4, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UrnMetadata {

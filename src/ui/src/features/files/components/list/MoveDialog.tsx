@@ -18,6 +18,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/shared/utils/cn';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 import { moveItems } from '@/features/files/store/filesThunks';
@@ -63,6 +64,7 @@ export function MoveDialog({
     // Loading state
     const [isMoving, setIsMoving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showOrgConfirm, setShowOrgConfirm] = useState(false);
 
     // Get folders for the selected visibility
     const availableFolders = useMemo(() => {
@@ -111,8 +113,8 @@ export function MoveDialog({
         return visibilityChanged || folderChanged;
     }, [selectedVisibility, selectedFolderId, currentVisibility, currentFolderId]);
 
-    // Handle move action
-    const handleMove = useCallback(async () => {
+    // Perform the actual move
+    const performMove = useCallback(async () => {
         setIsMoving(true);
         setError(null);
 
@@ -128,7 +130,6 @@ export function MoveDialog({
                 targetVisibility,
             })).unwrap();
 
-            // Refresh data
             dispatch(initializeFilesData({ forceRefresh: true }));
             dispatch(fetchFilesTree({ includeFiles: false }));
 
@@ -137,8 +138,24 @@ export function MoveDialog({
             setError(err instanceof Error ? err.message : 'Failed to move items');
         } finally {
             setIsMoving(false);
+            setShowOrgConfirm(false);
         }
     }, [dispatch, fileIds, folderIds, selectedFolderId, selectedVisibility, onClose]);
+
+    // Handle move button click - confirm before moving to organization
+    const handleMove = useCallback(async () => {
+        const targetVisibility = selectedVisibility === 'organization'
+            ? VisibilityScope.ORGANIZATION
+            : VisibilityScope.PRIVATE;
+
+        if (targetVisibility === VisibilityScope.ORGANIZATION &&
+            currentVisibility !== VisibilityScope.ORGANIZATION) {
+            setShowOrgConfirm(true);
+            return;
+        }
+
+        await performMove();
+    }, [selectedVisibility, currentVisibility, performMove]);
 
     // Render a folder node in the tree
     const renderFolderNode = useCallback((node: SerializedTreeNode, depth = 0): React.ReactNode => {
@@ -332,6 +349,19 @@ export function MoveDialog({
                         {isMoving ? 'Moving...' : 'Move'}
                     </Button>
                 </div>
+
+                {/* Organization Move Confirmation */}
+                <ConfirmDialog
+                    isOpen={showOrgConfirm}
+                    onClose={() => setShowOrgConfirm(false)}
+                    onConfirm={performMove}
+                    title="Move to Organization"
+                    message="Moving to Organization will make these items visible to all organization members. Any content referenced within (attached files, mentioned notes, inline media) will also become visible to the organization."
+                    confirmLabel="Move to Organization"
+                    cancelLabel="Cancel"
+                    variant="warning"
+                    loading={isMoving}
+                />
             </div>
         </div>
     );

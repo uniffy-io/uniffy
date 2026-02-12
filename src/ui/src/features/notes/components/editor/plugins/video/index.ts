@@ -1,0 +1,222 @@
+/**
+ * Video Block Plugin for Milkdown/Crepe Editor
+ *
+ * Adds block-level video support with:
+ * - Markdown persistence as [[[video|url]]] or [[[video|url|title]]]
+ * - Video player rendering via VideoBlock component (Video.js)
+ * - Service worker streaming for seek support
+ *
+ * Plugin components:
+ * - videoBlockNode: Block-level atomic node schema
+ * - videoBlockRemarkPlugin: Parses [[[video|url]]] and [[[video|url|title]]] from markdown
+ * - videoBlockView: React NodeView rendering VideoBlock
+ */
+
+import { $node, $view, $remark } from '@milkdown/kit/utils';
+import { Node } from '@milkdown/kit/prose/model';
+import { EditorView } from '@milkdown/kit/prose/view';
+import type { NodeView } from '@milkdown/kit/prose/view';
+import { createRoot } from 'react-dom/client';
+import type { Root } from 'react-dom/client';
+import React from 'react';
+import { VideoBlock } from '@/features/notes/components/editor/plugins/video/VideoBlock';
+import { visit, SKIP } from 'unist-util-visit';
+import type { Parent, Node as UnistNode } from 'unist';
+
+// ── Node Schema ──────────────────────────────────────────────────────────────
+
+export const videoBlockNode = $node('video_block', () => ({
+    group: 'block',
+    atom: true,
+    attrs: {
+        src: { default: '' },
+        title: { default: '' },
+    },
+    parseDOM: [
+        {
+            tag: 'div[data-type="video-block"]',
+            getAttrs: (dom: HTMLElement) => ({
+                src: dom.getAttribute('data-src') || '',
+                title: dom.getAttribute('data-title') || '',
+            }),
+        },
+    ],
+    toDOM: (node: Node) => [
+        'div',
+        {
+            'data-type': 'video-block',
+            'data-src': node.attrs.src,
+            'data-title': node.attrs.title || '',
+            class: 'video-block-wrapper',
+        },
+        0,
+    ],
+    parseMarkdown: {
+        match: ({ type }: { type: string }) => type === 'videoBlock',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        runner: (state: any, node: any, type: any) => {
+            state.addNode(type, {
+                src: node.src || '',
+                title: node.title || '',
+            });
+        },
+    },
+    toMarkdown: {
+        match: (node: Node) => node.type.name === 'video_block',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        runner: (state: any, node: Node) => {
+            const attrs = node.attrs as { src: string; title: string };
+            // Skip serializing upload placeholders -- they are transient
+            if (attrs.src.startsWith('uploading:')) return;
+            state.addNode('videoBlock', undefined, undefined, {
+                src: attrs.src,
+                title: attrs.title || '',
+            });
+        },
+    },
+}));
+
+// ── Remark Plugin ────────────────────────────────────────────────────────────
+
+// Regex to match [[[video|url]]] or [[[video|url|title]]] format
+const VIDEO_REGEX = /^\[\[\[video\|([^\]|]+)(?:\|([^\]]*))?\]\]\]$/;
+
+// Custom video block node type for the AST
+interface VideoBlockAstNode extends UnistNode {
+    type: 'videoBlock';
+    src: string;
+    title?: string;
+}
+
+/**
+ * Remark plugin to parse video blocks from markdown.
+ *
+ * Handles the formats: [[[video|url]]] and [[[video|url|title]]]
+ * A paragraph containing only such a pattern is converted to a videoBlock node.
+ *
+ * Stringify handler converts videoBlock nodes back to [[[video|url|title]]] or [[[video|url]]].
+ *
+ * IMPORTANT: This plugin must be registered BEFORE the mention remark plugin
+ * so that [[[video|X]]] patterns are consumed before the general mention regex.
+ */
+export const videoBlockRemarkPlugin = $remark('videoBlockRemarkPlugin', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return function videoPlugin(this: any) {
+        // Add handler for stringifying video block nodes back to markdown
+        const toMarkdownExtension = {
+            handlers: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                videoBlock: (node: any) => {
+                    if (node.title) return `[[[video|${node.src}|${node.title}]]]`;
+                    return `[[[video|${node.src}]]]`;
+                },
+            },
+        };
+
+        const existing = (this.data('toMarkdownExtensions') as unknown[] | undefined) || [];
+        this.data('toMarkdownExtensions', [...existing, toMarkdownExtension]);
+
+        // Return the tree transformer for parsing
+        return (tree: Parent) => {
+            visit(tree, 'paragraph', (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
+                if (!parent || index === undefined) return;
+
+                const paraNode = node as Parent;
+                // Check if paragraph has exactly one text child
+                if (paraNode.children.length !== 1) return;
+
+                const child = paraNode.children[0];
+                if (!child || child.type !== 'text') return;
+
+                const textValue = (child as { type: 'text'; value: string }).value.trim();
+                const match = VIDEO_REGEX.exec(textValue);
+                if (!match) return;
+
+                // Replace the paragraph with a videoBlock node
+                const videoNode: VideoBlockAstNode = {
+                    type: 'videoBlock',
+                    src: match[1],
+                    title: match[2] || '',
+                };
+
+                parent.children.splice(index, 1, videoNode as unknown as UnistNode);
+                return [SKIP, index + 1];
+            });
+        };
+    };
+});
+
+// ── Node View ────────────────────────────────────────────────────────────────
+
+class VideoBlockNodeView implements NodeView {
+    dom: HTMLElement;
+    node: Node;
+    view: EditorView;
+    getPos: () => number | undefined;
+    root: Root;
+    destroyed: boolean;
+
+    constructor(node: Node, view: EditorView, getPos: () => number | undefined) {
+        this.node = node;
+        this.view = view;
+        this.getPos = getPos;
+        this.destroyed = false;
+
+        // Create wrapper element (block-level)
+        this.dom = document.createElement('div');
+        this.dom.className = 'video-block-wrapper';
+        this.dom.contentEditable = 'false';
+
+        // Mount React component
+        this.root = createRoot(this.dom);
+        this.render();
+    }
+
+    render(selected = false) {
+        if (this.destroyed) return;
+
+        const { src, title } = this.node.attrs as { src: string; title: string };
+        this.root.render(
+            React.createElement(VideoBlock, { src, title, selected })
+        );
+    }
+
+    update(node: Node) {
+        if (node.type !== this.node.type) return false;
+        this.node = node;
+        this.render();
+        return true;
+    }
+
+    selectNode() {
+        this.dom.classList.add('ProseMirror-selectednode');
+        this.render(true);
+    }
+
+    deselectNode() {
+        this.dom.classList.remove('ProseMirror-selectednode');
+        this.render(false);
+    }
+
+    destroy() {
+        this.destroyed = true;
+        this.root.unmount();
+    }
+
+    stopEvent() {
+        return true;
+    }
+}
+
+export const videoBlockView = $view(videoBlockNode, () => (node: Node, view: EditorView, getPos: () => number | undefined) =>
+    new VideoBlockNodeView(node, view, getPos)
+);
+
+// ── Export ────────────────────────────────────────────────────────────────────
+
+// The remark plugin must come first to parse [[[video|url]]] before other processing
+// $remark returns a tuple [$Ctx, MilkdownPlugin] so we spread it
+export const videoPlugins = [...videoBlockRemarkPlugin, videoBlockNode, videoBlockView];
+
+// Re-export component
+export { VideoBlock } from '@/features/notes/components/editor/plugins/video/VideoBlock';

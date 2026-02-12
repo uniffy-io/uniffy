@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -43,10 +44,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         """Initialize event operations."""
         super().__init__(session)
 
-    # ─────────────────────────────────────────────────────────────
-    # Abstract method implementations
-    # ─────────────────────────────────────────────────────────────
-
     def _build_search_keywords(self, model: CalendarEvent) -> str:
         """
         Build search keywords from event content.
@@ -79,6 +76,20 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
     def _get_search_tags(self, model: CalendarEvent) -> list[str] | None:
         """Get tags for search index."""
         return model.tags if model.tags else None
+
+    def _get_search_metadata(self, model: CalendarEvent) -> dict[str, str] | None:
+        """Get event details metadata for search index."""
+        metadata: dict[str, str] = {}
+        if model.start_time:
+            metadata["start_time"] = model.start_time.isoformat()
+        if model.end_time:
+            metadata["end_time"] = model.end_time.isoformat()
+        if model.location:
+            metadata["location"] = model.location
+        if model.timezone:
+            metadata["timezone"] = model.timezone
+        metadata["is_all_day"] = str(model.is_all_day).lower()
+        return metadata if metadata else None
 
     def _get_owner_id_column(self) -> InstrumentedAttribute:
         """Get the organizer_id column (owner equivalent for events)."""
@@ -232,8 +243,17 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Created event.
 
         """
-        # Extract URN references from description
-        outgoing_refs = queries.extract_urns_from_content(description) if description else None
+        # Extract URN references and inline file refs from description
+        outgoing_refs = (
+            extract_all_outgoing_references(description, organization_id)
+            if description else None
+        )
+
+        # Resolve reminder intervals (use user defaults if not specified)
+        if reminders is None:
+            from uniffy.domains.settings.defaults import DEFAULT_REMINDER_INTERVALS
+
+            reminders = list(DEFAULT_REMINDER_INTERVALS)
 
         # Resolve reminder intervals (use user defaults if not specified)
         if reminders is None:
@@ -412,7 +432,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.title = title
         if description is not None:
             event.description = description
-            event.outgoing_references = queries.extract_urns_from_content(description) or None
+            event.outgoing_references = (
+                extract_all_outgoing_references(description, organization_id) or None
+            )
         if start_time is not None:
             event.start_time = start_time
         if end_time is not None:

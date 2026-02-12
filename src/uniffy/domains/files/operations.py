@@ -121,6 +121,12 @@ class FileOperations(BaseContentOperations[File]):
         """Get tags for search index."""
         return model.tags if model.tags else None
 
+    def _get_search_metadata(self, model: File) -> dict[str, str] | None:
+        """Get MIME type metadata for search index."""
+        if model.mime_type:
+            return {"mime_type": model.mime_type}
+        return None
+
     async def _fetch_by_id(
         self,
         content_id: UUID,

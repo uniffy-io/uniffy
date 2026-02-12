@@ -125,11 +125,6 @@ class SubjectType(str, Enum):
     ORGANIZATION = "ORGANIZATION"
 
 
-# ============================================================================
-# Calendar-specific enums
-# ============================================================================
-
-
 class RecurrencePattern(str, Enum):
     """
     Recurrence patterns for repeating calendar events.

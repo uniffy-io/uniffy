@@ -20,10 +20,6 @@ from uniffy.gen.groups.v1 import groups_pb2 as pb
 class GroupsHandlers:
     """Handlers for GroupsService RPC methods."""
 
-    # =========================================================================
-    # Group CRUD
-    # =========================================================================
-
     async def list_groups(
         self,
         request: pb.ListGroupsRequest,
@@ -209,10 +205,6 @@ class GroupsHandlers:
 
         return pb.DeleteGroupResponse(success=True)
 
-    # =========================================================================
-    # Group Membership
-    # =========================================================================
-
     async def list_group_members(
         self,
         request: pb.ListGroupMembersRequest,
@@ -372,10 +364,6 @@ class GroupsHandlers:
             await ops.remove_member(group_id, target_user_id)
 
         return pb.RemoveGroupMemberResponse(success=True)
-
-    # =========================================================================
-    # Bulk Operations
-    # =========================================================================
 
     async def get_user_groups(
         self,

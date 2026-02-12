@@ -309,7 +309,7 @@ async def seed_initial_data() -> None:
 
             # 8. Read content, replace markdown links with URN mentions,
             # and extract outgoing references for the knowledge graph
-            from uniffy.domains.notes.queries import extract_urns_from_content
+            from uniffy.core.content.references import extract_urns_from_content
 
             about_content = (DOCS_DIR / "ABOUT.md").read_text()
             about_note.content = replace_markdown_links_with_urns(

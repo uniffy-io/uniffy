@@ -26,10 +26,6 @@ class GroupOperations:
         """
         self._session = session
 
-    # =========================================================================
-    # Group CRUD
-    # =========================================================================
-
     async def get_by_id(self, group_id: UUID) -> Group:
         """
         Get group by ID.
@@ -233,10 +229,6 @@ class GroupOperations:
 
         return groups_with_counts, total
 
-    # =========================================================================
-    # Member Management
-    # =========================================================================
-
     async def add_member(
         self,
         group_id: UUID,
@@ -424,10 +416,6 @@ class GroupOperations:
         members = [(row[0], row[1]) for row in result.all()]
 
         return members, total
-
-    # =========================================================================
-    # User's Groups
-    # =========================================================================
 
     async def get_user_groups(
         self,

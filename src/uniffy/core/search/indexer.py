@@ -50,6 +50,7 @@ class SearchIndexer:
         shared_user_ids: list[UUID] | None = None,
         tags: list[str] | None = None,
         rank_score: float = 1.0,
+        metadata: dict[str, str] | None = None,
     ) -> None:
         """
         Index or update content in the search index.
@@ -82,6 +83,8 @@ class SearchIndexer:
             Tags associated with the content.
         rank_score : float
             Relevance booster (default 1.0).
+        metadata : dict[str, str] | None
+            Extra key-value metadata (e.g. mime_type, start_time).
 
         """
         from uniffy.core.search.meilisearch import get_meilisearch_client
@@ -101,6 +104,7 @@ class SearchIndexer:
             shared_user_ids=shared_user_ids,
             tags=tags,
             rank_score=rank_score,
+            metadata=metadata,
         )
 
     async def update_sharing(

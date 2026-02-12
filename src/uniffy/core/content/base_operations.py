@@ -157,6 +157,26 @@ class BaseContentOperations[TModel](ABC):
         """
         return None
 
+    def _get_search_metadata(self, model: TModel) -> dict[str, str] | None:
+        """
+        Get extra metadata for search index.
+
+        Override in subclass to provide additional key-value metadata
+        (e.g. mime_type for files, start_time for calendar events).
+
+        Parameters
+        ----------
+        model : TModel
+            The content model.
+
+        Returns
+        -------
+        dict[str, str] | None
+            Metadata dict, or None.
+
+        """
+        return None
+
     # ─────────────────────────────────────────────────────────────
     # Core CRUD operations
     # ─────────────────────────────────────────────────────────────
@@ -475,6 +495,7 @@ class BaseContentOperations[TModel](ABC):
             shared_group_ids=group_ids if group_ids else None,
             shared_user_ids=shared_user_ids if shared_user_ids else None,
             tags=self._get_search_tags(model),
+            metadata=self._get_search_metadata(model),
         )
 
     async def _get_shared_user_ids(self, content_id: UUID) -> list[UUID]:

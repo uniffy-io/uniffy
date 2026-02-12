@@ -2,15 +2,12 @@
 
 import pytest
 
-from uniffy.domains.calendar.queries import (
-    MENTION_PATTERN as CALENDAR_MENTION_PATTERN,
-)
-from uniffy.domains.notes.queries import (
-    MENTION_PATTERN as NOTES_MENTION_PATTERN,
+from uniffy.core.content.references import (
+    MENTION_PATTERN,
+    extract_urns_from_content,
 )
 from uniffy.domains.notes.queries import (
     extract_inline_tags_from_content,
-    extract_urns_from_content,
     slugify,
 )
 from uniffy.domains.search.parser import (
@@ -82,14 +79,13 @@ class TestMentionPattern:
         result = extract_urns_from_content(content)
         assert sorted(result) == sorted(expected_urns)
 
-    def test_calendar_mention_pattern_matches_notes(self):
-        """Calendar and notes mention patterns should be equivalent."""
+    def test_mention_pattern_matches_calendar_events(self):
+        """Shared mention pattern matches calendar event URNs."""
         test_content = "[[[Event|urn:uniffy:content:CALENDAR_EVENT:evt-123]]]"
-        notes_match = NOTES_MENTION_PATTERN.search(test_content)
-        calendar_match = CALENDAR_MENTION_PATTERN.search(test_content)
-        assert notes_match is not None
-        assert calendar_match is not None
-        assert notes_match.groups() == calendar_match.groups()
+        match = MENTION_PATTERN.search(test_content)
+        assert match is not None
+        assert match.group(1) == "Event"
+        assert match.group(2) == "urn:uniffy:content:CALENDAR_EVENT:evt-123"
 
 
 class TestInlineTagPattern:

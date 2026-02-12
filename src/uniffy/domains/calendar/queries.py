@@ -1,6 +1,5 @@
 """Calendar-specific database queries."""
 
-import re
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -12,39 +11,6 @@ from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.login.user import User
-
-# Regex pattern for URN mentions in markdown: [[[label|urn]]]
-MENTION_PATTERN = re.compile(r"\\?\[\\?\[\\?\[(.+?)\\?\|(.+?)\\?\]\\?\]\\?\]")
-
-
-def extract_urns_from_content(content: str) -> list[str]:
-    """
-    Extract all unique URNs from markdown content.
-
-    Parses the [[[label|urn]]] mention pattern and returns
-    a deduplicated list of URNs.
-
-    Parameters
-    ----------
-    content : str
-        Markdown content to parse.
-
-    Returns
-    -------
-    list[str]
-        Unique URNs found in the content.
-
-    """
-    if not content:
-        return []
-
-    urns: set[str] = set()
-    for match in MENTION_PATTERN.finditer(content):
-        urn = match.group(2)  # Second capture group is the URN
-        if urn and urn.startswith("urn:uniffy:"):
-            urns.add(urn)
-
-    return list(urns)
 
 
 async def get_events_in_range(

@@ -12,6 +12,9 @@ import {
   Clock,
   ArrowSquareOut,
   Link,
+  CalendarDots,
+  MapPin,
+  FrameCorners,
 } from '@phosphor-icons/react';
 import type { UrnPreviewData } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
@@ -23,6 +26,9 @@ interface MentionPreviewProps {
   error: string | null;
   position: { x: number; y: number };
   onClose: () => void;
+  onEmbed?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 interface TypeTheme {
@@ -85,12 +91,71 @@ function isRecentlyUpdated(dateStr: string | undefined): boolean {
   return now.getTime() - date.getTime() < 5 * 60 * 1000;
 }
 
+/**
+ * Get a human-readable media type label from MIME type metadata.
+ * Returns null if the file is not a supported media type.
+ */
+function getMediaEmbedLabel(metadata?: Record<string, string>): string | null {
+  const mime = metadata?.mime_type;
+  if (!mime) return null;
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'audio';
+  return null;
+}
+
+/**
+ * Format an event time range from metadata for display.
+ * Handles all-day events, same-day events, and multi-day events.
+ */
+function formatEventTimeRange(metadata: Record<string, string>): string {
+  const startStr = metadata.start_time;
+  const endStr = metadata.end_time;
+  const isAllDay = metadata.is_all_day === 'true';
+
+  if (!startStr) return '';
+
+  const start = new Date(startStr);
+  const end = endStr ? new Date(endStr) : null;
+
+  const dateOpts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  const timeOpts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+
+  if (isAllDay) {
+    if (!end || start.toDateString() === end.toDateString()) {
+      return `${start.toLocaleDateString(undefined, dateOpts)} (all day)`;
+    }
+    return `${start.toLocaleDateString(undefined, dateOpts)} - ${end.toLocaleDateString(undefined, dateOpts)} (all day)`;
+  }
+
+  const startDate = start.toLocaleDateString(undefined, dateOpts);
+  const startTime = start.toLocaleTimeString(undefined, timeOpts);
+
+  if (!end) {
+    return `${startDate} at ${startTime}`;
+  }
+
+  const endTime = end.toLocaleTimeString(undefined, timeOpts);
+
+  // Same day
+  if (start.toDateString() === end.toDateString()) {
+    return `${startDate}, ${startTime} - ${endTime}`;
+  }
+
+  // Multi-day
+  const endDate = end.toLocaleDateString(undefined, dateOpts);
+  return `${startDate} ${startTime} - ${endDate} ${endTime}`;
+}
+
 export function MentionPreview({
   preview,
   isLoading,
   error,
   position,
-  onClose
+  onClose,
+  onEmbed,
+  onMouseEnter,
+  onMouseLeave,
 }: MentionPreviewProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -106,16 +171,12 @@ export function MentionPreview({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  // Calculate position to stay within viewport
-  const adjustedPosition = {
-    left: Math.min(position.x, window.innerWidth - 340),
-    top: position.y + 8,
-  };
+  // Gap between the chip bottom edge and the visible popover (px)
+  const GAP = 8;
 
-  // Check if preview would go below viewport
-  if (adjustedPosition.top + 220 > window.innerHeight) {
-    adjustedPosition.top = position.y - 228;
-  }
+  // Calculate position to stay within viewport
+  const adjustedLeft = Math.min(position.x, window.innerWidth - 340);
+  const opensDownward = position.y + GAP + 220 <= window.innerHeight;
 
   const parsed = preview ? parseUrn(preview.urn) : null;
   const theme = parsed ? getTypeTheme(parsed.type) : getTypeTheme(UrnType.UNKNOWN);
@@ -123,10 +184,25 @@ export function MentionPreview({
   const recentlyUpdated = preview ? isRecentlyUpdated(preview.updatedAt) : false;
 
   return (
+    // Invisible hover bridge: extends from the chip edge through the gap to the
+    // popover so the mouse never leaves the hover area while traveling between them.
     <div
       ref={popoverRef}
+      className="fixed z-[9999]"
+      style={{
+        left: `${adjustedLeft}px`,
+        // Start at chip edge; pad the gap side so it covers the empty space
+        ...(opensDownward
+          ? { top: `${position.y}px`, paddingTop: `${GAP}px` }
+          : { top: `${position.y - GAP - 220}px`, paddingBottom: `${GAP}px` }
+        ),
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+    <div
       className={`
-        fixed z-[9999] w-80
+        w-80
         bg-card/95 backdrop-blur-xl
         text-card-foreground
         rounded-xl shadow-2xl
@@ -135,10 +211,6 @@ export function MentionPreview({
         animate-in fade-in-0 zoom-in-95 slide-in-from-top-2
         duration-200
       `}
-      style={{
-        left: `${adjustedPosition.left}px`,
-        top: `${adjustedPosition.top}px`,
-      }}
     >
       {/* Loading state */}
       {isLoading && (
@@ -224,6 +296,42 @@ export function MentionPreview({
             </div>
           )}
 
+          {/* Calendar event details */}
+          {preview.type === UrnType.CALENDAR_EVENT && preview.metadata?.start_time && (
+            <div className="px-4 pb-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDots size={16} weight="duotone" className="text-rose-500 shrink-0" />
+                <span>{formatEventTimeRange(preview.metadata)}</span>
+              </div>
+              {preview.metadata.location && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin size={16} weight="duotone" className="text-rose-500 shrink-0" />
+                  <span className="truncate">{preview.metadata.location}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Embed action for media files */}
+          {onEmbed && preview.type === UrnType.FILE && (() => {
+            const mediaLabel = getMediaEmbedLabel(preview.metadata);
+            if (!mediaLabel) return null;
+            return (
+              <div className="px-4 pb-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEmbed();
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  <FrameCorners size={14} weight="duotone" />
+                  <span>Embed as {mediaLabel}</span>
+                </button>
+              </div>
+            );
+          })()}
+
           {/* Footer with metadata */}
           <div className="px-4 py-2.5 bg-muted/30 border-t border-border/50 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -237,6 +345,7 @@ export function MentionPreview({
           </div>
         </>
       )}
+    </div>
     </div>
   );
 }

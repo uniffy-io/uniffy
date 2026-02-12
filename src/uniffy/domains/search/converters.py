@@ -98,7 +98,7 @@ def search_result_to_proto(
         type=entity_type_to_proto(item.entity_type),
         url=item.url_path,
         score=final_score,
-        metadata={},  # Can be extended later
+        metadata=item.metadata or {},
         tags=item.tags or [],
     )
 
@@ -128,4 +128,5 @@ def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
         description=item.description or "",
         type=entity_type_to_proto(item.entity_type),
         url=item.url_path,
+        metadata=item.metadata or {},
     )

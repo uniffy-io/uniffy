@@ -110,6 +110,7 @@ export function useUrnPreview(): UseUrnPreviewResult {
           description: resolved.description || '',
           type: searchResultTypeToUrnType(resolved.type),
           url: resolved.url,
+          metadata: resolved.metadata,
         };
         // Only cache successful lookups, not fallback data
         previewCache.set(urn, previewData);

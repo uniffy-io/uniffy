@@ -252,6 +252,26 @@ class PermissionsOperations:
             ))
 
             await self._sync_search_sharing(organization_id, content_type, content_id)
+
+            # Cascade VIEW to content referenced by this item
+            try:
+                from uniffy.core.content.cascade import cascade_permission_grant
+
+                await cascade_permission_grant(
+                    session=self.session,
+                    granting_user_id=granted_by_user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
+                    subject_type=subject_type,
+                    subject_id=subject_id,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to cascade permissions to referenced content",
+                    exc_info=True,
+                )
+
             return existing
 
         # Create new permission
@@ -288,6 +308,26 @@ class PermissionsOperations:
         ))
 
         await self._sync_search_sharing(organization_id, content_type, content_id)
+
+        # Cascade VIEW to content referenced by this item
+        try:
+            from uniffy.core.content.cascade import cascade_permission_grant
+
+            await cascade_permission_grant(
+                session=self.session,
+                granting_user_id=granted_by_user_id,
+                organization_id=organization_id,
+                content_type=content_type,
+                content_id=content_id,
+                subject_type=subject_type,
+                subject_id=subject_id,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to cascade permissions to referenced content",
+                exc_info=True,
+            )
+
         return permission
 
     async def revoke_permission(

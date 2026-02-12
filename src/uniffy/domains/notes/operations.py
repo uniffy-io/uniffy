@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.errors import NotFoundError
 from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
 from uniffy.core.models.login.user import User
@@ -152,8 +153,11 @@ class NoteOperations(BaseContentOperations[Note]):
         if existing:
             slug = f"{slug}-{int(datetime.now(UTC).timestamp())}"
 
-        # Extract URN references and inline tags from content
-        outgoing_refs = queries.extract_urns_from_content(content) if content else None
+        # Extract URN references and inline file refs from content
+        outgoing_refs = (
+            extract_all_outgoing_references(content, organization_id)
+            if content else None
+        )
         inline_tags = queries.extract_inline_tags_from_content(content) if content else None
 
         note = Note(
@@ -278,7 +282,9 @@ class NoteOperations(BaseContentOperations[Note]):
         if content is not None:
             note.content = content
             # Update outgoing references and inline tags when content changes
-            note.outgoing_references = queries.extract_urns_from_content(content) or None
+            note.outgoing_references = (
+                extract_all_outgoing_references(content, organization_id) or None
+            )
             note.inline_tags = queries.extract_inline_tags_from_content(content) or None
         if slug is not None:
             note.slug = slug
@@ -496,7 +502,9 @@ class NoteOperations(BaseContentOperations[Note]):
 
         note.content = content
         # Update outgoing references and inline tags when content changes
-        note.outgoing_references = queries.extract_urns_from_content(content) or None
+        note.outgoing_references = (
+            extract_all_outgoing_references(content, organization_id) or None
+        )
         note.inline_tags = queries.extract_inline_tags_from_content(content) or None
         if title is not None:
             note.title = title
@@ -835,6 +843,27 @@ class NoteOperations(BaseContentOperations[Note]):
                 content_type=ContentType.NOTE,
                 content_id=note.id,
             ))
+
+        # Cascade visibility to content referenced by this note
+        try:
+            from uniffy.core.content.cascade import cascade_visibility_change
+
+            await cascade_visibility_change(
+                session=self.session,
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id=note.id,
+                target_visibility=target_visibility,
+                target_group_ids=target_group_ids,
+            )
+        except Exception:
+            from loguru import logger
+
+            logger.warning(
+                "Failed to cascade visibility to referenced content",
+                exc_info=True,
+            )
 
         return note
 

@@ -49,10 +49,6 @@ from uniffy.gen.common.v1.common_pb2 import (
     VisibilityScope as ProtoVisibilityScope,
 )
 
-# ============================================================================
-# Visibility mapping (reuse from notes pattern)
-# ============================================================================
-
 VISIBILITY_TO_PROTO = {
     VisibilityScope.PRIVATE: ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
     VisibilityScope.GROUP: ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP,
@@ -67,10 +63,6 @@ VISIBILITY_FROM_PROTO = {
     ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope.ORGANIZATION,
     ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC: VisibilityScope.PUBLIC,
 }
-
-# ============================================================================
-# Recurrence pattern mapping
-# ============================================================================
 
 RECURRENCE_TO_PROTO = {
     RecurrencePattern.NONE: ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
@@ -91,10 +83,6 @@ RECURRENCE_FROM_PROTO = {
     ProtoRecurrencePattern.RECURRENCE_PATTERN_YEARLY: RecurrencePattern.YEARLY,
 }
 
-# ============================================================================
-# Attendee status mapping
-# ============================================================================
-
 ATTENDEE_STATUS_TO_PROTO = {
     AttendeeStatus.PENDING: ProtoAttendeeStatus.ATTENDEE_STATUS_PENDING,
     AttendeeStatus.ACCEPTED: ProtoAttendeeStatus.ATTENDEE_STATUS_ACCEPTED,
@@ -110,10 +98,6 @@ ATTENDEE_STATUS_FROM_PROTO = {
     ProtoAttendeeStatus.ATTENDEE_STATUS_DECLINED: AttendeeStatus.DECLINED,
 }
 
-# ============================================================================
-# Attendee role mapping
-# ============================================================================
-
 ATTENDEE_ROLE_TO_PROTO = {
     AttendeeRole.ORGANIZER: ProtoAttendeeRole.ATTENDEE_ROLE_ORGANIZER,
     AttendeeRole.REQUIRED: ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED,
@@ -126,10 +110,6 @@ ATTENDEE_ROLE_FROM_PROTO = {
     ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED: AttendeeRole.REQUIRED,
     ProtoAttendeeRole.ATTENDEE_ROLE_OPTIONAL: AttendeeRole.OPTIONAL,
 }
-
-# ============================================================================
-# Resource type mapping
-# ============================================================================
 
 RESOURCE_TYPE_TO_PROTO = {
     ResourceType.NOTE: ProtoResourceType.RESOURCE_TYPE_NOTE,
@@ -144,10 +124,6 @@ RESOURCE_TYPE_FROM_PROTO = {
     ProtoResourceType.RESOURCE_TYPE_CHAT: ResourceType.CHAT,
 }
 
-# ============================================================================
-# Day of week mapping
-# ============================================================================
-
 DAY_OF_WEEK_MAP = {
     "MONDAY": ProtoDayOfWeek.DAY_OF_WEEK_MONDAY,
     "TUESDAY": ProtoDayOfWeek.DAY_OF_WEEK_TUESDAY,
@@ -159,11 +135,6 @@ DAY_OF_WEEK_MAP = {
 }
 
 DAY_OF_WEEK_FROM_PROTO = {v: k for k, v in DAY_OF_WEEK_MAP.items()}
-
-
-# ============================================================================
-# Converter functions
-# ============================================================================
 
 
 def visibility_from_proto(proto_visibility: ProtoVisibilityScope) -> VisibilityScope:

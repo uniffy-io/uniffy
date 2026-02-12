@@ -34,6 +34,7 @@ class SearchResult:
     visibility: str
     owner_id: UUID
     tags: list[str] | None
+    metadata: dict[str, str] | None
     updated_at: datetime | None
     rank_score: float
     search_score: float | None  # Meilisearch ranking score
@@ -70,6 +71,7 @@ class SearchResult:
             visibility=hit.get("visibility", "PRIVATE"),
             owner_id=UUID(hit["owner_id"]),
             tags=hit.get("tags"),
+            metadata=hit.get("metadata"),
             updated_at=updated_at,
             rank_score=hit.get("rank_score", 1.0),
             search_score=hit.get("_rankingScore"),

@@ -163,13 +163,22 @@ class ResolveUrnsResponse(_message.Message):
     def __init__(self, resolved: _Optional[_Mapping[str, UrnMetadata]] = ...) -> None: ...
 
 class UrnMetadata(_message.Message):
-    __slots__ = ("title", "description", "type", "url")
+    __slots__ = ("title", "description", "type", "url", "metadata")
+    class MetadataEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     TITLE_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
     title: str
     description: str
     type: SearchResultType
     url: str
-    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ...) -> None: ...
+    metadata: _containers.ScalarMap[str, str]
+    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...

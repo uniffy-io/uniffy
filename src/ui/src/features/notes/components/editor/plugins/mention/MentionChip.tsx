@@ -18,6 +18,7 @@ import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
 import { MentionPreview } from '@/features/notes/components/editor/plugins/mention/MentionPreview';
 import { useUrnPreview } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
+import { useAppSelector } from '@/app/hooks';
 import type { Icon } from '@phosphor-icons/react';
 
 interface MentionChipProps {
@@ -25,6 +26,7 @@ interface MentionChipProps {
   label: string;
   selected?: boolean;
   onClick?: (e?: React.MouseEvent) => void;
+  onReplaceWithMedia?: (mediaType: 'image' | 'video' | 'audio', url: string, title: string) => void;
 }
 
 interface MentionChipBasicProps {
@@ -65,27 +67,46 @@ function getTypeStyle(type: UrnType): TypeStyle {
 
 // Delay before showing preview (ms)
 const HOVER_DELAY = 400;
+// Delay before closing preview when mouse leaves chip/popover (ms)
+const CLOSE_DELAY = 400;
 
 /**
  * Rich inline mention chip with glassmorphism and gradient effects.
  * Shows a detailed preview popover on hover.
  */
-export function MentionChip({ urn, label, selected = false, onClick }: MentionChipProps) {
+export function MentionChip({ urn, label, selected = false, onClick, onReplaceWithMedia }: MentionChipProps) {
   const parsed = parseUrn(urn);
   const style = getTypeStyle(parsed.type);
   const typeLabel = getUrnTypeLabel(urn);
   const Icon = style.icon;
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   // Hover preview state
   const [showPreview, setShowPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chipRef = useRef<HTMLSpanElement>(null);
 
   // Preview data fetching
   const { preview, isLoading, error, fetchPreview } = useUrnPreview();
 
+  const cancelClose = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimeoutRef.current = setTimeout(() => {
+      setShowPreview(false);
+    }, CLOSE_DELAY);
+  }, [cancelClose]);
+
   const handleMouseEnter = useCallback(() => {
+    cancelClose();
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
@@ -101,19 +122,49 @@ export function MentionChip({ urn, label, selected = false, onClick }: MentionCh
         setShowPreview(true);
       }
     }, HOVER_DELAY);
-  }, [urn, fetchPreview]);
+  }, [urn, fetchPreview, cancelClose]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
-    setShowPreview(false);
-  }, []);
+    scheduleClose();
+  }, [scheduleClose]);
 
   const handleClosePreview = useCallback(() => {
+    cancelClose();
     setShowPreview(false);
-  }, []);
+  }, [cancelClose]);
+
+  // Handle embed action: convert mention chip to inline media
+  const handleEmbed = useCallback(() => {
+    if (!preview || !onReplaceWithMedia || !organizationId) return;
+
+    const mimeType = preview.metadata?.mime_type;
+    if (!mimeType) return;
+
+    if (!parsed.isValid || !parsed.id) return;
+
+    let mediaType: 'image' | 'video' | 'audio';
+    let url: string;
+
+    if (mimeType.startsWith('image/')) {
+      mediaType = 'image';
+      url = `/api/files/${organizationId}/${parsed.id}`;
+    } else if (mimeType.startsWith('video/')) {
+      mediaType = 'video';
+      url = `/media-stream/${organizationId}/${parsed.id}`;
+    } else if (mimeType.startsWith('audio/')) {
+      mediaType = 'audio';
+      url = `/media-stream/${organizationId}/${parsed.id}`;
+    } else {
+      return;
+    }
+
+    setShowPreview(false);
+    onReplaceWithMedia(mediaType, url, label);
+  }, [preview, onReplaceWithMedia, organizationId, parsed.isValid, parsed.id, label]);
 
   return (
     <>
@@ -169,6 +220,9 @@ export function MentionChip({ urn, label, selected = false, onClick }: MentionCh
           error={error}
           position={previewPosition}
           onClose={handleClosePreview}
+          onEmbed={onReplaceWithMedia ? handleEmbed : undefined}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
         />,
         document.body
       )}
@@ -237,11 +291,27 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
   const [showPreview, setShowPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chipRef = useRef<HTMLSpanElement>(null);
 
   const { preview, isLoading, error, fetchPreview } = useUrnPreview();
 
+  const cancelClose = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimeoutRef.current = setTimeout(() => {
+      setShowPreview(false);
+    }, CLOSE_DELAY);
+  }, [cancelClose]);
+
   const handleMouseEnter = useCallback(() => {
+    cancelClose();
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
@@ -257,15 +327,15 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
         setShowPreview(true);
       }
     }, HOVER_DELAY);
-  }, [urn, fetchPreview]);
+  }, [urn, fetchPreview, cancelClose]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
-    setShowPreview(false);
-  }, []);
+    scheduleClose();
+  }, [scheduleClose]);
 
   return (
     <>
@@ -305,7 +375,9 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
           isLoading={isLoading}
           error={error}
           position={previewPosition}
-          onClose={() => setShowPreview(false)}
+          onClose={() => { cancelClose(); setShowPreview(false); }}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
         />,
         document.body
       )}

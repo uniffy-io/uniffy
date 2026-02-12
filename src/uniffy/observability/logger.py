@@ -23,9 +23,6 @@ RESET = "\033[0m"
 app_name = "uniffy"
 app_version = "0.0.1"
 
-# =============================================================================
-# Optimized string escaping for loguru markup
-# =============================================================================
 # Characters that loguru interprets as markup: { } < > [ ]
 # Benchmarked approaches - simple 'in' check + replace chain is fastest
 # See tests/benchmarks/test_logger_benchmark.py for performance comparison
