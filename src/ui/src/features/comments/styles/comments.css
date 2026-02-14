@@ -1,18 +1,21 @@
 /* Comment highlight decorations for ProseMirror editor */
 
-.comment-highlight {
-    background-color: oklch(from var(--primary) l c h / 0.15);
-    border-bottom: 2px solid oklch(from var(--primary) l c h / 0.4);
+.crepe-editor .ProseMirror .comment-highlight,
+.crepe-editor .milkdown .comment-highlight {
+    background-color: hsl(45 100% 60% / 0.25);
+    border-bottom: 2px solid hsl(45 100% 45% / 0.7);
     border-radius: 2px;
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
 
-.comment-highlight:hover {
-    background-color: oklch(from var(--primary) l c h / 0.25);
+.crepe-editor .ProseMirror .comment-highlight:hover,
+.crepe-editor .milkdown .comment-highlight:hover {
+    background-color: hsl(45 100% 60% / 0.4);
 }
 
-.comment-highlight.active {
-    background-color: oklch(from var(--primary) l c h / 0.3);
-    border-bottom-color: oklch(from var(--primary) l c h / 0.6);
+.crepe-editor .ProseMirror .comment-highlight.active,
+.crepe-editor .milkdown .comment-highlight.active {
+    background-color: hsl(45 100% 60% / 0.45);
+    border-bottom-color: hsl(45 100% 45% / 0.9);
 }

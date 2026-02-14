@@ -4,7 +4,7 @@
  * Form with title, description, status, priority, assignee, and dates.
  */
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { X, Plus, CaretDown, MagnifyingGlass, Check } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
@@ -62,8 +62,14 @@ export function CreateTaskModal() {
   const priorityField = project?.fieldDefinitions.find(
     (f) => f.id === SYSTEM_FIELD_IDS.PRIORITY
   );
-  const statusOptions = statusField?.config.options || [];
-  const priorityOptions = priorityField?.config.options || [];
+  const statusOptions = useMemo(
+    () => statusField?.config.options || [],
+    [statusField?.config.options]
+  );
+  const priorityOptions = useMemo(
+    () => priorityField?.config.options || [],
+    [priorityField?.config.options]
+  );
 
   // Set defaults
   useEffect(() => {
@@ -82,6 +88,15 @@ export function CreateTaskModal() {
       dispatch(fetchMembers({ pageSize: 50 }));
     }
   }, [dispatch, adminMembers.length]);
+
+  const handleClose = useCallback(() => {
+    setTitle("");
+    setDescription("");
+    setAssigneeIds([]);
+    setStartDate("");
+    setDueDate("");
+    dispatch(closeCreateTaskModal());
+  }, [dispatch]);
 
   // Focus input on mount
   useEffect(() => {
@@ -108,7 +123,7 @@ export function CreateTaskModal() {
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isSubmitting]);
+  }, [isSubmitting, handleClose]);
 
   // Close assignee dropdown on outside click
   useEffect(() => {
@@ -122,15 +137,6 @@ export function CreateTaskModal() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isAssigneeDropdownOpen]);
-
-  const handleClose = () => {
-    setTitle("");
-    setDescription("");
-    setAssigneeIds([]);
-    setStartDate("");
-    setDueDate("");
-    dispatch(closeCreateTaskModal());
-  };
 
   const toggleAssignee = (userId: string) => {
     setAssigneeIds((prev) =>

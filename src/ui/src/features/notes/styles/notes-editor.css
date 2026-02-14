@@ -953,6 +953,16 @@
 }
 
 /*
+ * Text Highlight Mark
+ */
+.crepe-editor .ProseMirror mark.text-highlight,
+.crepe-editor .milkdown mark.text-highlight {
+    border-radius: 2px;
+    padding: 0 1px;
+    color: inherit !important;
+}
+
+/*
  * Mention Search Popup
  */
 .mention-popup {

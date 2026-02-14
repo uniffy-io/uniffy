@@ -1,5 +1,7 @@
+import { $prose } from '@milkdown/kit/utils';
 import { Plugin, PluginKey } from '@milkdown/prose/state';
 import { Decoration, DecorationSet } from '@milkdown/prose/view';
+import type { EditorView } from '@milkdown/prose/view';
 import type { Node } from '@milkdown/prose/model';
 
 export interface CommentAnchor {
@@ -10,28 +12,59 @@ export interface CommentAnchor {
     isResolved: boolean;
 }
 
-const commentDecorationsKey = new PluginKey('commentDecorations');
+export const commentDecorationsKey = new PluginKey<DecorationSet>('commentDecorations');
+
+interface CommentDecorationsMeta {
+    anchors: CommentAnchor[];
+    activeCommentId: string | null;
+}
+
+/** Module-level click handler, set once when the editor mounts. */
+let _onCommentClick: ((commentId: string) => void) | undefined;
+
+export function setCommentClickHandler(handler: (commentId: string) => void) {
+    _onCommentClick = handler;
+}
 
 /**
- * Create a ProseMirror plugin that highlights commented text selections.
- *
- * Takes a list of comment anchors and creates inline decorations for each.
- * Supports position validation and text fallback when positions drift.
+ * Push updated anchors/activeId into the plugin via a ProseMirror meta transaction.
  */
-export function createCommentDecorationsPlugin(
+export function updateCommentDecorations(
+    view: EditorView,
     anchors: CommentAnchor[],
     activeCommentId: string | null,
-    onCommentClick?: (commentId: string) => void,
 ) {
+    if (view.isDestroyed) return;
+    const tr = view.state.tr.setMeta(commentDecorationsKey, { anchors, activeCommentId });
+    view.dispatch(tr);
+}
+
+/**
+ * Milkdown plugin that highlights commented text selections.
+ *
+ * Register with `editor.use(commentDecorationsPlugin)` BEFORE `.create()`.
+ * After creation, call `updateCommentDecorations(view, anchors, activeId)`
+ * whenever the comment data changes.
+ */
+export const commentDecorationsPlugin = $prose(() => {
+    let currentAnchors: CommentAnchor[] = [];
+    let currentActiveId: string | null = null;
+
     return new Plugin({
         key: commentDecorationsKey,
         state: {
             init(_, state) {
-                return buildDecorations(state.doc, anchors, activeCommentId);
+                return buildDecorations(state.doc, currentAnchors, currentActiveId);
             },
             apply(tr, oldDecorations, _oldState, newState) {
+                const meta = tr.getMeta(commentDecorationsKey) as CommentDecorationsMeta | undefined;
+                if (meta) {
+                    currentAnchors = meta.anchors;
+                    currentActiveId = meta.activeCommentId;
+                    return buildDecorations(newState.doc, currentAnchors, currentActiveId);
+                }
                 if (tr.docChanged) {
-                    return buildDecorations(newState.doc, anchors, activeCommentId);
+                    return buildDecorations(newState.doc, currentAnchors, currentActiveId);
                 }
                 return oldDecorations;
             },
@@ -43,10 +76,10 @@ export function createCommentDecorationsPlugin(
             handleClick(_view, _pos, event) {
                 const target = event.target as HTMLElement;
                 const highlight = target.closest?.('[data-comment-id]') as HTMLElement | null;
-                if (highlight && onCommentClick) {
+                if (highlight && _onCommentClick) {
                     const commentId = highlight.getAttribute('data-comment-id');
                     if (commentId) {
-                        onCommentClick(commentId);
+                        _onCommentClick(commentId);
                         return true;
                     }
                 }
@@ -54,7 +87,7 @@ export function createCommentDecorationsPlugin(
             },
         },
     });
-}
+});
 
 function buildDecorations(
     doc: Node,
@@ -62,29 +95,25 @@ function buildDecorations(
     activeCommentId: string | null,
 ): DecorationSet {
     const decorations: Decoration[] = [];
-    const docSize = doc.nodeSize - 2; // Account for doc wrapper
+    const docSize = doc.nodeSize - 2;
 
     for (const anchor of anchors) {
         if (anchor.isResolved) continue;
 
         let { from, to } = anchor;
 
-        // Validate positions are within document bounds
         if (from < 0 || to < 0 || from >= docSize || to >= docSize || from >= to) {
-            // Try text fallback: search the document for the anchor text
             const found = findTextInDoc(doc, anchor.text);
             if (found) {
                 from = found.from;
                 to = found.to;
             } else {
-                continue; // Skip this anchor
+                continue;
             }
         }
 
-        // Verify text matches (positions may have shifted)
         const currentText = safeTextBetween(doc, from, to);
         if (currentText !== anchor.text && anchor.text) {
-            // Text at position doesn't match, try text fallback
             const found = findTextInDoc(doc, anchor.text);
             if (found) {
                 from = found.from;
@@ -109,11 +138,7 @@ function buildDecorations(
     return DecorationSet.create(doc as any, decorations);
 }
 
-function safeTextBetween(
-    doc: Node,
-    from: number,
-    to: number,
-): string {
+function safeTextBetween(doc: Node, from: number, to: number): string {
     try {
         const docSize = doc.nodeSize - 2;
         if (from < 0 || to < 0 || from > docSize || to > docSize) return '';
@@ -123,10 +148,7 @@ function safeTextBetween(
     }
 }
 
-function findTextInDoc(
-    doc: Node,
-    text: string,
-): { from: number; to: number } | null {
+function findTextInDoc(doc: Node, text: string): { from: number; to: number } | null {
     if (!text) return null;
 
     let found: { from: number; to: number } | null = null;

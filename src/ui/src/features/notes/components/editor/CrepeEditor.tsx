@@ -9,7 +9,7 @@ import { upload, uploadConfig, type Uploader } from '@milkdown/kit/plugin/upload
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
-import { useAppSelector } from '@/app/hooks';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
 import { tagPlugins } from '@/features/notes/components/editor/plugins/tag';
 import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from '@/features/notes/components/editor/plugins/mention';
@@ -22,9 +22,21 @@ import { createImageUploadHandler, uploadNoteImage } from '@/features/notes/util
 import { createVideoUploadHandler, uploadNoteVideo } from '@/features/notes/utils/videoUploader';
 import { createAudioUploadHandler, uploadNoteAudio } from '@/features/notes/utils/audioUploader';
 import { audioPlugins } from '@/features/notes/components/editor/plugins/audio';
+import { highlightPlugins, highlightMark } from '@/features/notes/components/editor/plugins/highlight';
+import { HighlightPicker } from '@/features/notes/components/editor/plugins/highlight/HighlightPicker';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { InlineCommentPopover } from '@/features/comments/components/InlineCommentPopover';
+import { CommentThreadPopover } from '@/features/comments/components/CommentThreadPopover';
+import {
+  commentDecorationsPlugin,
+  updateCommentDecorations,
+  setCommentClickHandler,
+} from '@/features/comments/plugins/commentDecorations';
+import type { CommentAnchor } from '@/features/comments/plugins/commentDecorations';
+import { useComments } from '@/features/comments/hooks/useComments';
+import { setActiveComment } from '@/features/comments/store/commentsSlice';
+import { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
 import { ContentType } from '@/gen/common/v1/common_pb';
 
 // Import only common Crepe styles - frame themes set global html/body styles that break our app
@@ -48,6 +60,9 @@ interface CrepeEditorProps {
 
 // SVG icon for the comment toolbar button (Phosphor chat-circle, 24x24)
 const COMMENT_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256"><path fill="currentColor" d="M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24Zm0,192a87.87,87.87,0,0,1-44.06-11.81,8,8,0,0,0-4-1.08,8.09,8.09,0,0,0-2.53.41L40,216,52.47,178.6a8,8,0,0,0-.67-6.54A88,88,0,1,1,128,216Z"/></svg>';
+
+// SVG icon for the highlight toolbar button (Phosphor Highlighter, 24x24)
+const HIGHLIGHT_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256"><path fill="currentColor" d="M253.66,98.34l-40-40a8,8,0,0,0-11.32,0l-32,32L140,60a8,8,0,0,0-11.31,0L72,116.69A8,8,0,0,0,72,128l18.34,18.34L42.34,194.34a8,8,0,0,0,0,11.32l8,8a8,8,0,0,0,11.32,0l48-48L128,184a8,8,0,0,0,11.31,0l56.69-56.69,0,0,32-32a8,8,0,0,0,0-11.31ZM128,172.69,91.31,136l48-48L176,124.69l-.69.69,0,0ZM208,104.69,179.31,76l28-28L236.69,76.69Z"/></svg>';
 
 // SVG icon for the video slash command (Phosphor video camera icon, 24x24)
 const VIDEO_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M164,104v48a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V104a4,4,0,0,1,4-4H160A4,4,0,0,1,164,104Zm48-8a4,4,0,0,0-4.22.43L172,122.75V133.25l35.78,26.32A4,4,0,0,0,212,160a4,4,0,0,0,4-4V100A4,4,0,0,0,212,96Z"/></svg>';
@@ -211,6 +226,7 @@ function createCrepeConfig(
   videoUploadHandler?: (file: File) => Promise<string>,
   audioUploadHandler?: (file: File) => Promise<string>,
   onCommentClick?: () => void,
+  onHighlightClick?: () => void,
 ) {
   return {
     root,
@@ -240,19 +256,30 @@ function createCrepeConfig(
         searchPlaceholder: 'Search language...',
         noResultText: 'No language found',
       },
-      ...(!readonly && onCommentClick && {
+      ...(!readonly && (onCommentClick || onHighlightClick) && {
         [Crepe.Feature.Toolbar]: {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           buildToolbar: (builder: any) => {
             const functionGroup = builder.getGroup('function');
             if (!functionGroup) return;
-            functionGroup.addItem('comment', {
-              icon: COMMENT_ICON_SVG,
-              active: () => false,
-              onRun: () => {
-                onCommentClick();
-              },
-            });
+            if (onHighlightClick) {
+              functionGroup.addItem('highlight', {
+                icon: HIGHLIGHT_ICON_SVG,
+                active: () => false,
+                onRun: () => {
+                  onHighlightClick();
+                },
+              });
+            }
+            if (onCommentClick) {
+              functionGroup.addItem('comment', {
+                icon: COMMENT_ICON_SVG,
+                active: () => false,
+                onRun: () => {
+                  onCommentClick();
+                },
+              });
+            }
           },
         },
       }),
@@ -357,8 +384,34 @@ function createCrepeConfig(
 const defaultSettings = { editorMode: 'crepe' as const, showMarkdownPreview: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
 
 export function CrepeEditor({ note, readonly = false, content: propContent, className }: CrepeEditorProps) {
+  const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+
+  // Comment decorations: fetch + read comments from Redux
+  const { comments: noteComments, refresh: refreshComments } = useComments(ContentType.NOTE, note.id);
+  const activeCommentId = useAppSelector((state) => state.comments.activeCommentId);
+
+  // Build comment anchors from Redux state (only SELECTION anchors)
+  const commentAnchors: CommentAnchor[] = useMemo(() => {
+    if (!noteComments.length) return [];
+    return noteComments
+      .filter((c) => c.anchorType === CommentAnchorType.SELECTION && c.anchorData)
+      .map((c) => ({
+        commentId: c.id,
+        from: (c.anchorData?.from as number) ?? 0,
+        to: (c.anchorData?.to as number) ?? 0,
+        text: (c.anchorData?.text as string) ?? '',
+        isResolved: c.isResolved,
+      }));
+  }, [noteComments]);
+
+  // Refs to pass current values into the plugin without re-creating the editor
+  const commentAnchorsRef = useRef(commentAnchors);
+  commentAnchorsRef.current = commentAnchors;
+  const activeCommentIdRef = useRef(activeCommentId);
+  activeCommentIdRef.current = activeCommentId;
+
   const settings = editorState?.settings ?? defaultSettings;
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeRef = useRef<Crepe | null>(null);
@@ -373,6 +426,19 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     from: number;
     to: number;
     text: string;
+    rect: DOMRect;
+  } | null>(null);
+
+  // Comment thread popover state - triggered from clicking highlighted text
+  const [threadPopover, setThreadPopover] = useState<{
+    commentId: string;
+    rect: DOMRect;
+  } | null>(null);
+
+  // Highlight color picker state - triggered from toolbar highlight button
+  const [highlightPicker, setHighlightPicker] = useState<{
+    from: number;
+    to: number;
     rect: DOMRect;
   } | null>(null);
 
@@ -398,6 +464,26 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     );
 
     setCommentSelection({ from, to, text, rect });
+  };
+
+  // Stable ref for the highlight callback
+  const highlightCallbackRef = useRef<() => void>(() => {});
+  highlightCallbackRef.current = () => {
+    const view = (window as Window & { __milkdownEditorView?: EditorView }).__milkdownEditorView;
+    if (!view) return;
+    const { from, to } = view.state.selection;
+    if (from === to) return;
+
+    const start = view.coordsAtPos(from);
+    const end = view.coordsAtPos(to);
+    const rect = new DOMRect(
+      Math.min(start.left, end.left),
+      Math.min(start.top, end.top),
+      Math.abs(end.right - start.left),
+      Math.abs(end.bottom - start.top),
+    );
+
+    setHighlightPicker({ from, to, rect });
   };
 
   // Create image upload handler (only for edit mode with valid IDs)
@@ -522,6 +608,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       container, content, readonly,
       imageUploadHandler, videoUploadHandler, audioUploadHandler,
       () => commentCallbackRef.current(),
+      () => highlightCallbackRef.current(),
     ));
 
     // CRITICAL: Add plugins BEFORE calling create()
@@ -537,6 +624,12 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       editor.use(tagPlugins);
       // Register mention plugins (includes view capture plugin)
       editor.use(mentionPlugins);
+      // Register highlight mark plugin (both edit and readonly - highlights are content)
+      editor.use(highlightPlugins);
+      // Register comment highlight decorations (edit mode only)
+      if (!readonly) {
+        editor.use(commentDecorationsPlugin);
+      }
 
       // Register upload plugin for paste/drop image handling (only in edit mode)
       if (!readonly && organizationId && note.id) {
@@ -643,10 +736,19 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       try {
         const editor = crepe.editor;
         editor.action((ctx) => {
-          // Get the ProseMirror view from the context
           const view = ctx.get(editorViewCtx);
           if (view) {
             (window as Window & { __milkdownEditorView?: unknown }).__milkdownEditorView = view;
+
+            // Wire up comment click handler - open thread popover
+            setCommentClickHandler((commentId) => {
+              dispatch(setActiveComment(commentId));
+              // Find the highlight element to position the popover
+              const el = document.querySelector(`[data-comment-id="${commentId}"]`);
+              if (el) {
+                setThreadPopover({ commentId, rect: el.getBoundingClientRect() });
+              }
+            });
           }
         });
       } catch {
@@ -719,6 +821,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       editor.use(audioPlugins);
       editor.use(tagPlugins);
       editor.use(mentionPlugins);
+      editor.use(highlightPlugins);
     } catch {
       // Plugin registration failed silently
     }
@@ -772,6 +875,56 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     return () => container.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [matches]);
 
+  // Handle highlight color selection from the picker
+  const handleHighlightColor = useCallback((color: string | null) => {
+    if (!crepeRef.current || !highlightPicker) return;
+
+    try {
+      crepeRef.current.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        if (!view) return;
+
+        const markType = highlightMark.type(ctx);
+        const { from, to } = highlightPicker;
+
+        if (color === null) {
+          // Remove highlight marks in the selection
+          view.dispatch(view.state.tr.removeMark(from, to, markType));
+        } else {
+          // Remove existing highlight, then add new one
+          let tr = view.state.tr.removeMark(from, to, markType);
+          tr = tr.addMark(from, to, markType.create({ color }));
+          view.dispatch(tr);
+        }
+
+        view.focus();
+      });
+    } catch {
+      // Editor action failed
+    }
+
+    setHighlightPicker(null);
+  }, [highlightPicker]);
+
+  // Update comment decorations when comments or active comment change
+  useEffect(() => {
+    if (readonly) return;
+    const crepe = crepeRef.current;
+    if (!crepe) return;
+
+    try {
+      crepe.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        if (view && !view.isDestroyed) {
+          updateCommentDecorations(view, commentAnchors, activeCommentId);
+        }
+      });
+    } catch {
+      // Editor not ready yet
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commentAnchors, activeCommentId]);
+
   return (
     <>
       <div className={`crepe-editor-wrapper h-full overflow-y-auto ${className || ''}`}>
@@ -799,6 +952,16 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
         document.body
       )}
 
+      {/* Highlight color picker - triggered from toolbar highlight button */}
+      {!readonly && highlightPicker && createPortal(
+        <HighlightPicker
+          anchorRect={highlightPicker.rect}
+          onSelect={handleHighlightColor}
+          onClose={() => setHighlightPicker(null)}
+        />,
+        document.body
+      )}
+
       {/* Inline comment form - triggered from toolbar comment button */}
       {!readonly && commentSelection && createPortal(
         <InlineCommentPopover
@@ -809,6 +972,25 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
         />,
         document.body
       )}
+
+      {/* Comment thread popover - triggered from clicking highlighted text */}
+      {threadPopover && (() => {
+        const comment = noteComments.find((c) => c.id === threadPopover.commentId);
+        if (!comment) return null;
+        return (
+          <CommentThreadPopover
+            comment={comment}
+            contentType={ContentType.NOTE}
+            contentId={note.id}
+            anchorRect={threadPopover.rect}
+            onClose={() => {
+              setThreadPopover(null);
+              dispatch(setActiveComment(null));
+            }}
+            onRefresh={refreshComments}
+          />
+        );
+      })()}
     </>
   );
 }

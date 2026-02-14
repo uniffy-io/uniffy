@@ -4,7 +4,7 @@
  * Simple form with name and optional description.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Kanban } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "@/app/hooks";
@@ -44,6 +44,13 @@ export function CreateProjectModal() {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleClose = useCallback(() => {
+    setName("");
+    setDescription("");
+    setIcon("kanban");
+    dispatch(closeCreateProjectModal());
+  }, [dispatch]);
+
   // Close on escape
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -53,14 +60,7 @@ export function CreateProjectModal() {
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isSubmitting]);
-
-  const handleClose = () => {
-    setName("");
-    setDescription("");
-    setIcon("kanban");
-    dispatch(closeCreateProjectModal());
-  };
+  }, [isSubmitting, handleClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

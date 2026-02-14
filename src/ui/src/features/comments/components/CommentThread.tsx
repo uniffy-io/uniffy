@@ -55,6 +55,100 @@ function AuthorAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string })
     );
 }
 
+function ReplyItem({
+    reply,
+    contentType,
+    contentId,
+    onRefresh,
+}: {
+    reply: SerializedComment;
+    contentType: number;
+    contentId: string;
+    onRefresh: () => void;
+}) {
+    const [isEditing, setIsEditing] = useState(false);
+    const { update, remove, react, unreact } = useCommentActions();
+    const currentUserId = useAppSelector((state) => state.auth.user?.id);
+    const isAuthor = currentUserId === reply.authorId;
+
+    const handleEdit = useCallback(async (body: string) => {
+        await update(contentType, contentId, reply.id, body);
+        setIsEditing(false);
+        onRefresh();
+    }, [update, contentType, contentId, reply.id, onRefresh]);
+
+    const handleDelete = useCallback(async () => {
+        await remove(contentType, contentId, reply.id);
+        onRefresh();
+    }, [remove, contentType, contentId, reply.id, onRefresh]);
+
+    const handleReact = useCallback(async (emoji: string) => {
+        await react(reply.id, emoji);
+        onRefresh();
+    }, [react, reply.id, onRefresh]);
+
+    const handleUnreact = useCallback(async (emoji: string) => {
+        await unreact(reply.id, emoji);
+        onRefresh();
+    }, [unreact, reply.id, onRefresh]);
+
+    return (
+        <div className="py-2 first:pt-0">
+            <div className="flex items-center gap-2 mb-1">
+                <AuthorAvatar name={reply.authorName} avatarUrl={reply.authorAvatarUrl || undefined} />
+                <span className="text-sm font-medium">{reply.authorName}</span>
+                <span className="text-xs text-muted-foreground">
+                    {formatRelativeTime(reply.createdAt)}
+                </span>
+                {reply.updatedAt && (
+                    <span className="text-xs text-muted-foreground">(edited)</span>
+                )}
+            </div>
+            {isEditing ? (
+                <div className="ml-9">
+                    <CommentInput
+                        initialValue={reply.body}
+                        onSubmit={handleEdit}
+                        onCancel={() => setIsEditing(false)}
+                        autoFocus
+                    />
+                </div>
+            ) : (
+                <div className="ml-9 text-sm whitespace-pre-wrap break-words">
+                    {reply.body}
+                </div>
+            )}
+            {/* Reactions */}
+            <div className="ml-9 mt-1">
+                <CommentReactions
+                    reactions={reply.reactions}
+                    onReact={handleReact}
+                    onUnreact={handleUnreact}
+                />
+            </div>
+            {/* Actions */}
+            {!isEditing && isAuthor && (
+                <div className="ml-9 mt-1 flex items-center gap-2">
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                    >
+                        <PencilSimple size={12} />
+                        Edit
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        className="text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 transition-colors"
+                    >
+                        <Trash size={12} />
+                        Delete
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function CommentThread({ comment, contentType, contentId, onRefresh }: CommentThreadProps) {
     const [showReplyInput, setShowReplyInput] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -237,18 +331,13 @@ export function CommentThread({ comment, contentType, contentId, onRefresh }: Co
             {comment.replies.length > 0 && (
                 <div className="ml-9 mt-2 border-l-2 border-border pl-3">
                     {comment.replies.map((reply) => (
-                        <div key={reply.id} className="py-2 first:pt-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                <AuthorAvatar name={reply.authorName} avatarUrl={reply.authorAvatarUrl || undefined} />
-                                <span className="text-sm font-medium">{reply.authorName}</span>
-                                <span className="text-xs text-muted-foreground">
-                                    {formatRelativeTime(reply.createdAt)}
-                                </span>
-                            </div>
-                            <div className="ml-9 text-sm whitespace-pre-wrap break-words">
-                                {reply.body}
-                            </div>
-                        </div>
+                        <ReplyItem
+                            key={reply.id}
+                            reply={reply}
+                            contentType={contentType}
+                            contentId={contentId}
+                            onRefresh={onRefresh}
+                        />
                     ))}
                 </div>
             )}

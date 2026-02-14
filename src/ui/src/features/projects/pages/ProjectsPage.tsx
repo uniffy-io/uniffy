@@ -72,11 +72,12 @@ export function ProjectsPage() {
   }, [dispatch, projectId]);
 
   // Fetch tasks whenever the current project changes
+  const currentProjectId = currentProject?.id;
   useEffect(() => {
-    if (currentProject) {
-      dispatch(fetchProjectTasks(currentProject.id));
+    if (currentProjectId) {
+      dispatch(fetchProjectTasks(currentProjectId));
     }
-  }, [dispatch, currentProject?.id]);
+  }, [dispatch, currentProjectId]);
 
   // Handle task selection from URL (URL -> state)
   useEffect(() => {
