@@ -36,7 +36,7 @@ export {
 export { useNotificationStream } from '@/features/notifications/hooks/useNotificationStream';
 
 export { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
-export type { UsePushSubscriptionResult } from '@/features/notifications/hooks/usePushSubscription';
+export type { UsePushSubscriptionResult, SubscribeResult } from '@/features/notifications/hooks/usePushSubscription';
 
 export { NotificationBell } from '@/features/notifications/components/NotificationBell';
 export { NotificationPanel } from '@/features/notifications/components/NotificationPanel';

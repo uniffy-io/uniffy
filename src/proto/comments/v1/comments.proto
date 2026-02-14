@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+package comments.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "common/v1/common.proto";
+
+option go_package = "uniffy/gen/comments/v1;commentsv1";
+
+// SERVICE
+
+// CommentsService provides comment management for content.
+// Comments can be attached to notes, files, calendar events, etc.
+// using the polymorphic ContentType + content_id pattern.
+service CommentsService {
+  // Create a new comment on content.
+  rpc CreateComment(CreateCommentRequest) returns (CreateCommentResponse);
+
+  // Update an existing comment body.
+  rpc UpdateComment(UpdateCommentRequest) returns (UpdateCommentResponse);
+
+  // Soft-delete a comment.
+  rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
+
+  // List comments for a piece of content.
+  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
+
+  // Get a single comment with its replies.
+  rpc GetComment(GetCommentRequest) returns (GetCommentResponse);
+
+  // Resolve a comment thread.
+  rpc ResolveComment(ResolveCommentRequest) returns (ResolveCommentResponse);
+
+  // Reopen a resolved comment thread.
+  rpc ReopenComment(ReopenCommentRequest) returns (ReopenCommentResponse);
+
+  // Add a reaction to a comment.
+  rpc AddReaction(AddReactionRequest) returns (AddReactionResponse);
+
+  // Remove a reaction from a comment.
+  rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse);
+
+  // Get comment counts for multiple content items (for badges).
+  rpc GetCommentCounts(GetCommentCountsRequest) returns (GetCommentCountsResponse);
+}
+
+// ENUMS
+
+// CommentAnchorType defines where a comment is anchored.
+enum CommentAnchorType {
+  COMMENT_ANCHOR_TYPE_UNSPECIFIED = 0;
+  COMMENT_ANCHOR_TYPE_PAGE = 1;       // Page-level comment (no specific anchor)
+  COMMENT_ANCHOR_TYPE_SELECTION = 2;  // Text selection anchor
+  COMMENT_ANCHOR_TYPE_BLOCK = 3;      // Block-level anchor (heading, paragraph, etc.)
+  COMMENT_ANCHOR_TYPE_MEDIA = 4;      // Media pin anchor (image region, video timestamp)
+}
+
+// MESSAGES
+
+// Comment represents a single comment on content.
+message Comment {
+  string id = 1;
+  string organization_id = 2;
+  common.v1.ContentType content_type = 3;
+  string content_id = 4;
+  optional string parent_comment_id = 5;
+  string author_id = 6;
+  string author_name = 7;
+  optional string author_avatar_url = 8;
+  string body = 9;
+  CommentAnchorType anchor_type = 10;
+  google.protobuf.Struct anchor_data = 11;
+  bool is_resolved = 12;
+  optional string resolved_by_id = 13;
+  optional string resolved_by_name = 14;
+  optional google.protobuf.Timestamp resolved_at = 15;
+  google.protobuf.Timestamp created_at = 16;
+  optional google.protobuf.Timestamp updated_at = 17;
+  int32 reply_count = 18;
+  repeated CommentReaction reactions = 19;
+  repeated Comment replies = 20;
+}
+
+// CommentReaction represents aggregated reaction data.
+message CommentReaction {
+  string emoji = 1;
+  int32 count = 2;
+  repeated string user_ids = 3;
+  bool current_user_reacted = 4;
+}
+
+// ContentRef identifies a piece of content for bulk operations.
+message ContentRef {
+  common.v1.ContentType content_type = 1;
+  string content_id = 2;
+}
+
+// CREATE COMMENT
+
+message CreateCommentRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  optional string parent_comment_id = 4;
+  string body = 5;
+  CommentAnchorType anchor_type = 6;
+  google.protobuf.Struct anchor_data = 7;
+}
+
+message CreateCommentResponse {
+  Comment comment = 1;
+}
+
+// UPDATE COMMENT
+
+message UpdateCommentRequest {
+  string organization_id = 1;
+  string comment_id = 2;
+  string body = 3;
+}
+
+message UpdateCommentResponse {
+  Comment comment = 1;
+}
+
+// DELETE COMMENT
+
+message DeleteCommentRequest {
+  string organization_id = 1;
+  string comment_id = 2;
+}
+
+message DeleteCommentResponse {
+  bool success = 1;
+}
+
+// LIST COMMENTS
+
+message ListCommentsRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  optional bool is_resolved = 4;
+  optional CommentAnchorType anchor_type = 5;
+  int32 page = 6;
+  int32 page_size = 7;
+}
+
+message ListCommentsResponse {
+  repeated Comment comments = 1;
+  int32 total_count = 2;
+  int32 open_count = 3;
+  int32 resolved_count = 4;
+}
+
+// GET COMMENT
+
+message GetCommentRequest {
+  string organization_id = 1;
+  string comment_id = 2;
+}
+
+message GetCommentResponse {
+  Comment comment = 1;
+}
+
+// RESOLVE COMMENT
+
+message ResolveCommentRequest {
+  string organization_id = 1;
+  string comment_id = 2;
+}
+
+message ResolveCommentResponse {
+  Comment comment = 1;
+}
+
+// REOPEN COMMENT
+
+message ReopenCommentRequest {
+  string organization_id = 1;
+  string comment_id = 2;
+}
+
+message ReopenCommentResponse {
+  Comment comment = 1;
+}
+
+// ADD REACTION
+
+message AddReactionRequest {
+  string organization_id = 1;
+  string comment_id = 2;
+  string emoji = 3;
+}
+
+message AddReactionResponse {
+  bool success = 1;
+}
+
+// REMOVE REACTION
+
+message RemoveReactionRequest {
+  string organization_id = 1;
+  string comment_id = 2;
+  string emoji = 3;
+}
+
+message RemoveReactionResponse {
+  bool success = 1;
+}
+
+// GET COMMENT COUNTS
+
+message GetCommentCountsRequest {
+  string organization_id = 1;
+  repeated ContentRef content_refs = 2;
+}
+
+message GetCommentCountsResponse {
+  // Key format: "{content_type}:{content_id}"
+  map<string, int32> counts = 1;
+}

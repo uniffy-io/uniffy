@@ -37,9 +37,15 @@ function getPermissionState(): NotificationPermission | 'unsupported' {
     return Notification.permission;
 }
 
+export interface SubscribeResult {
+    success: boolean;
+    /** Human-readable error message when success is false. */
+    error?: string;
+}
+
 export interface UsePushSubscriptionResult {
     /** Subscribe to push notifications (requests permission + registers). */
-    subscribe: () => Promise<boolean>;
+    subscribe: () => Promise<SubscribeResult>;
     /** Unsubscribe from push notifications. */
     unsubscribe: () => Promise<boolean>;
     /** Current permission state. */
@@ -52,17 +58,19 @@ export function usePushSubscription(): UsePushSubscriptionResult {
     const permissionState = useMemo(() => getPermissionState(), []);
     const isSupported = useMemo(() => isPushSupported(), []);
 
-    const subscribe = useCallback(async (): Promise<boolean> => {
-        if (!isPushSupported()) return false;
+    const subscribe = useCallback(async (): Promise<SubscribeResult> => {
+        if (!isPushSupported()) return { success: false, error: 'Push notifications are not supported in this browser.' };
 
         try {
             // Request browser permission
             const permission = await Notification.requestPermission();
-            if (permission !== 'granted') return false;
+            if (permission !== 'granted') {
+                return { success: false, error: 'Notification permission was denied.' };
+            }
 
             // Fetch VAPID public key from backend
             const { publicKey } = await notificationsApi.getVapidPublicKey({});
-            if (!publicKey) return false;
+            if (!publicKey) return { success: false, error: 'Could not retrieve push configuration from server.' };
 
             // Use the existing media-stream service worker (already registered at /)
             // Push event handling is built into the same worker.
@@ -77,7 +85,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
             // Extract keys for backend
             const rawKey = subscription.getKey('p256dh');
             const rawAuth = subscription.getKey('auth');
-            if (!rawKey || !rawAuth) return false;
+            if (!rawKey || !rawAuth) return { success: false, error: 'Failed to extract push subscription keys.' };
 
             const p256dhKey = btoa(String.fromCharCode(...new Uint8Array(rawKey)))
                 .replace(/\+/g, '-')
@@ -96,10 +104,22 @@ export function usePushSubscription(): UsePushSubscriptionResult {
                 userAgent: navigator.userAgent,
             });
 
-            return true;
+            return { success: true };
         } catch (error) {
             console.error('[usePushSubscription] subscribe failed:', error);
-            return false;
+
+            // Provide actionable messages for common failure modes
+            if (error instanceof DOMException && error.name === 'AbortError') {
+                return {
+                    success: false,
+                    error: 'Push service registration failed. Your browser may block push services. Check your browser privacy settings.',
+                };
+            }
+            if (error instanceof DOMException && error.name === 'NotAllowedError') {
+                return { success: false, error: 'Notification permission was denied.' };
+            }
+
+            return { success: false, error: 'Could not enable notifications. Please try again later.' };
         }
     }, []);
 

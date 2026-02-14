@@ -95,7 +95,11 @@ export function NotificationsSection() {
         // When toggling desktop notifications, manage push subscription
         if (field === 'browserEnabled') {
             if (value) {
-                await subscribe();
+                const result = await subscribe();
+                if (!result.success) {
+                    // Don't persist the setting if subscription failed
+                    return;
+                }
             } else {
                 await unsubscribe();
             }

@@ -24,9 +24,14 @@ import { createAudioUploadHandler, uploadNoteAudio } from '@/features/notes/util
 import { audioPlugins } from '@/features/notes/components/editor/plugins/audio';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
+import { InlineCommentPopover } from '@/features/comments/components/InlineCommentPopover';
+import { ContentType } from '@/gen/common/v1/common_pb';
 
 // Import only common Crepe styles - frame themes set global html/body styles that break our app
 import '@milkdown/crepe/theme/common/style.css';
+
+// Comment highlight styles
+import '@/features/comments/styles/comments.css';
 
 // Import our custom overrides that handle theming
 import '../../styles/notes-editor.css';
@@ -40,6 +45,9 @@ interface CrepeEditorProps {
   /** Custom class name for the wrapper */
   className?: string;
 }
+
+// SVG icon for the comment toolbar button (Phosphor chat-circle, 24x24)
+const COMMENT_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256"><path fill="currentColor" d="M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24Zm0,192a87.87,87.87,0,0,1-44.06-11.81,8,8,0,0,0-4-1.08,8.09,8.09,0,0,0-2.53.41L40,216,52.47,178.6a8,8,0,0,0-.67-6.54A88,88,0,1,1,128,216Z"/></svg>';
 
 // SVG icon for the video slash command (Phosphor video camera icon, 24x24)
 const VIDEO_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M164,104v48a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V104a4,4,0,0,1,4-4H160A4,4,0,0,1,164,104Zm48-8a4,4,0,0,0-4.22.43L172,122.75V133.25l35.78,26.32A4,4,0,0,0,212,160a4,4,0,0,0,4-4V100A4,4,0,0,0,212,96Z"/></svg>';
@@ -200,6 +208,7 @@ function createCrepeConfig(
   imageUploadHandler?: (file: File) => Promise<string>,
   videoUploadHandler?: (file: File) => Promise<string>,
   audioUploadHandler?: (file: File) => Promise<string>,
+  onCommentClick?: () => void,
 ) {
   return {
     root,
@@ -229,6 +238,22 @@ function createCrepeConfig(
         searchPlaceholder: 'Search language...',
         noResultText: 'No language found',
       },
+      ...(!readonly && onCommentClick && {
+        [Crepe.Feature.Toolbar]: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          buildToolbar: (builder: any) => {
+            const functionGroup = builder.getGroup('function');
+            if (!functionGroup) return;
+            functionGroup.addItem('comment', {
+              icon: COMMENT_ICON_SVG,
+              active: () => false,
+              onRun: () => {
+                onCommentClick();
+              },
+            });
+          },
+        },
+      }),
       ...(imageUploadHandler && {
         [Crepe.Feature.ImageBlock]: {
           onUpload: imageUploadHandler,
@@ -340,6 +365,38 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
 
   // Mention popup state
   const [mentionPopup, setMentionPopup] = useState<MentionTriggerEvent | null>(null);
+
+  // Comment form state - triggered from toolbar button
+  const [commentSelection, setCommentSelection] = useState<{
+    from: number;
+    to: number;
+    text: string;
+    rect: DOMRect;
+  } | null>(null);
+
+  // Stable ref for the comment callback so createCrepeConfig captures the latest version
+  const commentCallbackRef = useRef<() => void>(() => {});
+  commentCallbackRef.current = () => {
+    const view = (window as Window & { __milkdownEditorView?: EditorView }).__milkdownEditorView;
+    if (!view) return;
+    const { from, to } = view.state.selection;
+    if (from === to) return;
+
+    const text = view.state.doc.textBetween(from, to, ' ');
+    if (!text.trim()) return;
+
+    // Get the bounding rect of the selection for positioning the form
+    const start = view.coordsAtPos(from);
+    const end = view.coordsAtPos(to);
+    const rect = new DOMRect(
+      Math.min(start.left, end.left),
+      Math.min(start.top, end.top),
+      Math.abs(end.right - start.left),
+      Math.abs(end.bottom - start.top),
+    );
+
+    setCommentSelection({ from, to, text, rect });
+  };
 
   // Create image upload handler (only for edit mode with valid IDs)
   const imageUploadHandler = useMemo(() => {
@@ -459,7 +516,11 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     contentRef.current = content;
     initializedNoteIdRef.current = note.id;
 
-    const crepe = new Crepe(createCrepeConfig(container, content, readonly, imageUploadHandler, videoUploadHandler, audioUploadHandler));
+    const crepe = new Crepe(createCrepeConfig(
+      container, content, readonly,
+      imageUploadHandler, videoUploadHandler, audioUploadHandler,
+      () => commentCallbackRef.current(),
+    ));
 
     // CRITICAL: Add plugins BEFORE calling create()
     // Access the underlying Milkdown editor and register our custom plugins
@@ -732,6 +793,17 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
           onSelect={handleMentionSelect}
           onClose={() => setMentionPopup(null)}
           onQueryChange={(newQuery) => setMentionPopup(prev => prev ? { ...prev, query: newQuery } : null)}
+        />,
+        document.body
+      )}
+
+      {/* Inline comment form - triggered from toolbar comment button */}
+      {!readonly && commentSelection && createPortal(
+        <InlineCommentPopover
+          selection={commentSelection}
+          contentType={ContentType.NOTE}
+          contentId={note.id}
+          onClose={() => setCommentSelection(null)}
         />,
         document.body
       )}

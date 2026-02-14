@@ -18,6 +18,7 @@ import { clearNotifications } from '@/features/notifications';
 import { clearSharing } from '@/features/sharing';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
+import { clearComments } from '@/features/comments';
 import { clearMemoryAccessToken } from '@/config/api';
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
@@ -74,6 +75,7 @@ export function UserMenu() {
         dispatch(clearNotifications());
         dispatch(clearSharing());
         dispatch(clearAdmin());
+        dispatch(clearComments());
         // Clear IndexedDB cache (async, fire and forget)
         clearNotesCache().catch(console.error);
         // Clear file blob cache

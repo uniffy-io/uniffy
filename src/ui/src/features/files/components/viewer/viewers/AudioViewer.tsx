@@ -3,6 +3,9 @@
  *
  * Cinematic audio player with vinyl disc animation and waveform visualization.
  * Features spinning disc, circular progress, ambient particles, and glow effects.
+ *
+ * Uses Range-based streaming for immediate playback (like video) and loads the
+ * real waveform in the background. Files >100MB skip waveform computation.
  */
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -34,6 +37,12 @@ import { formatFileSize, supportsThumbnail } from '@/features/files/components/l
 import { ExtractionStatus } from '@/gen/files/v1/files_pb';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 
+/** Files larger than this skip background waveform computation. */
+const WAVEFORM_SIZE_LIMIT = 100 * 1024 * 1024; // 100 MB
+
+/** Number of bars in the placeholder waveform. */
+const PLACEHOLDER_BARS = 200;
+
 interface AudioViewerProps {
     file: SerializedFile;
 }
@@ -48,15 +57,28 @@ function formatTime(seconds: number): string {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Generate a flat placeholder peak array so the waveform area is not empty
+ * while the real peaks are being computed in the background.
+ */
+function generatePlaceholderPeaks(count: number): Float32Array {
+    const peaks = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+        peaks[i] = 0.3;
+    }
+    return peaks;
+}
+
 export function AudioViewer({ file }: AudioViewerProps) {
     const dispatch = useAppDispatch();
     const { isPlaying, currentTime, duration, volume, isMuted } = useAppSelector(
         (state) => state.fileViewer
     );
-    // Request full file for audio - WaveSurfer needs the complete file for waveform analysis
-    const { url: streamUrl, loading: swLoading, error: swError } = useMediaStream(file.id, { full: true });
+    // Range-based streaming (no full download) - playback starts immediately
+    const { url: streamUrl, loading: swLoading, error: swError } = useMediaStream(file.id);
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
     const discRef = useRef<HTMLDivElement>(null);
     const rotationRef = useRef(0);
@@ -106,22 +128,27 @@ export function AudioViewer({ file }: AudioViewerProps) {
     const circumference = 2 * Math.PI * circleRadius;
     const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
-    // Initialize WaveSurfer
+    // Duration from file metadata (available before audio loads)
+    const fileDuration = file.metadata?.durationSeconds ?? 0;
+
+    // Initialize WaveSurfer with hidden <audio> element for Range-based playback
     useEffect(() => {
-        if (!containerRef.current || !streamUrl) return;
+        if (!containerRef.current || !streamUrl || !audioRef.current) return;
 
         dispatch(setViewerLoading(true));
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when streamUrl changes
         setIsReady(false);
 
-        // Create AbortController for fetch cancellation
-        const abortController = new AbortController();
+        const audio = audioRef.current;
+        audio.src = streamUrl;
 
         // Get computed primary color for waveform
         const root = document.documentElement;
         const computedStyle = getComputedStyle(root);
         const primaryHsl = computedStyle.getPropertyValue('--primary').trim();
         const waveColorBase = primaryHsl ? `hsl(${primaryHsl}` : 'hsl(262, 83%, 58%';
+
+        // Placeholder peaks so the waveform area shows bars immediately
+        const placeholderPeaks = generatePlaceholderPeaks(PLACEHOLDER_BARS);
 
         const wavesurfer = WaveSurfer.create({
             container: containerRef.current,
@@ -133,15 +160,14 @@ export function AudioViewer({ file }: AudioViewerProps) {
             barGap: 2,
             barRadius: 3,
             normalize: true,
-            fetchParams: {
-                signal: abortController.signal,
-            },
+            // Use the hidden <audio> element for playback (Range-based seeking)
+            media: audio,
+            // Show placeholder peaks immediately; real peaks loaded in background
+            peaks: [Array.from(placeholderPeaks)],
+            duration: fileDuration || undefined,
         });
 
         wavesurferRef.current = wavesurfer;
-
-        // Load audio
-        wavesurfer.load(streamUrl);
 
         // Event handlers
         wavesurfer.on('ready', () => {
@@ -167,12 +193,7 @@ export function AudioViewer({ file }: AudioViewerProps) {
         });
 
         wavesurfer.on('error', (error) => {
-            // Ignore AbortError - this is expected when component unmounts during loading
             if (error instanceof Error && error.name === 'AbortError') {
-                return;
-            }
-            // Ignore errors if we've been aborted
-            if (abortController.signal.aborted) {
                 return;
             }
             console.error('WaveSurfer error:', error);
@@ -181,13 +202,71 @@ export function AudioViewer({ file }: AudioViewerProps) {
 
         // Cleanup
         return () => {
-            // Abort fetch first to cancel any pending requests gracefully
-            abortController.abort();
             wavesurfer.unAll();
             wavesurfer.destroy();
             wavesurferRef.current = null;
         };
-    }, [streamUrl, dispatch]);
+    }, [streamUrl, dispatch, fileDuration]);
+
+    // Background waveform computation: fetch full file, decode, and update peaks
+    useEffect(() => {
+        if (!streamUrl || !isReady) return;
+
+        // Skip waveform computation for large files
+        if (file.sizeBytes > WAVEFORM_SIZE_LIMIT) {
+            return;
+        }
+
+        const ac = new AbortController();
+        const fullUrl = streamUrl.includes('?') ? `${streamUrl}&full=true` : `${streamUrl}?full=true`;
+
+        (async () => {
+            try {
+                const res = await fetch(fullUrl, { signal: ac.signal });
+                const arrayBuffer = await res.arrayBuffer();
+
+                const audioCtx = new AudioContext();
+                try {
+                    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+                    const channel = decoded.getChannelData(0);
+                    const numBars = PLACEHOLDER_BARS;
+                    const blockSize = Math.floor(channel.length / numBars) || 1;
+                    const peaks = new Float32Array(numBars);
+                    let max = 0;
+
+                    for (let i = 0; i < numBars; i++) {
+                        let sum = 0;
+                        const offset = i * blockSize;
+                        const end = Math.min(offset + blockSize, channel.length);
+                        for (let j = offset; j < end; j++) {
+                            sum += Math.abs(channel[j]);
+                        }
+                        const avg = sum / (end - offset);
+                        peaks[i] = avg;
+                        if (avg > max) max = avg;
+                    }
+                    if (max > 0) {
+                        for (let i = 0; i < numBars; i++) peaks[i] /= max;
+                    }
+
+                    // Update WaveSurfer with real peaks
+                    const ws = wavesurferRef.current;
+                    if (ws) {
+                        ws.load(streamUrl, [Array.from(peaks)], decoded.duration);
+                    }
+                } finally {
+                    await audioCtx.close();
+                }
+            } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') return;
+                console.warn('[AudioViewer] Background waveform computation failed:', err);
+            }
+        })();
+
+        return () => {
+            ac.abort();
+        };
+    }, [streamUrl, isReady, file.sizeBytes]);
 
     // Sync play state
     useEffect(() => {
@@ -389,6 +468,9 @@ export function AudioViewer({ file }: AudioViewerProps) {
 
     return (
         <div className="audio-player-container">
+            {/* Hidden audio element for Range-based streaming playback */}
+            <audio ref={audioRef} preload="metadata" style={{ display: 'none' }} />
+
             {/* Ambient background glow */}
             <div className="audio-ambient-glow" />
 

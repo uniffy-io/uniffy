@@ -19,6 +19,7 @@ import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, vie
 import { imageEditorReducer } from '@/features/files/store/imageEditorSlice';
 import notificationsReducer from '@/features/notifications/store/notificationsSlice';
 import sessionsReducer from '@/features/settings/store/sessionsSlice';
+import { commentsReducer } from '@/features/comments/store/commentsSlice';
 import projectsReducer from '@/features/projects/store/projectsSlice';
 import projectsUiReducer from '@/features/projects/store/projectsUiSlice';
 
@@ -87,6 +88,7 @@ const rootReducer = combineReducers({
   imageEditor: imageEditorReducer,
   notifications: notificationsReducer,
   sessions: sessionsReducer,
+  comments: commentsReducer,
 });
 
 // Migrations to handle state shape changes across versions

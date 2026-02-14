@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -135,6 +136,9 @@ export default defineConfig({
     esbuildOptions: {
       resolveExtensions: ['.ts', '.tsx', '.js', '.jsx'],
     },
+  },
+  test: {
+    include: ['src/**/*.test.ts'],
   },
   build: {
     rollupOptions: {

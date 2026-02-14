@@ -114,6 +114,10 @@ run_test() {
   uv run pytest src/uniffy/tests/ --ignore=src/uniffy/tests/benchmarks/
 }
 
+run_test_frontend() {
+  cd src/ui && pnpm test
+}
+
 run_bench() {
   echo "Running performance benchmarks..."
   uv run pytest src/uniffy/tests/benchmarks/ \
@@ -174,6 +178,7 @@ lint-frontend) lint_frontend ;;
 lint-backend) lint_backend ;;
 format) format ;;
 test) run_test ;;
+test-frontend) run_test_frontend ;;
 bench) run_bench ;;
 db-shell) db_shell ;;
 db-migrate) db_migrate ;;

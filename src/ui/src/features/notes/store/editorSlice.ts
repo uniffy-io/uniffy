@@ -8,7 +8,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 export type EditorMode = 'crepe' | 'markdown' | 'readonly';
 
 // Metadata panel tabs
-export type MetadataPanelTab = 'outline' | 'links' | 'properties' | 'ai' | 'history';
+export type MetadataPanelTab = 'outline' | 'links' | 'properties' | 'ai' | 'history' | 'comments';
 
 interface EditorState {
     // Editor content (draft state, not saved yet)

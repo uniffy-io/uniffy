@@ -9,6 +9,8 @@ from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
+from uniffy.core.models.comments.comment import Comment, CommentAnchorType
+from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
@@ -81,6 +83,10 @@ __all__ = [
     "UploadStatus",
     # Bookmarks
     "Bookmark",
+    # Comments
+    "Comment",
+    "CommentAnchorType",
+    "CommentReaction",
     # Notifications
     "Notification",
     "NotificationType",

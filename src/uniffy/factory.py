@@ -25,6 +25,7 @@ from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
+from uniffy.domains.comments.service import CommentsServiceImpl
 from uniffy.domains.files.http_routes import files_router, thumbnails_router
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
@@ -41,6 +42,7 @@ from uniffy.gen.attachments.v1.attachments_connect import AttachmentsServiceASGI
 from uniffy.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy.gen.cal.v1.calendar_connect import CalendarServiceASGIApplication
+from uniffy.gen.comments.v1.comments_connect import CommentsServiceASGIApplication
 from uniffy.gen.files.v1.files_connect import FilesServiceASGIApplication
 from uniffy.gen.groups.v1.groups_connect import GroupsServiceASGIApplication
 from uniffy.gen.notes.v1.notes_connect import NotesServiceASGIApplication
@@ -321,6 +323,12 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         "/attachments.v1.AttachmentsService",
         AttachmentsServiceASGIApplication(
             AttachmentsServiceImpl(), interceptors=[logging_interceptor]
+        ),
+    )
+    dispatcher.add_service(
+        "/comments.v1.CommentsService",
+        CommentsServiceASGIApplication(
+            CommentsServiceImpl(), interceptors=[logging_interceptor]
         ),
     )
     dispatcher.add_service(

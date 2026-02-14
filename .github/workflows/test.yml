@@ -123,6 +123,51 @@ jobs:
           # fail_on_failure: true # optional; the pytest step already fails the job
           # comment: true        # enable (and add pull-requests: write above) to have a PR comment
 
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: src/ui/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: src/ui
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Vitest
+        working-directory: src/ui
+        run: pnpm test -- --reporter=junit --outputFile=../../reports/vitest-report.xml
+
+      - name: Upload Vitest JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-report
+          path: reports/vitest-report.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish test report
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: reports/vitest-report.xml
+          check_name: Vitest Results
+          require_tests: true
+          detailed_summary: true
+
   benchmark-python:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'

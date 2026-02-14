@@ -6,6 +6,10 @@
  * which does not render inside ProseMirror node views) and a standard <audio>
  * element for playback via service worker streaming.
  *
+ * Playback starts immediately using Range-based streaming (no full download).
+ * The waveform is computed in the background from the full file and skipped
+ * entirely for files >50MB.
+ *
  * Shows an animated uploading indicator when src starts with "uploading:".
  */
 
@@ -22,6 +26,11 @@ const BAR_WIDTH = 2;
 const BAR_GAP = 1;
 const BAR_RADIUS = 1;
 const CANVAS_HEIGHT = 32;
+/** Large enough to fill any reasonable canvas width. drawWaveform clips to fit. */
+const PLACEHOLDER_BARS = 500;
+
+/** Files larger than this skip background waveform computation. */
+const WAVEFORM_SIZE_LIMIT = 50 * 1024 * 1024; // 50 MB
 
 function formatTime(seconds: number): string {
     if (!isFinite(seconds) || seconds < 0) return '0:00';
@@ -74,6 +83,15 @@ function extractPeaks(audioBuffer: AudioBuffer, numBars: number): Float32Array {
     return peaks;
 }
 
+/** Generate flat placeholder peaks so the waveform area is not empty. */
+function generatePlaceholderPeaks(numBars: number): Float32Array {
+    const peaks = new Float32Array(numBars);
+    for (let i = 0; i < numBars; i++) {
+        peaks[i] = 0.3;
+    }
+    return peaks;
+}
+
 /** Draw waveform bars onto a canvas with a progress split colour. */
 function drawWaveform(
     canvas: HTMLCanvasElement,
@@ -120,7 +138,6 @@ export function AudioBlock({ src, selected }: AudioBlockProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const peaksRef = useRef<Float32Array>(new Float32Array(0));
-    const blobUrlRef = useRef<string | null>(null);
     const rafRef = useRef(0);
 
     const [isPlaying, setIsPlaying] = useState(false);
@@ -132,56 +149,94 @@ export function AudioBlock({ src, selected }: AudioBlockProps) {
 
     const [rgb] = useState(resolvePrimaryRgb);
 
-    // ----- Load audio, decode peaks, set up <audio> element -----
+    // ----- Audio setup (immediate): set src directly for Range-based streaming -----
     useEffect(() => {
         if (isUploading || !src) return;
 
-        const ac = new AbortController();
-        let audioCtx: AudioContext | null = null;
-        let blobUrl: string | null = null;
+        const audio = audioRef.current;
+        if (!audio) return;
 
-        const loadUrl = src.includes('?') ? `${src}&full=true` : `${src}?full=true`;
+        setIsReady(false);
+        setDuration(0);
+        setCurrentTime(0);
+
+        // Point audio element directly at the stream URL (no ?full=true)
+        audio.src = src;
+
+        // Draw placeholder waveform immediately (use fixed large count so bars
+        // fill the full width even if the canvas hasn't been laid out yet)
+        peaksRef.current = generatePlaceholderPeaks(PLACEHOLDER_BARS);
+        const canvas = canvasRef.current;
+        if (canvas) {
+            drawWaveform(canvas, peaksRef.current, 0, rgb);
+        }
+
+        const onLoadedMetadata = () => {
+            setDuration(audio.duration);
+            setIsReady(true);
+        };
+
+        const onError = () => {
+            console.error('[AudioBlock] audio load error');
+        };
+
+        audio.addEventListener('loadedmetadata', onLoadedMetadata);
+        audio.addEventListener('error', onError);
+
+        return () => {
+            audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+            audio.removeEventListener('error', onError);
+            audio.pause();
+            audio.removeAttribute('src');
+            audio.load();
+        };
+    }, [src, isUploading, rgb]);
+
+    // ----- Background waveform computation (deferred) -----
+    useEffect(() => {
+        if (isUploading || !src || !isReady) return;
+
+        const ac = new AbortController();
+        const fullUrl = src.includes('?') ? `${src}&full=true` : `${src}?full=true`;
 
         (async () => {
             try {
-                const res = await fetch(loadUrl, { signal: ac.signal });
-                const arrayBuffer = await res.arrayBuffer();
-
-                // Blob for <audio> playback
-                const blob = new Blob([arrayBuffer], { type: res.headers.get('content-type') || 'audio/mpeg' });
-                blobUrl = URL.createObjectURL(blob);
-                blobUrlRef.current = blobUrl;
-
-                if (audioRef.current) {
-                    audioRef.current.src = blobUrl;
+                // Check Content-Length with a HEAD request first to skip large files
+                const headRes = await fetch(fullUrl, { method: 'HEAD', signal: ac.signal });
+                const contentLength = parseInt(headRes.headers.get('content-length') || '0', 10);
+                if (contentLength > WAVEFORM_SIZE_LIMIT) {
+                    return;
                 }
 
-                // Decode for waveform peaks (clone buffer since decode may detach)
-                audioCtx = new AudioContext();
-                const decoded = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-                const canvas = canvasRef.current;
-                const numBars = canvas ? Math.floor(canvas.clientWidth / (BAR_WIDTH + BAR_GAP)) : 300;
-                peaksRef.current = extractPeaks(decoded, numBars);
+                const res = await fetch(fullUrl, { signal: ac.signal });
+                const arrayBuffer = await res.arrayBuffer();
 
-                setDuration(decoded.duration);
-                setIsReady(true);
+                const audioCtx = new AudioContext();
+                try {
+                    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+                    const canvas = canvasRef.current;
+                    const numBars = canvas ? Math.floor(canvas.clientWidth / (BAR_WIDTH + BAR_GAP)) : 300;
+                    peaksRef.current = extractPeaks(decoded, numBars);
 
-                if (canvas) {
-                    drawWaveform(canvas, peaksRef.current, 0, rgb);
+                    if (canvas) {
+                        const audio = audioRef.current;
+                        const progress = audio?.duration ? audio.currentTime / audio.duration : 0;
+                        drawWaveform(canvas, peaksRef.current, progress, rgb);
+                    }
+                } finally {
+                    await audioCtx.close();
                 }
             } catch (err) {
                 if (err instanceof DOMException && err.name === 'AbortError') return;
-                console.error('[AudioBlock] load error:', err);
+                console.warn('[AudioBlock] waveform computation failed:', err);
+                // Non-fatal: player still works with placeholder waveform
             }
         })();
 
         return () => {
             ac.abort();
-            if (blobUrl) URL.revokeObjectURL(blobUrl);
-            blobUrlRef.current = null;
-            audioCtx?.close();
         };
-    }, [src, isUploading, rgb]);
+    }, [src, isUploading, isReady, rgb]);
 
     // ----- Animation loop: sync waveform progress with playback -----
     useEffect(() => {
@@ -303,8 +358,8 @@ export function AudioBlock({ src, selected }: AudioBlockProps) {
 
     return (
         <div className={`audio-block-container${selected ? ' audio-block-selected' : ''}`}>
-            {/* Hidden audio element for playback */}
-            <audio ref={audioRef} preload="none" style={{ display: 'none' }} />
+            {/* Hidden audio element for Range-based streaming playback */}
+            <audio ref={audioRef} preload="metadata" style={{ display: 'none' }} />
 
             <div className="audio-block-controls">
                 <button

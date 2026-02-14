@@ -11,7 +11,11 @@ import {
   Hash,
   FileText,
   Cube,
+  ChatCircle,
 } from '@phosphor-icons/react';
+import { CommentsPanel } from '@/features/comments/components/CommentsPanel';
+import { useComments } from '@/features/comments/hooks/useComments';
+import { ContentType } from '@/gen/common/v1/common_pb';
 import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
 import { useNavigate } from 'react-router-dom';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
@@ -94,6 +98,12 @@ export function NotesMetadataPanel() {
     [currentContent]
   );
 
+  // Get comment counts for badge
+  const { openCount: commentOpenCount } = useComments(
+    ContentType.NOTE,
+    currentNoteId || '',
+  );
+
   // Early returns AFTER all hooks
   if (!currentNoteId || !note) return null;
 
@@ -104,10 +114,11 @@ export function NotesMetadataPanel() {
     : 'Unknown';
   const ownerInitials = getInitials(ownerName);
 
-  const tabs: Array<{ id: MetadataPanelTab; label: string; icon: typeof Link }> = [
+  const tabs: Array<{ id: MetadataPanelTab; label: string; icon: typeof Link; badge?: number }> = [
     { id: 'outline', label: 'Outline', icon: ListBullets },
     { id: 'links', label: 'Links', icon: Link },
     { id: 'properties', label: 'Properties', icon: Gear },
+    { id: 'comments', label: 'Comments', icon: ChatCircle, badge: commentOpenCount },
     { id: 'ai', label: 'AI', icon: Sparkle },
     { id: 'history', label: 'History', icon: Clock },
   ];
@@ -461,6 +472,10 @@ export function NotesMetadataPanel() {
         return renderAITab();
       case 'history':
         return renderHistoryTab();
+      case 'comments':
+        return currentNoteId ? (
+          <CommentsPanel contentType={ContentType.NOTE} contentId={currentNoteId} />
+        ) : null;
       default:
         return renderOutlineTab();
     }
@@ -470,7 +485,7 @@ export function NotesMetadataPanel() {
     <div className="h-full flex flex-col">
       {/* Tabs */}
       <div className="flex border-b border-border">
-        {tabs.map(({ id, label, icon: Icon }) => (
+        {tabs.map(({ id, label, icon: Icon, badge }) => (
           <button
             key={id}
             onClick={() => dispatch(setMetadataPanelTab(id))}
@@ -482,6 +497,11 @@ export function NotesMetadataPanel() {
           >
             <Icon size={16} weight="duotone" />
             <span className="hidden xl:inline">{label}</span>
+            {badge != null && badge > 0 && (
+              <span className="ml-0.5 px-1.5 py-0 text-[10px] rounded-full bg-primary text-primary-foreground leading-4">
+                {badge}
+              </span>
+            )}
             {metadataPanelTab === id && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
             )}

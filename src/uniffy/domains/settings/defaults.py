@@ -46,6 +46,11 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "imageEditor.flipV": "V",
     "imageEditor.crop": "C",
     "imageEditor.applyCrop": "Enter",
+
+    # Comments
+    "comments.toggle": "Ctrl+Shift+M",
+    "comments.new": "Ctrl+Shift+C",
+
     # Projects table keyboard navigation
     "projects.focusUp": "ArrowUp",
     "projects.focusDown": "ArrowDown",
@@ -99,6 +104,10 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[str, dict[str, bool]] = {
     "PERMISSION_GRANTED": {"in_app": True, "browser": False, "email": True},
     "PERMISSION_REVOKED": {"in_app": True, "browser": False, "email": True},
     "SYSTEM_ANNOUNCEMENT": {"in_app": True, "browser": True, "email": True},
+    "COMMENT_ADDED": {"in_app": True, "browser": True, "email": False},
+    "COMMENT_REPLY": {"in_app": True, "browser": True, "email": True},
+    "COMMENT_MENTIONED": {"in_app": True, "browser": True, "email": True},
+    "COMMENT_RESOLVED": {"in_app": True, "browser": False, "email": False},
 }
 
 

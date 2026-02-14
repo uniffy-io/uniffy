@@ -27,6 +27,14 @@ const SHORTCUT_CATEGORIES = [
         ],
     },
     {
+        id: 'comments',
+        label: 'Comments',
+        shortcuts: [
+            { action: 'comments.toggle', label: 'Toggle Comments Panel' },
+            { action: 'comments.new', label: 'New Comment' },
+        ],
+    },
+    {
         id: 'viewer',
         label: 'File Viewer',
         shortcuts: [

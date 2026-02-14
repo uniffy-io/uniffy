@@ -4,27 +4,30 @@
  * so it reappears on next login.
  */
 
-import { useCallback, useReducer } from 'react';
-import { Bell, X } from '@phosphor-icons/react';
+import { useCallback, useEffect, useReducer } from 'react';
+import { Bell, X, WarningCircle } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
 
 const DISMISSED_KEY = 'uniffy_push_dismissed';
 
-type BannerState = { visible: boolean; subscribing: boolean };
+type BannerState = { visible: boolean; subscribing: boolean; error: string | null };
 type BannerAction =
     | { type: 'hide' }
     | { type: 'start_subscribe' }
-    | { type: 'end_subscribe'; success: boolean };
+    | { type: 'end_subscribe'; success: boolean; error?: string };
 
 function bannerReducer(state: BannerState, action: BannerAction): BannerState {
     switch (action.type) {
         case 'hide':
-            return { ...state, visible: false };
+            return { ...state, visible: false, error: null };
         case 'start_subscribe':
-            return { ...state, subscribing: true };
+            return { ...state, subscribing: true, error: null };
         case 'end_subscribe':
-            return { visible: !action.success, subscribing: false };
+            if (action.success) {
+                return { visible: false, subscribing: false, error: null };
+            }
+            return { visible: true, subscribing: false, error: action.error ?? null };
     }
 }
 
@@ -47,12 +50,13 @@ export function PushNotificationBanner() {
     const [state, dispatch] = useReducer(bannerReducer, isSupported, (supported) => ({
         visible: getInitialVisibility(supported),
         subscribing: false,
+        error: null,
     }));
 
     const handleEnable = useCallback(async () => {
         dispatch({ type: 'start_subscribe' });
-        const success = await subscribe();
-        dispatch({ type: 'end_subscribe', success });
+        const result = await subscribe();
+        dispatch({ type: 'end_subscribe', success: result.success, error: result.error });
     }, [subscribe]);
 
     const handleDismiss = useCallback(() => {
@@ -60,7 +64,42 @@ export function PushNotificationBanner() {
         dispatch({ type: 'hide' });
     }, []);
 
+    // Auto-dismiss banner after showing error for a few seconds
+    useEffect(() => {
+        if (!state.error) return;
+        const timer = setTimeout(() => {
+            sessionStorage.setItem(DISMISSED_KEY, 'true');
+            dispatch({ type: 'hide' });
+        }, 8000);
+        return () => clearTimeout(timer);
+    }, [state.error]);
+
     if (!state.visible) return null;
+
+    // Error state: show the error message with dismiss button
+    if (state.error) {
+        return (
+            <div
+                className={cn(
+                    'flex items-center justify-between gap-3 px-4 py-2',
+                    'bg-red-500/10 border-b border-red-500/20 text-foreground',
+                    'text-sm'
+                )}
+            >
+                <div className="flex items-center gap-2 min-w-0">
+                    <WarningCircle size={16} weight="duotone" className="shrink-0 text-red-500" />
+                    <span className="truncate">{state.error}</span>
+                </div>
+                <button
+                    onClick={handleDismiss}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                    aria-label="Dismiss notification banner"
+                >
+                    <X size={14} />
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div

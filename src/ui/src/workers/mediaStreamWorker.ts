@@ -173,38 +173,20 @@ function createAuthInterceptor(token: string) {
     };
 }
 
-// Max chunk size for initial request (2MB) - allows quick video start
-const MAX_INITIAL_CHUNK_SIZE = 2 * 1024 * 1024;
+import {
+    buildContentDisposition,
+    parseRangeRequest as parseRangeRequestUtil,
+} from '@/workers/mediaStreamUtils';
 
 /**
- * Parse Range header and determine byte range for request.
+ * Wrapper that extracts the Range header from a Request object and delegates
+ * to the pure utility function.
  */
 function parseRangeRequest(
     request: Request,
     requestFullFile: boolean
-): { startByte: number; endByte: number | undefined } {
-    const rangeHeader = request.headers.get('Range');
-    let startByte: number | undefined;
-    let endByte: number | undefined;
-
-    if (rangeHeader) {
-        const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
-        if (match) {
-            startByte = parseInt(match[1], 10);
-            endByte = match[2] ? parseInt(match[2], 10) : undefined;
-        }
-    }
-
-    if (startByte === undefined) {
-        startByte = 0;
-    }
-
-    // For non-full-file requests, limit chunk size for fast start
-    if (!requestFullFile && (endByte === undefined || endByte - startByte > MAX_INITIAL_CHUNK_SIZE)) {
-        endByte = startByte + MAX_INITIAL_CHUNK_SIZE - 1;
-    }
-
-    return { startByte, endByte };
+): { startByte: number; endByte: number | undefined; hasRangeHeader: boolean } {
+    return parseRangeRequestUtil(request.headers.get('Range'), requestFullFile);
 }
 
 /**
@@ -220,7 +202,7 @@ async function handleMediaRequest(
     requestFullFile: boolean
 ): Promise<Response> {
     // Parse range from request
-    const { startByte, endByte } = parseRangeRequest(request, requestFullFile);
+    const { startByte, endByte, hasRangeHeader } = parseRangeRequest(request, requestFullFile);
 
     // Get auth token (requests from main thread if not available)
     const token = await getAuthToken();
@@ -259,14 +241,23 @@ async function handleMediaRequest(
         const mimeType = firstChunk.mimeType || 'application/octet-stream';
         const filename = firstChunk.filename || 'file';
 
+        // Determine if this is a partial (206) or full (200) response.
+        // Return 206 only when the browser explicitly sent a Range header.
+        // Returning an unsolicited 206 breaks <audio>/<video> initial loads
+        // where the browser expects a normal 200 response.
+        const isPartial = hasRangeHeader && rangeEnd < totalSize - 1;
+
         // Build response headers
         const headers: HeadersInit = {
             'Content-Type': mimeType,
             'Accept-Ranges': 'bytes',
-            'Content-Length': String(rangeEnd - rangeStart + 1),
-            'Content-Range': `bytes ${rangeStart}-${rangeEnd}/${totalSize}`,
-            'Content-Disposition': `inline; filename="${filename}"`,
+            'Content-Length': isPartial ? String(rangeEnd - rangeStart + 1) : String(totalSize),
+            'Content-Disposition': buildContentDisposition(filename),
         };
+
+        if (isPartial) {
+            headers['Content-Range'] = `bytes ${rangeStart}-${rangeEnd}/${totalSize}`;
+        }
 
         // Stream chunks directly for memory efficiency
         const stream = new ReadableStream<Uint8Array>({
@@ -295,7 +286,7 @@ async function handleMediaRequest(
             },
         });
 
-        return new Response(stream, { status: 206, headers });
+        return new Response(stream, { status: isPartial ? 206 : 200, headers });
     } catch (error) {
         // Check if request was aborted (user navigated away, component unmounted, etc.)
         if (error instanceof Error && error.name === 'AbortError') {

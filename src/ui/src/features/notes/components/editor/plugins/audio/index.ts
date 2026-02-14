@@ -78,8 +78,10 @@ export const audioBlockNode = $node('audio_block', () => ({
 
 // -- Remark Plugin --
 
-// Regex to match [[[audio|url]]] or [[[audio|url|title]]] format
-const AUDIO_REGEX = /^\[\[\[audio\|([^\]|]+)(?:\|([^\]]*))?\]\]\]$/;
+// Regex to match [[[audio|url]]] or [[[audio|url|title]]] format.
+// The title capture uses .*? (non-greedy) so that ] characters inside filenames
+// (e.g. "[wwQDYSVAwXs].mp3") are tolerated -- the ]]] at the end anchors the match.
+const AUDIO_REGEX = /^\[\[\[audio\|([^\]|]+)(?:\|(.*?))?\]\]\]$/;
 
 // Custom audio block node type for the AST
 interface AudioBlockAstNode extends UnistNode {
@@ -107,7 +109,11 @@ export const audioBlockRemarkPlugin = $remark('audioBlockRemarkPlugin', () => {
             handlers: {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 audioBlock: (node: any) => {
-                    if (node.title) return `[[[audio|${node.src}|${node.title}]]]`;
+                    if (node.title) {
+                        // Sanitize brackets in title to prevent breaking the ]]] delimiter
+                        const safeTitle = node.title.replace(/\[/g, '\uFF3B').replace(/\]/g, '\uFF3D');
+                        return `[[[audio|${node.src}|${safeTitle}]]]`;
+                    }
                     return `[[[audio|${node.src}]]]`;
                 },
             },
@@ -122,13 +128,27 @@ export const audioBlockRemarkPlugin = $remark('audioBlockRemarkPlugin', () => {
                 if (!parent || index === undefined) return;
 
                 const paraNode = node as Parent;
-                // Check if paragraph has exactly one text child
-                if (paraNode.children.length !== 1) return;
+                if (paraNode.children.length === 0) return;
 
-                const child = paraNode.children[0];
-                if (!child || child.type !== 'text') return;
+                // Concatenate all inline text content. Remark may split the
+                // paragraph into multiple children when the title contains
+                // bracket characters (e.g. "[foo]" parsed as a linkReference).
+                const textValue = paraNode.children
+                    .map((c) => {
+                        if (c.type === 'text') return (c as { type: 'text'; value: string }).value;
+                        // linkReference nodes generated from bare [brackets]
+                        if (c.type === 'linkReference') {
+                            const lr = c as Parent & { label?: string };
+                            const inner = lr.children
+                                ?.map((lc) => (lc.type === 'text' ? (lc as { type: 'text'; value: string }).value : ''))
+                                .join('') ?? '';
+                            return `[${inner}]`;
+                        }
+                        return '';
+                    })
+                    .join('')
+                    .trim();
 
-                const textValue = (child as { type: 'text'; value: string }).value.trim();
                 const match = AUDIO_REGEX.exec(textValue);
                 if (!match) return;
 
@@ -220,3 +240,6 @@ export const audioPlugins = [...audioBlockRemarkPlugin, audioBlockNode, audioBlo
 
 // Re-export component
 export { AudioBlock } from '@/features/notes/components/editor/plugins/audio/AudioBlock';
+
+// Exported for unit testing
+export { AUDIO_REGEX };

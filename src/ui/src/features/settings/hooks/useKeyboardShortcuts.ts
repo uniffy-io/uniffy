@@ -29,6 +29,9 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'viewer.rotateRight': 'R',
     'viewer.download': 'Ctrl+S',
     'viewer.edit': 'E',
+    // Comments actions
+    'comments.toggle': 'Ctrl+Shift+M',
+    'comments.new': 'Ctrl+Shift+C',
     // Image editor actions
     'imageEditor.undo': 'Ctrl+Z',
     'imageEditor.redo': 'Ctrl+Shift+Z',
