@@ -13,8 +13,6 @@ class TaskActivity(SQLModel, table=True):
     """
     Activity entry for a task (changes, comments).
 
-    Comments are activities where action == "comment" and content is populated.
-
     Attributes
     ----------
     id : UUID
@@ -24,15 +22,13 @@ class TaskActivity(SQLModel, table=True):
     actor_id : UUID
         User who performed the action.
     action : str
-        Action type (created, status_changed, comment, etc.).
+        Action type (created, status_changed, etc.).
     field_id : str | None
         Field ID if this is a field update.
     previous_value : str | None
         Previous value for field updates.
     new_value : str | None
         New value for field updates.
-    content : str | None
-        Markdown content for comments.
     timestamp : datetime
         When this activity occurred.
 
@@ -49,7 +45,6 @@ class TaskActivity(SQLModel, table=True):
     field_id: str | None = Field(default=None, max_length=100)
     previous_value: str | None = Field(default=None)
     new_value: str | None = Field(default=None)
-    content: str | None = Field(default=None)
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

@@ -14,7 +14,6 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from uniffy.core.converters.common_proto import visibility_from_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.db import get_async_session
@@ -32,16 +31,12 @@ from uniffy.domains.projects.converters import (
 from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
 from uniffy.gen.common.v1.common_pb2 import PaginationResponse
 from uniffy.gen.projects.v1.projects_pb2 import (
-    ActivityResponse,
-    AddCommentRequest,
     BulkUpdateTasksRequest,
     BulkUpdateTasksResponse,
     CreateFieldRequest,
     CreateProjectRequest,
     CreateTaskRequest,
     CreateViewRequest,
-    DeleteCommentRequest,
-    DeleteCommentResponse,
     DeleteFieldRequest,
     DeleteFieldResponse,
     DeleteProjectRequest,
@@ -64,7 +59,6 @@ from uniffy.gen.projects.v1.projects_pb2 import (
     MoveTaskRequest,
     ProjectResponse,
     TaskResponse,
-    UpdateCommentRequest,
     UpdateFieldRequest,
     UpdateProjectRequest,
     UpdateTaskRequest,
@@ -1177,136 +1171,3 @@ class ProjectsHandlers:
             logger.opt(exception=True).error("Error listing activities")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def add_comment(
-        self,
-        request: AddCommentRequest,
-        ctx: RequestContext,
-    ) -> ActivityResponse:
-        """Add a comment to a task."""
-        try:
-            organization_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                # Verify task access (requires EDIT permission on project)
-                task_ops = TaskOperations(session)
-                task = await task_ops.get_by_id(user_id, organization_id, task_id)
-                await task_ops._require_edit(user_id, organization_id, task)
-
-                # Create comment activity
-                activity = await task_ops._log_activity(
-                    task_id=task_id,
-                    actor_id=user_id,
-                    action="comment",
-                    content=request.content,
-                )
-                await session.commit()
-                await session.refresh(activity)
-
-                return ActivityResponse(activity=activity_to_proto(activity))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ConnectError:
-            raise
-        except Exception:
-            logger.opt(exception=True).error("Error adding comment")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def update_comment(
-        self,
-        request: UpdateCommentRequest,
-        ctx: RequestContext,
-    ) -> ActivityResponse:
-        """Update a comment."""
-        try:
-            activity_id = UUID(request.activity_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                # Fetch activity
-
-                result = await session.execute(
-                    select(TaskActivity).where(TaskActivity.id == activity_id)
-                )
-                activity = result.scalar_one_or_none()
-                if not activity:
-                    raise NotFoundError("Activity", activity_id)
-
-                # Only author can update comment
-                if activity.actor_id != user_id:
-                    raise PermissionDeniedError(
-                        "update", "comment", "Only author can update comment"
-                    )
-
-                activity.content = request.content
-                await session.commit()
-                await session.refresh(activity)
-
-                return ActivityResponse(activity=activity_to_proto(activity))
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except ConnectError:
-            raise
-        except Exception:
-            logger.opt(exception=True).error("Error updating comment")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def delete_comment(
-        self,
-        request: DeleteCommentRequest,
-        ctx: RequestContext,
-    ) -> DeleteCommentResponse:
-        """Delete a comment."""
-        try:
-            activity_id = UUID(request.activity_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async for session in get_async_session():
-                # Fetch activity
-
-                result = await session.execute(
-                    select(TaskActivity).where(TaskActivity.id == activity_id)
-                )
-                activity = result.scalar_one_or_none()
-                if not activity:
-                    raise NotFoundError("Activity", activity_id)
-
-                # Only author can delete comment
-                if activity.actor_id != user_id:
-                    raise PermissionDeniedError(
-                        "delete", "comment", "Only author can delete comment"
-                    )
-
-                await session.delete(activity)
-                await session.commit()
-
-                return DeleteCommentResponse(success=True)
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except ConnectError:
-            raise
-        except Exception:
-            logger.opt(exception=True).error("Error deleting comment")
-            raise ConnectError(Code.INTERNAL, "Internal server error")

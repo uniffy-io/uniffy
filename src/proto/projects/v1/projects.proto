@@ -39,9 +39,6 @@ service ProjectsService {
 
   // ----- Activities -----
   rpc ListActivities(ListActivitiesRequest) returns (ListActivitiesResponse);
-  rpc AddComment(AddCommentRequest) returns (ActivityResponse);
-  rpc UpdateComment(UpdateCommentRequest) returns (ActivityResponse);
-  rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
 }
 
 // ============================================================================
@@ -71,7 +68,7 @@ enum ActivityAction {
   ACTIVITY_ACTION_CREATED = 1;
   ACTIVITY_ACTION_STATUS_CHANGED = 2;
   ACTIVITY_ACTION_PRIORITY_CHANGED = 3;
-  ACTIVITY_ACTION_COMMENT = 4;
+  reserved 4;
   ACTIVITY_ACTION_FIELD_UPDATED = 5;
   ACTIVITY_ACTION_BLOCKED_BY_ADDED = 6;
   ACTIVITY_ACTION_BLOCKED_BY_REMOVED = 7;
@@ -160,7 +157,7 @@ message TaskActivity {
   optional string field_id = 6;
   optional string previous_value = 7;
   optional string new_value = 8;
-  optional string content = 9;
+  reserved 9;
 }
 
 message SelectOption {
@@ -412,31 +409,6 @@ message ListActivitiesRequest {
   string organization_id = 1;
   string task_id = 2;
   optional common.v1.PaginationRequest pagination = 3;
-}
-
-message AddCommentRequest {
-  string organization_id = 1;
-  string task_id = 2;
-  string content = 3;
-}
-
-message UpdateCommentRequest {
-  string organization_id = 1;
-  string activity_id = 2;
-  string content = 3;
-}
-
-message DeleteCommentRequest {
-  string organization_id = 1;
-  string activity_id = 2;
-}
-
-message ActivityResponse {
-  TaskActivity activity = 1;
-}
-
-message DeleteCommentResponse {
-  bool success = 1;
 }
 
 message ListActivitiesResponse {

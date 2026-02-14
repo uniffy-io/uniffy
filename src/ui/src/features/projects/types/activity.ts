@@ -3,7 +3,6 @@ export type ActivityAction =
   | 'created'
   | 'status_changed'
   | 'priority_changed'
-  | 'comment'
   | 'field_updated'
   | 'blocked_by_added'
   | 'blocked_by_removed'
@@ -15,12 +14,9 @@ export interface TaskActivity {
   actorId: string; // User ID
   action: ActivityAction;
   timestamp: string;
-  
+
   // For structured diffs
   fieldId?: string; // If field_updated
   previousValue?: unknown;
   newValue?: unknown;
-  
-  // For comments
-  content?: string; // Markdown supported
 }

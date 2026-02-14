@@ -886,7 +886,6 @@ class TaskOperations(BaseContentOperations[Task]):
         field_id: str | None = None,
         previous_value: str | None = None,
         new_value: str | None = None,
-        content: str | None = None,
     ) -> TaskActivity:
         """
         Record a task activity entry.
@@ -905,8 +904,6 @@ class TaskOperations(BaseContentOperations[Task]):
             Previous value (optional).
         new_value : str | None
             New value (optional).
-        content : str | None
-            Comment content (optional).
 
         Returns
         -------
@@ -921,7 +918,6 @@ class TaskOperations(BaseContentOperations[Task]):
             field_id=field_id,
             previous_value=previous_value,
             new_value=new_value,
-            content=content,
         )
         self.session.add(activity)
         await self.session.flush()

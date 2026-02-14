@@ -76,15 +76,6 @@ class ProjectsService(Protocol):
     async def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def add_comment(self, request: projects_dot_v1_dot_projects__pb2.AddCommentRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def update_comment(self, request: projects_dot_v1_dot_projects__pb2.UpdateCommentRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def delete_comment(self, request: projects_dot_v1_dot_projects__pb2.DeleteCommentRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteCommentResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
 
 class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
     def __init__(self, service: ProjectsService | AsyncGenerator[ProjectsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -290,36 +281,6 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_activities,
-                ),
-                "/projects.v1.ProjectsService/AddComment": Endpoint.unary(
-                    method=MethodInfo(
-                        name="AddComment",
-                        service_name="projects.v1.ProjectsService",
-                        input=projects_dot_v1_dot_projects__pb2.AddCommentRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.add_comment,
-                ),
-                "/projects.v1.ProjectsService/UpdateComment": Endpoint.unary(
-                    method=MethodInfo(
-                        name="UpdateComment",
-                        service_name="projects.v1.ProjectsService",
-                        input=projects_dot_v1_dot_projects__pb2.UpdateCommentRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.update_comment,
-                ),
-                "/projects.v1.ProjectsService/DeleteComment": Endpoint.unary(
-                    method=MethodInfo(
-                        name="DeleteComment",
-                        service_name="projects.v1.ProjectsService",
-                        input=projects_dot_v1_dot_projects__pb2.DeleteCommentRequest,
-                        output=projects_dot_v1_dot_projects__pb2.DeleteCommentResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.delete_comment,
                 ),
             },
             interceptors=interceptors,
@@ -733,66 +694,6 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def add_comment(
-        self,
-        request: projects_dot_v1_dot_projects__pb2.AddCommentRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="AddComment",
-                service_name="projects.v1.ProjectsService",
-                input=projects_dot_v1_dot_projects__pb2.AddCommentRequest,
-                output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def update_comment(
-        self,
-        request: projects_dot_v1_dot_projects__pb2.UpdateCommentRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UpdateComment",
-                service_name="projects.v1.ProjectsService",
-                input=projects_dot_v1_dot_projects__pb2.UpdateCommentRequest,
-                output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def delete_comment(
-        self,
-        request: projects_dot_v1_dot_projects__pb2.DeleteCommentRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.DeleteCommentResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteComment",
-                service_name="projects.v1.ProjectsService",
-                input=projects_dot_v1_dot_projects__pb2.DeleteCommentRequest,
-                output=projects_dot_v1_dot_projects__pb2.DeleteCommentResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
 
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
@@ -834,12 +735,6 @@ class ProjectsServiceSync(Protocol):
     def delete_view(self, request: projects_dot_v1_dot_projects__pb2.DeleteViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_comment(self, request: projects_dot_v1_dot_projects__pb2.AddCommentRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_comment(self, request: projects_dot_v1_dot_projects__pb2.UpdateCommentRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_comment(self, request: projects_dot_v1_dot_projects__pb2.DeleteCommentRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteCommentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -1046,36 +941,6 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_activities,
-                ),
-                "/projects.v1.ProjectsService/AddComment": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="AddComment",
-                        service_name="projects.v1.ProjectsService",
-                        input=projects_dot_v1_dot_projects__pb2.AddCommentRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.add_comment,
-                ),
-                "/projects.v1.ProjectsService/UpdateComment": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="UpdateComment",
-                        service_name="projects.v1.ProjectsService",
-                        input=projects_dot_v1_dot_projects__pb2.UpdateCommentRequest,
-                        output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.update_comment,
-                ),
-                "/projects.v1.ProjectsService/DeleteComment": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="DeleteComment",
-                        service_name="projects.v1.ProjectsService",
-                        input=projects_dot_v1_dot_projects__pb2.DeleteCommentRequest,
-                        output=projects_dot_v1_dot_projects__pb2.DeleteCommentResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.delete_comment,
                 ),
             },
             interceptors=interceptors,
@@ -1483,66 +1348,6 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.ListActivitiesRequest,
                 output=projects_dot_v1_dot_projects__pb2.ListActivitiesResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def add_comment(
-        self,
-        request: projects_dot_v1_dot_projects__pb2.AddCommentRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="AddComment",
-                service_name="projects.v1.ProjectsService",
-                input=projects_dot_v1_dot_projects__pb2.AddCommentRequest,
-                output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def update_comment(
-        self,
-        request: projects_dot_v1_dot_projects__pb2.UpdateCommentRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.ActivityResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UpdateComment",
-                service_name="projects.v1.ProjectsService",
-                input=projects_dot_v1_dot_projects__pb2.UpdateCommentRequest,
-                output=projects_dot_v1_dot_projects__pb2.ActivityResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def delete_comment(
-        self,
-        request: projects_dot_v1_dot_projects__pb2.DeleteCommentRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> projects_dot_v1_dot_projects__pb2.DeleteCommentResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteComment",
-                service_name="projects.v1.ProjectsService",
-                input=projects_dot_v1_dot_projects__pb2.DeleteCommentRequest,
-                output=projects_dot_v1_dot_projects__pb2.DeleteCommentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

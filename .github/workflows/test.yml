@@ -148,7 +148,7 @@ jobs:
 
       - name: Run Vitest
         working-directory: src/ui
-        run: pnpm test -- --reporter=junit --outputFile=../../reports/vitest-report.xml
+        run: pnpm test:ci
 
       - name: Upload Vitest JUnit report
         if: always()

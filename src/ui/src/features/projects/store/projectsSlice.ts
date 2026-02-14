@@ -24,9 +24,6 @@ import {
   deleteViewThunk,
   bulkUpdateTasksThunk,
   fetchActivities,
-  addCommentThunk,
-  updateCommentThunk,
-  deleteCommentThunk,
 } from "./projectsThunks";
 
 /**
@@ -150,41 +147,6 @@ export const projectsSlice = createSlice({
       }
     },
 
-    /**
-     * Add an activity entry for a task
-     */
-    addActivity: (state, action: PayloadAction<TaskActivity>) => {
-      const { taskId } = action.payload;
-      if (!state.activities[taskId]) {
-        state.activities[taskId] = [];
-      }
-      state.activities[taskId].unshift(action.payload);
-    },
-
-    /**
-     * Remove an activity entry
-     */
-    removeActivity: (state, action: PayloadAction<{ taskId: string; activityId: string }>) => {
-      const { taskId, activityId } = action.payload;
-      if (state.activities[taskId]) {
-        state.activities[taskId] = state.activities[taskId].filter(
-          (a) => a.id !== activityId
-        );
-      }
-    },
-
-    /**
-     * Update an activity entry (for editing comments)
-     */
-    updateActivity: (state, action: PayloadAction<{ taskId: string; activityId: string; content: string }>) => {
-      const { taskId, activityId, content } = action.payload;
-      if (state.activities[taskId]) {
-        const idx = state.activities[taskId].findIndex((a) => a.id === activityId);
-        if (idx !== -1) {
-          state.activities[taskId][idx] = { ...state.activities[taskId][idx], content };
-        }
-      }
-    },
   },
   extraReducers: (builder) => {
     // ===== Fetch Projects =====
@@ -453,46 +415,6 @@ export const projectsSlice = createSlice({
       .addCase(fetchActivities.fulfilled, (state, action) => {
         state.activities[action.payload.taskId] = action.payload.activities;
       });
-
-    // ===== Add Comment =====
-    builder
-      .addCase(addCommentThunk.fulfilled, (state, action) => {
-        const activity = action.payload;
-        if (!state.activities[activity.taskId]) {
-          state.activities[activity.taskId] = [];
-        }
-        // Replace optimistic entry or prepend
-        const idx = state.activities[activity.taskId].findIndex((a) => a.id === activity.id);
-        if (idx !== -1) {
-          state.activities[activity.taskId][idx] = activity;
-        } else {
-          state.activities[activity.taskId].unshift(activity);
-        }
-      });
-
-    // ===== Update Comment =====
-    builder
-      .addCase(updateCommentThunk.fulfilled, (state, action) => {
-        const activity = action.payload;
-        const activities = state.activities[activity.taskId];
-        if (activities) {
-          const idx = activities.findIndex((a) => a.id === activity.id);
-          if (idx !== -1) {
-            activities[idx] = activity;
-          }
-        }
-      });
-
-    // ===== Delete Comment =====
-    builder
-      .addCase(deleteCommentThunk.fulfilled, (state, action) => {
-        const { taskId, activityId } = action.payload;
-        if (state.activities[taskId]) {
-          state.activities[taskId] = state.activities[taskId].filter(
-            (a) => a.id !== activityId
-          );
-        }
-      });
   },
 });
 
@@ -506,9 +428,6 @@ export const {
   addFieldDefinition,
   removeFieldDefinition,
   updateFieldDefinition,
-  addActivity,
-  removeActivity,
-  updateActivity,
 } = projectsSlice.actions;
 
 // Selectors

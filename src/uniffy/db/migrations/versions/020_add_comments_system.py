@@ -135,9 +135,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "comment_id", "user_id", "emoji", name="uq_comment_reaction"
-        ),
+        sa.UniqueConstraint("comment_id", "user_id", "emoji", name="uq_comment_reaction"),
     )
     op.create_index(
         "ix_comments_reactions_comment_id",
@@ -159,14 +157,10 @@ def downgrade() -> None:
 
     op.drop_index("ix_comments_org_content", table_name="comments_comments")
     op.drop_index("ix_comments_comments_author_id", table_name="comments_comments")
-    op.drop_index(
-        "ix_comments_comments_parent_comment_id", table_name="comments_comments"
-    )
+    op.drop_index("ix_comments_comments_parent_comment_id", table_name="comments_comments")
     op.drop_index("ix_comments_comments_content_id", table_name="comments_comments")
     op.drop_index("ix_comments_comments_content_type", table_name="comments_comments")
-    op.drop_index(
-        "ix_comments_comments_organization_id", table_name="comments_comments"
-    )
+    op.drop_index("ix_comments_comments_organization_id", table_name="comments_comments")
     op.drop_table("comments_comments")
 
     # Drop comment_anchor_type enum

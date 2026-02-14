@@ -32,7 +32,7 @@ import type {
 } from '../types/project';
 import type { FieldDefinition, FieldValue } from '../types/fields';
 import type { ViewConfig } from '../types/views';
-import type { TaskActivity, ActivityAction } from '../types/activity';
+import type { TaskActivity } from '../types/activity';
 
 /**
  * Create a projects service client with the shared transport.
@@ -289,8 +289,6 @@ function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAct
       return 'status_changed';
     case ProtoActivityAction.PRIORITY_CHANGED:
       return 'priority_changed';
-    case ProtoActivityAction.COMMENT:
-      return 'comment';
     case ProtoActivityAction.FIELD_UPDATED:
       return 'field_updated';
     case ProtoActivityAction.BLOCKED_BY_ADDED:
@@ -317,7 +315,6 @@ function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
     fieldId: proto.fieldId,
     previousValue: proto.previousValue,
     newValue: proto.newValue,
-    content: proto.content,
   };
 }
 
@@ -711,58 +708,6 @@ export const projectsApi = {
     });
     return {
       activities: response.activities.map(protoActivityToFrontend),
-    };
-  },
-
-  /**
-   * Add a comment to a task
-   */
-  addComment: async (
-    taskId: string,
-    content: string,
-    organizationId: string
-  ): Promise<{ activity: TaskActivity }> => {
-    const response = await projectsClient.addComment({
-      organizationId,
-      taskId,
-      content,
-    });
-    return {
-      activity: protoActivityToFrontend(response.activity!),
-    };
-  },
-
-  /**
-   * Update a comment
-   */
-  updateComment: async (
-    activityId: string,
-    content: string,
-    organizationId: string
-  ): Promise<{ activity: TaskActivity }> => {
-    const response = await projectsClient.updateComment({
-      organizationId,
-      activityId,
-      content,
-    });
-    return {
-      activity: protoActivityToFrontend(response.activity!),
-    };
-  },
-
-  /**
-   * Delete a comment
-   */
-  deleteComment: async (
-    activityId: string,
-    organizationId: string
-  ): Promise<{ success: boolean }> => {
-    const response = await projectsClient.deleteComment({
-      organizationId,
-      activityId,
-    });
-    return {
-      success: response.success,
     };
   },
 

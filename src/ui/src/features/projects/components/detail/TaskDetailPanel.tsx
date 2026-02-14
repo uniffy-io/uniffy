@@ -25,6 +25,8 @@ import { closeDetailPanel, selectTask } from "../../store/projectsUiSlice";
 import type { SelectOption } from "../../types";
 import { SYSTEM_FIELD_IDS } from "../../types";
 
+import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
+import { ContentType } from "@/gen/common/v1/common_pb";
 import { SubtasksList } from "./SubtasksList";
 import { ActivityLog } from "./ActivityLog";
 import { DependenciesList } from "./DependenciesList";
@@ -237,7 +239,10 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
             </div>
           )}
           
-          {/* Feature 10: Activity Log */}
+          {/* Comments (shared domain) */}
+          <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
+
+          {/* Activity Log (field changes, status updates, etc.) */}
           <ActivityLog taskId={task.id} />
         </div>
       </ScrollArea>

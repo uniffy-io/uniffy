@@ -310,7 +310,7 @@ export const bulkUpdateTasksThunk = createAsyncThunk<
   }
 );
 
-// ===== Activity/Comment Thunks =====
+// ===== Activity Thunks =====
 
 /**
  * Fetch activities for a task
@@ -327,59 +327,5 @@ export const fetchActivities = createAsyncThunk<
 
     const response = await projectsApi.listActivities(taskId, orgId);
     return { taskId, activities: response.activities };
-  }
-);
-
-/**
- * Add a comment to a task
- */
-export const addCommentThunk = createAsyncThunk<
-  TaskActivity,
-  { taskId: string; content: string }
->(
-  "projects/addComment",
-  async ({ taskId, content }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
-
-    const response = await projectsApi.addComment(taskId, content, orgId);
-    return response.activity;
-  }
-);
-
-/**
- * Update a comment
- */
-export const updateCommentThunk = createAsyncThunk<
-  TaskActivity,
-  { taskId: string; activityId: string; content: string }
->(
-  "projects/updateComment",
-  async ({ activityId, content }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
-
-    const response = await projectsApi.updateComment(activityId, content, orgId);
-    return response.activity;
-  }
-);
-
-/**
- * Delete a comment
- */
-export const deleteCommentThunk = createAsyncThunk<
-  { taskId: string; activityId: string },
-  { taskId: string; activityId: string }
->(
-  "projects/deleteComment",
-  async ({ taskId, activityId }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
-
-    await projectsApi.deleteComment(activityId, orgId);
-    return { taskId, activityId };
   }
 );

@@ -69,7 +69,6 @@ ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
     "created": ActivityAction.ACTIVITY_ACTION_CREATED,
     "status_changed": ActivityAction.ACTIVITY_ACTION_STATUS_CHANGED,
     "priority_changed": ActivityAction.ACTIVITY_ACTION_PRIORITY_CHANGED,
-    "comment": ActivityAction.ACTIVITY_ACTION_COMMENT,
     "field_updated": ActivityAction.ACTIVITY_ACTION_FIELD_UPDATED,
     "blocked_by_added": ActivityAction.ACTIVITY_ACTION_BLOCKED_BY_ADDED,
     "blocked_by_removed": ActivityAction.ACTIVITY_ACTION_BLOCKED_BY_REMOVED,
@@ -313,7 +312,4 @@ def activity_to_proto(activity: TaskActivity) -> ProtoTaskActivity:
         proto.previous_value = activity.previous_value
     if activity.new_value:
         proto.new_value = activity.new_value
-    if activity.content:
-        proto.content = activity.content
-
     return proto

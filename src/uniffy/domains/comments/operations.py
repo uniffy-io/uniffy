@@ -756,6 +756,34 @@ class CommentOperations:
                 raise NotFoundError("CalendarEvent", str(content_id))
             return row[0], row[1]
 
+        elif content_type == ContentType.PROJECT:
+            from uniffy.core.models.projects.project import Project
+
+            result = await self._session.execute(
+                select(Project.owner_id, Project.visibility).where(
+                    Project.id == content_id,
+                    Project.organization_id == organization_id,
+                )
+            )
+            row = result.one_or_none()
+            if not row:
+                raise NotFoundError("Project", str(content_id))
+            return row[0], row[1]
+
+        elif content_type == ContentType.TASK:
+            from uniffy.core.models.projects.task import Task
+
+            result = await self._session.execute(
+                select(Task.owner_id, Task.visibility).where(
+                    Task.id == content_id,
+                    Task.organization_id == organization_id,
+                )
+            )
+            row = result.one_or_none()
+            if not row:
+                raise NotFoundError("Task", str(content_id))
+            return row[0], row[1]
+
         else:
             raise NotFoundError("Content", str(content_id))
 

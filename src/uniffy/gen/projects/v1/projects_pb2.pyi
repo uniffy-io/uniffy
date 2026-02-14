@@ -35,7 +35,6 @@ class ActivityAction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ACTIVITY_ACTION_CREATED: _ClassVar[ActivityAction]
     ACTIVITY_ACTION_STATUS_CHANGED: _ClassVar[ActivityAction]
     ACTIVITY_ACTION_PRIORITY_CHANGED: _ClassVar[ActivityAction]
-    ACTIVITY_ACTION_COMMENT: _ClassVar[ActivityAction]
     ACTIVITY_ACTION_FIELD_UPDATED: _ClassVar[ActivityAction]
     ACTIVITY_ACTION_BLOCKED_BY_ADDED: _ClassVar[ActivityAction]
     ACTIVITY_ACTION_BLOCKED_BY_REMOVED: _ClassVar[ActivityAction]
@@ -56,7 +55,6 @@ ACTIVITY_ACTION_UNSPECIFIED: ActivityAction
 ACTIVITY_ACTION_CREATED: ActivityAction
 ACTIVITY_ACTION_STATUS_CHANGED: ActivityAction
 ACTIVITY_ACTION_PRIORITY_CHANGED: ActivityAction
-ACTIVITY_ACTION_COMMENT: ActivityAction
 ACTIVITY_ACTION_FIELD_UPDATED: ActivityAction
 ACTIVITY_ACTION_BLOCKED_BY_ADDED: ActivityAction
 ACTIVITY_ACTION_BLOCKED_BY_REMOVED: ActivityAction
@@ -200,7 +198,7 @@ class ViewConfig(_message.Message):
     def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., type: _Optional[_Union[ViewType, str]] = ..., is_default: _Optional[bool] = ..., config_json: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class TaskActivity(_message.Message):
-    __slots__ = ("id", "task_id", "actor_id", "action", "timestamp", "field_id", "previous_value", "new_value", "content")
+    __slots__ = ("id", "task_id", "actor_id", "action", "timestamp", "field_id", "previous_value", "new_value")
     ID_FIELD_NUMBER: _ClassVar[int]
     TASK_ID_FIELD_NUMBER: _ClassVar[int]
     ACTOR_ID_FIELD_NUMBER: _ClassVar[int]
@@ -209,7 +207,6 @@ class TaskActivity(_message.Message):
     FIELD_ID_FIELD_NUMBER: _ClassVar[int]
     PREVIOUS_VALUE_FIELD_NUMBER: _ClassVar[int]
     NEW_VALUE_FIELD_NUMBER: _ClassVar[int]
-    CONTENT_FIELD_NUMBER: _ClassVar[int]
     id: str
     task_id: str
     actor_id: str
@@ -218,8 +215,7 @@ class TaskActivity(_message.Message):
     field_id: str
     previous_value: str
     new_value: str
-    content: str
-    def __init__(self, id: _Optional[str] = ..., task_id: _Optional[str] = ..., actor_id: _Optional[str] = ..., action: _Optional[_Union[ActivityAction, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., field_id: _Optional[str] = ..., previous_value: _Optional[str] = ..., new_value: _Optional[str] = ..., content: _Optional[str] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., task_id: _Optional[str] = ..., actor_id: _Optional[str] = ..., action: _Optional[_Union[ActivityAction, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., field_id: _Optional[str] = ..., previous_value: _Optional[str] = ..., new_value: _Optional[str] = ...) -> None: ...
 
 class SelectOption(_message.Message):
     __slots__ = ("id", "label", "color", "sort_order")
@@ -630,46 +626,6 @@ class ListActivitiesRequest(_message.Message):
     task_id: str
     pagination: _common_pb2.PaginationRequest
     def __init__(self, organization_id: _Optional[str] = ..., task_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ...) -> None: ...
-
-class AddCommentRequest(_message.Message):
-    __slots__ = ("organization_id", "task_id", "content")
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    TASK_ID_FIELD_NUMBER: _ClassVar[int]
-    CONTENT_FIELD_NUMBER: _ClassVar[int]
-    organization_id: str
-    task_id: str
-    content: str
-    def __init__(self, organization_id: _Optional[str] = ..., task_id: _Optional[str] = ..., content: _Optional[str] = ...) -> None: ...
-
-class UpdateCommentRequest(_message.Message):
-    __slots__ = ("organization_id", "activity_id", "content")
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    ACTIVITY_ID_FIELD_NUMBER: _ClassVar[int]
-    CONTENT_FIELD_NUMBER: _ClassVar[int]
-    organization_id: str
-    activity_id: str
-    content: str
-    def __init__(self, organization_id: _Optional[str] = ..., activity_id: _Optional[str] = ..., content: _Optional[str] = ...) -> None: ...
-
-class DeleteCommentRequest(_message.Message):
-    __slots__ = ("organization_id", "activity_id")
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    ACTIVITY_ID_FIELD_NUMBER: _ClassVar[int]
-    organization_id: str
-    activity_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., activity_id: _Optional[str] = ...) -> None: ...
-
-class ActivityResponse(_message.Message):
-    __slots__ = ("activity",)
-    ACTIVITY_FIELD_NUMBER: _ClassVar[int]
-    activity: TaskActivity
-    def __init__(self, activity: _Optional[_Union[TaskActivity, _Mapping]] = ...) -> None: ...
-
-class DeleteCommentResponse(_message.Message):
-    __slots__ = ("success",)
-    SUCCESS_FIELD_NUMBER: _ClassVar[int]
-    success: bool
-    def __init__(self, success: _Optional[bool] = ...) -> None: ...
 
 class ListActivitiesResponse(_message.Message):
     __slots__ = ("activities", "pagination")

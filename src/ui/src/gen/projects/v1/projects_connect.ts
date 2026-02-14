@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ActivityResponse, AddCommentRequest, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CreateFieldRequest, CreateProjectRequest, CreateTaskRequest, CreateViewRequest, DeleteCommentRequest, DeleteCommentResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, FieldResponse, GetProjectRequest, GetTaskRequest, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, ProjectResponse, TaskResponse, UpdateCommentRequest, UpdateFieldRequest, UpdateProjectRequest, UpdateTaskRequest, UpdateViewRequest, ViewResponse } from "./projects_pb.js";
+import { BulkUpdateTasksRequest, BulkUpdateTasksResponse, CreateFieldRequest, CreateProjectRequest, CreateTaskRequest, CreateViewRequest, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, FieldResponse, GetProjectRequest, GetTaskRequest, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, ProjectResponse, TaskResponse, UpdateFieldRequest, UpdateProjectRequest, UpdateTaskRequest, UpdateViewRequest, ViewResponse } from "./projects_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -200,33 +200,6 @@ export const ProjectsService = {
       name: "ListActivities",
       I: ListActivitiesRequest,
       O: ListActivitiesResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc projects.v1.ProjectsService.AddComment
-     */
-    addComment: {
-      name: "AddComment",
-      I: AddCommentRequest,
-      O: ActivityResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc projects.v1.ProjectsService.UpdateComment
-     */
-    updateComment: {
-      name: "UpdateComment",
-      I: UpdateCommentRequest,
-      O: ActivityResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc projects.v1.ProjectsService.DeleteComment
-     */
-    deleteComment: {
-      name: "DeleteComment",
-      I: DeleteCommentRequest,
-      O: DeleteCommentResponse,
       kind: MethodKind.Unary,
     },
   }

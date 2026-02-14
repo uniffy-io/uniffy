@@ -120,11 +120,6 @@ export enum ActivityAction {
   PRIORITY_CHANGED = 3,
 
   /**
-   * @generated from enum value: ACTIVITY_ACTION_COMMENT = 4;
-   */
-  COMMENT = 4,
-
-  /**
    * @generated from enum value: ACTIVITY_ACTION_FIELD_UPDATED = 5;
    */
   FIELD_UPDATED = 5,
@@ -150,7 +145,6 @@ proto3.util.setEnumType(ActivityAction, "projects.v1.ActivityAction", [
   { no: 1, name: "ACTIVITY_ACTION_CREATED" },
   { no: 2, name: "ACTIVITY_ACTION_STATUS_CHANGED" },
   { no: 3, name: "ACTIVITY_ACTION_PRIORITY_CHANGED" },
-  { no: 4, name: "ACTIVITY_ACTION_COMMENT" },
   { no: 5, name: "ACTIVITY_ACTION_FIELD_UPDATED" },
   { no: 6, name: "ACTIVITY_ACTION_BLOCKED_BY_ADDED" },
   { no: 7, name: "ACTIVITY_ACTION_BLOCKED_BY_REMOVED" },
@@ -667,11 +661,6 @@ export class TaskActivity extends Message<TaskActivity> {
    */
   newValue?: string;
 
-  /**
-   * @generated from field: optional string content = 9;
-   */
-  content?: string;
-
   constructor(data?: PartialMessage<TaskActivity>) {
     super();
     proto3.util.initPartial(data, this);
@@ -688,7 +677,6 @@ export class TaskActivity extends Message<TaskActivity> {
     { no: 6, name: "field_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "previous_value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "new_value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 9, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TaskActivity {
@@ -2520,221 +2508,6 @@ export class ListActivitiesRequest extends Message<ListActivitiesRequest> {
 
   static equals(a: ListActivitiesRequest | PlainMessage<ListActivitiesRequest> | undefined, b: ListActivitiesRequest | PlainMessage<ListActivitiesRequest> | undefined): boolean {
     return proto3.util.equals(ListActivitiesRequest, a, b);
-  }
-}
-
-/**
- * @generated from message projects.v1.AddCommentRequest
- */
-export class AddCommentRequest extends Message<AddCommentRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string task_id = 2;
-   */
-  taskId = "";
-
-  /**
-   * @generated from field: string content = 3;
-   */
-  content = "";
-
-  constructor(data?: PartialMessage<AddCommentRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "projects.v1.AddCommentRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "task_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddCommentRequest {
-    return new AddCommentRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddCommentRequest {
-    return new AddCommentRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddCommentRequest {
-    return new AddCommentRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: AddCommentRequest | PlainMessage<AddCommentRequest> | undefined, b: AddCommentRequest | PlainMessage<AddCommentRequest> | undefined): boolean {
-    return proto3.util.equals(AddCommentRequest, a, b);
-  }
-}
-
-/**
- * @generated from message projects.v1.UpdateCommentRequest
- */
-export class UpdateCommentRequest extends Message<UpdateCommentRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string activity_id = 2;
-   */
-  activityId = "";
-
-  /**
-   * @generated from field: string content = 3;
-   */
-  content = "";
-
-  constructor(data?: PartialMessage<UpdateCommentRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "projects.v1.UpdateCommentRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "activity_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCommentRequest {
-    return new UpdateCommentRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCommentRequest {
-    return new UpdateCommentRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCommentRequest {
-    return new UpdateCommentRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: UpdateCommentRequest | PlainMessage<UpdateCommentRequest> | undefined, b: UpdateCommentRequest | PlainMessage<UpdateCommentRequest> | undefined): boolean {
-    return proto3.util.equals(UpdateCommentRequest, a, b);
-  }
-}
-
-/**
- * @generated from message projects.v1.DeleteCommentRequest
- */
-export class DeleteCommentRequest extends Message<DeleteCommentRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string activity_id = 2;
-   */
-  activityId = "";
-
-  constructor(data?: PartialMessage<DeleteCommentRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "projects.v1.DeleteCommentRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "activity_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCommentRequest {
-    return new DeleteCommentRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCommentRequest {
-    return new DeleteCommentRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCommentRequest {
-    return new DeleteCommentRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DeleteCommentRequest | PlainMessage<DeleteCommentRequest> | undefined, b: DeleteCommentRequest | PlainMessage<DeleteCommentRequest> | undefined): boolean {
-    return proto3.util.equals(DeleteCommentRequest, a, b);
-  }
-}
-
-/**
- * @generated from message projects.v1.ActivityResponse
- */
-export class ActivityResponse extends Message<ActivityResponse> {
-  /**
-   * @generated from field: projects.v1.TaskActivity activity = 1;
-   */
-  activity?: TaskActivity;
-
-  constructor(data?: PartialMessage<ActivityResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "projects.v1.ActivityResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "activity", kind: "message", T: TaskActivity },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ActivityResponse {
-    return new ActivityResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ActivityResponse {
-    return new ActivityResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ActivityResponse {
-    return new ActivityResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ActivityResponse | PlainMessage<ActivityResponse> | undefined, b: ActivityResponse | PlainMessage<ActivityResponse> | undefined): boolean {
-    return proto3.util.equals(ActivityResponse, a, b);
-  }
-}
-
-/**
- * @generated from message projects.v1.DeleteCommentResponse
- */
-export class DeleteCommentResponse extends Message<DeleteCommentResponse> {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success = false;
-
-  constructor(data?: PartialMessage<DeleteCommentResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "projects.v1.DeleteCommentResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCommentResponse {
-    return new DeleteCommentResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCommentResponse {
-    return new DeleteCommentResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCommentResponse {
-    return new DeleteCommentResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DeleteCommentResponse | PlainMessage<DeleteCommentResponse> | undefined, b: DeleteCommentResponse | PlainMessage<DeleteCommentResponse> | undefined): boolean {
-    return proto3.util.equals(DeleteCommentResponse, a, b);
   }
 }
 
