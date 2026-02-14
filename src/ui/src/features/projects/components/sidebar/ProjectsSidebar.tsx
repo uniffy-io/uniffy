@@ -103,7 +103,7 @@ export function ProjectsSidebar() {
                 <>
                   <p>No projects yet</p>
                   <Button
-                    variant="link"
+                    variant="ghost"
                     size="sm"
                     className="mt-2"
                     onClick={handleCreateProject}

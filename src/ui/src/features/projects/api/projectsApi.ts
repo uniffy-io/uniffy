@@ -31,8 +31,8 @@ import type {
   MoveTaskRequest as FrontendMoveTaskRequest,
 } from '../types/project';
 import type { FieldDefinition, FieldValue } from '../types/fields';
-import type { ViewConfig } from '../types/views';
-import type { TaskActivity } from '../types/activity';
+import type { ViewConfig, ViewSpecificConfig } from '../types/views';
+import type { TaskActivity, ActivityAction } from '../types/activity';
 
 /**
  * Create a projects service client with the shared transport.
@@ -272,7 +272,7 @@ function protoViewConfigToFrontend(proto: ProtoViewConfig): ViewConfig {
     name: proto.name,
     type: protoViewTypeToFrontend(proto.type) as ViewConfig['type'],
     isDefault: proto.isDefault,
-    config,
+    config: config as ViewSpecificConfig,
     createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
     updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
   };

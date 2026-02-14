@@ -131,18 +131,19 @@ function updateAudioBlockSrc(view: EditorView, oldSrc: string, newSrc: string, t
  */
 function removeAudioBlock(view: EditorView, src: string) {
     const { state } = view;
-    let found: { pos: number; size: number } | null = null;
+    const found: { pos: number; size: number }[] = [];
 
     state.doc.descendants((node, pos) => {
-        if (found !== null) return false;
+        if (found.length > 0) return false;
         if (node.type.name === 'audio_block' && node.attrs.src === src) {
-            found = { pos, size: node.nodeSize };
+            found.push({ pos, size: node.nodeSize });
             return false;
         }
     });
 
-    if (found !== null) {
-        const tr = state.tr.delete(found.pos, found.pos + found.size);
+    if (found.length > 0) {
+        const { pos, size } = found[0];
+        const tr = state.tr.delete(pos, pos + size);
         view.dispatch(tr);
     }
 }
@@ -177,18 +178,19 @@ function updateVideoBlockSrc(view: EditorView, oldSrc: string, newSrc: string, t
  */
 function removeVideoBlock(view: EditorView, src: string) {
     const { state } = view;
-    let found: { pos: number; size: number } | null = null;
+    const found: { pos: number; size: number }[] = [];
 
     state.doc.descendants((node, pos) => {
-        if (found !== null) return false;
+        if (found.length > 0) return false;
         if (node.type.name === 'video_block' && node.attrs.src === src) {
-            found = { pos, size: node.nodeSize };
+            found.push({ pos, size: node.nodeSize });
             return false;
         }
     });
 
-    if (found !== null) {
-        const tr = state.tr.delete(found.pos, found.pos + found.size);
+    if (found.length > 0) {
+        const { pos, size } = found[0];
+        const tr = state.tr.delete(pos, pos + size);
         view.dispatch(tr);
     }
 }

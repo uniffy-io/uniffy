@@ -12,7 +12,13 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc t
 COPY --from=ghcr.io/astral-sh/uv:0.10.0 /uv /uvx /bin/
 
 RUN apt-get update \
-  && apt-get install -y curl make gpg build-essential git \
+  && apt-get install -y --no-install-recommends \
+    # gpg to verify tini
+    gpg gpg-agent dirmngr build-essential \
+    # Pillow dependencies
+    libjpeg62-turbo libpng16-16t64 libtiff6 libwebp7 \
+    # ffmpeg for thumnails generation
+    ffmpeg \
   # install tini
   && gpg --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 \
   && gpg --batch --verify tini.asc tini \

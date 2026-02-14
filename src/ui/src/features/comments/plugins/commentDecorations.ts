@@ -1,5 +1,6 @@
 import { Plugin, PluginKey } from '@milkdown/prose/state';
 import { Decoration, DecorationSet } from '@milkdown/prose/view';
+import type { Node } from '@milkdown/prose/model';
 
 export interface CommentAnchor {
     commentId: string;
@@ -56,7 +57,7 @@ export function createCommentDecorationsPlugin(
 }
 
 function buildDecorations(
-    doc: Parameters<typeof Decoration.inline>[0] extends number ? never : { nodeSize: number; textBetween: (from: number, to: number) => string; descendants: (fn: (node: { isText: boolean; text?: string }, pos: number) => void | boolean) => void },
+    doc: Node,
     anchors: CommentAnchor[],
     activeCommentId: string | null,
 ): DecorationSet {
@@ -109,7 +110,7 @@ function buildDecorations(
 }
 
 function safeTextBetween(
-    doc: { textBetween: (from: number, to: number) => string; nodeSize: number },
+    doc: Node,
     from: number,
     to: number,
 ): string {
@@ -123,7 +124,7 @@ function safeTextBetween(
 }
 
 function findTextInDoc(
-    doc: { descendants: (fn: (node: { isText: boolean; text?: string }, pos: number) => void | boolean) => void },
+    doc: Node,
     text: string,
 ): { from: number; to: number } | null {
     if (!text) return null;
