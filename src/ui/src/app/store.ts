@@ -19,6 +19,8 @@ import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, vie
 import { imageEditorReducer } from '@/features/files/store/imageEditorSlice';
 import notificationsReducer from '@/features/notifications/store/notificationsSlice';
 import sessionsReducer from '@/features/settings/store/sessionsSlice';
+import projectsReducer from '@/features/projects/store/projectsSlice';
+import projectsUiReducer from '@/features/projects/store/projectsUiSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -74,6 +76,8 @@ const rootReducer = combineReducers({
   admin: adminReducer,
   calendar: calendarReducer,
   calendarUi: calendarUiReducer,
+  projects: projectsReducer,
+  projectsUi: projectsUiReducer,
   zenMode: zenModeReducer,
   files: filesReducer,
   filesTree: filesTreeReducer,

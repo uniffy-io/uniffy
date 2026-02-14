@@ -26,6 +26,7 @@ import { rehydrateAuth } from '@/config';
 import { useAppSelector } from '@/app/hooks';
 import { CalendarPage } from '@/features/calendar';
 import { FilesPage, FiltersPage, FilesTagsPage, FileViewerModal } from '@/features/files';
+import { ProjectsPage } from '@/features/projects/pages/ProjectsPage';
 
 /**
  * AuthInitializer - Handles auth token rehydration on app startup.
@@ -251,6 +252,34 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <FilesTagsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    {/* Projects routes */}
+                    <Route
+                        path="/projects"
+                        element={
+                            <ProtectedRoute>
+                                <ProjectsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/projects/:projectId"
+                        element={
+                            <ProtectedRoute>
+                                <ProjectsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/projects/:projectId/tasks/:taskId"
+                        element={
+                            <ProtectedRoute>
+                                <ProjectsPage />
                             </ProtectedRoute>
                         }
                     />

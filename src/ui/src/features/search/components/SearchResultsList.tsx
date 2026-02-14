@@ -24,6 +24,8 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.CHAT]: UrnType.CHAT,
   [SearchResultType.USER]: UrnType.USER,
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
+  [SearchResultType.PROJECT]: UrnType.PROJECT,
+  [SearchResultType.TASK]: UrnType.TASK,
 };
 
 interface ResultTheme extends UrnTypeTheme {

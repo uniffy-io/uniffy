@@ -27,6 +27,11 @@ from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.permissions.content_group_link import ContentGroupLink
 from uniffy.core.models.permissions.content_permission import ContentPermission
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
+from uniffy.core.models.projects.activity import TaskActivity
+from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.task import Task
+from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.models.shared import (
     AttendeeRole,
@@ -60,6 +65,12 @@ __all__ = [
     "UserSession",
     # Notes models
     "Note",
+    # Projects models
+    "Project",
+    "Task",
+    "FieldDefinition",
+    "ViewConfig",
+    "TaskActivity",
     # Files models
     "File",
     "FileMediaInfo",

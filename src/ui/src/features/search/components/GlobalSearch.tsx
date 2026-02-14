@@ -84,7 +84,7 @@ export function GlobalSearch() {
                 className={cn(
                     "group relative flex items-center",
                     "transition-all duration-500 ease-out",
-                    isFocused ? "w-[420px]" : "w-64"
+                    isFocused ? "w-[420px]" : "w-96"
                 )}
             >
                 {/* Glow effect when focused */}
@@ -164,7 +164,7 @@ export function GlobalSearch() {
             {isOpen && (query.trim() || isLoading) && (
                 <div className={cn(
                     "absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50",
-                    "w-[480px]"
+                    "w-[420px]"
                 )}>
                     <SearchResultsList
                         results={results}

@@ -62,6 +62,10 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'events': SearchResultType.CALENDAR_EVENT,
     'chat': SearchResultType.CHAT,
     'chats': SearchResultType.CHAT,
+    'project': SearchResultType.PROJECT,
+    'projects': SearchResultType.PROJECT,
+    'task': SearchResultType.TASK,
+    'tasks': SearchResultType.TASK,
 };
 
 /**
@@ -71,8 +75,9 @@ const FILTER_PREFIXES = [
     // Type filters
     'note', 'notes', 'file', 'files', 'user', 'users',
     'calendar', 'event', 'events', 'chat', 'chats',
+    'project', 'projects', 'task', 'tasks',
     // Metadata filters
-    'tag', 'project',
+    'tag',
     // Ownership filters
     'my', 'owner',
 ];
@@ -229,6 +234,10 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Events';
         case SearchResultType.CHAT:
             return 'Chats';
+        case SearchResultType.PROJECT:
+            return 'Projects';
+        case SearchResultType.TASK:
+            return 'Tasks';
         default:
             return 'Unknown';
     }
@@ -249,6 +258,10 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'calendar';
         case SearchResultType.CHAT:
             return 'chat';
+        case SearchResultType.PROJECT:
+            return 'project';
+        case SearchResultType.TASK:
+            return 'task';
         default:
             return '';
     }

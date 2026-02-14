@@ -15,6 +15,8 @@ import {
   ChatTeardrop,
   User,
   CalendarDots,
+  Kanban,
+  CheckSquare,
   Question,
 } from '@phosphor-icons/react';
 import { UrnType } from '@/shared/utils/urnTypes';
@@ -88,6 +90,24 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: 'calendar',
     theme: getUrnTypeTheme(UrnType.CALENDAR_EVENT),
     hexColor: getUrnTypeHexColor(UrnType.CALENDAR_EVENT),
+  },
+  [UrnType.PROJECT]: {
+    type: UrnType.PROJECT,
+    icon: Kanban,
+    label: 'Project',
+    labelPlural: 'Projects',
+    route: 'projects',
+    theme: getUrnTypeTheme(UrnType.PROJECT),
+    hexColor: getUrnTypeHexColor(UrnType.PROJECT),
+  },
+  [UrnType.TASK]: {
+    type: UrnType.TASK,
+    icon: CheckSquare,
+    label: 'Task',
+    labelPlural: 'Tasks',
+    route: 'projects', // Tasks are accessed within projects
+    theme: getUrnTypeTheme(UrnType.TASK),
+    hexColor: getUrnTypeHexColor(UrnType.TASK),
   },
   [UrnType.UNKNOWN]: {
     type: UrnType.UNKNOWN,

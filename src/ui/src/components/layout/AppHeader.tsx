@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Kanban, TreeStructure } from '@phosphor-icons/react';
+import { Kanban, Sparkle } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
@@ -30,7 +30,7 @@ const navItems: NavItem[] = [
   { name: 'Chat', path: '/chat', icon: chatConfig.icon },
   { name: 'Calendar', path: '/calendar', icon: calendarConfig.icon },
   { name: 'Projects', path: '/projects', icon: Kanban },
-  { name: 'Workflows', path: '/workflows', icon: TreeStructure },
+  { name: 'Assistants', path: '/assistants', icon: Sparkle },
 ];
 
 // Logo nav item for home/dashboard
@@ -141,9 +141,9 @@ export function AppHeader() {
       {/* Background */}
       <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
 
-      <div className="relative flex h-12 items-center px-3 lg:px-4">
+      <div className="relative flex h-12 items-center px-3 lg:px-4 justify-between">
         {/* Left: Navigation */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 z-20">
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-0.5">
             <LogoNavItem isActive={location.pathname === '/'} />
@@ -182,12 +182,12 @@ export function AppHeader() {
         </div>
 
         {/* Center: Search */}
-        <div className="flex-1 flex justify-center px-4">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
           <GlobalSearch />
         </div>
 
         {/* Right: Notifications + User */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 z-20">
           <NotificationBell />
           <UserMenu />
         </div>

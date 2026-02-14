@@ -46,6 +46,17 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "imageEditor.flipV": "V",
     "imageEditor.crop": "C",
     "imageEditor.applyCrop": "Enter",
+    # Projects table keyboard navigation
+    "projects.focusUp": "ArrowUp",
+    "projects.focusDown": "ArrowDown",
+    "projects.focusLeft": "ArrowLeft",
+    "projects.focusRight": "ArrowRight",
+    "projects.editCell": "Enter",
+    "projects.cancelEdit": "Escape",
+    "projects.toggleSelect": "Space",
+    # Projects undo/redo
+    "projects.undo": "Ctrl+Z",
+    "projects.redo": "Ctrl+Shift+Z",
 }
 
 

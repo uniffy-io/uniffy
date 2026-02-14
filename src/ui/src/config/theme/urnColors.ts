@@ -21,6 +21,8 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.CHAT]: '#8b5cf6',           // violet-500
   [UrnType.USER]: '#10b981',           // emerald-500
   [UrnType.CALENDAR_EVENT]: '#f43f5e', // rose-500
+  [UrnType.PROJECT]: '#f97316',        // orange-500
+  [UrnType.TASK]: '#14b8a6',           // teal-500
   [UrnType.UNKNOWN]: '#6b7280',        // gray-500
 };
 
@@ -84,6 +86,22 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: 'border-rose-500/20',
     shadow: 'shadow-rose-500/50',
   },
+  [UrnType.PROJECT]: {
+    gradient: 'from-orange-500/10 via-orange-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600',
+    accentText: 'text-orange-600 dark:text-orange-400',
+    badgeBg: 'bg-orange-500/10',
+    border: 'border-orange-500/20',
+    shadow: 'shadow-orange-500/50',
+  },
+  [UrnType.TASK]: {
+    gradient: 'from-teal-500/10 via-teal-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-teal-500 to-teal-600',
+    accentText: 'text-teal-600 dark:text-teal-400',
+    badgeBg: 'bg-teal-500/10',
+    border: 'border-teal-500/20',
+    shadow: 'shadow-teal-500/50',
+  },
   [UrnType.UNKNOWN]: {
     gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
     iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
@@ -125,4 +143,6 @@ export const URN_TYPE_LEGEND: Array<{
   { type: UrnType.FILE, label: 'Files', hexColor: URN_TYPE_HEX_COLORS[UrnType.FILE], tailwindBg: 'bg-blue-500' },
   { type: UrnType.CHAT, label: 'Chats', hexColor: URN_TYPE_HEX_COLORS[UrnType.CHAT], tailwindBg: 'bg-violet-500' },
   { type: UrnType.CALENDAR_EVENT, label: 'Events', hexColor: URN_TYPE_HEX_COLORS[UrnType.CALENDAR_EVENT], tailwindBg: 'bg-rose-500' },
+  { type: UrnType.PROJECT, label: 'Projects', hexColor: URN_TYPE_HEX_COLORS[UrnType.PROJECT], tailwindBg: 'bg-orange-500' },
+  { type: UrnType.TASK, label: 'Tasks', hexColor: URN_TYPE_HEX_COLORS[UrnType.TASK], tailwindBg: 'bg-teal-500' },
 ];

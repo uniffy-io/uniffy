@@ -1,0 +1,470 @@
+/**
+ * TaskDetailPanel - Right sidebar for task details
+ *
+ * Contains:
+ * - Header with task number and close button
+ * - Editable task title
+ * - Status badge
+ * - Fields section
+ * - Description with markdown and @ mentions
+ */
+
+import { useState, useRef, useEffect, useMemo } from "react";
+import { X, Hash, Repeat, Bell, Diamond, PencilSimple } from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import type { SerializedMemberInfo } from "@/features/admin";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { MarkdownEditor } from "@/components/editor";
+import { MentionChipCompact } from "@/features/notes/components/editor/plugins/mention";
+import { selectTasksMap, selectCurrentProject, optimisticUpdateTask } from "../../store/projectsSlice";
+import { updateTask } from "../../store/projectsThunks";
+import { closeDetailPanel, selectTask } from "../../store/projectsUiSlice";
+import type { SelectOption } from "../../types";
+import { SYSTEM_FIELD_IDS } from "../../types";
+
+import { SubtasksList } from "./SubtasksList";
+import { ActivityLog } from "./ActivityLog";
+import { DependenciesList } from "./DependenciesList";
+
+interface TaskDetailPanelProps {
+  taskId: string;
+}
+
+export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
+  const dispatch = useAppDispatch();
+  const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
+  const project = useAppSelector(selectCurrentProject);
+  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
+
+  const memberMap = useMemo(() => {
+    const map: Record<string, SerializedMemberInfo> = {};
+    for (const m of members) {
+      map[m.userId] = m;
+    }
+    return map;
+  }, [members]);
+
+  const getInitials = (id: string) => {
+    const member = memberMap[id];
+    if (!member) return id.slice(-2).toUpperCase();
+    const parts = member.displayName.split(" ").filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return member.displayName.slice(0, 2).toUpperCase();
+  };
+
+  const handleClose = () => {
+    dispatch(closeDetailPanel());
+    dispatch(selectTask(null));
+  };
+
+  if (!task) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        Task not found
+      </div>
+    );
+  }
+
+  // Get status and priority options from project field definitions
+  const statusField = project?.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
+  const priorityField = project?.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.PRIORITY);
+
+  const statusOption = statusField?.config.options?.find((o) => o.id === task.status);
+  const priorityOption = priorityField?.config.options?.find((o) => o.id === task.priority);
+
+  // Extract task number from ID (simplified)
+  const taskNumber = task.id.replace("task-", "");
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Hash size={14} className="text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{taskNumber}</span>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleClose}>
+          <X size={16} />
+        </Button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-6">
+          {/* Task Title (editable) */}
+          <EditableTitle
+            title={task.title}
+            onSave={(newTitle) => {
+              dispatch(optimisticUpdateTask({ id: task.id, title: newTitle }));
+              dispatch(updateTask({ id: task.id, title: newTitle }));
+            }}
+          />
+
+          {/* Status Badge */}
+          {statusOption && (
+            <div className="flex items-center justify-between">
+              <StatusBadge option={statusOption} />
+              
+              {/* Feature 15: Milestone Badge */}
+              {task.isMilestone && (
+                 <Badge variant="secondary" className="gap-1 border-yellow-500/30 bg-yellow-500/10 text-yellow-600">
+                    <Diamond weight="fill" />
+                    Milestone
+                 </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Fields Section */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Fields
+            </h3>
+
+            <div className="space-y-3">
+              {/* Priority */}
+              {priorityOption && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20">Priority</span>
+                  <Badge
+                    variant="outline"
+                    style={{
+                      backgroundColor: `${priorityOption.color}15`,
+                      borderColor: `${priorityOption.color}30`,
+                      color: priorityOption.color,
+                    }}
+                  >
+                    {priorityOption.label}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Assignees */}
+              {task.assigneeIds.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20">Assignee</span>
+                  <div className="flex -space-x-1">
+                    {task.assigneeIds.map((id) => (
+                      <div
+                        key={id}
+                        className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground border-2 border-card"
+                        title={memberMap[id]?.displayName}
+                      >
+                        {getInitials(id)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Start Date */}
+              {task.startDate && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20">Start</span>
+                  <span className="text-sm">{formatDate(task.startDate)}</span>
+                </div>
+              )}
+
+              {/* Due Date */}
+              {task.dueDate && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20">Due</span>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "text-sm",
+                      isOverdue(task.dueDate) && "text-destructive"
+                    )}>
+                      {formatDate(task.dueDate)}
+                    </span>
+                    
+                    {/* Feature 9: Recurrence Indicator */}
+                    {task.recurrenceRule && (
+                       <div className="flex items-center text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          <Repeat size={12} className="mr-1" />
+                          Recurring
+                       </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Feature 8: Reminder (Visual Only) */}
+              <div className="flex items-center gap-3">
+                 <span className="text-sm text-muted-foreground w-20">Remind me</span>
+                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
+                    <Bell size={12} className="mr-1" />
+                    Set reminder
+                 </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Feature 6: Dependencies */}
+          <DependenciesList blockedByTaskIds={task.blockedByTaskIds} />
+
+          {/* Feature 7: Subtasks */}
+          <SubtasksList taskId={task.id} />
+
+          {/* Description Section */}
+          <EditableDescription
+            description={task.description}
+            onSave={(newDesc) => {
+              dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+              dispatch(updateTask({ id: task.id, description: newDesc }));
+            }}
+          />
+
+          {/* References Section */}
+          {task.outgoingReferences.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                References
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {task.outgoingReferences.map((urn) => {
+                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
+                  return (
+                    <MentionChipCompact
+                      key={urn}
+                      urn={urn}
+                      label={mention?.label || extractFallbackLabel(urn)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Feature 10: Activity Log */}
+          <ActivityLog taskId={task.id} />
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function EditableTitle({ title, onSave }: { title: string; onSave: (newTitle: string) => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Keep local value in sync when title changes from outside
+  useEffect(() => {
+    if (!isEditing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local value when title prop changes externally
+      setValue(title);
+    }
+  }, [title, isEditing]);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== title) {
+      onSave(trimmed);
+    } else {
+      setValue(title);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      setValue(title);
+      setIsEditing(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          className="flex-1 text-lg font-semibold bg-background border border-primary rounded px-2 py-1 outline-none text-foreground"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="group flex items-center gap-2 cursor-pointer rounded px-2 py-1 -mx-2 hover:bg-muted/50 transition-colors"
+      onClick={() => setIsEditing(true)}
+    >
+      <h2 className="text-lg font-semibold text-foreground flex-1">{title}</h2>
+      <PencilSimple size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
+    </div>
+  );
+}
+
+function EditableDescription({ description, onSave }: { description: string; onSave: (desc: string) => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(description);
+  const [editorKey, setEditorKey] = useState(0);
+  const [editorReady, setEditorReady] = useState(false);
+
+  // Keep local value in sync when description changes from outside
+  useEffect(() => {
+    if (!isEditing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local value when description prop changes externally
+      setValue(description);
+    }
+  }, [description, isEditing]);
+
+  // Mount editor when entering edit mode
+  useEffect(() => {
+    if (!isEditing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting editor state when exiting edit mode
+      setEditorReady(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setEditorKey((prev) => prev + 1);
+      setEditorReady(true);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isEditing]);
+
+  const handleSave = () => {
+    const trimmed = value.trim();
+    if (trimmed !== description) {
+      onSave(trimmed);
+    } else {
+      setValue(description);
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Description
+        </h3>
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            <PencilSimple size={12} />
+            Edit
+          </button>
+        )}
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-2">
+          {editorReady ? (
+            <div className="border border-border rounded-lg overflow-hidden">
+              <MarkdownEditor
+                key={editorKey}
+                value={value}
+                onChange={setValue}
+                placeholder="Add a description... (type @ to mention)"
+                minHeight="100px"
+                maxHeight="250px"
+                showBottomToolbar={true}
+              />
+            </div>
+          ) : (
+            <div className="min-h-25 border border-border rounded-lg bg-muted/30 animate-pulse" />
+          )}
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleSave}>Save</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setValue(description); setIsEditing(false); }}>Cancel</Button>
+          </div>
+        </div>
+      ) : description ? (
+        <div
+          className="cursor-pointer"
+          onClick={() => setIsEditing(true)}
+        >
+          <MarkdownEditor
+            value={description}
+            onChange={() => {}}
+            readonly={true}
+            minHeight="120px"
+            className="border-none bg-transparent"
+          />
+        </div>
+      ) : (
+        <div
+          className="text-sm text-muted-foreground italic cursor-pointer hover:text-foreground transition-colors rounded-md bg-muted/50 px-3 py-2"
+          onClick={() => setIsEditing(true)}
+        >
+          Click to add description...
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface StatusBadgeProps {
+  option: SelectOption;
+}
+
+function StatusBadge({ option }: StatusBadgeProps) {
+  return (
+    <div
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium"
+      style={{
+        backgroundColor: `${option.color}15`,
+        border: `1px solid ${option.color}30`,
+      }}
+    >
+      <div
+        className="w-2 h-2 rounded-full"
+        style={{ backgroundColor: option.color }}
+      />
+      <span style={{ color: option.color }}>{option.label}</span>
+    </div>
+  );
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function isOverdue(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date < today;
+}
+
+function extractMentionsFromMarkdown(markdown: string): Array<{ label: string; urn: string }> {
+  const mentionRegex = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+  const mentions: Array<{ label: string; urn: string }> = [];
+  let match;
+  while ((match = mentionRegex.exec(markdown)) !== null) {
+    mentions.push({ label: match[1], urn: match[2] });
+  }
+  return mentions;
+}
+
+function extractFallbackLabel(urn: string): string {
+  const parts = urn.split(":");
+  const type = parts[3]?.toLowerCase() || "item";
+  const id = parts[4]?.slice(0, 8) || "";
+  return `${type}:${id}`;
+}

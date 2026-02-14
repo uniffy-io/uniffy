@@ -57,6 +57,8 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.CALENDAR_EVENT: ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT,
     DomainContentType.CHAT_MESSAGE: ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE,
     DomainContentType.USER: ProtoContentType.CONTENT_TYPE_USER,
+    DomainContentType.PROJECT: ProtoContentType.CONTENT_TYPE_PROJECT,
+    DomainContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType.ValueType, DomainContentType] = {

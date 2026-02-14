@@ -11,6 +11,8 @@ export const UrnType = {
   CHAT: 'chat',
   USER: 'user',
   CALENDAR_EVENT: 'calendar_event',
+  PROJECT: 'project',
+  TASK: 'task',
   UNKNOWN: 'unknown',
 } as const;
 

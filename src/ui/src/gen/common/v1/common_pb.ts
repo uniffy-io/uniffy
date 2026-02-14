@@ -47,6 +47,16 @@ export enum ContentType {
    * @generated from enum value: CONTENT_TYPE_FOLDER = 10;
    */
   FOLDER = 10,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_PROJECT = 11;
+   */
+  PROJECT = 11,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_TASK = 12;
+   */
+  TASK = 12,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ContentType)
 proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
@@ -57,6 +67,8 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
   { no: 7, name: "CONTENT_TYPE_CHAT_MESSAGE" },
   { no: 9, name: "CONTENT_TYPE_USER" },
   { no: 10, name: "CONTENT_TYPE_FOLDER" },
+  { no: 11, name: "CONTENT_TYPE_PROJECT" },
+  { no: 12, name: "CONTENT_TYPE_TASK" },
 ]);
 
 /**

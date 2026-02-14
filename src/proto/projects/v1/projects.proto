@@ -1,0 +1,445 @@
+syntax = "proto3";
+
+package projects.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// ============================================================================
+// Service Definition
+// ============================================================================
+
+service ProjectsService {
+  // ----- Projects -----
+  rpc CreateProject(CreateProjectRequest) returns (ProjectResponse);
+  rpc GetProject(GetProjectRequest) returns (ProjectResponse);
+  rpc UpdateProject(UpdateProjectRequest) returns (ProjectResponse);
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+
+  // ----- Tasks -----
+  rpc CreateTask(CreateTaskRequest) returns (TaskResponse);
+  rpc GetTask(GetTaskRequest) returns (TaskResponse);
+  rpc UpdateTask(UpdateTaskRequest) returns (TaskResponse);
+  rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  rpc MoveTask(MoveTaskRequest) returns (TaskResponse);
+  rpc BulkUpdateTasks(BulkUpdateTasksRequest) returns (BulkUpdateTasksResponse);
+  rpc DeleteTasks(DeleteTasksRequest) returns (DeleteTasksResponse);
+
+  // ----- Field Definitions -----
+  rpc CreateField(CreateFieldRequest) returns (FieldResponse);
+  rpc UpdateField(UpdateFieldRequest) returns (FieldResponse);
+  rpc DeleteField(DeleteFieldRequest) returns (DeleteFieldResponse);
+
+  // ----- View Configs -----
+  rpc CreateView(CreateViewRequest) returns (ViewResponse);
+  rpc UpdateView(UpdateViewRequest) returns (ViewResponse);
+  rpc DeleteView(DeleteViewRequest) returns (DeleteViewResponse);
+
+  // ----- Activities -----
+  rpc ListActivities(ListActivitiesRequest) returns (ListActivitiesResponse);
+  rpc AddComment(AddCommentRequest) returns (ActivityResponse);
+  rpc UpdateComment(UpdateCommentRequest) returns (ActivityResponse);
+  rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
+}
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+enum FieldType {
+  FIELD_TYPE_UNSPECIFIED = 0;
+  FIELD_TYPE_TEXT = 1;
+  FIELD_TYPE_NUMBER = 2;
+  FIELD_TYPE_SINGLE_SELECT = 3;
+  FIELD_TYPE_MULTI_SELECT = 4;
+  FIELD_TYPE_DATE = 5;
+  FIELD_TYPE_PERSON = 6;
+  FIELD_TYPE_REFERENCE = 7;
+}
+
+enum ViewType {
+  VIEW_TYPE_UNSPECIFIED = 0;
+  VIEW_TYPE_TABLE = 1;
+  VIEW_TYPE_BOARD = 2;
+  VIEW_TYPE_ROADMAP = 3;
+}
+
+enum ActivityAction {
+  ACTIVITY_ACTION_UNSPECIFIED = 0;
+  ACTIVITY_ACTION_CREATED = 1;
+  ACTIVITY_ACTION_STATUS_CHANGED = 2;
+  ACTIVITY_ACTION_PRIORITY_CHANGED = 3;
+  ACTIVITY_ACTION_COMMENT = 4;
+  ACTIVITY_ACTION_FIELD_UPDATED = 5;
+  ACTIVITY_ACTION_BLOCKED_BY_ADDED = 6;
+  ACTIVITY_ACTION_BLOCKED_BY_REMOVED = 7;
+  ACTIVITY_ACTION_ASSIGNED = 8;
+}
+
+// ============================================================================
+// Core Messages
+// ============================================================================
+
+message Project {
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string description = 5;
+  string icon = 6;
+  string color = 7;
+  common.v1.VisibilityScope visibility = 8;
+  repeated FieldDefinition field_definitions = 9;
+  repeated ViewConfig views = 10;
+  string default_view_id = 11;
+  repeated string member_ids = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  optional google.protobuf.Timestamp deleted_at = 15;
+  string urn = 16;
+}
+
+message Task {
+  string id = 1;
+  string project_id = 2;
+  string organization_id = 3;
+  string owner_id = 4;
+  string title = 5;
+  string description = 6;
+  string status = 7;
+  string priority = 8;
+  repeated string assignee_ids = 9;
+  optional string start_date = 10;
+  optional string due_date = 11;
+  optional google.protobuf.Timestamp completed_at = 12;
+  optional string parent_id = 13;
+  repeated string blocked_by_task_ids = 14;
+  bool is_milestone = 15;
+  optional string recurrence_rule = 16;
+  int32 sort_order = 17;
+  map<string, string> field_values = 18;
+  repeated string outgoing_references = 19;
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
+  optional google.protobuf.Timestamp deleted_at = 22;
+  string urn = 23;
+}
+
+message FieldDefinition {
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  FieldType type = 4;
+  bool is_required = 5;
+  bool is_system = 6;
+  int32 sort_order = 7;
+  string config_json = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ViewConfig {
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  ViewType type = 4;
+  bool is_default = 5;
+  string config_json = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message TaskActivity {
+  string id = 1;
+  string task_id = 2;
+  string actor_id = 3;
+  ActivityAction action = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  optional string field_id = 6;
+  optional string previous_value = 7;
+  optional string new_value = 8;
+  optional string content = 9;
+}
+
+message SelectOption {
+  string id = 1;
+  string label = 2;
+  string color = 3;
+  int32 sort_order = 4;
+}
+
+// ============================================================================
+// Project Requests/Responses
+// ============================================================================
+
+message CreateProjectRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional string icon = 4;
+  optional string color = 5;
+  optional common.v1.VisibilityScope visibility = 6;
+}
+
+message GetProjectRequest {
+  string organization_id = 1;
+  string project_id = 2;
+}
+
+message UpdateProjectRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional string icon = 5;
+  optional string color = 6;
+  optional common.v1.VisibilityScope visibility = 7;
+  repeated string member_ids = 8;
+  optional string default_view_id = 9;
+}
+
+message DeleteProjectRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  bool permanent = 3;
+}
+
+message ListProjectsRequest {
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+  optional common.v1.VisibilityScope visibility = 3;
+  optional bool include_deleted = 4;
+}
+
+message ProjectResponse {
+  Project project = 1;
+}
+
+message DeleteProjectResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// Task Requests/Responses
+// ============================================================================
+
+message CreateTaskRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string title = 3;
+  optional string description = 4;
+  optional string status = 5;
+  optional string priority = 6;
+  repeated string assignee_ids = 7;
+  optional string start_date = 8;
+  optional string due_date = 9;
+  optional string parent_id = 10;
+  repeated string blocked_by_task_ids = 11;
+  optional bool is_milestone = 12;
+  optional string recurrence_rule = 13;
+  map<string, string> field_values = 14;
+}
+
+message GetTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+}
+
+message UpdateTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  optional string title = 3;
+  optional string description = 4;
+  optional string status = 5;
+  optional string priority = 6;
+  repeated string assignee_ids = 7;
+  optional string start_date = 8;
+  optional string due_date = 9;
+  optional string parent_id = 10;
+  repeated string blocked_by_task_ids = 11;
+  optional bool is_milestone = 12;
+  optional string recurrence_rule = 13;
+  optional int32 sort_order = 14;
+  map<string, string> field_values = 15;
+}
+
+message MoveTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  string status = 3;
+  int32 sort_order = 4;
+}
+
+message BulkUpdateTasksRequest {
+  string organization_id = 1;
+  repeated string task_ids = 2;
+  optional string status = 3;
+  optional string priority = 4;
+  repeated string assignee_ids = 5;
+}
+
+message DeleteTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  bool permanent = 3;
+}
+
+message DeleteTasksRequest {
+  string organization_id = 1;
+  repeated string task_ids = 2;
+  bool permanent = 3;
+}
+
+message ListTasksRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+  optional bool include_deleted = 4;
+  optional string parent_id = 5;
+}
+
+message TaskResponse {
+  Task task = 1;
+}
+
+message DeleteTaskResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DeleteTasksResponse {
+  bool success = 1;
+  int32 deleted_count = 2;
+}
+
+message BulkUpdateTasksResponse {
+  repeated Task tasks = 1;
+  int32 updated_count = 2;
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// Field Requests/Responses
+// ============================================================================
+
+message CreateFieldRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string name = 3;
+  FieldType type = 4;
+  optional bool is_required = 5;
+  optional int32 sort_order = 6;
+  optional string config_json = 7;
+}
+
+message UpdateFieldRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string field_id = 3;
+  optional string name = 4;
+  optional bool is_required = 5;
+  optional int32 sort_order = 6;
+  optional string config_json = 7;
+}
+
+message DeleteFieldRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string field_id = 3;
+}
+
+message FieldResponse {
+  FieldDefinition field = 1;
+}
+
+message DeleteFieldResponse {
+  bool success = 1;
+}
+
+// ============================================================================
+// View Requests/Responses
+// ============================================================================
+
+message CreateViewRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string name = 3;
+  ViewType type = 4;
+  optional bool is_default = 5;
+  optional string config_json = 6;
+}
+
+message UpdateViewRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string view_id = 3;
+  optional string name = 4;
+  optional bool is_default = 5;
+  optional string config_json = 6;
+}
+
+message DeleteViewRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string view_id = 3;
+}
+
+message ViewResponse {
+  ViewConfig view = 1;
+}
+
+message DeleteViewResponse {
+  bool success = 1;
+}
+
+// ============================================================================
+// Activity Requests/Responses
+// ============================================================================
+
+message ListActivitiesRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+}
+
+message AddCommentRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  string content = 3;
+}
+
+message UpdateCommentRequest {
+  string organization_id = 1;
+  string activity_id = 2;
+  string content = 3;
+}
+
+message DeleteCommentRequest {
+  string organization_id = 1;
+  string activity_id = 2;
+}
+
+message ActivityResponse {
+  TaskActivity activity = 1;
+}
+
+message DeleteCommentResponse {
+  bool success = 1;
+}
+
+message ListActivitiesResponse {
+  repeated TaskActivity activities = 1;
+  common.v1.PaginationResponse pagination = 2;
+}

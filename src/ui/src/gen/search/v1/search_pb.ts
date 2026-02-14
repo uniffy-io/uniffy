@@ -36,9 +36,19 @@ export enum SearchResultType {
   USER = 4,
 
   /**
-   * @generated from enum value: SEARCH_RESULT_TYPE_CALENDAR_EVENT = 6;
+   * @generated from enum value: SEARCH_RESULT_TYPE_CALENDAR_EVENT = 5;
    */
-  CALENDAR_EVENT = 6,
+  CALENDAR_EVENT = 5,
+
+  /**
+   * @generated from enum value: SEARCH_RESULT_TYPE_PROJECT = 6;
+   */
+  PROJECT = 6,
+
+  /**
+   * @generated from enum value: SEARCH_RESULT_TYPE_TASK = 7;
+   */
+  TASK = 7,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SearchResultType)
 proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
@@ -47,7 +57,9 @@ proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
   { no: 2, name: "SEARCH_RESULT_TYPE_FILE" },
   { no: 3, name: "SEARCH_RESULT_TYPE_CHAT" },
   { no: 4, name: "SEARCH_RESULT_TYPE_USER" },
-  { no: 6, name: "SEARCH_RESULT_TYPE_CALENDAR_EVENT" },
+  { no: 5, name: "SEARCH_RESULT_TYPE_CALENDAR_EVENT" },
+  { no: 6, name: "SEARCH_RESULT_TYPE_PROJECT" },
+  { no: 7, name: "SEARCH_RESULT_TYPE_TASK" },
 ]);
 
 /**

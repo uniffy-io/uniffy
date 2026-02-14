@@ -1,0 +1,122 @@
+/**
+ * BoardColumn - A single column in the Board view
+ *
+ * Features:
+ * - Header with status color dot, name, and task count
+ * - Scrollable card list
+ * - Drop zone for drag-and-drop
+ * - Collapsible (future feature)
+ */
+
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { Plus } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { LAYOUT } from "../../../constants";
+import type { Task, SelectOption } from "../../../types";
+import { TaskCard } from "./TaskCard";
+
+interface BoardColumnProps {
+  statusOption: SelectOption;
+  tasks: Task[];
+  priorityOptions: SelectOption[];
+  selectedTaskIds: string[];
+  onTaskClick: (taskId: string, e: React.MouseEvent) => void;
+  onCheckboxChange: (taskId: string) => void;
+  onAddTask: () => void;
+}
+
+export function BoardColumn({
+  statusOption,
+  tasks,
+  priorityOptions,
+  selectedTaskIds,
+  onTaskClick,
+  onCheckboxChange,
+  onAddTask,
+}: BoardColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: statusOption.id,
+  });
+
+  // Get priority option for a task
+  const getPriorityOption = (priorityId: string | null) => {
+    if (!priorityId) return undefined;
+    return priorityOptions.find((o) => o.id === priorityId);
+  };
+
+  return (
+    <div
+      className="flex-shrink-0 flex flex-col bg-muted/30 rounded-lg"
+      style={{ width: LAYOUT.BOARD_COLUMN_WIDTH }}
+    >
+      {/* Column Header */}
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
+        {/* Status color dot */}
+        <div
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: statusOption.color }}
+        />
+
+        {/* Status name */}
+        <span className="font-medium text-sm text-foreground truncate">
+          {statusOption.label}
+        </span>
+
+        {/* Task count */}
+        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          {tasks.length}
+        </span>
+      </div>
+
+      {/* Cards Area */}
+      <ScrollArea className="flex-1">
+        <div
+          ref={setNodeRef}
+          className={cn(
+            "p-2 space-y-2 min-h-[200px]",
+            isOver && "bg-primary/5 ring-2 ring-primary/20 ring-inset rounded"
+          )}
+        >
+          <SortableContext
+            items={tasks.map((t) => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                statusOption={statusOption}
+                priorityOption={getPriorityOption(task.priority)}
+                onClick={(e) => onTaskClick(task.id, e)}
+                onCheckboxChange={onCheckboxChange}
+                isSelected={selectedTaskIds.includes(task.id)}
+              />
+            ))}
+          </SortableContext>
+
+          {/* Empty state for column */}
+          {tasks.length === 0 && (
+            <div className="flex items-center justify-center h-24 text-sm text-muted-foreground border-2 border-dashed border-border rounded-lg">
+              Drop tasks here
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Add Task Button */}
+      <button
+        type="button"
+        onClick={onAddTask}
+        className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors border-t border-border"
+      >
+        <Plus size={14} />
+        <span>Add task</span>
+      </button>
+    </div>
+  );
+}
