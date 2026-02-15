@@ -272,7 +272,7 @@ function protoViewConfigToFrontend(proto: ProtoViewConfig): ViewConfig {
     name: proto.name,
     type: protoViewTypeToFrontend(proto.type) as ViewConfig['type'],
     isDefault: proto.isDefault,
-    config: config as ViewSpecificConfig,
+    config: config as unknown as ViewSpecificConfig,
     createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
     updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
   };
