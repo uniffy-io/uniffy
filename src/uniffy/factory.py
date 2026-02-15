@@ -37,6 +37,7 @@ from uniffy.domains.permissions.service import PermissionsServiceImpl
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
+from uniffy.domains.users.http_routes import avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
 from uniffy.gen.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
 from uniffy.gen.auth.v1.auth_connect import AuthServiceASGIApplication
@@ -344,12 +345,14 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         ProjectsServiceASGIApplication(ProjectsServiceImpl(), interceptors=[logging_interceptor]),
     )
 
-    # HTTP routes (thumbnails and files)
+    # HTTP routes (thumbnails, files, avatars)
     http_app = FastAPI()
     setup_request_logging(http_app)
     http_app.include_router(thumbnails_router)
     http_app.include_router(files_router)
+    http_app.include_router(avatars_router)
     dispatcher.add_service("/thumbnails", http_app)
     dispatcher.add_service("/files", http_app)
+    dispatcher.add_service("/avatars", http_app)
 
     return dispatcher

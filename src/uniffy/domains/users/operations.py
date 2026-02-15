@@ -9,6 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.domains.users.avatars import (
+    delete_avatar as s3_delete_avatar,
+)
+from uniffy.domains.users.avatars import (
+    upload_avatar as s3_upload_avatar,
+)
 from uniffy.domains.users.search import UserSearchIndexer
 
 
@@ -340,6 +346,79 @@ class UserOperations:
         users = list(result.scalars().all())
 
         return users, total
+
+    async def upload_avatar(
+        self,
+        user_id: UUID,
+        image_data: bytes,
+        filename: str,
+    ) -> User:
+        """
+        Upload and set user avatar.
+
+        Validates, resizes to 3 sizes (sm/md/lg), uploads to S3, and updates user record.
+        Deletes any existing avatar before setting the new one.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID.
+        image_data : bytes
+            Raw image bytes.
+        filename : str
+            Original filename for MIME type detection.
+
+        Returns
+        -------
+        User
+            Updated user.
+
+        Raises
+        ------
+        ValueError
+            If image validation fails.
+
+        """
+        user = await self.get_by_id(user_id)
+
+        # Delete old avatar from S3 if exists
+        if user.avatar_key:
+            await s3_delete_avatar(user.avatar_key)
+
+        # Upload new avatar
+        avatar_key = await s3_upload_avatar(user_id, image_data, filename)
+        user.avatar_key = avatar_key
+
+        await self._session.commit()
+        await self._session.refresh(user)
+        return user
+
+    async def delete_avatar(self, user_id: UUID) -> User:
+        """
+        Delete user avatar.
+
+        Removes avatar images from S3 and clears the avatar_key on the user.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID.
+
+        Returns
+        -------
+        User
+            Updated user.
+
+        """
+        user = await self.get_by_id(user_id)
+
+        if user.avatar_key:
+            await s3_delete_avatar(user.avatar_key)
+            user.avatar_key = None
+            await self._session.commit()
+            await self._session.refresh(user)
+
+        return user
 
     async def require_system_admin(self, user_id: UUID) -> User:
         """

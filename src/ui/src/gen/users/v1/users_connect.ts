@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddUserToOrganizationRequest, CreateUserRequest, DeleteUserRequest, DeleteUserResponse, GetMyProfileRequest, GetUserRequest, ListUserOrganizationsRequest, ListUserOrganizationsResponse, ListUsersRequest, ListUsersResponse, RemoveUserFromOrganizationRequest, RemoveUserFromOrganizationResponse, UpdateMyProfileRequest, UpdateUserRequest, UserProfile } from "./users_pb.js";
+import { AddUserToOrganizationRequest, CreateUserRequest, DeleteAvatarRequest, DeleteUserRequest, DeleteUserResponse, GetMyProfileRequest, GetUserRequest, ListUserOrganizationsRequest, ListUserOrganizationsResponse, ListUsersRequest, ListUsersResponse, RemoveUserFromOrganizationRequest, RemoveUserFromOrganizationResponse, UpdateMyProfileRequest, UpdateUserRequest, UploadAvatarRequest, UserProfile } from "./users_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 import { MemberInfo } from "../../common/v1/common_pb.js";
 
@@ -78,6 +78,26 @@ export const UsersService = {
       name: "DeleteUser",
       I: DeleteUserRequest,
       O: DeleteUserResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Avatar operations
+     *
+     * @generated from rpc users.v1.UsersService.UploadAvatar
+     */
+    uploadAvatar: {
+      name: "UploadAvatar",
+      I: UploadAvatarRequest,
+      O: UserProfile,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc users.v1.UsersService.DeleteAvatar
+     */
+    deleteAvatar: {
+      name: "DeleteAvatar",
+      I: DeleteAvatarRequest,
+      O: UserProfile,
       kind: MethodKind.Unary,
     },
     /**

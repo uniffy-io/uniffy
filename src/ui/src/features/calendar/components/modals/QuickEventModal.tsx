@@ -3,7 +3,7 @@
  * Modern, clean design with visibility selector and reorganized layout
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   X,
   LockSimple,
@@ -16,8 +16,10 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
 import { createEvent } from '@/features/calendar/store/calendarThunks';
+import { attachmentsApi } from '@/features/attachments';
 import { cn } from '@/shared/utils/cn';
-import { MarkdownEditor } from '@/components/editor';
+import { ExpandableEditor } from '@/components/editor/ExpandableEditor';
+import { ContentType } from '@/gen/common/v1/common_pb';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import type { MemberInfo } from '@/gen/common/v1/common_pb';
@@ -103,8 +105,6 @@ export function QuickEventModal({
   const dispatch = useAppDispatch();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [editorKey, setEditorKey] = useState(0);
-  const [editorReady, setEditorReady] = useState(false);
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [startDate, setStartDate] = useState(getDateString(initialDate || new Date()));
   const [endDate, setEndDate] = useState(getDateString(initialDate || new Date()));
@@ -114,8 +114,14 @@ export function QuickEventModal({
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [visibility, setVisibility] = useState<EventVisibility>('private');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const pendingFileIdsRef = useRef<string[]>([]);
 
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const categories = useAppSelector((state) => state.calendar.categories);
+
+  const handleFileUploaded = useCallback((fileId: string) => {
+    pendingFileIdsRef.current.push(fileId);
+  }, []);
 
   const dateOptions = useMemo(() => generateDateOptions(), []);
 
@@ -148,15 +154,7 @@ export function QuickEventModal({
         setSelectedCategoryId(categoryIds[0]);
       }
       setAttendees([]);
-
-      setEditorReady(false);
-      const timer = setTimeout(() => {
-        setEditorKey((prev) => prev + 1);
-        setEditorReady(true);
-      }, 50);
-      return () => clearTimeout(timer);
-    } else {
-      setEditorReady(false);
+      pendingFileIdsRef.current = [];
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialStartHour, initialEndHour]);
@@ -229,6 +227,23 @@ export function QuickEventModal({
     );
 
     if (createEvent.fulfilled.match(result)) {
+      // Attach any files that were uploaded during creation (deferred mode)
+      if (pendingFileIdsRef.current.length > 0 && organizationId) {
+        await Promise.all(
+          pendingFileIdsRef.current.map((fileId) =>
+            attachmentsApi.attachFile({
+              organizationId,
+              sourceFileId: fileId,
+              contentType: ContentType.CALENDAR_EVENT,
+              contentId: result.payload.id,
+            }).catch((err) => {
+              console.error('[QuickEventModal] Failed to attach file:', err);
+            })
+          )
+        );
+        pendingFileIdsRef.current = [];
+      }
+
       dispatch(selectEvent(result.payload.id));
     }
     onClose();
@@ -457,21 +472,16 @@ export function QuickEventModal({
                   <span>Description</span>
                   <span className="text-xs text-muted-foreground">(optional)</span>
                 </div>
-                {editorReady ? (
-                  <div className="border border-border rounded-lg overflow-hidden">
-                    <MarkdownEditor
-                      key={editorKey}
-                      value={description}
-                      onChange={setDescription}
-                      placeholder="Add notes, use @ to reference content..."
-                      minHeight="120px"
-                      maxHeight="200px"
-                      showBottomToolbar={true}
-                    />
-                  </div>
-                ) : (
-                  <div className="min-h-[120px] border border-border rounded-lg bg-muted/30 animate-pulse" />
-                )}
+                <ExpandableEditor
+                  contentType={ContentType.CALENDAR_EVENT}
+                  contentId=""
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Add notes, use @ to reference content..."
+                  label="Description"
+                  enableUpload
+                  onFileUploaded={handleFileUploaded}
+                />
               </div>
             </div>
 

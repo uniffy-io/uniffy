@@ -36,8 +36,9 @@ import { cn } from '@/shared/utils/cn';
 import { useCalendarEvents } from '@/features/calendar/hooks';
 import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
-import { MarkdownEditor } from '@/components/editor';
-import { MentionChipCompact } from '@/features/notes/components/editor/plugins/mention';
+import { CrepeEditor } from '@/components/editor/CrepeEditor';
+import { ContentType } from '@/gen/common/v1/common_pb';
+import { MentionChipCompact } from '@/components/editor/plugins/mention';
 import {
   formatDateWithDay,
   formatTimeRange,
@@ -454,10 +455,13 @@ export function DetailPanel() {
             Description
           </h3>
           {selectedEvent.description ? (
-            <MarkdownEditor
+            <CrepeEditor
+              contentType={ContentType.CALENDAR_EVENT}
+              contentId={selectedEvent.id}
               value={selectedEvent.description}
-              onChange={() => {}}
-              readonly={true}
+              readonly
+              enableUpload={false}
+              compact
               minHeight="calc(50vh - 60px)"
               className="border-none bg-transparent"
             />

@@ -1,9 +1,10 @@
 /**
- * Audio Upload Utility for Notes Editor
+ * Audio Upload Utility for Editor
  *
  * Handles uploading audio files from the Crepe editor to the Attachments system.
  * Supports drag-drop, paste, file picker, and slash command uploads.
  * Returns /media-stream/ URLs for service worker streaming.
+ * Works with any content type (notes, calendar events, tasks, etc.).
  */
 
 import { filesApi } from '@/features/files/api/filesApi';
@@ -32,32 +33,36 @@ async function getAttachmentsFolderId(organizationId: string): Promise<string> {
     return folderId;
 }
 
-export interface UploadNoteAudioOptions {
+export interface UploadAudioOptions {
     /** The audio file to upload */
     file: File;
     /** Organization ID for the upload */
     organizationId: string;
-    /** Note ID to attach the audio to */
-    noteId: string;
+    /** Content ID to attach the audio to (empty string = deferred attachment) */
+    contentId: string;
+    /** Content type for the attachment */
+    contentType: ContentType;
     /** Optional progress callback (0-100) */
     onProgress?: (percent: number) => void;
+    /** Called with the uploaded file ID (useful for deferred attachment when contentId is empty) */
+    onFileUploaded?: (fileId: string) => void;
 }
 
 /**
- * Upload an audio file and attach it to a note.
+ * Upload an audio file and attach it to content.
  *
  * Flow:
  * 1. Get attachments folder ID (cached per org)
  * 2. Initiate upload via FilesService
  * 3. Upload file chunks
  * 4. Complete upload to get file ID
- * 5. Attach file to note via AttachmentsService
+ * 5. Attach file to content via AttachmentsService
  * 6. Return media-stream URL for audio playback
  *
  * @returns URL to stream the audio: /media-stream/{orgId}/{fileId}
  */
-export async function uploadNoteAudio(options: UploadNoteAudioOptions): Promise<string> {
-    const { file, organizationId, noteId, onProgress } = options;
+export async function uploadAudio(options: UploadAudioOptions): Promise<string> {
+    const { file, organizationId, contentId, contentType, onProgress, onFileUploaded } = options;
 
     // 1. Get attachments folder ID
     const folderId = await getAttachmentsFolderId(organizationId);
@@ -106,13 +111,16 @@ export async function uploadNoteAudio(options: UploadNoteAudioOptions): Promise<
     }
     onProgress?.(85);
 
-    // 5. Attach file to note
-    await attachmentsApi.attachFile({
-        organizationId,
-        sourceFileId: fileId,
-        contentType: ContentType.NOTE,
-        contentId: noteId,
-    });
+    // 5. Attach file to content (skip when contentId is empty - deferred mode)
+    if (contentId) {
+        await attachmentsApi.attachFile({
+            organizationId,
+            sourceFileId: fileId,
+            contentType,
+            contentId,
+        });
+    }
+    onFileUploaded?.(fileId);
     onProgress?.(100);
 
     // 6. Return media-stream URL (service worker handles auth)
@@ -122,22 +130,27 @@ export async function uploadNoteAudio(options: UploadNoteAudioOptions): Promise<
 /**
  * Create an audio upload handler function for the Crepe editor.
  *
- * This factory function captures the noteId and organizationId so the
- * returned handler can be passed directly to slash command callbacks.
+ * This factory function captures the contentId, contentType, and organizationId
+ * so the returned handler can be passed directly to slash command callbacks.
  *
- * @param noteId - The note ID to attach uploaded audio to
+ * @param contentType - The content type for the attachment
+ * @param contentId - The content ID to attach uploaded audio to
  * @param organizationId - The organization ID for the upload
  * @returns An async function that takes a File and returns a URL string
  */
 export function createAudioUploadHandler(
-    noteId: string,
-    organizationId: string
+    contentType: ContentType,
+    contentId: string,
+    organizationId: string,
+    onFileUploaded?: (fileId: string) => void,
 ): (file: File) => Promise<string> {
     return async (file: File): Promise<string> => {
-        return uploadNoteAudio({
+        return uploadAudio({
             file,
             organizationId,
-            noteId,
+            contentId,
+            contentType,
+            onFileUploaded,
         });
     };
 }

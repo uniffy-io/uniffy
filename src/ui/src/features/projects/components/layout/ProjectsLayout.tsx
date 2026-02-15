@@ -12,7 +12,7 @@
  * - Responsive behavior
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Kanban } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
@@ -35,6 +35,8 @@ import {
 } from "../../store/projectsUiSlice";
 import { selectCurrentProject, selectTasksForProject } from "../../store/projectsSlice";
 
+const EMPTY_TASKS: ReturnType<ReturnType<typeof selectTasksForProject>> = [];
+
 export function ProjectsLayout() {
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
@@ -42,9 +44,12 @@ export function ProjectsLayout() {
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
   const viewMode = useAppSelector(selectViewMode);
   const currentProject = useAppSelector(selectCurrentProject);
-  const tasks = useAppSelector((state) =>
-    currentProject ? selectTasksForProject(currentProject.id)(state) : []
+  const currentProjectId = currentProject?.id;
+  const selectTasks = useMemo(
+    () => currentProjectId ? selectTasksForProject(currentProjectId) : () => EMPTY_TASKS,
+    [currentProjectId],
   );
+  const tasks = useAppSelector(selectTasks);
   const isCreateTaskModalOpen = useAppSelector((state) => state.projectsUi.isCreateTaskModalOpen);
   const isCreateProjectModalOpen = useAppSelector((state) => state.projectsUi.isCreateProjectModalOpen);
 

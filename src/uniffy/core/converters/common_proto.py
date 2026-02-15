@@ -16,6 +16,7 @@ from uniffy.core.models.shared import ContentType as DomainContentType
 from uniffy.core.models.shared import PermissionLevel as DomainPermissionLevel
 from uniffy.core.models.shared import SubjectType as DomainSubjectType
 from uniffy.core.models.shared import VisibilityScope as DomainVisibilityScope
+from uniffy.domains.users.avatars import get_avatar_url
 from uniffy.gen.common.v1.common_pb2 import (
     ContentType as ProtoContentType,
 )
@@ -205,7 +206,7 @@ def user_info_to_proto(user: User) -> ProtoUserInfo:
         email=user.email,
         full_name=user.full_name or "",
         username=user.username,
-        avatar_url="",
+        avatar_url=get_avatar_url(user.id, user.avatar_key),
         created_at=datetime_to_timestamp(user.created_at),
     )
 
@@ -290,7 +291,7 @@ def member_info_to_proto(
         user_id=str(user.id),
         display_name=user.full_name or user.username,
         email=user.email,
-        avatar_url="",
+        avatar_url=get_avatar_url(user.id, user.avatar_key),
         role=org_role_to_proto(membership.role),
         joined_at=datetime_to_timestamp(membership.joined_at),
         is_active=membership.is_active,
@@ -321,7 +322,7 @@ def group_member_info_to_proto(
         user_id=str(user.id),
         display_name=user.full_name or user.username,
         email=user.email,
-        avatar_url="",
+        avatar_url=get_avatar_url(user.id, user.avatar_key),
         role=group_role_to_proto(membership.role),
         joined_at=datetime_to_timestamp(membership.joined_at),
     )

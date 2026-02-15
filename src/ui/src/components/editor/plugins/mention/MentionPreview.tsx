@@ -16,7 +16,7 @@ import {
   MapPin,
   FrameCorners,
 } from '@phosphor-icons/react';
-import type { UrnPreviewData } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
+import type { UrnPreviewData } from '@/components/editor/plugins/mention/useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 

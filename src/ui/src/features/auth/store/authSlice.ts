@@ -98,6 +98,17 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isRehydrating = false;
     },
+    /**
+     * Update user profile fields (e.g., after avatar upload/delete).
+     */
+    updateUser: (
+      state,
+      action: PayloadAction<Partial<PlainMessage<CurrentUserResponse>>>
+    ) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
     logout: (state) => {
       state.user = null;
       state.accessToken = null;
@@ -111,6 +122,6 @@ export const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, startRehydrating, rehydrateComplete, rehydrateFailed, logout } = authSlice.actions;
+export const { setCredentials, startRehydrating, rehydrateComplete, rehydrateFailed, updateUser, logout } = authSlice.actions;
 
 export default authSlice.reducer;

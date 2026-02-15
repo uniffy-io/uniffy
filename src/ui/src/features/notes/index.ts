@@ -12,7 +12,7 @@ export { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
 export { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
 export { NotesLayout } from '@/features/notes/components/NotesLayout';
 export { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMetadataPanel';
-export { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+export { CrepeEditor } from '@/components/editor/CrepeEditor';
 export { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
 export { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
 export { EditorHeader } from '@/features/notes/components/editor/EditorHeader';

@@ -22,7 +22,7 @@ import type { NodeView } from '@milkdown/kit/prose/view';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import React from 'react';
-import { TagChip } from '@/features/notes/components/editor/plugins/tag/TagChip';
+import { TagChip } from '@/components/editor/plugins/tag/TagChip';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
@@ -338,4 +338,4 @@ export const tagView = $view(tagNode, () => (node: Node, view: EditorView, getPo
 export const tagPlugins = [...tagRemarkPlugin, tagNode, tagInputRule, tagView];
 
 // Re-export components
-export { TagChip } from '@/features/notes/components/editor/plugins/tag/TagChip';
+export { TagChip } from '@/components/editor/plugins/tag/TagChip';

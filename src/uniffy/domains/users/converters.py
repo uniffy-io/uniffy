@@ -4,6 +4,7 @@ from uniffy.core.converters import datetime_to_timestamp, org_info_to_proto, org
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.domains.users.avatars import get_avatar_url
 from uniffy.gen.users.v1.users_pb2 import UserOrganizationMembership, UserProfile
 
 
@@ -27,7 +28,7 @@ def user_to_profile(user: User) -> UserProfile:
         email=user.email,
         full_name=user.full_name or "",
         username=user.username,
-        avatar_url="",
+        avatar_url=get_avatar_url(user.id, user.avatar_key),
         accent_color=user.accent_color or "",
         font_family=user.font_family or "",
         is_active=user.is_active,

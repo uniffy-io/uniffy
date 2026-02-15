@@ -33,6 +33,9 @@ const THUMBNAIL_PATTERN = /^\/api\/thumbnails\/([^/]+)\/([^/]+)$/;
 // Pattern to match file URLs: /api/files/{orgId}/{fileId}
 const FILES_PATTERN = /^\/api\/files\/([^/]+)\/([^/]+)$/;
 
+// Pattern to match avatar URLs: /api/avatars/{userId}/{size}
+const AVATARS_PATTERN = /^\/api\/avatars\/([^/]+)\/([^/]+)$/;
+
 // BroadcastChannel for real-time token sync
 const TOKEN_CHANNEL_NAME = 'uniffy-auth-token';
 
@@ -260,28 +263,41 @@ async function handleMediaRequest(
         }
 
         // Stream chunks directly for memory efficiency
+        let cancelled = false;
         const stream = new ReadableStream<Uint8Array>({
             async start(controller) {
                 try {
                     // Enqueue the first chunk we already have
+                    if (cancelled) return;
                     controller.enqueue(firstChunk.data);
 
                     // Stream remaining chunks directly
                     for await (const response of streamIterator) {
+                        if (cancelled) return;
                         controller.enqueue(response.data);
                     }
 
-                    controller.close();
+                    if (!cancelled) {
+                        controller.close();
+                    }
                 } catch (error) {
+                    // If stream was cancelled by client, silently stop
+                    if (cancelled) return;
+
                     if (error instanceof Error && error.name === 'AbortError') {
                         console.log('[MediaStreamWorker] Stream aborted');
                     } else {
                         console.error('[MediaStreamWorker] Stream error:', error);
                     }
-                    controller.error(error);
+                    try {
+                        controller.error(error);
+                    } catch {
+                        // Controller already closed/errored, ignore
+                    }
                 }
             },
             cancel() {
+                cancelled = true;
                 console.log('[MediaStreamWorker] Stream cancelled by client');
             },
         });
@@ -413,6 +429,13 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     const filesMatch = url.pathname.match(FILES_PATTERN);
     if (filesMatch) {
         console.log(`[MediaStreamWorker] Intercepting file request: ${url.pathname}`);
+        event.respondWith(handleFileRequest(event.request));
+        return;
+    }
+
+    // Check for avatar requests
+    const avatarsMatch = url.pathname.match(AVATARS_PATTERN);
+    if (avatarsMatch) {
         event.respondWith(handleFileRequest(event.request));
         return;
     }

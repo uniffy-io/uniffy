@@ -794,7 +794,7 @@ class AttachmentOperations:
             from uniffy.core.models.calendar.event import CalendarEvent
 
             result = await self._session.execute(
-                select(CalendarEvent.owner_id, CalendarEvent.visibility).where(
+                select(CalendarEvent.organizer_id, CalendarEvent.visibility).where(
                     CalendarEvent.id == content_id,
                     CalendarEvent.organization_id == organization_id,
                 )
@@ -802,6 +802,20 @@ class AttachmentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("CalendarEvent", str(content_id))
+            return row[0], row[1]
+
+        elif content_type == ContentType.TASK:
+            from uniffy.core.models.projects.task import Task
+
+            result = await self._session.execute(
+                select(Task.owner_id, Task.visibility).where(
+                    Task.id == content_id,
+                    Task.organization_id == organization_id,
+                )
+            )
+            row = result.one_or_none()
+            if not row:
+                raise NotFoundError("Task", str(content_id))
             return row[0], row[1]
 
         else:

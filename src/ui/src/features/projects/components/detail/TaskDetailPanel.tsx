@@ -17,8 +17,8 @@ import type { SerializedMemberInfo } from "@/features/admin";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MarkdownEditor } from "@/components/editor";
-import { MentionChipCompact } from "@/features/notes/components/editor/plugins/mention";
+import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
+import { MentionChipCompact } from "@/components/editor/plugins/mention";
 import { selectTasksMap, selectCurrentProject, optimisticUpdateTask } from "../../store/projectsSlice";
 import { updateTask } from "../../store/projectsThunks";
 import { closeDetailPanel, selectTask } from "../../store/projectsUiSlice";
@@ -210,13 +210,24 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
           <SubtasksList taskId={task.id} />
 
           {/* Description Section */}
-          <EditableDescription
-            description={task.description}
-            onSave={(newDesc) => {
-              dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-              dispatch(updateTask({ id: task.id, description: newDesc }));
-            }}
-          />
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Description
+            </h3>
+            <ExpandableEditor
+              contentType={ContentType.TASK}
+              contentId={task.id}
+              value={task.description}
+              onChange={(newDesc) => {
+                dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                dispatch(updateTask({ id: task.id, description: newDesc }));
+              }}
+              placeholder="Click to add a description... (type @ to mention)"
+              label="Description"
+              enableUpload
+              fullPreview
+            />
+          </div>
 
           {/* References Section */}
           {task.outgoingReferences.length > 0 && (
@@ -316,108 +327,6 @@ function EditableTitle({ title, onSave }: { title: string; onSave: (newTitle: st
   );
 }
 
-function EditableDescription({ description, onSave }: { description: string; onSave: (desc: string) => void }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(description);
-  const [editorKey, setEditorKey] = useState(0);
-  const [editorReady, setEditorReady] = useState(false);
-
-  // Keep local value in sync when description changes from outside
-  useEffect(() => {
-    if (!isEditing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local value when description prop changes externally
-      setValue(description);
-    }
-  }, [description, isEditing]);
-
-  // Mount editor when entering edit mode
-  useEffect(() => {
-    if (!isEditing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting editor state when exiting edit mode
-      setEditorReady(false);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setEditorKey((prev) => prev + 1);
-      setEditorReady(true);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [isEditing]);
-
-  const handleSave = () => {
-    const trimmed = value.trim();
-    if (trimmed !== description) {
-      onSave(trimmed);
-    } else {
-      setValue(description);
-    }
-    setIsEditing(false);
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Description
-        </h3>
-        {!isEditing && (
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-          >
-            <PencilSimple size={12} />
-            Edit
-          </button>
-        )}
-      </div>
-
-      {isEditing ? (
-        <div className="space-y-2">
-          {editorReady ? (
-            <div className="border border-border rounded-lg overflow-hidden">
-              <MarkdownEditor
-                key={editorKey}
-                value={value}
-                onChange={setValue}
-                placeholder="Add a description... (type @ to mention)"
-                minHeight="100px"
-                maxHeight="250px"
-                showBottomToolbar={true}
-              />
-            </div>
-          ) : (
-            <div className="min-h-25 border border-border rounded-lg bg-muted/30 animate-pulse" />
-          )}
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleSave}>Save</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setValue(description); setIsEditing(false); }}>Cancel</Button>
-          </div>
-        </div>
-      ) : description ? (
-        <div
-          className="cursor-pointer"
-          onClick={() => setIsEditing(true)}
-        >
-          <MarkdownEditor
-            value={description}
-            onChange={() => {}}
-            readonly={true}
-            minHeight="120px"
-            className="border-none bg-transparent"
-          />
-        </div>
-      ) : (
-        <div
-          className="text-sm text-muted-foreground italic cursor-pointer hover:text-foreground transition-colors rounded-md bg-muted/50 px-3 py-2"
-          onClick={() => setIsEditing(true)}
-        >
-          Click to add description...
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface StatusBadgeProps {
   option: SelectOption;

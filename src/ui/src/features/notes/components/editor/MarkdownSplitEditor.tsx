@@ -8,7 +8,8 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { defaultKeymap } from '@codemirror/commands';
 import { useAppSelector } from '@/app/hooks';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
-import { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+import { CrepeEditor } from '@/components/editor/CrepeEditor';
+import { ContentType } from '@/gen/common/v1/common_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
 interface MarkdownSplitEditorProps {
@@ -194,10 +195,12 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
             className="overflow-hidden h-full"
             style={{ width: `${(1 - splitRatio) * 100}%` }}
           >
-            <CrepeEditor 
-              note={note} 
-              readonly 
-              content={content}
+            <CrepeEditor
+              contentType={ContentType.NOTE}
+              contentId={note.id}
+              value={content}
+              readonly
+              enableUpload={false}
             />
           </div>
         )}

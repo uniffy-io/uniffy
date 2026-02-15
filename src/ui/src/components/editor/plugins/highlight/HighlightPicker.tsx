@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { HIGHLIGHT_COLORS, colorToBg } from '@/features/notes/components/editor/plugins/highlight/index';
+import { HIGHLIGHT_COLORS, colorToBg } from '@/components/editor/plugins/highlight/index';
 
 interface HighlightPickerProps {
   /** Bounding rect of the text selection for positioning */

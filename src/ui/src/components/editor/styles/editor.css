@@ -105,9 +105,22 @@
 }
 
 /* Also handle the editor container itself */
-.crepe-editor .milkdown,
-.crepe-editor .ProseMirror {
+.crepe-editor .milkdown {
   padding-top: 0 !important;
+}
+
+/*
+ * Milkdown's reset.css sets .ProseMirror { padding: 60px 120px }.
+ * In full mode we keep that default (nice centered content for notes).
+ * In compact mode (modals/panels) we zero it out - wrapper handles padding.
+ */
+.crepe-editor-compact .ProseMirror {
+  padding: 0 !important;
+}
+
+/* Ensure milkdown container takes full width */
+.crepe-editor .milkdown {
+  width: 100% !important;
 }
 
 /* 
@@ -487,6 +500,7 @@
   border-radius: 0.75rem !important;
   color: hsl(var(--foreground)) !important;
   box-shadow: var(--crepe-shadow-2) !important;
+  z-index: 300 !important;
 }
 
 [data-crepe-block-edit-menu] h6,
@@ -546,6 +560,7 @@
   background: hsl(var(--card)) !important;
   border: 1px solid hsl(var(--border)) !important;
   box-shadow: var(--crepe-shadow-1) !important;
+  z-index: 300 !important;
 }
 
 .crepe-editor-wrapper .milkdown-toolbar .toolbar-item svg,
@@ -960,6 +975,32 @@
     border-radius: 2px;
     padding: 0 1px;
     color: inherit !important;
+}
+
+/*
+ * Compact Editor Mode
+ * When CrepeEditor is used in modals/panels (calendar events, task descriptions),
+ * Milkdown's default flex layout constrains the editor width.
+ * These overrides force block layout so the editor fills its container,
+ * while keeping all Crepe features available on interaction.
+ */
+
+/* Compact-specific overrides (min-height) */
+.crepe-editor-compact .milkdown {
+  min-height: 60px;
+}
+
+.crepe-editor-compact .ProseMirror {
+  min-height: 60px;
+}
+
+.crepe-editor-compact .ProseMirror > :first-child {
+  margin-top: 0 !important;
+}
+
+/* Hide drag handle in compact mode - slash commands still work via keyboard */
+.crepe-editor-compact [data-crepe-block-handle] {
+  display: none !important;
 }
 
 /*

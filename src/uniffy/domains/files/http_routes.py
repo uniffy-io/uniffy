@@ -15,57 +15,12 @@ from loguru import logger
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.storage import get_s3_client
 from uniffy.db import get_async_session
+from uniffy.domains.auth.http_deps import get_current_user_id
 from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.domains.files.operations import FileOperations
 
 thumbnails_router = APIRouter(prefix="/thumbnails", tags=["thumbnails"])
 files_router = APIRouter(prefix="/files", tags=["files"])
-
-
-async def get_current_user_id(
-    authorization: Annotated[str | None, Header()] = None,
-) -> UUID:
-    """
-    Extract and validate user ID from Authorization header.
-
-    This is the FastAPI equivalent of get_user_id_from_context for HTTP routes.
-
-    Parameters
-    ----------
-    authorization : str | None
-        Authorization header value (Bearer token).
-
-    Returns
-    -------
-    UUID
-        Authenticated user's ID.
-
-    Raises
-    ------
-    HTTPException
-        401 if token is missing, invalid, or expired.
-
-    """
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token = authorization[7:]  # Remove "Bearer " prefix
-
-    try:
-        payload = decode_access_token(token)
-        user_id = UUID(payload["sub"])
-        return user_id
-    except Exception as e:
-        logger.debug(f"JWT decode error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
 
 async def get_organization_id_from_token(

@@ -19,6 +19,7 @@ from uniffy.gen.common.v1.common_pb2 import MemberInfo, PaginationResponse
 from uniffy.gen.users.v1.users_pb2 import (
     AddUserToOrganizationRequest,
     CreateUserRequest,
+    DeleteAvatarRequest,
     DeleteUserRequest,
     DeleteUserResponse,
     GetMyProfileRequest,
@@ -31,6 +32,7 @@ from uniffy.gen.users.v1.users_pb2 import (
     RemoveUserFromOrganizationResponse,
     UpdateMyProfileRequest,
     UpdateUserRequest,
+    UploadAvatarRequest,
     UserProfile,
 )
 
@@ -80,6 +82,55 @@ class UsersHandlers:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
             logger.error(f"Error updating profile: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def upload_avatar(
+        self,
+        request: UploadAvatarRequest,
+        ctx: RequestContext,
+    ) -> UserProfile:
+        """Upload user avatar image."""
+        user_id = get_user_id_from_context(ctx)
+
+        if not request.image_data:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Image data is required")
+        if not request.filename:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Filename is required")
+
+        try:
+            async for session in get_async_session():
+                ops = UserOperations(session)
+                user = await ops.upload_avatar(
+                    user_id=user_id,
+                    image_data=request.image_data,
+                    filename=request.filename,
+                )
+                return user_to_profile(user)
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error uploading avatar: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def delete_avatar(
+        self,
+        request: DeleteAvatarRequest,
+        ctx: RequestContext,
+    ) -> UserProfile:
+        """Delete user avatar."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = UserOperations(session)
+                user = await ops.delete_avatar(user_id)
+                return user_to_profile(user)
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error deleting avatar: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_users(

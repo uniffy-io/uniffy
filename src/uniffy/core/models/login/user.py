@@ -69,6 +69,11 @@ class User(SQLModel, table=True):
         max_length=20,
         description="User's preferred font family: 'inter', 'geist', or 'system'",
     )
+    avatar_key: str | None = Field(
+        default=None,
+        max_length=512,
+        description="S3 key prefix for avatar images (e.g., 'avatars/{user_id}/{hash}')",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

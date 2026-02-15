@@ -795,3 +795,81 @@ export class RemoveUserFromOrganizationResponse extends Message<RemoveUserFromOr
   }
 }
 
+/**
+ * @generated from message users.v1.UploadAvatarRequest
+ */
+export class UploadAvatarRequest extends Message<UploadAvatarRequest> {
+  /**
+   * Raw image bytes (max 5MB)
+   *
+   * @generated from field: bytes image_data = 1;
+   */
+  imageData = new Uint8Array(0);
+
+  /**
+   * Original filename (for MIME detection)
+   *
+   * @generated from field: string filename = 2;
+   */
+  filename = "";
+
+  constructor(data?: PartialMessage<UploadAvatarRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "users.v1.UploadAvatarRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "image_data", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UploadAvatarRequest {
+    return new UploadAvatarRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UploadAvatarRequest {
+    return new UploadAvatarRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UploadAvatarRequest {
+    return new UploadAvatarRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UploadAvatarRequest | PlainMessage<UploadAvatarRequest> | undefined, b: UploadAvatarRequest | PlainMessage<UploadAvatarRequest> | undefined): boolean {
+    return proto3.util.equals(UploadAvatarRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message users.v1.DeleteAvatarRequest
+ */
+export class DeleteAvatarRequest extends Message<DeleteAvatarRequest> {
+  constructor(data?: PartialMessage<DeleteAvatarRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "users.v1.DeleteAvatarRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteAvatarRequest {
+    return new DeleteAvatarRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteAvatarRequest {
+    return new DeleteAvatarRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteAvatarRequest {
+    return new DeleteAvatarRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteAvatarRequest | PlainMessage<DeleteAvatarRequest> | undefined, b: DeleteAvatarRequest | PlainMessage<DeleteAvatarRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteAvatarRequest, a, b);
+  }
+}
+

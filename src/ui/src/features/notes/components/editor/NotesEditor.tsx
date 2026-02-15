@@ -1,9 +1,11 @@
+import { useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
-import { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
 import { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
 import { toggleSidebar } from '@/features/notes/store/editorSlice';
+import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
 import { CaretDoubleRight } from '@phosphor-icons/react';
 import { useMyPermission } from '@/features/sharing';
 import { ContentType } from '@/gen/common/v1/common_pb';
@@ -33,12 +35,26 @@ export function NotesEditor() {
   const canEdit = permission?.canEdit ?? true; // Default to true while loading
   const canShare = permission?.canShare ?? false; // Only admin/owner can share
   const editorMode = canEdit ? userSelectedMode : 'readonly';
-  
+
+  // Autosave hook - handles debounced saving
+  const { scheduleAutosave, draftContent } = useAutosave(
+    canEdit && currentNoteId ? currentNoteId : null
+  );
+
+  // Get draft content from autosave hook
+  const noteContent = currentNote
+    ? (draftContent != null ? draftContent : currentNote.content)
+    : '';
+
+  const handleContentChange = useCallback((markdown: string) => {
+    scheduleAutosave(markdown);
+  }, [scheduleAutosave]);
+
   // Show loading state when:
   // 1. We're loading the current note AND
   // 2. Either we don't have the note yet OR the note has no content (from tree preview)
   const shouldShowLoading = isLoadingCurrentNote && (!currentNote || !currentNote.content);
-  
+
   // Loading state - show spinner when fetching note
   if (shouldShowLoading) {
     return (
@@ -78,10 +94,9 @@ export function NotesEditor() {
             </button>
           </div>
         )}
-        
+
         {/* Empty state */}
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-          <div className="text-6xl mb-4">📝</div>
           <h3 className="text-xl font-semibold mb-2">No note selected</h3>
           <p className="text-sm">Select a note from the sidebar or create a new one</p>
         </div>
@@ -92,16 +107,32 @@ export function NotesEditor() {
   const renderEditor = () => {
     switch (editorMode) {
       case 'crepe':
-        return <CrepeEditor note={currentNote} />;
+        return (
+          <CrepeEditor
+            contentType={ContentType.NOTE}
+            contentId={currentNote.id}
+            value={noteContent}
+            onChange={handleContentChange}
+            enableComments={true}
+          />
+        );
       case 'markdown':
         return <MarkdownSplitEditor note={currentNote} />;
       case 'readonly':
         return <ReadOnlyViewer note={currentNote} />;
       default:
-        return <CrepeEditor note={currentNote} />;
+        return (
+          <CrepeEditor
+            contentType={ContentType.NOTE}
+            contentId={currentNote.id}
+            value={noteContent}
+            onChange={handleContentChange}
+            enableComments={true}
+          />
+        );
     }
   };
-  
+
   return (
     <div className="flex flex-col h-full bg-card">
       <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} />

@@ -10,22 +10,20 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
-import { tagPlugins } from '@/features/notes/components/editor/plugins/tag';
-import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from '@/features/notes/components/editor/plugins/mention';
-import { videoPlugins } from '@/features/notes/components/editor/plugins/video';
-import { MentionSearch } from '@/features/notes/components/editor/plugins/mention/MentionSearch';
+import { tagPlugins } from '@/components/editor/plugins/tag';
+import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from '@/components/editor/plugins/mention';
+import { videoPlugins } from '@/components/editor/plugins/video';
+import { MentionSearch } from '@/components/editor/plugins/mention/MentionSearch';
 import { createPortal } from 'react-dom';
 import { openSpotlightSearch } from '@/features/search';
 import { useGlobalShortcuts } from '@/features/settings';
-import { createImageUploadHandler, uploadNoteImage } from '@/features/notes/utils/imageUploader';
-import { createVideoUploadHandler, uploadNoteVideo } from '@/features/notes/utils/videoUploader';
-import { createAudioUploadHandler, uploadNoteAudio } from '@/features/notes/utils/audioUploader';
-import { audioPlugins } from '@/features/notes/components/editor/plugins/audio';
-import { highlightPlugins, highlightMark } from '@/features/notes/components/editor/plugins/highlight';
-import { HighlightPicker } from '@/features/notes/components/editor/plugins/highlight/HighlightPicker';
+import { createImageUploadHandler, uploadImage } from '@/components/editor/utils/imageUploader';
+import { createVideoUploadHandler, uploadVideo } from '@/components/editor/utils/videoUploader';
+import { createAudioUploadHandler, uploadAudio } from '@/components/editor/utils/audioUploader';
+import { audioPlugins } from '@/components/editor/plugins/audio';
+import { highlightPlugins, highlightMark } from '@/components/editor/plugins/highlight';
+import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
-import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { InlineCommentPopover } from '@/features/comments/components/InlineCommentPopover';
 import { CommentThreadPopover } from '@/features/comments/components/CommentThreadPopover';
 import {
@@ -46,16 +44,35 @@ import '@milkdown/crepe/theme/common/style.css';
 import '@/features/comments/styles/comments.css';
 
 // Import our custom overrides that handle theming
-import '../../styles/notes-editor.css';
+import '@/components/editor/styles/editor.css';
 
 interface CrepeEditorProps {
-  note: SerializedNote;
+  /** Content type for uploads and comments */
+  contentType: ContentType;
+  /** Content ID for uploads and comments */
+  contentId: string;
+  /** Markdown content to display */
+  value: string;
+  /** Called when content changes (consumers handle persistence) */
+  onChange?: (markdown: string) => void;
   /** When true, the editor is read-only (no editing, no toolbar, no slash commands) */
   readonly?: boolean;
-  /** Content to display - if not provided, uses draft content or note content */
-  content?: string;
   /** Custom class name for the wrapper */
   className?: string;
+  /** Enable inline comments (default: false) */
+  enableComments?: boolean;
+  /** Enable file uploads - images, video, audio (default: true) */
+  enableUpload?: boolean;
+  /** Placeholder text for empty editor */
+  placeholder?: string;
+  /** Minimum height CSS value */
+  minHeight?: string;
+  /** Maximum height CSS value */
+  maxHeight?: string;
+  /** Compact mode - constrained height, minimal padding (default: false) */
+  compact?: boolean;
+  /** Called with each uploaded file ID (for deferred attachment when contentId is empty) */
+  onFileUploaded?: (fileId: string) => void;
 }
 
 // SVG icon for the comment toolbar button (Phosphor chat-circle, 24x24)
@@ -222,6 +239,8 @@ function createCrepeConfig(
   root: HTMLElement,
   content: string,
   readonly: boolean,
+  compact: boolean,
+  placeholderText: string,
   imageUploadHandler?: (file: File) => Promise<string>,
   videoUploadHandler?: (file: File) => Promise<string>,
   audioUploadHandler?: (file: File) => Promise<string>,
@@ -237,6 +256,7 @@ function createCrepeConfig(
       [Crepe.Feature.LinkTooltip]: true,
       [Crepe.Feature.ImageBlock]: true,
       // Disable editing features in readonly mode
+      // In compact mode, BlockEdit is enabled for slash commands but drag handle is hidden via CSS
       [Crepe.Feature.BlockEdit]: !readonly,
       [Crepe.Feature.Placeholder]: !readonly,
       [Crepe.Feature.Toolbar]: !readonly,
@@ -246,8 +266,8 @@ function createCrepeConfig(
     },
     featureConfigs: {
       [Crepe.Feature.Placeholder]: {
-        text: 'Start writing, use "/" for commands...',
-        mode: 'doc' as const,
+        text: placeholderText,
+        mode: compact ? 'block' as const : 'doc' as const,
       },
       [Crepe.Feature.CodeMirror]: {
         theme: oneDark,
@@ -383,19 +403,36 @@ function createCrepeConfig(
 
 const defaultSettings = { editorMode: 'crepe' as const, showMarkdownPreview: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
 
-export function CrepeEditor({ note, readonly = false, content: propContent, className }: CrepeEditorProps) {
+export function CrepeEditor({
+  contentType,
+  contentId,
+  value: content,
+  onChange,
+  readonly = false,
+  className,
+  enableComments = false,
+  enableUpload = true,
+  placeholder = 'Start writing, use "/" for commands...',
+  minHeight,
+  maxHeight,
+  compact = false,
+  onFileUploaded,
+}: CrepeEditorProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
-  // Comment decorations: fetch + read comments from Redux
-  const { comments: noteComments, refresh: refreshComments } = useComments(ContentType.NOTE, note.id);
+  // Comment decorations: fetch + read comments from Redux (only when comments enabled)
+  const { comments: contentComments, refresh: refreshComments } = useComments(
+    enableComments ? contentType : ContentType.NOTE,
+    enableComments ? contentId : '',
+  );
   const activeCommentId = useAppSelector((state) => state.comments.activeCommentId);
 
   // Build comment anchors from Redux state (only SELECTION anchors)
   const commentAnchors: CommentAnchor[] = useMemo(() => {
-    if (!noteComments.length) return [];
-    return noteComments
+    if (!enableComments || !contentComments.length) return [];
+    return contentComments
       .filter((c) => c.anchorType === CommentAnchorType.SELECTION && c.anchorData)
       .map((c) => ({
         commentId: c.id,
@@ -404,7 +441,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
         text: (c.anchorData?.text as string) ?? '',
         isResolved: c.isResolved,
       }));
-  }, [noteComments]);
+  }, [enableComments, contentComments]);
 
   // Refs to pass current values into the plugin without re-creating the editor
   const commentAnchorsRef = useRef(commentAnchors);
@@ -486,46 +523,36 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     setHighlightPicker({ from, to, rect });
   };
 
-  // Create image upload handler (only for edit mode with valid IDs)
+  // Create image upload handler (edit mode with uploads enabled and org ID)
+  // When contentId is empty, uploads work in deferred mode (file uploaded, attachment created later)
   const imageUploadHandler = useMemo(() => {
-    if (readonly || !organizationId || !note.id) {
+    if (readonly || !enableUpload || !organizationId) {
       return undefined;
     }
-    return createImageUploadHandler(note.id, organizationId);
-  }, [readonly, organizationId, note.id]);
+    return createImageUploadHandler(contentType, contentId, organizationId, onFileUploaded);
+  }, [readonly, enableUpload, organizationId, contentId, contentType, onFileUploaded]);
 
-  // Create video upload handler (only for edit mode with valid IDs)
+  // Create video upload handler
   const videoUploadHandler = useMemo(() => {
-    if (readonly || !organizationId || !note.id) {
+    if (readonly || !enableUpload || !organizationId) {
       return undefined;
     }
-    return createVideoUploadHandler(note.id, organizationId);
-  }, [readonly, organizationId, note.id]);
+    return createVideoUploadHandler(contentType, contentId, organizationId, onFileUploaded);
+  }, [readonly, enableUpload, organizationId, contentId, contentType, onFileUploaded]);
 
-  // Create audio upload handler (only for edit mode with valid IDs)
+  // Create audio upload handler
   const audioUploadHandler = useMemo(() => {
-    if (readonly || !organizationId || !note.id) {
+    if (readonly || !enableUpload || !organizationId) {
       return undefined;
     }
-    return createAudioUploadHandler(note.id, organizationId);
-  }, [readonly, organizationId, note.id]);
-
-  // Autosave hook - handles debounced saving (only active in edit mode)
-  const { scheduleAutosave } = useAutosave(readonly ? null : note.id);
-
-  // Get draft content directly from Redux (works in both edit and readonly modes)
-  const currentDraft = useAppSelector((state) => state.editor?.draftContent[note.id]);
-
-  // Use provided content, or fall back to draft content, or note content
-  // Check for both null and undefined in draft content
-  const content = propContent ?? (currentDraft != null ? currentDraft : note.content);
+    return createAudioUploadHandler(contentType, contentId, organizationId, onFileUploaded);
+  }, [readonly, enableUpload, organizationId, contentId, contentType, onFileUploaded]);
 
   // Handle content changes from the editor
   const handleContentChange = useCallback((markdown: string) => {
     if (readonly) return;
-    // Schedule autosave (debounced)
-    scheduleAutosave(markdown);
-  }, [readonly, scheduleAutosave]);
+    onChange?.(markdown);
+  }, [readonly, onChange]);
 
   // Handle mention selection
   const handleMentionSelect = useCallback((result: SearchResultItem) => {
@@ -602,12 +629,12 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     clearContainer(container);
     
     contentRef.current = content;
-    initializedNoteIdRef.current = note.id;
+    initializedNoteIdRef.current = contentId;
 
     const crepe = new Crepe(createCrepeConfig(
-      container, content, readonly,
+      container, content, readonly, compact, placeholder,
       imageUploadHandler, videoUploadHandler, audioUploadHandler,
-      () => commentCallbackRef.current(),
+      enableComments ? () => commentCallbackRef.current() : undefined,
       () => highlightCallbackRef.current(),
     ));
 
@@ -626,15 +653,17 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       editor.use(mentionPlugins);
       // Register highlight mark plugin (both edit and readonly - highlights are content)
       editor.use(highlightPlugins);
-      // Register comment highlight decorations (edit mode only)
-      if (!readonly) {
+      // Register comment highlight decorations (edit mode with comments enabled only)
+      if (!readonly && enableComments) {
         editor.use(commentDecorationsPlugin);
       }
 
-      // Register upload plugin for paste/drop image handling (only in edit mode)
-      if (!readonly && organizationId && note.id) {
-        const noteIdCapture = note.id;
+      // Register upload plugin for paste/drop image handling (only in edit mode with uploads enabled)
+      if (!readonly && enableUpload && organizationId) {
+        const contentIdCapture = contentId;
+        const contentTypeCapture = contentType;
         const orgIdCapture = organizationId;
+        const onFileUploadedCapture = onFileUploaded;
 
         // Create uploader that handles pasted/dropped images and videos
         const uploader: Uploader = async (files, schema) => {
@@ -647,10 +676,12 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
             // Handle image files
             if (file.type.startsWith('image/')) {
               try {
-                const url = await uploadNoteImage({
+                const url = await uploadImage({
                   file,
                   organizationId: orgIdCapture,
-                  noteId: noteIdCapture,
+                  contentId: contentIdCapture,
+                  contentType: contentTypeCapture,
+                  onFileUploaded: onFileUploadedCapture,
                 });
 
                 const node = schema.nodes.image?.createAndFill({
@@ -668,10 +699,12 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
             // Handle video files
             if (file.type.startsWith('video/')) {
               try {
-                const url = await uploadNoteVideo({
+                const url = await uploadVideo({
                   file,
                   organizationId: orgIdCapture,
-                  noteId: noteIdCapture,
+                  contentId: contentIdCapture,
+                  contentType: contentTypeCapture,
+                  onFileUploaded: onFileUploadedCapture,
                 });
 
                 const videoType = schema.nodes.video_block;
@@ -687,10 +720,12 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
             // Handle audio files
             if (file.type.startsWith('audio/')) {
               try {
-                const url = await uploadNoteAudio({
+                const url = await uploadAudio({
                   file,
                   organizationId: orgIdCapture,
-                  noteId: noteIdCapture,
+                  contentId: contentIdCapture,
+                  contentType: contentTypeCapture,
+                  onFileUploaded: onFileUploadedCapture,
                 });
 
                 const audioType = schema.nodes.audio_block;
@@ -740,15 +775,17 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
           if (view) {
             (window as Window & { __milkdownEditorView?: unknown }).__milkdownEditorView = view;
 
-            // Wire up comment click handler - open thread popover
-            setCommentClickHandler((commentId) => {
-              dispatch(setActiveComment(commentId));
-              // Find the highlight element to position the popover
-              const el = document.querySelector(`[data-comment-id="${commentId}"]`);
-              if (el) {
-                setThreadPopover({ commentId, rect: el.getBoundingClientRect() });
-              }
-            });
+            // Wire up comment click handler - open thread popover (only when comments enabled)
+            if (enableComments) {
+              setCommentClickHandler((commentId) => {
+                dispatch(setActiveComment(commentId));
+                // Find the highlight element to position the popover
+                const el = document.querySelector(`[data-comment-id="${commentId}"]`);
+                if (el) {
+                  setThreadPopover({ commentId, rect: el.getBoundingClientRect() });
+                }
+              });
+            }
           }
         });
       } catch {
@@ -784,10 +821,10 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       clearContainer(container);
       initializedNoteIdRef.current = null;
     };
-    // Only recreate when note ID, readonly mode, or upload handlers change
+    // Only recreate when content ID, readonly mode, or upload handlers change
     // Content changes in edit mode are handled by editor's internal state
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id, readonly, imageUploadHandler, videoUploadHandler, audioUploadHandler]);
+  }, [contentId, readonly, imageUploadHandler, videoUploadHandler, audioUploadHandler]);
 
   // Separate effect to handle content updates in readonly mode only
   useEffect(() => {
@@ -812,7 +849,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     contentRef.current = content;
 
     // Recreate with new content
-    const crepe = new Crepe(createCrepeConfig(container, content, true));
+    const crepe = new Crepe(createCrepeConfig(container, content, true, compact, placeholder));
 
     // Register plugins before create (same as above)
     try {
@@ -852,7 +889,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
     return () => {
       cancelled = true;
     };
-  }, [content, readonly]);
+  }, [content, readonly, compact, placeholder]);
 
   // Get shortcut matching function from settings
   const { matches } = useGlobalShortcuts();
@@ -908,7 +945,7 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
 
   // Update comment decorations when comments or active comment change
   useEffect(() => {
-    if (readonly) return;
+    if (readonly || !enableComments) return;
     const crepe = crepeRef.current;
     if (!crepe) return;
 
@@ -927,10 +964,15 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
 
   return (
     <>
-      <div className={`crepe-editor-wrapper h-full overflow-y-auto ${className || ''}`}>
+      <div className={`crepe-editor-wrapper ${compact ? '' : 'h-full'} overflow-y-auto ${className || ''}`}
+        style={{
+          ...(minHeight ? { minHeight } : {}),
+          ...(maxHeight ? { maxHeight } : {}),
+        }}
+      >
         <div
           ref={editorRef}
-          className="crepe-editor prose max-w-none px-8 py-4"
+          className={`crepe-editor prose max-w-none ${compact ? 'crepe-editor-compact px-3 py-2' : ''}`}
           style={{
             fontSize: `${settings?.fontSize || 16}px`,
             lineHeight: settings?.lineHeight || 1.6,
@@ -963,25 +1005,25 @@ export function CrepeEditor({ note, readonly = false, content: propContent, clas
       )}
 
       {/* Inline comment form - triggered from toolbar comment button */}
-      {!readonly && commentSelection && createPortal(
+      {!readonly && enableComments && commentSelection && createPortal(
         <InlineCommentPopover
           selection={commentSelection}
-          contentType={ContentType.NOTE}
-          contentId={note.id}
+          contentType={contentType}
+          contentId={contentId}
           onClose={() => setCommentSelection(null)}
         />,
         document.body
       )}
 
       {/* Comment thread popover - triggered from clicking highlighted text */}
-      {threadPopover && (() => {
-        const comment = noteComments.find((c) => c.id === threadPopover.commentId);
+      {enableComments && threadPopover && (() => {
+        const comment = contentComments.find((c) => c.id === threadPopover.commentId);
         if (!comment) return null;
         return (
           <CommentThreadPopover
             comment={comment}
-            contentType={ContentType.NOTE}
-            contentId={note.id}
+            contentType={contentType}
+            contentId={contentId}
             anchorRect={threadPopover.rect}
             onClose={() => {
               setThreadPopover(null);

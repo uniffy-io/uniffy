@@ -125,24 +125,31 @@ export function UserMenu() {
 
                 {/* Avatar container - matching nav item icon style */}
                 <span className={cn(
-                    "relative z-10 flex items-center justify-center w-7 h-7 rounded-md",
+                    "relative z-10 flex items-center justify-center w-7 h-7 rounded-md overflow-hidden",
                     "transition-all duration-500 ease-out",
-                    isOpen
+                    !user.avatarUrl && (isOpen
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground group-hover:text-primary"
+                        : "text-muted-foreground group-hover:text-primary")
                 )}>
-                    {/* Avatar with initials */}
-                    <span className={cn(
-                        "flex items-center justify-center w-full h-full rounded-md text-[11px] font-bold tracking-tight",
-                        "transition-all duration-300",
-                        isOpen
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted/80 text-foreground group-hover:bg-primary/20 group-hover:text-primary"
-                    )}>
-                        {user.fullName
-                            ? getInitials(user.fullName)
-                            : (user.username || '??').slice(0, 2).toUpperCase()}
-                    </span>
+                    {user.avatarUrl ? (
+                        <img
+                            src={user.avatarUrl}
+                            alt=""
+                            className="w-full h-full object-cover rounded-md"
+                        />
+                    ) : (
+                        <span className={cn(
+                            "flex items-center justify-center w-full h-full rounded-md text-[11px] font-bold tracking-tight",
+                            "transition-all duration-300",
+                            isOpen
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted/80 text-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                        )}>
+                            {user.fullName
+                                ? getInitials(user.fullName)
+                                : (user.username || '??').slice(0, 2).toUpperCase()}
+                        </span>
+                    )}
                 </span>
             </button>
 
@@ -152,13 +159,20 @@ export function UserMenu() {
                     <div className="px-3 py-2.5 border-b border-border">
                         <div className="flex items-center gap-2.5">
                             <div className={cn(
-                                "flex h-9 w-9 items-center justify-center rounded-lg",
-                                "bg-primary",
-                                "text-primary-foreground text-sm font-semibold"
+                                "flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden",
+                                !user.avatarUrl && "bg-primary text-primary-foreground text-sm font-semibold"
                             )}>
-                                {user.fullName
-                                    ? getInitials(user.fullName)
-                                    : (user.username || '??').slice(0, 2).toUpperCase()}
+                                {user.avatarUrl ? (
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt=""
+                                        className="w-full h-full object-cover rounded-lg"
+                                    />
+                                ) : (
+                                    user.fullName
+                                        ? getInitials(user.fullName)
+                                        : (user.username || '??').slice(0, 2).toUpperCase()
+                                )}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-foreground truncate">

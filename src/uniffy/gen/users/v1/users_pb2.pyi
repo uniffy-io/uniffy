@@ -169,3 +169,15 @@ class RemoveUserFromOrganizationResponse(_message.Message):
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class UploadAvatarRequest(_message.Message):
+    __slots__ = ("image_data", "filename")
+    IMAGE_DATA_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    image_data: bytes
+    filename: str
+    def __init__(self, image_data: _Optional[bytes] = ..., filename: _Optional[str] = ...) -> None: ...
+
+class DeleteAvatarRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

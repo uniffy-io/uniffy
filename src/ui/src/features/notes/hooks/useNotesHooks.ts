@@ -10,7 +10,7 @@ import {
     autosaveNote,
     fetchNote,
 } from '@/features/notes/store/notesSlice';
-import { invalidateNotePreviewCache } from '@/features/notes/components/editor/plugins/mention/useUrnPreview';
+import { invalidateNotePreviewCache } from '@/components/editor/plugins/mention/useUrnPreview';
 import {
     setDraftContent,
     setAutosaveSaving,

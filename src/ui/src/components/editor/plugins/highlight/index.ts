@@ -65,7 +65,6 @@ export const highlightMark = $mark('highlight', () => ({
     },
     0,
   ],
-  inclusive: false,
   parseMarkdown: {
     match: (node) => node.type === 'highlight',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

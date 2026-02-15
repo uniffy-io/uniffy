@@ -38,6 +38,12 @@ class UsersService(Protocol):
     async def delete_user(self, request: users_dot_v1_dot_users__pb2.DeleteUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.DeleteUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def upload_avatar(self, request: users_dot_v1_dot_users__pb2.UploadAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def delete_avatar(self, request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_user_organizations(self, request: users_dot_v1_dot_users__pb2.ListUserOrganizationsRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.ListUserOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -122,6 +128,26 @@ class UsersServiceASGIApplication(ConnectASGIApplication[UsersService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_user,
+                ),
+                "/users.v1.UsersService/UploadAvatar": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UploadAvatar",
+                        service_name="users.v1.UsersService",
+                        input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
+                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.upload_avatar,
+                ),
+                "/users.v1.UsersService/DeleteAvatar": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteAvatar",
+                        service_name="users.v1.UsersService",
+                        input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
+                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_avatar,
                 ),
                 "/users.v1.UsersService/ListUserOrganizations": Endpoint.unary(
                     method=MethodInfo(
@@ -305,6 +331,46 @@ class UsersServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def upload_avatar(
+        self,
+        request: users_dot_v1_dot_users__pb2.UploadAvatarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UploadAvatar",
+                service_name="users.v1.UsersService",
+                input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
+                output=users_dot_v1_dot_users__pb2.UserProfile,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_avatar(
+        self,
+        request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteAvatar",
+                service_name="users.v1.UsersService",
+                input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
+                output=users_dot_v1_dot_users__pb2.UserProfile,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_user_organizations(
         self,
         request: users_dot_v1_dot_users__pb2.ListUserOrganizationsRequest,
@@ -380,6 +446,10 @@ class UsersServiceSync(Protocol):
     def update_user(self, request: users_dot_v1_dot_users__pb2.UpdateUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_user(self, request: users_dot_v1_dot_users__pb2.DeleteUserRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.DeleteUserResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def upload_avatar(self, request: users_dot_v1_dot_users__pb2.UploadAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_avatar(self, request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.UserProfile:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_user_organizations(self, request: users_dot_v1_dot_users__pb2.ListUserOrganizationsRequest, ctx: RequestContext) -> users_dot_v1_dot_users__pb2.ListUserOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -462,6 +532,26 @@ class UsersServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_user,
+                ),
+                "/users.v1.UsersService/UploadAvatar": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UploadAvatar",
+                        service_name="users.v1.UsersService",
+                        input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
+                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.upload_avatar,
+                ),
+                "/users.v1.UsersService/DeleteAvatar": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteAvatar",
+                        service_name="users.v1.UsersService",
+                        input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
+                        output=users_dot_v1_dot_users__pb2.UserProfile,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_avatar,
                 ),
                 "/users.v1.UsersService/ListUserOrganizations": EndpointSync.unary(
                     method=MethodInfo(
@@ -639,6 +729,46 @@ class UsersServiceClientSync(ConnectClientSync):
                 service_name="users.v1.UsersService",
                 input=users_dot_v1_dot_users__pb2.DeleteUserRequest,
                 output=users_dot_v1_dot_users__pb2.DeleteUserResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def upload_avatar(
+        self,
+        request: users_dot_v1_dot_users__pb2.UploadAvatarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UploadAvatar",
+                service_name="users.v1.UsersService",
+                input=users_dot_v1_dot_users__pb2.UploadAvatarRequest,
+                output=users_dot_v1_dot_users__pb2.UserProfile,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_avatar(
+        self,
+        request: users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> users_dot_v1_dot_users__pb2.UserProfile:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteAvatar",
+                service_name="users.v1.UsersService",
+                input=users_dot_v1_dot_users__pb2.DeleteAvatarRequest,
+                output=users_dot_v1_dot_users__pb2.UserProfile,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

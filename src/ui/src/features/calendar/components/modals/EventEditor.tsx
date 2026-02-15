@@ -21,7 +21,8 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEvent } from '@/features/calendar/store/calendarThunks';
 import type { CalendarEvent, Attendee } from '@/features/calendar/types';
 import { cn } from '@/shared/utils/cn';
-import { MarkdownEditor } from '@/components/editor';
+import { ExpandableEditor } from '@/components/editor/ExpandableEditor';
+import { ContentType } from '@/gen/common/v1/common_pb';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import type { MemberInfo } from '@/gen/common/v1/common_pb';
@@ -502,16 +503,14 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                   <span>Description</span>
                   <span className="text-xs text-muted-foreground">(optional)</span>
                 </div>
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <MarkdownEditor
-                    value={formData.description}
-                    onChange={(markdown) => handleChange('description', markdown)}
-                    placeholder="Add notes, use @ to reference content..."
-                    minHeight="120px"
-                    maxHeight="200px"
-                    showBottomToolbar={true}
-                  />
-                </div>
+                <ExpandableEditor
+                  contentType={ContentType.CALENDAR_EVENT}
+                  contentId={event.id}
+                  value={formData.description}
+                  onChange={(markdown) => handleChange('description', markdown)}
+                  placeholder="Add notes, use @ to reference content..."
+                  label="Description"
+                />
               </div>
             </div>
 

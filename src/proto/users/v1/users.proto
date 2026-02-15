@@ -21,6 +21,10 @@ service UsersService {
   rpc UpdateUser(UpdateUserRequest) returns (UserProfile);
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 
+  // Avatar operations
+  rpc UploadAvatar(UploadAvatarRequest) returns (UserProfile);
+  rpc DeleteAvatar(DeleteAvatarRequest) returns (UserProfile);
+
   // User-Organization operations (System Admin)
   rpc ListUserOrganizations(ListUserOrganizationsRequest) returns (ListUserOrganizationsResponse);
   rpc AddUserToOrganization(AddUserToOrganizationRequest) returns (common.v1.MemberInfo);
@@ -127,3 +131,12 @@ message RemoveUserFromOrganizationRequest {
 message RemoveUserFromOrganizationResponse {
   bool success = 1;
 }
+
+// Avatar Messages
+
+message UploadAvatarRequest {
+  bytes image_data = 1;      // Raw image bytes (max 5MB)
+  string filename = 2;       // Original filename (for MIME detection)
+}
+
+message DeleteAvatarRequest {}

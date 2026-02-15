@@ -1,4 +1,5 @@
-import { CrepeEditor } from '@/features/notes/components/editor/CrepeEditor';
+import { CrepeEditor } from '@/components/editor/CrepeEditor';
+import { ContentType } from '@/gen/common/v1/common_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
 interface ReadOnlyViewerProps {
@@ -8,7 +9,13 @@ interface ReadOnlyViewerProps {
 export function ReadOnlyViewer({ note }: ReadOnlyViewerProps) {
   return (
     <div className="h-full bg-card">
-      <CrepeEditor note={note} readonly />
+      <CrepeEditor
+        contentType={ContentType.NOTE}
+        contentId={note.id}
+        value={note.content}
+        readonly
+        enableUpload={false}
+      />
     </div>
   );
 }

@@ -1,8 +1,10 @@
 /**
- * Image Upload Utility for Notes Editor
+ * Video Upload Utility for Editor
  *
- * Handles uploading images from the Crepe editor to the Attachments system.
- * Supports drag-drop, paste, and file picker uploads.
+ * Handles uploading video files from the Crepe editor to the Attachments system.
+ * Supports drag-drop, paste, file picker, and slash command uploads.
+ * Returns /media-stream/ URLs for service worker streaming with seek support.
+ * Works with any content type (notes, calendar events, tasks, etc.).
  */
 
 import { filesApi } from '@/features/files/api/filesApi';
@@ -31,32 +33,36 @@ async function getAttachmentsFolderId(organizationId: string): Promise<string> {
     return folderId;
 }
 
-export interface UploadNoteImageOptions {
-    /** The image file to upload */
+export interface UploadVideoOptions {
+    /** The video file to upload */
     file: File;
     /** Organization ID for the upload */
     organizationId: string;
-    /** Note ID to attach the image to */
-    noteId: string;
+    /** Content ID to attach the video to (empty string = deferred attachment) */
+    contentId: string;
+    /** Content type for the attachment */
+    contentType: ContentType;
     /** Optional progress callback (0-100) */
     onProgress?: (percent: number) => void;
+    /** Called with the uploaded file ID (useful for deferred attachment when contentId is empty) */
+    onFileUploaded?: (fileId: string) => void;
 }
 
 /**
- * Upload an image file and attach it to a note.
+ * Upload a video file and attach it to content.
  *
  * Flow:
  * 1. Get attachments folder ID (cached per org)
  * 2. Initiate upload via FilesService
  * 3. Upload file chunks
  * 4. Complete upload to get file ID
- * 5. Attach file to note via AttachmentsService
- * 6. Return permanent URL for the image
+ * 5. Attach file to content via AttachmentsService
+ * 6. Return media-stream URL for video playback with seeking
  *
- * @returns URL to the uploaded image: /api/files/{orgId}/{fileId}
+ * @returns URL to stream the video: /media-stream/{orgId}/{fileId}
  */
-export async function uploadNoteImage(options: UploadNoteImageOptions): Promise<string> {
-    const { file, organizationId, noteId, onProgress } = options;
+export async function uploadVideo(options: UploadVideoOptions): Promise<string> {
+    const { file, organizationId, contentId, contentType, onProgress, onFileUploaded } = options;
 
     // 1. Get attachments folder ID
     const folderId = await getAttachmentsFolderId(organizationId);
@@ -66,7 +72,7 @@ export async function uploadNoteImage(options: UploadNoteImageOptions): Promise<
     const initiateResponse = await filesApi.initiateUpload({
         organizationId,
         filename: file.name,
-        mimeType: file.type || 'application/octet-stream',
+        mimeType: file.type || 'video/mp4',
         totalSize: BigInt(file.size),
         folderId,
         visibility: VisibilityScope.PRIVATE,
@@ -105,38 +111,46 @@ export async function uploadNoteImage(options: UploadNoteImageOptions): Promise<
     }
     onProgress?.(85);
 
-    // 5. Attach file to note
-    await attachmentsApi.attachFile({
-        organizationId,
-        sourceFileId: fileId,
-        contentType: ContentType.NOTE,
-        contentId: noteId,
-    });
+    // 5. Attach file to content (skip when contentId is empty - deferred mode)
+    if (contentId) {
+        await attachmentsApi.attachFile({
+            organizationId,
+            sourceFileId: fileId,
+            contentType,
+            contentId,
+        });
+    }
+    onFileUploaded?.(fileId);
     onProgress?.(100);
 
-    // 6. Return permanent URL
-    return `/api/files/${organizationId}/${fileId}`;
+    // 6. Return media-stream URL (service worker handles auth + Range seeking)
+    return `/media-stream/${organizationId}/${fileId}`;
 }
 
 /**
- * Create an image upload handler function for the Crepe editor.
+ * Create a video upload handler function for the Crepe editor.
  *
- * This factory function captures the noteId and organizationId so the
- * returned handler can be passed directly to Crepe's ImageBlock config.
+ * This factory function captures the contentId, contentType, and organizationId
+ * so the returned handler can be passed directly to slash command callbacks.
  *
- * @param noteId - The note ID to attach uploaded images to
+ * @param contentType - The content type for the attachment
+ * @param contentId - The content ID to attach uploaded videos to
  * @param organizationId - The organization ID for the upload
  * @returns An async function that takes a File and returns a URL string
  */
-export function createImageUploadHandler(
-    noteId: string,
-    organizationId: string
+export function createVideoUploadHandler(
+    contentType: ContentType,
+    contentId: string,
+    organizationId: string,
+    onFileUploaded?: (fileId: string) => void,
 ): (file: File) => Promise<string> {
     return async (file: File): Promise<string> => {
-        return uploadNoteImage({
+        return uploadVideo({
             file,
             organizationId,
-            noteId,
+            contentId,
+            contentType,
+            onFileUploaded,
         });
     };
 }

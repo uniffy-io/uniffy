@@ -10,7 +10,9 @@ import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { MarkdownEditor } from "@/components/editor";
+import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
+import { attachmentsApi } from "@/features/attachments";
+import { ContentType } from "@/gen/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
 import { selectCurrentProject } from "../../store/projectsSlice";
 import { closeCreateTaskModal } from "../../store/projectsUiSlice";
@@ -33,11 +35,16 @@ export function CreateTaskModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState("");
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
-  const [editorKey, setEditorKey] = useState(0);
-  const [editorReady, setEditorReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const assigneeDropdownRef = useRef<HTMLDivElement>(null);
   const assigneeSearchRef = useRef<HTMLInputElement>(null);
+  const pendingFileIdsRef = useRef<string[]>([]);
+
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+
+  const handleFileUploaded = useCallback((fileId: string) => {
+    pendingFileIdsRef.current.push(fileId);
+  }, []);
 
   // Use org members from admin store
   const adminMembers = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
@@ -95,22 +102,13 @@ export function CreateTaskModal() {
     setAssigneeIds([]);
     setStartDate("");
     setDueDate("");
+    pendingFileIdsRef.current = [];
     dispatch(closeCreateTaskModal());
   }, [dispatch]);
 
   // Focus input on mount
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Deferred editor mount (Milkdown needs the DOM ready)
-  useEffect(() => {
-    setEditorReady(false);
-    const timer = setTimeout(() => {
-      setEditorKey((prev) => prev + 1);
-      setEditorReady(true);
-    }, 50);
     return () => clearTimeout(timer);
   }, []);
 
@@ -152,7 +150,7 @@ export function CreateTaskModal() {
 
     setIsSubmitting(true);
     try {
-      await dispatch(
+      const result = await dispatch(
         createTask({
           projectId: project.id,
           title: title.trim(),
@@ -164,6 +162,24 @@ export function CreateTaskModal() {
           dueDate: dueDate || null,
         })
       ).unwrap();
+
+      // Attach any files that were uploaded during creation (deferred mode)
+      if (pendingFileIdsRef.current.length > 0 && organizationId && result.id) {
+        await Promise.all(
+          pendingFileIdsRef.current.map((fileId) =>
+            attachmentsApi.attachFile({
+              organizationId,
+              sourceFileId: fileId,
+              contentType: ContentType.TASK,
+              contentId: result.id,
+            }).catch((err) => {
+              console.error('[CreateTaskModal] Failed to attach file:', err);
+            })
+          )
+        );
+        pendingFileIdsRef.current = [];
+      }
+
       handleClose();
     } finally {
       setIsSubmitting(false);
@@ -221,22 +237,17 @@ export function CreateTaskModal() {
                   (optional)
                 </span>
               </label>
-              {editorReady ? (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <MarkdownEditor
-                    key={editorKey}
-                    value={description}
-                    onChange={setDescription}
-                    placeholder="Add more details... (type @ to mention)"
-                    minHeight="100px"
-                    maxHeight="200px"
-                    showBottomToolbar={true}
-                    readonly={isSubmitting}
-                  />
-                </div>
-              ) : (
-                <div className="min-h-25 border border-border rounded-lg bg-muted/30 animate-pulse" />
-              )}
+              <ExpandableEditor
+                contentType={ContentType.TASK}
+                contentId=""
+                value={description}
+                onChange={setDescription}
+                placeholder="Add more details... (type @ to mention)"
+                label="Description"
+                readonly={isSubmitting}
+                enableUpload
+                onFileUploaded={handleFileUploaded}
+              />
             </div>
 
             {/* Status & Priority row */}
