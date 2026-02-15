@@ -12,6 +12,7 @@
  */
 
 import { getAccessToken } from '@/config/api';
+import { buildMediaStreamUrl } from '@/shared/utils/fileUrls';
 
 // BroadcastChannel for real-time token sync with Service Worker
 const TOKEN_CHANNEL_NAME = 'uniffy-auth-token';
@@ -179,7 +180,7 @@ export function getMediaStreamUrl(
     fileId: string,
     options?: { full?: boolean }
 ): string {
-    const base = `/media-stream/${organizationId}/${fileId}`;
+    const base = buildMediaStreamUrl(organizationId, fileId);
     if (options?.full) {
         return `${base}?full=true`;
     }

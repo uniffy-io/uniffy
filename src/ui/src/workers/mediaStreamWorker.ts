@@ -24,17 +24,18 @@ import { FilesService } from '@/gen/files/v1/files_connect';
 // Service Worker type declarations
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
-// Pattern to match media stream URLs: /media-stream/{orgId}/{fileId}
-const MEDIA_STREAM_PATTERN = /^\/media-stream\/([^/]+)\/([^/]+)$/;
+import {
+    MEDIA_STREAM_URL_PATTERN,
+    FILE_URL_PATTERN,
+    THUMBNAIL_URL_PATTERN,
+    AVATAR_URL_PATTERN,
+} from '@/shared/utils/fileUrls';
 
-// Pattern to match thumbnail URLs: /api/thumbnails/{orgId}/{fileId}
-const THUMBNAIL_PATTERN = /^\/api\/thumbnails\/([^/]+)\/([^/]+)$/;
-
-// Pattern to match file URLs: /api/files/{orgId}/{fileId}
-const FILES_PATTERN = /^\/api\/files\/([^/]+)\/([^/]+)$/;
-
-// Pattern to match avatar URLs: /api/avatars/{userId}/{size}
-const AVATARS_PATTERN = /^\/api\/avatars\/([^/]+)\/([^/]+)$/;
+// Alias patterns for local readability
+const MEDIA_STREAM_PATTERN = MEDIA_STREAM_URL_PATTERN;
+const THUMBNAIL_PATTERN = THUMBNAIL_URL_PATTERN;
+const FILES_PATTERN = FILE_URL_PATTERN;
+const AVATARS_PATTERN = AVATAR_URL_PATTERN;
 
 // BroadcastChannel for real-time token sync
 const TOKEN_CHANNEL_NAME = 'uniffy-auth-token';

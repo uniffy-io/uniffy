@@ -9,6 +9,7 @@
 
 import { filesApi } from '@/features/files/api/filesApi';
 import { attachmentsApi } from '@/features/attachments';
+import { buildMediaStreamUrl } from '@/shared/utils/fileUrls';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
@@ -124,7 +125,7 @@ export async function uploadAudio(options: UploadAudioOptions): Promise<string> 
     onProgress?.(100);
 
     // 6. Return media-stream URL (service worker handles auth)
-    return `/media-stream/${organizationId}/${fileId}`;
+    return buildMediaStreamUrl(organizationId, fileId);
 }
 
 /**

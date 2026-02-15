@@ -15,6 +15,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
+import { buildFileUrl, buildMediaStreamUrl } from '@/shared/utils/fileUrls';
 import { MentionPreview } from '@/components/editor/plugins/mention/MentionPreview';
 import { useUrnPreview } from '@/components/editor/plugins/mention/useUrnPreview';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
@@ -151,13 +152,13 @@ export function MentionChip({ urn, label, selected = false, onClick, onReplaceWi
 
     if (mimeType.startsWith('image/')) {
       mediaType = 'image';
-      url = `/api/files/${organizationId}/${parsed.id}`;
+      url = buildFileUrl(organizationId, parsed.id);
     } else if (mimeType.startsWith('video/')) {
       mediaType = 'video';
-      url = `/media-stream/${organizationId}/${parsed.id}`;
+      url = buildMediaStreamUrl(organizationId, parsed.id);
     } else if (mimeType.startsWith('audio/')) {
       mediaType = 'audio';
-      url = `/media-stream/${organizationId}/${parsed.id}`;
+      url = buildMediaStreamUrl(organizationId, parsed.id);
     } else {
       return;
     }

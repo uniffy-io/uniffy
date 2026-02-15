@@ -9,6 +9,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { getAccessToken } from '@/config/api';
+import { buildThumbnailUrl } from '@/shared/utils/fileUrls';
 import { updateWorkerAuthToken } from '@/workers/registerMediaWorker';
 
 /**
@@ -18,7 +19,7 @@ import { updateWorkerAuthToken } from '@/workers/registerMediaWorker';
  * The backend serves thumbnails with Cache-Control headers for browser caching.
  */
 export function getThumbnailUrl(organizationId: string, fileId: string): string {
-    return `/api/thumbnails/${organizationId}/${fileId}`;
+    return buildThumbnailUrl(organizationId, fileId);
 }
 
 /**

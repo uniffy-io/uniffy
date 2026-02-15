@@ -8,6 +8,7 @@
 
 import { filesApi } from '@/features/files/api/filesApi';
 import { attachmentsApi } from '@/features/attachments';
+import { buildFileUrl } from '@/shared/utils/fileUrls';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
@@ -123,7 +124,7 @@ export async function uploadImage(options: UploadImageOptions): Promise<string> 
     onProgress?.(100);
 
     // 6. Return permanent URL
-    return `/api/files/${organizationId}/${fileId}`;
+    return buildFileUrl(organizationId, fileId);
 }
 
 /**

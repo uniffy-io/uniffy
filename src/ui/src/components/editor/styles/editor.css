@@ -349,6 +349,29 @@
   max-width: 100%;
 }
 
+/* Clickable images in readonly mode - open file viewer */
+.crepe-editor .ProseMirror[contenteditable="false"] img[src*="/api/files/"] {
+  cursor: zoom-in;
+  transition: opacity 150ms ease;
+}
+
+.crepe-editor .ProseMirror[contenteditable="false"] img[src*="/api/files/"]:hover {
+  opacity: 0.85;
+}
+
+/* Re-enable pointer events on media inside expandable editor previews
+ * so images open the file viewer and audio/video can be played,
+ * even when the wrapper has pointer-events: none */
+.expandable-editor-preview img[src*="/api/files/"] {
+  pointer-events: auto;
+  cursor: zoom-in;
+}
+
+.expandable-editor-preview .audio-block-container,
+.expandable-editor-preview .video-block-container {
+  pointer-events: auto;
+}
+
 /* Math/LaTeX blocks */
 .crepe-editor .milkdown .math-display {
   background: hsl(var(--muted));

@@ -24,6 +24,7 @@ import {
 import { ViewerToolbar } from '@/features/files/components/viewer/ViewerToolbar';
 import { ViewerNavigation } from '@/features/files/components/viewer/ViewerNavigation';
 import { ViewerContent } from '@/features/files/components/viewer/ViewerContent';
+import { buildMediaStreamUrl } from '@/shared/utils/fileUrls';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 
 // Import viewer-specific styles
@@ -82,7 +83,7 @@ export function FileViewerModal() {
         if (file) {
             // Trigger download via hidden anchor
             const link = document.createElement('a');
-            link.href = `/media-stream/${file.organizationId}/${file.id}`;
+            link.href = buildMediaStreamUrl(file.organizationId, file.id);
             link.download = file.filename;
             document.body.appendChild(link);
             link.click();

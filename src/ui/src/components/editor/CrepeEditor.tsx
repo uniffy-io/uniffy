@@ -10,6 +10,8 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { openViewerWithFetch } from '@/features/files';
+import { parseFileUrl } from '@/shared/utils/fileUrls';
 import { tagPlugins } from '@/components/editor/plugins/tag';
 import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from '@/components/editor/plugins/mention';
 import { videoPlugins } from '@/components/editor/plugins/video';
@@ -911,6 +913,32 @@ export function CrepeEditor({
     container.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => container.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [matches]);
+
+  // In readonly mode, clicking an image opens the file viewer modal
+  // Uses capture phase to intercept before Milkdown's ImageBlock handles the event
+  useEffect(() => {
+    if (!readonly) return;
+    const container = editorRef.current;
+    if (!container) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Walk up from click target to find an <img> element
+      const img = target.closest('img') || (target.tagName === 'IMG' ? target : null);
+      if (!img) return;
+
+      const src = (img as HTMLImageElement).src;
+      const parsed = parseFileUrl(src);
+      if (!parsed) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      dispatch(openViewerWithFetch({ fileId: parsed.fileId }));
+    };
+
+    container.addEventListener('click', handleClick, { capture: true });
+    return () => container.removeEventListener('click', handleClick, { capture: true });
+  }, [readonly, dispatch]);
 
   // Handle highlight color selection from the picker
   const handleHighlightColor = useCallback((color: string | null) => {
