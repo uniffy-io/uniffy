@@ -8,16 +8,19 @@ checking and search indexing.
 from datetime import UTC, datetime
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.shared import ContentType, VisibilityScope
+from uniffy.core.search.indexer import build_content_urn
 from uniffy.domains.projects import queries
 
 
@@ -650,6 +653,8 @@ class TaskOperations(BaseContentOperations[Task]):
         task = await self.get_by_id(user_id, organization_id, task_id)
         await self._require_edit(user_id, organization_id, task)
 
+        title_changed = "title" in kwargs and kwargs["title"] != task.title
+
         # Fields that can be explicitly set to None (cleared)
         nullable_fields = {"start_date", "due_date", "description", "parent_id", "recurrence_rule"}
 
@@ -696,6 +701,24 @@ class TaskOperations(BaseContentOperations[Task]):
         project_ops = ProjectOperations(self.session)
         group_ids = await project_ops._get_content_group_ids(task.project_id)
         await self._index_for_search(task, group_ids)
+
+        # Propagate title change to mention labels in referencing content
+        if title_changed:
+            try:
+                task_urn = build_content_urn(ContentType.TASK, task.id)
+                await propagate_rename(
+                    session=self.session,
+                    organization_id=organization_id,
+                    target_urn=task_urn,
+                    new_label=task.title,
+                )
+                await self.session.commit()
+            except Exception:
+                logger.warning(
+                    "Failed to propagate task rename to mentions",
+                    task_id=str(task_id),
+                    exc_info=True,
+                )
 
         return task
 

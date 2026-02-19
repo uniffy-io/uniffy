@@ -3,30 +3,16 @@
  * Matches the Files sidebar pattern with hover-to-expand animation
  */
 
-import { CalendarBlank, LockSimple, Buildings } from '@phosphor-icons/react';
-import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setEventScope } from '@/features/calendar/store/calendarUiSlice';
 import { cn } from '@/shared/utils/cn';
-
-type EventScope = 'all' | 'personal' | 'organization';
-
-interface ScopeFilterConfig {
-  id: EventScope;
-  name: string;
-  icon: Icon;
-}
-
-const SCOPE_FILTERS: ScopeFilterConfig[] = [
-  { id: 'all', name: 'All', icon: CalendarBlank },
-  { id: 'personal', name: 'Personal', icon: LockSimple },
-  { id: 'organization', name: 'Org', icon: Buildings },
-];
+import { SCOPE_FILTERS } from '@/features/calendar/components/sidebar/eventScopeConstants';
+import type { ScopeFilterConfig, EventScope } from '@/features/calendar/components/sidebar/eventScopeConstants';
 
 /**
  * Compact nav item that expands on hover to show label.
  */
-function CompactScopeItem({
+export function CompactScopeItem({
   filter,
   isActive,
   onClick,

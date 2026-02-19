@@ -554,8 +554,9 @@ function BrandContent() {
         className="opacity-0"
         style={{ animation: 'auth-fade-in 0.8s ease-out 0.6s forwards' }}
       >
-        <p className="text-white/50 text-sm font-medium tracking-widest uppercase">
-          Work Infrastructure, democratized.
+        <p className="text-white/50 text-sm font-medium tracking-widest uppercase leading-relaxed">
+          Work Infrastructure,<br />
+          finally unified.
         </p>
       </div>
     </div>

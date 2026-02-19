@@ -10,18 +10,21 @@
  * - Tags
  */
 
-import { Plus } from '@phosphor-icons/react';
-import { useAppDispatch } from '@/app/hooks';
+import { Plus, CalendarBlank } from '@phosphor-icons/react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { openEventModal } from '@/features/calendar/store';
-import { EventScopeFilter } from '@/features/calendar/components/sidebar/EventScopeFilter';
+import { setEventScope } from '@/features/calendar/store/calendarUiSlice';
 import { QuickAccess } from '@/features/calendar/components/sidebar/QuickAccess';
 import { MiniCalendar } from '@/features/calendar/components/sidebar/MiniCalendar';
 import { CategoryList } from '@/features/calendar/components/sidebar/CategoryList';
 import { TagCloud } from '@/features/calendar/components/sidebar/TagCloud';
 import { TemplateList } from '@/features/calendar/components/sidebar/TemplateList';
+import { CompactScopeItem } from '@/features/calendar/components/sidebar/EventScopeFilter';
+import { SCOPE_FILTERS } from '@/features/calendar/components/sidebar/eventScopeConstants';
 
 export function LeftSidebar() {
   const dispatch = useAppDispatch();
+  const eventScope = useAppSelector((state) => state.calendarUi.eventScope);
 
   const handleNewEvent = () => {
     dispatch(openEventModal({ mode: 'create' }));
@@ -29,20 +32,32 @@ export function LeftSidebar() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with New Event Button */}
-      <div className="px-3 pt-3 pb-2">
+      {/* Header */}
+      <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         <button
           type="button"
           onClick={handleNewEvent}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors"
+          className="group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5"
+          title="New Event"
         >
-          <Plus size={16} weight="bold" />
-          <span>New Event</span>
+          <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+          <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out text-muted-foreground group-hover:text-primary">
+            <CalendarBlank size={18} weight="duotone" />
+            <Plus size={10} weight="bold" className="absolute -top-0.5 -right-0.5" />
+          </span>
+          <span className="relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out group-hover:ml-1.5 group-hover:max-w-24 text-muted-foreground group-hover:text-foreground">
+            Event
+          </span>
         </button>
+        {SCOPE_FILTERS.map((filter) => (
+          <CompactScopeItem
+            key={filter.id}
+            filter={filter}
+            isActive={eventScope === filter.id}
+            onClick={() => dispatch(setEventScope(filter.id))}
+          />
+        ))}
       </div>
-
-      {/* Event Scope Filter - Compact icons with hover expand */}
-      <EventScopeFilter />
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-6 pt-4">

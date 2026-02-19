@@ -11,6 +11,8 @@ from uniffy.core.content.references import (
     extract_inline_file_ids,
     extract_urns_from_content,
     parse_urn,
+    replace_mention_label,
+    replace_mention_label_in_canvas,
 )
 from uniffy.core.types import ContentType
 
@@ -406,3 +408,192 @@ class TestExtractAllOutgoingReferences:
             f"urn:uniffy:content:FILE:{f3}",
         ])
         assert result == expected
+
+
+class TestReplaceMentionLabel:
+    """Tests for replace_mention_label."""
+
+    URN_NOTE = "urn:uniffy:content:NOTE:123e4567-e89b-12d3-a456-426614174000"
+    URN_FILE = "urn:uniffy:content:FILE:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+
+    def test_basic_replacement(self):
+        """Replaces the label in a standard mention."""
+        content = f"[[[Old Title|{self.URN_NOTE}]]]"
+        result = replace_mention_label(content, self.URN_NOTE, "New Title")
+        assert result == f"[[[New Title|{self.URN_NOTE}]]]"
+
+    def test_multiple_mentions_same_urn(self):
+        """Replaces label in all mentions of the same URN."""
+        content = (
+            f"See [[[Draft|{self.URN_NOTE}]]] "
+            f"and also [[[Draft|{self.URN_NOTE}]]]"
+        )
+        result = replace_mention_label(content, self.URN_NOTE, "Final")
+        assert result == (
+            f"See [[[Final|{self.URN_NOTE}]]] "
+            f"and also [[[Final|{self.URN_NOTE}]]]"
+        )
+
+    def test_only_target_urn_replaced(self):
+        """Mentions of other URNs are left untouched."""
+        content = (
+            f"[[[Note A|{self.URN_NOTE}]]] "
+            f"and [[[Report.pdf|{self.URN_FILE}]]]"
+        )
+        result = replace_mention_label(content, self.URN_NOTE, "Note B")
+        assert result == (
+            f"[[[Note B|{self.URN_NOTE}]]] "
+            f"and [[[Report.pdf|{self.URN_FILE}]]]"
+        )
+
+    def test_escaped_brackets(self):
+        """Replaces label in escaped bracket mentions."""
+        content = f"\\[\\[\\[Old|{self.URN_NOTE}\\]\\]\\]"
+        result = replace_mention_label(content, self.URN_NOTE, "New")
+        assert "New" in result
+        assert self.URN_NOTE in result
+
+    def test_label_with_special_characters(self):
+        """Labels with colons, exclamation marks, etc. work correctly."""
+        content = f"[[[Doc: Important!|{self.URN_NOTE}]]]"
+        result = replace_mention_label(content, self.URN_NOTE, "Doc: Updated!")
+        assert result == f"[[[Doc: Updated!|{self.URN_NOTE}]]]"
+
+    def test_empty_content_returns_empty(self):
+        """Empty content is returned as-is."""
+        assert replace_mention_label("", self.URN_NOTE, "New") == ""
+
+    def test_no_mentions_returns_unchanged(self):
+        """Content without mentions is returned unchanged."""
+        content = "Just plain text without any mentions."
+        assert replace_mention_label(content, self.URN_NOTE, "New") == content
+
+    def test_no_matching_urn_returns_unchanged(self):
+        """Content with mentions of other URNs is returned unchanged."""
+        content = f"[[[Report|{self.URN_FILE}]]]"
+        result = replace_mention_label(content, self.URN_NOTE, "New")
+        assert result == content
+
+    def test_empty_urn_returns_unchanged(self):
+        """Empty target_urn returns content unchanged."""
+        content = f"[[[Note|{self.URN_NOTE}]]]"
+        assert replace_mention_label(content, "", "New") == content
+
+    def test_surrounding_text_preserved(self):
+        """Text before and after the mention is preserved."""
+        content = f"Check out [[[My Note|{self.URN_NOTE}]]] for details."
+        result = replace_mention_label(content, self.URN_NOTE, "Updated Note")
+        assert result == f"Check out [[[Updated Note|{self.URN_NOTE}]]] for details."
+
+    def test_multiline_content(self):
+        """Works correctly with mentions spread across multiple lines."""
+        content = (
+            f"First paragraph with [[[Note A|{self.URN_NOTE}]]].\n\n"
+            f"Second paragraph with [[[Report|{self.URN_FILE}]]].\n\n"
+            f"Third paragraph mentioning [[[Note A again|{self.URN_NOTE}]]]."
+        )
+        result = replace_mention_label(content, self.URN_NOTE, "Renamed Note")
+        assert f"[[[Renamed Note|{self.URN_NOTE}]]]" in result
+        assert f"[[[Report|{self.URN_FILE}]]]" in result
+        assert result.count(f"[[[Renamed Note|{self.URN_NOTE}]]]") == 2
+
+
+class TestReplaceMentionLabelInCanvas:
+    """Tests for replace_mention_label_in_canvas."""
+
+    URN_NOTE = "urn:uniffy:content:NOTE:123e4567-e89b-12d3-a456-426614174000"
+    URN_FILE = "urn:uniffy:content:FILE:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+
+    def _make_canvas(self, nodes: list[dict]) -> dict:
+        """Build a minimal canvas data structure."""
+        return {"nodes": [{"data": n} for n in nodes]}
+
+    def test_replaces_in_text_nodes(self):
+        """Replaces mention label inside text-type canvas nodes."""
+        canvas = self._make_canvas([
+            {"type": "text", "content": f"See [[[Old|{self.URN_NOTE}]]]"},
+        ])
+        result, changed = replace_mention_label_in_canvas(
+            canvas, self.URN_NOTE, "New"
+        )
+        assert changed is True
+        assert result["nodes"][0]["data"]["content"] == (
+            f"See [[[New|{self.URN_NOTE}]]]"
+        )
+
+    def test_leaves_non_text_nodes_unchanged(self):
+        """Non-text nodes (media, note, shape) are not modified."""
+        canvas = self._make_canvas([
+            {"type": "media", "fileId": "some-id"},
+            {"type": "note", "urn": self.URN_NOTE},
+            {"type": "shape", "label": f"[[[Old|{self.URN_NOTE}]]]"},
+        ])
+        result, changed = replace_mention_label_in_canvas(
+            canvas, self.URN_NOTE, "New"
+        )
+        assert changed is False
+        assert result is canvas
+
+    def test_multiple_text_nodes(self):
+        """Replaces mentions across multiple text nodes."""
+        canvas = self._make_canvas([
+            {"type": "text", "content": f"First [[[Old|{self.URN_NOTE}]]]"},
+            {"type": "text", "content": "No mentions here"},
+            {"type": "text", "content": f"Third [[[Old|{self.URN_NOTE}]]]"},
+        ])
+        result, changed = replace_mention_label_in_canvas(
+            canvas, self.URN_NOTE, "New"
+        )
+        assert changed is True
+        assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][0]["data"]["content"]
+        assert result["nodes"][1]["data"]["content"] == "No mentions here"
+        assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][2]["data"]["content"]
+
+    def test_no_matching_urn_returns_unchanged(self):
+        """Returns unchanged canvas when no mentions match."""
+        canvas = self._make_canvas([
+            {"type": "text", "content": f"[[[Report|{self.URN_FILE}]]]"},
+        ])
+        result, changed = replace_mention_label_in_canvas(
+            canvas, self.URN_NOTE, "New"
+        )
+        assert changed is False
+        assert result is canvas
+
+    def test_empty_canvas_returns_unchanged(self):
+        """Empty canvas data is returned as-is."""
+        result, changed = replace_mention_label_in_canvas({}, self.URN_NOTE, "New")
+        assert changed is False
+        assert result == {}
+
+    def test_none_canvas_returns_unchanged(self):
+        """None canvas data is returned as-is."""
+        result, changed = replace_mention_label_in_canvas(None, self.URN_NOTE, "New")
+        assert changed is False
+        assert result is None
+
+    def test_does_not_mutate_original(self):
+        """Original canvas dict is not modified (deep copy on change)."""
+        canvas = self._make_canvas([
+            {"type": "text", "content": f"[[[Old|{self.URN_NOTE}]]]"},
+        ])
+        original_content = canvas["nodes"][0]["data"]["content"]
+        result, changed = replace_mention_label_in_canvas(
+            canvas, self.URN_NOTE, "New"
+        )
+        assert changed is True
+        assert canvas["nodes"][0]["data"]["content"] == original_content
+        assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][0]["data"]["content"]
+
+    def test_text_node_with_empty_content_skipped(self):
+        """Text nodes with empty content are skipped without error."""
+        canvas = self._make_canvas([
+            {"type": "text", "content": ""},
+            {"type": "text", "content": f"[[[Old|{self.URN_NOTE}]]]"},
+        ])
+        result, changed = replace_mention_label_in_canvas(
+            canvas, self.URN_NOTE, "New"
+        )
+        assert changed is True
+        assert result["nodes"][0]["data"]["content"] == ""
+        assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][1]["data"]["content"]

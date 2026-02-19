@@ -48,6 +48,7 @@ NODE_TYPE_TO_PROTO = {
     NodeType.NOTE: ProtoNodeType.NODE_TYPE_NOTE,
     NodeType.FOLDER: ProtoNodeType.NODE_TYPE_FOLDER,
     NodeType.TEMPLATE: ProtoNodeType.NODE_TYPE_TEMPLATE,
+    NodeType.CANVAS: ProtoNodeType.NODE_TYPE_CANVAS,
 }
 
 # Node type mapping: proto -> model
@@ -56,7 +57,15 @@ NODE_TYPE_FROM_PROTO = {
     ProtoNodeType.NODE_TYPE_NOTE: NodeType.NOTE,
     ProtoNodeType.NODE_TYPE_FOLDER: NodeType.FOLDER,
     ProtoNodeType.NODE_TYPE_TEMPLATE: NodeType.TEMPLATE,
+    ProtoNodeType.NODE_TYPE_CANVAS: NodeType.CANVAS,
 }
+
+
+def _get_proto_content(note: Note) -> str:
+    """Get proto content field value, serializing canvas_content if needed."""
+    if note.node_type == NodeType.CANVAS and note.canvas_content:
+        return json.dumps(note.canvas_content)
+    return note.content
 
 
 def note_to_proto(
@@ -121,7 +130,7 @@ def note_to_proto(
         visibility=proto_visibility,
         node_type=proto_node_type,
         title=note.title,
-        content="" if exclude_content else note.content,
+        content="" if exclude_content else _get_proto_content(note),
         slug=note.slug,
         is_deleted=note.is_deleted,
         version=note.version,

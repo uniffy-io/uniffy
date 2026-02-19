@@ -64,7 +64,7 @@ const noteToPlain = (note: Note) => ({
 export interface TreeNode {
     id: string;
     title: string;
-    type: 'note' | 'folder';
+    type: 'note' | 'folder' | 'canvas';
     icon?: NoteIcon;
     children?: TreeNode[];
     noteId?: string;

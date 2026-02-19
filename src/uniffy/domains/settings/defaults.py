@@ -62,6 +62,17 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     # Projects undo/redo
     "projects.undo": "Ctrl+Z",
     "projects.redo": "Ctrl+Shift+Z",
+
+    # Canvas actions
+    "canvas.addText": "T",
+    "canvas.addShape": "S",
+    "canvas.deleteSelected": "Delete",
+    "canvas.selectAll": "Ctrl+A",
+    "canvas.fitView": "Ctrl+Shift+1",
+    "canvas.zoomIn": "Ctrl+=",
+    "canvas.zoomOut": "Ctrl+-",
+    "canvas.undo": "Ctrl+Z",
+    "canvas.redo": "Ctrl+Shift+Z",
 }
 
 

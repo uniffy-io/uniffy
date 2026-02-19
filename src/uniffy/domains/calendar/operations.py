@@ -3,11 +3,13 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
@@ -422,6 +424,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_edit(user_id, organization_id, event)
 
+        title_changed = title is not None and title != event.title
+
         # Snapshot old mentions before description update for diff
         old_mentioned: set[UUID] = set()
         if description is not None:
@@ -532,6 +536,24 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         group_ids = await self._get_content_group_ids(event.id)
         await self._index_for_search(model=event, group_ids=group_ids)
         await self.session.commit()
+
+        # Propagate title change to mention labels in referencing content
+        if title_changed:
+            try:
+                event_urn = build_content_urn(ContentType.CALENDAR_EVENT, event.id)
+                await propagate_rename(
+                    session=self.session,
+                    organization_id=organization_id,
+                    target_urn=event_urn,
+                    new_label=event.title,
+                )
+                await self.session.commit()
+            except Exception:
+                logger.warning(
+                    "Failed to propagate calendar event rename to mentions",
+                    event_id=str(event_id),
+                    exc_info=True,
+                )
 
         # Notify newly invited attendees
         if newly_invited_ids:

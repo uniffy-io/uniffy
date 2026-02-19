@@ -133,6 +133,13 @@ export enum NodeType {
    * @generated from enum value: NODE_TYPE_TEMPLATE = 3;
    */
   TEMPLATE = 3,
+
+  /**
+   * Canvas note with infinite 2D surface
+   *
+   * @generated from enum value: NODE_TYPE_CANVAS = 4;
+   */
+  CANVAS = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(NodeType)
 proto3.util.setEnumType(NodeType, "notes.v1.NodeType", [
@@ -140,6 +147,7 @@ proto3.util.setEnumType(NodeType, "notes.v1.NodeType", [
   { no: 1, name: "NODE_TYPE_NOTE" },
   { no: 2, name: "NODE_TYPE_FOLDER" },
   { no: 3, name: "NODE_TYPE_TEMPLATE" },
+  { no: 4, name: "NODE_TYPE_CANVAS" },
 ]);
 
 /**

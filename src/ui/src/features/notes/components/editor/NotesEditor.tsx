@@ -1,19 +1,25 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
 import { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
+import { CanvasEditor } from '@/features/notes/canvas/CanvasEditor';
+import { parseCanvasContent, serializeCanvas } from '@/features/notes/canvas/types';
+import type { CanvasState } from '@/features/notes/canvas/types';
 import { toggleSidebar } from '@/features/notes/store/editorSlice';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
 import { CaretDoubleRight } from '@phosphor-icons/react';
 import { useMyPermission } from '@/features/sharing';
 import { ContentType } from '@/gen/common/v1/common_pb';
+import { NodeType } from '@/gen/notes/v1/notes_pb';
 
 export function NotesEditor() {
   const dispatch = useAppDispatch();
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
+
+  const isZenMode = useAppSelector((state) => state.zenMode.isActive);
 
   const currentNoteId = notesState?.currentNoteId;
   const notes = notesState?.notes || {};
@@ -49,6 +55,20 @@ export function NotesEditor() {
   const handleContentChange = useCallback((markdown: string) => {
     scheduleAutosave(markdown);
   }, [scheduleAutosave]);
+
+  const handleCanvasChange = useCallback(
+    (state: CanvasState) => {
+      scheduleAutosave(serializeCanvas(state));
+    },
+    [scheduleAutosave]
+  );
+
+  const isCanvas = currentNote?.nodeType === NodeType.CANVAS;
+
+  const canvasState = useMemo(
+    () => (isCanvas ? parseCanvasContent(noteContent) : null),
+    [isCanvas, noteContent]
+  );
 
   // Show loading state when:
   // 1. We're loading the current note AND
@@ -104,6 +124,24 @@ export function NotesEditor() {
     );
   }
 
+  // Canvas notes use a dedicated editor
+  if (isCanvas && canvasState) {
+    return (
+      <div className="flex flex-col h-full bg-card">
+        {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} isCanvas />}
+        <div className="flex-1 overflow-hidden">
+          <CanvasEditor
+            key={currentNote.id}
+            canvasState={canvasState}
+            onChange={handleCanvasChange}
+            readonly={!canEdit}
+            contentId={currentNote.id}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const renderEditor = () => {
     switch (editorMode) {
       case 'crepe':
@@ -135,7 +173,7 @@ export function NotesEditor() {
 
   return (
     <div className="flex flex-col h-full bg-card">
-      <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} />
+      {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} />}
       <div className="flex-1 overflow-hidden">
         {renderEditor()}
       </div>

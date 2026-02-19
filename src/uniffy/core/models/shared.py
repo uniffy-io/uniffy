@@ -73,6 +73,7 @@ class NodeType(str, Enum):
     NOTE = "NOTE"
     FOLDER = "FOLDER"
     TEMPLATE = "TEMPLATE"
+    CANVAS = "CANVAS"
 
 
 class ContentType(str, Enum):

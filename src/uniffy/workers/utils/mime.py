@@ -50,12 +50,18 @@ EXTRACTION_MIME_TYPES: dict[str, str] = {
 }
 
 
+def _base_mime_type(mime_type: str) -> str:
+    """Strip codec parameters from a MIME type (e.g. 'audio/webm;codecs=opus' -> 'audio/webm')."""
+    return mime_type.split(";")[0].strip()
+
+
 def get_jobs_for_mime_type(mime_type: str) -> list[str]:
     """
     Get list of job names to run for a MIME type.
 
     Returns thumbnail job first, then extraction job.
     Jobs are returned in processing order.
+    Handles MIME types with codec parameters (e.g. 'audio/webm;codecs=opus').
 
     Parameters
     ----------
@@ -68,13 +74,14 @@ def get_jobs_for_mime_type(mime_type: str) -> list[str]:
         List of job function names to enqueue.
 
     """
+    base = _base_mime_type(mime_type)
     jobs = []
 
-    if mime_type in THUMBNAIL_MIME_TYPES:
-        jobs.append(THUMBNAIL_MIME_TYPES[mime_type])
+    if base in THUMBNAIL_MIME_TYPES:
+        jobs.append(THUMBNAIL_MIME_TYPES[base])
 
-    if mime_type in EXTRACTION_MIME_TYPES:
-        jobs.append(EXTRACTION_MIME_TYPES[mime_type])
+    if base in EXTRACTION_MIME_TYPES:
+        jobs.append(EXTRACTION_MIME_TYPES[base])
 
     return jobs
 
@@ -94,7 +101,7 @@ def supports_thumbnail(mime_type: str) -> bool:
         True if thumbnails can be generated for this type.
 
     """
-    return mime_type in THUMBNAIL_MIME_TYPES
+    return _base_mime_type(mime_type) in THUMBNAIL_MIME_TYPES
 
 
 def supports_extraction(mime_type: str) -> bool:
@@ -112,7 +119,7 @@ def supports_extraction(mime_type: str) -> bool:
         True if metadata can be extracted from this type.
 
     """
-    return mime_type in EXTRACTION_MIME_TYPES
+    return _base_mime_type(mime_type) in EXTRACTION_MIME_TYPES
 
 
 def get_processable_mime_types() -> set[str]:

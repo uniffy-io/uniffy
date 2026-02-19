@@ -12,8 +12,10 @@ import type { SerializedNote } from '@/features/notes/store/notesThunks';
 /**
  * Convert NodeType enum to TreeNode type string.
  */
-function nodeTypeToTreeType(nodeType: NodeType): 'note' | 'folder' {
-    return nodeType === NodeType.FOLDER ? 'folder' : 'note';
+function nodeTypeToTreeType(nodeType: NodeType): 'note' | 'folder' | 'canvas' {
+    if (nodeType === NodeType.FOLDER) return 'folder';
+    if (nodeType === NodeType.CANVAS) return 'canvas';
+    return 'note';
 }
 
 /**

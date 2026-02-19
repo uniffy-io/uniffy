@@ -97,6 +97,7 @@ class Note(SQLModel, table=True):
     )
     title: str = Field(max_length=500, nullable=False)
     content: str = Field(default="", nullable=False)
+    canvas_content: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     slug: str = Field(max_length=500, nullable=False, index=True)
     is_deleted: bool = Field(default=False, nullable=False)
     version: int = Field(default=1, nullable=False)

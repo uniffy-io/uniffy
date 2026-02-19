@@ -67,6 +67,21 @@ const SHORTCUT_CATEGORIES = [
             { action: 'imageEditor.applyCrop', label: 'Apply Crop' },
         ],
     },
+    {
+        id: 'canvas',
+        label: 'Canvas',
+        shortcuts: [
+            { action: 'canvas.addText', label: 'Add Text Block' },
+            { action: 'canvas.addShape', label: 'Add Shape' },
+            { action: 'canvas.deleteSelected', label: 'Delete Selected' },
+            { action: 'canvas.selectAll', label: 'Select All' },
+            { action: 'canvas.fitView', label: 'Fit to View' },
+            { action: 'canvas.zoomIn', label: 'Zoom In' },
+            { action: 'canvas.zoomOut', label: 'Zoom Out' },
+            { action: 'canvas.undo', label: 'Undo' },
+            { action: 'canvas.redo', label: 'Redo' },
+        ],
+    },
 ];
 
 // Helper to find action label from categories

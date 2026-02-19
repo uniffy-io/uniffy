@@ -4,6 +4,7 @@ This module defines the 7 built-in "Quick Filters" and provides a helper
 to insert them idempotently (ON CONFLICT DO NOTHING).
 """
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -85,6 +86,7 @@ async def create_default_presets(
         User ID to associate with the presets (typically the org owner).
 
     """
+    now = datetime.now(UTC)
     rows = [
         {
             "user_id": owner_user_id,
@@ -95,6 +97,8 @@ async def create_default_presets(
             "is_preset": True,
             "sort_by": preset["sort_by"],
             "sort_order": preset["sort_order"],
+            "created_at": now,
+            "updated_at": now,
         }
         for preset in DEFAULT_FILTER_PRESETS
     ]

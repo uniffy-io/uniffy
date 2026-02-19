@@ -39,6 +39,8 @@ enum NodeType {
   NODE_TYPE_FOLDER = 2;
   // Template note (future use)
   NODE_TYPE_TEMPLATE = 3;
+  // Canvas note with infinite 2D surface
+  NODE_TYPE_CANVAS = 4;
 }
 
 // NotesService provides note management functionality

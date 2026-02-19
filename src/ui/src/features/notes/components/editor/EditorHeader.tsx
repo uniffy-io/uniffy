@@ -40,6 +40,7 @@ interface EditorHeaderProps {
   note: SerializedNote;
   canEdit?: boolean;
   canShare?: boolean;
+  isCanvas?: boolean;
 }
 
 /**
@@ -211,7 +212,7 @@ const mockCollaborators = [
   { id: '2', initials: 'AM', color: 'bg-green-500' },
 ];
 
-export function EditorHeader({ note, canEdit = true, canShare = false }: EditorHeaderProps) {
+export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas = false }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const editorState = useAppSelector((state) => state.editor);
@@ -351,8 +352,8 @@ export function EditorHeader({ note, canEdit = true, canShare = false }: EditorH
         
         {/* Right Actions */}
         <div className="flex items-center gap-1">
-          {/* View Mode Selector */}
-          <div className="flex items-center gap-0.5 mr-3 border-r border-border pr-3">
+          {/* View Mode Selector - hidden for canvas notes */}
+          {!isCanvas && <div className="flex items-center gap-0.5 mr-3 border-r border-border pr-3">
             {viewModes.map(({ mode, icon: Icon, label }) => (
               <button
                 key={mode}
@@ -388,8 +389,8 @@ export function EditorHeader({ note, canEdit = true, canShare = false }: EditorH
                 <span className="hidden md:inline">Preview</span>
               </button>
             )}
-          </div>
-          
+          </div>}
+
           {/* Collaborators */}
           <div className="flex items-center -space-x-2 mr-2">
             {mockCollaborators.map((collab) => (

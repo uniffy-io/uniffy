@@ -4,12 +4,14 @@ import os
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
@@ -544,6 +546,7 @@ class FileOperations(BaseContentOperations[File]):
 
         await self._require_edit(user_id, organization_id, file)
 
+        filename_changed = filename is not None and filename != file.filename
         if filename is not None:
             file.filename = filename
         if tags is not None:
@@ -595,6 +598,24 @@ class FileOperations(BaseContentOperations[File]):
         )
         await self._index_for_search(model=file, group_ids=new_group_ids)
         await self.session.commit()
+
+        # Propagate filename change to mention labels in referencing content
+        if filename_changed:
+            try:
+                file_urn = build_content_urn(self.content_type, file.id)
+                await propagate_rename(
+                    session=self.session,
+                    organization_id=organization_id,
+                    target_urn=file_urn,
+                    new_label=file.filename,
+                )
+                await self.session.commit()
+            except Exception:
+                logger.warning(
+                    "Failed to propagate file rename to mentions",
+                    file_id=str(file_id),
+                    exc_info=True,
+                )
 
         return file
 

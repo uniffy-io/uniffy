@@ -45,6 +45,52 @@ def extract_inline_tags_from_content(content: str) -> list[str]:
     return sorted(tags)
 
 
+def extract_inline_tags_from_canvas(canvas_data: dict | str) -> list[str]:
+    """
+    Extract all unique inline tags from canvas data.
+
+    Parses the canvas structure, iterates over text nodes, and
+    calls ``extract_inline_tags_from_content()`` on each node's content.
+
+    Parameters
+    ----------
+    canvas_data : dict | str
+        Canvas state as a dict (from JSONB) or JSON string (legacy).
+
+    Returns
+    -------
+    list[str]
+        Unique tag names found in the canvas (lowercase, sorted).
+
+    """
+    if not canvas_data:
+        return []
+
+    # Accept both dict (from JSONB column) and str (legacy)
+    if isinstance(canvas_data, str):
+        import json as _json
+
+        try:
+            data = _json.loads(canvas_data)
+        except (ValueError, TypeError):
+            return []
+    else:
+        data = canvas_data
+
+    nodes = data.get("nodes", [])
+    tags: set[str] = set()
+
+    for node in nodes:
+        node_data = node.get("data", {})
+        if node_data.get("type") == "text":
+            content = node_data.get("content", "")
+            if content:
+                for tag in extract_inline_tags_from_content(content):
+                    tags.add(tag)
+
+    return sorted(tags)
+
+
 def slugify(text: str) -> str:
     """
     Convert text to URL-friendly slug.

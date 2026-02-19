@@ -1,5 +1,6 @@
 """Notes RPC handlers - thin layer delegating to operations."""
 
+import json
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -8,7 +9,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.shared import VisibilityScope
+from uniffy.core.models.shared import NodeType, VisibilityScope
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.notes.converters import (
@@ -87,11 +88,22 @@ class NotesHandlers:
                         "value": request.icon.value,
                     }
 
+                # Parse canvas content from JSON string to dict for CANVAS notes
+                canvas_content = None
+                content = request.content
+                if node_type == NodeType.CANVAS and content:
+                    try:
+                        canvas_content = json.loads(content)
+                        content = ""
+                    except (ValueError, TypeError):
+                        pass
+
                 note = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
                     title=request.title,
-                    content=request.content,
+                    content=content,
+                    canvas_content=canvas_content,
                     slug=request.slug if request.HasField("slug") else None,
                     visibility=visibility,
                     node_type=node_type,
@@ -189,12 +201,24 @@ class NotesHandlers:
                         "value": request.icon.value,
                     }
 
+                # Try to parse content as canvas JSON for canvas notes
+                content = request.content if request.HasField("content") else None
+                canvas_content = None
+                if content is not None:
+                    try:
+                        parsed = json.loads(content)
+                        if isinstance(parsed, dict):
+                            canvas_content = parsed
+                    except (ValueError, TypeError):
+                        pass
+
                 note = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     note_id=note_id,
                     title=request.title if request.HasField("title") else None,
-                    content=request.content if request.HasField("content") else None,
+                    content=content,
+                    canvas_content=canvas_content,
                     slug=request.slug if request.HasField("slug") else None,
                     parent_id=parent_id,
                     tags=list(request.tags) if request.tags else None,
@@ -388,11 +412,23 @@ class NotesHandlers:
         try:
             async for session in get_async_session():
                 ops = NoteOperations(session)
+
+                # Try to parse content as canvas JSON for canvas notes
+                content = request.content
+                canvas_content = None
+                try:
+                    parsed = json.loads(content)
+                    if isinstance(parsed, dict):
+                        canvas_content = parsed
+                except (ValueError, TypeError):
+                    pass
+
                 note = await ops.autosave(
                     user_id=user_id,
                     organization_id=organization_id,
                     note_id=note_id,
-                    content=request.content,
+                    content=content,
+                    canvas_content=canvas_content,
                     title=request.title if request.HasField("title") else None,
                 )
 

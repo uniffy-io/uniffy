@@ -6,11 +6,16 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.content.references import extract_all_outgoing_references
+from uniffy.core.content.cascade import propagate_rename
+from uniffy.core.content.references import (
+    extract_all_outgoing_references,
+    extract_all_outgoing_references_from_canvas,
+)
 from uniffy.core.errors import NotFoundError
 from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
 from uniffy.core.models.login.user import User
@@ -57,17 +62,35 @@ class NoteOperations(BaseContentOperations[Note]):
         and inline tags are indexed.
 
         Full content is indexed to support complete full-text search.
+        For canvas notes, text node content and shape labels are concatenated.
         """
         parts = [model.title]
         if model.tags:
-            # Prefix whole-note tags with 'tag:' for filtered search support
             parts.extend(f"tag:{tag}" for tag in model.tags)
         if model.inline_tags:
-            # Prefix inline tags with 'tag:' as well (deduplicated at search time)
             parts.extend(f"tag:{tag}" for tag in model.inline_tags)
-        if model.content:
+        if model.node_type == NodeType.CANVAS and model.canvas_content:
+            parts.extend(self._extract_canvas_text(model.canvas_content))
+        elif model.content:
             parts.append(model.content)
         return " ".join(parts)
+
+    @staticmethod
+    def _extract_canvas_text(canvas_data: dict) -> list[str]:
+        """Extract searchable text from canvas data for indexing."""
+        texts: list[str] = []
+        for node in canvas_data.get("nodes", []):
+            node_data = node.get("data", {})
+            node_type = node_data.get("type", "")
+            if node_type == "text":
+                content = node_data.get("content", "")
+                if content:
+                    texts.append(content)
+            elif node_type == "shape":
+                label = node_data.get("label", "")
+                if label:
+                    texts.append(label)
+        return texts
 
     def _get_search_title(self, model: Note) -> str:
         """Get note title for search."""
@@ -79,6 +102,8 @@ class NoteOperations(BaseContentOperations[Note]):
 
     def _get_search_description(self, model: Note) -> str | None:
         """Get search description from note content."""
+        if model.node_type == NodeType.CANVAS:
+            return None
         if model.content:
             return model.content[:200]
         return None
@@ -102,6 +127,7 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
         title: str,
         content: str = "",
+        canvas_content: dict[str, Any] | None = None,
         slug: str | None = None,
         visibility: VisibilityScope = VisibilityScope.PRIVATE,
         node_type: NodeType = NodeType.NOTE,
@@ -122,7 +148,9 @@ class NoteOperations(BaseContentOperations[Note]):
         title : str
             Note title.
         content : str
-            Note content in markdown.
+            Note content in markdown (empty for canvas notes).
+        canvas_content : dict | None
+            Canvas data as a dict (for CANVAS node_type).
         slug : str | None
             URL slug (auto-generated if not provided).
         visibility : VisibilityScope
@@ -154,17 +182,25 @@ class NoteOperations(BaseContentOperations[Note]):
             slug = f"{slug}-{int(datetime.now(UTC).timestamp())}"
 
         # Extract URN references and inline file refs from content
-        outgoing_refs = (
-            extract_all_outgoing_references(content, organization_id)
-            if content else None
-        )
-        inline_tags = queries.extract_inline_tags_from_content(content) if content else None
+        if node_type == NodeType.CANVAS and canvas_content:
+            outgoing_refs = (
+                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
+                or None
+            )
+            inline_tags = queries.extract_inline_tags_from_canvas(canvas_content) or None
+        else:
+            outgoing_refs = (
+                extract_all_outgoing_references(content, organization_id)
+                if content else None
+            )
+            inline_tags = queries.extract_inline_tags_from_content(content) if content else None
 
         note = Note(
             organization_id=organization_id,
             owner_id=user_id,
             title=title,
-            content=content,
+            content="" if node_type == NodeType.CANVAS else content,
+            canvas_content=canvas_content if node_type == NodeType.CANVAS else None,
             slug=slug,
             visibility=visibility,
             node_type=node_type,
@@ -230,6 +266,7 @@ class NoteOperations(BaseContentOperations[Note]):
         note_id: UUID,
         title: str | None = None,
         content: str | None = None,
+        canvas_content: dict[str, Any] | None = None,
         slug: str | None = None,
         parent_id: UUID | None | str = None,  # "" means remove parent
         tags: list[str] | None = None,
@@ -249,7 +286,9 @@ class NoteOperations(BaseContentOperations[Note]):
         title : str | None
             New title.
         content : str | None
-            New content.
+            New content (for regular notes).
+        canvas_content : dict | None
+            New canvas data (for canvas notes).
         slug : str | None
             New slug.
         parent_id : UUID | None | str
@@ -271,17 +310,31 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_edit(user_id, organization_id, note)
 
+        title_changed = title is not None and title != note.title
+
+        # Determine if content is being updated
+        content_changed = (
+            canvas_content is not None if note.node_type == NodeType.CANVAS else content is not None
+        )
+
         # Snapshot old mentions before content update for diff
         old_mentioned = (
-            extract_mentioned_user_ids(note.outgoing_references) if content is not None else set()
+            extract_mentioned_user_ids(note.outgoing_references) if content_changed else set()
         )
 
         # Apply updates
         if title is not None:
             note.title = title
-        if content is not None:
+        if note.node_type == NodeType.CANVAS and canvas_content is not None:
+            note.canvas_content = canvas_content
+            note.content = ""
+            note.outgoing_references = (
+                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
+                or None
+            )
+            note.inline_tags = queries.extract_inline_tags_from_canvas(canvas_content) or None
+        elif content is not None:
             note.content = content
-            # Update outgoing references and inline tags when content changes
             note.outgoing_references = (
                 extract_all_outgoing_references(content, organization_id) or None
             )
@@ -312,6 +365,24 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._index_for_search(model=note, group_ids=group_ids)
         await self.session.commit()
 
+        # Propagate title change to mention labels in referencing content
+        if title_changed:
+            try:
+                note_urn = build_content_urn(ContentType.NOTE, note.id)
+                await propagate_rename(
+                    session=self.session,
+                    organization_id=organization_id,
+                    target_urn=note_urn,
+                    new_label=note.title,
+                )
+                await self.session.commit()
+            except Exception:
+                logger.warning(
+                    "Failed to propagate note rename to mentions",
+                    note_id=str(note_id),
+                    exc_info=True,
+                )
+
         # Notify collaborators of edit (only for shared notes)
         if note.visibility != VisibilityScope.PRIVATE:
             await emit_notification(NotificationEvent(
@@ -325,7 +396,7 @@ class NoteOperations(BaseContentOperations[Note]):
             ))
 
         # Notify newly mentioned users (only for content changes)
-        if content is not None:
+        if content_changed:
             new_mentioned = extract_mentioned_user_ids(note.outgoing_references)
             new_mentioned.discard(user_id)
             newly_mentioned = new_mentioned - old_mentioned
@@ -466,7 +537,8 @@ class NoteOperations(BaseContentOperations[Note]):
         user_id: UUID,
         organization_id: UUID,
         note_id: UUID,
-        content: str,
+        content: str = "",
+        canvas_content: dict[str, Any] | None = None,
         title: str | None = None,
     ) -> Note:
         """
@@ -481,7 +553,9 @@ class NoteOperations(BaseContentOperations[Note]):
         note_id : UUID
             Note to save.
         content : str
-            New content.
+            New content (for regular notes).
+        canvas_content : dict | None
+            New canvas data (for canvas notes).
         title : str | None
             Optional new title.
 
@@ -500,12 +574,21 @@ class NoteOperations(BaseContentOperations[Note]):
         # Snapshot old mentions before content update for diff
         old_mentioned = extract_mentioned_user_ids(note.outgoing_references)
 
-        note.content = content
-        # Update outgoing references and inline tags when content changes
-        note.outgoing_references = (
-            extract_all_outgoing_references(content, organization_id) or None
-        )
-        note.inline_tags = queries.extract_inline_tags_from_content(content) or None
+        # Update content based on note type
+        if note.node_type == NodeType.CANVAS and canvas_content is not None:
+            note.canvas_content = canvas_content
+            note.content = ""
+            note.outgoing_references = (
+                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
+                or None
+            )
+            note.inline_tags = queries.extract_inline_tags_from_canvas(canvas_content) or None
+        else:
+            note.content = content
+            note.outgoing_references = (
+                extract_all_outgoing_references(content, organization_id) or None
+            )
+            note.inline_tags = queries.extract_inline_tags_from_content(content) or None
         if title is not None:
             note.title = title
         note.version += 1

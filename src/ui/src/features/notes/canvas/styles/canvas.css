@@ -1,0 +1,210 @@
+/**
+ * React Flow theme overrides.
+ *
+ * Overrides --xy-*-default CSS variables from style.css to use
+ * the app's theme system. Duplicated for .react-flow and .react-flow.dark
+ * so our overrides win in both light and dark mode.
+ *
+ * Canvas background matches the sidebar (--color-card).
+ */
+
+.react-flow,
+.react-flow.dark,
+.react-flow.light {
+  --xy-background-color-default: var(--color-card);
+  --xy-background-pattern-dots-color-default: hsl(var(--muted-foreground) / 0.35);
+  --xy-background-pattern-lines-color-default: hsl(var(--muted-foreground) / 0.2);
+  --xy-background-pattern-cross-color-default: hsl(var(--muted-foreground) / 0.2);
+
+  --xy-node-background-color-default: var(--color-card);
+  --xy-node-border-default: 1px solid var(--color-border);
+  --xy-node-border-radius-default: 0.5rem;
+  --xy-node-color-default: var(--color-card-foreground);
+  --xy-node-group-background-color-default: hsl(var(--muted) / 0.25);
+  --xy-node-boxshadow-hover-default: 0 1px 4px 1px hsl(var(--foreground) / 0.08);
+  --xy-node-boxshadow-selected-default: 0 0 0 2px var(--color-primary);
+
+  --xy-edge-stroke-default: hsl(var(--muted-foreground) / 0.4);
+  --xy-edge-stroke-width-default: 1.5;
+  --xy-edge-stroke-selected-default: var(--color-primary);
+  --xy-edge-label-background-color-default: var(--color-card);
+  --xy-edge-label-color-default: var(--color-foreground);
+
+  --xy-connectionline-stroke-default: var(--color-primary);
+  --xy-connectionline-stroke-width-default: 1.5;
+
+  --xy-handle-background-color-default: var(--color-primary);
+  --xy-handle-border-color-default: var(--color-card);
+
+  --xy-selection-background-color-default: hsl(var(--primary) / 0.1);
+  --xy-selection-border-default: 1px solid hsl(var(--primary) / 0.5);
+
+  --xy-minimap-background-color-default: var(--color-muted);
+  --xy-minimap-mask-background-color-default: hsl(var(--muted) / 0.7);
+  --xy-minimap-mask-stroke-color-default: var(--color-border);
+  --xy-minimap-node-background-color-default: var(--color-primary);
+  --xy-minimap-node-stroke-color-default: transparent;
+
+  --xy-controls-button-background-color-default: var(--color-card);
+  --xy-controls-button-background-color-hover-default: var(--color-muted);
+  --xy-controls-button-color-default: var(--color-foreground);
+  --xy-controls-button-color-hover-default: var(--color-foreground);
+  --xy-controls-button-border-color-default: var(--color-border);
+  --xy-controls-box-shadow-default: 0 0 2px 1px hsl(var(--foreground) / 0.06);
+
+  --xy-resize-background-color-default: var(--color-primary);
+  --xy-attribution-background-color-default: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Text nodes: floating text with no box by default                    */
+/* ------------------------------------------------------------------ */
+
+.react-flow .react-flow__node-text {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0;
+}
+
+.react-flow .react-flow__node-text.selected {
+  box-shadow: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Canvas mention chips: no background, text color only                */
+/* ------------------------------------------------------------------ */
+
+.react-flow .mention-chip {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.react-flow .mention-chip:hover {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Connection handles: hidden by default, visible on select/connect    */
+/* ------------------------------------------------------------------ */
+
+.react-flow .react-flow__node .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.react-flow .react-flow__node.selected .react-flow__handle,
+.react-flow.connecting .react-flow__handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ------------------------------------------------------------------ */
+/* Audio block styles for canvas MediaNode                            */
+/* Mirror editor.css audio-block rules scoped to .react-flow          */
+/* ------------------------------------------------------------------ */
+
+.react-flow .audio-block-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: transparent;
+}
+
+.react-flow .audio-block-container.audio-block-selected {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.react-flow .audio-block-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  height: 100%;
+}
+
+.react-flow .audio-block-play-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  border: none;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.react-flow .audio-block-play-btn:hover {
+  opacity: 0.85;
+}
+
+.react-flow .audio-block-waveform-wrapper {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+}
+
+.react-flow .audio-block-waveform {
+  display: block;
+  width: 100%;
+  height: 32px;
+}
+
+.react-flow .audio-block-time {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.675rem;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  min-width: 5rem;
+  text-align: right;
+}
+
+.react-flow .audio-block-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  background: hsl(var(--muted));
+  border: 1px dashed hsl(var(--border));
+  border-radius: 0.5rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+}
+
+.react-flow .audio-block-uploading {
+  border: 1px dashed hsl(var(--primary) / 0.4);
+  background: hsl(var(--primary) / 0.05);
+}
+
+.react-flow .audio-block-uploading-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  color: hsl(var(--primary));
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.react-flow .audio-block-spinner {
+  animation: audio-upload-spin 0.8s linear infinite;
+  color: hsl(var(--primary));
+}

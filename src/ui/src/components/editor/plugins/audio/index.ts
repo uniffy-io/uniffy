@@ -20,6 +20,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import React from 'react';
 import { AudioBlock } from '@/components/editor/plugins/audio/AudioBlock';
+import { AudioRecordingBar } from '@/components/editor/plugins/audio/AudioRecordingBar';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
 
@@ -232,11 +233,199 @@ export const audioBlockView = $view(audioBlockNode, () => (node: Node, view: Edi
     new AudioBlockNodeView(node, view, getPos)
 );
 
+// -- Audio Recording Node (transient, never persisted) --
+
+export const audioRecordingNode = $node('audio_recording', () => ({
+    group: 'block',
+    atom: true,
+    attrs: {
+        recordingId: { default: '' },
+    },
+    parseDOM: [],
+    toDOM: () => ['div', { 'data-type': 'audio-recording' }, 0],
+    parseMarkdown: {
+        match: () => false,
+        runner: () => {/* never parsed from markdown */},
+    },
+    toMarkdown: {
+        match: (node: Node) => node.type.name === 'audio_recording',
+        runner: () => {/* transient node, never serialized */},
+    },
+}));
+
+/** Pick the best supported MIME type for audio recording. */
+function getRecordingMimeType(): string {
+    const candidates = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+    ];
+    for (const mime of candidates) {
+        if (MediaRecorder.isTypeSupported(mime)) return mime;
+    }
+    return '';
+}
+
+/** Map MIME type to a sensible file extension. */
+function getRecordingExtension(mimeType: string): string {
+    if (mimeType.includes('webm')) return 'webm';
+    if (mimeType.includes('mp4')) return 'mp4';
+    if (mimeType.includes('ogg')) return 'ogg';
+    return 'webm';
+}
+
+/**
+ * Audio upload handler type. Set via setAudioRecordingUploadHandler()
+ * before inserting an audio_recording node.
+ */
+type AudioUploadHandler = (file: File) => Promise<string>;
+let _audioUploadHandler: AudioUploadHandler | null = null;
+
+/**
+ * Register the audio upload handler for recording nodes.
+ * Called by CrepeEditor when setting up the slash menu.
+ */
+export function setAudioRecordingUploadHandler(handler: AudioUploadHandler | null) {
+    _audioUploadHandler = handler;
+}
+
+class AudioRecordingNodeView implements NodeView {
+    dom: HTMLElement;
+    node: Node;
+    view: EditorView;
+    getPos: () => number | undefined;
+    root: Root;
+    destroyed: boolean;
+
+    constructor(node: Node, view: EditorView, getPos: () => number | undefined) {
+        this.node = node;
+        this.view = view;
+        this.getPos = getPos;
+        this.destroyed = false;
+
+        this.dom = document.createElement('div');
+        this.dom.className = 'audio-block-wrapper';
+        this.dom.contentEditable = 'false';
+
+        this.root = createRoot(this.dom);
+        this.render();
+    }
+
+    render() {
+        if (this.destroyed) return;
+
+        const recordingId = this.node.attrs.recordingId as string;
+        const view = this.view;
+        const getPos = this.getPos;
+
+        const handleComplete = (blob: Blob) => {
+            const pos = getPos();
+            if (pos === undefined) return;
+
+            const mimeType = getRecordingMimeType() || 'audio/webm';
+            const ext = getRecordingExtension(mimeType);
+            const filename = `recording-${Date.now()}.${ext}`;
+            const file = new File([blob], filename, { type: mimeType });
+
+            // Replace recording node with an audio_block placeholder
+            const placeholderId = `uploading:${recordingId}`;
+            const { schema } = view.state;
+            const audioType = schema.nodes.audio_block;
+            if (!audioType) return;
+
+            const placeholderNode = audioType.create({ src: placeholderId, title: filename });
+            const tr = view.state.tr.replaceWith(pos, pos + this.node.nodeSize, placeholderNode);
+            view.dispatch(tr);
+
+            // Upload using the registered handler
+            if (_audioUploadHandler) {
+                _audioUploadHandler(file).then((url) => {
+                    // Replace placeholder with final URL
+                    const { state } = view;
+                    let found: number | null = null;
+                    state.doc.descendants((n, p) => {
+                        if (found !== null) return false;
+                        if (n.type.name === 'audio_block' && n.attrs.src === placeholderId) {
+                            found = p;
+                            return false;
+                        }
+                    });
+                    if (found !== null) {
+                        const updateTr = view.state.tr.setNodeMarkup(found, null, { src: url, title: filename });
+                        view.dispatch(updateTr);
+                    }
+                }).catch((err) => {
+                    console.error('[AudioRecording] Upload failed:', err);
+                    // Remove the placeholder on failure
+                    const { state } = view;
+                    const toRemove: { pos: number; size: number }[] = [];
+                    state.doc.descendants((n, p) => {
+                        if (toRemove.length > 0) return false;
+                        if (n.type.name === 'audio_block' && n.attrs.src === placeholderId) {
+                            toRemove.push({ pos: p, size: n.nodeSize });
+                            return false;
+                        }
+                    });
+                    if (toRemove.length > 0) {
+                        const { pos: rPos, size } = toRemove[0];
+                        const removeTr = view.state.tr.delete(rPos, rPos + size);
+                        view.dispatch(removeTr);
+                    }
+                });
+            }
+        };
+
+        const handleCancel = () => {
+            const pos = getPos();
+            if (pos === undefined) return;
+            const tr = view.state.tr.delete(pos, pos + this.node.nodeSize);
+            view.dispatch(tr);
+        };
+
+        this.root.render(
+            React.createElement(AudioRecordingBar, {
+                onComplete: handleComplete,
+                onCancel: handleCancel,
+            })
+        );
+    }
+
+    update(node: Node) {
+        if (node.type !== this.node.type) return false;
+        this.node = node;
+        return true;
+    }
+
+    destroy() {
+        this.destroyed = true;
+        this.root.unmount();
+    }
+
+    stopEvent() {
+        return true;
+    }
+
+    ignoreMutation() {
+        return true;
+    }
+}
+
+export const audioRecordingView = $view(audioRecordingNode, () => (node: Node, view: EditorView, getPos: () => number | undefined) =>
+    new AudioRecordingNodeView(node, view, getPos)
+);
+
 // -- Export --
 
 // The remark plugin must come first to parse [[[audio|url]]] before other processing
 // $remark returns a tuple [$Ctx, MilkdownPlugin] so we spread it
-export const audioPlugins = [...audioBlockRemarkPlugin, audioBlockNode, audioBlockView];
+export const audioPlugins = [
+    ...audioBlockRemarkPlugin,
+    audioBlockNode,
+    audioBlockView,
+    audioRecordingNode,
+    audioRecordingView,
+];
 
 // Re-export component
 export { AudioBlock } from '@/components/editor/plugins/audio/AudioBlock';

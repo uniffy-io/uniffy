@@ -97,6 +97,7 @@ async def seed_initial_data() -> None:
     from uniffy.core.types import ContentType
     from uniffy.db.session import get_async_session
     from uniffy.domains.auth.passwords import hash_password
+    from uniffy.domains.files.filters.presets import create_default_presets
 
     logger.info("Checking for existing data...")
 
@@ -162,6 +163,11 @@ async def seed_initial_data() -> None:
                 is_active=True,
             )
             session.add(member)
+            await session.flush()
+
+            # 3b. Seed default file filter presets
+            await create_default_presets(session, default_org.id, admin_user.id)
+            logger.info("Seeded default file filter presets")
 
             # 4. Create Uniffy root folder
             uniffy_folder = Note(

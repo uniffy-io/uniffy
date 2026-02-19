@@ -32,6 +32,7 @@ class NodeType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NODE_TYPE_NOTE: _ClassVar[NodeType]
     NODE_TYPE_FOLDER: _ClassVar[NodeType]
     NODE_TYPE_TEMPLATE: _ClassVar[NodeType]
+    NODE_TYPE_CANVAS: _ClassVar[NodeType]
 VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope
 VISIBILITY_SCOPE_PRIVATE: VisibilityScope
 VISIBILITY_SCOPE_GROUP: VisibilityScope
@@ -46,6 +47,7 @@ NODE_TYPE_UNSPECIFIED: NodeType
 NODE_TYPE_NOTE: NodeType
 NODE_TYPE_FOLDER: NodeType
 NODE_TYPE_TEMPLATE: NodeType
+NODE_TYPE_CANVAS: NodeType
 
 class CreateNoteRequest(_message.Message):
     __slots__ = ("organization_id", "title", "content", "slug", "parent_id", "tags", "metadata", "visibility", "group_ids", "node_type", "icon")

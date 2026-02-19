@@ -10,6 +10,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
     CaretDown,
     CaretRight,
+    CaretUp,
     CaretDoubleLeft,
     Folder,
     FolderPlus,
@@ -43,6 +44,8 @@ import {
     createFolder,
     updateFolder,
     deleteFolder,
+    expandAll,
+    collapseAll,
 } from '@/features/files/store/filesTreeSlice';
 import { setFolderId, setViewScope, initializeFilesData, restoreFile } from '@/features/files/store/filesSlice';
 import { openViewer } from '@/features/files/store/viewerSlice';
@@ -131,30 +134,6 @@ function CompactNavItem({ item, isActive }: { item: FilesNavItem; isActive: bool
                 {item.name}
             </span>
         </Link>
-    );
-}
-
-/**
- * Files submenu navigation component.
- */
-function FilesSubmenu() {
-    const location = useLocation();
-
-    return (
-        <div className="px-3 py-2 border-b border-border">
-            <nav className="flex items-center gap-0.5">
-                {filesNavItems.map((item) => {
-                    // Check if current path matches item path
-                    const isActive = item.path === '/files'
-                        ? location.pathname === '/files' && !location.search.includes('folder=')
-                        : location.pathname === item.path;
-
-                    return (
-                        <CompactNavItem key={item.path} item={item} isActive={isActive} />
-                    );
-                })}
-            </nav>
-        </div>
     );
 }
 
@@ -338,6 +317,7 @@ interface FilesSidebarProps {
 export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Redux state
     const tree = useAppSelector((state) => state.filesTree.tree);
@@ -773,59 +753,55 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex items-center justify-between px-3 pt-3 pb-2">
+            <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
                 {/* Upload/Status Button */}
                 <button
                     onClick={handleUploadClick}
                     className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors",
+                        "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5",
                         showPanel && hasTransferActivity && "bg-muted"
                     )}
                     title={hasTransferActivity ? "View transfer status" : "Upload files"}
                 >
-                    {isDownloading && !isUploading ? (
-                        <CloudArrowDown size={16} weight="bold" className={isDownloading ? "animate-pulse" : ""} />
-                    ) : (
-                        <CloudArrowUp size={16} weight="bold" className={isUploading ? "animate-pulse" : ""} />
-                    )}
-                    {hasTransferActivity ? (
-                        <span className="tabular-nums">
-                            {isUploading && `${activeUploadCount}↑`}
-                            {isUploading && isDownloading && ' '}
-                            {isDownloading && `${activeDownloadCount}↓`}
-                        </span>
-                    ) : (
-                        <span>Upload</span>
-                    )}
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+                    <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out text-muted-foreground group-hover:text-primary">
+                        {isDownloading && !isUploading ? (
+                            <CloudArrowDown size={18} weight="bold" className={isDownloading ? "animate-pulse" : ""} />
+                        ) : (
+                            <CloudArrowUp size={18} weight="bold" className={isUploading ? "animate-pulse" : ""} />
+                        )}
+                    </span>
+                    <span className="relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out group-hover:ml-1.5 group-hover:max-w-24 text-muted-foreground group-hover:text-foreground">
+                        {hasTransferActivity ? (
+                            <span className="tabular-nums">
+                                {isUploading && `${activeUploadCount}↑`}
+                                {isUploading && isDownloading && ' '}
+                                {isDownloading && `${activeDownloadCount}↓`}
+                            </span>
+                        ) : (
+                            'Upload'
+                        )}
+                    </span>
                 </button>
-
-                <div className="flex items-center gap-1">
+                {filesNavItems.map((item) => {
+                    const isActive = item.path === '/files'
+                        ? location.pathname === '/files' && !location.search.includes('folder=')
+                        : location.pathname === item.path;
+                    return (
+                        <CompactNavItem key={item.path} item={item} isActive={isActive} />
+                    );
+                })}
+                <div className="flex-1" />
+                {onToggleSidebar && (
                     <button
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
-                        title="Refresh"
+                        onClick={onToggleSidebar}
+                        className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors flex-shrink-0"
+                        title="Toggle sidebar"
                     >
-                        <ArrowsClockwise
-                            size={16}
-                            weight="bold"
-                            className={cn("text-muted-foreground", loading && "animate-spin")}
-                        />
+                        <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
                     </button>
-                    {onToggleSidebar && (
-                        <button
-                            onClick={onToggleSidebar}
-                            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-                            title="Toggle sidebar"
-                        >
-                            <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
-                        </button>
-                    )}
-                </div>
+                )}
             </div>
-
-            {/* Navigation */}
-            <FilesSubmenu />
 
             {/* Error state */}
             {error && (
@@ -845,6 +821,32 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
             {/* Main Sections */}
             <div className="flex-1 overflow-y-auto px-3 py-2">
                 <nav className="space-y-0.5">
+                    {/* Tree controls */}
+                    <div className="flex items-center gap-0.5 mb-1">
+                        <button
+                            onClick={() => dispatch(expandAll())}
+                            className="p-1 rounded-md bg-transparent hover:bg-muted transition-colors"
+                            title="Expand all"
+                        >
+                            <CaretDown size={14} weight="bold" className="text-muted-foreground" />
+                        </button>
+                        <button
+                            onClick={() => dispatch(collapseAll())}
+                            className="p-1 rounded-md bg-transparent hover:bg-muted transition-colors"
+                            title="Collapse all"
+                        >
+                            <CaretUp size={14} weight="bold" className="text-muted-foreground" />
+                        </button>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={loading}
+                            className="p-1 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
+                            title="Refresh"
+                        >
+                            <ArrowsClockwise size={14} weight="bold" className={cn("text-muted-foreground", loading && "animate-spin")} />
+                        </button>
+                    </div>
+
                     {/* Bookmarks */}
                     {renderSection(BOOKMARKS_SECTION)}
 

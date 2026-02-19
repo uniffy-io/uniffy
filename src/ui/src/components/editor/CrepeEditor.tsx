@@ -22,7 +22,7 @@ import { useGlobalShortcuts } from '@/features/settings';
 import { createImageUploadHandler, uploadImage } from '@/components/editor/utils/imageUploader';
 import { createVideoUploadHandler, uploadVideo } from '@/components/editor/utils/videoUploader';
 import { createAudioUploadHandler, uploadAudio } from '@/components/editor/utils/audioUploader';
-import { audioPlugins } from '@/components/editor/plugins/audio';
+import { audioPlugins, setAudioRecordingUploadHandler } from '@/components/editor/plugins/audio';
 import { highlightPlugins, highlightMark } from '@/components/editor/plugins/highlight';
 import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
 import type { SearchResultItem } from '@/gen/search/v1/search_pb';
@@ -88,6 +88,9 @@ const VIDEO_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" heigh
 
 // SVG icon for the audio slash command (Phosphor speaker icon, 24x24)
 const AUDIO_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM144,207.64,84.91,161.69A7.94,7.94,0,0,0,80,160H32V96H80a7.94,7.94,0,0,0,4.91-1.69L144,48.36Zm64-79.64a24,24,0,0,0-24-24,8,8,0,0,0,0,16,8,8,0,0,1,0,16,8,8,0,0,0,0,16A24,24,0,0,0,208,128Z"/></svg>';
+
+// SVG icon for the record slash command (Phosphor microphone icon, 24x24)
+const RECORD_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M128,176a48.05,48.05,0,0,0,48-48V64a48,48,0,0,0-96,0v64A48.05,48.05,0,0,0,128,176ZM96,64a32,32,0,0,1,64,0v64a32,32,0,0,1-64,0Zm40,143.6V232a8,8,0,0,1-16,0V207.6A80.11,80.11,0,0,1,48,128a8,8,0,0,1,16,0,64,64,0,0,0,128,0,8,8,0,0,1,16,0A80.11,80.11,0,0,1,136,207.6Z"/></svg>';
 
 /**
  * Open a file picker for video files and return the selected file.
@@ -395,6 +398,30 @@ function createCrepeConfig(
                   });
                 },
               });
+
+              // Record Audio - inserts a recording bar inline
+              advancedGroup.addItem('record', {
+                label: 'Record Audio',
+                icon: RECORD_ICON_SVG,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                onRun: (ctx: any) => {
+                  const commands = ctx.get(commandsCtx);
+                  const view = ctx.get(editorViewCtx) as EditorView;
+                  if (!view) return;
+
+                  commands.call(clearTextInCurrentBlockCommand.key);
+
+                  const recordingId = `rec-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                  const { schema } = view.state;
+                  const recordingType = schema.nodes.audio_recording;
+                  if (!recordingType) return;
+
+                  const recordingNode = recordingType.create({ recordingId });
+                  const { $from } = view.state.selection;
+                  const tr = view.state.tr.replaceRangeWith($from.before(), $from.after(), recordingNode);
+                  view.dispatch(tr);
+                },
+              });
             }
           },
         },
@@ -545,9 +572,12 @@ export function CrepeEditor({
   // Create audio upload handler
   const audioUploadHandler = useMemo(() => {
     if (readonly || !enableUpload || !organizationId) {
+      setAudioRecordingUploadHandler(null);
       return undefined;
     }
-    return createAudioUploadHandler(contentType, contentId, organizationId, onFileUploaded);
+    const handler = createAudioUploadHandler(contentType, contentId, organizationId, onFileUploaded);
+    setAudioRecordingUploadHandler(handler);
+    return handler;
   }, [readonly, enableUpload, organizationId, contentId, contentType, onFileUploaded]);
 
   // Handle content changes from the editor

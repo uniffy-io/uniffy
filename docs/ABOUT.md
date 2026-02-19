@@ -1,5 +1,5 @@
 ## Uniffy
-***Work Infrastructure, democratized.***
+***Work Infrastructure, finally unified.***
 
 ---
 

@@ -27,6 +27,7 @@ import {
   ArrowUUpLeft,
   Atom,
   Tag,
+  SelectionAll,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -122,29 +123,6 @@ function CompactNavItem({ item, isActive }: { item: NotesNavItem; isActive: bool
         {item.name}
       </span>
     </Link>
-  );
-}
-
-/**
- * Notes submenu navigation component.
- * Displays view options like Knowledge Graph and Tags.
- */
-function NotesSubmenu() {
-  const location = useLocation();
-
-  return (
-    <div className="px-3 py-2 border-b border-border">
-      <nav className="flex items-center gap-0.5">
-        {notesNavItems.map((item) => {
-          // Exact match for specific routes
-          const isActive = location.pathname === item.path;
-
-          return (
-            <CompactNavItem key={item.path} item={item} isActive={isActive} />
-          );
-        })}
-      </nav>
-    </div>
   );
 }
 
@@ -392,6 +370,8 @@ function TreeNodeItem({
     >
       {node.type === 'folder' ? (
         <Folder size={16} weight="duotone" className="text-muted-foreground flex-shrink-0" />
+      ) : node.type === 'canvas' ? (
+        <SelectionAll size={16} weight="duotone" className="text-muted-foreground flex-shrink-0" />
       ) : (
         renderNoteIcon(node.icon, "h-4 w-4 text-muted-foreground flex-shrink-0")
       )}
@@ -452,6 +432,7 @@ function TreeNodeItem({
 export function NotesSidebar() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Redux state
   const currentNoteId = useAppSelector((state) => state.notes.currentNoteId);
@@ -575,6 +556,29 @@ export function NotesSidebar() {
         setEditingId(result.id);
       } catch (err) {
         console.error('Failed to create note:', err);
+      }
+    },
+    [dispatch, navigate]
+  );
+
+  // Create a new canvas
+  const handleNewCanvas = useCallback(
+    async (visibility: VisibilityScope = VisibilityScope.PRIVATE) => {
+      try {
+        const { createEmptyCanvas, serializeCanvas } = await import('@/features/notes/canvas/types');
+        const result = await dispatch(
+          createNote({
+            title: 'Untitled Canvas',
+            content: serializeCanvas(createEmptyCanvas()),
+            visibility,
+            nodeType: NodeType.CANVAS,
+          })
+        ).unwrap();
+
+        navigate(`/notes/${result.id}`);
+        setEditingId(result.id);
+      } catch (err) {
+        console.error('Failed to create canvas:', err);
       }
     },
     [dispatch, navigate]
@@ -1130,54 +1134,54 @@ export function NotesSidebar() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2">
+      <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         <button
           onClick={() => handleNewNote()}
           disabled={creatingNote}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+          className="group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5 disabled:opacity-50"
+          title="New Note"
         >
-          {creatingNote ? (
-            <ArrowsClockwise size={16} weight="bold" className="animate-spin" />
-          ) : (
-            <Plus size={16} weight="bold" />
-          )}
-          <span>New Note</span>
+          <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+          <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out text-muted-foreground group-hover:text-primary">
+            {creatingNote ? (
+              <ArrowsClockwise size={18} weight="bold" className="animate-spin" />
+            ) : (
+              <>
+                <FileText size={18} weight="duotone" />
+                <Plus size={10} weight="bold" className="absolute -top-0.5 -right-0.5" />
+              </>
+            )}
+          </span>
+          <span className="relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out group-hover:ml-1.5 group-hover:max-w-24 text-muted-foreground group-hover:text-foreground">
+            Note
+          </span>
         </button>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => dispatch(expandAll())}
-            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-            title="Expand all"
-          >
-            <CaretDown size={16} weight="bold" className="text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => dispatch(collapseAll())}
-            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-            title="Collapse all"
-          >
-            <CaretUp size={16} weight="bold" className="text-muted-foreground" />
-          </button>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
-            title="Refresh"
-          >
-            <ArrowsClockwise size={16} weight="bold" className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => dispatch(toggleSidebar())}
-            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-            title="Toggle sidebar (⌘\\)"
-          >
-            <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
-          </button>
-        </div>
+        <button
+          onClick={() => handleNewCanvas()}
+          className="group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5"
+          title="New Canvas"
+        >
+          <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+          <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out text-muted-foreground group-hover:text-primary">
+            <SelectionAll size={18} weight="duotone" />
+            <Plus size={10} weight="bold" className="absolute -top-0.5 -right-0.5" />
+          </span>
+          <span className="relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out group-hover:ml-1.5 group-hover:max-w-24 text-muted-foreground group-hover:text-foreground">
+            Canvas
+          </span>
+        </button>
+        {notesNavItems.map((item) => (
+          <CompactNavItem key={item.path} item={item} isActive={location.pathname === item.path} />
+        ))}
+        <div className="flex-1" />
+        <button
+          onClick={() => dispatch(toggleSidebar())}
+          className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors flex-shrink-0"
+          title="Toggle sidebar"
+        >
+          <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+        </button>
       </div>
-
-      {/* Notes Submenu */}
-      <NotesSubmenu />
 
       {/* Error state */}
       {error && (
@@ -1197,6 +1201,31 @@ export function NotesSidebar() {
       {/* Main Sections */}
       <div className="flex-1 overflow-y-auto px-3 py-2">
         <nav className="space-y-0.5">
+          {/* Tree controls */}
+          <div className="flex items-center gap-0.5 mb-1">
+            <button
+              onClick={() => dispatch(expandAll())}
+              className="p-1 rounded-md bg-transparent hover:bg-muted transition-colors"
+              title="Expand all"
+            >
+              <CaretDown size={14} weight="bold" className="text-muted-foreground" />
+            </button>
+            <button
+              onClick={() => dispatch(collapseAll())}
+              className="p-1 rounded-md bg-transparent hover:bg-muted transition-colors"
+              title="Collapse all"
+            >
+              <CaretUp size={14} weight="bold" className="text-muted-foreground" />
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-1 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
+              title="Refresh"
+            >
+              <ArrowsClockwise size={14} weight="bold" className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           {SECTIONS.map(renderSection)}
           {renderGroups()}
           {renderTrash()}
