@@ -10,6 +10,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, delete, func, select
+from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
@@ -167,6 +168,8 @@ class ProjectOperations(BaseContentOperations[Project]):
         project = await self.get_by_id(user_id, organization_id, project_id)
         await self._require_edit(user_id, organization_id, project)
 
+        old_visibility = project.visibility
+
         for key, value in kwargs.items():
             if value is not None and hasattr(project, key):
                 setattr(project, key, value)
@@ -181,7 +184,59 @@ class ProjectOperations(BaseContentOperations[Project]):
         group_ids = await self._get_content_group_ids(project.id)
         await self._index_for_search(project, group_ids)
 
+        # Propagate visibility change to all tasks in the project
+        if "visibility" in kwargs and kwargs["visibility"] != old_visibility:
+            await self._propagate_visibility_to_tasks(
+                project_id, organization_id, kwargs["visibility"], group_ids
+            )
+
         return project
+
+    async def _propagate_visibility_to_tasks(
+        self,
+        project_id: UUID,
+        organization_id: UUID,
+        new_visibility: VisibilityScope,
+        group_ids: list[UUID] | None,
+    ) -> None:
+        """
+        Propagate visibility changes from a project to all its tasks.
+
+        Updates visibility on all non-deleted tasks and re-indexes them for search.
+
+        Parameters
+        ----------
+        project_id : UUID
+            Project whose tasks to update.
+        organization_id : UUID
+            Organization ID.
+        new_visibility : VisibilityScope
+            New visibility to set on tasks.
+        group_ids : list[UUID] | None
+            Group IDs for search indexing.
+
+        """
+        await self.session.execute(
+            sql_update(Task)
+            .where(Task.project_id == project_id)
+            .where(Task.organization_id == organization_id)
+            .values(visibility=new_visibility)
+        )
+        await self.session.commit()
+
+        # Re-index all non-deleted tasks
+        result = await self.session.execute(
+            select(Task).where(
+                and_(
+                    Task.project_id == project_id,
+                    Task.organization_id == organization_id,
+                    Task.is_deleted == False,  # noqa: E712
+                )
+            )
+        )
+        task_ops = TaskOperations(self.session)
+        for task in result.scalars().all():
+            await task_ops._index_for_search(task, group_ids)
 
     async def delete(
         self,

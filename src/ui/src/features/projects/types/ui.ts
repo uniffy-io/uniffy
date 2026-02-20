@@ -78,6 +78,7 @@ export interface ProjectsUiState {
 
   // Modal state
   isCreateProjectModalOpen: boolean;
+  editProjectId: string | null;
   isCreateTaskModalOpen: boolean;
   isFieldPickerOpen: boolean;
   isViewConfigOpen: boolean;
@@ -133,6 +134,7 @@ export const initialProjectsUiState: ProjectsUiState = {
   sidebarWidth: 280,
 
   isCreateProjectModalOpen: false,
+  editProjectId: null,
   isCreateTaskModalOpen: false,
   isFieldPickerOpen: false,
   isViewConfigOpen: false,

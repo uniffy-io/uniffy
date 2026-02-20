@@ -146,6 +146,20 @@ export const projectsUiSlice = createSlice({
     },
 
     /**
+     * Open edit project modal for a specific project
+     */
+    openEditProjectModal: (state, action: PayloadAction<string>) => {
+      state.editProjectId = action.payload;
+    },
+
+    /**
+     * Close edit project modal
+     */
+    closeEditProjectModal: (state) => {
+      state.editProjectId = null;
+    },
+
+    /**
      * Open create task modal
      */
     openCreateTaskModal: (state) => {
@@ -391,6 +405,8 @@ export const {
   setSidebarWidth,
   openCreateProjectModal,
   closeCreateProjectModal,
+  openEditProjectModal,
+  closeEditProjectModal,
   openCreateTaskModal,
   closeCreateTaskModal,
   openFieldPicker,
@@ -440,6 +456,7 @@ export const selectEditingCell = (state: RootState) => state.projectsUi.editingC
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
 export const selectUndoStack = (state: RootState) => state.projectsUi.undoStack;
 export const selectRedoStack = (state: RootState) => state.projectsUi.redoStack;
+export const selectEditProjectId = (state: RootState) => state.projectsUi.editProjectId;
 export const selectCanUndo = (state: RootState) => state.projectsUi.undoStack.length > 0;
 export const selectCanRedo = (state: RootState) => state.projectsUi.redoStack.length > 0;
 

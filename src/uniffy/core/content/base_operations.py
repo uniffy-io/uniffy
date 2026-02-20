@@ -414,10 +414,6 @@ class BaseContentOperations[TModel](ABC):
         await self.search_indexer.remove(build_content_urn(self.content_type, content_id))
         await self.session.commit()
 
-    # ─────────────────────────────────────────────────────────────
-    # Permission helpers
-    # ─────────────────────────────────────────────────────────────
-
     async def _require_access(
         self,
         user_id: UUID,
@@ -467,6 +463,7 @@ class BaseContentOperations[TModel](ABC):
             content_type=self.content_type,
             content_id=content.id,
             content_owner_id=content.owner_id,
+            content_visibility=content.visibility,
         )
         if not can_delete:
             raise PermissionDeniedError("delete", self.content_type.value)
@@ -511,10 +508,6 @@ class BaseContentOperations[TModel](ABC):
             )
         )
         return [row[0] for row in result.all()]
-
-    # ─────────────────────────────────────────────────────────────
-    # Group link management
-    # ─────────────────────────────────────────────────────────────
 
     async def _create_group_links(
         self,

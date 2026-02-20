@@ -9,7 +9,7 @@
 
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Kanban, Trash } from "@phosphor-icons/react";
+import { Plus, Kanban, Trash, PencilSimple } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
   selectProjectCompletion,
 } from "@/features/projects/store/projectsSlice";
 import { deleteProject } from "@/features/projects/store/projectsThunks";
-import { openCreateProjectModal, selectProjectScope } from "@/features/projects/store/projectsUiSlice";
+import { openCreateProjectModal, openEditProjectModal, selectProjectScope } from "@/features/projects/store/projectsUiSlice";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { ProjectScopeFilter } from "@/features/projects/components/sidebar/ProjectScopeFilter";
 import { Progress } from "@/components/ui/progress";
@@ -55,6 +55,10 @@ export function ProjectsSidebar() {
 
   const handleCreateProject = () => {
     dispatch(openCreateProjectModal());
+  };
+
+  const handleEditProject = (project: Project) => {
+    dispatch(openEditProjectModal(project.id));
   };
 
   const handleDeleteProject = (project: Project) => {
@@ -122,6 +126,7 @@ export function ProjectsSidebar() {
                 project={project}
                 isActive={project.id === currentProjectId}
                 onClick={() => handleProjectClick(project)}
+                onEdit={() => handleEditProject(project)}
                 onDelete={() => handleDeleteProject(project)}
                 progress={projectCompletion[project.id] ?? 0}
               />
@@ -149,11 +154,12 @@ interface ProjectListItemProps {
   project: Project;
   isActive: boolean;
   onClick: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   progress: number;
 }
 
-function ProjectListItem({ project, isActive, onClick, onDelete, progress }: ProjectListItemProps) {
+function ProjectListItem({ project, isActive, onClick, onEdit, onDelete, progress }: ProjectListItemProps) {
   return (
     <div
       className={cn(
@@ -179,6 +185,24 @@ function ProjectListItem({ project, isActive, onClick, onDelete, progress }: Pro
           tabIndex={0}
           onClick={(e) => {
             e.stopPropagation();
+            onEdit();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.stopPropagation();
+              onEdit();
+            }
+          }}
+          className="p-0.5 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          title="Edit"
+        >
+          <PencilSimple size={14} weight="duotone" className="text-muted-foreground" />
+        </span>
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
             onDelete();
           }}
           onKeyDown={(e) => {
@@ -187,10 +211,10 @@ function ProjectListItem({ project, isActive, onClick, onDelete, progress }: Pro
               onDelete();
             }
           }}
-          className="p-0.5 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          className="p-0.5 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           title="Delete"
         >
-          <Trash size={14} weight="duotone" className="text-destructive" />
+          <Trash size={14} weight="duotone" className="text-muted-foreground" />
         </span>
       </div>
       
