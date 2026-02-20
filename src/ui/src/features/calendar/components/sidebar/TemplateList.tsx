@@ -91,7 +91,7 @@ export function TemplateList() {
                 </button>
                 <button
                     onClick={(e) => handleDelete(e, template.id, template.title)}
-                    className="p-0.5 hover:bg-background rounded text-muted-foreground hover:text-red-500 transition-colors"
+                    className="p-0.5 hover:bg-background rounded text-muted-foreground hover-destructive transition-colors"
                     title="Delete"
                 >
                     <Trash size={14} weight="duotone" />

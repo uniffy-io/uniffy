@@ -6,13 +6,14 @@ Provides bidirectional mapping between domain models and projects.v1 proto types
 
 import json
 
-from uniffy.core.converters.common_proto import visibility_to_proto
+from uniffy.core.converters.common_proto import permission_level_to_proto, visibility_to_proto
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.types import PermissionLevel
 from uniffy.gen.projects.v1.projects_pb2 import (
     ActivityAction,
     FieldType,
@@ -114,6 +115,7 @@ def project_to_proto(
     project: Project,
     fields: list[FieldDefinition],
     views: list[ViewConfig],
+    user_permission_level: PermissionLevel | None = None,
 ) -> ProtoProject:
     """
     Convert Project model to proto Project message.
@@ -126,6 +128,8 @@ def project_to_proto(
         Field definitions for this project.
     views : list[ViewConfig]
         View configurations for this project.
+    user_permission_level : PermissionLevel | None
+        The requesting user's permission level for this project.
 
     Returns
     -------
@@ -151,13 +155,19 @@ def project_to_proto(
         urn=project.urn,
     )
 
+    if user_permission_level:
+        proto.user_permission_level = permission_level_to_proto(user_permission_level)
+
     if project.deleted_at:
         proto.deleted_at.CopyFrom(datetime_to_timestamp(project.deleted_at))
 
     return proto
 
 
-def task_to_proto(task: Task) -> ProtoTask:
+def task_to_proto(
+    task: Task,
+    user_permission_level: PermissionLevel | None = None,
+) -> ProtoTask:
     """
     Convert Task model to proto Task message.
 
@@ -165,6 +175,8 @@ def task_to_proto(task: Task) -> ProtoTask:
     ----------
     task : Task
         Task model instance.
+    user_permission_level : PermissionLevel | None
+        The requesting user's permission level for this task.
 
     Returns
     -------
@@ -216,6 +228,9 @@ def task_to_proto(task: Task) -> ProtoTask:
         proto.recurrence_rule = task.recurrence_rule
     if task.deleted_at:
         proto.deleted_at.CopyFrom(datetime_to_timestamp(task.deleted_at))
+
+    if user_permission_level:
+        proto.user_permission_level = permission_level_to_proto(user_permission_level)
 
     return proto
 

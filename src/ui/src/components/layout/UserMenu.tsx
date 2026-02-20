@@ -255,9 +255,10 @@ export function UserMenu() {
                     <div className="border-t border-border pt-1.5 px-1.5">
                         <button
                             onClick={handleLogout}
-                            className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-red-600 dark:text-red-400 transition-colors overflow-hidden"
+                            className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md transition-colors overflow-hidden"
+                            style={{ color: 'var(--status-error)' }}
                         >
-                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-red-500 transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" style={{ backgroundColor: 'var(--status-error)' }} />
                             <SignOut size={16} weight="duotone" />
                             <span>Sign out</span>
                         </button>

@@ -26,6 +26,7 @@ export interface Project {
   updatedAt: string;
   deletedAt: string | null;
   urn: string;
+  userPermissionLevel: number;
 }
 
 /**
@@ -58,6 +59,7 @@ export interface Task {
   updatedAt: string;
   deletedAt: string | null;
   urn: string;
+  userPermissionLevel: number;
 }
 
 /**

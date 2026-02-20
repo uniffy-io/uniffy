@@ -12,10 +12,12 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.converters.common_proto import visibility_from_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.types import ContentType as DomainContentType
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.projects import queries
@@ -137,11 +139,23 @@ class ProjectsHandlers:
                 ops = ProjectOperations(session)
                 project = await ops.get_by_id(user_id, organization_id, project_id)
 
+                # Compute user's permission level
+                checker = PermissionChecker(session)
+                perm_level = await checker.get_user_permission_level(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=DomainContentType.PROJECT,
+                    content_id=project.id,
+                    content_owner_id=project.owner_id,
+                )
+
                 # Fetch fields and views
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
 
-                return ProjectResponse(project=project_to_proto(project, fields, views))
+                return ProjectResponse(
+                    project=project_to_proto(project, fields, views, perm_level)
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Project not found")
@@ -410,7 +424,17 @@ class ProjectsHandlers:
                 ops = TaskOperations(session)
                 task = await ops.get_by_id(user_id, organization_id, task_id)
 
-                return TaskResponse(task=task_to_proto(task))
+                # Compute user's permission level on the parent project
+                checker = PermissionChecker(session)
+                perm_level = await checker.get_user_permission_level(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=DomainContentType.PROJECT,
+                    content_id=task.project_id,
+                    content_owner_id=task.owner_id,
+                )
+
+                return TaskResponse(task=task_to_proto(task, perm_level))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Task not found")

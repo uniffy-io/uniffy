@@ -452,8 +452,8 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
 
                 {/* Processing error */}
                 {metadata?.error && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <p className="text-sm text-red-500">{metadata.error}</p>
+                    <div className="p-3 rounded-lg border status-error">
+                        <p className="text-sm" style={{ color: 'var(--status-error)' }}>{metadata.error}</p>
                     </div>
                 )}
             </div>

@@ -284,7 +284,7 @@ export function DetailPanel() {
                   className={cn(
                     'flex-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
                     currentUserAttendee.status === 'accepted'
-                      ? 'bg-green-100 border-green-300 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-400'
+                      ? 'status-success border'
                       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
@@ -296,7 +296,7 @@ export function DetailPanel() {
                   className={cn(
                     'flex-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
                     currentUserAttendee.status === 'tentative'
-                      ? 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400'
+                      ? 'status-warning border'
                       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
@@ -308,7 +308,7 @@ export function DetailPanel() {
                   className={cn(
                     'flex-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
                     currentUserAttendee.status === 'declined'
-                      ? 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-400'
+                      ? 'status-error border'
                       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
@@ -328,19 +328,19 @@ export function DetailPanel() {
               {(rsvpSummary.accepted > 0 || rsvpSummary.declined > 0 || rsvpSummary.tentative > 0 || rsvpSummary.pending > 0) && (
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   {rsvpSummary.accepted > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium status-success">
                       <Check size={12} weight="bold" />
                       {rsvpSummary.accepted}
                     </span>
                   )}
                   {rsvpSummary.declined > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium status-error">
                       <X size={12} weight="bold" />
                       {rsvpSummary.declined}
                     </span>
                   )}
                   {rsvpSummary.tentative > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium status-warning">
                       <Question size={12} weight="bold" />
                       {rsvpSummary.tentative}
                     </span>
@@ -382,20 +382,20 @@ export function DetailPanel() {
                       <span className="inline-flex items-center gap-1">
                         {attendee.status === 'accepted' && (
                           <>
-                            <Check size={14} weight="bold" className="text-green-500" />
-                            <span className="text-xs text-green-600 dark:text-green-400">Accepted</span>
+                            <Check size={14} weight="bold" style={{ color: 'var(--status-success)' }} />
+                            <span className="text-xs" style={{ color: 'var(--status-success)' }}>Accepted</span>
                           </>
                         )}
                         {attendee.status === 'declined' && (
                           <>
-                            <X size={14} weight="bold" className="text-red-500" />
-                            <span className="text-xs text-red-600 dark:text-red-400">Declined</span>
+                            <X size={14} weight="bold" style={{ color: 'var(--status-error)' }} />
+                            <span className="text-xs" style={{ color: 'var(--status-error)' }}>Declined</span>
                           </>
                         )}
                         {attendee.status === 'tentative' && (
                           <>
-                            <Question size={14} weight="bold" className="text-yellow-500" />
-                            <span className="text-xs text-yellow-600 dark:text-yellow-400">Maybe</span>
+                            <Question size={14} weight="bold" style={{ color: 'var(--status-warning)' }} />
+                            <span className="text-xs" style={{ color: 'var(--status-warning)' }}>Maybe</span>
                           </>
                         )}
                         {attendee.status === 'pending' && (
@@ -411,8 +411,8 @@ export function DetailPanel() {
 
           {/* Conflicts Warning */}
           {conflictingEvents.length > 0 && (
-            <div className="px-5 py-3 border-t border-border bg-yellow-50 dark:bg-yellow-900/10">
-              <h3 className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 uppercase tracking-wide mb-2 flex items-center gap-2">
+            <div className="px-5 py-3 border-t border-border" style={{ backgroundColor: 'color-mix(in srgb, var(--status-warning) 5%, transparent)' }}>
+              <h3 className="text-xs font-semibold uppercase tracking-wide mb-2 flex items-center gap-2" style={{ color: 'var(--status-warning)' }}>
                 <Warning size={14} weight="duotone" />
                 Scheduling Conflicts ({conflictingEvents.length})
               </h3>
@@ -420,7 +420,8 @@ export function DetailPanel() {
                 {conflictingEvents.map((conflict) => (
                   <div
                     key={conflict.id}
-                    className="flex flex-col gap-1 p-2 rounded-md bg-card border border-yellow-300 dark:border-yellow-700/50"
+                    className="flex flex-col gap-1 p-2 rounded-md bg-card border"
+                    style={{ borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)' }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-sm font-medium text-foreground truncate">
@@ -442,7 +443,7 @@ export function DetailPanel() {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-yellow-700 dark:text-yellow-500">
+              <p className="mt-2 text-xs" style={{ color: 'var(--status-warning)' }}>
                 These events overlap with the current event's time slot. Consider rescheduling to avoid conflicts.
               </p>
             </div>
@@ -526,7 +527,8 @@ export function DetailPanel() {
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-medium"
+                className="flex-1 px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors font-medium"
+                style={{ backgroundColor: 'var(--status-error)' }}
               >
                 Delete
               </button>

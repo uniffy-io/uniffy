@@ -189,12 +189,28 @@ class AttachmentOperations:
         # Verify user can access the content they're attaching to
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
+        # Fetch parent content visibility to inherit on attachment files
+        _, content_visibility = await self._get_content_for_permission_check(
+            organization_id, content_type, content_id
+        )
+
+        # Only inherit ORGANIZATION visibility; keep PRIVATE for GROUP/PRIVATE
+        # (GROUP requires group links which are handled by the cascade system)
+        file_visibility = (
+            content_visibility
+            if content_visibility == VisibilityScope.ORGANIZATION
+            else VisibilityScope.PRIVATE
+        )
+
         # Get or create Attachments folder
         folder = await self.get_or_create_attachments_folder(user_id, organization_id)
 
         # Check if file is already in user's Attachments folder
         if source_file.folder_id == folder.id and source_file.owner_id == user_id:
-            # File is already in Attachments folder - link directly
+            # File is already in Attachments folder - sync visibility
+            if source_file.visibility != file_visibility:
+                source_file.visibility = file_visibility
+                await self._session.flush()
             file_to_link = source_file
         else:
             # Copy the file to Attachments folder
@@ -203,6 +219,7 @@ class AttachmentOperations:
                 target_folder_id=folder.id,
                 user_id=user_id,
                 organization_id=organization_id,
+                content_visibility=file_visibility,
             )
 
         # Create the attachment link
@@ -582,6 +599,7 @@ class AttachmentOperations:
         target_folder_id: UUID,
         user_id: UUID,
         organization_id: UUID,
+        content_visibility: VisibilityScope = VisibilityScope.PRIVATE,
     ) -> File:
         """Copy a file to a target folder with thumbnail handling."""
         # Generate new storage key
@@ -665,7 +683,7 @@ class AttachmentOperations:
             id=new_file_id,
             organization_id=organization_id,
             owner_id=user_id,
-            visibility=VisibilityScope.PRIVATE,
+            visibility=content_visibility,
             filename=source_file.filename,
             original_filename=source_file.original_filename,
             mime_type=source_file.mime_type,

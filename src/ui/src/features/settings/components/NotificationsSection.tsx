@@ -159,12 +159,12 @@ export function NotificationsSection() {
                                 Show push notifications in your browser
                             </div>
                             {isSupported && permissionState === 'denied' && (
-                                <div className="text-xs text-red-500 dark:text-red-400 mt-1">
+                                <div className="text-xs mt-1" style={{ color: 'var(--status-error)' }}>
                                     Notifications are blocked by your browser. Re-enable in browser site settings.
                                 </div>
                             )}
                             {isSupported && permissionState === 'granted' && notifications.browserEnabled && (
-                                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                <div className="text-xs mt-1" style={{ color: 'var(--status-success)' }}>
                                     Permission granted
                                 </div>
                             )}

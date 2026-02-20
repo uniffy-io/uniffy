@@ -22,6 +22,23 @@ import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
 import type { Icon } from '@phosphor-icons/react';
 
+/**
+ * Small avatar image for user mention chips.
+ * Falls back to the type icon on load error.
+ */
+function UserAvatar({ userId, className, fallback }: { userId: string; className: string; fallback: React.ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+  return (
+    <img
+      src={`/api/avatars/${userId}/sm`}
+      alt=""
+      className={className}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 interface MentionChipProps {
   urn: string;
   label: string;
@@ -172,7 +189,7 @@ export function MentionChip({ urn, label, selected = false, onClick, onReplaceWi
       <span
         ref={chipRef}
         className={`
-          mention-chip group inline-flex items-center gap-2.5
+          mention-chip group inline-flex items-center align-middle gap-2.5
           px-3 py-1.5 mx-0.5 my-1
           rounded-full
           bg-gradient-to-r ${style.gradient}
@@ -190,17 +207,24 @@ export function MentionChip({ urn, label, selected = false, onClick, onReplaceWi
         onMouseLeave={handleMouseLeave}
         title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
       >
-        {/* Icon with gradient background */}
-        <span className={`
-          flex items-center justify-center
-          w-7 h-7 rounded-full
-          ${style.iconBg}
-          shadow-sm
-          transition-transform duration-200
-          group-hover:scale-110
-        `}>
-          <Icon size={16} weight="duotone" className={style.iconColor} />
-        </span>
+        {/* Icon/avatar with gradient background */}
+        {parsed.type === UrnType.USER && parsed.id ? (
+          <span className="flex items-center justify-center shrink-0 w-7 h-7 rounded-full shadow-sm transition-transform duration-200 group-hover:scale-110 overflow-hidden">
+            <UserAvatar
+              userId={parsed.id}
+              className="w-7 h-7 rounded-full object-cover"
+              fallback={
+                <span className={`flex items-center justify-center w-7 h-7 rounded-full ${style.iconBg}`}>
+                  <Icon size={16} weight="duotone" className={style.iconColor} />
+                </span>
+              }
+            />
+          </span>
+        ) : (
+          <span className={`flex items-center justify-center shrink-0 w-7 h-7 rounded-full ${style.iconBg} shadow-sm transition-transform duration-200 group-hover:scale-110`}>
+            <Icon size={16} weight="duotone" className={style.iconColor} />
+          </span>
+        )}
 
         {/* Label */}
         <span className="text-base font-medium text-foreground truncate max-w-[200px] leading-none pr-1">
@@ -244,7 +268,7 @@ export function MentionChipBasic({ urn, label, selected = false }: MentionChipBa
   return (
     <span
       className={`
-        mention-chip group inline-flex items-center gap-2.5
+        mention-chip group inline-flex items-center align-middle gap-2.5
         px-3 py-1.5 mx-0.5 my-1
         rounded-full
         bg-gradient-to-r ${style.gradient}
@@ -259,17 +283,24 @@ export function MentionChipBasic({ urn, label, selected = false }: MentionChipBa
       `}
       title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
     >
-      {/* Icon with gradient background */}
-      <span className={`
-        flex items-center justify-center
-        w-7 h-7 rounded-full
-        ${style.iconBg}
-        shadow-sm
-        transition-transform duration-200
-        group-hover:scale-110
-      `}>
-        <Icon size={16} weight="duotone" className={style.iconColor} />
-      </span>
+      {/* Icon/avatar with gradient background */}
+      {parsed.type === UrnType.USER && parsed.id ? (
+        <span className="flex items-center justify-center shrink-0 w-7 h-7 rounded-full shadow-sm transition-transform duration-200 group-hover:scale-110 overflow-hidden">
+          <UserAvatar
+            userId={parsed.id}
+            className="w-7 h-7 rounded-full object-cover"
+            fallback={
+              <span className={`flex items-center justify-center w-7 h-7 rounded-full ${style.iconBg}`}>
+                <Icon size={16} weight="duotone" className={style.iconColor} />
+              </span>
+            }
+          />
+        </span>
+      ) : (
+        <span className={`flex items-center justify-center shrink-0 w-7 h-7 rounded-full ${style.iconBg} shadow-sm transition-transform duration-200 group-hover:scale-110`}>
+          <Icon size={16} weight="duotone" className={style.iconColor} />
+        </span>
+      )}
 
       {/* Label */}
       <span className="text-base font-medium text-foreground truncate max-w-[200px] leading-none pr-1">
@@ -343,7 +374,7 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
       <span
         ref={chipRef}
         className={`
-          mention-chip-compact group inline-flex items-center gap-1
+          mention-chip-compact group inline-flex items-center align-middle gap-1
           px-1.5 py-0.5 mx-0.5
           rounded-md
           bg-gradient-to-r ${style.gradient}
@@ -358,13 +389,23 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
         onMouseLeave={handleMouseLeave}
         title={`Open ${typeLabel}: ${label}`}
       >
-        <span className={`
-          flex items-center justify-center
-          w-4 h-4 rounded
-          ${style.iconBg}
-        `}>
-          <Icon size={10} weight="duotone" className={style.iconColor} />
-        </span>
+        {parsed.type === UrnType.USER && parsed.id ? (
+          <span className="flex items-center justify-center shrink-0 w-4 h-4 rounded-full overflow-hidden">
+            <UserAvatar
+              userId={parsed.id}
+              className="w-4 h-4 rounded-full object-cover"
+              fallback={
+                <span className={`flex items-center justify-center w-4 h-4 rounded ${style.iconBg}`}>
+                  <Icon size={10} weight="duotone" className={style.iconColor} />
+                </span>
+              }
+            />
+          </span>
+        ) : (
+          <span className={`flex items-center justify-center shrink-0 w-4 h-4 rounded ${style.iconBg}`}>
+            <Icon size={10} weight="duotone" className={style.iconColor} />
+          </span>
+        )}
         <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
           {label}
         </span>

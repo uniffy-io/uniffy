@@ -17,6 +17,20 @@ import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 
+/** Avatar with error fallback for user search results */
+function UserSearchAvatar({ userId, fallback }: { userId: string; fallback: React.ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+  return (
+    <img
+      src={`/api/avatars/${userId}/sm`}
+      alt=""
+      className="w-8 h-8 rounded-full shrink-0 object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 /** Map SearchResultType to UrnType */
 const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.NOTE]: UrnType.NOTE,
@@ -248,11 +262,26 @@ export function SearchResultsList({
                       )} />
                     )}
 
-                    {/* Icon badge / thumbnail */}
+                    {/* Icon badge / thumbnail / avatar */}
                     {result.type === SearchResultType.FILE ? (
                       <SearchFileIcon
                         urn={result.urn}
                         isSelected={isSelected}
+                        fallback={
+                          <div className={cn(
+                            'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
+                            'transition-all duration-200',
+                            isSelected ? theme.iconBg : 'bg-muted'
+                          )}>
+                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} className={cn(
+                              isSelected ? 'text-white' : 'text-muted-foreground'
+                            )} />
+                          </div>
+                        }
+                      />
+                    ) : result.type === SearchResultType.USER ? (
+                      <UserSearchAvatar
+                        userId={parseUrn(result.urn).id || ''}
                         fallback={
                           <div className={cn(
                             'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
@@ -338,7 +367,7 @@ export function SearchResultsList({
               <span className="flex items-center gap-1">
                 <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono">⌘C</kbd>
                 {copiedUrn ? (
-                  <span className="text-green-600 dark:text-green-400">copied!</span>
+                  <span style={{ color: 'var(--status-success)' }}>copied!</span>
                 ) : (
                   <span>copy</span>
                 )}

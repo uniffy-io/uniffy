@@ -22,6 +22,7 @@ import sessionsReducer from '@/features/settings/store/sessionsSlice';
 import { commentsReducer } from '@/features/comments/store/commentsSlice';
 import projectsReducer from '@/features/projects/store/projectsSlice';
 import projectsUiReducer from '@/features/projects/store/projectsUiSlice';
+import { errorToastMiddleware } from '@/app/errorToastMiddleware';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -157,7 +158,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }),
+    }).concat(errorToastMiddleware),
 });
 
 // Initialize storeRef for modules that need store access without direct import

@@ -71,7 +71,8 @@ export function SessionsSection() {
                     <button
                         onClick={() => dispatch(revokeOtherSessions())}
                         disabled={revokingAll}
-                        className="text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 flex items-center gap-1"
+                        className="text-sm disabled:opacity-50 flex items-center gap-1"
+                        style={{ color: 'var(--status-error)' }}
                     >
                         {revokingAll ? (
                             <SpinnerGap className="w-3.5 h-3.5 animate-spin" />
@@ -84,14 +85,14 @@ export function SessionsSection() {
             </div>
 
             {error && (
-                <div className="flex items-center justify-between bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 rounded-lg px-4 py-2 text-sm">
+                <div className="flex items-center justify-between rounded-lg px-4 py-2 text-sm status-error">
                     <div className="flex items-center gap-2">
                         <Warning className="w-4 h-4 flex-shrink-0" />
                         <span>{error}</span>
                     </div>
                     <button
                         onClick={() => dispatch(clearSessionsError())}
-                        className="p-0.5 hover:bg-red-200 dark:hover:bg-red-900/50 rounded"
+                        className="p-0.5 hover:opacity-70 rounded"
                     >
                         <X className="w-3.5 h-3.5" />
                     </button>
@@ -126,7 +127,7 @@ export function SessionsSection() {
                                                 {session.deviceLabel}
                                             </span>
                                             {session.isCurrent && (
-                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium status-success">
                                                     This device
                                                 </span>
                                             )}
@@ -140,7 +141,7 @@ export function SessionsSection() {
                                         <button
                                             onClick={() => dispatch(revokeSession(session.id))}
                                             disabled={isRevoking || revokingAll}
-                                            className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-muted disabled:opacity-50 transition-colors"
+                                            className="p-1.5 rounded-md text-muted-foreground hover-destructive disabled:opacity-50 transition-colors"
                                             title="Revoke session"
                                         >
                                             {isRevoking ? (

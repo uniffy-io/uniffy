@@ -82,12 +82,13 @@ export function PushNotificationBanner() {
             <div
                 className={cn(
                     'flex items-center justify-between gap-3 px-4 py-2',
-                    'bg-red-500/10 border-b border-red-500/20 text-foreground',
+                    'text-foreground',
                     'text-sm'
                 )}
+                style={{ backgroundColor: 'color-mix(in srgb, var(--status-error) 10%, transparent)', borderBottom: '1px solid color-mix(in srgb, var(--status-error) 20%, transparent)' }}
             >
                 <div className="flex items-center gap-2 min-w-0">
-                    <WarningCircle size={16} weight="duotone" className="shrink-0 text-red-500" />
+                    <WarningCircle size={16} weight="duotone" className="shrink-0" style={{ color: 'var(--status-error)' }} />
                     <span className="truncate">{state.error}</span>
                 </div>
                 <button

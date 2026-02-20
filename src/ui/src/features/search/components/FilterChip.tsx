@@ -30,8 +30,8 @@ export function FilterChip({ label, onRemove, icon, variant = 'default', classNa
             button: "hover:bg-primary/20",
         },
         exact: {
-            chip: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-            button: "hover:bg-amber-500/20",
+            chip: "status-warning",
+            button: "hover:opacity-80",
         },
     };
 

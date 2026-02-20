@@ -45,6 +45,7 @@ import { BoardColumn } from "./BoardColumn";
 import { TaskCard } from "./TaskCard";
 import { AddStatusDialog } from "./AddStatusDialog";
 import { EmptyState } from "../table/EmptyState";
+import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 
 export function BoardView() {
   const dispatch = useAppDispatch();
@@ -53,21 +54,21 @@ export function BoardView() {
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
 
+  const { canEdit } = useProjectPermission();
   // Track the currently dragged task
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isAddStatusOpen, setIsAddStatusOpen] = useState(false);
 
   // Configure sensors for drag detection
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // 8px movement before drag starts
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: canEdit ? 8 : Infinity,
+    },
+  });
+  const keyboardSensor = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
+  const sensors = useSensors(pointerSensor, keyboardSensor);
 
   if (!project) {
     return null;
@@ -228,24 +229,26 @@ export function BoardView() {
             ))}
 
             {/* Add Status Column - Shortcut to manage statuses */}
-            <div className="shrink-0 w-85 relative">
-              <Button
-                variant="ghost"
-                className="w-full h-12 border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground"
-                onClick={() => setIsAddStatusOpen(!isAddStatusOpen)}
-              >
-                <Plus size={16} className="mr-2" />
-                Add Status
-              </Button>
-              {isAddStatusOpen && (
-                <div className="absolute top-14 left-0 z-50">
-                  <AddStatusDialog
-                    onSubmit={handleAddStatus}
-                    onClose={() => setIsAddStatusOpen(false)}
-                  />
-                </div>
-              )}
-            </div>
+            {canEdit && (
+              <div className="shrink-0 w-85 relative">
+                <Button
+                  variant="ghost"
+                  className="w-full h-12 border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground"
+                  onClick={() => setIsAddStatusOpen(!isAddStatusOpen)}
+                >
+                  <Plus size={16} className="mr-2" />
+                  Add Status
+                </Button>
+                {isAddStatusOpen && (
+                  <div className="absolute top-14 left-0 z-50">
+                    <AddStatusDialog
+                      onSubmit={handleAddStatus}
+                      onClose={() => setIsAddStatusOpen(false)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

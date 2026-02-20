@@ -5,7 +5,7 @@
  * Features glassmorphism, animated entrance, and type-colored headers.
  */
 
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
 import type { Icon } from '@phosphor-icons/react';
 import {
@@ -147,6 +147,20 @@ function formatEventTimeRange(metadata: Record<string, string>): string {
   return `${startDate} ${startTime} - ${endDate} ${endTime}`;
 }
 
+/** Avatar with error fallback for user mention previews */
+function PreviewUserAvatar({ userId, fallback }: { userId: string; fallback: React.ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+  return (
+    <img
+      src={`/api/avatars/${userId}/md`}
+      alt=""
+      className="w-11 h-11 rounded-xl object-cover shadow-lg ring-2 ring-background"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export function MentionPreview({
   preview,
   isLoading,
@@ -253,7 +267,23 @@ export function MentionPreview({
           {/* Header */}
           <div className="relative p-4 pb-2">
             <div className="flex items-start gap-3">
-              {/* Icon badge */}
+              {/* Icon badge or avatar */}
+              {preview.type === UrnType.USER && parsed?.id ? (
+                <PreviewUserAvatar
+                  userId={parsed.id}
+                  fallback={
+                    <div className={`
+                      flex items-center justify-center
+                      w-11 h-11 rounded-xl
+                      ${theme.iconBg}
+                      shadow-lg
+                      ring-2 ring-background
+                    `}>
+                      <Icon size={20} weight="duotone" className="text-white" />
+                    </div>
+                  }
+                />
+              ) : (
               <div className={`
                 flex items-center justify-center
                 w-11 h-11 rounded-xl
@@ -263,6 +293,7 @@ export function MentionPreview({
               `}>
                 <Icon size={20} weight="duotone" className="text-white" />
               </div>
+              )}
 
               {/* Title and type */}
               <div className="flex-1 min-w-0 pt-0.5">

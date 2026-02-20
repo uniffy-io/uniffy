@@ -5,7 +5,7 @@ import { AuthService } from "@/gen/auth/v1/auth_connect";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/store/authSlice";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
-import { transport, setMemoryAccessToken } from "@/config";
+import { transport, setMemoryAccessToken, friendlyErrorMessage } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { defaultTheme } from "@/config/theme/types";
@@ -644,6 +644,7 @@ export function AuthForms() {
         emailVerified: userResponse.emailVerified,
         accentColor: userResponse.accentColor,
         fontFamily: userResponse.fontFamily,
+        avatarUrl: userResponse.avatarUrl,
       };
 
       // Sync theme preferences from user profile
@@ -685,9 +686,8 @@ export function AuthForms() {
 
       // Navigation will be handled by the useEffect above
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Registration failed';
-      setError(message);
-      console.error('Registration error:', err);
+      const raw = err instanceof Error ? err.message : 'Registration failed';
+      setError(friendlyErrorMessage(raw) || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -708,9 +708,8 @@ export function AuthForms() {
 
       // Navigation will be handled by the useEffect above
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Login failed';
-      setError(message);
-      console.error('Login error:', err);
+      const raw = err instanceof Error ? err.message : 'Login failed';
+      setError(friendlyErrorMessage(raw) || 'Login failed');
     } finally {
       setLoading(false);
     }

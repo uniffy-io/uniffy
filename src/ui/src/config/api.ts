@@ -300,6 +300,7 @@ export async function rehydrateAuth(): Promise<boolean> {
         emailVerified: boolean;
         accentColor?: string;
         fontFamily?: string;
+        avatarUrl?: string;
       };
 
       store.dispatch(createRehydrateCompleteAction({

@@ -178,6 +178,7 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
     deletedAt: proto.deletedAt?.toDate().toISOString() || null,
     urn: proto.urn,
+    userPermissionLevel: proto.userPermissionLevel,
   };
 }
 
@@ -221,6 +222,7 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
     deletedAt: proto.deletedAt?.toDate().toISOString() || null,
     urn: proto.urn,
+    userPermissionLevel: proto.userPermissionLevel,
   };
 }
 

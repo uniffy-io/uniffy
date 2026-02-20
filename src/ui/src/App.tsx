@@ -27,6 +27,39 @@ import { useAppSelector } from '@/app/hooks';
 import { CalendarPage } from '@/features/calendar';
 import { FilesPage, FiltersPage, FilesTagsPage, FileViewerModal } from '@/features/files';
 import { ProjectsPage } from '@/features/projects/pages/ProjectsPage';
+import { Toaster, toast } from 'sonner';
+import { useTheme } from '@/config/theme/ThemeProvider';
+import { WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react';
+
+// Expose toast on window in dev mode for testing
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__toast = toast;
+}
+
+function ThemedToaster() {
+  const { resolvedTheme } = useTheme();
+  return (
+    <Toaster
+      theme={resolvedTheme}
+      position="top-right"
+      icons={{
+        error: <WarningCircle size={22} weight="fill" />,
+        success: <CheckCircle size={22} weight="fill" />,
+        warning: <Warning size={22} weight="fill" />,
+        info: <Info size={22} weight="fill" />,
+      }}
+      toastOptions={{
+        classNames: {
+          toast: 'uniffy-toast',
+          error: 'toast-error',
+          success: 'toast-success',
+          warning: 'toast-warning',
+          info: 'toast-info',
+        },
+      }}
+    />
+  );
+}
 
 /**
  * AuthInitializer - Handles auth token rehydration on app startup.
@@ -106,6 +139,8 @@ export default function App() {
                 <FileViewerModal />
                 {/* Global Zen Mode handler - toggles distraction-free mode */}
                 <ZenModeHandler />
+                {/* Global toast notifications */}
+                <ThemedToaster />
 
                 <Routes>
                     <Route

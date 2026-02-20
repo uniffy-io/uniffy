@@ -105,6 +105,10 @@ class ContentType(str, Enum):
         Chat messages.
     USER : str
         User profiles (for @mentions and references).
+    PROJECT : str
+        Projects (task containers).
+    TASK : str
+        Tasks (individual work items within projects).
 
     """
 
@@ -114,6 +118,8 @@ class ContentType(str, Enum):
     CALENDAR_EVENT = "CALENDAR_EVENT"
     CHAT_MESSAGE = "CHAT_MESSAGE"
     USER = "USER"
+    PROJECT = "PROJECT"
+    TASK = "TASK"
 
 
 class SubjectType(str, Enum):

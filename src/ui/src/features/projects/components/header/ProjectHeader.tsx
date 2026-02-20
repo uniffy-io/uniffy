@@ -37,6 +37,7 @@ import { ManageStatusesDialog } from "@/features/projects/components/views/board
 import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import type { SelectOption } from "@/features/projects/types";
+import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -50,6 +51,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const activeFilterConfig = useAppSelector(selectActiveFilterConfig);
   const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
+  const { canEdit } = useProjectPermission();
   const [showDeleteTasksConfirm, setShowDeleteTasksConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -122,14 +124,16 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             {project.memberIds.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <button
-          type="button"
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors shrink-0"
-          onClick={() => dispatch(openCreateTaskModal())}
-        >
-          <Plus size={16} weight="bold" />
-          New Task
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors shrink-0"
+            onClick={() => dispatch(openCreateTaskModal())}
+          >
+            <Plus size={16} weight="bold" />
+            New Task
+          </button>
+        )}
       </div>
 
       {/* View Tabs + Filter Bar */}

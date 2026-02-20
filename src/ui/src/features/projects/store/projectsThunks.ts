@@ -17,119 +17,151 @@ import type { TaskActivity } from "../types/activity";
 /**
  * Fetch all projects for the current organization
  */
-export const fetchProjects = createAsyncThunk<Project[], void>(
+export const fetchProjects = createAsyncThunk<Project[], void, { rejectValue: string }>(
   "projects/fetchProjects",
-  async (_, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.listProjects(orgId);
-    return response.projects;
+      const response = await projectsApi.listProjects(orgId);
+      return response.projects;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch projects");
+    }
   }
 );
 
 /**
  * Fetch a single project by ID
  */
-export const fetchProject = createAsyncThunk<Project | null, string>(
+export const fetchProject = createAsyncThunk<Project | null, string, { rejectValue: string }>(
   "projects/fetchProject",
-  async (projectId, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (projectId, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.getProject(projectId, orgId);
-    return response.project;
+      const response = await projectsApi.getProject(projectId, orgId);
+      return response.project;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch project");
+    }
   }
 );
 
 /**
  * Fetch all tasks for a project
  */
-export const fetchProjectTasks = createAsyncThunk<Task[], string>(
+export const fetchProjectTasks = createAsyncThunk<Task[], string, { rejectValue: string }>(
   "projects/fetchProjectTasks",
-  async (projectId, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (projectId, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.listTasks(projectId, orgId);
-    return response.tasks;
+      const response = await projectsApi.listTasks(projectId, orgId);
+      return response.tasks;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch tasks");
+    }
   }
 );
 
 /**
  * Create a new project
  */
-export const createProject = createAsyncThunk<Project, CreateProjectRequest>(
+export const createProject = createAsyncThunk<Project, CreateProjectRequest, { rejectValue: string }>(
   "projects/createProject",
-  async (data, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (data, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.createProject(data, orgId);
-    return response.project;
+      const response = await projectsApi.createProject(data, orgId);
+      return response.project;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to create project");
+    }
   }
 );
 
 /**
  * Update an existing project
  */
-export const updateProject = createAsyncThunk<Project, UpdateProjectRequest>(
+export const updateProject = createAsyncThunk<Project, UpdateProjectRequest, { rejectValue: string }>(
   "projects/updateProject",
-  async (data, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (data, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.updateProject(data, orgId);
-    return response.project;
+      const response = await projectsApi.updateProject(data, orgId);
+      return response.project;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to update project");
+    }
   }
 );
 
 /**
  * Delete a project (soft delete)
  */
-export const deleteProject = createAsyncThunk<void, string>(
+export const deleteProject = createAsyncThunk<void, string, { rejectValue: string }>(
   "projects/deleteProject",
-  async (projectId, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (projectId, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    await projectsApi.deleteProject(projectId, orgId);
+      await projectsApi.deleteProject(projectId, orgId);
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to delete project");
+    }
   }
 );
 
 /**
  * Create a new task
  */
-export const createTask = createAsyncThunk<Task, CreateTaskRequest>(
+export const createTask = createAsyncThunk<Task, CreateTaskRequest, { rejectValue: string }>(
   "projects/createTask",
-  async (data, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (data, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.createTask(data, orgId);
-    return response.task;
+      const response = await projectsApi.createTask(data, orgId);
+      return response.task;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to create task");
+    }
   }
 );
 
 /**
  * Update an existing task
  */
-export const updateTask = createAsyncThunk<Task, UpdateTaskRequest>(
+export const updateTask = createAsyncThunk<Task, UpdateTaskRequest, { rejectValue: string }>(
   "projects/updateTask",
-  async (data, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (data, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.updateTask(data, orgId);
-    return response.task;
+      const response = await projectsApi.updateTask(data, orgId);
+      return response.task;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to update task");
+    }
   }
 );
 
@@ -137,44 +169,56 @@ export const updateTask = createAsyncThunk<Task, UpdateTaskRequest>(
  * Move a task to a different status/position
  * Used for drag-and-drop operations
  */
-export const moveTask = createAsyncThunk<Task, MoveTaskRequest>(
+export const moveTask = createAsyncThunk<Task, MoveTaskRequest, { rejectValue: string }>(
   "projects/moveTask",
-  async (data, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (data, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.moveTask(data, orgId);
-    return response.task;
+      const response = await projectsApi.moveTask(data, orgId);
+      return response.task;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to move task");
+    }
   }
 );
 
 /**
  * Delete a task (soft delete)
  */
-export const deleteTask = createAsyncThunk<void, string>(
+export const deleteTask = createAsyncThunk<void, string, { rejectValue: string }>(
   "projects/deleteTask",
-  async (taskId, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (taskId, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    await projectsApi.deleteTask(taskId, orgId);
+      await projectsApi.deleteTask(taskId, orgId);
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to delete task");
+    }
   }
 );
 
 /**
  * Delete multiple tasks (soft delete)
  */
-export const deleteTasks = createAsyncThunk<string[], string[]>(
+export const deleteTasks = createAsyncThunk<string[], string[], { rejectValue: string }>(
   "projects/deleteTasks",
-  async (taskIds, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (taskIds, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    await projectsApi.deleteTasks(taskIds, orgId);
-    return taskIds;
+      await projectsApi.deleteTasks(taskIds, orgId);
+      return taskIds;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to delete tasks");
+    }
   }
 );
 
@@ -185,16 +229,21 @@ export const deleteTasks = createAsyncThunk<string[], string[]>(
  */
 export const createFieldThunk = createAsyncThunk<
   FieldDefinition,
-  { projectId: string; field: Omit<FieldDefinition, 'id' | 'projectId' | 'createdAt' | 'updatedAt'> }
+  { projectId: string; field: Omit<FieldDefinition, 'id' | 'projectId' | 'createdAt' | 'updatedAt'> },
+  { rejectValue: string }
 >(
   "projects/createField",
-  async ({ projectId, field }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async ({ projectId, field }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.createField(projectId, field, orgId);
-    return response.field;
+      const response = await projectsApi.createField(projectId, field, orgId);
+      return response.field;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to create field");
+    }
   }
 );
 
@@ -203,16 +252,21 @@ export const createFieldThunk = createAsyncThunk<
  */
 export const updateFieldThunk = createAsyncThunk<
   FieldDefinition,
-  { projectId: string; fieldId: string; updates: Partial<FieldDefinition> }
+  { projectId: string; fieldId: string; updates: Partial<FieldDefinition> },
+  { rejectValue: string }
 >(
   "projects/updateField",
-  async ({ projectId, fieldId, updates }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async ({ projectId, fieldId, updates }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.updateField(projectId, fieldId, updates, orgId);
-    return response.field;
+      const response = await projectsApi.updateField(projectId, fieldId, updates, orgId);
+      return response.field;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to update field");
+    }
   }
 );
 
@@ -221,16 +275,21 @@ export const updateFieldThunk = createAsyncThunk<
  */
 export const deleteFieldThunk = createAsyncThunk<
   { projectId: string; fieldId: string },
-  { projectId: string; fieldId: string }
+  { projectId: string; fieldId: string },
+  { rejectValue: string }
 >(
   "projects/deleteField",
-  async ({ projectId, fieldId }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async ({ projectId, fieldId }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    await projectsApi.deleteField(projectId, fieldId, orgId);
-    return { projectId, fieldId };
+      await projectsApi.deleteField(projectId, fieldId, orgId);
+      return { projectId, fieldId };
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to delete field");
+    }
   }
 );
 
@@ -241,16 +300,21 @@ export const deleteFieldThunk = createAsyncThunk<
  */
 export const createViewThunk = createAsyncThunk<
   ViewConfig,
-  { projectId: string; view: Omit<ViewConfig, 'id' | 'projectId' | 'createdAt' | 'updatedAt'> }
+  { projectId: string; view: Omit<ViewConfig, 'id' | 'projectId' | 'createdAt' | 'updatedAt'> },
+  { rejectValue: string }
 >(
   "projects/createView",
-  async ({ projectId, view }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async ({ projectId, view }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.createView(projectId, view, orgId);
-    return response.view;
+      const response = await projectsApi.createView(projectId, view, orgId);
+      return response.view;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to create view");
+    }
   }
 );
 
@@ -259,16 +323,21 @@ export const createViewThunk = createAsyncThunk<
  */
 export const updateViewThunk = createAsyncThunk<
   ViewConfig,
-  { projectId: string; viewId: string; updates: Partial<ViewConfig> }
+  { projectId: string; viewId: string; updates: Partial<ViewConfig> },
+  { rejectValue: string }
 >(
   "projects/updateView",
-  async ({ projectId, viewId, updates }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async ({ projectId, viewId, updates }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.updateView(projectId, viewId, updates, orgId);
-    return response.view;
+      const response = await projectsApi.updateView(projectId, viewId, updates, orgId);
+      return response.view;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to update view");
+    }
   }
 );
 
@@ -277,16 +346,21 @@ export const updateViewThunk = createAsyncThunk<
  */
 export const deleteViewThunk = createAsyncThunk<
   { projectId: string; viewId: string },
-  { projectId: string; viewId: string }
+  { projectId: string; viewId: string },
+  { rejectValue: string }
 >(
   "projects/deleteView",
-  async ({ projectId, viewId }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async ({ projectId, viewId }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    await projectsApi.deleteView(projectId, viewId, orgId);
-    return { projectId, viewId };
+      await projectsApi.deleteView(projectId, viewId, orgId);
+      return { projectId, viewId };
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to delete view");
+    }
   }
 );
 
@@ -297,16 +371,21 @@ export const deleteViewThunk = createAsyncThunk<
  */
 export const bulkUpdateTasksThunk = createAsyncThunk<
   Task[],
-  { taskIds: string[]; updates: { status?: string; priority?: string; assigneeIds?: string[] } }
+  { taskIds: string[]; updates: { status?: string; priority?: string; assigneeIds?: string[] } },
+  { rejectValue: string }
 >(
   "projects/bulkUpdateTasks",
-  async ({ taskIds, updates }, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async ({ taskIds, updates }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.bulkUpdateTasks(taskIds, updates, orgId);
-    return response.tasks;
+      const response = await projectsApi.bulkUpdateTasks(taskIds, updates, orgId);
+      return response.tasks;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to bulk update tasks");
+    }
   }
 );
 
@@ -317,15 +396,20 @@ export const bulkUpdateTasksThunk = createAsyncThunk<
  */
 export const fetchActivities = createAsyncThunk<
   { taskId: string; activities: TaskActivity[] },
-  string
+  string,
+  { rejectValue: string }
 >(
   "projects/fetchActivities",
-  async (taskId, { getState }) => {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) throw new Error("No organization selected");
+  async (taskId, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.listActivities(taskId, orgId);
-    return { taskId, activities: response.activities };
+      const response = await projectsApi.listActivities(taskId, orgId);
+      return { taskId, activities: response.activities };
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch activities");
+    }
   }
 );

@@ -333,17 +333,17 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
               </>
             ) : saveError ? (
               <>
-                <WarningCircle size={14} weight="fill" className="text-red-500" />
-                <span className="text-red-500">Save failed</span>
+                <WarningCircle size={14} weight="fill" style={{ color: 'var(--status-error)' }} />
+                <span style={{ color: 'var(--status-error)' }}>Save failed</span>
               </>
             ) : hasUnsavedChanges ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--status-warning)' }} />
                 <span className="text-muted-foreground">{statusText}</span>
               </>
             ) : (
               <>
-                <CheckCircle size={14} weight="fill" className="text-green-500" />
+                <CheckCircle size={14} weight="fill" style={{ color: 'var(--status-success)' }} />
                 <span className="text-muted-foreground">{statusText}</span>
               </>
             )}

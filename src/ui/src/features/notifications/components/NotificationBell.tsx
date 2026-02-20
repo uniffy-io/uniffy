@@ -60,8 +60,8 @@ export function NotificationBell() {
                     <span className={cn(
                         'absolute top-0.5 right-0.5 z-20 flex items-center justify-center',
                         'min-w-[16px] h-4 px-1 rounded-full',
-                        'bg-red-500 text-white text-[10px] font-bold leading-none'
-                    )}>
+                        'text-white text-[10px] font-bold leading-none'
+                    )} style={{ backgroundColor: 'var(--status-error)' }}>
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}

@@ -324,7 +324,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
     const expandedNodes = useAppSelector((state) => state.filesTree.expandedNodes);
     const selectedFolderId = useAppSelector((state) => state.filesTree.selectedFolderId);
     const loading = useAppSelector((state) => state.filesTree.loading);
-    const error = useAppSelector((state) => state.filesTree.error);
+
     const viewScope = useAppSelector((state) => state.files.filters.viewScope);
 
     // Local state
@@ -802,21 +802,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                     </button>
                 )}
             </div>
-
-            {/* Error state */}
-            {error && (
-                <div className="px-3 py-2">
-                    <div className="px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md">
-                        {error}
-                        <button
-                            onClick={handleRefresh}
-                            className="ml-2 underline hover:no-underline"
-                        >
-                            Retry
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {/* Main Sections */}
             <div className="flex-1 overflow-y-auto px-3 py-2">

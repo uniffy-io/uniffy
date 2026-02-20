@@ -157,7 +157,7 @@ export function NotesEditor() {
       case 'markdown':
         return <MarkdownSplitEditor note={currentNote} />;
       case 'readonly':
-        return <ReadOnlyViewer note={currentNote} />;
+        return <ReadOnlyViewer note={currentNote} content={noteContent} />;
       default:
         return (
           <CrepeEditor

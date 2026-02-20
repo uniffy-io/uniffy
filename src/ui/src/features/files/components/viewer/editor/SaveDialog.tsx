@@ -208,9 +208,9 @@ export function SaveDialog({
 
                         {/* Error message */}
                         {error && (
-                            <div className="flex items-start gap-2 p-3 rounded-md bg-red-500/10 border border-red-500/20">
-                                <Warning size={18} className="text-red-500 shrink-0 mt-0.5" />
-                                <p className="text-sm text-red-500">{error}</p>
+                            <div className="flex items-start gap-2 p-3 rounded-md border status-error">
+                                <Warning size={18} className="shrink-0 mt-0.5" style={{ color: 'var(--status-error)' }} />
+                                <p className="text-sm" style={{ color: 'var(--status-error)' }}>{error}</p>
                             </div>
                         )}
                     </div>

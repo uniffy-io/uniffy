@@ -96,6 +96,7 @@ message Project {
   google.protobuf.Timestamp updated_at = 14;
   optional google.protobuf.Timestamp deleted_at = 15;
   string urn = 16;
+  common.v1.PermissionLevel user_permission_level = 17;
 }
 
 message Task {
@@ -122,6 +123,7 @@ message Task {
   google.protobuf.Timestamp updated_at = 21;
   optional google.protobuf.Timestamp deleted_at = 22;
   string urn = 23;
+  common.v1.PermissionLevel user_permission_level = 24;
 }
 
 message FieldDefinition {

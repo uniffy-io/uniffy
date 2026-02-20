@@ -1,4 +1,6 @@
+import { toast } from 'sonner';
 import type { AppDispatch } from '@/app/store';
+import { friendlyErrorMessage } from '@/config/errorMessages';
 import { commentsApi } from '@/features/comments/api/commentsApi';
 import {
     setCommentsLoading,
@@ -44,6 +46,8 @@ export const fetchComments = (
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to load comments';
         dispatch(setCommentsError({ contentType, contentId, error: message }));
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
     }
 };
 
@@ -77,6 +81,8 @@ export const createComment = (
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to create comment';
         dispatch(setCommentsError({ contentType, contentId, error: message }));
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
         throw error;
     }
 };
@@ -88,19 +94,26 @@ export const updateComment = (
     commentId: string,
     body: string,
 ) => async (dispatch: AppDispatch) => {
-    const response = await commentsApi.updateComment({
-        organizationId,
-        commentId,
-        body,
-    });
-    if (response.comment) {
-        dispatch(updateCommentInList({
-            contentType,
-            contentId,
-            comment: serializeComment(response.comment),
-        }));
+    try {
+        const response = await commentsApi.updateComment({
+            organizationId,
+            commentId,
+            body,
+        });
+        if (response.comment) {
+            dispatch(updateCommentInList({
+                contentType,
+                contentId,
+                comment: serializeComment(response.comment),
+            }));
+        }
+        return response;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update comment';
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
+        throw error;
     }
-    return response;
 };
 
 export const deleteComment = (
@@ -109,11 +122,18 @@ export const deleteComment = (
     contentId: string,
     commentId: string,
 ) => async (dispatch: AppDispatch) => {
-    await commentsApi.deleteComment({
-        organizationId,
-        commentId,
-    });
-    dispatch(removeComment({ contentType, contentId, commentId }));
+    try {
+        await commentsApi.deleteComment({
+            organizationId,
+            commentId,
+        });
+        dispatch(removeComment({ contentType, contentId, commentId }));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to delete comment';
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
+        throw error;
+    }
 };
 
 export const resolveComment = (
@@ -122,19 +142,26 @@ export const resolveComment = (
     contentId: string,
     commentId: string,
 ) => async (dispatch: AppDispatch) => {
-    const response = await commentsApi.resolveComment({
-        organizationId,
-        commentId,
-    });
-    if (response.comment) {
-        dispatch(updateCommentInList({
-            contentType,
-            contentId,
-            comment: serializeComment(response.comment),
-        }));
+    try {
+        const response = await commentsApi.resolveComment({
+            organizationId,
+            commentId,
+        });
+        if (response.comment) {
+            dispatch(updateCommentInList({
+                contentType,
+                contentId,
+                comment: serializeComment(response.comment),
+            }));
+        }
+        // Re-fetch to update counts
+        dispatch(fetchComments(organizationId, contentType, contentId));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to resolve comment';
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
+        throw error;
     }
-    // Re-fetch to update counts
-    dispatch(fetchComments(organizationId, contentType, contentId));
 };
 
 export const reopenComment = (
@@ -143,19 +170,26 @@ export const reopenComment = (
     contentId: string,
     commentId: string,
 ) => async (dispatch: AppDispatch) => {
-    const response = await commentsApi.reopenComment({
-        organizationId,
-        commentId,
-    });
-    if (response.comment) {
-        dispatch(updateCommentInList({
-            contentType,
-            contentId,
-            comment: serializeComment(response.comment),
-        }));
+    try {
+        const response = await commentsApi.reopenComment({
+            organizationId,
+            commentId,
+        });
+        if (response.comment) {
+            dispatch(updateCommentInList({
+                contentType,
+                contentId,
+                comment: serializeComment(response.comment),
+            }));
+        }
+        // Re-fetch to update counts
+        dispatch(fetchComments(organizationId, contentType, contentId));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to reopen comment';
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
+        throw error;
     }
-    // Re-fetch to update counts
-    dispatch(fetchComments(organizationId, contentType, contentId));
 };
 
 export const addReaction = (
@@ -163,7 +197,13 @@ export const addReaction = (
     commentId: string,
     emoji: string,
 ) => async () => {
-    await commentsApi.addReaction({ organizationId, commentId, emoji });
+    try {
+        await commentsApi.addReaction({ organizationId, commentId, emoji });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to add reaction';
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
+    }
 };
 
 export const removeReaction = (
@@ -171,7 +211,13 @@ export const removeReaction = (
     commentId: string,
     emoji: string,
 ) => async () => {
-    await commentsApi.removeReaction({ organizationId, commentId, emoji });
+    try {
+        await commentsApi.removeReaction({ organizationId, commentId, emoji });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to remove reaction';
+        const friendly = friendlyErrorMessage(message);
+        if (friendly) toast.error(friendly);
+    }
 };
 
 export const fetchCommentCounts = (
@@ -190,6 +236,6 @@ export const fetchCommentCounts = (
         }
         dispatch(setCounts(counts));
     } catch {
-        // Non-fatal
+        // Non-fatal - comment counts are supplementary
     }
 };

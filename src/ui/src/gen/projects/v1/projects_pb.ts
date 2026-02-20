@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { PaginationRequest, PaginationResponse, VisibilityScope } from "../../common/v1/common_pb.js";
+import { PaginationRequest, PaginationResponse, PermissionLevel, VisibilityScope } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from enum projects.v1.FieldType
@@ -235,6 +235,11 @@ export class Project extends Message<Project> {
    */
   urn = "";
 
+  /**
+   * @generated from field: common.v1.PermissionLevel user_permission_level = 17;
+   */
+  userPermissionLevel = PermissionLevel.UNSPECIFIED;
+
   constructor(data?: PartialMessage<Project>) {
     super();
     proto3.util.initPartial(data, this);
@@ -259,6 +264,7 @@ export class Project extends Message<Project> {
     { no: 14, name: "updated_at", kind: "message", T: Timestamp },
     { no: 15, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 16, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 17, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Project {
@@ -397,6 +403,11 @@ export class Task extends Message<Task> {
    */
   urn = "";
 
+  /**
+   * @generated from field: common.v1.PermissionLevel user_permission_level = 24;
+   */
+  userPermissionLevel = PermissionLevel.UNSPECIFIED;
+
   constructor(data?: PartialMessage<Task>) {
     super();
     proto3.util.initPartial(data, this);
@@ -428,6 +439,7 @@ export class Task extends Message<Task> {
     { no: 21, name: "updated_at", kind: "message", T: Timestamp },
     { no: 22, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 23, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 24, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Task {

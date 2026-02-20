@@ -4,6 +4,7 @@ from uuid import UUID
 
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
+from uniffy.domains.users.avatars import get_avatar_url
 from uniffy.gen.auth.v1.auth_pb2 import CurrentUserResponse, SessionInfo
 
 
@@ -32,7 +33,7 @@ def user_to_current_user_response(user: User) -> CurrentUserResponse:
         email_verified=user.email_verified,
         accent_color=user.accent_color or "",
         font_family=user.font_family or "",
-        avatar_url="",  # TODO: Add avatar_url to User model
+        avatar_url=get_avatar_url(user.id, user.avatar_key),
     )
 
 

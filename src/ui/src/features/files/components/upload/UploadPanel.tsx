@@ -46,13 +46,13 @@ function DownloadItemRow({ item }: { item: DownloadItem }) {
             {/* Status icon */}
             <div className="flex-shrink-0">
                 {isCompleted && (
-                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <Check size={16} weight="bold" className="text-green-500" />
+                    <div className="w-8 h-8 rounded-full status-success flex items-center justify-center">
+                        <Check size={16} weight="bold" className="text-[var(--status-success)]" />
                     </div>
                 )}
                 {isFailed && (
-                    <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                        <Warning size={16} weight="bold" className="text-red-500" />
+                    <div className="w-8 h-8 rounded-full status-error flex items-center justify-center">
+                        <Warning size={16} weight="bold" className="text-[var(--status-error)]" />
                     </div>
                 )}
                 {item.status === 'archiving' && (
@@ -80,7 +80,7 @@ function DownloadItemRow({ item }: { item: DownloadItem }) {
                         }
                     </span>
                     {isFailed && item.error && (
-                        <span className="text-xs text-red-500 truncate">{item.error}</span>
+                        <span className="text-xs text-[var(--status-error)] truncate">{item.error}</span>
                     )}
                 </div>
 
@@ -115,13 +115,13 @@ function UploadItemRow({ item, onAbort, onRetry }: { item: UploadItem; onAbort?:
             {/* Status icon */}
             <div className="flex-shrink-0">
                 {isCompleted && (
-                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <Check size={16} weight="bold" className="text-green-500" />
+                    <div className="w-8 h-8 rounded-full status-success flex items-center justify-center">
+                        <Check size={16} weight="bold" className="text-[var(--status-success)]" />
                     </div>
                 )}
                 {isFailed && (
-                    <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                        <Warning size={16} weight="bold" className="text-red-500" />
+                    <div className="w-8 h-8 rounded-full status-error flex items-center justify-center">
+                        <Warning size={16} weight="bold" className="text-[var(--status-error)]" />
                     </div>
                 )}
                 {isActive && (
@@ -144,7 +144,7 @@ function UploadItemRow({ item, onAbort, onRetry }: { item: UploadItem; onAbort?:
                         {formatFileSize(item.uploadedBytes)} / {formatFileSize(item.totalSize)}
                     </span>
                     {isFailed && item.error && (
-                        <span className="text-xs text-red-500 truncate">{item.error}</span>
+                        <span className="text-xs text-[var(--status-error)] truncate">{item.error}</span>
                     )}
                 </div>
 
@@ -326,8 +326,8 @@ export function UploadPanel() {
                         {/* Failed */}
                         {failedUploads.length > 0 && (
                             <div>
-                                <div className="flex items-center justify-between px-3 py-1.5 bg-red-500/10">
-                                    <span className="text-xs font-medium text-red-500 uppercase tracking-wider">
+                                <div className="flex items-center justify-between px-3 py-1.5 status-error">
+                                    <span className="text-xs font-medium text-[var(--status-error)] uppercase tracking-wider">
                                         Failed ({failedUploads.length})
                                     </span>
                                     <button
@@ -350,8 +350,8 @@ export function UploadPanel() {
                         {/* Completed uploads */}
                         {completedUploads.length > 0 && (
                             <div>
-                                <div className="flex items-center justify-between px-3 py-1.5 bg-green-500/10">
-                                    <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">
+                                <div className="flex items-center justify-between px-3 py-1.5 status-success">
+                                    <span className="text-xs font-medium text-[var(--status-success)] uppercase tracking-wider">
                                         Uploaded ({completedUploads.length})
                                     </span>
                                     <button
@@ -375,8 +375,8 @@ export function UploadPanel() {
                         {/* Completed downloads */}
                         {completedDownloads.length > 0 && (
                             <div>
-                                <div className="flex items-center justify-between px-3 py-1.5 bg-green-500/10">
-                                    <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">
+                                <div className="flex items-center justify-between px-3 py-1.5 status-success">
+                                    <span className="text-xs font-medium text-[var(--status-success)] uppercase tracking-wider">
                                         Downloaded ({completedDownloads.length})
                                     </span>
                                     <button

@@ -32,6 +32,40 @@
   --color-ring: hsl(var(--ring));
 }
 
+/* Status colors — semantic, theme-independent (see config/theme/statusColors.ts) */
+:root {
+  --status-error: #dc2626;
+  --status-success: #22c55e;
+  --status-warning: #eab308;
+  --status-info: hsl(var(--primary));
+}
+
+/* Hover-destructive: use on delete/remove/revoke buttons */
+.hover-destructive {
+  transition: color 0.15s, background-color 0.15s;
+}
+.hover-destructive:hover {
+  color: var(--status-error) !important;
+  background-color: color-mix(in srgb, var(--status-error) 10%, transparent) !important;
+}
+
+/* Status badge utility classes */
+.status-error {
+  color: var(--status-error);
+  background-color: color-mix(in srgb, var(--status-error) 10%, transparent);
+  border-color: color-mix(in srgb, var(--status-error) 20%, transparent);
+}
+.status-success {
+  color: var(--status-success);
+  background-color: color-mix(in srgb, var(--status-success) 10%, transparent);
+  border-color: color-mix(in srgb, var(--status-success) 20%, transparent);
+}
+.status-warning {
+  color: var(--status-warning);
+  background-color: color-mix(in srgb, var(--status-warning) 10%, transparent);
+  border-color: color-mix(in srgb, var(--status-warning) 20%, transparent);
+}
+
 /* Default values (fallback) - Light theme */
 :root {
   --primary: 221.2 83.2% 53.3%;
@@ -110,4 +144,66 @@
   .invisible-scrollbar {
     scrollbar-color: transparent transparent;
   }
+}
+
+/* Toast notification theme overrides */
+[data-sonner-toaster] .uniffy-toast {
+  --normal-bg: hsl(var(--card));
+  --normal-text: hsl(var(--card-foreground));
+  --normal-border: hsl(var(--border));
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  font-size: 0.8125rem !important;
+  letter-spacing: 0 !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.08);
+}
+
+.dark [data-sonner-toaster] .uniffy-toast {
+  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.3);
+}
+
+[data-sonner-toaster] .uniffy-toast [data-title] {
+  font-weight: 500 !important;
+  font-size: 0.8125rem !important;
+}
+
+[data-sonner-toaster] .uniffy-toast [data-close-button] {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+
+/* Variant accent borders + icon colors (uses --status-* vars from config/theme/statusColors.ts) */
+[data-sonner-toaster] .toast-error {
+  border-left: 3px solid var(--status-error) !important;
+}
+
+[data-sonner-toaster] .toast-error [data-icon] {
+  color: var(--status-error) !important;
+}
+
+[data-sonner-toaster] .toast-success {
+  border-left: 3px solid var(--status-success) !important;
+}
+
+[data-sonner-toaster] .toast-success [data-icon] {
+  color: var(--status-success) !important;
+}
+
+[data-sonner-toaster] .toast-warning {
+  border-left: 3px solid var(--status-warning) !important;
+}
+
+[data-sonner-toaster] .toast-warning [data-icon] {
+  color: var(--status-warning) !important;
+}
+
+[data-sonner-toaster] .toast-info {
+  border-left: 3px solid var(--status-info) !important;
+}
+
+[data-sonner-toaster] .toast-info [data-icon] {
+  color: var(--status-info) !important;
 }

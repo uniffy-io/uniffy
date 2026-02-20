@@ -176,15 +176,14 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
 
     if (isEditing) {
         return (
-            <div className={`py-3 px-4 rounded-lg border ${conflict ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' : 'bg-primary/5 border-primary'}`}>
+            <div className={`py-3 px-4 rounded-lg border ${conflict ? 'status-warning' : 'bg-primary/5 border-primary'}`}>
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">{label}</span>
                     <div className="flex items-center gap-2">
                         <input
                             type="text"
-                            className={`w-32 px-2 py-1 text-sm bg-background border rounded text-center font-mono ${
-                                conflict ? 'border-yellow-500' : 'border-border'
-                            }`}
+                            className="w-32 px-2 py-1 text-sm bg-background border rounded text-center font-mono border-border"
+                            style={conflict ? { borderColor: 'var(--status-warning)' } : undefined}
                             value={tempBinding || 'Press keys...'}
                             readOnly
                             onKeyDown={handleKeyDown}
@@ -194,9 +193,10 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
                             type="button"
                             className={`px-2 py-1 text-xs rounded ${
                                 conflict
-                                    ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                                    ? 'text-white hover:opacity-90'
                                     : 'bg-primary text-primary-foreground'
                             }`}
+                            style={conflict ? { backgroundColor: 'var(--status-warning)' } : undefined}
                             onClick={handleSave}
                             disabled={!tempBinding}
                         >
@@ -212,7 +212,7 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
                     </div>
                 </div>
                 {conflict && (
-                    <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-400">
+                    <div className="mt-2 text-sm" style={{ color: 'var(--status-warning)' }}>
                         This shortcut is already used by "{conflict.label}". Saving will remove it from that action.
                     </div>
                 )}

@@ -77,11 +77,12 @@ export function CommentInput({
                     'w-full resize-none rounded-md border bg-background',
                     'px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring',
                     'min-h-[60px] max-h-[200px]',
-                    error ? 'border-red-500' : 'border-border',
+                    'border-border',
                 )}
+                style={error ? { borderColor: 'var(--status-error)' } : undefined}
             />
             {error && (
-                <p className="text-xs text-red-500">{error}</p>
+                <p className="text-xs" style={{ color: 'var(--status-error)' }}>{error}</p>
             )}
             <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">

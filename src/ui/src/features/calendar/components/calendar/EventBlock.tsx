@@ -197,7 +197,8 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
                 <Warning
                   size={12}
                   weight="duotone"
-                  className="text-yellow-600 dark:text-yellow-400 flex-shrink-0"
+                  className="flex-shrink-0"
+                  style={{ color: 'var(--status-warning)' }}
                 />
               </span>
             )}

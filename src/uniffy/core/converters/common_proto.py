@@ -82,6 +82,7 @@ PERMISSION_LEVEL_TO_PROTO: dict[DomainPermissionLevel, ProtoPermissionLevel.Valu
     DomainPermissionLevel.VIEW: ProtoPermissionLevel.PERMISSION_LEVEL_VIEW,
     DomainPermissionLevel.EDIT: ProtoPermissionLevel.PERMISSION_LEVEL_EDIT,
     DomainPermissionLevel.ADMIN: ProtoPermissionLevel.PERMISSION_LEVEL_ADMIN,
+    DomainPermissionLevel.OWNER: ProtoPermissionLevel.PERMISSION_LEVEL_ADMIN,
 }
 
 PERMISSION_LEVEL_FROM_PROTO: dict[ProtoPermissionLevel.ValueType, DomainPermissionLevel] = {

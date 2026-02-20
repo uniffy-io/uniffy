@@ -313,7 +313,8 @@ export function UserEditDialog({ user, isOpen, onClose, onSave }: UserEditDialog
                           <Button
                             variant="ghost"
                             size="xs"
-                            className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 transition-opacity"
+                            className="opacity-0 group-hover:opacity-100 hover:opacity-90 transition-opacity"
+                            style={{ color: 'var(--status-error)' }}
                             onClick={() => handleRemoveOrgClick(membership.organization?.id || '')}
                           >
                             <Trash size={14} />

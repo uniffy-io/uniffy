@@ -138,7 +138,7 @@ function ReplyItem({
                     </button>
                     <button
                         onClick={handleDelete}
-                        className="text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 transition-colors"
+                        className="text-xs text-muted-foreground hover-destructive flex items-center gap-1 transition-colors"
                     >
                         <Trash size={12} />
                         Delete
@@ -306,7 +306,7 @@ export function CommentThread({ comment, contentType, contentId, onRefresh }: Co
                     {isAuthor && (
                         <button
                             onClick={handleDelete}
-                            className="text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 transition-colors"
+                            className="text-xs text-muted-foreground hover-destructive flex items-center gap-1 transition-colors"
                         >
                             <Trash size={12} />
                             Delete

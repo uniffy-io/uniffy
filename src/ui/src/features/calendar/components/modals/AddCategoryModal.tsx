@@ -127,7 +127,7 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/50">
+            <div className="text-sm p-3 rounded-md border status-error">
               {error}
             </div>
           )}

@@ -18,7 +18,7 @@ import { OrganizationEditDialog } from "@/features/admin/components/Organization
 import { transport } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Buildings, Plus, PencilSimple, Clipboard, Check } from '@phosphor-icons/react';
-import { cn } from "@/shared/utils/cn";
+
 
 export default function OrganizationsPage() {
   useDocumentTitle('Organizations');
@@ -121,8 +121,8 @@ export default function OrganizationsPage() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/30 p-4">
-          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+        <div className="rounded-xl border p-4" style={{ borderColor: 'color-mix(in srgb, var(--status-error) 20%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-error) 5%, transparent)' }}>
+          <p className="text-sm" style={{ color: 'var(--status-error)' }}>{error}</p>
         </div>
       )}
 
@@ -168,7 +168,7 @@ export default function OrganizationsPage() {
                           title="Copy full UUID"
                         >
                           {copiedId === org.organization?.id ? (
-                            <Check size={12} weight="bold" className="text-green-600 dark:text-green-400" />
+                            <Check size={12} weight="bold" style={{ color: 'var(--status-success)' }} />
                           ) : (
                             <Clipboard size={12} className="text-muted-foreground hover:text-foreground" />
                           )}
@@ -193,14 +193,8 @@ export default function OrganizationsPage() {
                 </TableCell>
                 <TableCell align="center">
                   <div className="flex items-center justify-center gap-2">
-                    <span className={cn(
-                      "h-2 w-2 rounded-full animate-pulse",
-                      org.isActive ? "bg-green-500" : "bg-red-500"
-                    )} />
-                    <span className={cn(
-                      "text-xs font-medium",
-                      org.isActive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                    )}>
+                    <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: org.isActive ? 'var(--status-success)' : 'var(--status-error)' }} />
+                    <span className="text-xs font-medium" style={{ color: org.isActive ? 'var(--status-success)' : 'var(--status-error)' }}>
                       {org.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>

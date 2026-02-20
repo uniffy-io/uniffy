@@ -80,7 +80,7 @@ export function CommentsPanel({ contentType, contentId }: CommentsPanelProps) {
 
             {/* Error banner */}
             {error && (
-                <div className="flex items-center gap-2 px-3 py-2 border-b border-red-500/20 bg-red-500/10 text-sm text-red-600 dark:text-red-400">
+                <div className="flex items-center gap-2 px-3 py-2 border-b text-sm" style={{ borderColor: 'color-mix(in srgb, var(--status-error) 20%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-error) 10%, transparent)', color: 'var(--status-error)' }}>
                     <WarningCircle size={14} className="shrink-0" />
                     <span className="truncate">{error}</span>
                     <button

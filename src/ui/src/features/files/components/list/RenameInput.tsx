@@ -74,7 +74,7 @@ export function RenameInput({ initialValue, onConfirm, onCancel, className, vari
                     type="button"
                     onMouseDown={(e) => e.preventDefault()} // Prevent blur
                 >
-                    <Check size={16} className="text-green-500" />
+                    <Check size={16} style={{ color: 'var(--status-success)' }} />
                 </button>
                 <button
                     onClick={(e) => {

@@ -441,7 +441,7 @@ export function NotesSidebar() {
   const expandedNodes = useAppSelector((state) => state.notesTree.expandedNodes);
   const selectedNodeId = useAppSelector((state) => state.notesTree.selectedNodeId);
   const loading = useAppSelector((state) => state.notesTree.loading);
-  const error = useAppSelector((state) => state.notesTree.error);
+
   const creatingNote = useAppSelector((state) => state.notes.creatingNote);
   // Bookmarks state - useBookmarks() auto-fetches when organization changes
   useBookmarks();
@@ -1182,21 +1182,6 @@ export function NotesSidebar() {
           <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
         </button>
       </div>
-
-      {/* Error state */}
-      {error && (
-        <div className="px-3 py-2">
-          <div className="px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md">
-            {error}
-            <button
-              onClick={handleRefresh}
-              className="ml-2 underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Main Sections */}
       <div className="flex-1 overflow-y-auto px-3 py-2">

@@ -49,6 +49,19 @@ function normalizeNote(note: SerializedNote): SerializedNote {
     return note;
 }
 
+/**
+ * Merge a note from a bulk/list fetch into the store, preserving the existing
+ * `content` field when the incoming note was fetched with `excludeContent: true`.
+ * This prevents background refreshes from wiping out content that was loaded
+ * via a full `fetchNote` call.
+ */
+function mergeNote(existing: SerializedNote | undefined, incoming: SerializedNote): SerializedNote {
+    if (!existing || incoming.content) {
+        return normalizeNote(incoming);
+    }
+    return normalizeNote({ ...incoming, content: existing.content });
+}
+
 interface NotesState {
     // All notes indexed by ID
     notes: Record<string, SerializedNote>;
@@ -250,9 +263,9 @@ export const notesSlice = createSlice({
             })
             .addCase(fetchNotes.fulfilled, (state, action) => {
                 state.loading = false;
-                // Add/update notes in the store
+                // Add/update notes in the store, preserving content from full fetches
                 action.payload.notes.forEach((note) => {
-                    state.notes[note.id] = normalizeNote(note);
+                    state.notes[note.id] = mergeNote(state.notes[note.id], note);
                 });
                 state.pagination = {
                     page: action.payload.page,
@@ -424,9 +437,9 @@ export const notesSlice = createSlice({
             })
             .addCase(initializeNotesData.fulfilled, (state, action) => {
                 state.loading = false;
-                // Add/update notes in the store
+                // Add/update notes in the store, preserving content from full fetches
                 action.payload.notes.forEach((note) => {
-                    state.notes[note.id] = normalizeNote(note);
+                    state.notes[note.id] = mergeNote(state.notes[note.id], note);
                 });
                 state.pagination = {
                     page: 1,
@@ -444,9 +457,9 @@ export const notesSlice = createSlice({
                 (action): action is PayloadAction<{ notes: ReturnType<typeof normalizeNote>[]; totalCount: number }> =>
                     action.type === 'notes/backgroundRefreshComplete',
                 (state, action) => {
-                    // Update notes silently (no loading state change)
+                    // Update notes silently (no loading state change), preserving content
                     action.payload.notes.forEach((note) => {
-                        state.notes[note.id] = normalizeNote(note);
+                        state.notes[note.id] = mergeNote(state.notes[note.id], note);
                     });
                     state.pagination.totalCount = action.payload.totalCount;
                 }

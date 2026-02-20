@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.search.indexer import SearchIndexer
+from uniffy.domains.users.avatars import get_avatar_url
 
 
 class UserSearchIndexer:
@@ -73,6 +74,9 @@ class UserSearchIndexer:
             keywords_parts.append(user.full_name)
         keywords = " ".join(keywords_parts)
 
+        avatar_url = get_avatar_url(user.id, user.avatar_key)
+        metadata: dict[str, str] | None = {"avatar_url": avatar_url} if avatar_url else None
+
         await self._indexer.index(
             urn=urn,
             organization_id=organization_id,
@@ -84,6 +88,7 @@ class UserSearchIndexer:
             keywords=keywords,
             description=user.email,
             rank_score=1.0,
+            metadata=metadata,
         )
 
     async def index_for_all_organizations(self, user: User) -> None:

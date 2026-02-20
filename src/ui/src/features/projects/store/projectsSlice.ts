@@ -172,7 +172,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjects.rejected, (state, action) => {
         state.loading.projects = false;
-        state.errors.projects = action.error.message || "Failed to fetch projects";
+        state.errors.projects = (action.payload as string) || action.error.message || "Failed to fetch projects";
       });
 
     // ===== Fetch Single Project =====
@@ -198,7 +198,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjectTasks.rejected, (state, action) => {
         state.loading.tasks = false;
-        state.errors.tasks = action.error.message || "Failed to fetch tasks";
+        state.errors.tasks = (action.payload as string) || action.error.message || "Failed to fetch tasks";
       });
 
     // ===== Create Project =====
@@ -213,7 +213,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(createProject.rejected, (state, action) => {
         state.loading.creating = false;
-        state.errors.general = action.error.message || "Failed to create project";
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to create project";
       });
 
     // ===== Update Project =====
@@ -227,7 +227,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(updateProject.rejected, (state, action) => {
         state.loading.updating = null;
-        state.errors.general = action.error.message || "Failed to update project";
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to update project";
       });
 
     // ===== Delete Project =====
@@ -252,7 +252,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(deleteProject.rejected, (state, action) => {
         state.loading.deleting = null;
-        state.errors.general = action.error.message || "Failed to delete project";
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to delete project";
       });
 
     // ===== Create Task =====
@@ -266,7 +266,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(createTask.rejected, (state, action) => {
         state.loading.creating = false;
-        state.errors.general = action.error.message || "Failed to create task";
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to create task";
       });
 
     // ===== Update Task =====
@@ -280,7 +280,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(updateTask.rejected, (state, action) => {
         state.loading.updating = null;
-        state.errors.general = action.error.message || "Failed to update task";
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to update task";
       });
 
     // ===== Move Task =====
@@ -289,8 +289,7 @@ export const projectsSlice = createSlice({
         state.tasks[action.payload.id] = action.payload;
       })
       .addCase(moveTask.rejected, (state, action) => {
-        state.errors.general = action.error.message || "Failed to move task";
-        // Note: The optimistic update should be reverted by the component
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to move task";
       });
 
     // ===== Delete Task =====
@@ -304,7 +303,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(deleteTask.rejected, (state, action) => {
         state.loading.deleting = null;
-        state.errors.general = action.error.message || "Failed to delete task";
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to delete task";
       });
 
     // ===== Delete Multiple Tasks =====
@@ -320,7 +319,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(deleteTasks.rejected, (state, action) => {
         state.loading.deleting = null;
-        state.errors.general = action.error.message || "Failed to delete tasks";
+        state.errors.general = (action.payload as string) || action.error.message || "Failed to delete tasks";
       });
 
     // ===== Create Field =====

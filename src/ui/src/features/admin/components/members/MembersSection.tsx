@@ -152,9 +152,8 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
                 {/* Status */}
                 <TableCell align="center">
                     <span
-                        className={`text-xs font-medium ${
-                            member.isActive ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
-                        }`}
+                        className="text-xs font-medium"
+                        style={member.isActive ? { color: 'var(--status-success)' } : undefined}
                     >
                         {member.isActive ? 'Active' : 'Inactive'}
                     </span>
@@ -167,8 +166,8 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
                             type="button"
                             onClick={handleRemoveClick}
                             disabled={removing}
-                            className="p-2 rounded-md text-muted-foreground hover:text-red-500
-                                hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all
+                            className="p-2 rounded-md text-muted-foreground hover-destructive
+                                opacity-0 group-hover:opacity-100 transition-all
                                 disabled:opacity-50"
                             title="Remove from organization"
                         >
@@ -292,8 +291,8 @@ export function MembersSection() {
 
             {/* Error */}
             {error && (
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <div className="flex items-center gap-2 text-sm text-red-500">
+                <div className="p-4 rounded-lg border status-error">
+                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--status-error)' }}>
                         <Warning size={20} weight="fill" />
                         {error}
                     </div>

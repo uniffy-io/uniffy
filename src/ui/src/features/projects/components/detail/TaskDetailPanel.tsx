@@ -27,6 +27,7 @@ import { SYSTEM_FIELD_IDS } from "../../types";
 
 import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
 import { ContentType } from "@/gen/common/v1/common_pb";
+import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { SubtasksList } from "./SubtasksList";
 import { ActivityLog } from "./ActivityLog";
 import { DependenciesList } from "./DependenciesList";
@@ -40,6 +41,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
   const project = useAppSelector(selectCurrentProject);
   const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
+  const { canEdit } = useTaskPermission(taskId);
 
   const memberMap = useMemo(() => {
     const map: Record<string, SerializedMemberInfo> = {};
@@ -95,9 +97,10 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
-          {/* Task Title (editable) */}
+          {/* Task Title (editable when permitted) */}
           <EditableTitle
             title={task.title}
+            readOnly={!canEdit}
             onSave={(newTitle) => {
               dispatch(optimisticUpdateTask({ id: task.id, title: newTitle }));
               dispatch(updateTask({ id: task.id, title: newTitle }));
@@ -111,7 +114,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               
               {/* Feature 15: Milestone Badge */}
               {task.isMilestone && (
-                 <Badge variant="secondary" className="gap-1 border-yellow-500/30 bg-yellow-500/10 text-yellow-600">
+                 <Badge variant="secondary" className="gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
                     <Diamond weight="fill" />
                     Milestone
                  </Badge>
@@ -226,6 +229,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               label="Description"
               enableUpload
               fullPreview
+              readonly={!canEdit}
             />
           </div>
 
@@ -261,7 +265,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
   );
 }
 
-function EditableTitle({ title, onSave }: { title: string; onSave: (newTitle: string) => void }) {
+function EditableTitle({ title, onSave, readOnly }: { title: string; onSave: (newTitle: string) => void; readOnly?: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -300,7 +304,7 @@ function EditableTitle({ title, onSave }: { title: string; onSave: (newTitle: st
     }
   };
 
-  if (isEditing) {
+  if (isEditing && !readOnly) {
     return (
       <div className="flex items-center gap-2">
         <input
@@ -312,6 +316,14 @@ function EditableTitle({ title, onSave }: { title: string; onSave: (newTitle: st
           onKeyDown={handleKeyDown}
           className="flex-1 text-lg font-semibold bg-background border border-primary rounded px-2 py-1 outline-none text-foreground"
         />
+      </div>
+    );
+  }
+
+  if (readOnly) {
+    return (
+      <div className="px-2 py-1 -mx-2">
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
       </div>
     );
   }

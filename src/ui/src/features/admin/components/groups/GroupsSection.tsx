@@ -90,7 +90,7 @@ function GroupCard({ group, onEdit, onDelete, onViewMembers }: GroupCardProps) {
                         type="button"
                         onClick={handleDeleteClick}
                         disabled={deleting}
-                        className="p-2 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        className="p-2 rounded-md text-muted-foreground hover-destructive transition-colors disabled:opacity-50"
                         title="Delete group"
                     >
                         <Trash size={16} />
@@ -164,7 +164,7 @@ function GroupFormModal({ group, onSave, onClose }: GroupFormModalProps) {
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     {error && (
-                        <div className="p-3 rounded-md bg-red-500/10 text-sm text-red-500">
+                        <div className="p-3 rounded-md text-sm status-error">
                             {error}
                         </div>
                     )}

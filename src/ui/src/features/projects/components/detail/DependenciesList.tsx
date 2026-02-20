@@ -41,7 +41,7 @@ function DependencyItem({ taskId }: { taskId: string }) {
       </div>
       
       {!isCompleted && (
-        <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 bg-amber-500/10 gap-1">
+        <Badge variant="outline" className="text-xs gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 50%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
           <WarningCircle size={10} weight="fill" />
           Blocking
         </Badge>

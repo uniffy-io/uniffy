@@ -103,3 +103,4 @@ When adding a new content type (e.g., `TASK`), update these files:
 19. For authenticated resources in `<img>`/`<video>` tags, use HTTP routes + service worker auth proxy (see frontend.md)
 20. Use the attachments system (`@/features/attachments`) to link files to content - never store file references directly on content models
 21. NEVER use inline imports in Python - all imports MUST be at the top of the file. The only exception is when there is no other way to avoid a circular dependency
+22. Use the centralized error handling system (`@/config/errorMessages.ts` + `errorToastMiddleware`) - never write manual `toast.error()` calls in thunks or duplicate error message strings (see frontend.md for patterns)

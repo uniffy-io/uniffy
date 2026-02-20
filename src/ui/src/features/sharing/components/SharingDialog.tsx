@@ -159,7 +159,7 @@ export function SharingDialog() {
                                             disabled={granting}
                                         />
                                         {grantError && (
-                                            <div className="mt-2 flex items-center gap-2 text-sm text-red-500">
+                                            <div className="mt-2 flex items-center gap-2 text-sm" style={{ color: 'var(--status-error)' }}>
                                                 <WarningCircle size={16} weight="fill" />
                                                 {grantError}
                                             </div>
@@ -168,8 +168,8 @@ export function SharingDialog() {
 
                                     {/* Error state */}
                                     {error && (
-                                        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                            <div className="flex items-center gap-2 text-sm text-red-500">
+                                        <div className="mb-4 p-3 rounded-lg border status-error">
+                                            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--status-error)' }}>
                                                 <WarningCircle size={16} weight="fill" />
                                                 {error}
                                             </div>

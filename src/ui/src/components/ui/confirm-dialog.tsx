@@ -62,16 +62,22 @@ export function ConfirmDialog({
 
     const variantStyles = {
         danger: {
-            icon: 'bg-red-500/10 text-red-500',
-            button: 'bg-red-600 hover:bg-red-700 text-white',
+            icon: { backgroundColor: 'color-mix(in srgb, var(--status-error) 10%, transparent)', color: 'var(--status-error)' },
+            buttonStyle: { backgroundColor: 'var(--status-error)', color: '#fff' },
+            buttonHoverClass: 'hover:opacity-90',
+            ringColor: 'var(--status-error)',
         },
         warning: {
-            icon: 'bg-amber-500/10 text-amber-500',
-            button: 'bg-amber-600 hover:bg-amber-700 text-white',
+            icon: { backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)', color: 'var(--status-warning)' },
+            buttonStyle: { backgroundColor: 'var(--status-warning)', color: '#fff' },
+            buttonHoverClass: 'hover:opacity-90',
+            ringColor: 'var(--status-warning)',
         },
         default: {
-            icon: 'bg-primary/10 text-primary',
-            button: 'bg-primary hover:bg-primary/90 text-primary-foreground',
+            icon: {},
+            buttonStyle: {},
+            buttonHoverClass: '',
+            ringColor: '',
         },
     };
 
@@ -89,7 +95,7 @@ export function ConfirmDialog({
             <div className="relative bg-card w-full max-w-md mx-4 rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 fade-in duration-200">
                 {/* Header */}
                 <div className="flex items-start gap-4 p-6 pb-4">
-                    <div className={cn('p-3 rounded-full', styles.icon)}>
+                    <div className={cn('p-3 rounded-full', variant === 'default' && 'bg-primary/10 text-primary')} style={styles.icon}>
                         <Warning size={24} weight="duotone" />
                     </div>
                     <div className="flex-1 pt-1">
@@ -126,11 +132,13 @@ export function ConfirmDialog({
                             'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                             'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
                             'disabled:opacity-50 disabled:cursor-not-allowed',
-                            styles.button,
-                            variant === 'danger' && 'focus:ring-red-500',
-                            variant === 'warning' && 'focus:ring-amber-500',
-                            variant === 'default' && 'focus:ring-primary'
+                            styles.buttonHoverClass,
+                            variant === 'default' && 'bg-primary hover:bg-primary/90 text-primary-foreground focus:ring-primary'
                         )}
+                        style={{
+                            ...styles.buttonStyle,
+                            ...(styles.ringColor ? { '--tw-ring-color': styles.ringColor } as React.CSSProperties : {}),
+                        }}
                     >
                         {loading ? (
                             <span className="flex items-center gap-2">

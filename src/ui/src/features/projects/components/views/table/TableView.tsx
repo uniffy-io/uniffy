@@ -80,6 +80,7 @@ import { fetchMembers } from "@/features/admin";
 import type { SerializedMemberInfo } from "@/features/admin";
 import { EmptyState } from "./EmptyState";
 import { CreateFieldDialog } from "./CreateFieldDialog";
+import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 
 // ===== Grouping Types =====
 
@@ -97,6 +98,7 @@ export function TableView() {
   const searchQuery = useAppSelector(selectSearchQuery);
   const activeSortConfig = useAppSelector(selectActiveSortConfig);
   const groupByFieldId = useAppSelector(selectActiveGroupByFieldId);
+  const { canEdit } = useProjectPermission();
   const editingCell = useAppSelector(selectEditingCell);
   const focusedCell = useAppSelector(selectFocusedCell);
   const undoStack = useAppSelector(selectUndoStack);
@@ -395,14 +397,16 @@ export function TableView() {
   }, [dispatch, activeSortConfig]);
 
   const handleStartEdit = useCallback((taskId: string, fieldId: string) => {
+    if (!canEdit) return;
     dispatch(setEditingCell({ taskId, fieldId }));
-  }, [dispatch]);
+  }, [dispatch, canEdit]);
 
   const handleEndEdit = useCallback(() => {
     dispatch(setEditingCell(null));
   }, [dispatch]);
 
   const handleSaveField = useCallback((taskId: string, fieldId: string, value: unknown) => {
+    if (!canEdit) return;
     const task = allTasks[taskId];
     const update: Partial<Task> & { id: string } = { id: taskId };
     const previousValues: Record<string, unknown> = {};
@@ -458,7 +462,7 @@ export function TableView() {
     if (fieldId !== SYSTEM_FIELD_IDS.ASSIGNEE) {
       dispatch(setEditingCell(null));
     }
-  }, [dispatch, allTasks]);
+  }, [dispatch, allTasks, canEdit]);
 
   const toggleGroup = useCallback((groupKey: string) => {
     setCollapsedGroups((prev) => {

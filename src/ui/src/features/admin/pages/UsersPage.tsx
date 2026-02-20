@@ -83,8 +83,8 @@ export default function UsersPage() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/30 p-4">
-          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+        <div className="rounded-xl border p-4" style={{ borderColor: 'color-mix(in srgb, var(--status-error) 20%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-error) 5%, transparent)' }}>
+          <p className="text-sm" style={{ color: 'var(--status-error)' }}>{error}</p>
         </div>
       )}
 
@@ -145,14 +145,8 @@ export default function UsersPage() {
                 </TableCell>
                 <TableCell align="center">
                   <div className="flex items-center justify-center gap-2">
-                    <span className={cn(
-                      "h-2 w-2 rounded-full animate-pulse",
-                      user.isActive ? "bg-green-500" : "bg-red-500"
-                    )} />
-                    <span className={cn(
-                      "text-xs font-medium",
-                      user.isActive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                    )}>
+                    <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: user.isActive ? 'var(--status-success)' : 'var(--status-error)' }} />
+                    <span className="text-xs font-medium" style={{ color: user.isActive ? 'var(--status-success)' : 'var(--status-error)' }}>
                       {user.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>

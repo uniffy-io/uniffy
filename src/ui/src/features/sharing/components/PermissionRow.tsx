@@ -64,8 +64,9 @@ export function PermissionRow({
         return (
             <span
                 className={`text-xs flex items-center gap-1 ${
-                    isExpired ? 'text-red-500' : 'text-muted-foreground'
+                    isExpired ? '' : 'text-muted-foreground'
                 }`}
+                style={isExpired ? { color: 'var(--status-error)' } : undefined}
             >
                 <Calendar size={12} />
                 {isExpired ? 'Expired' : `Until ${date.toLocaleDateString()}`}
@@ -157,8 +158,8 @@ export function PermissionRow({
                             type="button"
                             onClick={handleRemove}
                             disabled={disabled || isRemoving}
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-red-500
-                                hover:bg-red-500/10 transition-colors
+                            className="p-1.5 rounded-md text-muted-foreground hover-destructive
+                                transition-colors
                                 opacity-0 group-hover:opacity-100
                                 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Remove access"

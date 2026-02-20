@@ -128,7 +128,7 @@ export function TaskCard({
 
             {/* Blocked Indicator */}
             {task.blockedByTaskIds && task.blockedByTaskIds.length > 0 && (
-                <span className="flex items-center text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded gap-1 text-[10px]" title="Blocked">
+                <span className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px]" style={{ color: 'var(--status-warning)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }} title="Blocked">
                     <WarningCircle size={10} weight="fill" />
                     Blocked
                 </span>

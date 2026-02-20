@@ -6,3 +6,4 @@
 
 export { env } from '@/config/env';
 export { transport, rehydrateAuth, setMemoryAccessToken, clearMemoryAccessToken } from '@/config/api';
+export { friendlyErrorMessage } from '@/config/errorMessages';

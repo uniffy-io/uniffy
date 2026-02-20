@@ -242,16 +242,17 @@ export function PermissionDefaultsSection() {
 
             {/* Error banner */}
             {error && (
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                <div className="p-4 rounded-lg border status-error">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-red-500">
+                        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--status-error)' }}>
                             <WarningCircle size={20} weight="fill" />
                             {error}
                         </div>
                         <button
                             type="button"
                             onClick={dismissError}
-                            className="text-sm text-red-500 hover:underline"
+                            className="text-sm hover:underline"
+                            style={{ color: 'var(--status-error)' }}
                         >
                             Dismiss
                         </button>

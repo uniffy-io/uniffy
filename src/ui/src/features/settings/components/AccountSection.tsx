@@ -163,7 +163,7 @@ export function AccountSection() {
                                         className={cn(
                                             "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md",
                                             "border border-border text-muted-foreground",
-                                            "hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 dark:hover:border-red-800",
+                                            "hover-destructive",
                                             "transition-colors",
                                             "disabled:opacity-50 disabled:cursor-not-allowed"
                                         )}
@@ -180,7 +180,7 @@ export function AccountSection() {
                     </div>
 
                     {error && (
-                        <div className="mt-4 text-sm text-red-600 dark:text-red-400">
+                        <div className="mt-4 text-sm" style={{ color: 'var(--status-error)' }}>
                             {error}
                         </div>
                     )}
@@ -231,11 +231,11 @@ export function AccountSection() {
                             <span className="text-sm font-medium text-muted-foreground">Email Status</span>
                             <span>
                                 {user.emailVerified ? (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-success">
                                         Verified
                                     </span>
                                 ) : (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-warning">
                                         Unverified
                                     </span>
                                 )}
@@ -245,11 +245,11 @@ export function AccountSection() {
                             <span className="text-sm font-medium text-muted-foreground">Account Status</span>
                             <span>
                                 {user.isActive ? (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-success">
                                         Active
                                     </span>
                                 ) : (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-error">
                                         Inactive
                                     </span>
                                 )}

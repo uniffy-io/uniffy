@@ -427,6 +427,53 @@ showSidebar={!isZenMode && isSidebarOpen}
 )}>
 ```
 
+## Error Handling
+
+**IMPORTANT: Never write custom error handling or toast calls in thunks or components. Use the centralized error system.**
+
+The app has a global error-toast pipeline that automatically catches rejected async thunks, translates raw API/network errors into user-friendly messages, and displays toast notifications. No per-feature error handling is needed.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/config/errorMessages.ts` | Error message mappings (`friendlyErrorMessage()`) |
+| `src/ui/src/app/errorToastMiddleware.ts` | Redux middleware that catches rejected thunks and shows toasts |
+| `src/ui/src/config/index.ts` | Re-exports `friendlyErrorMessage` |
+
+**How it works:**
+
+```
+Async Thunk rejects (API error)
+    -> errorToastMiddleware catches rejection
+    -> friendlyErrorMessage() translates raw error
+    -> toast.error() displays user-friendly message
+```
+
+The middleware handles both `rejectWithValue` payloads and thrown error messages. Noisy non-errors (aborted requests, etc.) are automatically suppressed.
+
+**Error translation priority:**
+
+1. ConnectRPC/gRPC status codes (e.g., `[permission_denied]` -> "You do not have permission to perform this action.")
+2. HTTP status codes (e.g., `500` -> "Something went wrong on our end. Please try again shortly.")
+3. Regex patterns (e.g., network errors, timeouts)
+4. Fall-through: raw message displayed as-is
+
+**Rules:**
+
+1. **Do NOT call `toast.error()` manually in thunks** - the middleware handles it automatically
+2. **Do NOT write custom error messages in thunks** - use `rejectWithValue(error.message)` and let `friendlyErrorMessage()` translate it
+3. **To add new error mappings**, update `src/ui/src/config/errorMessages.ts` (add to `STATUS_CODE_MESSAGES`, `HTTP_STATUS_MESSAGES`, or `MESSAGE_PATTERNS`)
+4. **To suppress an error**, return `null` from `friendlyErrorMessage()` by adding it to the suppression list
+5. **For manual toast calls outside Redux** (rare), import `friendlyErrorMessage` from `@/config` and use it:
+   ```typescript
+   import { friendlyErrorMessage } from '@/config';
+   import { toast } from 'sonner';
+
+   const friendly = friendlyErrorMessage(error.message);
+   if (friendly) toast.error(friendly);
+   ```
+
 ## Authentication (Frontend)
 
 **Key Frontend Files:**

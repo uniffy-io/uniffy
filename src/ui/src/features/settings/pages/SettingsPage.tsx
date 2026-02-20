@@ -84,15 +84,16 @@ export function SettingsPage() {
     };
 
     return (
-        <div className="h-full bg-background">
+        <>
             {/* Error banner */}
             {error && (
-                <div className="bg-red-100 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-4 py-3">
-                    <div className="flex items-center justify-between max-w-3xl mx-auto">
-                        <span className="text-sm text-red-800 dark:text-red-200">{error}</span>
+                <div className="mb-6 p-4 rounded-lg border status-error">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm" style={{ color: 'var(--status-error)' }}>{error}</span>
                         <button
                             type="button"
-                            className="text-red-600 dark:text-red-400 hover:underline text-sm"
+                            className="hover:underline text-sm"
+                            style={{ color: 'var(--status-error)' }}
                             onClick={dismissError}
                         >
                             Dismiss
@@ -108,7 +109,7 @@ export function SettingsPage() {
             >
                 {renderContent()}
             </SettingsLayout>
-        </div>
+        </>
     );
 }
 
