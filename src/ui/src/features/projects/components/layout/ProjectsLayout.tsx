@@ -27,7 +27,9 @@ import { RoadmapView } from "../views/roadmap/RoadmapView";
 import { TaskDetailPanel } from "../detail/TaskDetailPanel";
 import { CreateTaskModal } from "../modals/CreateTaskModal";
 import { CreateProjectModal } from "../modals/CreateProjectModal";
+import { EditProjectModal } from "../modals/EditProjectModal";
 import {
+  selectEditProjectId,
   selectIsDetailPanelOpen,
   selectIsSidebarOpen,
   selectSelectedTaskId,
@@ -52,6 +54,7 @@ export function ProjectsLayout() {
   const tasks = useAppSelector(selectTasks);
   const isCreateTaskModalOpen = useAppSelector((state) => state.projectsUi.isCreateTaskModalOpen);
   const isCreateProjectModalOpen = useAppSelector((state) => state.projectsUi.isCreateProjectModalOpen);
+  const editProjectId = useAppSelector(selectEditProjectId);
 
   // Load saved panel layout
   const [defaultLayout] = useState(() => loadPanelLayout("projects"));
@@ -139,6 +142,7 @@ export function ProjectsLayout() {
     {/* Modals */}
     {isCreateTaskModalOpen && <CreateTaskModal />}
     {isCreateProjectModalOpen && <CreateProjectModal />}
+    {editProjectId && <EditProjectModal />}
     </>
   );
 }

@@ -1,18 +1,18 @@
 /**
- * CreateProjectModal - Modal for creating a new project
+ * EditProjectModal - Modal for editing an existing project
  *
- * Simple form with name and optional description.
+ * Allows editing name, description, visibility, and icon.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Kanban, LockSimple, Buildings } from "@phosphor-icons/react";
-import { useNavigate } from "react-router-dom";
+import { X, PencilSimple, LockSimple, Buildings } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { closeCreateProjectModal, selectProjectScope } from "@/features/projects/store/projectsUiSlice";
-import { createProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
+import { closeEditProjectModal, selectEditProjectId } from "@/features/projects/store/projectsUiSlice";
+import { selectProjects } from "@/features/projects/store/projectsSlice";
+import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
 import type { VisibilityScope } from "@/features/projects/types/project";
 
@@ -29,33 +29,40 @@ const ICON_OPTIONS: ProjectIconName[] = [
   "star",
 ];
 
-export function CreateProjectModal() {
+export function EditProjectModal() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const projectScope = useAppSelector(selectProjectScope);
+  const editProjectId = useAppSelector(selectEditProjectId);
+  const projects = useAppSelector(selectProjects);
+  const project = projects.find((p) => p.id === editProjectId);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
-  const [visibility, setVisibility] = useState<VisibilityScope>(
-    projectScope === "organization" ? "ORGANIZATION" : "PRIVATE"
-  );
+  const [visibility, setVisibility] = useState<VisibilityScope>("PRIVATE");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Populate form when project changes
+  useEffect(() => {
+    if (project) {
+      setName(project.name);
+      setDescription(project.description || "");
+      setIcon((project.icon || "kanban") as ProjectIconName);
+      setVisibility(project.visibility);
+    }
+  }, [project]);
+
   // Focus input on mount
   useEffect(() => {
-    const timer = setTimeout(() => inputRef.current?.focus(), 50);
-    return () => clearTimeout(timer);
-  }, []);
+    if (editProjectId) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [editProjectId]);
 
   const handleClose = useCallback(() => {
-    setName("");
-    setDescription("");
-    setIcon("kanban");
-    setVisibility(projectScope === "organization" ? "ORGANIZATION" : "PRIVATE");
-    dispatch(closeCreateProjectModal());
-  }, [dispatch, projectScope]);
+    dispatch(closeEditProjectModal());
+  }, [dispatch]);
 
   // Close on escape
   useEffect(() => {
@@ -68,23 +75,23 @@ export function CreateProjectModal() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isSubmitting, handleClose]);
 
+  if (!project || !editProjectId) return null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     setIsSubmitting(true);
     try {
-      const result = await dispatch(
-        createProject({
+      await dispatch(
+        updateProject({
+          id: project.id,
           name: name.trim(),
           description: description.trim(),
           icon,
           visibility,
         })
       ).unwrap();
-      // Load tasks for the new project and navigate to it
-      dispatch(fetchProjectTasks(result.id));
-      navigate(`/projects/${result.id}`);
       handleClose();
     } finally {
       setIsSubmitting(false);
@@ -104,9 +111,9 @@ export function CreateProjectModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <Kanban size={20} weight="bold" className="text-primary" />
+            <PencilSimple size={20} weight="bold" className="text-primary" />
             <h3 className="text-lg font-semibold text-foreground">
-              New Project
+              Edit Project
             </h3>
           </div>
           <button
@@ -224,7 +231,7 @@ export function CreateProjectModal() {
               Cancel
             </Button>
             <Button type="submit" disabled={!name.trim() || isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Project"}
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

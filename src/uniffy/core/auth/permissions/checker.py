@@ -167,6 +167,15 @@ class PermissionChecker:
         ):
             return False
 
+        # For org-wide content, check org permission defaults
+        if content_visibility == VisibilityScope.ORGANIZATION:
+            # Tasks use project defaults (tasks are children of projects)
+            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
+            if await self._org_defaults_allow(
+                organization_id, defaults_type, "members_can_edit"
+            ):
+                return True
+
         # Check for explicit edit permission
         return await self._has_permission_level(
             user_id,
@@ -183,6 +192,7 @@ class PermissionChecker:
         content_type: ContentType,
         content_id: UUID,
         content_owner_id: UUID,
+        content_visibility: VisibilityScope = VisibilityScope.PRIVATE,
     ) -> bool:
         """
         Check if a user can delete a piece of content.
@@ -199,6 +209,8 @@ class PermissionChecker:
             ID of the content.
         content_owner_id : UUID
             Owner of the content.
+        content_visibility : VisibilityScope
+            Visibility scope of the content.
 
         Returns
         -------
@@ -214,6 +226,14 @@ class PermissionChecker:
         if await self._is_org_admin(user_id, organization_id):
             return True
 
+        # For org-wide content, check org permission defaults
+        if content_visibility == VisibilityScope.ORGANIZATION:
+            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
+            if await self._org_defaults_allow(
+                organization_id, defaults_type, "members_can_delete"
+            ):
+                return True
+
         # Check for explicit delete permission
         permission = await self._get_user_permission(
             user_id, content_type, content_id, organization_id
@@ -228,6 +248,7 @@ class PermissionChecker:
         content_type: ContentType,
         content_id: UUID,
         content_owner_id: UUID,
+        content_visibility: VisibilityScope = VisibilityScope.PRIVATE,
     ) -> bool:
         """
         Check if a user can share a piece of content.
@@ -244,6 +265,8 @@ class PermissionChecker:
             ID of the content.
         content_owner_id : UUID
             Owner of the content.
+        content_visibility : VisibilityScope
+            Visibility scope of the content.
 
         Returns
         -------
@@ -258,6 +281,14 @@ class PermissionChecker:
         # Org OWNER/ADMIN always have full access to all org content
         if await self._is_org_admin(user_id, organization_id):
             return True
+
+        # For org-wide content, check org permission defaults
+        if content_visibility == VisibilityScope.ORGANIZATION:
+            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
+            if await self._org_defaults_allow(
+                organization_id, defaults_type, "members_can_share"
+            ):
+                return True
 
         # Check for explicit share permission
         permission = await self._get_user_permission(
@@ -436,6 +467,42 @@ class PermissionChecker:
     # ─────────────────────────────────────────────────────────────
     # Private helper methods
     # ─────────────────────────────────────────────────────────────
+
+    async def _org_defaults_allow(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        field: str,
+    ) -> bool:
+        """
+        Check if org permission defaults allow the given action for a content type.
+
+        Parameters
+        ----------
+        organization_id : UUID
+            Organization ID.
+        content_type : ContentType
+            Content type to check defaults for.
+        field : str
+            The defaults field to check (e.g. 'members_can_edit').
+
+        Returns
+        -------
+        bool
+            True if the org default allows the action.
+
+        """
+        from uniffy.core.models.permissions.org_permission_defaults import (
+            OrganizationPermissionDefaults,
+        )
+
+        result = await self.session.execute(
+            select(getattr(OrganizationPermissionDefaults, field))
+            .where(OrganizationPermissionDefaults.organization_id == organization_id)
+            .where(OrganizationPermissionDefaults.content_type == content_type)
+        )
+        value = result.scalar_one_or_none()
+        return value is True
 
     async def _is_user_in_organization(
         self,

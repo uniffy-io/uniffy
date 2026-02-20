@@ -112,16 +112,12 @@ export const viewerSlice = createSlice({
             state.loading = false;
         },
 
-        // Close viewer
+        // Close viewer - only set isOpen to false so the Transition
+        // leave animation can complete and Dialog cleans up (removes inert).
+        // File data is kept until the next openViewer call overwrites it.
         closeViewer: (state) => {
             state.isOpen = false;
             state.isFullscreen = false;
-            state.currentFileId = null;
-            state.fileData = null;
-            state.playlist = [];
-            state.playlistIndex = 0;
-            state.loading = false;
-            state.error = null;
         },
 
         // Navigate to next file in playlist

@@ -7,12 +7,11 @@
 import { useEffect, useState } from 'react';
 import {
     ShieldCheck,
-    FileText,
-    Folder,
+    NotePencil,
+    FolderSimple,
     CalendarDots,
-    ChatTeardrop,
-    User,
     WarningCircle,
+    Kanban,
 } from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '@/features/admin/hooks/useAdminHooks';
 import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
@@ -26,20 +25,18 @@ const VISIBILITY_OPTIONS: SelectOption<number>[] = [
     { value: VisibilityScope.ORGANIZATION, label: 'Organization' },
 ];
 
-const CONTENT_TYPE_ICONS: Record<number, typeof FileText> = {
-    [ContentType.NOTE]: FileText,
-    [ContentType.FILE]: Folder,
+const CONTENT_TYPE_ICONS: Record<number, typeof NotePencil> = {
+    [ContentType.NOTE]: NotePencil,
+    [ContentType.FILE]: FolderSimple,
+    [ContentType.PROJECT]: Kanban,
     [ContentType.CALENDAR_EVENT]: CalendarDots,
-    [ContentType.CHAT_MESSAGE]: ChatTeardrop,
-    [ContentType.USER]: User,
 };
 
 const ALL_CONTENT_TYPES = [
     ContentType.NOTE,
     ContentType.FILE,
+    ContentType.PROJECT,
     ContentType.CALENDAR_EVENT,
-    ContentType.CHAT_MESSAGE,
-    ContentType.USER,
 ];
 
 interface ContentTypeCardProps {
@@ -50,7 +47,7 @@ interface ContentTypeCardProps {
 
 function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardProps) {
     const [saving, setSaving] = useState(false);
-    const Icon = CONTENT_TYPE_ICONS[contentType] || FileText;
+    const Icon = CONTENT_TYPE_ICONS[contentType] || NotePencil;
 
     // Local state for toggles
     const [membersCanView, setMembersCanView] = useState(defaults?.membersCanView ?? true);
@@ -120,7 +117,7 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
                 <div className="flex-1">
                     <h3 className="font-medium">{getContentTypeLabel(contentType)}</h3>
                     <p className="text-xs text-muted-foreground">
-                        Default permissions for new {getContentTypeLabel(contentType).toLowerCase()}
+                        Member permissions for organization-visible {getContentTypeLabel(contentType).toLowerCase()}
                     </p>
                 </div>
                 {saving && (
