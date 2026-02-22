@@ -2,6 +2,47 @@ import type { FieldDefinition, FieldValue } from "./fields";
 import type { ViewConfig } from "./views";
 
 /**
+ * A sprint is a time-boxed iteration for completing tasks
+ */
+export interface Sprint {
+  id: string;
+  projectId: string;
+  organizationId: string;
+  name: string;
+  goal: string;
+  status: "planned" | "active" | "closed";
+  startDate: string | null;
+  endDate: string | null;
+  sortOrder: number;
+  taskCount: number;
+  completedTaskCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSprintRequest {
+  projectId: string;
+  name: string;
+  goal?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface UpdateSprintRequest {
+  id: string;
+  name?: string;
+  goal?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface StartSprintRequest {
+  id: string;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+/**
  * Visibility scope for projects (matches existing pattern)
  */
 export type VisibilityScope = "PRIVATE" | "GROUP" | "ORGANIZATION" | "PUBLIC";
@@ -27,6 +68,7 @@ export interface Project {
   deletedAt: string | null;
   urn: string;
   userPermissionLevel: number;
+  slug: string;
 }
 
 /**
@@ -60,6 +102,9 @@ export interface Task {
   deletedAt: string | null;
   urn: string;
   userPermissionLevel: number;
+  number: number;
+  taskType: string;
+  sprintId: string | null;
 }
 
 /**
@@ -83,6 +128,7 @@ export interface CreateProjectRequest {
   icon?: string;
   color?: string;
   visibility?: VisibilityScope;
+  slug?: string;
 }
 
 export interface UpdateProjectRequest {
@@ -92,6 +138,7 @@ export interface UpdateProjectRequest {
   icon?: string;
   color?: string;
   visibility?: VisibilityScope;
+  slug?: string;
 }
 
 export interface CreateTaskRequest {
@@ -104,6 +151,10 @@ export interface CreateTaskRequest {
   startDate?: string | null;
   dueDate?: string | null;
   fieldValues?: Record<string, FieldValue>;
+  taskType?: string;
+  sprintId?: string | null;
+  parentId?: string | null;
+  blockedByTaskIds?: string[];
 }
 
 export interface UpdateTaskRequest {
@@ -117,6 +168,10 @@ export interface UpdateTaskRequest {
   dueDate?: string | null;
   fieldValues?: Record<string, FieldValue>;
   sortOrder?: number;
+  taskType?: string;
+  sprintId?: string | null;
+  parentId?: string | null;
+  blockedByTaskIds?: string[];
 }
 
 export interface MoveTaskRequest {

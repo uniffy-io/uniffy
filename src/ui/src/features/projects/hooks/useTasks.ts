@@ -98,9 +98,12 @@ export function useFilteredTasks(projectId: string) {
   const searchQuery = useAppSelector((state) => state.projectsUi.searchQuery);
   const sortConfig = useAppSelector((state) => state.projectsUi.activeSortConfig);
   const filterConfig = useAppSelector((state) => state.projectsUi.activeFilterConfig);
+  const sprintFilter = useAppSelector((state) => state.projectsUi.sprintFilter);
+  const taskTypeFilter = useAppSelector((state) => state.projectsUi.taskTypeFilter);
 
   const filteredTasks = useMemo(() => {
-    let result = [...tasks];
+    // Exclude subtasks — they are only visible in the parent task's detail panel
+    let result = tasks.filter((t) => !t.parentId);
 
     // Apply search filter
     if (searchQuery) {
@@ -110,6 +113,18 @@ export function useFilteredTasks(projectId: string) {
           task.title.toLowerCase().includes(query) ||
           task.description.toLowerCase().includes(query)
       );
+    }
+
+    // Apply sprint quick filter
+    if (sprintFilter === "__backlog__") {
+      result = result.filter((task) => task.sprintId === null);
+    } else if (sprintFilter) {
+      result = result.filter((task) => task.sprintId === sprintFilter);
+    }
+
+    // Apply task type quick filter
+    if (taskTypeFilter) {
+      result = result.filter((task) => (task.taskType || "task") === taskTypeFilter);
     }
 
     // Apply filter conditions
@@ -129,12 +144,12 @@ export function useFilteredTasks(projectId: string) {
         return sortConfig.direction === "asc" ? comparison : -comparison;
       });
     } else {
-      // Default: sort by sortOrder (asc)
-      result.sort((a, b) => a.sortOrder - b.sortOrder);
+      // Default: sort by task number (asc)
+      result.sort((a, b) => a.number - b.number);
     }
 
     return result;
-  }, [tasks, searchQuery, sortConfig, filterConfig]);
+  }, [tasks, searchQuery, sortConfig, filterConfig, sprintFilter, taskTypeFilter]);
 
   return filteredTasks;
 }

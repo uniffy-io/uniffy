@@ -4,6 +4,7 @@
 
 import {
   differenceInDays,
+  getDaysInMonth,
   startOfDay,
   startOfWeek,
   startOfMonth,
@@ -106,10 +107,46 @@ const DAYS_PER_COLUMN: Record<ZoomLevel, number> = {
 };
 
 /**
+ * Minimum bar width in pixels (ensures bars remain visible/clickable)
+ */
+const MIN_BAR_WIDTH = 20;
+
+/**
+ * Convert a date to its pixel X position on the timeline.
+ *
+ * For day/week zoom: uses a fixed pixels-per-day ratio (columns are
+ * fixed-duration).
+ *
+ * For month zoom: calculates the exact month offset plus the fractional
+ * position within that month, so bars align correctly to calendar month
+ * columns regardless of varying month lengths (28-31 days).
+ */
+export function dateToPixelX(
+  date: Date,
+  viewStartDate: Date,
+  zoom: ZoomLevel,
+): number {
+  const columnWidth = COLUMN_WIDTHS[zoom];
+
+  if (zoom === "month") {
+    const monthsDiff =
+      (date.getFullYear() - viewStartDate.getFullYear()) * 12 +
+      (date.getMonth() - viewStartDate.getMonth());
+    const dayInMonth = date.getDate() - 1; // 0-based
+    const daysInMonth = getDaysInMonth(date);
+    return (monthsDiff + dayInMonth / daysInMonth) * columnWidth;
+  }
+
+  // Day and week: columns have fixed duration, linear math is accurate
+  const pixelsPerDay = columnWidth / DAYS_PER_COLUMN[zoom];
+  return differenceInDays(date, viewStartDate) * pixelsPerDay;
+}
+
+/**
  * Calculate gantt bar position and width.
  *
- * Uses day-based math for all zoom levels so bars align accurately
- * within columns instead of snapping to column boundaries.
+ * Uses dateToPixelX for accurate positioning at all zoom levels,
+ * including month zoom where column durations vary.
  */
 export interface GanttBarPosition {
   left: number;
@@ -141,15 +178,11 @@ export function calculateBarPosition(
   const visibleStart = isBefore(start, viewStartDate) ? viewStartDate : start;
   const visibleEnd = isAfter(end, viewEndDate) ? viewEndDate : end;
 
-  // Use day-based calculations for accurate sub-column positioning
-  const columnWidth = COLUMN_WIDTHS[zoom];
-  const pixelsPerDay = columnWidth / DAYS_PER_COLUMN[zoom];
-
-  const startDayOffset = differenceInDays(visibleStart, viewStartDate);
-  const durationDays = differenceInDays(visibleEnd, visibleStart) + 1;
-
-  const left = startDayOffset * pixelsPerDay;
-  const width = Math.max(durationDays * pixelsPerDay, columnWidth * 0.5);
+  const left = dateToPixelX(visibleStart, viewStartDate, zoom);
+  const endX = dateToPixelX(addDays(visibleEnd, 1), viewStartDate, zoom);
+  // Minimum bar width: enough to be visible/clickable without inflating
+  // the bar beyond its actual date range (especially at month zoom)
+  const width = Math.max(endX - left, MIN_BAR_WIDTH);
 
   return {
     left,
@@ -168,6 +201,17 @@ export function pixelToDate(
   zoom: ZoomLevel
 ): Date {
   const columnWidth = COLUMN_WIDTHS[zoom];
+
+  if (zoom === "month") {
+    const monthIndex = pixelX / columnWidth;
+    const wholeMonths = Math.floor(monthIndex);
+    const fraction = monthIndex - wholeMonths;
+    const targetMonth = addMonths(viewStartDate, wholeMonths);
+    const daysInMonth = getDaysInMonth(targetMonth);
+    const dayOffset = Math.round(fraction * daysInMonth);
+    return addDays(targetMonth, dayOffset);
+  }
+
   const pixelsPerDay = columnWidth / DAYS_PER_COLUMN[zoom];
   const dayOffset = Math.round(pixelX / pixelsPerDay);
   return addDays(viewStartDate, dayOffset);

@@ -54,6 +54,12 @@ class Task(SQLModel, table=True):
         RRULE string (RFC 5545).
     sort_order : int
         Ordering within status group.
+    number : int
+        Human-readable sequential number within the project.
+    task_type : str
+        Issue type: task, bug, feature, story, or epic.
+    sprint_id : UUID | None
+        Sprint this task belongs to (None means backlog).
     field_values : dict | None
         Custom field values as JSONB.
     outgoing_references : list[str] | None
@@ -113,6 +119,11 @@ class Task(SQLModel, table=True):
     is_milestone: bool = Field(default=False, nullable=False)
     recurrence_rule: str | None = Field(default=None, max_length=500)
     sort_order: int = Field(default=0, sa_column=Column(Integer, nullable=False))
+    number: int = Field(default=0, nullable=False)
+    task_type: str = Field(default="task", max_length=50, nullable=False)
+    sprint_id: UUID | None = Field(
+        default=None, foreign_key="projects_sprints.id", index=True
+    )
     field_values: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     outgoing_references: list[str] | None = Field(
         default=None, sa_column=Column(JSONB)

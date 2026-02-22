@@ -41,7 +41,22 @@ export function CreateProjectModal() {
     projectScope === "organization" ? "ORGANIZATION" : "PRIVATE"
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [slug, setSlug] = useState("");
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-generate slug from name when not manually edited
+  useEffect(() => {
+    if (isSlugManuallyEdited) return;
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    let candidate: string;
+    if (words.length >= 2) {
+      candidate = words.map((w) => w[0]).join("").slice(0, 5).toUpperCase();
+    } else {
+      candidate = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase();
+    }
+    setSlug(candidate);
+  }, [name, isSlugManuallyEdited]);
 
   // Focus input on mount
   useEffect(() => {
@@ -54,6 +69,8 @@ export function CreateProjectModal() {
     setDescription("");
     setIcon("kanban");
     setVisibility(projectScope === "organization" ? "ORGANIZATION" : "PRIVATE");
+    setIsSlugManuallyEdited(false);
+    setSlug("");
     dispatch(closeCreateProjectModal());
   }, [dispatch, projectScope]);
 
@@ -80,6 +97,7 @@ export function CreateProjectModal() {
           description: description.trim(),
           icon,
           visibility,
+          slug: slug || undefined,
         })
       ).unwrap();
       // Load tasks for the new project and navigate to it
@@ -134,6 +152,30 @@ export function CreateProjectModal() {
                 onChange={(e) => setName(e.target.value)}
                 disabled={isSubmitting}
               />
+            </div>
+
+            {/* Slug (key/identifier) */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Project Key
+              </label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => {
+                    setSlug(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5));
+                    setIsSlugManuallyEdited(true);
+                  }}
+                  maxLength={5}
+                  disabled={isSubmitting}
+                  className="w-32 font-mono"
+                  placeholder="KEY"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Used for task IDs like {slug || "KEY"}-1
+                </span>
+              </div>
             </div>
 
             {/* Description */}

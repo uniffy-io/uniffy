@@ -5,19 +5,24 @@ Provides CRUD operations for projects and tasks with automatic permission
 checking and search indexing.
 """
 
+import re
+import secrets
 from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, select
+from sqlalchemy import and_, delete, func, select, text
 from sqlalchemy import update as sql_update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
+from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.shared import ContentType, VisibilityScope
@@ -65,6 +70,85 @@ class ProjectOperations(BaseContentOperations[Project]):
 
     # Core CRUD operations
 
+    def _generate_slug_candidate(self, name: str) -> str:
+        """
+        Generate an uppercase slug candidate from a project name.
+
+        Uses word initials for multi-word names, or first 3 chars
+        of cleaned name for single-word names. Ensures at least 2 chars.
+
+        Parameters
+        ----------
+        name : str
+            Project name to derive slug from.
+
+        Returns
+        -------
+        str
+            Uppercase slug candidate (2-5 chars).
+
+        """
+        words = [w for w in name.split() if w]
+        if len(words) >= 2:
+            candidate = "".join(w[0] for w in words)[:5].upper()
+        else:
+            cleaned = re.sub(r"[^a-zA-Z0-9]", "", name)
+            candidate = cleaned[:3].upper() if cleaned else "PRJ"
+        return candidate if len(candidate) >= 2 else (candidate + "PROJ")[:5]
+
+    async def _resolve_slug(
+        self,
+        organization_id: UUID,
+        name: str,
+        requested_slug: str | None,
+    ) -> str:
+        """
+        Resolve a unique slug for a project within an organization.
+
+        If a slug is requested and valid, uses it (or appends a digit
+        suffix on collision). Otherwise, auto-generates from name.
+
+        Parameters
+        ----------
+        organization_id : UUID
+            Organization ID (slugs are unique per org).
+        name : str
+            Project name (used if no slug is requested).
+        requested_slug : str | None
+            Explicitly requested slug (optional).
+
+        Returns
+        -------
+        str
+            Unique uppercase slug.
+
+        Raises
+        ------
+        ValidationError
+            If the requested slug fails pattern validation.
+
+        """
+        SLUG_PATTERN = re.compile(r"^[A-Z][A-Z0-9]{1,4}$")
+        candidate = requested_slug.upper() if requested_slug else self._generate_slug_candidate(name)
+        if not SLUG_PATTERN.match(candidate):
+            raise ValidationError(
+                "slug",
+                f"Slug '{candidate}' must be 2-5 uppercase letters/digits starting with a letter",
+            )
+        for suffix in ["", "2", "3", "4", "5", "6", "7", "8", "9"]:
+            slug_to_try = candidate + suffix
+            exists = await self.session.execute(
+                select(Project).where(
+                    Project.organization_id == organization_id,
+                    Project.slug == slug_to_try,
+                    Project.is_deleted == False,  # noqa: E712
+                )
+            )
+            if exists.scalar_one_or_none() is None:
+                return slug_to_try
+        # Last resort: append random hex
+        return candidate[:4] + secrets.token_hex(1).upper()
+
     async def create(
         self,
         user_id: UUID,
@@ -75,6 +159,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         color: str = "#3b82f6",
         visibility: VisibilityScope = VisibilityScope.PRIVATE,
         group_ids: list[UUID] | None = None,
+        slug: str | None = None,
     ) -> Project:
         """
         Create a project with default fields, views, and the owner as member.
@@ -97,6 +182,8 @@ class ProjectOperations(BaseContentOperations[Project]):
             Access scope.
         group_ids : list[UUID] | None
             Groups to share with (for GROUP visibility).
+        slug : str | None
+            Optional explicit slug. Auto-generated from name if not provided.
 
         Returns
         -------
@@ -104,6 +191,7 @@ class ProjectOperations(BaseContentOperations[Project]):
             Created project with default fields and views.
 
         """
+        resolved_slug = await self._resolve_slug(organization_id, name, slug)
         project = Project(
             organization_id=organization_id,
             owner_id=user_id,
@@ -113,6 +201,8 @@ class ProjectOperations(BaseContentOperations[Project]):
             color=color,
             visibility=visibility,
             member_ids=[str(user_id)],
+            slug=resolved_slug,
+            task_counter=0,
         )
         self.session.add(project)
         await self.session.flush()
@@ -592,6 +682,7 @@ class TaskOperations(BaseContentOperations[Task]):
         organization_id: UUID,
         project_id: UUID,
         title: str,
+        task_type: str = "task",
         **kwargs,
     ) -> Task:
         """
@@ -607,6 +698,8 @@ class TaskOperations(BaseContentOperations[Task]):
             Parent project ID.
         title : str
             Task title.
+        task_type : str
+            Issue type (task, bug, feature, story, epic).
         **kwargs
             Optional fields (description, status, priority, assignee_ids,
             dates, parent_id, field_values, etc.).
@@ -621,6 +714,18 @@ class TaskOperations(BaseContentOperations[Task]):
         project_ops = ProjectOperations(self.session)
         project = await project_ops.get_by_id(user_id, organization_id, project_id)
         await project_ops._require_edit(user_id, organization_id, project)
+
+        # Atomically increment task_counter and get the new number
+        counter_result = await self.session.execute(
+            text(
+                "UPDATE projects_projects "
+                "SET task_counter = task_counter + 1 "
+                "WHERE id = :project_id "
+                "RETURNING task_counter"
+            ),
+            {"project_id": str(project_id)},
+        )
+        task_number = counter_result.scalar_one()
 
         # Extract references from description
         description = kwargs.get("description", "")
@@ -661,6 +766,9 @@ class TaskOperations(BaseContentOperations[Task]):
             field_values=kwargs.get("field_values"),
             outgoing_references=outgoing_references or None,
             created_at=datetime.now(UTC),  # Ensure created_at is consistent
+            number=task_number,
+            task_type=task_type,
+            sprint_id=kwargs.get("sprint_id"),
         )
         self.session.add(task)
         await self.session.flush()
@@ -711,7 +819,9 @@ class TaskOperations(BaseContentOperations[Task]):
         title_changed = "title" in kwargs and kwargs["title"] != task.title
 
         # Fields that can be explicitly set to None (cleared)
-        nullable_fields = {"start_date", "due_date", "description", "parent_id", "recurrence_rule"}
+        nullable_fields = {
+            "start_date", "due_date", "description", "parent_id", "recurrence_rule", "sprint_id"
+        }
 
         # Track changes for activity log
         for key, value in kwargs.items():
@@ -724,6 +834,12 @@ class TaskOperations(BaseContentOperations[Task]):
 
             # Log specific changes
             if key == "status" and old_value != value:
+                # Auto-set completed_at when moving to done status
+                if value == "status_done" and task.completed_at is None:
+                    task.completed_at = datetime.now(UTC)
+                elif old_value == "status_done" and value != "status_done":
+                    task.completed_at = None
+
                 await self._log_activity(
                     task_id,
                     user_id,
@@ -740,6 +856,23 @@ class TaskOperations(BaseContentOperations[Task]):
                     field_id="field_priority",
                     previous_value=str(old_value),
                     new_value=str(value),
+                )
+            elif key == "task_type" and old_value != value:
+                await self._log_activity(
+                    task_id,
+                    user_id,
+                    "type_changed",
+                    field_id="field_type",
+                    previous_value=str(old_value),
+                    new_value=str(value),
+                )
+            elif key == "sprint_id" and old_value != value:
+                await self._log_activity(
+                    task_id,
+                    user_id,
+                    "sprint_changed",
+                    previous_value=str(old_value) if old_value else None,
+                    new_value=str(value) if value else None,
                 )
 
         # Re-extract references if description changed
@@ -897,6 +1030,8 @@ class TaskOperations(BaseContentOperations[Task]):
         project_id: UUID,
         include_deleted: bool = False,
         parent_id: UUID | str | None = None,
+        sprint_id: UUID | None = None,
+        backlog_only: bool = False,
         page: int = 1,
         page_size: int = 500,
     ) -> tuple[list[Task], int]:
@@ -915,6 +1050,10 @@ class TaskOperations(BaseContentOperations[Task]):
             Include soft-deleted tasks.
         parent_id : UUID | str | None
             Parent filter (None=all, "root"=top level, UUID=specific parent).
+        sprint_id : UUID | None
+            Filter by sprint ID.
+        backlog_only : bool
+            If True, only return tasks with no sprint assigned.
         page : int
             Page number.
         page_size : int
@@ -944,6 +1083,11 @@ class TaskOperations(BaseContentOperations[Task]):
             query = query.where(Task.parent_id.is_(None))
         elif parent_id:
             query = query.where(Task.parent_id == parent_id)
+
+        if sprint_id is not None:
+            query = query.where(Task.sprint_id == sprint_id)
+        elif backlog_only:
+            query = query.where(Task.sprint_id.is_(None))
 
         count_result = await self.session.execute(select(func.count()).select_from(query.subquery()))
         total = count_result.scalar_one()
@@ -1000,3 +1144,406 @@ class TaskOperations(BaseContentOperations[Task]):
         self.session.add(activity)
         await self.session.flush()
         return activity
+
+
+class SprintOperations:
+    """
+    Sprint CRUD operations for project sprints.
+
+    Sprints are project-scoped iteration containers, not full content items,
+    so they do not extend BaseContentOperations.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize sprint operations."""
+        self.session = session
+
+    async def _verify_project_edit(
+        self, user_id: UUID, organization_id: UUID, project_id: UUID
+    ) -> None:
+        """
+        Verify user has EDIT permission on the project.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User requesting access.
+        organization_id : UUID
+            Organization ID.
+        project_id : UUID
+            Project to check access on.
+
+        Raises
+        ------
+        NotFoundError
+            If the project does not exist.
+        PermissionDeniedError
+            If the user lacks EDIT permission.
+
+        """
+        project_ops = ProjectOperations(self.session)
+        project = await project_ops.get_by_id(user_id, organization_id, project_id)
+        await project_ops._require_edit(user_id, organization_id, project)
+
+    async def _get_sprint(self, sprint_id: UUID, organization_id: UUID) -> Sprint:
+        """
+        Fetch a sprint by ID within an organization.
+
+        Parameters
+        ----------
+        sprint_id : UUID
+            Sprint ID.
+        organization_id : UUID
+            Organization ID.
+
+        Returns
+        -------
+        Sprint
+            The sprint model.
+
+        Raises
+        ------
+        NotFoundError
+            If the sprint does not exist.
+
+        """
+        result = await self.session.execute(
+            select(Sprint).where(
+                Sprint.id == sprint_id,
+                Sprint.organization_id == organization_id,
+            )
+        )
+        sprint = result.scalar_one_or_none()
+        if not sprint:
+            raise NotFoundError("Sprint", str(sprint_id))
+        return sprint
+
+    async def create(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        project_id: UUID,
+        name: str,
+        goal: str = "",
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> Sprint:
+        """
+        Create a new sprint in the project.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User creating the sprint.
+        organization_id : UUID
+            Organization ID.
+        project_id : UUID
+            Project ID.
+        name : str
+            Sprint name.
+        goal : str
+            Sprint goal description.
+        start_date : str | None
+            Optional ISO date string for sprint start.
+        end_date : str | None
+            Optional ISO date string for sprint end.
+
+        Returns
+        -------
+        Sprint
+            Created sprint.
+
+        """
+        await self._verify_project_edit(user_id, organization_id, project_id)
+
+        # Get next sort_order
+        max_result = await self.session.execute(
+            select(func.max(Sprint.sort_order)).where(
+                Sprint.project_id == project_id,
+                Sprint.organization_id == organization_id,
+            )
+        )
+        current_max = max_result.scalar() or 0
+        new_sort_order = current_max + 1
+
+        sprint = Sprint(
+            project_id=project_id,
+            organization_id=organization_id,
+            name=name,
+            goal=goal,
+            status="planned",
+            start_date=start_date,
+            end_date=end_date,
+            sort_order=new_sort_order,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        self.session.add(sprint)
+        await self.session.commit()
+        await self.session.refresh(sprint)
+        return sprint
+
+    async def update(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        sprint_id: UUID,
+        name: str | None = None,
+        goal: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> Sprint:
+        """
+        Update sprint fields. Requires EDIT on project.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing update.
+        organization_id : UUID
+            Organization ID.
+        sprint_id : UUID
+            Sprint to update.
+        name : str | None
+            New sprint name.
+        goal : str | None
+            New sprint goal.
+        start_date : str | None
+            New start date ISO string.
+        end_date : str | None
+            New end date ISO string.
+
+        Returns
+        -------
+        Sprint
+            Updated sprint.
+
+        """
+        sprint = await self._get_sprint(sprint_id, organization_id)
+        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+
+        if name is not None:
+            sprint.name = name
+        if goal is not None:
+            sprint.goal = goal
+        if start_date is not None:
+            sprint.start_date = start_date
+        if end_date is not None:
+            sprint.end_date = end_date
+
+        sprint.updated_at = datetime.now(UTC)
+        await self.session.commit()
+        await self.session.refresh(sprint)
+        return sprint
+
+    async def start(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        sprint_id: UUID,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> Sprint:
+        """
+        Activate a sprint. Only one active sprint per project is allowed.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the action.
+        organization_id : UUID
+            Organization ID.
+        sprint_id : UUID
+            Sprint to start.
+        start_date : str | None
+            Optional override for start date.
+        end_date : str | None
+            Optional override for end date.
+
+        Returns
+        -------
+        Sprint
+            Activated sprint.
+
+        Raises
+        ------
+        ValidationError
+            If another sprint is already active in the project.
+
+        """
+        sprint = await self._get_sprint(sprint_id, organization_id)
+        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+
+        if sprint.status == "active":
+            return sprint
+
+        sprint.status = "active"
+        if start_date is not None:
+            sprint.start_date = start_date
+        if end_date is not None:
+            sprint.end_date = end_date
+        sprint.updated_at = datetime.now(UTC)
+
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise ValidationError("sprint", "A sprint is already active in this project")
+
+        await self.session.refresh(sprint)
+        return sprint
+
+    async def complete(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        sprint_id: UUID,
+    ) -> Sprint:
+        """
+        Mark a sprint as closed.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the action.
+        organization_id : UUID
+            Organization ID.
+        sprint_id : UUID
+            Sprint to complete.
+
+        Returns
+        -------
+        Sprint
+            Closed sprint.
+
+        """
+        sprint = await self._get_sprint(sprint_id, organization_id)
+        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+
+        sprint.status = "closed"
+        sprint.updated_at = datetime.now(UTC)
+        await self.session.commit()
+        await self.session.refresh(sprint)
+        return sprint
+
+    async def delete(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        sprint_id: UUID,
+    ) -> bool:
+        """
+        Delete a sprint, moving its tasks to backlog (sprint_id = NULL).
+
+        Parameters
+        ----------
+        user_id : UUID
+            User performing the action.
+        organization_id : UUID
+            Organization ID.
+        sprint_id : UUID
+            Sprint to delete.
+
+        Returns
+        -------
+        bool
+            True if deleted successfully.
+
+        """
+        from sqlalchemy import update as sa_update
+
+        sprint = await self._get_sprint(sprint_id, organization_id)
+        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+
+        # Move sprint tasks to backlog
+        await self.session.execute(
+            sa_update(Task)
+            .where(Task.sprint_id == sprint_id)
+            .values(sprint_id=None, updated_at=datetime.now(UTC))
+        )
+
+        await self.session.delete(sprint)
+        await self.session.commit()
+        return True
+
+    async def list_sprints(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        project_id: UUID,
+        include_closed: bool = False,
+    ) -> list[Sprint]:
+        """
+        List sprints for a project.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User requesting list.
+        organization_id : UUID
+            Organization ID.
+        project_id : UUID
+            Project ID.
+        include_closed : bool
+            Whether to include closed sprints.
+
+        Returns
+        -------
+        list[Sprint]
+            List of sprints ordered by sort_order.
+
+        """
+        # Verify project access
+        project_ops = ProjectOperations(self.session)
+        await project_ops.get_by_id(user_id, organization_id, project_id)
+
+        query = select(Sprint).where(
+            Sprint.project_id == project_id,
+            Sprint.organization_id == organization_id,
+        )
+
+        if not include_closed:
+            query = query.where(Sprint.status != "closed")
+
+        query = query.order_by(Sprint.sort_order.asc(), Sprint.created_at.asc())
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_task_counts(
+        self, sprint_ids: list[UUID]
+    ) -> dict[str, tuple[int, int]]:
+        """
+        Get total and completed task counts for a list of sprints.
+
+        Parameters
+        ----------
+        sprint_ids : list[UUID]
+            Sprint IDs to query.
+
+        Returns
+        -------
+        dict[str, tuple[int, int]]
+            Mapping of sprint_id string to (total, completed) counts.
+
+        """
+        if not sprint_ids:
+            return {}
+
+        result = await self.session.execute(
+            select(
+                Task.sprint_id,
+                func.count(Task.id).label("total"),
+                func.count(Task.completed_at).label("completed"),
+            )
+            .where(
+                Task.sprint_id.in_(sprint_ids),
+                Task.is_deleted == False,  # noqa: E712
+            )
+            .group_by(Task.sprint_id)
+        )
+
+        counts: dict[str, tuple[int, int]] = {}
+        for row in result:
+            counts[str(row.sprint_id)] = (row.total, row.completed)
+        return counts

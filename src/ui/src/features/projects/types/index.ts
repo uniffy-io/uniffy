@@ -2,6 +2,7 @@
 export type {
   Project,
   Task,
+  Sprint,
   ProjectSummary,
   VisibilityScope,
   CreateProjectRequest,

@@ -13,6 +13,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { attachmentsApi } from "@/features/attachments";
 import { ContentType } from "@/gen/common/v1/common_pb";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
 import { selectCurrentProject } from "../../store/projectsSlice";
 import { closeCreateTaskModal } from "../../store/projectsUiSlice";
@@ -20,6 +21,7 @@ import { createTask } from "../../store/projectsThunks";
 import { SYSTEM_FIELD_IDS } from "../../types";
 import { fetchMembers } from "@/features/admin";
 import type { SerializedMemberInfo } from "@/features/admin";
+import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 
 export function CreateTaskModal() {
   const dispatch = useAppDispatch();
@@ -33,6 +35,7 @@ export function CreateTaskModal() {
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [taskType, setTaskType] = useState("task");
   const [assigneeSearch, setAssigneeSearch] = useState("");
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +105,7 @@ export function CreateTaskModal() {
     setAssigneeIds([]);
     setStartDate("");
     setDueDate("");
+    setTaskType("task");
     pendingFileIdsRef.current = [];
     dispatch(closeCreateTaskModal());
   }, [dispatch]);
@@ -160,6 +164,7 @@ export function CreateTaskModal() {
           assigneeIds,
           startDate: startDate || null,
           dueDate: dueDate || null,
+          taskType,
         })
       ).unwrap();
 
@@ -214,6 +219,39 @@ export function CreateTaskModal() {
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+            {/* Issue Type */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Type
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {TASK_TYPES.map((type) => {
+                  const TypeIcon = type.icon;
+                  const isActive = taskType === type.value;
+                  return (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => setTaskType(type.value)}
+                      disabled={isSubmitting}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm transition-colors",
+                        isActive
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <TypeIcon
+                        size={14}
+                        weight={isActive ? "fill" : "regular"}
+                      />
+                      {type.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Title */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -256,36 +294,34 @@ export function CreateTaskModal() {
                 <label className="block text-sm font-medium text-foreground mb-1.5">
                   Status
                 </label>
-                <select
+                <Select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={setStatus}
                   disabled={isSubmitting}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {statusOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  options={statusOptions.map((opt) => ({
+                    value: opt.id,
+                    label: opt.label,
+                  }))}
+                  placeholder="Select status..."
+                  className="w-full"
+                />
               </div>
 
               <div className="flex-1">
                 <label className="block text-sm font-medium text-foreground mb-1.5">
                   Priority
                 </label>
-                <select
+                <Select
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
+                  onChange={setPriority}
                   disabled={isSubmitting}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {priorityOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  options={priorityOptions.map((opt) => ({
+                    value: opt.id,
+                    label: opt.label,
+                  }))}
+                  placeholder="Select priority..."
+                  className="w-full"
+                />
               </div>
             </div>
 

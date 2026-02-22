@@ -23,6 +23,7 @@ import { commentsReducer } from '@/features/comments/store/commentsSlice';
 import projectsReducer from '@/features/projects/store/projectsSlice';
 import projectsUiReducer from '@/features/projects/store/projectsUiSlice';
 import { errorToastMiddleware } from '@/app/errorToastMiddleware';
+import sprintsReducer from '@/features/projects/store/sprintsSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -80,6 +81,7 @@ const rootReducer = combineReducers({
   calendarUi: calendarUiReducer,
   projects: projectsReducer,
   projectsUi: projectsUiReducer,
+  sprints: sprintsReducer,
   zenMode: zenModeReducer,
   files: filesReducer,
   filesTree: filesTreeReducer,

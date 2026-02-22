@@ -39,6 +39,14 @@ service ProjectsService {
 
   // ----- Activities -----
   rpc ListActivities(ListActivitiesRequest) returns (ListActivitiesResponse);
+
+  // ----- Sprints -----
+  rpc CreateSprint(CreateSprintRequest) returns (SprintResponse);
+  rpc UpdateSprint(UpdateSprintRequest) returns (SprintResponse);
+  rpc StartSprint(StartSprintRequest) returns (SprintResponse);
+  rpc CompleteSprint(CompleteSprintRequest) returns (SprintResponse);
+  rpc DeleteSprint(DeleteSprintRequest) returns (DeleteSprintResponse);
+  rpc ListSprints(ListSprintsRequest) returns (ListSprintsResponse);
 }
 
 // ============================================================================
@@ -73,6 +81,8 @@ enum ActivityAction {
   ACTIVITY_ACTION_BLOCKED_BY_ADDED = 6;
   ACTIVITY_ACTION_BLOCKED_BY_REMOVED = 7;
   ACTIVITY_ACTION_ASSIGNED = 8;
+  ACTIVITY_ACTION_TYPE_CHANGED = 9;
+  ACTIVITY_ACTION_SPRINT_CHANGED = 10;
 }
 
 // ============================================================================
@@ -97,6 +107,7 @@ message Project {
   optional google.protobuf.Timestamp deleted_at = 15;
   string urn = 16;
   common.v1.PermissionLevel user_permission_level = 17;
+  string slug = 18;
 }
 
 message Task {
@@ -123,7 +134,10 @@ message Task {
   google.protobuf.Timestamp updated_at = 21;
   optional google.protobuf.Timestamp deleted_at = 22;
   string urn = 23;
-  common.v1.PermissionLevel user_permission_level = 24;
+  int32 number = 24;
+  string task_type = 25;
+  optional string sprint_id = 26;
+  common.v1.PermissionLevel user_permission_level = 27;
 }
 
 message FieldDefinition {
@@ -169,6 +183,22 @@ message SelectOption {
   int32 sort_order = 4;
 }
 
+message Sprint {
+  string id = 1;
+  string project_id = 2;
+  string organization_id = 3;
+  string name = 4;
+  string goal = 5;
+  string status = 6;
+  optional string start_date = 7;
+  optional string end_date = 8;
+  int32 sort_order = 9;
+  int32 task_count = 10;
+  int32 completed_task_count = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
 // ============================================================================
 // Project Requests/Responses
 // ============================================================================
@@ -180,6 +210,7 @@ message CreateProjectRequest {
   optional string icon = 4;
   optional string color = 5;
   optional common.v1.VisibilityScope visibility = 6;
+  optional string slug = 7;
 }
 
 message GetProjectRequest {
@@ -197,6 +228,7 @@ message UpdateProjectRequest {
   optional common.v1.VisibilityScope visibility = 7;
   repeated string member_ids = 8;
   optional string default_view_id = 9;
+  optional string slug = 10;
 }
 
 message DeleteProjectRequest {
@@ -245,6 +277,8 @@ message CreateTaskRequest {
   optional bool is_milestone = 12;
   optional string recurrence_rule = 13;
   map<string, string> field_values = 14;
+  optional string task_type = 15;
+  optional string sprint_id = 16;
 }
 
 message GetTaskRequest {
@@ -268,6 +302,8 @@ message UpdateTaskRequest {
   optional string recurrence_rule = 13;
   optional int32 sort_order = 14;
   map<string, string> field_values = 15;
+  optional string task_type = 16;
+  optional string sprint_id = 17;
 }
 
 message MoveTaskRequest {
@@ -303,6 +339,8 @@ message ListTasksRequest {
   optional common.v1.PaginationRequest pagination = 3;
   optional bool include_deleted = 4;
   optional string parent_id = 5;
+  optional string sprint_id = 6;
+  optional bool backlog_only = 7;
 }
 
 message TaskResponse {
@@ -401,6 +439,63 @@ message ViewResponse {
 
 message DeleteViewResponse {
   bool success = 1;
+}
+
+// ============================================================================
+// Sprint Requests/Responses
+// ============================================================================
+
+message CreateSprintRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  string name = 3;
+  optional string goal = 4;
+  optional string start_date = 5;
+  optional string end_date = 6;
+}
+
+message UpdateSprintRequest {
+  string organization_id = 1;
+  string sprint_id = 2;
+  optional string name = 3;
+  optional string goal = 4;
+  optional string start_date = 5;
+  optional string end_date = 6;
+}
+
+message StartSprintRequest {
+  string organization_id = 1;
+  string sprint_id = 2;
+  optional string start_date = 3;
+  optional string end_date = 4;
+}
+
+message CompleteSprintRequest {
+  string organization_id = 1;
+  string sprint_id = 2;
+}
+
+message DeleteSprintRequest {
+  string organization_id = 1;
+  string sprint_id = 2;
+}
+
+message ListSprintsRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  optional bool include_closed = 3;
+}
+
+message SprintResponse {
+  Sprint sprint = 1;
+}
+
+message DeleteSprintResponse {
+  bool success = 1;
+}
+
+message ListSprintsResponse {
+  repeated Sprint sprints = 1;
 }
 
 // ============================================================================

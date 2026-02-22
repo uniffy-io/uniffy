@@ -9,7 +9,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus } from "@phosphor-icons/react";
+import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Input } from "@/components/ui/input";
@@ -20,11 +20,15 @@ import {
   setSearchQuery,
   setFilterConfig,
   setGroupBy,
+  setSprintFilter,
+  setTaskTypeFilter,
   selectViewMode,
   selectSearchQuery,
   selectSelectedTaskIds,
   selectActiveFilterConfig,
   selectActiveGroupByFieldId,
+  selectSprintFilter,
+  selectTaskTypeFilter,
   clearSelection,
   openCreateTaskModal,
 } from "@/features/projects/store/projectsUiSlice";
@@ -36,6 +40,8 @@ import { FilterBuilder } from "@/features/projects/components/views/table/Filter
 import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
 import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
+import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
+import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import type { SelectOption } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 
@@ -52,6 +58,11 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const activeFilterConfig = useAppSelector(selectActiveFilterConfig);
   const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
   const { canEdit } = useProjectPermission();
+  const activeSprint = useAppSelector(selectActiveSprint(project.id));
+  const allSprints = useAppSelector(selectSprintsForProject(project.id));
+  const sprintFilter = useAppSelector(selectSprintFilter);
+  const taskTypeFilter = useAppSelector(selectTaskTypeFilter);
+  const hasSprintsWithTasks = allSprints.some((s) => s.taskCount > 0);
   const [showDeleteTasksConfirm, setShowDeleteTasksConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -157,7 +168,25 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             isActive={viewMode === "roadmap"}
             onClick={() => handleViewChange("roadmap")}
           />
+          <ViewTab
+            icon={<Archive size={16} />}
+            label="Backlog"
+            isActive={viewMode === "backlog"}
+            onClick={() => handleViewChange("backlog")}
+          />
+          <ViewTab
+            icon={<ShareNetwork size={16} />}
+            label="Graph"
+            isActive={viewMode === "graph"}
+            onClick={() => handleViewChange("graph")}
+          />
         </div>
+
+        {activeSprint && (
+          <span className="ml-2 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            {activeSprint.name}
+          </span>
+        )}
 
         <div className="h-5 w-px bg-border" />
 
@@ -202,6 +231,33 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           )}
         </div>
 
+        {/* Sprint Filter */}
+        {hasSprintsWithTasks && viewMode !== "backlog" && (
+          <QuickFilterDropdown
+            label="Sprint"
+            value={sprintFilter}
+            options={[
+              { value: null, label: "All sprints" },
+              { value: "__backlog__", label: "Backlog" },
+              ...allSprints
+                .filter((s) => s.status !== "closed")
+                .map((s) => ({ value: s.id, label: s.name })),
+            ]}
+            onSelect={(value) => dispatch(setSprintFilter(value))}
+          />
+        )}
+
+        {/* Task Type Filter */}
+        <QuickFilterDropdown
+          label="Type"
+          value={taskTypeFilter}
+          options={[
+            { value: null, label: "All types" },
+            ...TASK_TYPES.map((t) => ({ value: t.value, label: t.label })),
+          ]}
+          onSelect={(value) => dispatch(setTaskTypeFilter(value))}
+        />
+
         {/* Manage Statuses Button (Board view only) */}
         {viewMode === "board" && (
             <div className="relative">
@@ -215,7 +271,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
                     Manage Statuses
                 </Button>
                 {isManageStatusesOpen && (
-                    <div className="absolute top-9 left-0 z-50">
+                    <div className="absolute top-9 right-0 z-50">
                         <ManageStatusesDialog
                             options={statusOptions}
                             onSave={handleUpdateStatuses}
@@ -231,11 +287,12 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           <GroupByDropdown
             activeGroupByFieldId={activeGroupByFieldId}
             onSelect={(value) => dispatch(setGroupBy(value))}
+            showSprintOption={hasSprintsWithTasks}
           />
         )}
 
-        {/* Selection actions or auto-save indicator */}
-        {hasSelection ? (
+        {/* Selection actions */}
+        {hasSelection && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-muted-foreground">
               {selectedTaskIds.length} selected
@@ -254,11 +311,6 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             >
               <X size={14} />
             </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Check size={14} weight="bold" />
-            <span>Saved</span>
           </div>
         )}
       </div>
@@ -310,18 +362,110 @@ const GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
   { value: SYSTEM_FIELD_IDS.STATUS, label: "Status" },
   { value: SYSTEM_FIELD_IDS.PRIORITY, label: "Priority" },
   { value: SYSTEM_FIELD_IDS.ASSIGNEE, label: "Assignee" },
+  { value: "__sprint__", label: "Sprint" },
+  { value: "__task_type__", label: "Task Type" },
 ];
 
 interface GroupByDropdownProps {
   activeGroupByFieldId: string | null;
   onSelect: (value: string | null) => void;
+  showSprintOption: boolean;
 }
 
-function GroupByDropdown({ activeGroupByFieldId, onSelect }: GroupByDropdownProps) {
+// ===== Quick Filter Dropdown =====
+
+interface QuickFilterOption {
+  value: string | null;
+  label: string;
+}
+
+interface QuickFilterDropdownProps {
+  label: string;
+  value: string | null;
+  options: QuickFilterOption[];
+  onSelect: (value: string | null) => void;
+}
+
+function QuickFilterDropdown({ label, value, options, onSelect }: QuickFilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const activeOption = GROUP_BY_OPTIONS.find((o) => o.value === activeGroupByFieldId);
+  const activeOption = options.find((o) => o.value === value);
+  const displayLabel = activeOption?.value != null ? activeOption.label : label;
+  const isFiltered = value !== null;
+
+  const handleClose = useCallback(() => setIsOpen(false), []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        handleClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, handleClose]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors",
+          "hover:bg-muted",
+          isFiltered
+            ? "text-primary font-medium"
+            : "text-muted-foreground"
+        )}
+      >
+        <span>{displayLabel}</span>
+        <CaretDown size={12} className={cn("transition-transform", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full right-0 z-50 mt-1.5 w-48 rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95">
+          <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {label}
+          </div>
+          {options.map((option) => {
+            const isActive = option.value === value;
+            return (
+              <button
+                key={option.value ?? "__none__"}
+                type="button"
+                onClick={() => {
+                  onSelect(option.value);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-3 py-1.5 text-sm transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted"
+                )}
+              >
+                <span>{option.label}</span>
+                {isActive && <Check size={14} weight="bold" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GroupByDropdown({ activeGroupByFieldId, onSelect, showSprintOption }: GroupByDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const options = showSprintOption
+    ? GROUP_BY_OPTIONS
+    : GROUP_BY_OPTIONS.filter((o) => o.value !== "__sprint__");
+
+  const activeOption = options.find((o) => o.value === activeGroupByFieldId);
   const displayLabel = activeOption?.value ? activeOption.label : "No grouping";
 
   const handleClose = useCallback(() => setIsOpen(false), []);
@@ -360,7 +504,7 @@ function GroupByDropdown({ activeGroupByFieldId, onSelect }: GroupByDropdownProp
           <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Group by
           </div>
-          {GROUP_BY_OPTIONS.map((option) => {
+          {options.map((option) => {
             const isActive = option.value === activeGroupByFieldId;
             return (
               <button

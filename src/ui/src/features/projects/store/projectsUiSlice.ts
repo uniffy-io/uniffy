@@ -297,6 +297,20 @@ export const projectsUiSlice = createSlice({
       state.searchQuery = action.payload;
     },
 
+    /**
+     * Set sprint quick filter
+     */
+    setSprintFilter: (state, action: PayloadAction<string | null>) => {
+      state.sprintFilter = action.payload;
+    },
+
+    /**
+     * Set task type quick filter
+     */
+    setTaskTypeFilter: (state, action: PayloadAction<string | null>) => {
+      state.taskTypeFilter = action.payload;
+    },
+
     // ===== Roadmap State =====
 
     /**
@@ -425,6 +439,8 @@ export const {
   setSortConfig,
   setGroupBy,
   setSearchQuery,
+  setSprintFilter,
+  setTaskTypeFilter,
   setRoadmapStartDate,
   setRoadmapZoom,
   setTaskSaving,
@@ -452,6 +468,8 @@ export const selectAutosaveState = (state: RootState) => state.projectsUi.autosa
 export const selectActiveSortConfig = (state: RootState) => state.projectsUi.activeSortConfig;
 export const selectActiveFilterConfig = (state: RootState) => state.projectsUi.activeFilterConfig;
 export const selectActiveGroupByFieldId = (state: RootState) => state.projectsUi.activeGroupByFieldId;
+export const selectSprintFilter = (state: RootState) => state.projectsUi.sprintFilter;
+export const selectTaskTypeFilter = (state: RootState) => state.projectsUi.taskTypeFilter;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
 export const selectUndoStack = (state: RootState) => state.projectsUi.undoStack;

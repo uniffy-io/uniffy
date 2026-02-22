@@ -76,6 +76,24 @@ class ProjectsService(Protocol):
     async def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def create_sprint(self, request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_sprint(self, request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def start_sprint(self, request: projects_dot_v1_dot_projects__pb2.StartSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def complete_sprint(self, request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def delete_sprint(self, request: projects_dot_v1_dot_projects__pb2.DeleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteSprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_sprints(self, request: projects_dot_v1_dot_projects__pb2.ListSprintsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListSprintsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
     def __init__(self, service: ProjectsService | AsyncGenerator[ProjectsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -281,6 +299,66 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_activities,
+                ),
+                "/projects.v1.ProjectsService/CreateSprint": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_sprint,
+                ),
+                "/projects.v1.ProjectsService/UpdateSprint": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_sprint,
+                ),
+                "/projects.v1.ProjectsService/StartSprint": Endpoint.unary(
+                    method=MethodInfo(
+                        name="StartSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.start_sprint,
+                ),
+                "/projects.v1.ProjectsService/CompleteSprint": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CompleteSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.complete_sprint,
+                ),
+                "/projects.v1.ProjectsService/DeleteSprint": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.DeleteSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.DeleteSprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_sprint,
+                ),
+                "/projects.v1.ProjectsService/ListSprints": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListSprints",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ListSprintsRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ListSprintsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_sprints,
                 ),
             },
             interceptors=interceptors,
@@ -694,6 +772,126 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def start_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.StartSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StartSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def complete_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CompleteSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.DeleteSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.DeleteSprintResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.DeleteSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.DeleteSprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_sprints(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ListSprintsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ListSprintsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSprints",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ListSprintsRequest,
+                output=projects_dot_v1_dot_projects__pb2.ListSprintsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
@@ -735,6 +933,18 @@ class ProjectsServiceSync(Protocol):
     def delete_view(self, request: projects_dot_v1_dot_projects__pb2.DeleteViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_sprint(self, request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_sprint(self, request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def start_sprint(self, request: projects_dot_v1_dot_projects__pb2.StartSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def complete_sprint(self, request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_sprint(self, request: projects_dot_v1_dot_projects__pb2.DeleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteSprintResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_sprints(self, request: projects_dot_v1_dot_projects__pb2.ListSprintsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListSprintsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -941,6 +1151,66 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_activities,
+                ),
+                "/projects.v1.ProjectsService/CreateSprint": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_sprint,
+                ),
+                "/projects.v1.ProjectsService/UpdateSprint": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_sprint,
+                ),
+                "/projects.v1.ProjectsService/StartSprint": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="StartSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.start_sprint,
+                ),
+                "/projects.v1.ProjectsService/CompleteSprint": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CompleteSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.complete_sprint,
+                ),
+                "/projects.v1.ProjectsService/DeleteSprint": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteSprint",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.DeleteSprintRequest,
+                        output=projects_dot_v1_dot_projects__pb2.DeleteSprintResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_sprint,
+                ),
+                "/projects.v1.ProjectsService/ListSprints": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListSprints",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ListSprintsRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ListSprintsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_sprints,
                 ),
             },
             interceptors=interceptors,
@@ -1348,6 +1618,126 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.ListActivitiesRequest,
                 output=projects_dot_v1_dot_projects__pb2.ListActivitiesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def create_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.CreateSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.UpdateSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def start_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.StartSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StartSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.StartSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def complete_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.SprintResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CompleteSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.CompleteSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.SprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_sprint(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.DeleteSprintRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.DeleteSprintResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteSprint",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.DeleteSprintRequest,
+                output=projects_dot_v1_dot_projects__pb2.DeleteSprintResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_sprints(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ListSprintsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ListSprintsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSprints",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ListSprintsRequest,
+                output=projects_dot_v1_dot_projects__pb2.ListSprintsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

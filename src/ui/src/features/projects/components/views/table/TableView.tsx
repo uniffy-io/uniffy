@@ -81,6 +81,8 @@ import type { SerializedMemberInfo } from "@/features/admin";
 import { EmptyState } from "./EmptyState";
 import { CreateFieldDialog } from "./CreateFieldDialog";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
+import { getTaskTypeConfig, TASK_TYPES } from "@/features/projects/utils/taskTypes";
+import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 
 // ===== Grouping Types =====
 
@@ -105,6 +107,7 @@ export function TableView() {
   const redoStack = useAppSelector(selectRedoStack);
   const allTasks = useAppSelector((state) => state.projects.tasks);
   const filteredTasks = useFilteredTasks(project?.id ?? "");
+  const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
 
   // Track collapsed group sections
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -122,6 +125,33 @@ export function TableView() {
   // Compute groups
   const groups = useMemo((): TaskGroup[] | null => {
     if (!groupByFieldId || !project) return null;
+
+    // Virtual group: Sprint
+    if (groupByFieldId === "__sprint__") {
+      const sprintMap = new Map(sprints.map((s) => [s.id, s]));
+      const grouped: TaskGroup[] = sprints.map((s) => ({
+        key: s.id,
+        label: s.name,
+        tasks: filteredTasks.filter((t) => t.sprintId === s.id),
+      }));
+      const backlog = filteredTasks.filter(
+        (t) => !t.sprintId || !sprintMap.has(t.sprintId)
+      );
+      if (backlog.length > 0) {
+        grouped.push({ key: "__backlog__", label: "Backlog", tasks: backlog });
+      }
+      return grouped;
+    }
+
+    // Virtual group: Task Type
+    if (groupByFieldId === "__task_type__") {
+      const grouped: TaskGroup[] = TASK_TYPES.map((tt) => ({
+        key: tt.value,
+        label: tt.label,
+        tasks: filteredTasks.filter((t) => (t.taskType || "task") === tt.value),
+      }));
+      return grouped.filter((g) => g.tasks.length > 0);
+    }
 
     const field = project.fieldDefinitions.find((f) => f.id === groupByFieldId);
     if (!field) return null;
@@ -183,7 +213,7 @@ export function TableView() {
     }
 
     return result;
-  }, [groupByFieldId, project, filteredTasks]);
+  }, [groupByFieldId, project, filteredTasks, sprints]);
 
   // All tasks for select-all (respects grouping collapsed state)
   const allVisibleTaskIds = useMemo(() => {
@@ -1044,7 +1074,7 @@ function TableRow({
         style={{ width: 300 }}
         onClick={onTitleClick}
       >
-        <span className="text-sm text-foreground truncate">{task.title}</span>
+        <TaskTitleCell task={task} />
       </div>
 
       {/* Field Columns */}
@@ -1630,6 +1660,23 @@ function InlineAssigneeEditor({ currentAssigneeIds, onSave, onClose }: {
       <div ref={triggerRef} className="absolute top-0 left-0 w-full h-full" />
       {dropdown}
     </>
+  );
+}
+
+// ===== Task Title Cell =====
+
+function TaskTitleCell({ task }: { task: Task }) {
+  const project = useAppSelector(selectCurrentProject);
+  const typeConfig = getTaskTypeConfig(task.taskType || "task");
+  const TypeIcon = typeConfig.icon;
+  const ticketId = `${project?.slug || ""}-${task.number}`;
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <TypeIcon size={14} className="text-muted-foreground shrink-0" weight="fill" />
+      <span className="text-xs font-mono text-muted-foreground shrink-0">{ticketId}</span>
+      <span className="truncate text-foreground text-sm">{task.title}</span>
+    </div>
   );
 }
 

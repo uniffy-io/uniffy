@@ -28,6 +28,7 @@ interface BoardColumnProps {
   onTaskClick: (taskId: string, e: React.MouseEvent) => void;
   onCheckboxChange: (taskId: string) => void;
   onAddTask: () => void;
+  projectSlug: string;
 }
 
 export function BoardColumn({
@@ -38,6 +39,7 @@ export function BoardColumn({
   onTaskClick,
   onCheckboxChange,
   onAddTask,
+  projectSlug,
 }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: statusOption.id,
@@ -95,6 +97,7 @@ export function BoardColumn({
                 onClick={(e) => onTaskClick(task.id, e)}
                 onCheckboxChange={onCheckboxChange}
                 isSelected={selectedTaskIds.includes(task.id)}
+                projectSlug={projectSlug}
               />
             ))}
           </SortableContext>

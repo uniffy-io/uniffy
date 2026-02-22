@@ -11,9 +11,11 @@
  * - Drag entire bar to move task (preserves duration)
  */
 
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { cn } from "@/shared/utils/cn";
+import { useAppSelector } from "@/app/hooks";
+import type { SerializedMemberInfo } from "@/features/admin";
 import { LAYOUT } from "../../../constants";
 import type { Task, SelectOption } from "../../../types";
 import type { GanttBarPosition } from "../../../utils/ganttPositioning";
@@ -50,6 +52,16 @@ export function GanttBar({
 }: GanttBarProps) {
   const barColor = statusOption?.color || "#6b7280";
   const top = rowIndex * LAYOUT.ROADMAP_ROW_HEIGHT + (LAYOUT.ROADMAP_ROW_HEIGHT - LAYOUT.GANTT_BAR_HEIGHT) / 2;
+
+  // Resolve assignee IDs to display names
+  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
+  const memberMap = useMemo(() => {
+    const map: Record<string, SerializedMemberInfo> = {};
+    for (const m of members) {
+      map[m.userId] = m;
+    }
+    return map;
+  }, [members]);
 
   // Drag state - use refs for event handlers to avoid stale closures,
   // state for rendering only
@@ -233,11 +245,27 @@ export function GanttBar({
       </span>
 
       {/* Assignee avatar */}
-      {task.assigneeIds.length > 0 && displayWidth > 80 && (
-        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[9px] text-white flex-shrink-0">
-          {task.assigneeIds[0].slice(-2).toUpperCase()}
-        </div>
-      )}
+      {task.assigneeIds.length > 0 && displayWidth > 80 && (() => {
+        const member = memberMap[task.assigneeIds[0]];
+        const name = member?.displayName;
+        let initials: string;
+        if (!name) {
+          initials = task.assigneeIds[0].slice(-2).toUpperCase();
+        } else {
+          const parts = name.split(" ").filter(Boolean);
+          initials = parts.length >= 2
+            ? (parts[0][0] + parts[1][0]).toUpperCase()
+            : name.slice(0, 2).toUpperCase();
+        }
+        return (
+          <div
+            className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[9px] text-white shrink-0"
+            title={name}
+          >
+            {initials}
+          </div>
+        );
+      })()}
 
       {/* Right resize handle */}
       {!position.isPartialEnd && (

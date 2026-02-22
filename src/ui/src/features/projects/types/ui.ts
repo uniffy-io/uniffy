@@ -105,6 +105,10 @@ export interface ProjectsUiState {
   activeGroupByFieldId: string | null;
   searchQuery: string;
 
+  // Quick filters
+  sprintFilter: string | null; // sprint ID, "__backlog__" for unassigned, or null for all
+  taskTypeFilter: string | null; // task type value or null for all
+
   // Roadmap view state
   roadmapStartDate: string; // ISO date string
   roadmapZoomLevel: "day" | "week" | "month";
@@ -154,6 +158,9 @@ export const initialProjectsUiState: ProjectsUiState = {
   activeSortConfig: null,
   activeGroupByFieldId: null,
   searchQuery: "",
+
+  sprintFilter: null,
+  taskTypeFilter: null,
 
   roadmapStartDate: new Date().toISOString().split("T")[0],
   roadmapZoomLevel: "week",

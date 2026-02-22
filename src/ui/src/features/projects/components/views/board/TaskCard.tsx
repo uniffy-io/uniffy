@@ -10,13 +10,16 @@
  * - Reference chips
  */
 
+import { useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppSelector } from "@/app/hooks";
+import type { SerializedMemberInfo } from "@/features/admin";
 import { selectSubtasksByParentId } from "../../../store/projectsSlice";
 import type { Task, SelectOption } from "../../../types";
+import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 
 interface TaskCardProps {
   task: Task;
@@ -25,6 +28,7 @@ interface TaskCardProps {
   onClick: (e: React.MouseEvent) => void;
   onCheckboxChange: (taskId: string) => void;
   isSelected?: boolean;
+  projectSlug: string;
 }
 
 export function TaskCard({
@@ -34,6 +38,7 @@ export function TaskCard({
   onClick,
   onCheckboxChange,
   isSelected,
+  projectSlug,
 }: TaskCardProps) {
   const {
     attributes,
@@ -52,6 +57,20 @@ export function TaskCard({
   // Feature 7: Subtask progress
   const subtasks = useAppSelector(selectSubtasksByParentId(task.id));
   const completedSubtasks = subtasks.filter(t => t.completedAt).length;
+
+  // Resolve assignee IDs to display names
+  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
+  const memberMap = useMemo(() => {
+    const map: Record<string, SerializedMemberInfo> = {};
+    for (const m of members) {
+      map[m.userId] = m;
+    }
+    return map;
+  }, [members]);
+
+  const ticketId = `${projectSlug}-${task.number}`;
+  const typeConfig = getTaskTypeConfig(task.taskType || "task");
+  const TypeIcon = typeConfig.icon;
 
   return (
     <div
@@ -76,6 +95,21 @@ export function TaskCard({
       )}
 
       <div className="p-3">
+        {/* Ticket ID and type */}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <TypeIcon size={12} className="text-muted-foreground shrink-0" weight="fill" />
+          <span
+            className="text-[10px] font-mono text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(ticketId);
+            }}
+            title="Click to copy"
+          >
+            {ticketId}
+          </span>
+        </div>
+
         {/* Top Row: Title & Dates */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 min-w-0">
@@ -166,14 +200,19 @@ export function TaskCard({
           {/* Assignee avatars */}
           {task.assigneeIds.length > 0 && (
             <div className="flex -space-x-1 ml-auto">
-              {task.assigneeIds.slice(0, 2).map((id) => (
-                <div
-                  key={id}
-                  className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground border border-card"
-                >
-                  {id.slice(-2).toUpperCase()}
-                </div>
-              ))}
+              {task.assigneeIds.slice(0, 2).map((id) => {
+                const member = memberMap[id];
+                const initials = getInitials(member?.displayName, id);
+                return (
+                  <div
+                    key={id}
+                    className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground border border-card"
+                    title={member?.displayName}
+                  >
+                    {initials}
+                  </div>
+                );
+              })}
               {task.assigneeIds.length > 2 && (
                 <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground border border-card">
                   +{task.assigneeIds.length - 2}
@@ -198,6 +237,13 @@ function isOverdue(dateStr: string): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return date < today;
+}
+
+function getInitials(displayName: string | undefined, id: string): string {
+  if (!displayName) return id.slice(-2).toUpperCase();
+  const parts = displayName.split(" ").filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return displayName.slice(0, 2).toUpperCase();
 }
 
 function extractLabel(urn: string): string {

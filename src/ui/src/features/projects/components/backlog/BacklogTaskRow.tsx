@@ -1,0 +1,305 @@
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { ArrowRight, CalendarBlank } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { updateTask } from "@/features/projects/store/projectsThunks";
+import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
+import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
+import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import type { Task, SelectOption } from "@/features/projects/types";
+import type { SerializedMemberInfo } from "@/features/admin";
+
+interface BacklogTaskRowProps {
+  task: Task;
+  projectId: string;
+  projectSlug: string;
+  /** The sprint this task currently belongs to (null = backlog) */
+  currentSprintId: string | null;
+}
+
+export function BacklogTaskRow({
+  task,
+  projectId,
+  projectSlug,
+  currentSprintId,
+}: BacklogTaskRowProps) {
+  const dispatch = useAppDispatch();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const project = useAppSelector(selectCurrentProject);
+  const adminMembers = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
+
+  const allSprints = useAppSelector(selectSprintsForProject(projectId));
+  const availableSprints = allSprints.filter(
+    (s) => s.status !== "closed" && s.id !== currentSprintId
+  );
+
+  // Field definitions for status/priority labels and colors
+  const statusOptions = useMemo(() => {
+    const field = project?.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
+    return (field?.config.options ?? []) as SelectOption[];
+  }, [project?.fieldDefinitions]);
+
+  const priorityOptions = useMemo(() => {
+    const field = project?.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.PRIORITY);
+    return (field?.config.options ?? []) as SelectOption[];
+  }, [project?.fieldDefinitions]);
+
+  const statusOption = useMemo(
+    () => statusOptions.find((o) => o.id === task.status),
+    [statusOptions, task.status]
+  );
+
+  const priorityOption = useMemo(
+    () => priorityOptions.find((o) => o.id === task.priority),
+    [priorityOptions, task.priority]
+  );
+
+  const typeConfig = getTaskTypeConfig(task.taskType || "task");
+  const TypeIcon = typeConfig.icon;
+
+  // Assignee display names
+  const assigneeDisplays = useMemo(() => {
+    return task.assigneeIds.map((id) => {
+      const member = adminMembers.find((m) => m.userId === id);
+      if (!member) return { id, initials: id.slice(-2).toUpperCase(), name: "" };
+      const parts = member.displayName.split(" ").filter(Boolean);
+      const initials =
+        parts.length >= 2
+          ? (parts[0][0] + parts[1][0]).toUpperCase()
+          : member.displayName.slice(0, 2).toUpperCase();
+      return { id, initials, name: member.displayName };
+    });
+  }, [task.assigneeIds, adminMembers]);
+
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setMenuPos({
+      top: rect.bottom + 4,
+      left: rect.right - 176, // 176 = w-44 (11rem)
+    });
+  }, []);
+
+  // Update position on open and scroll/resize
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    updatePosition();
+    const handler = () => updatePosition();
+    window.addEventListener("scroll", handler, true);
+    window.addEventListener("resize", handler);
+    return () => {
+      window.removeEventListener("scroll", handler, true);
+      window.removeEventListener("resize", handler);
+    };
+  }, [isMenuOpen, updatePosition]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node) &&
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isMenuOpen]);
+
+  // Close on escape
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMenuOpen]);
+
+  const handleMove = async (sprintId: string | null) => {
+    setIsMenuOpen(false);
+    await dispatch(updateTask({ id: task.id, sprintId }));
+  };
+
+  const renderMenu = () => {
+    if (!isMenuOpen || !menuPos) return null;
+
+    return createPortal(
+      <div
+        ref={menuRef}
+        style={{
+          position: "fixed",
+          top: menuPos.top,
+          left: menuPos.left,
+          width: 176,
+        }}
+        className="z-200 rounded-md border border-border bg-card shadow-xl py-1 animate-in fade-in-0 slide-in-from-top-2 duration-100"
+      >
+        <div className="px-3 py-1 text-xs font-medium text-muted-foreground">
+          Move to
+        </div>
+        {currentSprintId !== null && (
+          <button
+            type="button"
+            className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
+            onClick={() => handleMove(null)}
+          >
+            Backlog
+          </button>
+        )}
+        {availableSprints.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors truncate"
+            onClick={() => handleMove(s.id)}
+          >
+            {s.name}
+          </button>
+        ))}
+      </div>,
+      document.body
+    );
+  };
+
+  const dueDateOverdue = task.dueDate ? isOverdue(task.dueDate) : false;
+
+  return (
+    <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors">
+      {/* Type icon */}
+      <TypeIcon
+        size={14}
+        weight="fill"
+        className="text-muted-foreground shrink-0"
+        title={typeConfig.label}
+      />
+
+      {/* Task ID */}
+      <span className="text-xs font-mono text-muted-foreground w-20 shrink-0">
+        {projectSlug}-{task.number}
+      </span>
+
+      {/* Title */}
+      <span className="text-sm text-foreground truncate flex-1 min-w-0">
+        {task.title}
+      </span>
+
+      {/* Due date */}
+      {task.dueDate && (
+        <span
+          className={cn(
+            "flex items-center gap-1 text-xs shrink-0",
+            dueDateOverdue
+              ? "text-red-500 dark:text-red-400"
+              : "text-muted-foreground"
+          )}
+          title={`Due: ${task.dueDate}`}
+        >
+          <span className="text-muted-foreground">Due:</span>
+          <CalendarBlank size={12} />
+          {formatDate(task.dueDate)}
+        </span>
+      )}
+
+      {/* Priority badge */}
+      {priorityOption && (
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs text-muted-foreground">Priority:</span>
+          <span
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+            style={{
+              backgroundColor: `${priorityOption.color}15`,
+              color: priorityOption.color,
+            }}
+          >
+            {priorityOption.label}
+          </span>
+        </span>
+      )}
+
+      {/* Status badge */}
+      {statusOption && (
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs text-muted-foreground">Status:</span>
+          <span
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+            style={{
+              backgroundColor: `${statusOption.color}15`,
+              color: statusOption.color,
+            }}
+          >
+            {statusOption.label}
+          </span>
+        </span>
+      )}
+
+      {/* Assignee avatars */}
+      {assigneeDisplays.length > 0 && (
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs text-muted-foreground">
+            {assigneeDisplays.length > 1 ? "Assignees:" : "Assignee:"}
+          </span>
+          <div className="flex -space-x-1.5">
+            {assigneeDisplays.slice(0, 2).map((a) => (
+              <div
+                key={a.id}
+                className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[9px] font-medium text-primary-foreground border border-card"
+                title={a.name}
+              >
+                {a.initials}
+              </div>
+            ))}
+            {assigneeDisplays.length > 2 && (
+              <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium text-muted-foreground border border-card">
+                +{assigneeDisplays.length - 2}
+              </div>
+            )}
+          </div>
+        </span>
+      )}
+
+      {/* Move-to menu */}
+      {availableSprints.length > 0 || currentSprintId !== null ? (
+        <>
+          <button
+            ref={buttonRef}
+            type="button"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={cn(
+              "p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0",
+              isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}
+            title="Move to..."
+          >
+            <ArrowRight size={14} />
+          </button>
+          {renderMenu()}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function isOverdue(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date < today;
+}

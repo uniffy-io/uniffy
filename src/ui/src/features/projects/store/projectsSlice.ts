@@ -502,6 +502,7 @@ export const selectProjectCompletion = createSelector(
     const projectStats: Record<string, { total: number; completed: number }> = {};
   
     tasks.forEach(task => {
+      if (task.parentId) return; // Only count root tasks, not subtasks
       if (!projectStats[task.projectId]) {
         projectStats[task.projectId] = { total: 0, completed: 0 };
       }

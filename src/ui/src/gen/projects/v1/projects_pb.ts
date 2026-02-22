@@ -138,6 +138,16 @@ export enum ActivityAction {
    * @generated from enum value: ACTIVITY_ACTION_ASSIGNED = 8;
    */
   ASSIGNED = 8,
+
+  /**
+   * @generated from enum value: ACTIVITY_ACTION_TYPE_CHANGED = 9;
+   */
+  TYPE_CHANGED = 9,
+
+  /**
+   * @generated from enum value: ACTIVITY_ACTION_SPRINT_CHANGED = 10;
+   */
+  SPRINT_CHANGED = 10,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ActivityAction)
 proto3.util.setEnumType(ActivityAction, "projects.v1.ActivityAction", [
@@ -149,6 +159,8 @@ proto3.util.setEnumType(ActivityAction, "projects.v1.ActivityAction", [
   { no: 6, name: "ACTIVITY_ACTION_BLOCKED_BY_ADDED" },
   { no: 7, name: "ACTIVITY_ACTION_BLOCKED_BY_REMOVED" },
   { no: 8, name: "ACTIVITY_ACTION_ASSIGNED" },
+  { no: 9, name: "ACTIVITY_ACTION_TYPE_CHANGED" },
+  { no: 10, name: "ACTIVITY_ACTION_SPRINT_CHANGED" },
 ]);
 
 /**
@@ -240,6 +252,11 @@ export class Project extends Message<Project> {
    */
   userPermissionLevel = PermissionLevel.UNSPECIFIED;
 
+  /**
+   * @generated from field: string slug = 18;
+   */
+  slug = "";
+
   constructor(data?: PartialMessage<Project>) {
     super();
     proto3.util.initPartial(data, this);
@@ -265,6 +282,7 @@ export class Project extends Message<Project> {
     { no: 15, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 16, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 17, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 18, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Project {
@@ -404,7 +422,22 @@ export class Task extends Message<Task> {
   urn = "";
 
   /**
-   * @generated from field: common.v1.PermissionLevel user_permission_level = 24;
+   * @generated from field: int32 number = 24;
+   */
+  number = 0;
+
+  /**
+   * @generated from field: string task_type = 25;
+   */
+  taskType = "";
+
+  /**
+   * @generated from field: optional string sprint_id = 26;
+   */
+  sprintId?: string;
+
+  /**
+   * @generated from field: common.v1.PermissionLevel user_permission_level = 27;
    */
   userPermissionLevel = PermissionLevel.UNSPECIFIED;
 
@@ -439,7 +472,10 @@ export class Task extends Message<Task> {
     { no: 21, name: "updated_at", kind: "message", T: Timestamp },
     { no: 22, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 23, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 24, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 24, name: "number", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 25, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 26, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 27, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Task {
@@ -764,6 +800,115 @@ export class SelectOption extends Message<SelectOption> {
 }
 
 /**
+ * @generated from message projects.v1.Sprint
+ */
+export class Sprint extends Message<Sprint> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string project_id = 2;
+   */
+  projectId = "";
+
+  /**
+   * @generated from field: string organization_id = 3;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string goal = 5;
+   */
+  goal = "";
+
+  /**
+   * @generated from field: string status = 6;
+   */
+  status = "";
+
+  /**
+   * @generated from field: optional string start_date = 7;
+   */
+  startDate?: string;
+
+  /**
+   * @generated from field: optional string end_date = 8;
+   */
+  endDate?: string;
+
+  /**
+   * @generated from field: int32 sort_order = 9;
+   */
+  sortOrder = 0;
+
+  /**
+   * @generated from field: int32 task_count = 10;
+   */
+  taskCount = 0;
+
+  /**
+   * @generated from field: int32 completed_task_count = 11;
+   */
+  completedTaskCount = 0;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 12;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 13;
+   */
+  updatedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<Sprint>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.Sprint";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "project_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "goal", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "start_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "end_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "sort_order", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 10, name: "task_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 11, name: "completed_task_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 12, name: "created_at", kind: "message", T: Timestamp },
+    { no: 13, name: "updated_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Sprint {
+    return new Sprint().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Sprint {
+    return new Sprint().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Sprint {
+    return new Sprint().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Sprint | PlainMessage<Sprint> | undefined, b: Sprint | PlainMessage<Sprint> | undefined): boolean {
+    return proto3.util.equals(Sprint, a, b);
+  }
+}
+
+/**
  * @generated from message projects.v1.CreateProjectRequest
  */
 export class CreateProjectRequest extends Message<CreateProjectRequest> {
@@ -797,6 +942,11 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
    */
   visibility?: VisibilityScope;
 
+  /**
+   * @generated from field: optional string slug = 7;
+   */
+  slug?: string;
+
   constructor(data?: PartialMessage<CreateProjectRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -811,6 +961,7 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
     { no: 4, name: "icon", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 7, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProjectRequest {
@@ -922,6 +1073,11 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
    */
   defaultViewId?: string;
 
+  /**
+   * @generated from field: optional string slug = 10;
+   */
+  slug?: string;
+
   constructor(data?: PartialMessage<UpdateProjectRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -939,6 +1095,7 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
     { no: 7, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
     { no: 8, name: "member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 9, name: "default_view_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProjectRequest {
@@ -1259,6 +1416,16 @@ export class CreateTaskRequest extends Message<CreateTaskRequest> {
    */
   fieldValues: { [key: string]: string } = {};
 
+  /**
+   * @generated from field: optional string task_type = 15;
+   */
+  taskType?: string;
+
+  /**
+   * @generated from field: optional string sprint_id = 16;
+   */
+  sprintId?: string;
+
   constructor(data?: PartialMessage<CreateTaskRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1281,6 +1448,8 @@ export class CreateTaskRequest extends Message<CreateTaskRequest> {
     { no: 12, name: "is_milestone", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 13, name: "recurrence_rule", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "field_values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 15, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 16, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateTaskRequest {
@@ -1422,6 +1591,16 @@ export class UpdateTaskRequest extends Message<UpdateTaskRequest> {
    */
   fieldValues: { [key: string]: string } = {};
 
+  /**
+   * @generated from field: optional string task_type = 16;
+   */
+  taskType?: string;
+
+  /**
+   * @generated from field: optional string sprint_id = 17;
+   */
+  sprintId?: string;
+
   constructor(data?: PartialMessage<UpdateTaskRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1445,6 +1624,8 @@ export class UpdateTaskRequest extends Message<UpdateTaskRequest> {
     { no: 13, name: "recurrence_rule", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "sort_order", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 15, name: "field_values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 16, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 17, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateTaskRequest {
@@ -1707,6 +1888,16 @@ export class ListTasksRequest extends Message<ListTasksRequest> {
    */
   parentId?: string;
 
+  /**
+   * @generated from field: optional string sprint_id = 6;
+   */
+  sprintId?: string;
+
+  /**
+   * @generated from field: optional bool backlog_only = 7;
+   */
+  backlogOnly?: boolean;
+
   constructor(data?: PartialMessage<ListTasksRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1720,6 +1911,8 @@ export class ListTasksRequest extends Message<ListTasksRequest> {
     { no: 3, name: "pagination", kind: "message", T: PaginationRequest, opt: true },
     { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "backlog_only", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTasksRequest {
@@ -2471,6 +2664,441 @@ export class DeleteViewResponse extends Message<DeleteViewResponse> {
 
   static equals(a: DeleteViewResponse | PlainMessage<DeleteViewResponse> | undefined, b: DeleteViewResponse | PlainMessage<DeleteViewResponse> | undefined): boolean {
     return proto3.util.equals(DeleteViewResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.CreateSprintRequest
+ */
+export class CreateSprintRequest extends Message<CreateSprintRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string project_id = 2;
+   */
+  projectId = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: optional string goal = 4;
+   */
+  goal?: string;
+
+  /**
+   * @generated from field: optional string start_date = 5;
+   */
+  startDate?: string;
+
+  /**
+   * @generated from field: optional string end_date = 6;
+   */
+  endDate?: string;
+
+  constructor(data?: PartialMessage<CreateSprintRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.CreateSprintRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "project_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "goal", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "start_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "end_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSprintRequest {
+    return new CreateSprintRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSprintRequest {
+    return new CreateSprintRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSprintRequest {
+    return new CreateSprintRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateSprintRequest | PlainMessage<CreateSprintRequest> | undefined, b: CreateSprintRequest | PlainMessage<CreateSprintRequest> | undefined): boolean {
+    return proto3.util.equals(CreateSprintRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.UpdateSprintRequest
+ */
+export class UpdateSprintRequest extends Message<UpdateSprintRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string sprint_id = 2;
+   */
+  sprintId = "";
+
+  /**
+   * @generated from field: optional string name = 3;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: optional string goal = 4;
+   */
+  goal?: string;
+
+  /**
+   * @generated from field: optional string start_date = 5;
+   */
+  startDate?: string;
+
+  /**
+   * @generated from field: optional string end_date = 6;
+   */
+  endDate?: string;
+
+  constructor(data?: PartialMessage<UpdateSprintRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.UpdateSprintRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "goal", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "start_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "end_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSprintRequest {
+    return new UpdateSprintRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSprintRequest {
+    return new UpdateSprintRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSprintRequest {
+    return new UpdateSprintRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateSprintRequest | PlainMessage<UpdateSprintRequest> | undefined, b: UpdateSprintRequest | PlainMessage<UpdateSprintRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateSprintRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.StartSprintRequest
+ */
+export class StartSprintRequest extends Message<StartSprintRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string sprint_id = 2;
+   */
+  sprintId = "";
+
+  /**
+   * @generated from field: optional string start_date = 3;
+   */
+  startDate?: string;
+
+  /**
+   * @generated from field: optional string end_date = 4;
+   */
+  endDate?: string;
+
+  constructor(data?: PartialMessage<StartSprintRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.StartSprintRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "start_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "end_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StartSprintRequest {
+    return new StartSprintRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StartSprintRequest {
+    return new StartSprintRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StartSprintRequest {
+    return new StartSprintRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StartSprintRequest | PlainMessage<StartSprintRequest> | undefined, b: StartSprintRequest | PlainMessage<StartSprintRequest> | undefined): boolean {
+    return proto3.util.equals(StartSprintRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.CompleteSprintRequest
+ */
+export class CompleteSprintRequest extends Message<CompleteSprintRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string sprint_id = 2;
+   */
+  sprintId = "";
+
+  constructor(data?: PartialMessage<CompleteSprintRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.CompleteSprintRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompleteSprintRequest {
+    return new CompleteSprintRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompleteSprintRequest {
+    return new CompleteSprintRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompleteSprintRequest {
+    return new CompleteSprintRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompleteSprintRequest | PlainMessage<CompleteSprintRequest> | undefined, b: CompleteSprintRequest | PlainMessage<CompleteSprintRequest> | undefined): boolean {
+    return proto3.util.equals(CompleteSprintRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.DeleteSprintRequest
+ */
+export class DeleteSprintRequest extends Message<DeleteSprintRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string sprint_id = 2;
+   */
+  sprintId = "";
+
+  constructor(data?: PartialMessage<DeleteSprintRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.DeleteSprintRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSprintRequest {
+    return new DeleteSprintRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSprintRequest {
+    return new DeleteSprintRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSprintRequest {
+    return new DeleteSprintRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteSprintRequest | PlainMessage<DeleteSprintRequest> | undefined, b: DeleteSprintRequest | PlainMessage<DeleteSprintRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteSprintRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.ListSprintsRequest
+ */
+export class ListSprintsRequest extends Message<ListSprintsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string project_id = 2;
+   */
+  projectId = "";
+
+  /**
+   * @generated from field: optional bool include_closed = 3;
+   */
+  includeClosed?: boolean;
+
+  constructor(data?: PartialMessage<ListSprintsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.ListSprintsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "project_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "include_closed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSprintsRequest {
+    return new ListSprintsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSprintsRequest {
+    return new ListSprintsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSprintsRequest {
+    return new ListSprintsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListSprintsRequest | PlainMessage<ListSprintsRequest> | undefined, b: ListSprintsRequest | PlainMessage<ListSprintsRequest> | undefined): boolean {
+    return proto3.util.equals(ListSprintsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.SprintResponse
+ */
+export class SprintResponse extends Message<SprintResponse> {
+  /**
+   * @generated from field: projects.v1.Sprint sprint = 1;
+   */
+  sprint?: Sprint;
+
+  constructor(data?: PartialMessage<SprintResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.SprintResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "sprint", kind: "message", T: Sprint },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SprintResponse {
+    return new SprintResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SprintResponse {
+    return new SprintResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SprintResponse {
+    return new SprintResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SprintResponse | PlainMessage<SprintResponse> | undefined, b: SprintResponse | PlainMessage<SprintResponse> | undefined): boolean {
+    return proto3.util.equals(SprintResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.DeleteSprintResponse
+ */
+export class DeleteSprintResponse extends Message<DeleteSprintResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  constructor(data?: PartialMessage<DeleteSprintResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.DeleteSprintResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSprintResponse {
+    return new DeleteSprintResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSprintResponse {
+    return new DeleteSprintResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSprintResponse {
+    return new DeleteSprintResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteSprintResponse | PlainMessage<DeleteSprintResponse> | undefined, b: DeleteSprintResponse | PlainMessage<DeleteSprintResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteSprintResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.ListSprintsResponse
+ */
+export class ListSprintsResponse extends Message<ListSprintsResponse> {
+  /**
+   * @generated from field: repeated projects.v1.Sprint sprints = 1;
+   */
+  sprints: Sprint[] = [];
+
+  constructor(data?: PartialMessage<ListSprintsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.ListSprintsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "sprints", kind: "message", T: Sprint, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSprintsResponse {
+    return new ListSprintsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSprintsResponse {
+    return new ListSprintsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSprintsResponse {
+    return new ListSprintsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListSprintsResponse | PlainMessage<ListSprintsResponse> | undefined, b: ListSprintsResponse | PlainMessage<ListSprintsResponse> | undefined): boolean {
+    return proto3.util.equals(ListSprintsResponse, a, b);
   }
 }
 

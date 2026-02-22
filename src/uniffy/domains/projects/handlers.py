@@ -10,6 +10,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
@@ -26,23 +27,28 @@ from uniffy.domains.projects.converters import (
     field_to_proto,
     field_type_from_proto,
     project_to_proto,
+    sprint_to_proto,
     task_to_proto,
     view_to_proto,
     view_type_from_proto,
 )
-from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
+from uniffy.domains.projects.operations import ProjectOperations, SprintOperations, TaskOperations
 from uniffy.gen.common.v1.common_pb2 import PaginationResponse
 from uniffy.gen.projects.v1.projects_pb2 import (
     BulkUpdateTasksRequest,
     BulkUpdateTasksResponse,
+    CompleteSprintRequest,
     CreateFieldRequest,
     CreateProjectRequest,
+    CreateSprintRequest,
     CreateTaskRequest,
     CreateViewRequest,
     DeleteFieldRequest,
     DeleteFieldResponse,
     DeleteProjectRequest,
     DeleteProjectResponse,
+    DeleteSprintRequest,
+    DeleteSprintResponse,
     DeleteTaskRequest,
     DeleteTaskResponse,
     DeleteTasksRequest,
@@ -56,13 +62,18 @@ from uniffy.gen.projects.v1.projects_pb2 import (
     ListActivitiesResponse,
     ListProjectsRequest,
     ListProjectsResponse,
+    ListSprintsRequest,
+    ListSprintsResponse,
     ListTasksRequest,
     ListTasksResponse,
     MoveTaskRequest,
     ProjectResponse,
+    SprintResponse,
+    StartSprintRequest,
     TaskResponse,
     UpdateFieldRequest,
     UpdateProjectRequest,
+    UpdateSprintRequest,
     UpdateTaskRequest,
     UpdateViewRequest,
     ViewResponse,
@@ -98,6 +109,8 @@ class ProjectsHandlers:
                 if request.HasField("visibility"):
                     visibility = visibility_from_proto(request.visibility)
 
+                slug = request.slug if request.HasField("slug") else None
+
                 project = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -106,6 +119,7 @@ class ProjectsHandlers:
                     icon=request.icon if request.HasField("icon") else "folder",
                     color=request.color if request.HasField("color") else "#3b82f6",
                     visibility=visibility,
+                    slug=slug,
                 )
 
                 # Fetch fields and views for response
@@ -201,8 +215,16 @@ class ProjectsHandlers:
                     updates["member_ids"] = list(request.member_ids)
                 if request.HasField("default_view_id"):
                     updates["default_view_id"] = request.default_view_id
+                if request.HasField("slug"):
+                    updates["slug"] = request.slug
 
-                project = await ops.update(user_id, organization_id, project_id, **updates)
+                try:
+                    project = await ops.update(user_id, organization_id, project_id, **updates)
+                except IntegrityError:
+                    raise ConnectError(
+                        Code.ALREADY_EXISTS,
+                        "A project with that slug already exists",
+                    )
 
                 # Fetch fields and views
                 fields = await queries.get_fields_for_project(session, project.id)
@@ -355,6 +377,7 @@ class ProjectsHandlers:
                     "priority": request.priority
                     if request.HasField("priority")
                     else "priority_medium",
+                    "task_type": request.task_type if request.HasField("task_type") else "task",
                 }
 
                 if request.assignee_ids:
@@ -374,6 +397,11 @@ class ProjectsHandlers:
                     kwargs["is_milestone"] = request.is_milestone
                 if request.HasField("recurrence_rule"):
                     kwargs["recurrence_rule"] = request.recurrence_rule
+                if request.HasField("sprint_id"):
+                    try:
+                        kwargs["sprint_id"] = UUID(request.sprint_id) if request.sprint_id else None
+                    except ValueError:
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
                 if request.field_values:
                     # Convert proto map to dict, decoding JSON strings
                     field_values = {}
@@ -390,6 +418,7 @@ class ProjectsHandlers:
                     organization_id=organization_id,
                     project_id=project_id,
                     title=request.title,
+                    task_type=kwargs.pop("task_type", "task"),
                     **kwargs,
                 )
 
@@ -493,6 +522,13 @@ class ProjectsHandlers:
                     updates["recurrence_rule"] = request.recurrence_rule
                 if request.HasField("sort_order"):
                     updates["sort_order"] = request.sort_order
+                if request.HasField("task_type"):
+                    updates["task_type"] = request.task_type
+                if request.HasField("sprint_id"):
+                    try:
+                        updates["sprint_id"] = UUID(request.sprint_id) if request.sprint_id else None
+                    except ValueError:
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
                 if request.field_values:
                     # Convert proto map to dict, decoding JSON strings
                     field_values = {}
@@ -715,6 +751,16 @@ class ProjectsHandlers:
                         except ValueError:
                             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
 
+                # Parse sprint filter
+                sprint_id_filter = None
+                if request.HasField("sprint_id"):
+                    try:
+                        sprint_id_filter = UUID(request.sprint_id)
+                    except ValueError:
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
+
+                backlog_only = request.backlog_only if request.HasField("backlog_only") else False
+
                 tasks, total = await ops.list_tasks(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -723,6 +769,8 @@ class ProjectsHandlers:
                     if request.HasField("include_deleted")
                     else False,
                     parent_id=parent_id,
+                    sprint_id=sprint_id_filter,
+                    backlog_only=backlog_only,
                     page=page,
                     page_size=page_size,
                 )
@@ -774,7 +822,7 @@ class ProjectsHandlers:
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
 
                 # Check for ADMIN permission
-                can_admin = await project_ops.permission_checker.can_admin_content(
+                can_edit = await project_ops.permission_checker.can_edit_content(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=project_ops.content_type,
@@ -782,8 +830,8 @@ class ProjectsHandlers:
                     content_owner_id=project.owner_id,
                     content_visibility=project.visibility,
                 )
-                if not can_admin:
-                    raise PermissionDeniedError("create", "field", "Requires ADMIN permission")
+                if not can_edit:
+                    raise PermissionDeniedError("create", "field", "Requires EDIT permission")
 
                 # Parse config if provided
                 config = {}
@@ -843,7 +891,7 @@ class ProjectsHandlers:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
 
-                can_admin = await project_ops.permission_checker.can_admin_content(
+                can_edit = await project_ops.permission_checker.can_edit_content(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=project_ops.content_type,
@@ -851,8 +899,8 @@ class ProjectsHandlers:
                     content_owner_id=project.owner_id,
                     content_visibility=project.visibility,
                 )
-                if not can_admin:
-                    raise PermissionDeniedError("update", "field", "Requires ADMIN permission")
+                if not can_edit:
+                    raise PermissionDeniedError("update", "field", "Requires EDIT permission")
 
                 # Fetch field
 
@@ -919,7 +967,7 @@ class ProjectsHandlers:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
 
-                can_admin = await project_ops.permission_checker.can_admin_content(
+                can_edit = await project_ops.permission_checker.can_edit_content(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=project_ops.content_type,
@@ -927,8 +975,8 @@ class ProjectsHandlers:
                     content_owner_id=project.owner_id,
                     content_visibility=project.visibility,
                 )
-                if not can_admin:
-                    raise PermissionDeniedError("delete", "field", "Requires ADMIN permission")
+                if not can_edit:
+                    raise PermissionDeniedError("delete", "field", "Requires EDIT permission")
 
                 # Fetch field
 
@@ -944,7 +992,7 @@ class ProjectsHandlers:
 
                 # Cannot delete system fields
                 if field.is_system:
-                    raise ValidationError("Cannot delete system field")
+                    raise ValidationError("field", "Cannot delete system field")
 
                 await session.delete(field)
                 await session.commit()
@@ -1195,3 +1243,236 @@ class ProjectsHandlers:
             logger.opt(exception=True).error("Error listing activities")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
+
+class SprintHandlers:
+    """Sprint RPC handlers."""
+
+    async def create_sprint(
+        self,
+        request: CreateSprintRequest,
+        ctx: RequestContext,
+    ) -> SprintResponse:
+        """Create a new sprint."""
+        try:
+            organization_id = UUID(request.organization_id)
+            project_id = UUID(request.project_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = SprintOperations(session)
+                sprint = await ops.create(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    name=request.name,
+                    goal=request.goal if request.HasField("goal") else "",
+                    start_date=request.start_date if request.HasField("start_date") else None,
+                    end_date=request.end_date if request.HasField("end_date") else None,
+                )
+                return SprintResponse(sprint=sprint_to_proto(sprint))
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Project not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error("Error creating sprint")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def update_sprint(
+        self,
+        request: UpdateSprintRequest,
+        ctx: RequestContext,
+    ) -> SprintResponse:
+        """Update a sprint."""
+        try:
+            organization_id = UUID(request.organization_id)
+            sprint_id = UUID(request.sprint_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = SprintOperations(session)
+                sprint = await ops.update(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    sprint_id=sprint_id,
+                    name=request.name if request.HasField("name") else None,
+                    goal=request.goal if request.HasField("goal") else None,
+                    start_date=request.start_date if request.HasField("start_date") else None,
+                    end_date=request.end_date if request.HasField("end_date") else None,
+                )
+                return SprintResponse(sprint=sprint_to_proto(sprint))
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error("Error updating sprint")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def start_sprint(
+        self,
+        request: StartSprintRequest,
+        ctx: RequestContext,
+    ) -> SprintResponse:
+        """Start a sprint (make it active)."""
+        try:
+            organization_id = UUID(request.organization_id)
+            sprint_id = UUID(request.sprint_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = SprintOperations(session)
+                sprint = await ops.start(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    sprint_id=sprint_id,
+                    start_date=request.start_date if request.HasField("start_date") else None,
+                    end_date=request.end_date if request.HasField("end_date") else None,
+                )
+                return SprintResponse(sprint=sprint_to_proto(sprint))
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error("Error starting sprint")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def complete_sprint(
+        self,
+        request: CompleteSprintRequest,
+        ctx: RequestContext,
+    ) -> SprintResponse:
+        """Complete a sprint."""
+        try:
+            organization_id = UUID(request.organization_id)
+            sprint_id = UUID(request.sprint_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = SprintOperations(session)
+                sprint = await ops.complete(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    sprint_id=sprint_id,
+                )
+                return SprintResponse(sprint=sprint_to_proto(sprint))
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error("Error completing sprint")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def delete_sprint(
+        self,
+        request: DeleteSprintRequest,
+        ctx: RequestContext,
+    ) -> DeleteSprintResponse:
+        """Delete a sprint and move its tasks to backlog."""
+        try:
+            organization_id = UUID(request.organization_id)
+            sprint_id = UUID(request.sprint_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = SprintOperations(session)
+                await ops.delete(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    sprint_id=sprint_id,
+                )
+                return DeleteSprintResponse(success=True)
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error("Error deleting sprint")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def list_sprints(
+        self,
+        request: ListSprintsRequest,
+        ctx: RequestContext,
+    ) -> ListSprintsResponse:
+        """List sprints for a project."""
+        try:
+            organization_id = UUID(request.organization_id)
+            project_id = UUID(request.project_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = SprintOperations(session)
+                include_closed = (
+                    request.include_closed if request.HasField("include_closed") else False
+                )
+                sprints = await ops.list_sprints(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    include_closed=include_closed,
+                )
+
+                # Batch-load task counts
+                sprint_ids = [s.id for s in sprints]
+                counts = await ops.get_task_counts(sprint_ids)
+
+                sprint_protos = []
+                for sprint in sprints:
+                    total, completed = counts.get(str(sprint.id), (0, 0))
+                    sprint_protos.append(sprint_to_proto(sprint, total, completed))
+
+                return ListSprintsResponse(sprints=sprint_protos)
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Project not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error("Error listing sprints")
+            raise ConnectError(Code.INTERNAL, "Internal server error")

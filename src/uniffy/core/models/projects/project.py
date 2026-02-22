@@ -33,6 +33,10 @@ class Project(SQLModel, table=True):
         Icon identifier (e.g., "rocket", "megaphone").
     color : str
         Hex color code (e.g., "#3b82f6").
+    slug : str
+        Short uppercase identifier used for task IDs (e.g., "UAI").
+    task_counter : int
+        Monotonically increasing counter for task number generation.
     default_view_id : str | None
         ID of the default view.
     member_ids : list[str] | None
@@ -74,6 +78,8 @@ class Project(SQLModel, table=True):
     description: str = Field(default="", nullable=False)
     icon: str = Field(default="folder", max_length=50, nullable=False)
     color: str = Field(default="#3b82f6", max_length=20, nullable=False)
+    slug: str = Field(max_length=20, nullable=False)
+    task_counter: int = Field(default=0, nullable=False)
     default_view_id: str | None = Field(default=None, max_length=100)
     member_ids: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     is_deleted: bool = Field(default=False, nullable=False)

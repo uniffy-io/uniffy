@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BulkUpdateTasksRequest, BulkUpdateTasksResponse, CreateFieldRequest, CreateProjectRequest, CreateTaskRequest, CreateViewRequest, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, FieldResponse, GetProjectRequest, GetTaskRequest, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, ProjectResponse, TaskResponse, UpdateFieldRequest, UpdateProjectRequest, UpdateTaskRequest, UpdateViewRequest, ViewResponse } from "./projects_pb.js";
+import { BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CreateFieldRequest, CreateProjectRequest, CreateSprintRequest, CreateTaskRequest, CreateViewRequest, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, FieldResponse, GetProjectRequest, GetTaskRequest, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, ProjectResponse, SprintResponse, StartSprintRequest, TaskResponse, UpdateFieldRequest, UpdateProjectRequest, UpdateSprintRequest, UpdateTaskRequest, UpdateViewRequest, ViewResponse } from "./projects_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -200,6 +200,62 @@ export const ProjectsService = {
       name: "ListActivities",
       I: ListActivitiesRequest,
       O: ListActivitiesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ----- Sprints -----
+     *
+     * @generated from rpc projects.v1.ProjectsService.CreateSprint
+     */
+    createSprint: {
+      name: "CreateSprint",
+      I: CreateSprintRequest,
+      O: SprintResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc projects.v1.ProjectsService.UpdateSprint
+     */
+    updateSprint: {
+      name: "UpdateSprint",
+      I: UpdateSprintRequest,
+      O: SprintResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc projects.v1.ProjectsService.StartSprint
+     */
+    startSprint: {
+      name: "StartSprint",
+      I: StartSprintRequest,
+      O: SprintResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc projects.v1.ProjectsService.CompleteSprint
+     */
+    completeSprint: {
+      name: "CompleteSprint",
+      I: CompleteSprintRequest,
+      O: SprintResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc projects.v1.ProjectsService.DeleteSprint
+     */
+    deleteSprint: {
+      name: "DeleteSprint",
+      I: DeleteSprintRequest,
+      O: DeleteSprintResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc projects.v1.ProjectsService.ListSprints
+     */
+    listSprints: {
+      name: "ListSprints",
+      I: ListSprintsRequest,
+      O: ListSprintsResponse,
       kind: MethodKind.Unary,
     },
   }

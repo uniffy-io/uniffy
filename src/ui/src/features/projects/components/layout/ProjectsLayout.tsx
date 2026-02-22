@@ -12,10 +12,10 @@
  * - Responsive behavior
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Kanban } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
 import { LAYOUT } from "../../constants";
@@ -24,10 +24,14 @@ import { ProjectHeader } from "../header/ProjectHeader";
 import { TableView } from "../views/table/TableView";
 import { BoardView } from "../views/board/BoardView";
 import { RoadmapView } from "../views/roadmap/RoadmapView";
+import { BacklogView } from "../backlog/BacklogView";
+import { DependencyGraphView } from "../views/graph/DependencyGraphView";
 import { TaskDetailPanel } from "../detail/TaskDetailPanel";
 import { CreateTaskModal } from "../modals/CreateTaskModal";
 import { CreateProjectModal } from "../modals/CreateProjectModal";
 import { EditProjectModal } from "../modals/EditProjectModal";
+import { fetchSprints } from "../../store/sprintsThunks";
+import { fetchMembers } from "@/features/admin";
 import {
   selectEditProjectId,
   selectIsDetailPanelOpen,
@@ -40,6 +44,7 @@ import { selectCurrentProject, selectTasksForProject } from "../../store/project
 const EMPTY_TASKS: ReturnType<ReturnType<typeof selectTasksForProject>> = [];
 
 export function ProjectsLayout() {
+  const dispatch = useAppDispatch();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const isDetailPanelOpen = useAppSelector(selectIsDetailPanelOpen);
@@ -55,6 +60,21 @@ export function ProjectsLayout() {
   const isCreateTaskModalOpen = useAppSelector((state) => state.projectsUi.isCreateTaskModalOpen);
   const isCreateProjectModalOpen = useAppSelector((state) => state.projectsUi.isCreateProjectModalOpen);
   const editProjectId = useAppSelector(selectEditProjectId);
+
+  // Fetch sprints whenever the current project changes
+  useEffect(() => {
+    if (currentProjectId) {
+      dispatch(fetchSprints(currentProjectId));
+    }
+  }, [currentProjectId, dispatch]);
+
+  // Load organization members for assignee display
+  const adminMembers = useAppSelector((state) => state.admin.members);
+  useEffect(() => {
+    if (adminMembers.length === 0) {
+      dispatch(fetchMembers({ pageSize: 50 }));
+    }
+  }, [dispatch, adminMembers.length]);
 
   // Load saved panel layout
   const [defaultLayout] = useState(() => loadPanelLayout("projects"));
@@ -107,14 +127,16 @@ export function ProjectsLayout() {
           className="flex flex-col overflow-hidden"
         >
           {currentProject ? (
-            <>
+            <div className="h-full overflow-hidden bg-card flex flex-col">
               <ProjectHeader project={currentProject} taskCount={tasks.length} />
               <div className="flex-1 overflow-hidden">
                 {viewMode === "table" && <TableView />}
                 {viewMode === "board" && <BoardView />}
                 {viewMode === "roadmap" && <RoadmapView />}
+                {viewMode === "backlog" && <BacklogView />}
+                {viewMode === "graph" && <DependencyGraphView />}
               </div>
-            </>
+            </div>
           ) : (
             <NoProjectSelected />
           )}

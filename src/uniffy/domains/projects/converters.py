@@ -11,6 +11,7 @@ from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.types import PermissionLevel
@@ -24,6 +25,9 @@ from uniffy.gen.projects.v1.projects_pb2 import (
 )
 from uniffy.gen.projects.v1.projects_pb2 import (
     Project as ProtoProject,
+)
+from uniffy.gen.projects.v1.projects_pb2 import (
+    Sprint as ProtoSprint,
 )
 from uniffy.gen.projects.v1.projects_pb2 import (
     Task as ProtoTask,
@@ -74,6 +78,8 @@ ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
     "blocked_by_added": ActivityAction.ACTIVITY_ACTION_BLOCKED_BY_ADDED,
     "blocked_by_removed": ActivityAction.ACTIVITY_ACTION_BLOCKED_BY_REMOVED,
     "assigned": ActivityAction.ACTIVITY_ACTION_ASSIGNED,
+    "type_changed": ActivityAction.ACTIVITY_ACTION_TYPE_CHANGED,
+    "sprint_changed": ActivityAction.ACTIVITY_ACTION_SPRINT_CHANGED,
 }
 
 # =============================================================================
@@ -145,6 +151,7 @@ def project_to_proto(
         description=project.description,
         icon=project.icon,
         color=project.color,
+        slug=project.slug,
         visibility=visibility_to_proto(project.visibility),
         field_definitions=[field_to_proto(f) for f in fields],
         views=[view_to_proto(v) for v in views],
@@ -206,6 +213,8 @@ def task_to_proto(
         assignee_ids=task.assignee_ids or [],
         is_milestone=task.is_milestone,
         sort_order=task.sort_order,
+        number=task.number,
+        task_type=task.task_type,
         field_values=field_values_map,
         outgoing_references=task.outgoing_references or [],
         created_at=datetime_to_timestamp(task.created_at),
@@ -228,6 +237,8 @@ def task_to_proto(
         proto.recurrence_rule = task.recurrence_rule
     if task.deleted_at:
         proto.deleted_at.CopyFrom(datetime_to_timestamp(task.deleted_at))
+    if task.sprint_id:
+        proto.sprint_id = str(task.sprint_id)
 
     if user_permission_level:
         proto.user_permission_level = permission_level_to_proto(user_permission_level)
@@ -327,4 +338,47 @@ def activity_to_proto(activity: TaskActivity) -> ProtoTaskActivity:
         proto.previous_value = activity.previous_value
     if activity.new_value:
         proto.new_value = activity.new_value
+    return proto
+
+
+def sprint_to_proto(
+    sprint: Sprint,
+    task_count: int = 0,
+    completed_task_count: int = 0,
+) -> ProtoSprint:
+    """
+    Convert Sprint model to proto Sprint message.
+
+    Parameters
+    ----------
+    sprint : Sprint
+        Sprint model instance.
+    task_count : int
+        Total tasks in this sprint.
+    completed_task_count : int
+        Completed tasks in this sprint.
+
+    Returns
+    -------
+    ProtoSprint
+        Proto sprint message.
+
+    """
+    proto = ProtoSprint(
+        id=str(sprint.id),
+        project_id=str(sprint.project_id),
+        organization_id=str(sprint.organization_id),
+        name=sprint.name,
+        goal=sprint.goal,
+        status=sprint.status,
+        sort_order=sprint.sort_order,
+        task_count=task_count,
+        completed_task_count=completed_task_count,
+        created_at=datetime_to_timestamp(sprint.created_at),
+        updated_at=datetime_to_timestamp(sprint.updated_at),
+    )
+    if sprint.start_date:
+        proto.start_date = sprint.start_date
+    if sprint.end_date:
+        proto.end_date = sprint.end_date
     return proto

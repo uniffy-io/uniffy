@@ -39,6 +39,8 @@ class ActivityAction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ACTIVITY_ACTION_BLOCKED_BY_ADDED: _ClassVar[ActivityAction]
     ACTIVITY_ACTION_BLOCKED_BY_REMOVED: _ClassVar[ActivityAction]
     ACTIVITY_ACTION_ASSIGNED: _ClassVar[ActivityAction]
+    ACTIVITY_ACTION_TYPE_CHANGED: _ClassVar[ActivityAction]
+    ACTIVITY_ACTION_SPRINT_CHANGED: _ClassVar[ActivityAction]
 FIELD_TYPE_UNSPECIFIED: FieldType
 FIELD_TYPE_TEXT: FieldType
 FIELD_TYPE_NUMBER: FieldType
@@ -59,9 +61,11 @@ ACTIVITY_ACTION_FIELD_UPDATED: ActivityAction
 ACTIVITY_ACTION_BLOCKED_BY_ADDED: ActivityAction
 ACTIVITY_ACTION_BLOCKED_BY_REMOVED: ActivityAction
 ACTIVITY_ACTION_ASSIGNED: ActivityAction
+ACTIVITY_ACTION_TYPE_CHANGED: ActivityAction
+ACTIVITY_ACTION_SPRINT_CHANGED: ActivityAction
 
 class Project(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "visibility", "field_definitions", "views", "default_view_id", "member_ids", "created_at", "updated_at", "deleted_at", "urn", "user_permission_level")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "visibility", "field_definitions", "views", "default_view_id", "member_ids", "created_at", "updated_at", "deleted_at", "urn", "user_permission_level", "slug")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -79,6 +83,7 @@ class Project(_message.Message):
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
     URN_FIELD_NUMBER: _ClassVar[int]
     USER_PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    SLUG_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -96,10 +101,11 @@ class Project(_message.Message):
     deleted_at: _timestamp_pb2.Timestamp
     urn: str
     user_permission_level: _common_pb2.PermissionLevel
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ...) -> None: ...
+    slug: str
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., slug: _Optional[str] = ...) -> None: ...
 
 class Task(_message.Message):
-    __slots__ = ("id", "project_id", "organization_id", "owner_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "completed_at", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values", "outgoing_references", "created_at", "updated_at", "deleted_at", "urn", "user_permission_level")
+    __slots__ = ("id", "project_id", "organization_id", "owner_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "completed_at", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values", "outgoing_references", "created_at", "updated_at", "deleted_at", "urn", "number", "task_type", "sprint_id", "user_permission_level")
     class FieldValuesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -130,6 +136,9 @@ class Task(_message.Message):
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
     URN_FIELD_NUMBER: _ClassVar[int]
+    NUMBER_FIELD_NUMBER: _ClassVar[int]
+    TASK_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
     USER_PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
     id: str
     project_id: str
@@ -154,8 +163,11 @@ class Task(_message.Message):
     updated_at: _timestamp_pb2.Timestamp
     deleted_at: _timestamp_pb2.Timestamp
     urn: str
+    number: int
+    task_type: str
+    sprint_id: str
     user_permission_level: _common_pb2.PermissionLevel
-    def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., number: _Optional[int] = ..., task_type: _Optional[str] = ..., sprint_id: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ...) -> None: ...
 
 class FieldDefinition(_message.Message):
     __slots__ = ("id", "project_id", "name", "type", "is_required", "is_system", "sort_order", "config_json", "created_at", "updated_at")
@@ -233,21 +245,53 @@ class SelectOption(_message.Message):
     sort_order: int
     def __init__(self, id: _Optional[str] = ..., label: _Optional[str] = ..., color: _Optional[str] = ..., sort_order: _Optional[int] = ...) -> None: ...
 
+class Sprint(_message.Message):
+    __slots__ = ("id", "project_id", "organization_id", "name", "goal", "status", "start_date", "end_date", "sort_order", "task_count", "completed_task_count", "created_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    GOAL_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    START_DATE_FIELD_NUMBER: _ClassVar[int]
+    END_DATE_FIELD_NUMBER: _ClassVar[int]
+    SORT_ORDER_FIELD_NUMBER: _ClassVar[int]
+    TASK_COUNT_FIELD_NUMBER: _ClassVar[int]
+    COMPLETED_TASK_COUNT_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    project_id: str
+    organization_id: str
+    name: str
+    goal: str
+    status: str
+    start_date: str
+    end_date: str
+    sort_order: int
+    task_count: int
+    completed_task_count: int
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., goal: _Optional[str] = ..., status: _Optional[str] = ..., start_date: _Optional[str] = ..., end_date: _Optional[str] = ..., sort_order: _Optional[int] = ..., task_count: _Optional[int] = ..., completed_task_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
 class CreateProjectRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "description", "icon", "color", "visibility")
+    __slots__ = ("organization_id", "name", "description", "icon", "color", "visibility", "slug")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
     COLOR_FIELD_NUMBER: _ClassVar[int]
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    SLUG_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     description: str
     icon: str
     color: str
     visibility: _common_pb2.VisibilityScope
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+    slug: str
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., slug: _Optional[str] = ...) -> None: ...
 
 class GetProjectRequest(_message.Message):
     __slots__ = ("organization_id", "project_id")
@@ -258,7 +302,7 @@ class GetProjectRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class UpdateProjectRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "name", "description", "icon", "color", "visibility", "member_ids", "default_view_id")
+    __slots__ = ("organization_id", "project_id", "name", "description", "icon", "color", "visibility", "member_ids", "default_view_id", "slug")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -268,6 +312,7 @@ class UpdateProjectRequest(_message.Message):
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     MEMBER_IDS_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_VIEW_ID_FIELD_NUMBER: _ClassVar[int]
+    SLUG_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     name: str
@@ -277,7 +322,8 @@ class UpdateProjectRequest(_message.Message):
     visibility: _common_pb2.VisibilityScope
     member_ids: _containers.RepeatedScalarFieldContainer[str]
     default_view_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., member_ids: _Optional[_Iterable[str]] = ..., default_view_id: _Optional[str] = ...) -> None: ...
+    slug: str
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., member_ids: _Optional[_Iterable[str]] = ..., default_view_id: _Optional[str] = ..., slug: _Optional[str] = ...) -> None: ...
 
 class DeleteProjectRequest(_message.Message):
     __slots__ = ("organization_id", "project_id", "permanent")
@@ -324,7 +370,7 @@ class ListProjectsResponse(_message.Message):
     def __init__(self, projects: _Optional[_Iterable[_Union[Project, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class CreateTaskRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "field_values")
+    __slots__ = ("organization_id", "project_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "field_values", "task_type", "sprint_id")
     class FieldValuesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -346,6 +392,8 @@ class CreateTaskRequest(_message.Message):
     IS_MILESTONE_FIELD_NUMBER: _ClassVar[int]
     RECURRENCE_RULE_FIELD_NUMBER: _ClassVar[int]
     FIELD_VALUES_FIELD_NUMBER: _ClassVar[int]
+    TASK_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     title: str
@@ -360,7 +408,9 @@ class CreateTaskRequest(_message.Message):
     is_milestone: bool
     recurrence_rule: str
     field_values: _containers.ScalarMap[str, str]
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., field_values: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    task_type: str
+    sprint_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., field_values: _Optional[_Mapping[str, str]] = ..., task_type: _Optional[str] = ..., sprint_id: _Optional[str] = ...) -> None: ...
 
 class GetTaskRequest(_message.Message):
     __slots__ = ("organization_id", "task_id")
@@ -371,7 +421,7 @@ class GetTaskRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., task_id: _Optional[str] = ...) -> None: ...
 
 class UpdateTaskRequest(_message.Message):
-    __slots__ = ("organization_id", "task_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values")
+    __slots__ = ("organization_id", "task_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values", "task_type", "sprint_id")
     class FieldValuesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -394,6 +444,8 @@ class UpdateTaskRequest(_message.Message):
     RECURRENCE_RULE_FIELD_NUMBER: _ClassVar[int]
     SORT_ORDER_FIELD_NUMBER: _ClassVar[int]
     FIELD_VALUES_FIELD_NUMBER: _ClassVar[int]
+    TASK_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     task_id: str
     title: str
@@ -409,7 +461,9 @@ class UpdateTaskRequest(_message.Message):
     recurrence_rule: str
     sort_order: int
     field_values: _containers.ScalarMap[str, str]
-    def __init__(self, organization_id: _Optional[str] = ..., task_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    task_type: str
+    sprint_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., task_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ..., task_type: _Optional[str] = ..., sprint_id: _Optional[str] = ...) -> None: ...
 
 class MoveTaskRequest(_message.Message):
     __slots__ = ("organization_id", "task_id", "status", "sort_order")
@@ -458,18 +512,22 @@ class DeleteTasksRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., task_ids: _Optional[_Iterable[str]] = ..., permanent: _Optional[bool] = ...) -> None: ...
 
 class ListTasksRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "pagination", "include_deleted", "parent_id")
+    __slots__ = ("organization_id", "project_id", "pagination", "include_deleted", "parent_id", "sprint_id", "backlog_only")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     PAGINATION_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
+    BACKLOG_ONLY_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     pagination: _common_pb2.PaginationRequest
     include_deleted: bool
     parent_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ...) -> None: ...
+    sprint_id: str
+    backlog_only: bool
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., backlog_only: _Optional[bool] = ...) -> None: ...
 
 class TaskResponse(_message.Message):
     __slots__ = ("task",)
@@ -620,6 +678,94 @@ class DeleteViewResponse(_message.Message):
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class CreateSprintRequest(_message.Message):
+    __slots__ = ("organization_id", "project_id", "name", "goal", "start_date", "end_date")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    GOAL_FIELD_NUMBER: _ClassVar[int]
+    START_DATE_FIELD_NUMBER: _ClassVar[int]
+    END_DATE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    project_id: str
+    name: str
+    goal: str
+    start_date: str
+    end_date: str
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., goal: _Optional[str] = ..., start_date: _Optional[str] = ..., end_date: _Optional[str] = ...) -> None: ...
+
+class UpdateSprintRequest(_message.Message):
+    __slots__ = ("organization_id", "sprint_id", "name", "goal", "start_date", "end_date")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    GOAL_FIELD_NUMBER: _ClassVar[int]
+    START_DATE_FIELD_NUMBER: _ClassVar[int]
+    END_DATE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    sprint_id: str
+    name: str
+    goal: str
+    start_date: str
+    end_date: str
+    def __init__(self, organization_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., name: _Optional[str] = ..., goal: _Optional[str] = ..., start_date: _Optional[str] = ..., end_date: _Optional[str] = ...) -> None: ...
+
+class StartSprintRequest(_message.Message):
+    __slots__ = ("organization_id", "sprint_id", "start_date", "end_date")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
+    START_DATE_FIELD_NUMBER: _ClassVar[int]
+    END_DATE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    sprint_id: str
+    start_date: str
+    end_date: str
+    def __init__(self, organization_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., start_date: _Optional[str] = ..., end_date: _Optional[str] = ...) -> None: ...
+
+class CompleteSprintRequest(_message.Message):
+    __slots__ = ("organization_id", "sprint_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    sprint_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., sprint_id: _Optional[str] = ...) -> None: ...
+
+class DeleteSprintRequest(_message.Message):
+    __slots__ = ("organization_id", "sprint_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    sprint_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., sprint_id: _Optional[str] = ...) -> None: ...
+
+class ListSprintsRequest(_message.Message):
+    __slots__ = ("organization_id", "project_id", "include_closed")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_CLOSED_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    project_id: str
+    include_closed: bool
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., include_closed: _Optional[bool] = ...) -> None: ...
+
+class SprintResponse(_message.Message):
+    __slots__ = ("sprint",)
+    SPRINT_FIELD_NUMBER: _ClassVar[int]
+    sprint: Sprint
+    def __init__(self, sprint: _Optional[_Union[Sprint, _Mapping]] = ...) -> None: ...
+
+class DeleteSprintResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class ListSprintsResponse(_message.Message):
+    __slots__ = ("sprints",)
+    SPRINTS_FIELD_NUMBER: _ClassVar[int]
+    sprints: _containers.RepeatedCompositeFieldContainer[Sprint]
+    def __init__(self, sprints: _Optional[_Iterable[_Union[Sprint, _Mapping]]] = ...) -> None: ...
 
 class ListActivitiesRequest(_message.Message):
     __slots__ = ("organization_id", "task_id", "pagination")

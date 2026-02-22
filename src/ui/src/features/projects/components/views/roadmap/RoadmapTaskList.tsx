@@ -8,16 +8,20 @@
  * - Synchronized vertical scroll with timeline (mirrors via transform)
  */
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { Circle, CheckCircle, Spinner } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { LAYOUT } from "@/features/projects/constants";
+import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import type { Task, SelectOption } from "@/features/projects/types";
+import type { SerializedMemberInfo } from "@/features/admin";
 
 interface RoadmapTaskListProps {
   tasks: Task[];
   statusOptions: SelectOption[];
   selectedTaskIds: string[];
+  projectSlug: string;
   onTaskClick: (taskId: string, e: React.MouseEvent) => void;
   onCheckboxChange: (taskId: string) => void;
   onWheel: (deltaY: number) => void;
@@ -28,12 +32,22 @@ export function RoadmapTaskList({
   tasks,
   statusOptions,
   selectedTaskIds,
+  projectSlug,
   onTaskClick,
   onCheckboxChange,
   onWheel,
   scrollTop,
 }: RoadmapTaskListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const adminMembers = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
+
+  const memberMap = useMemo(() => {
+    const map: Record<string, SerializedMemberInfo> = {};
+    for (const m of adminMembers) {
+      map[m.userId] = m;
+    }
+    return map;
+  }, [adminMembers]);
 
   // Non-passive wheel listener to prevent page scroll and forward delta
   const onWheelRef = useRef(onWheel);
@@ -85,6 +99,8 @@ export function RoadmapTaskList({
                 statusOption={statusOption}
                 hasDates={!!hasDates}
                 isSelected={selectedTaskIds.includes(task.id)}
+                projectSlug={projectSlug}
+                memberMap={memberMap}
                 onClick={(e) => onTaskClick(task.id, e)}
                 onCheckboxChange={() => onCheckboxChange(task.id)}
               />
@@ -101,8 +117,16 @@ interface RoadmapTaskRowProps {
   statusOption?: SelectOption;
   hasDates: boolean;
   isSelected: boolean;
+  projectSlug: string;
+  memberMap: Record<string, SerializedMemberInfo>;
   onClick: (e: React.MouseEvent) => void;
   onCheckboxChange: () => void;
+}
+
+function getInitials(member: SerializedMemberInfo): string {
+  const parts = member.displayName.split(" ").filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return member.displayName.slice(0, 2).toUpperCase();
 }
 
 function RoadmapTaskRow({
@@ -110,9 +134,14 @@ function RoadmapTaskRow({
   statusOption,
   hasDates,
   isSelected,
+  projectSlug,
+  memberMap,
   onClick,
   onCheckboxChange,
 }: RoadmapTaskRowProps) {
+  const typeConfig = getTaskTypeConfig(task.taskType || "task");
+  const TypeIcon = typeConfig.icon;
+
   return (
     <div
       className={cn(
@@ -141,6 +170,19 @@ function RoadmapTaskRow({
         onClick={(e) => e.stopPropagation()}
       />
 
+      {/* Task type icon */}
+      <TypeIcon
+        size={14}
+        weight="fill"
+        className="text-muted-foreground shrink-0"
+        title={typeConfig.label}
+      />
+
+      {/* Task ID */}
+      <span className="text-xs font-mono text-muted-foreground shrink-0">
+        {projectSlug}-{task.number}
+      </span>
+
       {/* Status icon */}
       <StatusIcon
         statusId={statusOption?.id}
@@ -162,10 +204,27 @@ function RoadmapTaskRow({
         <span className="text-xs text-muted-foreground italic">No dates</span>
       )}
 
-      {/* Assignee avatar */}
+      {/* Assignee avatars */}
       {task.assigneeIds.length > 0 && (
-        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground shrink-0">
-          {task.assigneeIds[0].slice(-2).toUpperCase()}
+        <div className="flex -space-x-1.5 shrink-0">
+          {task.assigneeIds.slice(0, 2).map((id) => {
+            const member = memberMap[id];
+            const initials = member ? getInitials(member) : id.slice(-2).toUpperCase();
+            return (
+              <div
+                key={id}
+                className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[9px] font-medium text-primary-foreground border border-card"
+                title={member?.displayName}
+              >
+                {initials}
+              </div>
+            );
+          })}
+          {task.assigneeIds.length > 2 && (
+            <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium text-muted-foreground border border-card">
+              +{task.assigneeIds.length - 2}
+            </div>
+          )}
         </div>
       )}
     </div>

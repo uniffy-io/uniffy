@@ -6,7 +6,9 @@ export type ActivityAction =
   | 'field_updated'
   | 'blocked_by_added'
   | 'blocked_by_removed'
-  | 'assigned';
+  | 'assigned'
+  | 'type_changed'
+  | 'sprint_changed';
 
 export interface TaskActivity {
   id: string;

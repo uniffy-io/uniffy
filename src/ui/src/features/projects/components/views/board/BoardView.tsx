@@ -8,7 +8,7 @@
  * - Task filtering by search query
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -29,6 +29,7 @@ import {
   optimisticUpdateTask,
   updateFieldDefinition,
 } from "@/features/projects/store/projectsSlice";
+import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { moveTask, updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import {
   selectSelectedTaskIds,
@@ -53,6 +54,17 @@ export function BoardView() {
   const filteredTasks = useFilteredTasks(project?.id ?? "");
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
+  const activeSprint = useAppSelector(selectActiveSprint(project?.id ?? ""));
+  const allSprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
+  const hasSprints = allSprints.length > 0;
+
+  const tasks = useMemo(
+    () =>
+      activeSprint
+        ? filteredTasks.filter((t) => t.sprintId === activeSprint.id)
+        : filteredTasks,
+    [filteredTasks, activeSprint]
+  );
 
   const { canEdit } = useProjectPermission();
   // Track the currently dragged task
@@ -89,7 +101,7 @@ export function BoardView() {
   // Group tasks by status
   const tasksByStatus = statusOptions.reduce(
     (acc, option) => {
-      acc[option.id] = filteredTasks.filter((t) => t.status === option.id);
+      acc[option.id] = tasks.filter((t) => t.status === option.id);
       return acc;
     },
     {} as Record<string, Task[]>
@@ -143,7 +155,7 @@ export function BoardView() {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const task = filteredTasks.find((t) => t.id === event.active.id);
+    const task = tasks.find((t) => t.id === event.active.id);
     if (task) {
       setActiveTask(task);
     }
@@ -156,7 +168,7 @@ export function BoardView() {
     if (!over) return;
 
     const taskId = active.id as string;
-    const task = filteredTasks.find((t) => t.id === taskId);
+    const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
     // Determine the target status
@@ -168,7 +180,7 @@ export function BoardView() {
       newStatus = over.id as string;
     } else {
       // Dropped over another task - find that task's status
-      const overTask = filteredTasks.find((t) => t.id === over.id);
+      const overTask = tasks.find((t) => t.id === over.id);
       if (overTask) {
         newStatus = overTask.status;
       } else {
@@ -191,9 +203,34 @@ export function BoardView() {
     }
   };
 
-  // Show empty state if no tasks and no search
-  if (filteredTasks.length === 0 && !searchQuery) {
+  // Show empty state if no tasks, no search, and no sprints at all (non-sprint project)
+  if (tasks.length === 0 && !searchQuery && !hasSprints) {
     return <EmptyState onCreateTask={handleAddTask} />;
+  }
+
+  // Show empty sprint state when there is an active sprint but no tasks in it
+  if (tasks.length === 0 && activeSprint) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="shrink-0 flex items-center gap-3 px-4 py-2 bg-primary/5 border-b border-border text-sm">
+          <span className="font-medium text-primary">{activeSprint.name}</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+          No tasks in this sprint. Go to Backlog to add tasks.
+        </div>
+      </div>
+    );
+  }
+
+  // Project uses sprints but no sprint is currently active
+  if (!activeSprint && hasSprints && !searchQuery) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-8">
+        <span className="text-sm text-muted-foreground">
+          No active sprint. Go to the Backlog to plan and start your next sprint.
+        </span>
+      </div>
+    );
   }
 
   // Get the priority option for the dragged task
@@ -206,6 +243,24 @@ export function BoardView() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Active sprint banner */}
+      {activeSprint && (
+        <div className="shrink-0 flex items-center gap-3 px-4 py-2 bg-primary/5 border-b border-border text-sm">
+          <span className="font-medium text-primary">{activeSprint.name}</span>
+          {activeSprint.startDate && activeSprint.endDate && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-muted-foreground">
+                {activeSprint.startDate} – {activeSprint.endDate}
+              </span>
+            </>
+          )}
+          <span className="text-muted-foreground">|</span>
+          <span className="text-muted-foreground">
+            {tasks.filter((t) => t.status === "status_done").length}/{tasks.length} done
+          </span>
+        </div>
+      )}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -225,6 +280,7 @@ export function BoardView() {
                 onTaskClick={handleTaskClick}
                 onCheckboxChange={handleCheckboxChange}
                 onAddTask={handleAddTask}
+                projectSlug={project?.slug || ""}
               />
             ))}
 
@@ -263,6 +319,7 @@ export function BoardView() {
                 onClick={(e) => e.stopPropagation()}
                 onCheckboxChange={() => {}}
                 isSelected={false}
+                projectSlug={project?.slug || ""}
               />
             </div>
           )}

@@ -28,6 +28,7 @@ import {
   openCreateTaskModal,
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
+import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { ZoomLevel } from "@/features/projects/utils/ganttPositioning";
 import {
@@ -53,6 +54,7 @@ export function RoadmapView() {
   const project = useAppSelector(selectCurrentProject);
   const filteredTasks = useFilteredTasks(project?.id ?? "");
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
+  const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
   const searchQuery = useAppSelector(selectSearchQuery);
 
   // Zoom level state
@@ -133,13 +135,8 @@ export function RoadmapView() {
   const handleToday = useCallback(() => {
     const today = getStartOfPeriod(new Date(), zoom);
     setBaseDate(today);
-    // Scroll to center
-    const todayIndex = columns.findIndex((c) => c.isToday);
-    if (todayIndex !== -1) {
-      const columnWidth = COLUMN_WIDTHS[zoom];
-      setScrollLeft(todayIndex * columnWidth - 200); // Center-ish
-    }
-  }, [zoom, columns]);
+    setScrollLeft(PERIODS_BEFORE * COLUMN_WIDTHS[zoom] - 200);
+  }, [zoom]);
 
   const handlePrevious = useCallback(() => {
     const steps = zoom === "day" ? -7 : zoom === "week" ? -4 : -3;
@@ -251,6 +248,7 @@ export function RoadmapView() {
           tasks={filteredTasks}
           statusOptions={statusOptions}
           selectedTaskIds={selectedTaskIds}
+          projectSlug={project.slug}
           onTaskClick={handleTaskClick}
           onCheckboxChange={handleCheckboxChange}
           onWheel={handleTaskListWheel}
@@ -267,6 +265,8 @@ export function RoadmapView() {
             onScroll={setScrollLeft}
             onScrollTop={setScrollTop}
             scrollContainerRef={timelineScrollRef}
+            sprints={sprints}
+            timelineStart={timelineStart}
           >
               {/* Dependency Lines */}
               <DependencyLines tasks={dependencyData} />

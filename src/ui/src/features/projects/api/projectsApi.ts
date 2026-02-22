@@ -20,15 +20,20 @@ import type {
   FieldDefinition as ProtoFieldDefinition,
   ViewConfig as ProtoViewConfig,
   TaskActivity as ProtoTaskActivity,
+  Sprint as ProtoSprint,
 } from '@/gen/projects/v1/projects_pb';
 import type {
   Project,
   Task,
+  Sprint,
   CreateProjectRequest as FrontendCreateProjectRequest,
   UpdateProjectRequest as FrontendUpdateProjectRequest,
   CreateTaskRequest as FrontendCreateTaskRequest,
   UpdateTaskRequest as FrontendUpdateTaskRequest,
   MoveTaskRequest as FrontendMoveTaskRequest,
+  CreateSprintRequest as FrontendCreateSprintRequest,
+  UpdateSprintRequest as FrontendUpdateSprintRequest,
+  StartSprintRequest as FrontendStartSprintRequest,
 } from '../types/project';
 import type { FieldDefinition, FieldValue } from '../types/fields';
 import type { ViewConfig, ViewSpecificConfig } from '../types/views';
@@ -179,6 +184,7 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     deletedAt: proto.deletedAt?.toDate().toISOString() || null,
     urn: proto.urn,
     userPermissionLevel: proto.userPermissionLevel,
+    slug: proto.slug,
   };
 }
 
@@ -223,6 +229,9 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     deletedAt: proto.deletedAt?.toDate().toISOString() || null,
     urn: proto.urn,
     userPermissionLevel: proto.userPermissionLevel,
+    number: proto.number,
+    taskType: proto.taskType || "task",
+    sprintId: proto.sprintId ?? null,
   };
 }
 
@@ -299,6 +308,8 @@ function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAct
       return 'blocked_by_removed';
     case ProtoActivityAction.ASSIGNED:
       return 'assigned';
+    case ProtoActivityAction.TYPE_CHANGED:
+      return 'type_changed';
     default:
       return 'created';
   }
@@ -317,6 +328,27 @@ function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
     fieldId: proto.fieldId,
     previousValue: proto.previousValue,
     newValue: proto.newValue,
+  };
+}
+
+/**
+ * Convert proto Sprint to frontend Sprint
+ */
+function protoSprintToFrontend(proto: ProtoSprint): Sprint {
+  return {
+    id: proto.id,
+    projectId: proto.projectId,
+    organizationId: proto.organizationId,
+    name: proto.name,
+    goal: proto.goal,
+    status: proto.status as Sprint['status'],
+    startDate: proto.startDate ?? null,
+    endDate: proto.endDate ?? null,
+    sortOrder: proto.sortOrder,
+    taskCount: proto.taskCount,
+    completedTaskCount: proto.completedTaskCount,
+    createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
+    updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
   };
 }
 
@@ -380,6 +412,7 @@ export const projectsApi = {
       icon: data.icon,
       color: data.color,
       visibility: data.visibility ? frontendVisibilityToProto(data.visibility) : ProtoVisibilityScope.PRIVATE,
+      ...(data.slug ? { slug: data.slug } : {}),
     });
     return {
       project: protoProjectToFrontend(response.project!),
@@ -467,6 +500,10 @@ export const projectsApi = {
       startDate: data.startDate || undefined,
       dueDate: data.dueDate || undefined,
       fieldValues: data.fieldValues ? frontendFieldValuesToProto(data.fieldValues) : {},
+      ...(data.taskType ? { taskType: data.taskType } : {}),
+      ...(data.sprintId !== undefined ? { sprintId: data.sprintId ?? "" } : {}),
+      ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
+      ...(data.blockedByTaskIds ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
@@ -492,6 +529,10 @@ export const projectsApi = {
       dueDate: data.dueDate !== undefined ? (data.dueDate ?? "") : undefined,
       sortOrder: data.sortOrder,
       fieldValues: data.fieldValues ? frontendFieldValuesToProto(data.fieldValues) : {},
+      ...(data.taskType !== undefined ? { taskType: data.taskType } : {}),
+      ...(data.sprintId !== undefined ? { sprintId: data.sprintId ?? "" } : {}),
+      ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
+      ...(data.blockedByTaskIds !== undefined ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
@@ -724,5 +765,75 @@ export const projectsApi = {
     _projectId: string
   ): Promise<{ members: Array<{ id: string; name: string; initials: string; color: string }> }> => {
     return { members: [] };
+  },
+
+  // ===== Sprints =====
+
+  listSprints: async (projectId: string, organizationId: string): Promise<{ sprints: Sprint[] }> => {
+    const response = await projectsClient.listSprints({
+      organizationId,
+      projectId,
+      includeClosed: true,
+    });
+    return { sprints: response.sprints.map(protoSprintToFrontend) };
+  },
+
+  createSprint: async (
+    data: FrontendCreateSprintRequest,
+    organizationId: string
+  ): Promise<{ sprint: Sprint }> => {
+    const response = await projectsClient.createSprint({
+      organizationId,
+      projectId: data.projectId,
+      name: data.name,
+      goal: data.goal,
+      startDate: data.startDate ?? undefined,
+      endDate: data.endDate ?? undefined,
+    });
+    return { sprint: protoSprintToFrontend(response.sprint!) };
+  },
+
+  updateSprint: async (
+    data: FrontendUpdateSprintRequest,
+    organizationId: string
+  ): Promise<{ sprint: Sprint }> => {
+    const response = await projectsClient.updateSprint({
+      organizationId,
+      sprintId: data.id,
+      name: data.name,
+      goal: data.goal,
+      startDate: data.startDate ?? undefined,
+      endDate: data.endDate ?? undefined,
+    });
+    return { sprint: protoSprintToFrontend(response.sprint!) };
+  },
+
+  startSprint: async (
+    data: FrontendStartSprintRequest,
+    organizationId: string
+  ): Promise<{ sprint: Sprint }> => {
+    const response = await projectsClient.startSprint({
+      organizationId,
+      sprintId: data.id,
+      startDate: data.startDate ?? undefined,
+      endDate: data.endDate ?? undefined,
+    });
+    return { sprint: protoSprintToFrontend(response.sprint!) };
+  },
+
+  completeSprint: async (sprintId: string, organizationId: string): Promise<{ sprint: Sprint }> => {
+    const response = await projectsClient.completeSprint({
+      organizationId,
+      sprintId,
+    });
+    return { sprint: protoSprintToFrontend(response.sprint!) };
+  },
+
+  deleteSprint: async (sprintId: string, organizationId: string): Promise<{ success: boolean }> => {
+    const response = await projectsClient.deleteSprint({
+      organizationId,
+      sprintId,
+    });
+    return { success: response.success };
   },
 };
