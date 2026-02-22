@@ -10,6 +10,7 @@ import { updateUser } from '@/features/auth/store/authSlice';
 import { usersApi } from '@/features/settings/api/usersApi';
 import { SessionsSection } from '@/features/settings/components/SessionsSection';
 import { cn } from '@/shared/utils/cn';
+import { getInitials } from '@/components/subject/utils';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -82,16 +83,6 @@ export function AccountSection() {
             </div>
         );
     }
-
-    const getInitials = (name: string) => {
-        if (!name) return '??';
-        return name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-    };
 
     const displayInitials = user.fullName
         ? getInitials(user.fullName)

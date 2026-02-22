@@ -67,6 +67,46 @@ const calendarUiTransform = createTransform(
   { whitelist: ['calendarUi'] }
 );
 
+/**
+ * Projects UI transform: Reset transient state on rehydration.
+ *
+ * Preserves layout preferences (panel open/close, widths, viewMode, scope,
+ * columnWidths) but resets transient state that should not survive a page
+ * refresh (selections, modals, drag/editing, undo/redo).
+ */
+const projectsUiTransform = createTransform(
+  // Transform state before persisting (outbound) - keep as is
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (inboundState: any) => inboundState,
+  // Transform state when rehydrating (inbound) - reset transient state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (outboundState: any) => ({
+    ...outboundState,
+    // Reset selections
+    selectedTaskId: null,
+    selectedTaskIds: [],
+    isMultiSelectMode: false,
+    // Reset modals
+    isCreateProjectModalOpen: false,
+    editProjectId: null,
+    isCreateTaskModalOpen: false,
+    isFieldPickerOpen: false,
+    isViewConfigOpen: false,
+    editingFieldId: null,
+    // Reset transient interaction state
+    dragState: null,
+    editingCell: null,
+    focusedCell: null,
+    searchQuery: '',
+    // Reset undo/redo (not meaningful across sessions)
+    undoStack: [],
+    redoStack: [],
+    // Reset autosave (stale across sessions)
+    autosave: { isSaving: {}, lastSaved: {}, hasChanges: {} },
+  }),
+  { whitelist: ['projectsUi'] }
+);
+
 const rootReducer = combineReducers({
   auth: authReducer,
   bookmarks: bookmarksReducer,
@@ -146,8 +186,8 @@ const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
   version: 3, // Bumped to trigger security migration (access token removal)
   storage,
-  whitelist: ['auth', 'theme', 'editor', 'calendarUi'], // Persist auth, theme, editor, and calendar UI settings
-  transforms: [authSecurityTransform, calendarUiTransform], // Security: don't persist access tokens; reset calendar to today
+  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi'], // Persist auth, theme, editor, calendar UI, and projects UI settings
+  transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform], // Security: don't persist access tokens; reset calendar/projects transient state
   migrate: createMigrate(migrations, { debug: false }),
 };
 

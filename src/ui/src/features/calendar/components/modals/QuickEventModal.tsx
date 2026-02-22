@@ -18,11 +18,12 @@ import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
 import { createEvent } from '@/features/calendar/store/calendarThunks';
 import { attachmentsApi } from '@/features/attachments';
 import { cn } from '@/shared/utils/cn';
+import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
 import { ExpandableEditor } from '@/components/editor/ExpandableEditor';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import type { MemberInfo } from '@/gen/common/v1/common_pb';
+import { getInitials } from '@/components/subject/utils';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 import type { Attendee } from '@/features/calendar/types';
@@ -40,18 +41,6 @@ function getDateString(date: Date): string {
 }
 
 /**
- * Format date for display
- */
-function formatDateLabel(dateString: string): string {
-  const date = new Date(dateString + 'T00:00:00');
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/**
  * Generate date options for the next 60 days and past 7 days
  */
 function generateDateOptions(): { value: string; label: string }[] {
@@ -62,30 +51,19 @@ function generateDateOptions(): { value: string; label: string }[] {
     const date = new Date(today);
     date.setDate(today.getDate() - i);
     const dateString = getDateString(date);
-    options.push({ value: dateString, label: formatDateLabel(dateString) });
+    options.push({ value: dateString, label: formatDateWithWeekday(dateString) });
   }
 
   for (let i = 0; i <= 60; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     const dateString = getDateString(date);
-    const label = i === 0 ? `Today, ${formatDateLabel(dateString)}` : formatDateLabel(dateString);
+    const label = i === 0 ? `Today, ${formatDateWithWeekday(dateString)}` : formatDateWithWeekday(dateString);
     options.push({ value: dateString, label });
   }
 
   return options;
 }
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
-}
-
 
 interface QuickEventModalProps {
   isOpen: boolean;
@@ -159,7 +137,7 @@ export function QuickEventModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialStartHour, initialEndHour]);
 
-  const handleAttendeeAdd = (member: MemberInfo) => {
+  const handleAttendeeAdd = (member: { userId: string; displayName: string; email: string }) => {
     if (attendees.some((a) => a.id === member.userId)) return;
 
     const newAttendee: Attendee = {

@@ -1,6 +1,6 @@
 # Uniffy
 
-Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions.
+Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. This is an enterprise application in which everything should be almost perfect and pushed to the standards. Don't make shortcuts or easy solutions, just to quickly solve something. When doing something always check if the logic is repeating first in other domains or already build components / classes. The buttons, pickers, tables, etc ... should be the same in every aspect of the app. 
 
 ## Commands
 
@@ -8,8 +8,6 @@ Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar,
 ./run.sh proto  # generate protos
 ./run.sh lint-backend # run backend linters
 ./run.sh lint-frontend # run frontend linters
-./run.sh dev    # run backend + frontend + worker
-./run.sh        # show all commands
 ```
 
 Migrations run automatically on startup.
@@ -35,7 +33,7 @@ Uniffy uses URNs to uniquely identify all content. This enables universal `@` me
 
 **Format:** `urn:uniffy:content:{TYPE}:{uuid}`
 
-**Supported Types:** `NOTE`, `FILE`, `CHAT`, `USER`, `CALENDAR_EVENT`
+**Supported Types:** `NOTE`, `FILE`, `CHAT`, `USER`, `CALENDAR_EVENT`, `PROJECT`, `TASK`, `USER`, `GROUP`
 
 **Requirements:**
 - All content models MUST have a `urn` property

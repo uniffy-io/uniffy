@@ -19,26 +19,7 @@ import {
     revokeOtherSessions,
     clearSessionsError,
 } from '@/features/settings/store/sessionsSlice';
-
-function formatRelativeTime(isoString: string): string {
-    const date = new Date(isoString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 30) return `${diffDays}d ago`;
-
-    return date.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-    });
-}
+import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 
 function getDeviceIcon(deviceLabel: string) {
     const lower = deviceLabel.toLowerCase();

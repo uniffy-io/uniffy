@@ -9,6 +9,7 @@ import { UsersThree, Trash, Calendar } from '@phosphor-icons/react';
 import { PermissionLevelSelect } from '@/features/sharing/components/PermissionLevelSelect';
 import { isUserPermission, getPermissionLevelLabel } from '@/features/sharing/hooks/useSharingHooks';
 import type { SerializedPermissionInfo } from '@/features/sharing/store/sharingSlice';
+import { getInitials } from '@/components/subject/utils';
 
 interface PermissionRowProps {
     permission: SerializedPermissionInfo;
@@ -72,16 +73,6 @@ export function PermissionRow({
                 {isExpired ? 'Expired' : `Until ${date.toLocaleDateString()}`}
             </span>
         );
-    };
-
-    // Get initials for avatar
-    const getInitials = (name: string): string => {
-        return name
-            .split(' ')
-            .map((part) => part[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
     };
 
     return (

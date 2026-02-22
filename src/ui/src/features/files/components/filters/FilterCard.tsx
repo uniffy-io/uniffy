@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { renderIcon } from '@/components/icon-picker';
 import { cn } from '@/shared/utils/cn';
 import type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
+import { formatFileSize } from '@/shared/utils/dateFormatting';
 
 interface FilterCardProps {
     filter: SerializedSavedFilter;
@@ -53,31 +54,15 @@ function getCriteriaSummary(criteria: SerializedFilterCriteria): string[] {
 
     if (criteria.sizeMinBytes || criteria.sizeMaxBytes) {
         if (criteria.sizeMinBytes && criteria.sizeMaxBytes) {
-            parts.push(`Size: ${formatBytes(criteria.sizeMinBytes)} - ${formatBytes(criteria.sizeMaxBytes)}`);
+            parts.push(`Size: ${formatFileSize(criteria.sizeMinBytes)} - ${formatFileSize(criteria.sizeMaxBytes)}`);
         } else if (criteria.sizeMinBytes) {
-            parts.push(`Size: > ${formatBytes(criteria.sizeMinBytes)}`);
+            parts.push(`Size: > ${formatFileSize(criteria.sizeMinBytes)}`);
         } else if (criteria.sizeMaxBytes) {
-            parts.push(`Size: < ${formatBytes(criteria.sizeMaxBytes)}`);
+            parts.push(`Size: < ${formatFileSize(criteria.sizeMaxBytes)}`);
         }
     }
 
     return parts;
-}
-
-/**
- * Format bytes to human-readable string.
- */
-function formatBytes(bytes: number): string {
-    if (bytes >= 1073741824) {
-        return `${(bytes / 1073741824).toFixed(1)} GB`;
-    }
-    if (bytes >= 1048576) {
-        return `${(bytes / 1048576).toFixed(1)} MB`;
-    }
-    if (bytes >= 1024) {
-        return `${(bytes / 1024).toFixed(1)} KB`;
-    }
-    return `${bytes} B`;
 }
 
 /**

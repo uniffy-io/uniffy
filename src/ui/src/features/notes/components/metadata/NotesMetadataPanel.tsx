@@ -19,6 +19,7 @@ import { ContentType } from '@/gen/common/v1/common_pb';
 import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
 import { useNavigate } from 'react-router-dom';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
+import { getInitials } from '@/components/subject/utils';
 
 /** Parsed mention from content */
 interface ParsedMention {
@@ -60,16 +61,6 @@ function getTypeIcon(type: UrnType) {
 function getTypeStyle(type: UrnType) {
   const theme = getContentTypeConfig(type).theme;
   return { bg: theme.badgeBg, text: theme.accentText };
-}
-
-/** Get initials from a name */
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 export function NotesMetadataPanel() {

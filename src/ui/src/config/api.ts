@@ -119,9 +119,11 @@ function updateAuthState(
       user,
       accessToken, // This will be stripped by transform before persistence
       refreshToken,
-      // Preserve existing org ID and role if not provided (important for token refresh)
-      organizationId: organizationId ?? currentOrgId ?? undefined,
-      organizationRole: organizationRole ?? currentOrgRole ?? undefined,
+      // Preserve existing org ID and role if not provided (important for token refresh).
+      // Use || instead of ?? because protobuf returns "" (empty string) for unset
+      // string fields, and ?? does not fall back on empty strings.
+      organizationId: organizationId || currentOrgId || undefined,
+      organizationRole: organizationRole || currentOrgRole || undefined,
       sessionId,
     }));
   }

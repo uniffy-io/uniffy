@@ -36,29 +36,7 @@ export function renderFileIcon(mimeType: string, size: number, className: string
     return <IconComponent size={size} weight="duotone" className={className} />;
 }
 
-/**
- * Format file size in human-readable format
- */
-export function formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-/**
- * Format timestamp to readable date string
- */
-export function formatDate(timestamp?: { seconds: number; nanos: number }): string {
-    if (!timestamp) return '-';
-    const date = new Date(timestamp.seconds * 1000);
-    return date.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
-    });
-}
+export { formatProtoDate as formatDate, formatFileSize } from '@/shared/utils/dateFormatting';
 
 /**
  * MIME types that support server-side thumbnail generation.

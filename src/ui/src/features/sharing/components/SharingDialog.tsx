@@ -22,6 +22,7 @@ import {
 import { ShareTargetSearch } from '@/features/sharing/components/ShareTargetSearch';
 import { PermissionRow } from '@/features/sharing/components/PermissionRow';
 import type { SerializedShareTarget } from '@/features/sharing/store/sharingSlice';
+import { getInitials } from '@/components/subject/utils';
 
 export function SharingDialog() {
     const { isOpen, activeContent, close } = useSharingDialog();
@@ -77,16 +78,6 @@ export function SharingDialog() {
     // Handle removing permission
     const handleRemove = async (permissionId: string) => {
         await revoke(permissionId);
-    };
-
-    // Get initials for avatar
-    const getInitials = (name: string): string => {
-        return name
-            .split(' ')
-            .map((part) => part[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
     };
 
     if (!activeContent) {

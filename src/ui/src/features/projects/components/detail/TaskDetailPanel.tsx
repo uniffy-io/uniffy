@@ -14,7 +14,8 @@ import { X, Repeat, Bell, Diamond, PencilSimple, Check } from "@phosphor-icons/r
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import type { SerializedMemberInfo } from "@/features/admin";
+import { formatDateFull, isOverdue } from "@/shared/utils/dateFormatting";
+import { SubjectAvatarStack } from "@/components/subject";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ import type { SelectOption, Sprint } from "../../types";
 import { SYSTEM_FIELD_IDS } from "../../types";
 
 import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
+import { extractMentionsFromMarkdown, extractFallbackLabel } from "@/shared/utils/mentionUtils";
 import { ContentType } from "@/gen/common/v1/common_pb";
 import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { SubtasksList } from "./SubtasksList";
@@ -53,25 +55,8 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
     () => allProjectTasks.filter((t) => t.blockedByTaskIds.includes(taskId)).map((t) => t.id),
     [allProjectTasks, taskId]
   );
-  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
   const { canEdit } = useTaskPermission(taskId);
   const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
-
-  const memberMap = useMemo(() => {
-    const map: Record<string, SerializedMemberInfo> = {};
-    for (const m of members) {
-      map[m.userId] = m;
-    }
-    return map;
-  }, [members]);
-
-  const getInitials = (id: string) => {
-    const member = memberMap[id];
-    if (!member) return id.slice(-2).toUpperCase();
-    const parts = member.displayName.split(" ").filter(Boolean);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return member.displayName.slice(0, 2).toUpperCase();
-  };
 
   const handleClose = () => {
     dispatch(closeDetailPanel());
@@ -212,17 +197,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               {task.assigneeIds.length > 0 && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground w-20">Assignee</span>
-                  <div className="flex -space-x-1">
-                    {task.assigneeIds.map((id) => (
-                      <div
-                        key={id}
-                        className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground border-2 border-card"
-                        title={memberMap[id]?.displayName}
-                      >
-                        {getInitials(id)}
-                      </div>
-                    ))}
-                  </div>
+                  <SubjectAvatarStack subjectIds={task.assigneeIds} />
                 </div>
               )}
 
@@ -230,7 +205,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               {task.startDate && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground w-20">Start</span>
-                  <span className="text-sm">{formatDate(task.startDate)}</span>
+                  <span className="text-sm">{formatDateFull(task.startDate)}</span>
                 </div>
               )}
 
@@ -243,7 +218,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
                       "text-sm",
                       isOverdue(task.dueDate) && "text-destructive"
                     )}>
-                      {formatDate(task.dueDate)}
+                      {formatDateFull(task.dueDate)}
                     </span>
                     
                     {/* Feature 9: Recurrence Indicator */}
@@ -544,35 +519,4 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
   );
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
-function isOverdue(dateStr: string): boolean {
-  const date = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-}
-
-function extractMentionsFromMarkdown(markdown: string): Array<{ label: string; urn: string }> {
-  const mentionRegex = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
-  const mentions: Array<{ label: string; urn: string }> = [];
-  let match;
-  while ((match = mentionRegex.exec(markdown)) !== null) {
-    mentions.push({ label: match[1], urn: match[2] });
-  }
-  return mentions;
-}
-
-function extractFallbackLabel(urn: string): string {
-  const parts = urn.split(":");
-  const type = parts[3]?.toLowerCase() || "item";
-  const id = parts[4]?.slice(0, 8) || "";
-  return `${type}:${id}`;
-}

@@ -45,30 +45,7 @@ import {
   getTimezoneOffset,
 } from '@/features/calendar/utils';
 import { findConflicts } from '@/features/calendar/utils/eventPositioning';
-
-/**
- * Extract URN mentions from markdown content.
- * Matches the [[[label|urn]]] format used by Uniffy mentions.
- */
-function extractMentionsFromMarkdown(markdown: string): Array<{ label: string; urn: string }> {
-  const mentionRegex = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
-  const mentions: Array<{ label: string; urn: string }> = [];
-  let match;
-
-  while ((match = mentionRegex.exec(markdown)) !== null) {
-    mentions.push({
-      label: match[1],
-      urn: match[2],
-    });
-  }
-
-  // Remove duplicates by URN
-  const uniqueMentions = mentions.filter(
-    (mention, index, self) => self.findIndex((m) => m.urn === mention.urn) === index
-  );
-
-  return uniqueMentions;
-}
+import { extractMentionsFromMarkdown } from '@/shared/utils/mentionUtils';
 
 // Default color when category is not found
 const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue

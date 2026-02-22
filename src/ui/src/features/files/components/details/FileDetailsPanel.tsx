@@ -10,6 +10,7 @@ import { setDetailsPanelTab } from '@/features/files/store/filesSlice';
 import type { DetailsPanelTab } from '@/features/files/store/filesSlice';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize } from '@/features/files/components/list/utils';
+import { formatProtoDateTime, formatMediaTime } from '@/shared/utils/dateFormatting';
 import { ThumbnailImage } from '@/features/files/components/list/ThumbnailImage';
 import {
     useContentPermissions,
@@ -39,6 +40,7 @@ import {
     SpeakerHigh,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { getInitials } from '@/components/subject/utils';
 
 interface FileDetailsPanelProps {
     file: SerializedFile | null;
@@ -56,41 +58,6 @@ function getVisibilityInfo(visibility: VisibilityScope) {
         default:
             return { label: 'Unknown', icon: Lock, className: 'text-muted-foreground' };
     }
-}
-
-/** Format date for display */
-function formatDateTime(timestamp?: { seconds: number; nanos: number }): string {
-    if (!timestamp) return '-';
-    const date = new Date(timestamp.seconds * 1000);
-    return date.toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-}
-
-/** Format duration in seconds to readable format */
-function formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-}
-
-/** Get initials from a name */
-function getInitials(name: string): string {
-    return name
-        .split(' ')
-        .map(part => part[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
 }
 
 /** Map common EXIF tag names to readable labels */
@@ -266,7 +233,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                         ) : (
                             <MusicNote size={16} weight="duotone" className="text-muted-foreground" />
                         )}
-                        <span className="text-sm">{formatDuration(metadata.durationSeconds)}</span>
+                        <span className="text-sm">{formatMediaTime(metadata.durationSeconds)}</span>
                     </div>
                 </div>
             )}
@@ -336,7 +303,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Created</label>
                 <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
                     <Calendar size={16} weight="duotone" className="text-muted-foreground" />
-                    <span className="text-sm">{formatDateTime(file.createdAt)}</span>
+                    <span className="text-sm">{formatProtoDateTime(file.createdAt)}</span>
                 </div>
             </div>
 
@@ -345,7 +312,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Modified</label>
                 <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
                     <Calendar size={16} weight="duotone" className="text-muted-foreground" />
-                    <span className="text-sm">{formatDateTime(file.updatedAt)}</span>
+                    <span className="text-sm">{formatProtoDateTime(file.updatedAt)}</span>
                 </div>
             </div>
 

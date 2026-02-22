@@ -25,6 +25,7 @@ import { transport } from '@/config/api';
 import { AuthService } from '@/gen/auth/v1/auth_connect';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { cn } from '@/shared/utils/cn';
+import { getInitials } from '@/components/subject/utils';
 import { useNavigate } from 'react-router-dom';
 
 export function UserMenu() {
@@ -62,7 +63,7 @@ export function UserMenu() {
         // Notify backend to revoke the session (fire-and-forget)
         if (refreshToken) {
             const client = createClient(AuthService, transport);
-            client.logout({ refreshToken }).catch(() => {});
+            client.logout({ refreshToken }).catch(() => { });
         }
         // Clear memory access token (security: remove from memory)
         clearMemoryAccessToken();
@@ -84,15 +85,7 @@ export function UserMenu() {
         navigate('/auth');
     };
 
-    const getInitials = (name: string) => {
-        if (!name) return '??';
-        return name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-    };
+
 
     const displayName = user.fullName || user.username || 'User';
 
@@ -154,7 +147,7 @@ export function UserMenu() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 z-[100] mt-1.5 w-60 origin-top-right rounded-lg bg-card py-1.5 shadow-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 z-100 mt-1.5 w-60 origin-top-right rounded-lg bg-card py-1.5 shadow-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* User info header */}
                     <div className="px-3 py-2.5 border-b border-border">
                         <div className="flex items-center gap-2.5">

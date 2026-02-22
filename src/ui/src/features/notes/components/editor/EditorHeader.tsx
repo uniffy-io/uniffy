@@ -33,6 +33,7 @@ import { IconPicker } from '@/features/notes/components/editor/IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { useSharingDialog } from '@/features/sharing';
 import { cn } from '@/shared/utils/cn';
+import { formatProtoDate } from '@/shared/utils/dateFormatting';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 
@@ -293,17 +294,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
       ];
 
 
-  // Format date
-  const formatDate = (timestamp?: { seconds: bigint | number; nanos: number }) => {
-    if (!timestamp) return '';
-    const date = new Date(Number(timestamp.seconds) * 1000);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
-  
   return (
     <div className="border-b border-border bg-card">
       {/* Top Bar: Breadcrumb + Actions */}
@@ -496,11 +486,11 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
             
             {/* Meta Info */}
             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-              <span>Created {formatDate(note.createdAt)}</span>
+              <span>Created {formatProtoDate(note.createdAt)}</span>
               {note.updatedAt && (
                 <>
                   <span>·</span>
-                  <span>Updated {formatDate(note.updatedAt)}</span>
+                  <span>Updated {formatProtoDate(note.updatedAt)}</span>
                 </>
               )}
               {/* Sharing info: show owner for shared notes (but not org-wide notes) */}

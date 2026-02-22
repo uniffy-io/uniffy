@@ -34,6 +34,7 @@ import {
 import { useMediaStream } from '@/features/files/components/viewer/hooks/useMediaStream';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize, supportsThumbnail } from '@/features/files/components/list/utils';
+import { formatMediaTime } from '@/shared/utils/dateFormatting';
 import { ExtractionStatus } from '@/gen/files/v1/files_pb';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 
@@ -45,16 +46,6 @@ const PLACEHOLDER_BARS = 200;
 
 interface AudioViewerProps {
     file: SerializedFile;
-}
-
-/**
- * Format time in mm:ss format.
- */
-function formatTime(seconds: number): string {
-    if (!isFinite(seconds) || seconds < 0) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -581,9 +572,9 @@ export function AudioViewer({ file }: AudioViewerProps) {
 
                 {/* Time display */}
                 <div className="audio-time-display">
-                    <span className="audio-time-current">{formatTime(currentTime)}</span>
+                    <span className="audio-time-current">{formatMediaTime(currentTime)}</span>
                     <div className="audio-time-divider" />
-                    <span className="audio-time-duration">{formatTime(duration)}</span>
+                    <span className="audio-time-duration">{formatMediaTime(duration)}</span>
                 </div>
 
                 {/* Main controls */}

@@ -410,6 +410,67 @@ const isBookmarked = useIsBookmarked(urn);
 const { toggle, isLoading } = useToggleBookmark();
 ```
 
+## Shared Formatting Utilities
+
+Use the centralized formatting utilities instead of defining local helpers. Never duplicate date, time, file size, or mention parsing functions.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/shared/utils/dateFormatting.ts` | All date, time, file size, and relative time formatting |
+| `src/ui/src/shared/utils/mentionUtils.ts` | Markdown mention extraction (`[[[label\|urn]]]`) |
+
+**Date formatting (`@/shared/utils/dateFormatting`):**
+
+| Function | Output | Use for |
+|----------|--------|---------|
+| `formatDateShort(dateStr)` | "Jan 22" (+ year if not current) | Task dates, list views |
+| `formatDateFull(dateStr)` | "Jan 22, 2026" | Detail panels |
+| `formatDateWithWeekday(dateStr)` | "Mon, Jan 22" | Calendar date labels |
+| `formatProtoDate(timestamp)` | "Jan 22" | Proto `{ seconds, nanos }` timestamps |
+| `formatProtoDateTime(timestamp)` | "Jan 22, 2026, 2:30 PM" | File details, full timestamps |
+| `formatRelativeTime(dateStr)` | "Just now", "5m ago", "3d ago" | Comments, notifications, activity |
+| `isOverdue(dateStr)` | `boolean` | Task due date styling |
+| `formatMediaTime(seconds)` | "1:23" or "1:02:03" | Audio/video playback |
+| `formatFileSize(bytes)` | "1.5 MB" | File sizes |
+
+**Mention parsing (`@/shared/utils/mentionUtils`):**
+
+| Function | Purpose |
+|----------|---------|
+| `extractMentionsFromMarkdown(md)` | Parse `[[[label\|urn]]]` mentions, deduplicated by URN |
+| `extractFallbackLabel(urn)` | Short label from URN: "note:abcdef12" |
+
+**Rules:**
+- Never define local `formatDate`, `formatRelativeTime`, `formatFileSize`, `getInitials`, `extractMentions`, or `isOverdue` functions
+- Never use inline `toLocaleDateString()` calls - use the shared formatters
+- For proto timestamps, use `formatProtoDate` / `formatProtoDateTime` instead of manual `new Date(seconds * 1000)`
+
+## Subject Components (Users and Groups)
+
+Use the shared subject components (`src/ui/src/components/subject/`) for all user/group display and selection. Never build inline avatar circles, initials helpers, or member search dropdowns.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/components/subject/types.ts` | Subject interface, type constants, size/mode types |
+| `src/ui/src/components/subject/utils.ts` | Canonical `getInitials`, type converters (member/group/shareTarget to Subject) |
+| `src/ui/src/components/subject/SubjectAvatar.tsx` | Avatar circle (photo with initials fallback for users, violet initials for groups) |
+| `src/ui/src/components/subject/SubjectAvatarStack.tsx` | Overlapping avatar row with +N overflow |
+| `src/ui/src/components/subject/SubjectChip.tsx` | Removable pill (avatar + name + X button) |
+| `src/ui/src/components/subject/SubjectPicker.tsx` | Search dropdown for selecting users/groups (single/multi, portal/inline) |
+| `src/ui/src/components/subject/hooks/useSubjectResolver.ts` | Resolves user/group IDs to Subject objects from Redux store |
+| `src/ui/src/components/subject/hooks/useSubjectSearch.ts` | Debounced search wrapping `searchShareTargets` thunk |
+| `src/ui/src/components/subject/index.ts` | Public barrel exports |
+
+**Rules:**
+- Always import `getInitials` from `@/components/subject/utils` - never define it locally
+- Use `SubjectAvatar` / `SubjectAvatarStack` for displaying user/group avatars - never build inline avatar circles
+- Use `SubjectPicker` for user/group selection - never build inline member search dropdowns
+- Use `SubjectChip` for removable user/group pills - never build inline chip components
+
 ## Zen Mode
 
 All domain layouts MUST support Zen Mode (`Ctrl+\`).

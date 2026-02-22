@@ -10,16 +10,17 @@
  * - Reference chips
  */
 
-import { useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { useAppSelector } from "@/app/hooks";
-import type { SerializedMemberInfo } from "@/features/admin";
+import { SubjectAvatarStack } from "@/components/subject";
 import { selectSubtasksByParentId } from "../../../store/projectsSlice";
 import type { Task, SelectOption } from "../../../types";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { extractFallbackLabel } from "@/shared/utils/mentionUtils";
 
 interface TaskCardProps {
   task: Task;
@@ -57,16 +58,6 @@ export function TaskCard({
   // Feature 7: Subtask progress
   const subtasks = useAppSelector(selectSubtasksByParentId(task.id));
   const completedSubtasks = subtasks.filter(t => t.completedAt).length;
-
-  // Resolve assignee IDs to display names
-  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
-  const memberMap = useMemo(() => {
-    const map: Record<string, SerializedMemberInfo> = {};
-    for (const m of members) {
-      map[m.userId] = m;
-    }
-    return map;
-  }, [members]);
 
   const ticketId = `${projectSlug}-${task.number}`;
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
@@ -134,11 +125,11 @@ export function TaskCard({
           {(task.startDate || task.dueDate) && (
             <div className="flex flex-col items-end gap-0.5 text-[10px] text-muted-foreground shrink-0 leading-tight">
               {task.startDate && (
-                  <span>Start: {formatDate(task.startDate)}</span>
+                  <span>Start: {formatDateShort(task.startDate)}</span>
               )}
               {task.dueDate && (
                   <span className={isOverdue(task.dueDate) ? "text-destructive font-medium" : ""}>
-                    Due: {formatDate(task.dueDate)}
+                    Due: {formatDateShort(task.dueDate)}
                   </span>
               )}
             </div>
@@ -187,7 +178,7 @@ export function TaskCard({
                 key={urn}
                 className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
               >
-                {extractLabel(urn)}
+                {extractFallbackLabel(urn)}
               </span>
             ))}
             {(task.outgoingReferences?.length || 0) > 2 && (
@@ -199,25 +190,8 @@ export function TaskCard({
 
           {/* Assignee avatars */}
           {task.assigneeIds.length > 0 && (
-            <div className="flex -space-x-1 ml-auto">
-              {task.assigneeIds.slice(0, 2).map((id) => {
-                const member = memberMap[id];
-                const initials = getInitials(member?.displayName, id);
-                return (
-                  <div
-                    key={id}
-                    className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground border border-card"
-                    title={member?.displayName}
-                  >
-                    {initials}
-                  </div>
-                );
-              })}
-              {task.assigneeIds.length > 2 && (
-                <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground border border-card">
-                  +{task.assigneeIds.length - 2}
-                </div>
-              )}
+            <div className="ml-auto">
+              <SubjectAvatarStack subjectIds={task.assigneeIds} maxDisplay={2} size="xs" />
             </div>
           )}
         </div>
@@ -225,30 +199,4 @@ export function TaskCard({
       </div>
     </div>
   );
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function isOverdue(dateStr: string): boolean {
-  const date = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-}
-
-function getInitials(displayName: string | undefined, id: string): string {
-  if (!displayName) return id.slice(-2).toUpperCase();
-  const parts = displayName.split(" ").filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return displayName.slice(0, 2).toUpperCase();
-}
-
-function extractLabel(urn: string): string {
-  const parts = urn.split(":");
-  const type = parts[3]?.toLowerCase() || "item";
-  const id = parts[4]?.slice(0, 6) || "";
-  return `${type}:${id}`;
 }

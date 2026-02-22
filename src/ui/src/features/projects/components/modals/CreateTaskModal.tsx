@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { X, Plus, CaretDown, MagnifyingGlass, Check } from "@phosphor-icons/react";
+import { X, Plus, CaretDown } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,11 @@ import { attachmentsApi } from "@/features/attachments";
 import { ContentType } from "@/gen/common/v1/common_pb";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
+import { SubjectPicker } from "@/components/subject";
 import { selectCurrentProject } from "../../store/projectsSlice";
 import { closeCreateTaskModal } from "../../store/projectsUiSlice";
 import { createTask } from "../../store/projectsThunks";
 import { SYSTEM_FIELD_IDS } from "../../types";
-import { fetchMembers } from "@/features/admin";
-import type { SerializedMemberInfo } from "@/features/admin";
 import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 
 export function CreateTaskModal() {
@@ -36,11 +35,9 @@ export function CreateTaskModal() {
   const [dueDate, setDueDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskType, setTaskType] = useState("task");
-  const [assigneeSearch, setAssigneeSearch] = useState("");
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const assigneeDropdownRef = useRef<HTMLDivElement>(null);
-  const assigneeSearchRef = useRef<HTMLInputElement>(null);
   const pendingFileIdsRef = useRef<string[]>([]);
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -48,22 +45,6 @@ export function CreateTaskModal() {
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
   }, []);
-
-  // Use org members from admin store
-  const adminMembers = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
-
-  const activeMembers = useMemo(
-    () => adminMembers.filter((m) => m.isActive),
-    [adminMembers]
-  );
-
-  const filteredMembers = useMemo(() => {
-    if (!assigneeSearch) return activeMembers;
-    const q = assigneeSearch.toLowerCase();
-    return activeMembers.filter(
-      (m) => m.displayName.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
-    );
-  }, [activeMembers, assigneeSearch]);
 
   // Get field options from project
   const statusField = project?.fieldDefinitions.find(
@@ -92,13 +73,6 @@ export function CreateTaskModal() {
     }
   }, [statusOptions, priorityOptions, status, priority]);
 
-  // Load org members if not already loaded
-  useEffect(() => {
-    if (adminMembers.length === 0) {
-      dispatch(fetchMembers({ pageSize: 50 }));
-    }
-  }, [dispatch, adminMembers.length]);
-
   const handleClose = useCallback(() => {
     setTitle("");
     setDescription("");
@@ -126,27 +100,6 @@ export function CreateTaskModal() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isSubmitting, handleClose]);
-
-  // Close assignee dropdown on outside click
-  useEffect(() => {
-    if (!isAssigneeDropdownOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (assigneeDropdownRef.current && !assigneeDropdownRef.current.contains(e.target as Node)) {
-        setIsAssigneeDropdownOpen(false);
-        setAssigneeSearch("");
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isAssigneeDropdownOpen]);
-
-  const toggleAssignee = (userId: string) => {
-    setAssigneeIds((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,92 +290,29 @@ export function CreateTaskModal() {
                 disabled={isSubmitting}
                 onClick={() => {
                   setIsAssigneeDropdownOpen((prev) => !prev);
-                  setAssigneeSearch("");
-                  setTimeout(() => assigneeSearchRef.current?.focus(), 50);
                 }}
                 className={cn(
                   "flex items-center gap-2 w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm",
                   "transition-colors hover:bg-muted/50",
                   "focus:outline-none focus:ring-2 focus:ring-ring",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
-                  assigneeIds.length > 0 ? "text-foreground" : "text-muted-foreground"
+                  "text-muted-foreground"
                 )}
               >
-                <span className="flex-1 text-left truncate">
-                  {assigneeIds.length === 0
-                    ? "Select assignees..."
-                    : assigneeIds.map((id) => {
-                        const m = activeMembers.find((mem) => mem.userId === id);
-                        return m?.displayName ?? id.slice(-6);
-                      }).join(", ")}
-                </span>
+                <span className="flex-1 text-left truncate">Select assignees...</span>
                 <CaretDown size={14} className="text-muted-foreground shrink-0" />
               </button>
 
               {/* Dropdown popover */}
               {isAssigneeDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-border bg-card shadow-lg">
-                  {/* Search */}
-                  <div className="p-2 border-b border-border">
-                    <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background">
-                      <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
-                      <input
-                        ref={assigneeSearchRef}
-                        type="text"
-                        value={assigneeSearch}
-                        onChange={(e) => setAssigneeSearch(e.target.value)}
-                        placeholder="Search members..."
-                        className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Member list */}
-                  <div className="max-h-48 overflow-y-auto py-1">
-                    {filteredMembers.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">
-                        {activeMembers.length === 0 ? "No members available" : "No members found"}
-                      </div>
-                    ) : (
-                      filteredMembers.map((member) => {
-                        const isSelected = assigneeIds.includes(member.userId);
-                        const parts = member.displayName.split(" ").filter(Boolean);
-                        const initials = parts.length >= 2
-                          ? (parts[0][0] + parts[1][0]).toUpperCase()
-                          : member.displayName.slice(0, 2).toUpperCase();
-                        return (
-                          <button
-                            key={member.userId}
-                            type="button"
-                            onClick={() => toggleAssignee(member.userId)}
-                            className={cn(
-                              "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
-                              isSelected ? "bg-primary/10" : "hover:bg-muted"
-                            )}
-                          >
-                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground shrink-0">
-                              {initials}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-foreground truncate block">{member.displayName}</span>
-                              <span className="text-xs text-muted-foreground truncate block">{member.email}</span>
-                            </div>
-                            {isSelected && (
-                              <Check size={14} className="text-primary shrink-0" />
-                            )}
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* Footer */}
-                  {assigneeIds.length > 0 && (
-                    <div className="px-3 py-2 border-t border-border text-xs text-muted-foreground">
-                      {assigneeIds.length} selected
-                    </div>
-                  )}
-                </div>
+                <SubjectPicker
+                  mode="multi"
+                  subjectTypes="all"
+                  value={assigneeIds}
+                  onChange={(ids) => setAssigneeIds(ids)}
+                  onClose={() => setIsAssigneeDropdownOpen(false)}
+                  autoFocus
+                />
               )}
             </div>
 

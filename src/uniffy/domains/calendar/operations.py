@@ -166,6 +166,74 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self.session.execute(stmt)
 
     # ─────────────────────────────────────────────────────────────
+    # Group expansion
+    # ─────────────────────────────────────────────────────────────
+
+    async def _expand_group_attendees(
+        self,
+        attendee_ids: list[UUID],
+    ) -> list[UUID]:
+        """
+        Expand any group IDs in the attendee list to individual user IDs.
+
+        IDs that match a group in login_groups are replaced with the group's
+        active member user IDs. IDs that are not groups are kept as-is.
+        Duplicates are removed while preserving order.
+
+        Parameters
+        ----------
+        attendee_ids : list[UUID]
+            Mixed list of user and/or group IDs.
+
+        Returns
+        -------
+        list[UUID]
+            Flat list of unique user IDs.
+
+        """
+        if not attendee_ids:
+            return []
+
+        from uniffy.core.models.login.group import Group
+        from uniffy.core.models.login.group_member import GroupMember
+
+        # Check which IDs are groups
+        result = await self.session.execute(
+            select(Group.id).where(Group.id.in_(attendee_ids))
+        )
+        group_ids = {row[0] for row in result.all()}
+
+        if not group_ids:
+            return attendee_ids
+
+        # Fetch active members for all matched groups
+        result = await self.session.execute(
+            select(GroupMember.user_id).where(
+                and_(
+                    GroupMember.group_id.in_(group_ids),
+                    GroupMember.is_active.is_(True),
+                )
+            )
+        )
+        group_member_ids = [row[0] for row in result.all()]
+
+        # Build final list: non-group IDs + expanded group member IDs
+        seen: set[UUID] = set()
+        resolved: list[UUID] = []
+        for uid in attendee_ids:
+            if uid in group_ids:
+                continue  # Skip the group ID itself
+            if uid not in seen:
+                seen.add(uid)
+                resolved.append(uid)
+        for uid in group_member_ids:
+            if uid not in seen:
+                seen.add(uid)
+                resolved.append(uid)
+
+        return resolved
+
+    # ─────────────────────────────────────────────────────────────
     # Event-specific operations
     # ─────────────────────────────────────────────────────────────
 
@@ -245,6 +313,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Created event.
 
         """
+        # Expand any group IDs to individual user IDs
+        if attendee_ids:
+            attendee_ids = await self._expand_group_attendees(attendee_ids)
+
         # Extract URN references and inline file refs from description
         outgoing_refs = (
             extract_all_outgoing_references(description, organization_id)
@@ -499,6 +571,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         # Update attendees
         newly_invited_ids: list[UUID] = []
         if attendee_ids is not None:
+            # Expand any group IDs to individual user IDs
+            attendee_ids = await self._expand_group_attendees(attendee_ids)
             # Fetch existing attendees
             stmt = select(EventAttendee).where(EventAttendee.event_id == event.id)
             result = await self.session.execute(stmt)
@@ -896,6 +970,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             raise NotFoundError("CalendarEvent", event_id)
 
         await self._require_edit(user_id, organization_id, event)
+
+        # Expand any group IDs to individual user IDs
+        attendee_ids = await self._expand_group_attendees(attendee_ids)
 
         # Get existing attendee IDs
         result = await self.session.execute(

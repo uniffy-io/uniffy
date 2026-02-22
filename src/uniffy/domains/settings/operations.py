@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, ValidationError
@@ -362,12 +363,22 @@ class SettingsOperations:
             await self.session.refresh(profiles[0])
             return profiles[0]
 
-        # No profiles at all, create a default one
-        return await self.create_profile(
-            user_id=user_id,
-            name="Default",
-            is_default=True,
-        )
+        # No profiles at all, create a default one.
+        # Handle race condition: concurrent requests may both try to create
+        # the default profile simultaneously. If we lose the race, rollback
+        # and return the profile that the other request created.
+        try:
+            return await self.create_profile(
+                user_id=user_id,
+                name="Default",
+                is_default=True,
+            )
+        except (IntegrityError, ValidationError):
+            await self.session.rollback()
+            profile = await self.get_default_profile(user_id)
+            if profile:
+                return profile
+            raise
 
     async def set_default_profile(
         self,

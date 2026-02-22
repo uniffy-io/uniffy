@@ -30,9 +30,10 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, ArrowUp, ArrowDown, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, MagnifyingGlass, Check } from "@phosphor-icons/react";
+import { Plus, ArrowUp, ArrowDown, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -76,8 +77,7 @@ import { moveTask } from "@/features/projects/store/projectsThunks";
 import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
-import { fetchMembers } from "@/features/admin";
-import type { SerializedMemberInfo } from "@/features/admin";
+import { SubjectPicker, SubjectAvatarStack } from "@/components/subject";
 import { EmptyState } from "./EmptyState";
 import { CreateFieldDialog } from "./CreateFieldDialog";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
@@ -1499,166 +1499,25 @@ function InlineAssigneeEditor({ currentAssigneeIds, onSave, onClose }: {
   onSave: (value: unknown) => void;
   onClose: () => void;
 }) {
-  const dispatch = useAppDispatch();
   const triggerRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<string[]>(currentAssigneeIds);
-  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
-  const membersLoading = useAppSelector((state) => state.admin.membersLoading);
 
-  // Load members on mount
-  useEffect(() => {
-    dispatch(fetchMembers({ pageSize: 50 }));
-  }, [dispatch]);
-
-  // Focus search input after dropdown renders
-  useEffect(() => {
-    if (position) {
-      // Small delay to wait for portal to mount
-      const timer = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [position]);
-
-  // Position dropdown using portal
-  useEffect(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPosition({ top: rect.bottom + 4, left: rect.right - 240 });
-
-    const handleScroll = () => {
-      const r = triggerRef.current?.getBoundingClientRect();
-      if (r) setPosition({ top: r.bottom + 4, left: r.right - 240 });
-    };
-    window.addEventListener("scroll", handleScroll, true);
-    window.addEventListener("resize", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll, true);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, []);
-
-  // Close on outside click (just close, save already happened per-toggle)
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-        triggerRef.current && !triggerRef.current.contains(e.target as Node)
-      ) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
-
-  // Close on escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  const filtered = members.filter((m) => {
-    if (!m.isActive) return false;
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return m.displayName.toLowerCase().includes(q) || m.email.toLowerCase().includes(q);
-  });
-
-  const toggleMember = (userId: string) => {
-    const next = selected.includes(userId)
-      ? selected.filter((id) => id !== userId)
-      : [...selected, userId];
-    setSelected(next);
-    // Save immediately on each toggle so the cell updates in real-time
-    onSave(next);
-  };
-
-  const getInitials = (name: string) => {
-    const parts = name.split(" ").filter(Boolean);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
-
-  const dropdown = position ? createPortal(
-    <div
-      ref={dropdownRef}
-      style={{ position: "fixed", top: position.top, left: position.left, width: 240 }}
-      className="z-200 rounded-lg border border-border bg-card shadow-xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* Search input */}
-      <div className="p-2 border-b border-border">
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background">
-          <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()}
-            placeholder="Search members..."
-            className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
-          />
-        </div>
-      </div>
-
-      {/* Member list */}
-      <div className="max-h-48 overflow-y-auto py-1">
-        {membersLoading && filtered.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
-        ) : filtered.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">No members found</div>
-        ) : (
-          filtered.map((member) => {
-            const isAssigned = selected.includes(member.userId);
-            return (
-              <button
-                key={member.userId}
-                type="button"
-                onClick={() => toggleMember(member.userId)}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
-                  isAssigned ? "bg-primary/10" : "hover:bg-muted"
-                )}
-              >
-                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground shrink-0">
-                  {getInitials(member.displayName)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-foreground truncate">{member.displayName}</div>
-                  <div className="text-xs text-muted-foreground truncate">{member.email}</div>
-                </div>
-                {isAssigned && (
-                  <Check size={14} className="text-primary shrink-0" />
-                )}
-              </button>
-            );
-          })
-        )}
-      </div>
-
-      {/* Footer with count */}
-      <div className="px-3 py-2 border-t border-border text-xs text-muted-foreground">
-        {selected.length} assigned
-      </div>
-    </div>,
-    document.body
-  ) : null;
+  const handleChange = useCallback((ids: string[]) => {
+    onSave(ids);
+  }, [onSave]);
 
   return (
     <>
       <div ref={triggerRef} className="absolute top-0 left-0 w-full h-full" />
-      {dropdown}
+      <SubjectPicker
+        mode="multi"
+        subjectTypes="all"
+        value={currentAssigneeIds}
+        onChange={handleChange}
+        portal
+        anchorRef={triggerRef}
+        onClose={onClose}
+        autoFocus
+      />
     </>
   );
 }
@@ -1707,10 +1566,10 @@ function FieldCell({ task, field }: FieldCellProps) {
 
     case "date": {
       if (!value) return <span className="text-muted-foreground text-sm">-</span>;
-      const isOverdue = field.id === SYSTEM_FIELD_IDS.DUE_DATE && checkOverdue(value as string);
+      const overdue = field.id === SYSTEM_FIELD_IDS.DUE_DATE && isOverdue(value as string);
       return (
-        <span className={cn("text-sm", isOverdue && "text-destructive")}>
-          {formatDate(value as string)}
+        <span className={cn("text-sm", overdue && "text-destructive")}>
+          {formatDateShort(value as string)}
         </span>
       );
     }
@@ -1739,41 +1598,7 @@ function SelectBadge({ option }: { option: SelectOption }) {
 }
 
 function AvatarStack({ ids }: { ids: string[] }) {
-  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
-  const memberMap = useMemo(() => {
-    const map: Record<string, SerializedMemberInfo> = {};
-    for (const m of members) {
-      map[m.userId] = m;
-    }
-    return map;
-  }, [members]);
-
-  const getInitials = (id: string) => {
-    const member = memberMap[id];
-    if (!member) return id.slice(-2).toUpperCase();
-    const parts = member.displayName.split(" ").filter(Boolean);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return member.displayName.slice(0, 2).toUpperCase();
-  };
-
-  return (
-    <div className="flex -space-x-1">
-      {ids.slice(0, 3).map((id) => (
-        <div
-          key={id}
-          className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground border-2 border-card"
-          title={memberMap[id]?.displayName}
-        >
-          {getInitials(id)}
-        </div>
-      ))}
-      {ids.length > 3 && (
-        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground border-2 border-card">
-          +{ids.length - 3}
-        </div>
-      )}
-    </div>
-  );
+  return <SubjectAvatarStack subjectIds={ids} maxDisplay={3} size="sm" />;
 }
 
 // ===== Utilities =====
@@ -1800,14 +1625,3 @@ function getColumnWidth(field: FieldDefinition): number {
   return defaultWidth || 150;
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function checkOverdue(dateStr: string): boolean {
-  const date = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-}

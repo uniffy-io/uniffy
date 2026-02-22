@@ -26,7 +26,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import type { SerializedMemberInfo } from "@/features/admin";
+import { SubjectAvatarStack } from "@/components/subject";
 import {
   selectTasksForProject,
   selectCurrentProject,
@@ -386,15 +386,6 @@ export function DependencyGraphView() {
     return map;
   }, [currentProject]);
 
-  const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
-  const memberMap = useMemo(() => {
-    const map: Record<string, SerializedMemberInfo> = {};
-    for (const m of members) {
-      map[m.userId] = m;
-    }
-    return map;
-  }, [members]);
-
   const layout = useMemo(
     () => buildGraphLayout(tasks, sprints),
     [tasks, sprints]
@@ -711,7 +702,6 @@ export function DependencyGraphView() {
                 projectSlug={currentProject?.slug ?? ""}
                 statusColor={status?.color}
                 statusLabel={status?.label}
-                memberMap={memberMap}
                 isSelected={node.id === selectedTaskId}
                 onClick={handleNodeClick}
               />
@@ -768,7 +758,6 @@ interface GraphNodeProps {
   projectSlug: string;
   statusColor?: string;
   statusLabel?: string;
-  memberMap: Record<string, SerializedMemberInfo>;
   isSelected: boolean;
   onClick: (id: string) => void;
 }
@@ -778,21 +767,12 @@ function GraphNode({
   projectSlug,
   statusColor,
   statusLabel,
-  memberMap,
   isSelected,
   onClick,
 }: GraphNodeProps) {
   const badge = STATE_BADGE[node.state];
   const typeConfig = getTaskTypeConfig(node.taskType);
   const TypeIcon = typeConfig.icon;
-
-  const getInitials = (id: string) => {
-    const member = memberMap[id];
-    if (!member) return id.slice(-2).toUpperCase();
-    const parts = member.displayName.split(" ").filter(Boolean);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return member.displayName.slice(0, 2).toUpperCase();
-  };
 
   const formatShortDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -876,22 +856,7 @@ function GraphNode({
             )}
           </div>
           {node.assigneeIds.length > 0 && (
-            <div className="flex -space-x-1.5 shrink-0">
-              {node.assigneeIds.slice(0, 3).map((id) => (
-                <div
-                  key={id}
-                  className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[8px] font-medium text-primary-foreground border border-card"
-                  title={memberMap[id]?.displayName}
-                >
-                  {getInitials(id)}
-                </div>
-              ))}
-              {node.assigneeIds.length > 3 && (
-                <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground border border-card">
-                  +{node.assigneeIds.length - 3}
-                </div>
-              )}
-            </div>
+            <SubjectAvatarStack subjectIds={node.assigneeIds} maxDisplay={3} size="xs" className="shrink-0" />
           )}
         </div>
       </div>

@@ -3,13 +3,14 @@ import { createPortal } from "react-dom";
 import { ArrowRight, CalendarBlank } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { updateTask } from "@/features/projects/store/projectsThunks";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, SelectOption } from "@/features/projects/types";
-import type { SerializedMemberInfo } from "@/features/admin";
+import { SubjectAvatarStack } from "@/components/subject";
 
 interface BacklogTaskRowProps {
   task: Task;
@@ -32,7 +33,6 @@ export function BacklogTaskRow({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const project = useAppSelector(selectCurrentProject);
-  const adminMembers = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
 
   const allSprints = useAppSelector(selectSprintsForProject(projectId));
   const availableSprints = allSprints.filter(
@@ -62,20 +62,6 @@ export function BacklogTaskRow({
 
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
   const TypeIcon = typeConfig.icon;
-
-  // Assignee display names
-  const assigneeDisplays = useMemo(() => {
-    return task.assigneeIds.map((id) => {
-      const member = adminMembers.find((m) => m.userId === id);
-      if (!member) return { id, initials: id.slice(-2).toUpperCase(), name: "" };
-      const parts = member.displayName.split(" ").filter(Boolean);
-      const initials =
-        parts.length >= 2
-          ? (parts[0][0] + parts[1][0]).toUpperCase()
-          : member.displayName.slice(0, 2).toUpperCase();
-      return { id, initials, name: member.displayName };
-    });
-  }, [task.assigneeIds, adminMembers]);
 
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -209,7 +195,7 @@ export function BacklogTaskRow({
         >
           <span className="text-muted-foreground">Due:</span>
           <CalendarBlank size={12} />
-          {formatDate(task.dueDate)}
+          {formatDateShort(task.dueDate)}
         </span>
       )}
 
@@ -246,27 +232,12 @@ export function BacklogTaskRow({
       )}
 
       {/* Assignee avatars */}
-      {assigneeDisplays.length > 0 && (
+      {task.assigneeIds.length > 0 && (
         <span className="flex items-center gap-1.5 shrink-0">
           <span className="text-xs text-muted-foreground">
-            {assigneeDisplays.length > 1 ? "Assignees:" : "Assignee:"}
+            {task.assigneeIds.length > 1 ? "Assignees:" : "Assignee:"}
           </span>
-          <div className="flex -space-x-1.5">
-            {assigneeDisplays.slice(0, 2).map((a) => (
-              <div
-                key={a.id}
-                className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[9px] font-medium text-primary-foreground border border-card"
-                title={a.name}
-              >
-                {a.initials}
-              </div>
-            ))}
-            {assigneeDisplays.length > 2 && (
-              <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium text-muted-foreground border border-card">
-                +{assigneeDisplays.length - 2}
-              </div>
-            )}
-          </div>
+          <SubjectAvatarStack subjectIds={task.assigneeIds} maxDisplay={2} size="xs" />
         </span>
       )}
 
@@ -292,14 +263,3 @@ export function BacklogTaskRow({
   );
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function isOverdue(dateStr: string): boolean {
-  const date = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-}

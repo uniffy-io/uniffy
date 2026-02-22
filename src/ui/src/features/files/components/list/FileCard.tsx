@@ -21,6 +21,7 @@ import { renderFileIcon, formatFileSize, formatDate, supportsThumbnail } from '@
 import { ItemContextMenu } from '@/features/files/components/list/ItemContextMenu';
 import { RenameInput } from '@/features/files/components/list/RenameInput';
 import { ThumbnailImage } from '@/features/files/components/list/ThumbnailImage';
+import { getInitials } from '@/components/subject/utils';
 
 export interface FileCardProps {
     file: SerializedFile;
@@ -40,17 +41,6 @@ export interface FileCardProps {
     isChecked: boolean;
     onToggleCheck: (id: string, shiftKey: boolean) => void;
     canShare?: boolean;
-}
-
-/** Get initials from a name */
-function getInitials(name: string): string {
-    if (!name) return '??';
-    return name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
 }
 
 export function FileCard({

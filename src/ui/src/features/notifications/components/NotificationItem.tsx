@@ -32,6 +32,8 @@ import type { SerializedNotification } from '@/features/notifications/store/noti
 import { NotificationType } from '@/gen/notifications/v1/notifications_pb';
 import type { AttendeeStatus } from '@/features/calendar/types';
 import { UrnType } from '@/shared/utils/urnTypes';
+import { getInitials } from '@/components/subject/utils';
+import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 
 interface NotificationTypeConfig {
     icon: Icon;
@@ -103,33 +105,6 @@ const DEFAULT_TYPE_CONFIG: NotificationTypeConfig = {
     color: 'text-muted-foreground',
     bgColor: 'bg-muted',
 };
-
-function formatRelativeTime(dateStr: string): string {
-    const now = Date.now();
-    const date = new Date(dateStr).getTime();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m`;
-    if (hours < 24) return `${hours}h`;
-    if (days < 7) return `${days}d`;
-    return new Date(dateStr).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-    });
-}
-
-function getInitials(name: string): string {
-    if (!name) return '?';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name[0].toUpperCase();
-}
 
 interface NotificationItemProps {
     notification: SerializedNotification;

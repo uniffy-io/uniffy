@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Play, Pause } from '@phosphor-icons/react';
+import { formatMediaTime } from '@/shared/utils/dateFormatting';
 
 interface AudioBlockProps {
     src: string;
@@ -31,13 +32,6 @@ const PLACEHOLDER_BARS = 500;
 
 /** Files larger than this skip background waveform computation. */
 const WAVEFORM_SIZE_LIMIT = 50 * 1024 * 1024; // 50 MB
-
-function formatTime(seconds: number): string {
-    if (!isFinite(seconds) || seconds < 0) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
 
 /** Resolve CSS --primary HSL value to rgb components. */
 function resolvePrimaryRgb(): { r: number; g: number; b: number } {
@@ -381,7 +375,7 @@ export function AudioBlock({ src, selected }: AudioBlockProps) {
                 </div>
 
                 <span className="audio-block-time">
-                    {formatTime(currentTime)} / {formatTime(duration)}
+                    {formatMediaTime(currentTime)} / {formatMediaTime(duration)}
                 </span>
             </div>
         </div>
