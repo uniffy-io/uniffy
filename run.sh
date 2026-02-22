@@ -26,7 +26,8 @@ help() {
   echo -e "  ${CYAN}worker${NC}        Run background worker"
   echo -e "  ${CYAN}worker-dev${NC}    Run worker with hot reload (development)"
   echo -e "  ${CYAN}licenses${NC}      Generate third-party license files"
-  echo -e "  ${CYAN}docker-staging${NC} Build and push Docker images for staging"
+  echo -e "  ${CYAN}docker-staging${NC}  Build and push Docker images for staging"
+  echo -e "  ${CYAN}drop-staging-db${NC} Drop and recreate the staging db"
 }
 
 install() {
@@ -135,6 +136,11 @@ db_migrate() {
   uv run alembic -c src/uniffy/alembic.ini upgrade head
 }
 
+db_drop_staging() {
+  kubectl exec -it uniffy-db-1 -n uniffy -- psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'uniffy' AND pid <> pg_backend_pid();" -c "DROP DATABASE uniffy;"
+  kubectl exec -it uniffy-db-1 -n uniffy -- psql -U postgres -c "CREATE DATABASE uniffy OWNER uniffy;"
+}
+
 worker() {
   echo "Starting background worker..."
   uv run python -m uniffy.worker
@@ -186,5 +192,6 @@ worker) worker ;;
 worker-dev) worker_dev ;;
 licenses) licenses ;;
 docker-staging) docker_build_staging ;;
+drop-staging-db) db_drop_staging ;;
 help | *) help ;;
 esac

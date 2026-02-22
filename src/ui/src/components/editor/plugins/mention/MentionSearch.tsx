@@ -62,6 +62,10 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
     const queryStart = from + 1;
     const queryEnd = queryStart + oldLength;
 
+    // Validate positions are within document bounds
+    const docSize = state.doc.content.size;
+    if (queryStart < 0 || queryEnd > docSize) return;
+
     // Create fragment for replacement
     const fragment = newQuery
       ? state.schema.text(newQuery)

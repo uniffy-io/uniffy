@@ -599,6 +599,13 @@ export function CrepeEditor({
     const from = storedFrom;
     const to = storedFrom + 1 + query.length;
 
+    // Validate positions are within the current document bounds
+    const docSize = state.doc.content.size;
+    if (from < 0 || to > docSize) {
+      setMentionPopup(null);
+      return;
+    }
+
     // ── Insert mention chip ─────────────────────────────────────
     // All @mentions create chips. Media files can be converted to
     // inline embeds via the "Embed" button in the hover preview.
@@ -901,19 +908,6 @@ export function CrepeEditor({
         return;
       }
       crepeRef.current = crepe;
-
-      // Store editor view for readonly mode too
-      try {
-        const editor = crepe.editor;
-        editor.action((ctx) => {
-          const view = ctx.get(editorViewCtx);
-          if (view) {
-            (window as Window & { __milkdownEditorView?: unknown }).__milkdownEditorView = view;
-          }
-        });
-      } catch {
-        // Editor view access failed silently
-      }
 
       crepe.setReadonly(true);
     });
