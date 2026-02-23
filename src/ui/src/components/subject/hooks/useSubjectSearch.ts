@@ -39,7 +39,7 @@ export function useSubjectSearch(options: UseSubjectSearchOptions = {}): UseSubj
     const rawResults = useAppSelector((state) => state.sharing.searchResults);
     const loading = useAppSelector((state) => state.sharing.searchLoading);
     const [query, setQuery] = useState('');
-    const timerRef = useRef<ReturnType<typeof setTimeout>>();
+    const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     const includeUsers = subjectTypes === 'users' || subjectTypes === 'all';
     const includeGroups = subjectTypes === 'groups' || subjectTypes === 'all';

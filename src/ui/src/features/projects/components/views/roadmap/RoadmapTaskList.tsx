@@ -156,7 +156,6 @@ function RoadmapTaskRow({
         size={14}
         weight="fill"
         className="text-muted-foreground shrink-0"
-        title={typeConfig.label}
       />
 
       {/* Task ID */}

@@ -140,7 +140,6 @@ function computeNodeState(
 function layoutTaskGroup(
   groupTasks: Task[],
   allEdges: LayoutEdge[],
-  blockerSet: Set<string>,
   tasksMap: Map<string, Task>,
   stateMap: Map<string, NodeState>,
   startX: number,
@@ -261,7 +260,6 @@ function buildGraphLayout(
     const result = layoutTaskGroup(
       rootTasks,
       allEdges,
-      blockerSet,
       tasksMap,
       stateMap,
       MARGIN,
@@ -320,7 +318,6 @@ function buildGraphLayout(
     const result = layoutTaskGroup(
       groupTasks,
       allEdges,
-      blockerSet,
       tasksMap,
       stateMap,
       contentStartX,
