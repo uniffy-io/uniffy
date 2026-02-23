@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
+import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 import { notesApi } from '@/features/notes/api/notesApi';
-import { organizeNotesByVisibility } from '@/features/notes/utils/notesTreeUtils';
+import { organizeNotesByVisibility, noteToTreeNode, sortTreeNodes } from '@/features/notes/utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
 import type { Note } from '@/gen/notes/v1/notes_pb';
 import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote, moveNote } from '@/features/notes/store/notesThunks';
@@ -257,17 +257,18 @@ export const notesTreeSlice = createSlice({
             }
         },
 
-        // Update a node title
+        // Update a node title and re-sort its containing array
         updateNodeTitle: (state, action: PayloadAction<{ nodeId: string; title: string }>) => {
             const { nodeId, title } = action.payload;
-            // Search all sections for the node
-            const updateInArray = (nodes: TreeNode[]): boolean => {
+            // Search all sections for the node, update title, and re-sort the containing array
+            const updateAndSort = (nodes: TreeNode[]): boolean => {
                 for (const node of nodes) {
                     if (node.id === nodeId) {
                         node.title = title;
+                        sortTreeNodes(nodes);
                         return true;
                     }
-                    if (node.children && updateInArray(node.children)) {
+                    if (node.children && updateAndSort(node.children)) {
                         return true;
                     }
                 }
@@ -275,10 +276,10 @@ export const notesTreeSlice = createSlice({
             };
 
             for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
-                if (updateInArray(state.tree[section])) break;
+                if (updateAndSort(state.tree[section])) break;
             }
             for (const group of state.tree.groups) {
-                if (updateInArray(group.nodes)) break;
+                if (updateAndSort(group.nodes)) break;
             }
         },
 
@@ -422,15 +423,16 @@ export const notesTreeSlice = createSlice({
             // Sync tree when a note is updated (e.g., title change from editor)
             .addCase(updateNote.fulfilled, (state, action) => {
                 const { id, title, icon } = action.payload;
-                // Update the node title and icon in all sections
-                const updateInArray = (nodes: TreeNode[]): boolean => {
+                // Update the node title and icon, then re-sort the containing array
+                const updateAndSort = (nodes: TreeNode[]): boolean => {
                     for (const node of nodes) {
                         if (node.id === id) {
                             node.title = title;
                             node.icon = icon;
+                            sortTreeNodes(nodes);
                             return true;
                         }
-                        if (node.children && updateInArray(node.children)) {
+                        if (node.children && updateAndSort(node.children)) {
                             return true;
                         }
                     }
@@ -438,10 +440,10 @@ export const notesTreeSlice = createSlice({
                 };
 
                 for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
-                    if (updateInArray(state.tree[section])) break;
+                    if (updateAndSort(state.tree[section])) break;
                 }
                 for (const group of state.tree.groups) {
-                    if (updateInArray(group.nodes)) break;
+                    if (updateAndSort(group.nodes)) break;
                 }
             })
             // Sync tree when note icon is updated
@@ -492,15 +494,7 @@ export const notesTreeSlice = createSlice({
             // Sync tree when a note is created
             .addCase(createNote.fulfilled, (state, action) => {
                 const note = action.payload;
-                const newNode: TreeNode = {
-                    id: note.id,
-                    title: note.title,
-                    type: note.nodeType === NodeType.FOLDER ? 'folder' : 'note',
-                    icon: note.icon,
-                    noteId: note.id,
-                    visibility: note.visibility,
-                    updatedAt: note.updatedAt?.seconds?.toString(),
-                };
+                const newNode: TreeNode = noteToTreeNode(note);
 
                 // Helper to add node to parent or root
                 const addToParent = (nodes: TreeNode[], parentId: string | undefined): boolean => {
@@ -509,6 +503,7 @@ export const notesTreeSlice = createSlice({
                         if (node.id === parentId) {
                             if (!node.children) node.children = [];
                             node.children.push(newNode);
+                            sortTreeNodes(node.children);
                             return true;
                         }
                         if (node.children && addToParent(node.children, parentId)) {
@@ -547,6 +542,7 @@ export const notesTreeSlice = createSlice({
                 } else {
                     // Add to root of appropriate section
                     state.tree[targetSection].push(newNode);
+                    sortTreeNodes(state.tree[targetSection]);
                 }
             })
             // Sync tree when a note is deleted
@@ -611,21 +607,15 @@ export const notesTreeSlice = createSlice({
                 state.tree.trash = state.tree.trash.filter(n => n.id !== note.id);
 
                 // Create node from restored note
-                const restoredNode: TreeNode = {
-                    id: note.id,
-                    title: note.title,
-                    type: note.nodeType === NodeType.FOLDER ? 'folder' : 'note',
-                    icon: note.icon,
-                    noteId: note.id,
-                    visibility: note.visibility,
-                    updatedAt: note.updatedAt?.seconds?.toString(),
-                };
+                const restoredNode: TreeNode = noteToTreeNode(note);
 
                 // Add to appropriate section based on visibility
                 if (note.visibility === VisibilityScope.ORGANIZATION) {
                     state.tree.organization.push(restoredNode);
+                    sortTreeNodes(state.tree.organization);
                 } else {
                     state.tree.personal.push(restoredNode);
+                    sortTreeNodes(state.tree.personal);
                 }
             })
             // Sync tree when a note is moved between visibility scopes
@@ -663,13 +653,7 @@ export const notesTreeSlice = createSlice({
 
                 // If not found, create a new node
                 if (!movedNode) {
-                    movedNode = {
-                        id: note.id,
-                        title: note.title,
-                        type: note.nodeType === NodeType.FOLDER ? 'folder' : 'note',
-                        icon: note.icon,
-                        noteId: note.id,
-                    };
+                    movedNode = noteToTreeNode(note);
                 }
 
                 // Update the node's visibility
@@ -681,6 +665,7 @@ export const notesTreeSlice = createSlice({
                 switch (note.visibility) {
                     case VisibilityScope.ORGANIZATION:
                         state.tree.organization.push(movedNode);
+                        sortTreeNodes(state.tree.organization);
                         break;
                     case VisibilityScope.GROUP:
                         // For GROUP visibility, add to each group's nodes
@@ -689,12 +674,14 @@ export const notesTreeSlice = createSlice({
                             const group = state.tree.groups.find(g => g.groupId === groupId);
                             if (group) {
                                 group.nodes.push(movedNode);
+                                sortTreeNodes(group.nodes);
                             }
                         }
                         break;
                     case VisibilityScope.PRIVATE:
                     default:
                         state.tree.personal.push(movedNode);
+                        sortTreeNodes(state.tree.personal);
                         break;
                 }
             })

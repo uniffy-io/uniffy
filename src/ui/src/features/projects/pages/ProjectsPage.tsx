@@ -15,6 +15,7 @@ import {
   closeDetailPanel,
   openCreateTaskModal,
   openCreateProjectModal,
+  toggleSidebar,
   selectSelectedTaskId,
   selectSelectedTaskIds,
   selectIsDetailPanelOpen,
@@ -49,6 +50,9 @@ export function ProjectsPage() {
 
   // Register keyboard shortcuts
   useShortcutHandlers({
+    "app.toggleSidebar": () => {
+      dispatch(toggleSidebar());
+    },
     "projects.newTask": () => {
       if (currentProject) {
         dispatch(openCreateTaskModal());

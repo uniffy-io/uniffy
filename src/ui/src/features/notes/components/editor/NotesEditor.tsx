@@ -1,4 +1,5 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
@@ -14,8 +15,38 @@ import { useMyPermission } from '@/features/sharing';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { NodeType } from '@/gen/notes/v1/notes_pb';
 
+/**
+ * Convert heading text to a URL-safe slug.
+ * Must match the algorithm in NotesMetadataPanel.parseHeadings.
+ */
+function headingToSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+/**
+ * Find a heading element in the editor DOM whose text matches the given hash slug.
+ */
+function findHeadingBySlug(slug: string): Element | null {
+  const editor = document.querySelector('.crepe-editor .ProseMirror') ??
+    document.querySelector('.crepe-editor .milkdown');
+  if (!editor) return null;
+
+  const headings = editor.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  for (const heading of headings) {
+    const text = heading.textContent?.trim() ?? '';
+    if (headingToSlug(text) === slug) {
+      return heading;
+    }
+  }
+  return null;
+}
+
 export function NotesEditor() {
   const dispatch = useAppDispatch();
+  const location = useLocation();
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
 
@@ -51,6 +82,80 @@ export function NotesEditor() {
   const noteContent = currentNote
     ? (draftContent != null ? draftContent : currentNote.content)
     : '';
+
+  // Scroll to heading when URL has a hash fragment (e.g. /notes/:id#heading-slug).
+  // The editor renders asynchronously, so we poll until the heading appears in the DOM.
+  const hashScrolledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const hash = location.hash.replace(/^#/, '');
+    if (!hash || !currentNote?.content) return;
+
+    // Avoid re-scrolling to the same hash on re-renders
+    if (hashScrolledRef.current === `${currentNoteId}#${hash}`) return;
+
+    let attempts = 0;
+    const maxAttempts = 20;
+    let rafId: number;
+
+    const tryScroll = () => {
+      const heading = findHeadingBySlug(hash);
+      if (heading) {
+        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        hashScrolledRef.current = `${currentNoteId}#${hash}`;
+        return;
+      }
+      attempts++;
+      if (attempts < maxAttempts) {
+        rafId = requestAnimationFrame(tryScroll);
+      }
+    };
+
+    // Start polling after a short delay to let the editor mount
+    const timeoutId = setTimeout(() => {
+      rafId = requestAnimationFrame(tryScroll);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      cancelAnimationFrame(rafId);
+    };
+  }, [location.hash, currentNoteId, currentNote?.content]);
+
+  // Hide title section on scroll down, show on scroll up or at top.
+  // Uses capture-phase scroll listener on the container so it catches
+  // scroll events from any nested scrollable element (CrepeEditor wrapper,
+  // CodeMirror scroller, etc.) without needing to query for them.
+  const [titleVisible, setTitleVisible] = useState(true);
+  const lastScrollTopRef = useRef(0);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = editorContainerRef.current;
+    if (!container) return;
+
+    const onScroll = (e: Event) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const scrollTop = target.scrollTop;
+      const isAtTop = scrollTop <= 10;
+      const scrollingUp = scrollTop < lastScrollTopRef.current;
+
+      setTitleVisible(isAtTop || scrollingUp);
+      lastScrollTopRef.current = scrollTop;
+    };
+
+    // Capture phase catches scroll events from any descendant
+    container.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => container.removeEventListener('scroll', onScroll, { capture: true });
+  }, [currentNoteId, editorMode]);
+
+  // Reset title visibility when switching notes
+  useEffect(() => {
+    setTitleVisible(true);
+    lastScrollTopRef.current = 0;
+  }, [currentNoteId]);
 
   const handleContentChange = useCallback((markdown: string) => {
     scheduleAutosave(markdown);
@@ -173,8 +278,8 @@ export function NotesEditor() {
 
   return (
     <div className="flex flex-col h-full bg-card">
-      {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} />}
-      <div className="flex-1 overflow-hidden">
+      {!isZenMode && <EditorHeader note={currentNote} canEdit={canEdit} canShare={canShare} titleVisible={titleVisible} />}
+      <div ref={editorContainerRef} className="flex-1 overflow-hidden">
         {renderEditor()}
       </div>
     </div>

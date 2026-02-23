@@ -41,7 +41,7 @@ export function noteToTreeNode(note: SerializedNote): TreeNode {
 /**
  * Sort tree nodes: folders first, then notes, alphabetically within each group.
  */
-function sortTreeNodes(nodes: TreeNode[]): TreeNode[] {
+export function sortTreeNodes(nodes: TreeNode[]): TreeNode[] {
     return nodes.sort((a, b) => {
         // Folders come before notes
         if (a.type === 'folder' && b.type !== 'folder') return -1;

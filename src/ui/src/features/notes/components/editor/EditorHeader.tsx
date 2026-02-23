@@ -42,6 +42,7 @@ interface EditorHeaderProps {
   canEdit?: boolean;
   canShare?: boolean;
   isCanvas?: boolean;
+  titleVisible?: boolean;
 }
 
 /**
@@ -207,13 +208,7 @@ function CollapsibleBreadcrumb({ items, noteVisibility }: CollapsibleBreadcrumbP
   );
 }
 
-// Mock collaborators for demo
-const mockCollaborators = [
-  { id: '1', initials: 'JD', color: 'bg-blue-500' },
-  { id: '2', initials: 'AM', color: 'bg-green-500' },
-];
-
-export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas = false }: EditorHeaderProps) {
+export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas = false, titleVisible = true }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const editorState = useAppSelector((state) => state.editor);
@@ -310,7 +305,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
               <CaretDoubleRight size={16} weight="bold" className="text-primary" />
             </button>
           )}
-          
+
           {/* Breadcrumb */}
           <CollapsibleBreadcrumb items={breadcrumb} noteVisibility={note.visibility} />
 
@@ -339,7 +334,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
             )}
           </div>
         </div>
-        
+
         {/* Right Actions */}
         <div className="flex items-center gap-1">
           {/* View Mode Selector - hidden for canvas notes */}
@@ -359,7 +354,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
                 <span className="hidden md:inline">{label}</span>
               </button>
             ))}
-            
+
             {/* Preview Toggle (only in markdown mode) */}
             {editorMode === 'markdown' && (
               <button
@@ -381,22 +376,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
             )}
           </div>}
 
-          {/* Collaborators */}
-          <div className="flex items-center -space-x-2 mr-2">
-            {mockCollaborators.map((collab) => (
-              <div
-                key={collab.id}
-                className={`w-7 h-7 rounded-full ${collab.color} border-2 border-card flex items-center justify-center text-white text-xs font-medium`}
-                title={collab.initials}
-              >
-                {collab.initials}
-              </div>
-            ))}
-            <button className="w-7 h-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-xs font-medium hover:bg-muted/80">
-              +2
-            </button>
-          </div>
-          
           {/* Bookmark Button */}
           <button
             onClick={toggleBookmark}
@@ -410,7 +389,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
               <BookmarkSimple size={20} weight="duotone" className="text-primary" />
             )}
           </button>
-          
+
           {/* Share Button - only show if user has share permission (admin/owner) */}
           {canShare && (
             <button
@@ -421,7 +400,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
               <ShareNetwork size={20} weight="duotone" className="text-primary" />
             </button>
           )}
-          
+
           {/* More Options */}
           <button
             className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
@@ -429,7 +408,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
           >
             <DotsThree size={20} weight="bold" className="text-primary" />
           </button>
-          
+
           {/* Right panel toggle */}
           <button
             onClick={() => dispatch(toggleMetadataPanel())}
@@ -446,85 +425,93 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
         </div>
       </div>
       
-      {/* Title Section */}
-      <div className="px-8 pt-6 pb-2">
-        <div className="flex items-start gap-4">
-          {/* Note Icon/Emoji */}
-          <div className="relative mt-1">
-            <button
-              onClick={() => canEdit && setIsIconPickerOpen(!isIconPickerOpen)}
-              className={`p-2 rounded-lg transition-colors ${
-                canEdit ? 'hover:bg-accent cursor-pointer' : 'cursor-not-allowed opacity-60'
-              }`}
-              title={canEdit ? 'Change icon' : 'Read only'}
-              disabled={!canEdit}
-            >
-              {renderNoteIcon(note.icon, "h-7 w-7 text-muted-foreground")}
-            </button>
-            {isIconPickerOpen && canEdit && (
-              <IconPicker
-                currentIcon={note.icon}
-                onSelect={handleIconChange}
-                onClose={() => setIsIconPickerOpen(false)}
-              />
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Title Input */}
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => canEdit && handleTitleChange(e.target.value)}
-              onBlur={handleTitleBlur}
-              placeholder="Untitled"
-              readOnly={!canEdit}
-              className={`w-full text-3xl font-bold bg-transparent border-none outline-none focus:ring-0 text-foreground ${
-                !canEdit ? 'cursor-not-allowed opacity-80' : ''
-              }`}
-            />
-            
-            {/* Meta Info */}
-            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-              <span>Created {formatProtoDate(note.createdAt)}</span>
-              {note.updatedAt && (
-                <>
-                  <span>·</span>
-                  <span>Updated {formatProtoDate(note.updatedAt)}</span>
-                </>
-              )}
-              {/* Sharing info: show owner for shared notes (but not org-wide notes) */}
-              {note.ownerInfo && note.visibility !== VisibilityScope.ORGANIZATION && (
-                <>
-                  <span>·</span>
-                  <span className="text-blue-500">
-                    Shared by {note.ownerInfo.name}
-                  </span>
-                </>
-              )}
-              {/* Sharing info: show share count for notes owned by user */}
-              {note.sharedWith && note.sharedWith.length > 0 && (
-                <>
-                  <span>·</span>
-                  <span className="text-blue-500">
-                    Shared with {note.sharedWith.length} {note.sharedWith.length === 1 ? 'person' : 'people'}
-                  </span>
-                </>
+      {/* Title Section - collapses on scroll down */}
+      <div
+        className="overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out"
+        style={{
+          maxHeight: titleVisible ? '200px' : '0px',
+          opacity: titleVisible ? 1 : 0,
+        }}
+      >
+        <div className="px-4 pt-3 pb-2">
+          <div className="flex items-start gap-3">
+            {/* Note Icon/Emoji */}
+            <div className="relative mt-0.5 shrink-0">
+              <button
+                onClick={() => canEdit && setIsIconPickerOpen(!isIconPickerOpen)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  canEdit ? 'hover:bg-muted cursor-pointer' : 'cursor-not-allowed opacity-60'
+                }`}
+                title={canEdit ? 'Change icon' : 'Read only'}
+                disabled={!canEdit}
+              >
+                {renderNoteIcon(note.icon, "h-6 w-6 text-muted-foreground")}
+              </button>
+              {isIconPickerOpen && canEdit && (
+                <IconPicker
+                  currentIcon={note.icon}
+                  onSelect={handleIconChange}
+                  onClose={() => setIsIconPickerOpen(false)}
+                />
               )}
             </div>
+
+            <div className="flex-1 min-w-0">
+              {/* Title Input */}
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => canEdit && handleTitleChange(e.target.value)}
+                onBlur={handleTitleBlur}
+                placeholder="Untitled"
+                readOnly={!canEdit}
+                className={`w-full text-xl font-semibold bg-transparent border-none outline-none focus:ring-0 text-foreground ${
+                  !canEdit ? 'cursor-not-allowed opacity-80' : ''
+                }`}
+              />
+
+              {/* Meta Info */}
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span>Created {formatProtoDate(note.createdAt)}</span>
+                {note.updatedAt && (
+                  <>
+                    <span>·</span>
+                    <span>Updated {formatProtoDate(note.updatedAt)}</span>
+                  </>
+                )}
+                {/* Sharing info: show owner for shared notes (but not org-wide notes) */}
+                {note.ownerInfo && note.visibility !== VisibilityScope.ORGANIZATION && (
+                  <>
+                    <span>·</span>
+                    <span className="text-blue-500">
+                      Shared by {note.ownerInfo.name}
+                    </span>
+                  </>
+                )}
+                {/* Sharing info: show share count for notes owned by user */}
+                {note.sharedWith && note.sharedWith.length > 0 && (
+                  <>
+                    <span>·</span>
+                    <span className="text-blue-500">
+                      Shared with {note.sharedWith.length} {note.sharedWith.length === 1 ? 'person' : 'people'}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Tags Row */}
+              <div className="mt-2">
+                <TagInput
+                  tags={note.tags || []}
+                  onTagsChange={(newTags) => {
+                    dispatch(updateNote({ noteId: note.id, tags: newTags }));
+                  }}
+                  disabled={!canEdit}
+                  onTagClick={handleTagClick}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-        
-        {/* Tags Row */}
-        <div className="flex items-center gap-2 mt-4 ml-14">
-          <TagInput
-            tags={note.tags || []}
-            onTagsChange={(newTags) => {
-              dispatch(updateNote({ noteId: note.id, tags: newTags }));
-            }}
-            disabled={!canEdit}
-            onTagClick={handleTagClick}
-          />
         </div>
       </div>
     </div>
