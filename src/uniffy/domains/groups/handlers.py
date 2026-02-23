@@ -249,7 +249,7 @@ class GroupsHandlers:
             )
 
         return pb.ListGroupMembersResponse(
-            members=[group_member_info_to_proto(m, u) for m, u in members],
+            members=[group_member_info_to_proto(u, m) for m, u in members],
             pagination=common.PaginationResponse(
                 page=page,
                 page_size=page_size,
@@ -294,7 +294,7 @@ class GroupsHandlers:
             # Get user info for response
             _, user = await ops.get_member(group_id, target_user_id)
 
-        return group_member_info_to_proto(membership, user)
+        return group_member_info_to_proto(user, membership)
 
     async def update_group_member(
         self,
@@ -332,7 +332,7 @@ class GroupsHandlers:
             # Get user info for response
             _, user = await ops.get_member(group_id, target_user_id)
 
-        return group_member_info_to_proto(membership, user)
+        return group_member_info_to_proto(user, membership)
 
     async def remove_group_member(
         self,

@@ -25,22 +25,24 @@ export function useSubjectResolver(ids: string[]): {
     const dispatch = useAppDispatch();
     const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
     const membersLoading = useAppSelector((state) => state.admin.membersLoading);
+    const membersFetched = useAppSelector((state) => state.admin.membersFetched);
     const groups = useAppSelector((state) => state.admin.groups) as SerializedGroupInfo[];
     const groupsLoading = useAppSelector((state) => state.admin.groupsLoading);
+    const groupsFetched = useAppSelector((state) => state.admin.groupsFetched);
 
-    // Fetch members if store is empty
+    // Fetch members if not yet fetched
     useEffect(() => {
-        if (members.length === 0 && !membersLoading) {
+        if (!membersFetched && !membersLoading) {
             dispatch(fetchMembers({ pageSize: 200 }));
         }
-    }, [dispatch, members.length, membersLoading]);
+    }, [dispatch, membersFetched, membersLoading]);
 
-    // Fetch groups if store is empty
+    // Fetch groups if not yet fetched
     useEffect(() => {
-        if (groups.length === 0 && !groupsLoading) {
+        if (!groupsFetched && !groupsLoading) {
             dispatch(fetchGroups({}));
         }
-    }, [dispatch, groups.length, groupsLoading]);
+    }, [dispatch, groupsFetched, groupsLoading]);
 
     const memberMap = useMemo(() => {
         const map: Record<string, SerializedMemberInfo> = {};

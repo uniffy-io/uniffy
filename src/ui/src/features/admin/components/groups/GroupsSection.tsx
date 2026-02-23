@@ -4,18 +4,22 @@
  * Admin UI for managing organization groups.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     UsersThree,
     Plus,
     Pencil,
     Trash,
     Users,
+    UserPlus,
     X,
 } from '@phosphor-icons/react';
 import { useGroups, useGroupMembers } from '@/features/admin/hooks/useAdminHooks';
 import type { SerializedGroupInfo } from '@/features/admin/store/adminSlice';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SubjectPicker } from '@/components/subject/SubjectPicker';
+import { SubjectAvatarById } from '@/components/subject/SubjectAvatar';
+import type { Subject } from '@/components/subject/types';
 
 interface GroupCardProps {
     group: SerializedGroupInfo;
@@ -224,8 +228,15 @@ interface GroupMembersModalProps {
 }
 
 function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
-    const { members, loading, remove } = useGroupMembers(group.id);
+    const { members, loading, add, remove, refresh } = useGroupMembers(group.id);
     const [removing, setRemoving] = useState<string | null>(null);
+    const [adding, setAdding] = useState(false);
+    const [showAddPicker, setShowAddPicker] = useState(false);
+
+    const excludeIds = useMemo(
+        () => members.map((m) => m.userId),
+        [members]
+    );
 
     const handleRemove = async (userId: string) => {
         setRemoving(userId);
@@ -235,6 +246,22 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
             setRemoving(null);
         }
     };
+
+    const handleAdd = useCallback(
+        async (_ids: string[], subjects: Subject[]) => {
+            const subject = subjects[0];
+            if (!subject) return;
+
+            setAdding(true);
+            try {
+                await add(subject.id);
+                refresh();
+            } finally {
+                setAdding(false);
+            }
+        },
+        [add, refresh]
+    );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -246,14 +273,47 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                             {members.length} member{members.length !== 1 ? 's' : ''}
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                        <X size={20} weight="bold" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => setShowAddPicker((prev) => !prev)}
+                            disabled={adding}
+                            className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                            title="Add member"
+                        >
+                            <UserPlus size={20} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                            <X size={20} weight="bold" />
+                        </button>
+                    </div>
                 </div>
+
+                {/* Add member picker */}
+                {showAddPicker && (
+                    <div className="px-6 pt-4">
+                        <SubjectPicker
+                            mode="single"
+                            subjectTypes="users"
+                            value={[]}
+                            onChange={handleAdd}
+                            excludeIds={excludeIds}
+                            placeholder="Search users to add..."
+                            autoFocus
+                            disabled={adding}
+                        />
+                    </div>
+                )}
+
+                {adding && (
+                    <div className="px-6 pt-2">
+                        <p className="text-xs text-muted-foreground">Adding member...</p>
+                    </div>
+                )}
 
                 <div className="p-6 max-h-96 overflow-y-auto">
                     {loading ? (
@@ -265,6 +325,15 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                         <div className="py-8 text-center">
                             <Users size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-2" />
                             <p className="text-sm text-muted-foreground">No members in this group</p>
+                            {!showAddPicker && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddPicker(true)}
+                                    className="mt-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                                >
+                                    Add a member
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-2">
@@ -273,19 +342,11 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                                     key={member.userId}
                                     className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 group"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                                        {member.avatarUrl ? (
-                                            <img
-                                                src={member.avatarUrl}
-                                                alt={member.displayName}
-                                                className="w-full h-full rounded-full object-cover"
-                                            />
-                                        ) : (
-                                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                                                {member.displayName.slice(0, 2).toUpperCase()}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <SubjectAvatarById
+                                        userId={member.userId}
+                                        displayName={member.displayName}
+                                        size="md"
+                                    />
 
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium truncate">{member.displayName}</p>

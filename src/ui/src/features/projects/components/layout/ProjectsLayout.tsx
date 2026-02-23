@@ -69,12 +69,13 @@ export function ProjectsLayout() {
   }, [currentProjectId, dispatch]);
 
   // Load organization members for assignee display
-  const adminMembers = useAppSelector((state) => state.admin.members);
+  const membersFetched = useAppSelector((state) => state.admin.membersFetched);
+  const membersLoading = useAppSelector((state) => state.admin.membersLoading);
   useEffect(() => {
-    if (adminMembers.length === 0) {
+    if (!membersFetched && !membersLoading) {
       dispatch(fetchMembers({ pageSize: 50 }));
     }
-  }, [dispatch, adminMembers.length]);
+  }, [dispatch, membersFetched, membersLoading]);
 
   // Load saved panel layout
   const [defaultLayout] = useState(() => loadPanelLayout("projects"));

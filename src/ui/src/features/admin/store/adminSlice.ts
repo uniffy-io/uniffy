@@ -176,11 +176,13 @@ export interface AdminState {
     // Members
     members: SerializedMemberInfo[];
     membersLoading: boolean;
+    membersFetched: boolean;
     membersTotalCount: number;
 
     // Groups
     groups: SerializedGroupInfo[];
     groupsLoading: boolean;
+    groupsFetched: boolean;
     groupsTotalCount: number;
 
     // Group members (keyed by group ID)
@@ -199,9 +201,11 @@ const initialState: AdminState = {
     overviewLoading: false,
     members: [],
     membersLoading: false,
+    membersFetched: false,
     membersTotalCount: 0,
     groups: [],
     groupsLoading: false,
+    groupsFetched: false,
     groupsTotalCount: 0,
     groupMembers: {},
     groupMembersLoading: {},
@@ -262,11 +266,13 @@ const adminSlice = createSlice({
         });
         builder.addCase(fetchMembers.fulfilled, (state, action) => {
             state.membersLoading = false;
+            state.membersFetched = true;
             state.members = action.payload.members;
             state.membersTotalCount = action.payload.totalCount;
         });
         builder.addCase(fetchMembers.rejected, (state, action) => {
             state.membersLoading = false;
+            state.membersFetched = true;
             state.error = action.error.message || 'Failed to fetch members';
         });
 
@@ -288,11 +294,13 @@ const adminSlice = createSlice({
         });
         builder.addCase(fetchGroups.fulfilled, (state, action) => {
             state.groupsLoading = false;
+            state.groupsFetched = true;
             state.groups = action.payload.groups;
             state.groupsTotalCount = action.payload.totalCount;
         });
         builder.addCase(fetchGroups.rejected, (state, action) => {
             state.groupsLoading = false;
+            state.groupsFetched = true;
             state.error = action.error.message || 'Failed to fetch groups';
         });
 
