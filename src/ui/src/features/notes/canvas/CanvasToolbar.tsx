@@ -19,6 +19,7 @@ import {
   LineSegment,
   Path,
   ArrowBendRightDown,
+  TreeStructure,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { NODE_COLORS, BORDER_WIDTHS } from '@/features/notes/canvas/components/nodeStyleConstants';
@@ -29,6 +30,7 @@ interface CanvasToolbarProps {
   onOpenContentPicker?: () => void;
   onAddMediaFile?: (file: File) => void;
   onAddShape?: (shape: 'rect' | 'ellipse' | 'diamond') => void;
+  onAddMindMap?: () => void;
   canvasDefaults?: CanvasDefaults;
   onDefaultsChange?: (defaults: CanvasDefaults) => void;
   className?: string;
@@ -39,6 +41,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
   onOpenContentPicker,
   onAddMediaFile,
   onAddShape,
+  onAddMindMap,
   canvasDefaults,
   onDefaultsChange,
   className,
@@ -155,6 +158,21 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             </div>
           )}
         </div>
+      )}
+
+      {/* Mind Map */}
+      {onAddMindMap && (
+        <>
+          <div className="w-px h-5 bg-border" />
+          <button
+            onClick={onAddMindMap}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors text-foreground"
+            title="Add Mind Map"
+          >
+            <TreeStructure size={16} weight="duotone" />
+            <span className="hidden sm:inline">Mind Map</span>
+          </button>
+        </>
       )}
 
       {/* Defaults picker */}

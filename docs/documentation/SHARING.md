@@ -42,9 +42,9 @@
 
 Every piece of content has a visibility setting.
 
-- **Private** (default) -- Only you can see it unless explicitly shared.
-- **Group** -- Accessible to members of one or more linked groups.
-- **Organization** -- All organization members can access it.
+- **Private** (default) - Only you can see it unless explicitly shared.
+- **Group** - Accessible to members of one or more linked groups.
+- **Organization** - All organization members can access it.
 
 ---
 
@@ -52,10 +52,10 @@ Every piece of content has a visibility setting.
 
 When sharing content, you choose what the recipient can do:
 
-- **View** -- Read only.
-- **Edit** -- Read and modify.
-- **Admin** -- Full control: view, edit, delete, share, and move.
-- **Owner** -- Same as Admin. Automatically assigned to the creator. Can transfer ownership.
+- **View** - Read only.
+- **Edit** - Read and modify.
+- **Admin** - Full control: view, edit, delete, share, and move.
+- **Owner** - Same as Admin. Automatically assigned to the creator. Can transfer ownership.
 
 ---
 
@@ -63,10 +63,10 @@ When sharing content, you choose what the recipient can do:
 
 Permissions are evaluated in this order:
 
-1. **Ownership** -- Content creators always have full access.
-2. **Organization role** -- Org admins and owners can access all content.
-3. **Explicit permissions** -- Individual grants override visibility. A private note can be shared with specific people without changing its visibility.
-4. **Group membership** -- If content is linked to a group you belong to, you have access.
+1. **Ownership** - Content creators always have full access.
+2. **Organization role** - Org admins and owners can access all content.
+3. **Explicit permissions** - Individual grants override visibility. A private note can be shared with specific people without changing its visibility.
+4. **Group membership** - If content is linked to a group you belong to, you have access.
 
 ---
 
@@ -88,9 +88,9 @@ Set an expiration date when sharing. The permission is automatically revoked aft
 
 ## Organization Roles
 
-- **Member** -- Access own content, explicitly shared content, group content, and org-wide content (based on defaults).
-- **Admin** -- Full access to all organization content.
-- **Owner** -- Same as Admin, plus org settings, billing, and deletion.
+- **Member** - Access own content, explicitly shared content, group content, and org-wide content (based on defaults).
+- **Admin** - Full access to all organization content.
+- **Owner** - Same as Admin, plus org settings, billing, and deletion.
 
 ---
 
@@ -112,8 +112,8 @@ Groups are collections of users within an organization (teams, projects, departm
 
 **Group roles:**
 
-- **Member** -- Standard access.
-- **Admin** -- Can manage group membership and settings.
+- **Member** - Standard access.
+- **Admin** - Can manage group membership and settings.
 
 **Content linked to a group:**
 

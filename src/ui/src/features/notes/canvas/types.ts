@@ -63,7 +63,37 @@ export interface ShapeNodeData extends Record<string, unknown> {
   borderWidth?: number;
 }
 
-export type CanvasNodeData = TextNodeData | NoteNodeData | MediaNodeData | ShapeNodeData;
+export interface MindMapNodeData extends Record<string, unknown> {
+  type: 'mindmap';
+  /** Display text for this mind map node. */
+  label: string;
+  /** Groups all nodes belonging to the same mind map instance. */
+  mindmapId: string;
+  /** Parent node ID within the mind map tree. Null for the root node. */
+  parentNodeId: string | null;
+  /** Ordered child node IDs. */
+  children: string[];
+  /** When true, children are hidden in the layout. */
+  collapsed?: boolean;
+  /** Branch color inherited from the top-level ancestor. */
+  branchColor?: string;
+  /** True only for the root node of a mind map. */
+  isRoot?: boolean;
+  /** Layout direction for the tree. Stored on every node, changed from root. */
+  direction?: 'right' | 'down' | 'left' | 'up';
+  /** Text formatting options. */
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  textAlign?: 'left' | 'center' | 'right';
+  /** Visual styling. */
+  bgColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+}
+
+export type CanvasNodeData = TextNodeData | NoteNodeData | MediaNodeData | ShapeNodeData | MindMapNodeData;
 
 // -- React Flow node types --
 
@@ -71,8 +101,9 @@ export type TextCanvasNode = Node<TextNodeData, 'text'>;
 export type NoteCanvasNode = Node<NoteNodeData, 'note'>;
 export type MediaCanvasNode = Node<MediaNodeData, 'media'>;
 export type ShapeCanvasNode = Node<ShapeNodeData, 'shape'>;
+export type MindMapCanvasNode = Node<MindMapNodeData, 'mindmap'>;
 
-export type CanvasNode = TextCanvasNode | NoteCanvasNode | MediaCanvasNode | ShapeCanvasNode;
+export type CanvasNode = TextCanvasNode | NoteCanvasNode | MediaCanvasNode | ShapeCanvasNode | MindMapCanvasNode;
 
 // -- Edge types --
 
@@ -86,6 +117,12 @@ export interface CanvasEdgeData extends Record<string, unknown> {
 }
 
 export type CanvasEdge = Edge<CanvasEdgeData>;
+
+export interface MindMapEdgeData extends Record<string, unknown> {
+  branchColor: string;
+}
+
+export type MindMapEdge = Edge<MindMapEdgeData>;
 
 // -- Per-canvas default styles for new nodes --
 

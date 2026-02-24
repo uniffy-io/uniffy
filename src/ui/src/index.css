@@ -68,7 +68,7 @@
 
 /* Default values (fallback) - Light theme */
 :root {
-  --primary: 221.2 83.2% 53.3%;
+  --primary: 217 91% 50%;
   --primary-foreground: 210 40% 98%;
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -78,11 +78,11 @@
   --card-foreground: 222.2 84% 4.9%;
   --border: 220 13% 82%;
   --input: 220 13% 82%;
-  --ring: 221.2 83.2% 53.3%;
+  --ring: 217 91% 50%;
 }
 
 .dark {
-  --primary: 217.2 91.2% 59.8%;
+  --primary: 217 91% 60%;
   --primary-foreground: 222.2 47.4% 11.2%;
   --background: 228 16% 8%;
   --foreground: 220 14% 95%;
@@ -92,7 +92,7 @@
   --card-foreground: 220 14% 95%;
   --border: 228 10% 21%;
   --input: 228 12% 10%;
-  --ring: 224.3 76.3% 48%;
+  --ring: 217 91% 55%;
 }
 
 /* Base styles */

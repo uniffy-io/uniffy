@@ -62,7 +62,7 @@ tag:urgent
 tag:"project alpha"
 ```
 
-Multiple tags use AND logic -- all tags must match:
+Multiple tags use AND logic - all tags must match:
 
 ```
 tag:finance tag:Q3
@@ -102,14 +102,14 @@ This finds: notes you own, tagged "sales", containing the exact phrase "client p
 
 ### Search Tips
 
-1. **Start broad, then narrow** -- Begin with a simple search, then add filters if you get too many results.
-2. **Use quotes for specific phrases** -- Names, exact titles, and multi-word terms work better with exact matching.
-3. **Check the filter chips** -- Active filters appear as colored chips below the search box. Remove them by clicking x.
+1. **Start broad, then narrow** - Begin with a simple search, then add filters if you get too many results.
+2. **Use quotes for specific phrases** - Names, exact titles, and multi-word terms work better with exact matching.
+3. **Check the filter chips** - Active filters appear as colored chips below the search box. Remove them by clicking x.
 4. **Keyboard navigation:**
-   - `Up/Down` -- Navigate results
-   - `Enter` -- Open selected result
-   - `Ctrl+C` / `Cmd+C` -- Copy link to selected result
-   - `Esc` -- Close search
+   - `Up/Down` - Navigate results
+   - `Enter` - Open selected result
+   - `Ctrl+C` / `Cmd+C` - Copy link to selected result
+   - `Esc` - Close search
 
 ---
 

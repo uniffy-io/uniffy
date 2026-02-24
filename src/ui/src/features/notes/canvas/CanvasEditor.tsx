@@ -16,6 +16,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useUpdateNodeInternals,
   ReactFlowProvider,
   type OnConnect,
   type NodeTypes,
@@ -32,11 +33,19 @@ import { TextNode } from '@/features/notes/canvas/nodes/TextNode';
 import { NoteNode } from '@/features/notes/canvas/nodes/NoteNode';
 import { MediaNode } from '@/features/notes/canvas/nodes/MediaNode';
 import { ShapeNode } from '@/features/notes/canvas/nodes/ShapeNode';
+import { MindMapNode } from '@/features/notes/canvas/nodes/MindMapNode';
 import { CanvasToolbar } from '@/features/notes/canvas/CanvasToolbar';
 import { CanvasContextMenu } from '@/features/notes/canvas/CanvasContextMenu';
 import { CustomEdge } from '@/features/notes/canvas/edges/CustomEdge';
+import { MindMapEdge } from '@/features/notes/canvas/edges/MindMapEdge';
 import { EdgeStyleToolbar } from '@/features/notes/canvas/components/EdgeStyleToolbar';
 import { useCanvasHistory } from '@/features/notes/canvas/hooks/useCanvasHistory';
+import {
+  layoutMindMap,
+  findMindMapRoot,
+  collectDescendants,
+  getBranchColorForNewChild,
+} from '@/features/notes/canvas/utils/mindmapLayout';
 import type {
   CanvasState,
   CanvasNode,
@@ -47,6 +56,8 @@ import type {
   NoteCanvasNode,
   MediaCanvasNode,
   ShapeCanvasNode,
+  MindMapCanvasNode,
+  MindMapNodeData,
 } from '@/features/notes/canvas/types';
 import { cn } from '@/shared/utils/cn';
 import { useTheme } from '@/config/theme/ThemeProvider';
@@ -76,6 +87,13 @@ interface ContextMenuState {
   x: number;
   y: number;
   nodeId: string;
+  mindMapInfo?: {
+    isRoot: boolean;
+    hasChildren: boolean;
+    isCollapsed: boolean;
+    branchColor: string;
+    direction: string;
+  };
 }
 
 /** Static nodeTypes -- defined outside the component to avoid re-creation. */
@@ -84,11 +102,13 @@ const NODE_TYPES: NodeTypes = {
   note: NoteNode,
   media: MediaNode,
   shape: ShapeNode,
+  mindmap: MindMapNode,
 };
 
 /** Static edgeTypes -- custom edge rendering for all edges. */
 const EDGE_TYPES: EdgeTypes = {
   custom: CustomEdge as EdgeTypes[string],
+  mindmapEdge: MindMapEdge as EdgeTypes[string],
 };
 
 interface SelectedEdgeState {
@@ -104,6 +124,7 @@ function CanvasEditorInner({
   contentId,
 }: CanvasEditorProps) {
   const { screenToFlowPosition, fitView } = useReactFlow();
+  const updateNodeInternals = useUpdateNodeInternals();
   const { resolvedTheme } = useTheme();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const canvasStateRef = useRef(canvasState);
@@ -118,6 +139,7 @@ function CanvasEditorInner({
   const [showContentPicker, setShowContentPicker] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const clearEditingNodeId = useCallback(() => setEditingNodeId(null), []);
+
   const contentPickerInputRef = useRef<HTMLInputElement>(null);
   const contentPickerRef = useRef<HTMLDivElement>(null);
   const { query: pickerQuery, setQuery: setPickerQuery, results: pickerResults, isLoading: pickerLoading, clearResults: clearPickerResults } = useSearch({ limit: 15 });
@@ -127,6 +149,33 @@ function CanvasEditorInner({
   // Track if we need to emit onChange (debounced via interaction)
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Compute mind map edges from a set of nodes (for saving). */
+  const computeMmEdgesFromNodes = useCallback((nodeList: CanvasNode[]): CanvasEdge[] => {
+    const result: CanvasEdge[] = [];
+    for (const node of nodeList) {
+      if (node.data.type !== 'mindmap') continue;
+      const mmData = node.data as MindMapNodeData;
+      if (mmData.collapsed) continue;
+      for (const childId of mmData.children) {
+        const child = nodeList.find((n) => n.id === childId);
+        if (!child || child.data.type !== 'mindmap') continue;
+        const childColor = (child.data as MindMapNodeData).branchColor || '';
+        result.push({
+          id: `mm_edge_${node.id}_${childId}`,
+          source: node.id,
+          target: childId,
+          sourceHandle: 'mm-source',
+          targetHandle: 'mm-target',
+          type: 'mindmapEdge',
+          data: { branchColor: childColor },
+          selectable: false,
+          deletable: false,
+        });
+      }
+    }
+    return result;
+  }, []);
+
   const scheduleChange = useCallback(
     (updatedNodes?: CanvasNode[], updatedEdges?: CanvasEdge[]) => {
       if (changeTimerRef.current) {
@@ -134,16 +183,100 @@ function CanvasEditorInner({
       }
       changeTimerRef.current = setTimeout(() => {
         const currentState = canvasStateRef.current;
+        const finalNodes = updatedNodes ?? nodes;
+        // Combine user edges with computed mind map edges for persistence
+        const userEdges = (updatedEdges ?? edges).filter((e) => e.type !== 'mindmapEdge');
+        const mmEdges = computeMmEdgesFromNodes(finalNodes);
         const newState: CanvasState = {
           ...currentState,
-          nodes: updatedNodes ?? nodes,
-          edges: updatedEdges ?? edges,
+          nodes: finalNodes,
+          edges: [...userEdges, ...mmEdges] as CanvasEdge[],
         };
         pushState(currentState);
         onChange(newState);
       }, 300);
     },
-    [onChange, nodes, edges, pushState]
+    [onChange, nodes, edges, pushState, computeMmEdgesFromNodes]
+  );
+
+  // Declaratively compute mind map edges from node state. This avoids all timing
+  // issues - edges are always in sync with nodes because they're derived, not managed.
+  const computedMmEdges = useMemo(() => {
+    const mmEdges: CanvasEdge[] = [];
+    for (const node of nodes) {
+      if (node.data.type !== 'mindmap') continue;
+      const mmData = node.data as MindMapNodeData;
+      if (mmData.collapsed) continue;
+      for (const childId of mmData.children) {
+        const child = nodes.find((n) => n.id === childId);
+        if (!child || child.data.type !== 'mindmap') continue;
+        const childColor = (child.data as MindMapNodeData).branchColor || '';
+        mmEdges.push({
+          id: `mm_edge_${node.id}_${childId}`,
+          source: node.id,
+          target: childId,
+          sourceHandle: 'mm-source',
+          targetHandle: 'mm-target',
+          type: 'mindmapEdge',
+          data: { branchColor: childColor },
+          selectable: false,
+          deletable: false,
+        });
+      }
+    }
+    return mmEdges;
+  }, [nodes]);
+
+  // Combine user-created edges with computed mind map edges for rendering
+  const allEdges = useMemo(() => {
+    const userEdges = edges.filter((e) => e.type !== 'mindmapEdge');
+    return [...userEdges, ...computedMmEdges] as CanvasEdge[];
+  }, [edges, computedMmEdges]);
+
+  /** Helper: run layout for a mind map group and apply positions + edges. */
+  const applyMindMapLayout = useCallback(
+    (rootId: string, updatedNodes: CanvasNode[]): { nodes: CanvasNode[]; edges: CanvasEdge[] } => {
+      const rootNode = updatedNodes.find((n) => n.id === rootId);
+      if (!rootNode) return { nodes: updatedNodes, edges: [] };
+
+      const rootPos = rootNode.position;
+      const result = layoutMindMap(rootId, updatedNodes, rootPos);
+
+      // Correct positions so the root stays at its exact position.
+      // The layout algorithm may shift the root vertically to center it
+      // among children; this correction ensures drag positions are preserved.
+      const computedRootPos = result.positions.get(rootId);
+      const correctionX = computedRootPos ? rootPos.x - computedRootPos.x : 0;
+      const correctionY = computedRootPos ? rootPos.y - computedRootPos.y : 0;
+
+      // Apply corrected positions; root is draggable, children are not
+      const positioned = updatedNodes.map((n) => {
+        const pos = result.positions.get(n.id);
+        if (pos) {
+          const isRootNode = n.data.type === 'mindmap' && (n.data as MindMapNodeData).isRoot === true;
+          return {
+            ...n,
+            position: { x: pos.x + correctionX, y: pos.y + correctionY },
+            draggable: isRootNode,
+          };
+        }
+        return n;
+      }) as CanvasNode[];
+
+      // Apply branch color updates
+      for (const [nodeId, updates] of result.nodeUpdates) {
+        const idx = positioned.findIndex((n) => n.id === nodeId);
+        if (idx !== -1) {
+          positioned[idx] = {
+            ...positioned[idx],
+            data: { ...positioned[idx].data, ...updates },
+          } as CanvasNode;
+        }
+      }
+
+      return { nodes: positioned, edges: result.edges };
+    },
+    []
   );
 
   // Handle node changes (move, resize, select)
@@ -154,13 +287,65 @@ function CanvasEditorInner({
       const hasStructuralChange = changes.some(
         (c) => c.type === 'position' || c.type === 'dimensions' || c.type === 'remove'
       );
-      if (hasStructuralChange && !readonly) {
-        requestAnimationFrame(() => {
-          scheduleChange();
+      if (!hasStructuralChange || readonly) return;
+
+      // Re-layout mind map trees when any mind map node's dimensions change,
+      // so children shift to account for wider/taller parent nodes.
+      const hasMmDimensionChange = changes.some(
+        (c) => c.type === 'dimensions' && c.id && nodes.find((n) => n.id === c.id)?.data.type === 'mindmap'
+      );
+      if (hasMmDimensionChange) {
+        setNodes((nds) => {
+          // Find all unique mind map roots that need re-layout
+          const rootIds = new Set<string>();
+          for (const c of changes) {
+            if (c.type !== 'dimensions') continue;
+            const node = nds.find((n) => n.id === c.id);
+            if (!node || node.data.type !== 'mindmap') continue;
+            const rootId = findMindMapRoot(node.id, nds);
+            if (rootId) rootIds.add(rootId);
+          }
+          if (rootIds.size === 0) return nds;
+          let result = nds;
+          for (const rootId of rootIds) {
+            const { nodes: laid } = applyMindMapLayout(rootId, result);
+            result = laid;
+          }
+          return result;
         });
       }
+
+      // Re-layout mind map trees when a root node is dragged,
+      // so child nodes follow the root's new position.
+      const hasMmRootPositionChange = changes.some(
+        (c) => c.type === 'position' && c.position &&
+          nodes.find((n) => n.id === c.id && n.data.type === 'mindmap' && (n.data as MindMapNodeData).isRoot)
+      );
+      if (hasMmRootPositionChange) {
+        setNodes((nds) => {
+          const rootIds = new Set<string>();
+          for (const c of changes) {
+            if (c.type !== 'position' || !c.position) continue;
+            const node = nds.find((n) => n.id === c.id);
+            if (node?.data.type === 'mindmap' && (node.data as MindMapNodeData).isRoot) {
+              rootIds.add(c.id);
+            }
+          }
+          if (rootIds.size === 0) return nds;
+          let result = nds;
+          for (const rootId of rootIds) {
+            const { nodes: laid } = applyMindMapLayout(rootId, result);
+            result = laid;
+          }
+          return result;
+        });
+      }
+
+      requestAnimationFrame(() => {
+        scheduleChange();
+      });
     },
-    [onNodesChange, readonly, scheduleChange]
+    [onNodesChange, readonly, scheduleChange, nodes, setNodes, applyMindMapLayout]
   );
 
   const handleEdgesChange = useCallback(
@@ -207,10 +392,10 @@ function CanvasEditorInner({
     [setEdges, readonly, scheduleChange, getEdgeDefaults]
   );
 
-  // Handle edge click to show style toolbar
+  // Handle edge click to show style toolbar (skip auto-managed mind map edges)
   const handleEdgeClick = useCallback(
     (event: React.MouseEvent, edge: CanvasEdge) => {
-      if (readonly) return;
+      if (readonly || edge.type === 'mindmapEdge') return;
       setSelectedEdge({ edgeId: edge.id, x: event.clientX, y: event.clientY });
       setContextMenu(null);
     },
@@ -275,6 +460,43 @@ function CanvasEditorInner({
   const handleNodeStyleChange = useCallback(
     (nodeId: string, updates: Record<string, unknown>) => {
       if (readonly) return;
+
+      // For mind map nodes with branchColor change, propagate to descendants and re-layout
+      if ('branchColor' in updates) {
+        setNodes((nds) => {
+          const node = nds.find((n) => n.id === nodeId);
+          if (!node || node.data.type !== 'mindmap') {
+            // Not a mind map node, do normal update
+            const updated = nds.map((n) =>
+              n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n,
+            ) as CanvasNode[];
+            scheduleChange(updated);
+            return updated;
+          }
+
+          // Propagate branchColor to node and all descendants
+          const color = updates.branchColor as string;
+          const descendants = collectDescendants(nodeId, nds);
+          const updated = nds.map((n) => {
+            if (descendants.has(n.id)) {
+              return { ...n, data: { ...n.data, branchColor: color } };
+            }
+            return n;
+          }) as CanvasNode[];
+
+          // Re-layout to update positions and branch colors
+          const rootId = findMindMapRoot(nodeId, updated);
+          if (!rootId) {
+            scheduleChange(updated);
+            return updated;
+          }
+          const { nodes: laid } = applyMindMapLayout(rootId, updated);
+          scheduleChange(laid);
+          return laid;
+        });
+        return;
+      }
+
       setNodes((nds) => {
         const updated = nds.map((n) => {
           if (n.id === nodeId) {
@@ -286,7 +508,7 @@ function CanvasEditorInner({
         return updated;
       });
     },
-    [setNodes, readonly, scheduleChange]
+    [setNodes, readonly, scheduleChange, applyMindMapLayout]
   );
 
   // Get center position for new nodes
@@ -411,6 +633,330 @@ function CanvasEditorInner({
     [readonly, getCenterPosition, getStyleDefaults, setNodes, scheduleChange]
   );
 
+  // -- Mind map handlers --
+
+  /** Add a new mind map (root + 2 starter children) at canvas center. */
+  const handleAddMindMap = useCallback(() => {
+    if (readonly) return;
+    const position = getCenterPosition();
+    const mindmapId = `mm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const rootId = generateNodeId();
+    const child1Id = generateNodeId();
+    const child2Id = generateNodeId();
+
+    const rootNode: MindMapCanvasNode = {
+      id: rootId,
+      type: 'mindmap',
+      position,
+      data: {
+        type: 'mindmap',
+        label: 'Central Idea',
+        mindmapId,
+        parentNodeId: null,
+        children: [child1Id, child2Id],
+        isRoot: true,
+      },
+      draggable: true,
+      selectable: true,
+    };
+
+    const child1: MindMapCanvasNode = {
+      id: child1Id,
+      type: 'mindmap',
+      position: { x: position.x + 300, y: position.y - 40 },
+      data: {
+        type: 'mindmap',
+        label: 'Branch 1',
+        mindmapId,
+        parentNodeId: rootId,
+        children: [],
+      },
+      draggable: false,
+      selectable: true,
+    };
+
+    const child2: MindMapCanvasNode = {
+      id: child2Id,
+      type: 'mindmap',
+      position: { x: position.x + 300, y: position.y + 40 },
+      data: {
+        type: 'mindmap',
+        label: 'Branch 2',
+        mindmapId,
+        parentNodeId: rootId,
+        children: [],
+      },
+      draggable: false,
+      selectable: true,
+    };
+
+    setNodes((nds) => {
+      const withNew = [...nds, rootNode, child1, child2] as CanvasNode[];
+      const { nodes: laid } = applyMindMapLayout(rootId, withNew);
+      scheduleChange(laid);
+      return laid;
+    });
+    setEditingNodeId(rootId);
+  }, [readonly, getCenterPosition, setNodes, scheduleChange, applyMindMapLayout]);
+
+  /** Add child to a mind map node. */
+  const handleMindMapAddChild = useCallback(
+    (parentId: string) => {
+      if (readonly) return;
+      let newChildId = '';
+      setNodes((nds) => {
+        const parent = nds.find((n) => n.id === parentId) as MindMapCanvasNode | undefined;
+        if (!parent || parent.data.type !== 'mindmap') return nds;
+
+        const branchColor = getBranchColorForNewChild(parentId, nds);
+        const childId = generateNodeId();
+        newChildId = childId;
+
+        // Update parent to include new child
+        const updatedNds = nds.map((n) => {
+          if (n.id === parentId && n.data.type === 'mindmap') {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                children: [...(n.data as MindMapNodeData).children, childId],
+                collapsed: false,
+              },
+            } as CanvasNode;
+          }
+          return n;
+        }) as CanvasNode[];
+
+        // Create new child node (inherit direction from root)
+        const rootId = findMindMapRoot(parentId, nds);
+        const rootNode = rootId ? nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined : undefined;
+        const direction = rootNode ? (rootNode.data as MindMapNodeData).direction : undefined;
+
+        const newChild: MindMapCanvasNode = {
+          id: childId,
+          type: 'mindmap',
+          position: { x: parent.position.x + 300, y: parent.position.y },
+          data: {
+            type: 'mindmap',
+            label: 'New idea',
+            mindmapId: parent.data.mindmapId,
+            parentNodeId: parentId,
+            children: [],
+            branchColor,
+            ...(direction ? { direction } : {}),
+          },
+          draggable: false,
+          selectable: true,
+        };
+
+        const withChild = [...updatedNds, newChild] as CanvasNode[];
+        const layoutRootId = rootId ?? findMindMapRoot(parentId, withChild);
+        if (!layoutRootId) return withChild;
+
+        const { nodes: laid } = applyMindMapLayout(layoutRootId, withChild);
+        scheduleChange(laid);
+        return laid;
+      });
+      if (newChildId) setEditingNodeId(newChildId);
+    },
+    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+  );
+
+  /** Add sibling after a mind map node. */
+  const handleMindMapAddSibling = useCallback(
+    (nodeId: string) => {
+      if (readonly) return;
+      let newSiblingId = '';
+      setNodes((nds) => {
+        const node = nds.find((n) => n.id === nodeId) as MindMapCanvasNode | undefined;
+        if (!node || node.data.type !== 'mindmap' || node.data.isRoot) return nds;
+
+        const parentId = node.data.parentNodeId;
+        if (!parentId) return nds;
+
+        const branchColor = node.data.branchColor || getBranchColorForNewChild(parentId, nds);
+        const siblingId = generateNodeId();
+        newSiblingId = siblingId;
+
+        // Insert sibling after current node in parent's children
+        const updatedNds = nds.map((n) => {
+          if (n.id === parentId && n.data.type === 'mindmap') {
+            const parentData = n.data as MindMapNodeData;
+            const idx = parentData.children.indexOf(nodeId);
+            const newChildren = [...parentData.children];
+            newChildren.splice(idx + 1, 0, siblingId);
+            return { ...n, data: { ...n.data, children: newChildren } } as CanvasNode;
+          }
+          return n;
+        }) as CanvasNode[];
+
+        // Inherit direction from root
+        const rootId = findMindMapRoot(nodeId, nds);
+        const rootNode = rootId ? nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined : undefined;
+        const direction = rootNode ? (rootNode.data as MindMapNodeData).direction : undefined;
+
+        const newSibling: MindMapCanvasNode = {
+          id: siblingId,
+          type: 'mindmap',
+          position: { x: node.position.x, y: node.position.y + 50 },
+          data: {
+            type: 'mindmap',
+            label: 'New idea',
+            mindmapId: node.data.mindmapId,
+            parentNodeId: parentId,
+            children: [],
+            branchColor,
+            ...(direction ? { direction } : {}),
+          },
+          draggable: false,
+          selectable: true,
+        };
+
+        const withSibling = [...updatedNds, newSibling] as CanvasNode[];
+        const layoutRootId = rootId ?? findMindMapRoot(nodeId, withSibling);
+        if (!layoutRootId) return withSibling;
+
+        const { nodes: laid } = applyMindMapLayout(layoutRootId, withSibling);
+        scheduleChange(laid);
+        return laid;
+      });
+      if (newSiblingId) setEditingNodeId(newSiblingId);
+    },
+    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+  );
+
+  /** Delete a mind map node and its entire subtree. */
+  const handleMindMapDeleteNode = useCallback(
+    (nodeId: string) => {
+      if (readonly) return;
+      setNodes((nds) => {
+        const node = nds.find((n) => n.id === nodeId) as MindMapCanvasNode | undefined;
+        if (!node || node.data.type !== 'mindmap' || node.data.isRoot) return nds;
+
+        const descendants = collectDescendants(nodeId, nds);
+
+        // Remove from parent's children
+        const cleaned = nds
+          .filter((n) => !descendants.has(n.id))
+          .map((n) => {
+            if (n.data.type === 'mindmap' && (n.data as MindMapNodeData).children.includes(nodeId)) {
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  children: (n.data as MindMapNodeData).children.filter((c) => c !== nodeId),
+                },
+              } as CanvasNode;
+            }
+            return n;
+          }) as CanvasNode[];
+
+        const rootId = findMindMapRoot(node.data.parentNodeId || '', cleaned);
+        if (!rootId) {
+          scheduleChange(cleaned);
+          return cleaned;
+        }
+
+        const { nodes: laid } = applyMindMapLayout(rootId, cleaned);
+        scheduleChange(laid);
+        return laid;
+      });
+    },
+    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+  );
+
+  /** Toggle collapse on a mind map node. */
+  const handleMindMapToggleCollapse = useCallback(
+    (nodeId: string) => {
+      if (readonly) return;
+      setNodes((nds) => {
+        const node = nds.find((n) => n.id === nodeId) as MindMapCanvasNode | undefined;
+        if (!node || node.data.type !== 'mindmap') return nds;
+
+        const updatedNds = nds.map((n) => {
+          if (n.id === nodeId) {
+            return {
+              ...n,
+              data: { ...n.data, collapsed: !node.data.collapsed },
+            } as CanvasNode;
+          }
+          return n;
+        }) as CanvasNode[];
+
+        const rootId = findMindMapRoot(nodeId, updatedNds);
+        if (!rootId) {
+          scheduleChange(updatedNds);
+          return updatedNds;
+        }
+
+        const { nodes: laid } = applyMindMapLayout(rootId, updatedNds);
+        scheduleChange(laid);
+        return laid;
+      });
+    },
+    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+  );
+
+  /** Update a mind map node label. */
+  const handleMindMapLabelChange = useCallback(
+    (nodeId: string, label: string) => {
+      if (readonly) return;
+      setNodes((nds) => {
+        const updated = nds.map((n) => {
+          if (n.id === nodeId && n.data.type === 'mindmap') {
+            return { ...n, data: { ...n.data, label } };
+          }
+          return n;
+        }) as CanvasNode[];
+        scheduleChange(updated);
+        return updated;
+      });
+    },
+    [setNodes, readonly, scheduleChange]
+  );
+
+  /** Rotate the layout direction of a mind map (cycles right -> down -> left -> up). */
+  const handleMindMapRotate = useCallback(
+    (nodeId: string) => {
+      if (readonly) return;
+      setNodes((nds) => {
+        const rootId = findMindMapRoot(nodeId, nds);
+        if (!rootId) return nds;
+
+        const rootNode = nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined;
+        if (!rootNode) return nds;
+
+        const currentDir = (rootNode.data as MindMapNodeData).direction || 'right';
+        const dirs: Array<'right' | 'down' | 'left' | 'up'> = ['right', 'down', 'left', 'up'];
+        const nextDir = dirs[(dirs.indexOf(currentDir) + 1) % dirs.length];
+
+        // Update direction on all nodes in this mindmap
+        const mmId = rootNode.data.mindmapId;
+        const mmNodeIds: string[] = [];
+        const updated = nds.map((n) => {
+          if (n.data.type === 'mindmap' && (n.data as MindMapNodeData).mindmapId === mmId) {
+            mmNodeIds.push(n.id);
+            return { ...n, data: { ...n.data, direction: nextDir } } as CanvasNode;
+          }
+          return n;
+        }) as CanvasNode[];
+
+        const { nodes: laid } = applyMindMapLayout(rootId, updated);
+        scheduleChange(laid);
+
+        // Tell React Flow to re-read handle positions after the DOM updates
+        requestAnimationFrame(() => {
+          for (const nId of mmNodeIds) {
+            updateNodeInternals(nId);
+          }
+        });
+
+        return laid;
+      });
+    },
+    [readonly, setNodes, scheduleChange, applyMindMapLayout, updateNodeInternals]
+  );
+
   // Handle content picker selection
   const handleContentPickerSelect = useCallback(
     (result: SearchResultItem) => {
@@ -471,7 +1017,18 @@ function CanvasEditorInner({
     (event: React.MouseEvent, node: CanvasNode) => {
       if (readonly) return;
       event.preventDefault();
-      setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+      let mindMapInfo: ContextMenuState['mindMapInfo'];
+      if (node.data.type === 'mindmap') {
+        const mmData = node.data as MindMapNodeData;
+        mindMapInfo = {
+          isRoot: mmData.isRoot === true,
+          hasChildren: mmData.children.length > 0,
+          isCollapsed: mmData.collapsed === true,
+          branchColor: mmData.branchColor || '',
+          direction: mmData.direction || 'right',
+        };
+      }
+      setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id, mindMapInfo });
     },
     [readonly]
   );
@@ -642,11 +1199,33 @@ function CanvasEditorInner({
         e.preventDefault();
         setShowContentPicker(true);
       }
+
+      // Mind map shortcuts (only when a mindmap node is selected)
+      const selectedNode = nodes.find((n) => n.selected);
+      if (selectedNode?.data.type === 'mindmap') {
+        const mmData = selectedNode.data as MindMapNodeData;
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          handleMindMapAddChild(selectedNode.id);
+        } else if (e.key === 'Enter' && !mmData.isRoot) {
+          e.preventDefault();
+          handleMindMapAddSibling(selectedNode.id);
+        } else if (e.key === ' ' && mmData.children.length > 0) {
+          e.preventDefault();
+          handleMindMapToggleCollapse(selectedNode.id);
+        } else if (e.key === 'F2') {
+          e.preventDefault();
+          setEditingNodeId(selectedNode.id);
+        } else if ((e.key === 'Delete' || e.key === 'Backspace') && !mmData.isRoot) {
+          e.preventDefault();
+          handleMindMapDeleteNode(selectedNode.id);
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [readonly, handleAddTextBlock, handleAddShape, handleUndo, handleRedo, fitView]);
+  }, [readonly, handleAddTextBlock, handleAddShape, handleUndo, handleRedo, fitView, nodes, handleMindMapAddChild, handleMindMapAddSibling, handleMindMapToggleCollapse, handleMindMapDeleteNode]);
 
   // Focus content picker input when opened, close on escape/click outside
   useEffect(() => {
@@ -682,12 +1261,17 @@ function CanvasEditorInner({
       onTextContentChange: handleTextContentChange,
       onShapeLabelChange: handleShapeLabelChange,
       onNodeStyleChange: handleNodeStyleChange,
+      onMindMapLabelChange: handleMindMapLabelChange,
+      onMindMapAddChild: handleMindMapAddChild,
+      onMindMapAddSibling: handleMindMapAddSibling,
+      onMindMapDeleteNode: handleMindMapDeleteNode,
+      onMindMapToggleCollapse: handleMindMapToggleCollapse,
       readonly,
       contentId,
       editingNodeId,
       clearEditingNodeId,
     }),
-    [handleTextContentChange, handleShapeLabelChange, handleNodeStyleChange, readonly, contentId, editingNodeId, clearEditingNodeId]
+    [handleTextContentChange, handleShapeLabelChange, handleNodeStyleChange, handleMindMapLabelChange, handleMindMapAddChild, handleMindMapAddSibling, handleMindMapDeleteNode, handleMindMapToggleCollapse, readonly, contentId, editingNodeId, clearEditingNodeId]
   );
 
   return (
@@ -695,7 +1279,7 @@ function CanvasEditorInner({
       <div className={cn('relative w-full h-full bg-card')}>
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={allEdges}
           onNodesChange={handleNodesChange}
           onEdgesChange={handleEdgesChange}
           onConnect={onConnect}
@@ -731,6 +1315,7 @@ function CanvasEditorInner({
             onOpenContentPicker={() => setShowContentPicker(true)}
             onAddMediaFile={handleAddMediaFile}
             onAddShape={handleAddShape}
+            onAddMindMap={handleAddMindMap}
             canvasDefaults={canvasState.defaults}
             onDefaultsChange={handleDefaultsChange}
           />
@@ -760,6 +1345,15 @@ function CanvasEditorInner({
             onSendToBack={handleSendToBack}
             onBringForward={handleBringForward}
             onSendBackward={handleSendBackward}
+            mindMapInfo={contextMenu.mindMapInfo ? {
+              ...contextMenu.mindMapInfo,
+              onAddChild: handleMindMapAddChild,
+              onAddSibling: handleMindMapAddSibling,
+              onToggleCollapse: handleMindMapToggleCollapse,
+              onDeleteSubtree: handleMindMapDeleteNode,
+              onBranchColorChange: (color: string) => handleNodeStyleChange(contextMenu.nodeId, { branchColor: color }),
+              onRotate: () => handleMindMapRotate(contextMenu.nodeId),
+            } : undefined}
           />
         )}
         {/* Content picker */}

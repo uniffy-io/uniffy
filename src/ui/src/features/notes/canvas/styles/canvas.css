@@ -208,3 +208,23 @@
   animation: audio-upload-spin 0.8s linear infinite;
   color: hsl(var(--primary));
 }
+
+/* ------------------------------------------------------------------ */
+/* Mind map nodes: transparent wrapper, hidden handles                  */
+/* ------------------------------------------------------------------ */
+
+.react-flow .react-flow__node-mindmap {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0;
+}
+
+.react-flow .react-flow__node-mindmap.selected {
+  box-shadow: none !important;
+}
+
+.react-flow .react-flow__node-mindmap .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}

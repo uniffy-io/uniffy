@@ -7,7 +7,8 @@ import { useSettings, useAppearanceSettings } from '@/features/settings/hooks/us
 
 // Predefined accent colors (quick picks)
 const ACCENT_COLORS = [
-    { name: 'Blue', value: '221.2 83.2% 53.3%' },
+    { name: 'Blue', value: '217 91% 60%' },
+    { name: 'Sky', value: '199 84% 50%' },
     { name: 'Purple', value: '262.1 83.3% 57.8%' },
     { name: 'Green', value: '142.1 76.2% 36.3%' },
     { name: 'Orange', value: '24.6 95% 53.1%' },
@@ -20,7 +21,7 @@ const ACCENT_COLORS = [
 // Convert HSL string to hex for color input
 function hslToHex(hsl: string): string {
     const parts = hsl.split(' ');
-    if (parts.length !== 3) return '#3b82f6';
+    if (parts.length !== 3) return '#3c83f5';
 
     const h = parseFloat(parts[0]) / 360;
     const s = parseFloat(parts[1]) / 100;
@@ -57,7 +58,7 @@ function hslToHex(hsl: string): string {
 // Convert hex to HSL string for storage
 function hexToHsl(hex: string): string {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return '221.2 83.2% 53.3%';
+    if (!result) return '217 91% 60%';
 
     const r = parseInt(result[1], 16) / 255;
     const g = parseInt(result[2], 16) / 255;
@@ -172,10 +173,10 @@ export function AppearanceSection() {
                     <div className="relative">
                         <input
                             type="color"
-                            value={appearance.accentColor ? hslToHex(appearance.accentColor) : '#3b82f6'}
+                            value={appearance.accentColor ? hslToHex(appearance.accentColor) : '#3c83f5'}
                             onChange={(e) => handleAccentColorChange(hexToHsl(e.target.value))}
                             disabled={saving}
-                            className="w-16 h-16 rounded-xl border-2 border-border cursor-pointer bg-transparent p-1 hover:border-primary transition-colors"
+                            className="w-16 h-16 rounded-xl cursor-pointer bg-transparent p-1 transition-colors"
                             title="Choose custom color"
                         />
                     </div>
@@ -204,10 +205,10 @@ export function AppearanceSection() {
                                 key={value}
                                 type="button"
                                 disabled={saving}
-                                className={`relative w-8 h-8 rounded-full border-2 transition-all ${
+                                className={`relative w-8 h-8 rounded-full transition-all ${
                                     appearance.accentColor === value
-                                        ? 'border-foreground scale-110'
-                                        : 'border-border hover:scale-105'
+                                        ? 'scale-110'
+                                        : 'hover:scale-105'
                                 }`}
                                 style={{ backgroundColor: `hsl(${value})` }}
                                 title={name}

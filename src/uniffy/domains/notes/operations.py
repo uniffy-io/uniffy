@@ -86,7 +86,7 @@ class NoteOperations(BaseContentOperations[Note]):
                 content = node_data.get("content", "")
                 if content:
                     texts.append(content)
-            elif node_type == "shape":
+            elif node_type == "shape" or node_type == "mindmap":
                 label = node_data.get("label", "")
                 if label:
                     texts.append(label)

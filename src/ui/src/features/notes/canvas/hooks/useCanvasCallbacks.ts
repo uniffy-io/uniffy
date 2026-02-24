@@ -11,6 +11,11 @@ interface CanvasCallbacks {
   onTextContentChange: (nodeId: string, content: string) => void;
   onShapeLabelChange: (nodeId: string, label: string) => void;
   onNodeStyleChange: (nodeId: string, updates: Record<string, unknown>) => void;
+  onMindMapLabelChange: (nodeId: string, label: string) => void;
+  onMindMapAddChild: (parentId: string) => void;
+  onMindMapAddSibling: (nodeId: string) => void;
+  onMindMapDeleteNode: (nodeId: string) => void;
+  onMindMapToggleCollapse: (nodeId: string) => void;
   readonly: boolean;
   contentId: string;
   editingNodeId: string | null;
@@ -21,6 +26,11 @@ export const CanvasCallbacksContext = createContext<CanvasCallbacks>({
   onTextContentChange: () => {},
   onShapeLabelChange: () => {},
   onNodeStyleChange: () => {},
+  onMindMapLabelChange: () => {},
+  onMindMapAddChild: () => {},
+  onMindMapAddSibling: () => {},
+  onMindMapDeleteNode: () => {},
+  onMindMapToggleCollapse: () => {},
   readonly: false,
   contentId: '',
   editingNodeId: null,
