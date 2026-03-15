@@ -1,4 +1,4 @@
-"""Unified Valkey module for queue, Pub/Sub, and cache connections."""
+"""Unified Valkey module for queue, Pub/Sub, cache, and rate limiting."""
 
 from uniffy.core.valkey.cache import (
     CACHE_MISS,
@@ -15,6 +15,7 @@ from uniffy.core.valkey.pubsub import (
     subscribe_user,
 )
 from uniffy.core.valkey.queue import close_queue, get_queue, init_queue
+from uniffy.core.valkey.rate_limit import check_agent_rate_limits, check_rate_limit
 
 __all__ = [
     "CACHE_MISS",
@@ -22,6 +23,8 @@ __all__ = [
     "cache_delete",
     "cache_get",
     "cache_set",
+    "check_agent_rate_limits",
+    "check_rate_limit",
     "close_pubsub",
     "close_queue",
     "get_queue",

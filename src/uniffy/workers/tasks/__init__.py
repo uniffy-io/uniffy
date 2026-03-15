@@ -1,6 +1,8 @@
 """Background task implementations."""
 
+from uniffy.workers.tasks.agent_cron import execute_agent_cron_tasks, execute_single_agent_cron_task
 from uniffy.workers.tasks.base import on_job_end, on_job_start, on_shutdown, on_startup
+from uniffy.workers.tasks.content_extraction import extract_document_content
 from uniffy.workers.tasks.extraction import extract_audio_metadata, extract_image_metadata
 from uniffy.workers.tasks.notifications import (
     deliver_email_notification,
@@ -28,6 +30,7 @@ __all__ = [
     # Extraction
     "extract_image_metadata",
     "extract_audio_metadata",
+    "extract_document_content",
     # Notifications
     "process_notification_event",
     "deliver_push_notification",
@@ -35,4 +38,7 @@ __all__ = [
     "send_email_digest",
     # Calendar reminders
     "check_calendar_reminders",
+    # Agent cron tasks
+    "execute_agent_cron_tasks",
+    "execute_single_agent_cron_task",
 ]

@@ -1159,6 +1159,26 @@
 }
 
 /*
+ * Chat Bubble Editor
+ * When CrepeEditor is used inside agent chat bubbles, reduce
+ * compact mode's min-height so short messages don't waste space
+ * and tighten vertical padding for a chat-like feel.
+ */
+.chat-bubble-editor .crepe-editor-compact .milkdown,
+.chat-bubble-editor .crepe-editor-compact .ProseMirror {
+  min-height: unset;
+}
+
+.chat-bubble-editor .crepe-editor-compact,
+.chat-bubble-editor .crepe-editor-compact .milkdown,
+.chat-bubble-editor .crepe-editor-compact .ProseMirror,
+.chat-bubble-editor .crepe-editor-compact .ProseMirror p,
+.chat-bubble-editor .crepe-editor-compact .ProseMirror li {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+/*
  * Mention Search Popup
  */
 .mention-popup {

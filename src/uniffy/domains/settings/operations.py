@@ -373,7 +373,7 @@ class SettingsOperations:
                 name="Default",
                 is_default=True,
             )
-        except (IntegrityError, ValidationError):
+        except IntegrityError, ValidationError:
             await self.session.rollback()
             profile = await self.get_default_profile(user_id)
             if profile:
@@ -485,9 +485,9 @@ class SettingsOperations:
         from sqlalchemy import func
 
         result = await self.session.execute(
-            select(func.count()).select_from(SettingsProfile).where(
-                SettingsProfile.user_id == user_id
-            )
+            select(func.count())
+            .select_from(SettingsProfile)
+            .where(SettingsProfile.user_id == user_id)
         )
         return result.scalar() or 0
 

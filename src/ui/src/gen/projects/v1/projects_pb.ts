@@ -120,34 +120,34 @@ export enum ActivityAction {
   PRIORITY_CHANGED = 3,
 
   /**
-   * @generated from enum value: ACTIVITY_ACTION_FIELD_UPDATED = 5;
+   * @generated from enum value: ACTIVITY_ACTION_FIELD_UPDATED = 4;
    */
-  FIELD_UPDATED = 5,
+  FIELD_UPDATED = 4,
 
   /**
-   * @generated from enum value: ACTIVITY_ACTION_BLOCKED_BY_ADDED = 6;
+   * @generated from enum value: ACTIVITY_ACTION_BLOCKED_BY_ADDED = 5;
    */
-  BLOCKED_BY_ADDED = 6,
+  BLOCKED_BY_ADDED = 5,
 
   /**
-   * @generated from enum value: ACTIVITY_ACTION_BLOCKED_BY_REMOVED = 7;
+   * @generated from enum value: ACTIVITY_ACTION_BLOCKED_BY_REMOVED = 6;
    */
-  BLOCKED_BY_REMOVED = 7,
+  BLOCKED_BY_REMOVED = 6,
 
   /**
-   * @generated from enum value: ACTIVITY_ACTION_ASSIGNED = 8;
+   * @generated from enum value: ACTIVITY_ACTION_ASSIGNED = 7;
    */
-  ASSIGNED = 8,
+  ASSIGNED = 7,
 
   /**
-   * @generated from enum value: ACTIVITY_ACTION_TYPE_CHANGED = 9;
+   * @generated from enum value: ACTIVITY_ACTION_TYPE_CHANGED = 8;
    */
-  TYPE_CHANGED = 9,
+  TYPE_CHANGED = 8,
 
   /**
-   * @generated from enum value: ACTIVITY_ACTION_SPRINT_CHANGED = 10;
+   * @generated from enum value: ACTIVITY_ACTION_SPRINT_CHANGED = 9;
    */
-  SPRINT_CHANGED = 10,
+  SPRINT_CHANGED = 9,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ActivityAction)
 proto3.util.setEnumType(ActivityAction, "projects.v1.ActivityAction", [
@@ -155,12 +155,12 @@ proto3.util.setEnumType(ActivityAction, "projects.v1.ActivityAction", [
   { no: 1, name: "ACTIVITY_ACTION_CREATED" },
   { no: 2, name: "ACTIVITY_ACTION_STATUS_CHANGED" },
   { no: 3, name: "ACTIVITY_ACTION_PRIORITY_CHANGED" },
-  { no: 5, name: "ACTIVITY_ACTION_FIELD_UPDATED" },
-  { no: 6, name: "ACTIVITY_ACTION_BLOCKED_BY_ADDED" },
-  { no: 7, name: "ACTIVITY_ACTION_BLOCKED_BY_REMOVED" },
-  { no: 8, name: "ACTIVITY_ACTION_ASSIGNED" },
-  { no: 9, name: "ACTIVITY_ACTION_TYPE_CHANGED" },
-  { no: 10, name: "ACTIVITY_ACTION_SPRINT_CHANGED" },
+  { no: 4, name: "ACTIVITY_ACTION_FIELD_UPDATED" },
+  { no: 5, name: "ACTIVITY_ACTION_BLOCKED_BY_ADDED" },
+  { no: 6, name: "ACTIVITY_ACTION_BLOCKED_BY_REMOVED" },
+  { no: 7, name: "ACTIVITY_ACTION_ASSIGNED" },
+  { no: 8, name: "ACTIVITY_ACTION_TYPE_CHANGED" },
+  { no: 9, name: "ACTIVITY_ACTION_SPRINT_CHANGED" },
 ]);
 
 /**

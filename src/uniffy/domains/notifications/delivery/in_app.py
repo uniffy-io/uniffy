@@ -54,8 +54,7 @@ class InAppAdapter(DeliveryAdapter):
         # This adapter requires a session, injected per-batch by the worker
         # via deliver_with_session().
         logger.warning(
-            "InAppAdapter.deliver() called without session; "
-            "use deliver_with_session() instead"
+            "InAppAdapter.deliver() called without session; use deliver_with_session() instead"
         )
         return False
 
@@ -122,9 +121,7 @@ class InAppAdapter(DeliveryAdapter):
             "id": str(notification.id),
             "organization_id": str(notification.organization_id),
             "user_id": str(notification.user_id),
-            "notification_type": notification_type_to_proto(
-                notification.notification_type
-            ),
+            "notification_type": notification_type_to_proto(notification.notification_type),
             "title": notification.title,
             "body": notification.body or "",
             "source_urn": notification.source_urn or "",

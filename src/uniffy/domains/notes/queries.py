@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
+from uniffy.core.types import slugify  # noqa: F401 - re-exported, used via queries.slugify
 
 # Regex pattern for inline tags in markdown: [[[tag|tagname]]]
 # Tags are stored with the "tag|" prefix to distinguish from URN mentions
@@ -72,7 +73,7 @@ def extract_inline_tags_from_canvas(canvas_data: dict | str) -> list[str]:
 
         try:
             data = _json.loads(canvas_data)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return []
     else:
         data = canvas_data
@@ -89,27 +90,6 @@ def extract_inline_tags_from_canvas(canvas_data: dict | str) -> list[str]:
                     tags.add(tag)
 
     return sorted(tags)
-
-
-def slugify(text: str) -> str:
-    """
-    Convert text to URL-friendly slug.
-
-    Parameters
-    ----------
-    text : str
-        Text to slugify.
-
-    Returns
-    -------
-    str
-        Slugified text (max 500 chars).
-
-    """
-    text = text.lower().strip()
-    text = re.sub(r"[^\w\s-]", "", text)
-    text = re.sub(r"[-\s]+", "-", text)
-    return text[:500]
 
 
 async def get_by_slug(

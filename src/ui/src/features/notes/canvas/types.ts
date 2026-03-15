@@ -10,7 +10,7 @@ import type { Node, Edge, Viewport } from '@xyflow/react';
 /** Version of the canvas JSON format. */
 export const CANVAS_FORMAT_VERSION = 1;
 
-// -- Node style fields (shared across all node types) --
+// -Node style fields (shared across all node types) --
 
 export interface NodeStyleData {
   bgColor?: string;
@@ -18,7 +18,7 @@ export interface NodeStyleData {
   borderWidth?: number;
 }
 
-// -- Node data types ----
+// -Node data types ----
 
 export interface TextNodeData extends Record<string, unknown> {
   type: 'text';
@@ -95,7 +95,7 @@ export interface MindMapNodeData extends Record<string, unknown> {
 
 export type CanvasNodeData = TextNodeData | NoteNodeData | MediaNodeData | ShapeNodeData | MindMapNodeData;
 
-// -- React Flow node types --
+// -React Flow node types --
 
 export type TextCanvasNode = Node<TextNodeData, 'text'>;
 export type NoteCanvasNode = Node<NoteNodeData, 'note'>;
@@ -105,7 +105,7 @@ export type MindMapCanvasNode = Node<MindMapNodeData, 'mindmap'>;
 
 export type CanvasNode = TextCanvasNode | NoteCanvasNode | MediaCanvasNode | ShapeCanvasNode | MindMapCanvasNode;
 
-// -- Edge types --
+// -Edge types --
 
 export type EdgeShape = 'default' | 'straight' | 'step' | 'smoothstep';
 
@@ -124,7 +124,7 @@ export interface MindMapEdgeData extends Record<string, unknown> {
 
 export type MindMapEdge = Edge<MindMapEdgeData>;
 
-// -- Per-canvas default styles for new nodes --
+// -Per-canvas default styles for new nodes --
 
 export interface CanvasDefaults {
   bgColor?: string;
@@ -135,7 +135,7 @@ export interface CanvasDefaults {
   edgeShape?: EdgeShape;
 }
 
-// -- Canvas state (stored as Note.content JSON) --
+// -Canvas state (stored as Note.content JSON) --
 
 export interface CanvasState {
   version: number;
@@ -145,7 +145,7 @@ export interface CanvasState {
   defaults?: CanvasDefaults;
 }
 
-// -- Helpers --
+// -Helpers --
 
 export function createEmptyCanvas(): CanvasState {
   return {

@@ -35,7 +35,10 @@ from uniffy.workers.tasks import (
     check_calendar_reminders,
     deliver_email_notification,
     deliver_push_notification,
+    execute_agent_cron_tasks,
+    execute_single_agent_cron_task,
     extract_audio_metadata,
+    extract_document_content,
     extract_image_metadata,
     generate_image_thumbnail,
     generate_pdf_thumbnail,
@@ -90,6 +93,10 @@ class WorkerSettings:
         # Metadata extraction
         extract_image_metadata,
         extract_audio_metadata,
+        # Document content extraction
+        extract_document_content,
+        # Agent cron (on-demand trigger)
+        execute_single_agent_cron_task,
         # Notifications
         process_notification_event,
         deliver_push_notification,
@@ -100,6 +107,7 @@ class WorkerSettings:
     # Cron jobs
     cron_jobs = [
         cron(check_calendar_reminders, minute=None),  # Every minute
+        cron(execute_agent_cron_tasks, minute=None),  # Every minute
     ]
 
     # Lifecycle hooks

@@ -128,9 +128,7 @@ async def collect_referenced_content(
             source_type=content_type.value,
             source_id=str(content_id),
             ref_count=len(ref_list),
-            refs=[
-                f"{rt.value}:{rid}" for rt, rid in ref_list
-            ],
+            refs=[f"{rt.value}:{rid}" for rt, rid in ref_list],
         )
 
     return ref_list
@@ -172,9 +170,7 @@ async def cascade_permission_grant(
         ID of the permission subject.
 
     """
-    refs = await collect_referenced_content(
-        session, content_type, content_id, organization_id
-    )
+    refs = await collect_referenced_content(session, content_type, content_id, organization_id)
     if not refs:
         return
 
@@ -246,9 +242,7 @@ async def cascade_permission_grant(
 
     if changed_items:
         await session.commit()
-        await _sync_search_sharing_batch(
-            session, organization_id, changed_items
-        )
+        await _sync_search_sharing_batch(session, organization_id, changed_items)
 
 
 async def cascade_visibility_change(
@@ -293,9 +287,7 @@ async def cascade_visibility_change(
     if target_visibility == VisibilityScope.PRIVATE:
         return
 
-    refs = await collect_referenced_content(
-        session, content_type, content_id, organization_id
-    )
+    refs = await collect_referenced_content(session, content_type, content_id, organization_id)
     if not refs:
         return
 
@@ -382,9 +374,7 @@ async def cascade_visibility_change(
 
     if changed_items:
         await session.commit()
-        await _sync_search_sharing_batch(
-            session, organization_id, changed_items
-        )
+        await _sync_search_sharing_batch(session, organization_id, changed_items)
 
 
 async def propagate_rename(
@@ -425,15 +415,25 @@ async def propagate_rename(
 
     """
     updated_notes = await _propagate_rename_notes(
-        session, organization_id, target_urn, new_label,
-        replace_mention_label, replace_mention_label_in_canvas,
+        session,
+        organization_id,
+        target_urn,
+        new_label,
+        replace_mention_label,
+        replace_mention_label_in_canvas,
     )
     updated_events = await _propagate_rename_calendar_events(
-        session, organization_id, target_urn, new_label,
+        session,
+        organization_id,
+        target_urn,
+        new_label,
         replace_mention_label,
     )
     updated_tasks = await _propagate_rename_tasks(
-        session, organization_id, target_urn, new_label,
+        session,
+        organization_id,
+        target_urn,
+        new_label,
         replace_mention_label,
     )
 
@@ -449,7 +449,10 @@ async def propagate_rename(
 
     # Re-index updated content in search
     await _reindex_renamed_content(
-        session, updated_notes, updated_events, updated_tasks,
+        session,
+        updated_notes,
+        updated_events,
+        updated_tasks,
     )
 
     return updated_count
@@ -571,9 +574,7 @@ async def _fetch_content_owner_and_visibility(
         from uniffy.core.models.calendar.event import CalendarEvent
 
         result = await session.execute(
-            select(
-                CalendarEvent.organizer_id, CalendarEvent.visibility
-            ).where(
+            select(CalendarEvent.organizer_id, CalendarEvent.visibility).where(
                 CalendarEvent.id == content_id,
                 CalendarEvent.organization_id == organization_id,
             )
@@ -835,7 +836,9 @@ async def _propagate_rename_notes(
 
         if note.node_type == NodeType.CANVAS and note.canvas_content:
             new_canvas, canvas_changed = replace_canvas_fn(
-                note.canvas_content, target_urn, new_label,
+                note.canvas_content,
+                target_urn,
+                new_label,
             )
             if canvas_changed:
                 note.canvas_content = new_canvas

@@ -1,0 +1,188 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// ProvidersService manages LLM provider credentials for an organization.
+service ProvidersService {
+  // Add a new provider API key or setup token
+  rpc AddProviderKey(AddProviderKeyRequest) returns (ProviderKeyResponse) {}
+
+  // List all provider keys for the organization (credentials are masked)
+  rpc ListProviderKeys(ListProviderKeysRequest) returns (ListProviderKeysResponse) {}
+
+  // Remove a provider key
+  rpc RemoveProviderKey(RemoveProviderKeyRequest) returns (RemoveProviderKeyResponse) {}
+
+  // Validate a stored provider key against the provider API
+  rpc ValidateProviderKey(ValidateProviderKeyRequest) returns (ValidateProviderKeyResponse) {}
+
+  // List available models based on configured provider keys
+  rpc ListAvailableModels(ListAvailableModelsRequest) returns (ListAvailableModelsResponse) {}
+
+  // Enable or disable a provider key
+  rpc ToggleProviderKey(ToggleProviderKeyRequest) returns (ProviderKeyResponse) {}
+
+  // List models available through a specific provider key
+  rpc ListModelsForKey(ListModelsForKeyRequest) returns (ListAvailableModelsResponse) {}
+}
+
+// Type of credential stored for a provider
+enum CredentialType {
+  CREDENTIAL_TYPE_UNSPECIFIED = 0;
+  CREDENTIAL_TYPE_API_KEY = 1;
+  CREDENTIAL_TYPE_SETUP_TOKEN = 2;
+}
+
+// Provider key info (never includes the actual credential)
+message ProviderKeyInfo {
+  // Unique key ID
+  string id = 1;
+  // Provider name (e.g. "anthropic")
+  string provider = 2;
+  // Type of credential
+  CredentialType credential_type = 3;
+  // User-friendly label
+  string label = 4;
+  // Masked hint of the credential (e.g. "sk-ant-oat01-...xyz")
+  string key_hint = 5;
+  // Whether the key passed its last validation
+  bool is_valid = 6;
+  // When the key was last validated
+  optional google.protobuf.Timestamp last_validated_at = 7;
+  // When the key was last used for an API call
+  optional google.protobuf.Timestamp last_used_at = 8;
+  // Last error message if validation failed
+  optional string last_error = 9;
+  // When the key was created
+  google.protobuf.Timestamp created_at = 10;
+  // When the key was last updated
+  google.protobuf.Timestamp updated_at = 11;
+  // Whether the key is enabled for use
+  bool is_enabled = 12;
+  // User who created this key
+  string created_by = 13;
+  // Visibility scope
+  common.v1.VisibilityScope visibility = 14;
+}
+
+// Model capabilities and metadata
+message ModelInfo {
+  // Model identifier (e.g. "claude-opus-4-6")
+  string id = 1;
+  // Human-readable name
+  string display_name = 2;
+  // Provider name
+  string provider = 3;
+  // Context window size in tokens
+  int32 context_window = 4;
+  // Whether the model supports tool use
+  bool supports_tools = 5;
+  // Whether the model supports image inputs
+  bool supports_vision = 6;
+  // Whether the model supports extended thinking
+  bool supports_thinking = 7;
+}
+
+// Request to add a new provider key
+message AddProviderKeyRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Provider name (e.g. "anthropic")
+  string provider = 2;
+  // Type of credential
+  CredentialType credential_type = 3;
+  // User-friendly label
+  string label = 4;
+  // The actual credential (API key or setup token)
+  string credential = 5;
+  // Visibility scope for the key
+  optional common.v1.VisibilityScope visibility = 6;
+}
+
+// Response containing a single provider key
+message ProviderKeyResponse {
+  // The provider key info (credential is never included)
+  ProviderKeyInfo key = 1;
+}
+
+// Request to list provider keys
+message ListProviderKeysRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Optional provider filter
+  optional string provider = 2;
+}
+
+// Response with list of provider keys
+message ListProviderKeysResponse {
+  // List of provider keys
+  repeated ProviderKeyInfo keys = 1;
+}
+
+// Request to remove a provider key
+message RemoveProviderKeyRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Key ID to remove
+  string key_id = 2;
+}
+
+// Response for remove operation
+message RemoveProviderKeyResponse {
+  bool success = 1;
+}
+
+// Request to validate a provider key
+message ValidateProviderKeyRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Key ID to validate
+  string key_id = 2;
+}
+
+// Response for validate operation
+message ValidateProviderKeyResponse {
+  // Whether the key is valid
+  bool is_valid = 1;
+  // Error message if not valid
+  optional string error = 2;
+}
+
+// Request to list available models
+message ListAvailableModelsRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Optional provider filter
+  optional string provider = 2;
+  // When true, bypasses the cached model list and fetches fresh from the provider API
+  bool force_refresh = 3;
+}
+
+// Response with available models
+message ListAvailableModelsResponse {
+  // Available models
+  repeated ModelInfo models = 1;
+}
+
+// Request to list models for a specific provider key
+message ListModelsForKeyRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Provider key ID
+  string key_id = 2;
+  // When true, bypass cache and fetch fresh from provider API
+  bool force_refresh = 3;
+}
+
+// Request to toggle a provider key on or off
+message ToggleProviderKeyRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Key ID to toggle
+  string key_id = 2;
+  // Whether to enable (true) or disable (false) the key
+  bool enabled = 3;
+}

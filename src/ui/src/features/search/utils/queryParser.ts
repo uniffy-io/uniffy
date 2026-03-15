@@ -66,6 +66,10 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'projects': SearchResultType.PROJECT,
     'task': SearchResultType.TASK,
     'tasks': SearchResultType.TASK,
+    'agent': SearchResultType.AGENT,
+    'agents': SearchResultType.AGENT,
+    'prompt': SearchResultType.PROMPT,
+    'prompts': SearchResultType.PROMPT,
 };
 
 /**
@@ -76,6 +80,8 @@ const FILTER_PREFIXES = [
     'note', 'notes', 'file', 'files', 'user', 'users',
     'calendar', 'event', 'events', 'chat', 'chats',
     'project', 'projects', 'task', 'tasks',
+    'agent', 'agents',
+    'prompt', 'prompts',
     // Metadata filters
     'tag',
     // Ownership filters
@@ -238,6 +244,10 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Projects';
         case SearchResultType.TASK:
             return 'Tasks';
+        case SearchResultType.AGENT:
+            return 'Agents';
+        case SearchResultType.PROMPT:
+            return 'Prompts';
         default:
             return 'Unknown';
     }
@@ -262,6 +272,10 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'project';
         case SearchResultType.TASK:
             return 'task';
+        case SearchResultType.AGENT:
+            return 'agent';
+        case SearchResultType.PROMPT:
+            return 'prompt';
         default:
             return '';
     }

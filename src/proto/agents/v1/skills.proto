@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// SkillsService manages skill definitions for agents.
+// Skills are curated instruction sets (markdown) that shape agent behavior.
+service SkillsService {
+  // Create a new organization skill
+  rpc CreateSkill(CreateSkillRequest) returns (SkillResponse) {}
+
+  // Get a skill by ID
+  rpc GetSkill(GetSkillRequest) returns (SkillResponse) {}
+
+  // List skills (bundled + organization)
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) {}
+
+  // Update an organization skill
+  rpc UpdateSkill(UpdateSkillRequest) returns (SkillResponse) {}
+
+  // Delete an organization skill
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse) {}
+}
+
+// Source of a skill definition
+enum SkillSource {
+  SKILL_SOURCE_UNSPECIFIED = 0;
+  SKILL_SOURCE_BUNDLED = 1;       // shipped with the app, org_id is null
+  SKILL_SOURCE_ORGANIZATION = 2;  // created by an org admin
+  SKILL_SOURCE_PERSONAL = 3;      // created by a user for personal use
+}
+
+// Skill definition returned to clients
+message SkillInfo {
+  string id = 1;
+  optional string organization_id = 2;  // null for bundled skills
+  string name = 3;
+  string display_name = 4;
+  string description = 5;
+  string content = 6;                   // markdown instructions
+  SkillSource source = 7;
+  bool always_active = 8;               // injected regardless of agent config
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  // Owner user ID for personal skills (null for org/bundled skills)
+  optional string owner_id = 11;
+}
+
+// --- Requests and Responses ---
+
+message CreateSkillRequest {
+  string organization_id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  string content = 5;
+  optional bool always_active = 6;
+  // Owner user ID for personal skills
+  optional string owner_id = 7;
+}
+
+message SkillResponse {
+  SkillInfo skill = 1;
+}
+
+message GetSkillRequest {
+  string organization_id = 1;
+  string skill_id = 2;
+}
+
+message ListSkillsRequest {
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+}
+
+message ListSkillsResponse {
+  repeated SkillInfo skills = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateSkillRequest {
+  string organization_id = 1;
+  string skill_id = 2;
+  optional string name = 3;
+  optional string display_name = 4;
+  optional string description = 5;
+  optional string content = 6;
+  optional bool always_active = 7;
+}
+
+message DeleteSkillRequest {
+  string organization_id = 1;
+  string skill_id = 2;
+}
+
+message DeleteSkillResponse {
+  bool success = 1;
+}

@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy import Column, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -70,4 +70,5 @@ class FileMediaInfo(SQLModel, table=True):
     sample_rate: int | None = Field(default=None)
     channels: int | None = Field(default=None)
     exif: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    extracted_text: str | None = Field(default=None, sa_column=Column("extracted_text", Text))
     extraction_error: str | None = Field(default=None, max_length=2000)

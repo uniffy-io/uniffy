@@ -17,6 +17,7 @@ interface PermissionRowProps {
     onRemove: (permissionId: string) => Promise<void>;
     disabled?: boolean;
     canEdit?: boolean;
+    allowedLevels?: number[];
 }
 
 export function PermissionRow({
@@ -25,6 +26,7 @@ export function PermissionRow({
     onRemove,
     disabled = false,
     canEdit = true,
+    allowedLevels,
 }: PermissionRowProps) {
     const [isRemoving, setIsRemoving] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -144,6 +146,7 @@ export function PermissionRow({
                             onChange={handleLevelChange}
                             disabled={disabled || isRemoving || isUpdating}
                             compact
+                            allowedLevels={allowedLevels}
                         />
                         <button
                             type="button"

@@ -18,6 +18,16 @@ down_revision: str | None = "003"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_visibility_enum = postgresql.ENUM(
+    "PRIVATE",
+    "GROUP",
+    "ORGANIZATION",
+    "PUBLIC",
+    name="visibilityscope",
+    create_type=False,
+)
+_node_type_enum = postgresql.ENUM("NOTE", "FOLDER", "TEMPLATE", name="nodetype", create_type=False)
+
 
 def upgrade() -> None:
     """Create notes table."""
@@ -26,24 +36,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "visibility",
-            postgresql.ENUM(
-                "PRIVATE",
-                "GROUP",
-                "ORGANIZATION",
-                "PUBLIC",
-                name="visibilityscope",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
-        sa.Column(
-            "node_type",
-            postgresql.ENUM("NOTE", "FOLDER", "TEMPLATE", name="nodetype", create_type=False),
-            nullable=False,
-            server_default="NOTE",
-        ),
+        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column("node_type", _node_type_enum, nullable=False, server_default="NOTE"),
         sa.Column("title", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
         sa.Column(
             "content", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default="''"

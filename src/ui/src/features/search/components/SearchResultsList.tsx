@@ -40,6 +40,8 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
   [SearchResultType.PROJECT]: UrnType.PROJECT,
   [SearchResultType.TASK]: UrnType.TASK,
+  [SearchResultType.AGENT]: UrnType.AGENT,
+  [SearchResultType.PROMPT]: UrnType.PROMPT,
 };
 
 interface ResultTheme extends UrnTypeTheme {

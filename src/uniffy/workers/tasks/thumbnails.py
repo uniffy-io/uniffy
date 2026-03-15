@@ -141,11 +141,14 @@ async def generate_image_thumbnail(
             await session.commit()
 
             try:
-                await publish_notification(file.owner_id, {
-                    "_type": "file_updated",
-                    "file_id": str(file.id),
-                    "organization_id": str(file.organization_id),
-                })
+                await publish_notification(
+                    file.owner_id,
+                    {
+                        "_type": "file_updated",
+                        "file_id": str(file.id),
+                        "organization_id": str(file.organization_id),
+                    },
+                )
             except Exception:
                 log.warning("Failed to publish file update event")
 
@@ -258,11 +261,14 @@ async def generate_pdf_thumbnail(
             await session.commit()
 
             try:
-                await publish_notification(file.owner_id, {
-                    "_type": "file_updated",
-                    "file_id": str(file.id),
-                    "organization_id": str(file.organization_id),
-                })
+                await publish_notification(
+                    file.owner_id,
+                    {
+                        "_type": "file_updated",
+                        "file_id": str(file.id),
+                        "organization_id": str(file.organization_id),
+                    },
+                )
             except Exception:
                 log.warning("Failed to publish file update event")
 
@@ -375,11 +381,14 @@ async def generate_video_thumbnail(
             await session.commit()
 
             try:
-                await publish_notification(file.owner_id, {
-                    "_type": "file_updated",
-                    "file_id": str(file.id),
-                    "organization_id": str(file.organization_id),
-                })
+                await publish_notification(
+                    file.owner_id,
+                    {
+                        "_type": "file_updated",
+                        "file_id": str(file.id),
+                        "organization_id": str(file.organization_id),
+                    },
+                )
             except Exception:
                 log.warning("Failed to publish file update event")
 
@@ -551,12 +560,17 @@ def _create_video_thumbnail(video_bytes: bytes) -> tuple[bytes, int, int]:
             cmd = [
                 "ffmpeg",
                 "-y",  # Overwrite output
-                "-i", str(video_path),
-                "-ss", "1",  # Seek to 1 second
-                "-vframes", "1",  # Extract 1 frame
-                "-vf", f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
-                       ":force_original_aspect_ratio=decrease",
-                "-q:v", "2",  # High quality JPEG
+                "-i",
+                str(video_path),
+                "-ss",
+                "1",  # Seek to 1 second
+                "-vframes",
+                "1",  # Extract 1 frame
+                "-vf",
+                f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
+                ":force_original_aspect_ratio=decrease",
+                "-q:v",
+                "2",  # High quality JPEG
                 str(output_path),
             ]
 
@@ -571,11 +585,15 @@ def _create_video_thumbnail(video_bytes: bytes) -> tuple[bytes, int, int]:
                 cmd_first_frame = [
                     "ffmpeg",
                     "-y",
-                    "-i", str(video_path),
-                    "-vframes", "1",
-                    "-vf", f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
-                           ":force_original_aspect_ratio=decrease",
-                    "-q:v", "2",
+                    "-i",
+                    str(video_path),
+                    "-vframes",
+                    "1",
+                    "-vf",
+                    f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
+                    ":force_original_aspect_ratio=decrease",
+                    "-q:v",
+                    "2",
                     str(output_path),
                 ]
                 result = subprocess.run(

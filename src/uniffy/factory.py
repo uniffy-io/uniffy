@@ -21,6 +21,15 @@ from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.core.valkey import close_pubsub, close_queue, init_pubsub, init_queue
 from uniffy.db import close_db, init_db, seed_initial_data
+from uniffy.domains.agents.agents.http_routes import agent_avatars_router
+from uniffy.domains.agents.agents.service import AgentsServiceImpl
+from uniffy.domains.agents.cron.service import CronServiceImpl
+from uniffy.domains.agents.memories.service import MemoriesServiceImpl
+from uniffy.domains.agents.prompts.service import PromptsServiceImpl
+from uniffy.domains.agents.providers.service import ProvidersServiceImpl
+from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
+from uniffy.domains.agents.sessions.service import SessionsServiceImpl
+from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
@@ -39,6 +48,14 @@ from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
 from uniffy.domains.users.http_routes import avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
+from uniffy.gen.agents.v1.agents_connect import AgentsServiceASGIApplication
+from uniffy.gen.agents.v1.cron_connect import CronServiceASGIApplication
+from uniffy.gen.agents.v1.memories_connect import MemoriesServiceASGIApplication
+from uniffy.gen.agents.v1.prompts_connect import PromptsServiceASGIApplication
+from uniffy.gen.agents.v1.providers_connect import ProvidersServiceASGIApplication
+from uniffy.gen.agents.v1.runtime_connect import RuntimeServiceASGIApplication
+from uniffy.gen.agents.v1.sessions_connect import SessionsServiceASGIApplication
+from uniffy.gen.agents.v1.skills_connect import SkillsServiceASGIApplication
 from uniffy.gen.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
 from uniffy.gen.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
@@ -111,7 +128,7 @@ class ConnectRPCDispatcher:
         # Strip the mount prefix from the path
         # FastAPI's mount() sets root_path but doesn't strip the prefix from path
         if root_path and path.startswith(root_path):
-            path = path[len(root_path):] or "/"
+            path = path[len(root_path) :] or "/"
 
         # Find matching service by prefix
         for prefix, service_app in self.services:
@@ -328,9 +345,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/comments.v1.CommentsService",
-        CommentsServiceASGIApplication(
-            CommentsServiceImpl(), interceptors=[logging_interceptor]
-        ),
+        CommentsServiceASGIApplication(CommentsServiceImpl(), interceptors=[logging_interceptor]),
     )
     dispatcher.add_service(
         "/notifications.v1.NotificationsService",
@@ -344,6 +359,40 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         "/projects.v1.ProjectsService",
         ProjectsServiceASGIApplication(ProjectsServiceImpl(), interceptors=[logging_interceptor]),
     )
+    dispatcher.add_service(
+        "/agents.v1.ProvidersService",
+        ProvidersServiceASGIApplication(ProvidersServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.SessionsService",
+        SessionsServiceASGIApplication(SessionsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.AgentsService",
+        AgentsServiceASGIApplication(AgentsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.SkillsService",
+        SkillsServiceASGIApplication(SkillsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.PromptsService",
+        PromptsServiceASGIApplication(PromptsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.MemoriesService",
+        MemoriesServiceASGIApplication(MemoriesServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.CronService",
+        CronServiceASGIApplication(CronServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/agents.v1.RuntimeService",
+        StreamDisconnectMiddleware(
+            RuntimeServiceASGIApplication(RuntimeServiceImpl(), interceptors=[logging_interceptor])
+        ),
+    )
 
     # HTTP routes (thumbnails, files, avatars)
     http_app = FastAPI()
@@ -351,8 +400,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     http_app.include_router(thumbnails_router)
     http_app.include_router(files_router)
     http_app.include_router(avatars_router)
+    http_app.include_router(agent_avatars_router)
     dispatcher.add_service("/thumbnails", http_app)
     dispatcher.add_service("/files", http_app)
     dispatcher.add_service("/avatars", http_app)
+    dispatcher.add_service("/agents/avatars", http_app)
 
     return dispatcher

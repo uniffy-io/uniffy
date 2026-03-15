@@ -86,9 +86,7 @@ class Comment(SQLModel, table=True):
     __tablename__ = "comments_comments"
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     content_type: ContentType = Field(
         sa_column=Column(
             SAEnum(
@@ -127,9 +125,7 @@ class Comment(SQLModel, table=True):
         sa_column=Column(JSONB, nullable=True),
     )
     is_resolved: bool = Field(default=False, nullable=False)
-    resolved_by: UUID | None = Field(
-        default=None, foreign_key="login_users.id", nullable=True
-    )
+    resolved_by: UUID | None = Field(default=None, foreign_key="login_users.id", nullable=True)
     resolved_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),

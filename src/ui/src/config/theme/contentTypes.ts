@@ -17,6 +17,8 @@ import {
   CalendarDots,
   Kanban,
   CheckSquare,
+  Brain,
+  Notebook,
   Question,
 } from '@phosphor-icons/react';
 import { UrnType } from '@/shared/utils/urnTypes';
@@ -108,6 +110,24 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: 'projects', // Tasks are accessed within projects
     theme: getUrnTypeTheme(UrnType.TASK),
     hexColor: getUrnTypeHexColor(UrnType.TASK),
+  },
+  [UrnType.AGENT]: {
+    type: UrnType.AGENT,
+    icon: Brain,
+    label: 'Agent',
+    labelPlural: 'Agents',
+    route: 'agents',
+    theme: getUrnTypeTheme(UrnType.AGENT),
+    hexColor: getUrnTypeHexColor(UrnType.AGENT),
+  },
+  [UrnType.PROMPT]: {
+    type: UrnType.PROMPT,
+    icon: Notebook,
+    label: 'Prompt',
+    labelPlural: 'Prompts',
+    route: 'agents/prompts',
+    theme: getUrnTypeTheme(UrnType.PROMPT),
+    hexColor: getUrnTypeHexColor(UrnType.PROMPT),
   },
   [UrnType.UNKNOWN]: {
     type: UrnType.UNKNOWN,

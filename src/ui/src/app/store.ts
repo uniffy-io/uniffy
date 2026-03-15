@@ -22,6 +22,16 @@ import sessionsReducer from '@/features/settings/store/sessionsSlice';
 import { commentsReducer } from '@/features/comments/store/commentsSlice';
 import projectsReducer from '@/features/projects/store/projectsSlice';
 import projectsUiReducer from '@/features/projects/store/projectsUiSlice';
+import { agentsUiReducer } from '@/features/agents/store/agentsUiSlice';
+import { agentsReducer } from '@/features/agents/store/agentsSlice';
+import { agentSessionsReducer } from '@/features/agents/store/agentSessionsSlice';
+import { agentMessagesReducer } from '@/features/agents/store/agentMessagesSlice';
+import { agentSkillsReducer } from '@/features/agents/store/agentSkillsSlice';
+import { agentPromptsReducer } from '@/features/agents/store/agentPromptsSlice';
+import { agentProvidersReducer } from '@/features/agents/store/agentProvidersSlice';
+import { agentUsageReducer } from '@/features/agents/store/agentUsageSlice';
+import { agentCronReducer } from '@/features/agents/store/agentCronSlice';
+import { agentMemoriesReducer } from '@/features/agents/store/agentMemoriesSlice';
 import { errorToastMiddleware } from '@/app/errorToastMiddleware';
 import sprintsReducer from '@/features/projects/store/sprintsSlice';
 
@@ -107,6 +117,26 @@ const projectsUiTransform = createTransform(
   { whitelist: ['projectsUi'] }
 );
 
+/**
+ * Agents UI transform: Reset transient state on rehydration.
+ *
+ * Preserves layout preferences (activeTab, sidebarCollapsed, agentsSidebarCollapsed,
+ * agentsPanel) but resets transient state (selections, messages, search).
+ */
+const agentsUiTransform = createTransform(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (inboundState: any) => inboundState,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (outboundState: any) => ({
+    ...outboundState,
+    selectedAgentId: null,
+    chatMessage: '',
+    sidebarContent: null,
+    skillSearch: '',
+  }),
+  { whitelist: ['agentsUi'] }
+);
+
 const rootReducer = combineReducers({
   auth: authReducer,
   bookmarks: bookmarksReducer,
@@ -121,6 +151,16 @@ const rootReducer = combineReducers({
   calendarUi: calendarUiReducer,
   projects: projectsReducer,
   projectsUi: projectsUiReducer,
+  agentsUi: agentsUiReducer,
+  agents: agentsReducer,
+  agentSessions: agentSessionsReducer,
+  agentMessages: agentMessagesReducer,
+  agentSkills: agentSkillsReducer,
+  agentPrompts: agentPromptsReducer,
+  agentProviders: agentProvidersReducer,
+  agentUsage: agentUsageReducer,
+  agentCron: agentCronReducer,
+  agentMemories: agentMemoriesReducer,
   sprints: sprintsReducer,
   zenMode: zenModeReducer,
   files: filesReducer,
@@ -186,8 +226,8 @@ const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
   version: 3, // Bumped to trigger security migration (access token removal)
   storage,
-  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi'], // Persist auth, theme, editor, calendar UI, and projects UI settings
-  transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform], // Security: don't persist access tokens; reset calendar/projects transient state
+  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi'],
+  transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform, agentsUiTransform],
   migrate: createMigrate(migrations, { debug: false }),
 };
 

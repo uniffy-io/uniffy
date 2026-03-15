@@ -159,9 +159,7 @@ class UsersHandlers:
                     page_size=page_size,
                     query_str=request.search if request.HasField("search") else None,
                     include_inactive=(
-                        request.include_inactive
-                        if request.HasField("include_inactive")
-                        else False
+                        request.include_inactive if request.HasField("include_inactive") else False
                     ),
                 )
 
@@ -282,13 +280,9 @@ class UsersHandlers:
                     email=request.email if request.HasField("email") else None,
                     full_name=request.full_name if request.HasField("full_name") else None,
                     username=request.username if request.HasField("username") else None,
-                    is_active=(
-                        request.is_active if request.HasField("is_active") else None
-                    ),
+                    is_active=(request.is_active if request.HasField("is_active") else None),
                     is_system_admin=(
-                        request.is_system_admin
-                        if request.HasField("is_system_admin")
-                        else None
+                        request.is_system_admin if request.HasField("is_system_admin") else None
                     ),
                     hashed_password=hashed_pw,
                 )
@@ -392,6 +386,7 @@ class UsersHandlers:
                 role = org_role_from_proto(request.role)
                 if role is None:
                     from uniffy.core.models.login.organization_member import OrganizationRole
+
                     role = OrganizationRole.MEMBER
 
                 org_ops = OrganizationOperations(session)

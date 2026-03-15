@@ -184,14 +184,12 @@ class NoteOperations(BaseContentOperations[Note]):
         # Extract URN references and inline file refs from content
         if node_type == NodeType.CANVAS and canvas_content:
             outgoing_refs = (
-                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
-                or None
+                extract_all_outgoing_references_from_canvas(canvas_content, organization_id) or None
             )
             inline_tags = queries.extract_inline_tags_from_canvas(canvas_content) or None
         else:
             outgoing_refs = (
-                extract_all_outgoing_references(content, organization_id)
-                if content else None
+                extract_all_outgoing_references(content, organization_id) if content else None
             )
             inline_tags = queries.extract_inline_tags_from_content(content) if content else None
 
@@ -234,28 +232,32 @@ class NoteOperations(BaseContentOperations[Note]):
 
         # Notify if note is shared (GROUP or ORGANIZATION visibility)
         if visibility != VisibilityScope.PRIVATE:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CONTENT_SHARED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Shared note: {note.title}",
-                source_urn=build_content_urn(ContentType.NOTE, note.id),
-                content_type=ContentType.NOTE,
-                content_id=note.id,
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_SHARED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Shared note: {note.title}",
+                    source_urn=build_content_urn(ContentType.NOTE, note.id),
+                    content_type=ContentType.NOTE,
+                    content_id=note.id,
+                )
+            )
 
         # Notify mentioned users
         mentioned_ids = extract_mentioned_user_ids(outgoing_refs)
         mentioned_ids.discard(user_id)
         if mentioned_ids:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CONTENT_MENTIONED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Mentioned you in: {note.title}",
-                source_urn=build_content_urn(ContentType.NOTE, note.id),
-                target_user_ids=list(mentioned_ids),
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Mentioned you in: {note.title}",
+                    source_urn=build_content_urn(ContentType.NOTE, note.id),
+                    target_user_ids=list(mentioned_ids),
+                )
+            )
 
         return note
 
@@ -329,8 +331,7 @@ class NoteOperations(BaseContentOperations[Note]):
             note.canvas_content = canvas_content
             note.content = ""
             note.outgoing_references = (
-                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
-                or None
+                extract_all_outgoing_references_from_canvas(canvas_content, organization_id) or None
             )
             note.inline_tags = queries.extract_inline_tags_from_canvas(canvas_content) or None
         elif content is not None:
@@ -385,15 +386,17 @@ class NoteOperations(BaseContentOperations[Note]):
 
         # Notify collaborators of edit (only for shared notes)
         if note.visibility != VisibilityScope.PRIVATE:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CONTENT_EDITED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Edited note: {note.title}",
-                source_urn=build_content_urn(ContentType.NOTE, note.id),
-                content_type=ContentType.NOTE,
-                content_id=note.id,
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_EDITED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Edited note: {note.title}",
+                    source_urn=build_content_urn(ContentType.NOTE, note.id),
+                    content_type=ContentType.NOTE,
+                    content_id=note.id,
+                )
+            )
 
         # Notify newly mentioned users (only for content changes)
         if content_changed:
@@ -401,14 +404,16 @@ class NoteOperations(BaseContentOperations[Note]):
             new_mentioned.discard(user_id)
             newly_mentioned = new_mentioned - old_mentioned
             if newly_mentioned:
-                await emit_notification(NotificationEvent(
-                    notification_type=NotificationType.CONTENT_MENTIONED,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Mentioned you in: {note.title}",
-                    source_urn=build_content_urn(ContentType.NOTE, note.id),
-                    target_user_ids=list(newly_mentioned),
-                ))
+                await emit_notification(
+                    NotificationEvent(
+                        notification_type=NotificationType.CONTENT_MENTIONED,
+                        organization_id=organization_id,
+                        actor_id=user_id,
+                        title=f"Mentioned you in: {note.title}",
+                        source_urn=build_content_urn(ContentType.NOTE, note.id),
+                        target_user_ids=list(newly_mentioned),
+                    )
+                )
 
         return note
 
@@ -579,8 +584,7 @@ class NoteOperations(BaseContentOperations[Note]):
             note.canvas_content = canvas_content
             note.content = ""
             note.outgoing_references = (
-                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
-                or None
+                extract_all_outgoing_references_from_canvas(canvas_content, organization_id) or None
             )
             note.inline_tags = queries.extract_inline_tags_from_canvas(canvas_content) or None
         else:
@@ -607,14 +611,16 @@ class NoteOperations(BaseContentOperations[Note]):
         new_mentioned.discard(user_id)
         newly_mentioned = new_mentioned - old_mentioned
         if newly_mentioned:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CONTENT_MENTIONED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Mentioned you in: {note.title}",
-                source_urn=build_content_urn(ContentType.NOTE, note.id),
-                target_user_ids=list(newly_mentioned),
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Mentioned you in: {note.title}",
+                    source_urn=build_content_urn(ContentType.NOTE, note.id),
+                    target_user_ids=list(newly_mentioned),
+                )
+            )
 
         return note
 
@@ -907,25 +913,23 @@ class NoteOperations(BaseContentOperations[Note]):
         await self.session.refresh(note)
 
         # Re-index for search with new visibility/groups
-        new_group_ids = (
-            target_group_ids
-            if target_visibility == VisibilityScope.GROUP
-            else None
-        )
+        new_group_ids = target_group_ids if target_visibility == VisibilityScope.GROUP else None
         await self._index_for_search(model=note, group_ids=new_group_ids)
         await self.session.commit()
 
         # Notify when note becomes shared
         if target_visibility != VisibilityScope.PRIVATE:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CONTENT_SHARED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Shared note: {note.title}",
-                source_urn=build_content_urn(ContentType.NOTE, note.id),
-                content_type=ContentType.NOTE,
-                content_id=note.id,
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_SHARED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Shared note: {note.title}",
+                    source_urn=build_content_urn(ContentType.NOTE, note.id),
+                    content_type=ContentType.NOTE,
+                    content_id=note.id,
+                )
+            )
 
         # Cascade visibility to content referenced by this note
         try:
@@ -998,9 +1002,7 @@ class NoteOperations(BaseContentOperations[Note]):
         # Fetch owner info for notes shared with current user
         if notes_shared_with_user:
             owner_ids = list({note.owner_id for note in notes_shared_with_user})
-            owners_result = await self.session.execute(
-                select(User).where(User.id.in_(owner_ids))
-            )
+            owners_result = await self.session.execute(select(User).where(User.id.in_(owner_ids)))
             owners_map: dict[UUID, User] = {u.id: u for u in owners_result.scalars().all()}
 
             for note in notes_shared_with_user:
@@ -1010,7 +1012,9 @@ class NoteOperations(BaseContentOperations[Note]):
                         "id": str(note.owner_id),
                         "name": owner.full_name or owner.username if owner else "Unknown",
                         "email": owner.email if owner else "",
-                    } if owner else None
+                    }
+                    if owner
+                    else None
                 )
 
         # Fetch shared_with list for notes owned by current user
@@ -1033,16 +1037,13 @@ class NoteOperations(BaseContentOperations[Note]):
             permissions = list(permissions_result.scalars().all())
 
             # Group permissions by note ID
-            permissions_by_note: dict[UUID, list[ContentPermission]] = {
-                nid: [] for nid in note_ids
-            }
+            permissions_by_note: dict[UUID, list[ContentPermission]] = {nid: [] for nid in note_ids}
             for perm in permissions:
                 permissions_by_note[perm.content_id].append(perm)
 
             # Fetch user info for user permissions
             user_subject_ids = [
-                perm.subject_id for perm in permissions
-                if perm.subject_type == SubjectType.USER
+                perm.subject_id for perm in permissions if perm.subject_type == SubjectType.USER
             ]
             users_map: dict[UUID, User] = {}
             if user_subject_ids:
@@ -1053,8 +1054,7 @@ class NoteOperations(BaseContentOperations[Note]):
 
             # Fetch group info for group permissions
             group_subject_ids = [
-                perm.subject_id for perm in permissions
-                if perm.subject_type == SubjectType.GROUP
+                perm.subject_id for perm in permissions if perm.subject_type == SubjectType.GROUP
             ]
             groups_map: dict[UUID, Group] = {}
             group_member_counts: dict[UUID, int] = {}
@@ -1106,8 +1106,6 @@ class NoteOperations(BaseContentOperations[Note]):
                                 "permission_level": perm.permission_level.value,
                             })
 
-                result[note.id] = NoteSharingInfo(
-                    shared_with=shared_with if shared_with else None
-                )
+                result[note.id] = NoteSharingInfo(shared_with=shared_with if shared_with else None)
 
         return result

@@ -167,12 +167,10 @@ async def aggregate_reactions(
 
     reactions = []
     for row in result.all():
-        reactions.append(
-            {
-                "emoji": row.emoji,
-                "count": row.count,
-                "user_ids": [str(uid) for uid in row.user_ids] if row.user_ids else [],
-            }
-        )
+        reactions.append({
+            "emoji": row.emoji,
+            "count": row.count,
+            "user_ids": [str(uid) for uid in row.user_ids] if row.user_ids else [],
+        })
 
     return reactions

@@ -60,6 +60,70 @@ domains/{feature}/
 6. Create Alembic migration if model added
 7. **If adding searchable content type**: Complete the Search Integration Checklist in the main CLAUDE.md
 
+## Migration Conventions
+
+**Enum references in migrations must use module-level variables, never inline definitions inside `sa.Column()`.**
+
+Define each enum as a module-level variable with `create_type=False`, then reference it in column definitions:
+
+```python
+from sqlalchemy.dialects import postgresql
+
+_visibility_enum = postgresql.ENUM(
+    "PRIVATE",
+    "GROUP",
+    "ORGANIZATION",
+    "PUBLIC",
+    name="visibilityscope",
+    create_type=False,
+)
+
+def upgrade() -> None:
+    op.create_table(
+        "my_table",
+        # CORRECT - reference module-level variable
+        sa.Column("visibility", _visibility_enum, nullable=False),
+    )
+```
+
+**WRONG - inline enum in column definition:**
+```python
+def upgrade() -> None:
+    op.create_table(
+        "my_table",
+        sa.Column(
+            "visibility",
+            postgresql.ENUM(
+                "PRIVATE", "GROUP", "ORGANIZATION", "PUBLIC",
+                name="visibilityscope", create_type=False,
+            ),
+            nullable=False,
+        ),
+    )
+```
+
+**Creating new enums:** When a migration introduces a brand new enum type, create it explicitly inside `upgrade()` and define a separate module-level variable (with `create_type=False`) for column references:
+
+```python
+_my_status_enum = postgresql.ENUM(
+    "PENDING", "ACTIVE", "DONE",
+    name="mystatus",
+    create_type=False,
+)
+
+def upgrade() -> None:
+    # Create the enum type in the database
+    postgresql.ENUM(
+        "PENDING", "ACTIVE", "DONE",
+        name="mystatus",
+    ).create(op.get_bind(), checkfirst=True)
+
+    op.create_table(
+        "my_table",
+        sa.Column("status", _my_status_enum, nullable=False),
+    )
+```
+
 ## API Services Architecture
 
 The backend is organized into domain-specific ConnectRPC services. Each service has its own proto definition and handles a specific domain.
@@ -421,14 +485,3 @@ FAILED      # After max retries (3)
     or
 SKIPPED     # MIME type not supported
 ```
-
-**Configuration (Environment Variables):**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VALKEY_HOST` | localhost | Valkey server host |
-| `VALKEY_PORT` | 6380 | Valkey server port |
-| `VALKEY_PASSWORD` | uniffy-valkey-dev | Valkey password |
-| `WORKER_MAX_JOBS` | 10 | Concurrent jobs per worker |
-| `WORKER_JOB_TIMEOUT` | 300 | Job timeout in seconds |
-| `WORKER_MAX_TRIES` | 3 | Max retry attempts |

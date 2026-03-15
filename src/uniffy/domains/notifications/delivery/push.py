@@ -57,9 +57,7 @@ class PushAdapter(DeliveryAdapter):
             Always False -- use deliver_with_session() for actual delivery.
 
         """
-        logger.debug(
-            f"Push deliver() called without session: user={user_id} title={event.title}"
-        )
+        logger.debug(f"Push deliver() called without session: user={user_id} title={event.title}")
         return False
 
     async def deliver_with_session(
@@ -133,15 +131,12 @@ class PushAdapter(DeliveryAdapter):
                 sub.last_used_at = datetime.now(UTC)
             except WebPushException as e:
                 if e.response and e.response.status_code == 410:
-                    logger.info(
-                        f"Push subscription expired (410), removing: {sub.endpoint[:60]}"
-                    )
+                    logger.info(f"Push subscription expired (410), removing: {sub.endpoint[:60]}")
                     stale.append(sub)
                 else:
                     status = e.response.status_code if e.response else "N/A"
                     logger.warning(
-                        f"Push delivery failed for {sub.endpoint[:60]}: "
-                        f"status={status} {e}"
+                        f"Push delivery failed for {sub.endpoint[:60]}: status={status} {e}"
                     )
             except Exception as e:
                 logger.warning(f"Push delivery error for {sub.endpoint[:60]}: {e}")

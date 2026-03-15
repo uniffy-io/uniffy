@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Kanban, Sparkle } from '@phosphor-icons/react';
+import { Kanban, Cpu } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
@@ -30,7 +30,7 @@ const navItems: NavItem[] = [
   { name: 'Chat', path: '/chat', icon: chatConfig.icon },
   { name: 'Calendar', path: '/calendar', icon: calendarConfig.icon },
   { name: 'Projects', path: '/projects', icon: Kanban },
-  { name: 'Assistants', path: '/assistants', icon: Sparkle },
+  { name: 'Agents', path: '/agents', icon: Cpu },
 ];
 
 // Logo nav item for home/dashboard

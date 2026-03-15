@@ -279,6 +279,8 @@ export function getContentTypeLabel(contentType: number): string {
             return 'Users';
         case ContentType.PROJECT:
             return 'Projects';
+        case ContentType.AGENT:
+            return 'Agents';
         default:
             return 'Unknown';
     }

@@ -22,55 +22,47 @@ down_revision: str | None = "019"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_content_type_enum = postgresql.ENUM(
+    "NOTE",
+    "FILE",
+    "CALENDAR_EVENT",
+    "CHAT_MESSAGE",
+    "USER",
+    name="contenttype",
+    create_type=False,
+)
+_comment_anchor_type_enum = postgresql.ENUM(
+    "PAGE",
+    "SELECTION",
+    "BLOCK",
+    "MEDIA",
+    name="comment_anchor_type",
+    create_type=False,
+)
+
 
 def upgrade() -> None:
     """Add comments system tables."""
     # Create comment_anchor_type enum (checkfirst handles re-runs)
-    comment_anchor_type = postgresql.ENUM(
+    postgresql.ENUM(
         "PAGE",
         "SELECTION",
         "BLOCK",
         "MEDIA",
         name="comment_anchor_type",
-        create_type=False,
-    )
-    comment_anchor_type.create(op.get_bind(), checkfirst=True)
+    ).create(op.get_bind(), checkfirst=True)
 
     # Create comments table
     op.create_table(
         "comments_comments",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "content_type",
-            postgresql.ENUM(
-                "NOTE",
-                "FILE",
-                "CALENDAR_EVENT",
-                "CHAT_MESSAGE",
-                "USER",
-                name="contenttype",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("content_type", _content_type_enum, nullable=False),
         sa.Column("content_id", sa.Uuid(), nullable=False),
         sa.Column("parent_comment_id", sa.Uuid(), nullable=True),
         sa.Column("author_id", sa.Uuid(), nullable=False),
         sa.Column("body", sa.Text(), nullable=False),
-        sa.Column(
-            "anchor_type",
-            postgresql.ENUM(
-                "PAGE",
-                "SELECTION",
-                "BLOCK",
-                "MEDIA",
-                name="comment_anchor_type",
-                create_type=False,
-            ),
-            nullable=False,
-            server_default="PAGE",
-        ),
+        sa.Column("anchor_type", _comment_anchor_type_enum, nullable=False, server_default="PAGE"),
         sa.Column("anchor_data", postgresql.JSONB(), nullable=True),
         sa.Column("is_resolved", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("resolved_by", sa.Uuid(), nullable=True),

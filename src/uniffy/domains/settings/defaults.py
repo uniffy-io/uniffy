@@ -46,11 +46,9 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "imageEditor.flipV": "V",
     "imageEditor.crop": "C",
     "imageEditor.applyCrop": "Enter",
-
     # Comments
     "comments.toggle": "Ctrl+Shift+M",
     "comments.new": "Ctrl+Shift+C",
-
     # Projects table keyboard navigation
     "projects.focusUp": "ArrowUp",
     "projects.focusDown": "ArrowDown",
@@ -62,7 +60,6 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     # Projects undo/redo
     "projects.undo": "Ctrl+Z",
     "projects.redo": "Ctrl+Shift+Z",
-
     # Canvas actions
     "canvas.addText": "T",
     "canvas.addShape": "S",

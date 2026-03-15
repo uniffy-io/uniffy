@@ -102,6 +102,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             process_revision_directives=process_revision_directives,
+            transaction_per_migration=True,
         )
 
         with context.begin_transaction():

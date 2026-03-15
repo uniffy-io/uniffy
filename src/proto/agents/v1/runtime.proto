@@ -1,0 +1,187 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "agents/v1/sessions.proto";
+
+// RuntimeService handles message execution (send to LLM and store response).
+service RuntimeService {
+  // Send a user message and get the assistant response
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
+  // Send a user message and stream tokens, tool events, and the final response
+  rpc StreamSendMessage(SendMessageRequest) returns (stream StreamSendMessageEvent) {}
+  // Approve or reject a destructive tool call that requires confirmation
+  rpc RespondToConfirmation(ConfirmationResponse) returns (ConfirmationResponseAck) {}
+  // Get usage statistics for an organization
+  rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse) {}
+}
+
+// --- Usage Analytics ---
+
+message GetUsageStatsRequest {
+  string organization_id = 1;
+  // Number of days to look back (default 30)
+  int32 days = 2;
+  // Aggregation interval: "30m", "1h", "2h", "4h", "1d" (default "1d")
+  string interval = 3;
+}
+
+message GetUsageStatsResponse {
+  // Summary totals for the period
+  int64 total_runs = 1;
+  int64 total_input_tokens = 2;
+  int64 total_output_tokens = 3;
+  int64 total_sessions = 4;
+  int32 avg_duration_ms = 5;
+
+  // Daily usage breakdown
+  repeated DailyUsage daily_usage = 6;
+
+  // Per-model token breakdown
+  repeated ModelUsage model_usage = 7;
+
+  // Per-agent usage breakdown
+  repeated AgentUsageInfo agent_usage = 8;
+
+  // Top tool calls by frequency
+  repeated ToolUsage tool_usage = 9;
+
+  // Per-provider-key usage breakdown
+  repeated ProviderKeyUsage provider_key_usage = 10;
+
+  // Cron (scheduled tasks) usage breakdown
+  repeated CronTaskUsage cron_usage = 11;
+  // Cron summary totals
+  int64 cron_total_runs = 12;
+  int64 cron_total_successes = 13;
+  int64 cron_total_failures = 14;
+  int64 cron_total_input_tokens = 15;
+  int64 cron_total_output_tokens = 16;
+}
+
+message DailyUsage {
+  string date = 1; // YYYY-MM-DD
+  int64 runs = 2;
+  int64 input_tokens = 3;
+  int64 output_tokens = 4;
+}
+
+message ModelUsage {
+  string model = 1;
+  int64 runs = 2;
+  int64 input_tokens = 3;
+  int64 output_tokens = 4;
+}
+
+message AgentUsageInfo {
+  string agent_id = 1;
+  string agent_name = 2;
+  int64 runs = 3;
+  int64 input_tokens = 4;
+  int64 output_tokens = 5;
+}
+
+message ToolUsage {
+  string tool_name = 1;
+  int64 call_count = 2;
+}
+
+message ProviderKeyUsage {
+  string provider_key_id = 1;
+  string key_label = 2;
+  string provider = 3;
+  int64 runs = 4;
+  int64 input_tokens = 5;
+  int64 output_tokens = 6;
+}
+
+message CronTaskUsage {
+  string cron_task_id = 1;
+  string task_name = 2;
+  string agent_name = 3;
+  int64 total_runs = 4;
+  int64 successes = 5;
+  int64 failures = 6;
+  int64 input_tokens = 7;
+  int64 output_tokens = 8;
+}
+
+// --- Requests and Responses ---
+
+message SendMessageRequest {
+  string organization_id = 1;
+  string session_id = 2;
+  string content = 3;
+  // IDs of uploaded files to include (uploaded via FilesService)
+  repeated string file_ids = 4;
+  // IANA timezone of the user's browser (e.g. "America/New_York")
+  string user_timezone = 5;
+}
+
+message SendMessageResponse {
+  agents.v1.MessageInfo user_message = 1;
+  agents.v1.MessageInfo assistant_message = 2;
+  string model_used = 3;
+}
+
+message ConfirmationResponse {
+  string organization_id = 1;
+  string session_id = 2;
+  string tool_call_id = 3;
+  bool approved = 4;
+}
+
+message ConfirmationResponseAck {
+  bool accepted = 1;
+}
+
+// --- Streaming event types ---
+
+message StreamSendMessageEvent {
+  oneof event {
+    StreamTokenEvent token = 1;
+    StreamToolCallEvent tool_call = 2;
+    StreamToolResultEvent tool_result = 3;
+    StreamMessageStoredEvent message_stored = 4;
+    StreamDoneEvent done = 5;
+    StreamErrorEvent error = 6;
+    StreamConfirmationRequiredEvent confirmation_required = 7;
+  }
+}
+
+message StreamTokenEvent {
+  string text = 1;
+}
+
+message StreamToolCallEvent {
+  string tool_call_id = 1;
+  string tool_name = 2;
+  string tool_args_json = 3;
+}
+
+message StreamToolResultEvent {
+  string tool_call_id = 1;
+  string tool_name = 2;
+  bool success = 3;
+  string result = 4;
+}
+
+message StreamMessageStoredEvent {
+  agents.v1.MessageInfo message = 1;
+}
+
+message StreamDoneEvent {
+  agents.v1.MessageInfo assistant_message = 1;
+  string model_used = 2;
+}
+
+message StreamErrorEvent {
+  string message = 1;
+}
+
+message StreamConfirmationRequiredEvent {
+  string tool_call_id = 1;
+  string tool_name = 2;
+  string tool_args_json = 3;
+  string description = 4;
+}

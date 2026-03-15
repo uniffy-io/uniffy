@@ -20,6 +20,9 @@ class ContentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONTENT_TYPE_FOLDER: _ClassVar[ContentType]
     CONTENT_TYPE_PROJECT: _ClassVar[ContentType]
     CONTENT_TYPE_TASK: _ClassVar[ContentType]
+    CONTENT_TYPE_AGENT: _ClassVar[ContentType]
+    CONTENT_TYPE_PROVIDER_KEY: _ClassVar[ContentType]
+    CONTENT_TYPE_PROMPT: _ClassVar[ContentType]
 
 class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -64,6 +67,9 @@ CONTENT_TYPE_USER: ContentType
 CONTENT_TYPE_FOLDER: ContentType
 CONTENT_TYPE_PROJECT: ContentType
 CONTENT_TYPE_TASK: ContentType
+CONTENT_TYPE_AGENT: ContentType
+CONTENT_TYPE_PROVIDER_KEY: ContentType
+CONTENT_TYPE_PROMPT: ContentType
 SUBJECT_TYPE_UNSPECIFIED: SubjectType
 SUBJECT_TYPE_USER: SubjectType
 SUBJECT_TYPE_GROUP: SubjectType

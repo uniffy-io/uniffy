@@ -50,9 +50,7 @@ def anchor_type_to_proto(anchor_type: CommentAnchorType) -> int:
         Proto enum value.
 
     """
-    return ANCHOR_TYPE_TO_PROTO.get(
-        anchor_type, ProtoAnchorType.COMMENT_ANCHOR_TYPE_PAGE
-    )
+    return ANCHOR_TYPE_TO_PROTO.get(anchor_type, ProtoAnchorType.COMMENT_ANCHOR_TYPE_PAGE)
 
 
 def anchor_type_from_proto(proto_type: int) -> CommentAnchorType:

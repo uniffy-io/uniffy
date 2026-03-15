@@ -4,6 +4,7 @@ Common proto converters for shared enums and messages.
 Provides bidirectional mapping between domain enums/models and common.v1 proto types.
 """
 
+from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
@@ -16,7 +17,6 @@ from uniffy.core.models.shared import ContentType as DomainContentType
 from uniffy.core.models.shared import PermissionLevel as DomainPermissionLevel
 from uniffy.core.models.shared import SubjectType as DomainSubjectType
 from uniffy.core.models.shared import VisibilityScope as DomainVisibilityScope
-from uniffy.domains.users.avatars import get_avatar_url
 from uniffy.gen.common.v1.common_pb2 import (
     ContentType as ProtoContentType,
 )
@@ -60,6 +60,9 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.USER: ProtoContentType.CONTENT_TYPE_USER,
     DomainContentType.PROJECT: ProtoContentType.CONTENT_TYPE_PROJECT,
     DomainContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
+    DomainContentType.AGENT: ProtoContentType.CONTENT_TYPE_AGENT,
+    DomainContentType.PROVIDER_KEY: ProtoContentType.CONTENT_TYPE_PROVIDER_KEY,
+    DomainContentType.PROMPT: ProtoContentType.CONTENT_TYPE_PROMPT,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType.ValueType, DomainContentType] = {

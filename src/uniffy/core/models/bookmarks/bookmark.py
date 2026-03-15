@@ -32,15 +32,11 @@ class Bookmark(SQLModel, table=True):
     """
 
     __tablename__ = "bookmarks"
-    __table_args__ = (
-        UniqueConstraint("user_id", "urn", name="uq_bookmarks_user_urn"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "urn", name="uq_bookmarks_user_urn"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     urn: str = Field(max_length=500, nullable=False, index=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

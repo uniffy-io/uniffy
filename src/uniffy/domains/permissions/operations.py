@@ -239,17 +239,17 @@ class PermissionsOperations:
             await self.session.refresh(existing)
 
             # Notify subject of updated permission
-            target_ids = await self._resolve_notification_targets(
-                subject_type, subject_id
+            target_ids = await self._resolve_notification_targets(subject_type, subject_id)
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.PERMISSION_GRANTED,
+                    organization_id=organization_id,
+                    actor_id=granted_by_user_id,
+                    title=f"Permission updated: {permission_level.value}",
+                    source_urn=build_content_urn(content_type, content_id),
+                    target_user_ids=target_ids,
+                )
             )
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.PERMISSION_GRANTED,
-                organization_id=organization_id,
-                actor_id=granted_by_user_id,
-                title=f"Permission updated: {permission_level.value}",
-                source_urn=build_content_urn(content_type, content_id),
-                target_user_ids=target_ids,
-            ))
 
             await self._sync_search_sharing(organization_id, content_type, content_id)
 
@@ -295,17 +295,17 @@ class PermissionsOperations:
         await self.session.refresh(permission)
 
         # Notify subject of granted permission
-        target_ids = await self._resolve_notification_targets(
-            subject_type, subject_id
+        target_ids = await self._resolve_notification_targets(subject_type, subject_id)
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.PERMISSION_GRANTED,
+                organization_id=organization_id,
+                actor_id=granted_by_user_id,
+                title=f"Permission granted: {permission_level.value}",
+                source_urn=build_content_urn(content_type, content_id),
+                target_user_ids=target_ids,
+            )
         )
-        await emit_notification(NotificationEvent(
-            notification_type=NotificationType.PERMISSION_GRANTED,
-            organization_id=organization_id,
-            actor_id=granted_by_user_id,
-            title=f"Permission granted: {permission_level.value}",
-            source_urn=build_content_urn(content_type, content_id),
-            target_user_ids=target_ids,
-        ))
 
         await self._sync_search_sharing(organization_id, content_type, content_id)
 
@@ -388,18 +388,18 @@ class PermissionsOperations:
         await self.session.commit()
 
         # Notify subject of revoked permission
-        await emit_notification(NotificationEvent(
-            notification_type=NotificationType.PERMISSION_REVOKED,
-            organization_id=organization_id,
-            actor_id=revoking_user_id,
-            title="Permission revoked",
-            source_urn=build_content_urn(revoked_content_type, revoked_content_id),
-            target_user_ids=target_ids,
-        ))
-
-        await self._sync_search_sharing(
-            organization_id, revoked_content_type, revoked_content_id
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.PERMISSION_REVOKED,
+                organization_id=organization_id,
+                actor_id=revoking_user_id,
+                title="Permission revoked",
+                source_urn=build_content_urn(revoked_content_type, revoked_content_id),
+                target_user_ids=target_ids,
+            )
         )
+
+        await self._sync_search_sharing(organization_id, revoked_content_type, revoked_content_id)
         return True
 
     async def update_permission(
@@ -540,9 +540,7 @@ class PermissionsOperations:
         permissions = list(result.scalars().all())
 
         # Get owner
-        owner_result = await self.session.execute(
-            select(User).where(User.id == content_owner_id)
-        )
+        owner_result = await self.session.execute(select(User).where(User.id == content_owner_id))
         owner = owner_result.scalar_one_or_none()
 
         return (permissions, owner)
@@ -630,7 +628,7 @@ class PermissionsOperations:
                 granted_by_user_id=user_id,
             )
 
-        # 2. Check for explicit permission grant - this takes precedence for non-owners
+        # 2. Check for explicit user permission grant
         now = datetime.now(UTC)
         result = await self.session.execute(
             select(ContentPermission)
@@ -650,7 +648,33 @@ class PermissionsOperations:
         if explicit_permission:
             return explicit_permission
 
-        # 3. Check if user is org admin - they get full access ONLY for ORGANIZATION-scoped content
+        # 3. Check for group permission grant (shared with a group the user belongs to)
+        user_groups = (
+            select(GroupMember.group_id)
+            .where(GroupMember.user_id == user_id)
+            .where(GroupMember.is_active == True)  # noqa: E712
+        )
+        group_result = await self.session.execute(
+            select(ContentPermission)
+            .where(ContentPermission.organization_id == organization_id)
+            .where(ContentPermission.content_type == content_type)
+            .where(ContentPermission.content_id == content_id)
+            .where(ContentPermission.subject_type == SubjectType.GROUP)
+            .where(ContentPermission.subject_id.in_(user_groups))
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
+            .order_by(ContentPermission.permission_level.desc())
+            .limit(1)
+        )
+        group_permission = group_result.scalar_one_or_none()
+        if group_permission:
+            return group_permission
+
+        # 4. Check if user is org admin - they get full access ONLY for ORGANIZATION-scoped content
         # For PRIVATE or GROUP content, admins need explicit permission (checked above)
         if content_visibility == VisibilityScope.ORGANIZATION:
             org_member_result = await self.session.execute(
@@ -705,18 +729,51 @@ class PermissionsOperations:
         if content_type == ContentType.NOTE:
             from uniffy.core.models.notes.note import Note
 
-            result = await self.session.execute(
-                select(Note.owner_id).where(Note.id == content_id)
-            )
+            result = await self.session.execute(select(Note.owner_id).where(Note.id == content_id))
             return result.scalar_one_or_none()
         elif content_type == ContentType.FILE:
             from uniffy.core.models.files.file import File
 
+            result = await self.session.execute(select(File.owner_id).where(File.id == content_id))
+            return result.scalar_one_or_none()
+        elif content_type == ContentType.AGENT:
+            from uniffy.core.models.agents.agent import Agent
+
+            result = await self.session.execute(select(Agent.owner_id).where(Agent.id == content_id))
+            return result.scalar_one_or_none()
+        elif content_type == ContentType.CALENDAR_EVENT:
+            from uniffy.core.models.calendar.event import CalendarEvent
+
             result = await self.session.execute(
-                select(File.owner_id).where(File.id == content_id)
+                select(CalendarEvent.owner_id).where(CalendarEvent.id == content_id)
             )
             return result.scalar_one_or_none()
-        # Add other content types as needed
+        elif content_type == ContentType.PROJECT:
+            from uniffy.core.models.projects.project import Project
+
+            result = await self.session.execute(
+                select(Project.owner_id).where(Project.id == content_id)
+            )
+            return result.scalar_one_or_none()
+        elif content_type == ContentType.TASK:
+            from uniffy.core.models.projects.task import Task
+
+            result = await self.session.execute(select(Task.owner_id).where(Task.id == content_id))
+            return result.scalar_one_or_none()
+        elif content_type == ContentType.PROVIDER_KEY:
+            from uniffy.core.models.agents.provider_key import ProviderKey
+
+            result = await self.session.execute(
+                select(ProviderKey.created_by).where(ProviderKey.id == content_id)
+            )
+            return result.scalar_one_or_none()
+        elif content_type == ContentType.PROMPT:
+            from uniffy.core.models.agents.prompt import AgentPrompt
+
+            result = await self.session.execute(
+                select(AgentPrompt.created_by).where(AgentPrompt.id == content_id)
+            )
+            return result.scalar_one_or_none()
         return None
 
     async def _get_content_owner_and_visibility(
@@ -763,7 +820,78 @@ class PermissionsOperations:
                 return row[0], row[1]
             return None, VisibilityScope.PRIVATE
 
-        # Default to PRIVATE for unknown content types
+        elif content_type == ContentType.AGENT:
+            from uniffy.core.models.agents.agent import Agent
+
+            result = await self.session.execute(
+                select(Agent.owner_id, Agent.visibility).where(Agent.id == content_id)
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
+        elif content_type == ContentType.CALENDAR_EVENT:
+            from uniffy.core.models.calendar.event import CalendarEvent
+
+            result = await self.session.execute(
+                select(CalendarEvent.owner_id, CalendarEvent.visibility).where(
+                    CalendarEvent.id == content_id
+                )
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
+        elif content_type == ContentType.PROJECT:
+            from uniffy.core.models.projects.project import Project
+
+            result = await self.session.execute(
+                select(Project.owner_id, Project.visibility).where(Project.id == content_id)
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
+        elif content_type == ContentType.TASK:
+            from uniffy.core.models.projects.task import Task
+
+            result = await self.session.execute(
+                select(Task.owner_id, Task.visibility).where(Task.id == content_id)
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
+        elif content_type == ContentType.PROVIDER_KEY:
+            from uniffy.core.models.agents.provider_key import ProviderKey
+
+            result = await self.session.execute(
+                select(ProviderKey.created_by, ProviderKey.visibility).where(
+                    ProviderKey.id == content_id
+                )
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
+        elif content_type == ContentType.PROMPT:
+            from uniffy.core.models.agents.prompt import AgentPrompt
+
+            result = await self.session.execute(
+                select(AgentPrompt.created_by, AgentPrompt.visibility).where(
+                    AgentPrompt.id == content_id
+                )
+            )
+            row = result.one_or_none()
+            if row:
+                return row[0], row[1]
+            return None, VisibilityScope.PRIVATE
+
         return None, VisibilityScope.PRIVATE
 
     async def search_share_targets(
@@ -868,9 +996,7 @@ class PermissionsOperations:
 
         """
         if permission.subject_type == SubjectType.USER:
-            result = await self.session.execute(
-                select(User).where(User.id == permission.subject_id)
-            )
+            result = await self.session.execute(select(User).where(User.id == permission.subject_id))
             return (result.scalar_one_or_none(), 0)
         else:
             result = await self.session.execute(
@@ -891,9 +1017,7 @@ class PermissionsOperations:
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
         """Get a user by ID."""
-        result = await self.session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.session.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
     async def _get_existing_permission(

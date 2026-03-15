@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// AgentsService manages agent configurations for an organization.
+service AgentsService {
+  // Create a new agent configuration
+  rpc CreateAgent(CreateAgentRequest) returns (AgentResponse) {}
+
+  // Get an agent by ID
+  rpc GetAgent(GetAgentRequest) returns (AgentResponse) {}
+
+  // List agents for an organization
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse) {}
+
+  // Update an agent configuration
+  rpc UpdateAgent(UpdateAgentRequest) returns (AgentResponse) {}
+
+  // Delete an agent
+  rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse) {}
+
+  // Upload agent avatar image (synchronous processing)
+  rpc UploadAgentAvatar(UploadAgentAvatarRequest) returns (AgentResponse) {}
+
+  // Delete agent avatar
+  rpc DeleteAgentAvatar(DeleteAgentAvatarRequest) returns (AgentResponse) {}
+
+  // Preview the fully assembled system prompt for an agent
+  rpc PreviewSystemPrompt(PreviewSystemPromptRequest) returns (PreviewSystemPromptResponse) {}
+}
+
+// Agent configuration info returned to clients
+message AgentInfo {
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string soul_prompt = 5;
+  string primary_model = 6;
+  repeated string fallback_models = 7;
+  reserved 8; // was temperature
+  reserved 9; // was max_tokens
+  repeated string enabled_tools = 10;
+  string avatar_emoji = 11;
+  string theme_color = 12;
+  bool is_default = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  repeated string enabled_skills = 16;
+  common.v1.VisibilityScope visibility = 17;
+  reserved 18;
+  // S3 key prefix for avatar images (empty string if none)
+  string avatar_key = 19;
+  reserved 20; // was thinking_budget_tokens
+  // Image generation model (empty string = disabled)
+  string image_model = 21;
+  // Provider key ID for the primary model (empty = not assigned)
+  string primary_provider_key_id = 22;
+  // Provider key ID for the image model (empty = not assigned)
+  string image_provider_key_id = 23;
+  // Prompt template ID (empty = no template, uses soul_prompt directly)
+  string prompt_id = 24;
+}
+
+// --- Requests and Responses ---
+
+message CreateAgentRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string soul_prompt = 3;
+  optional string primary_model = 4;
+  repeated string fallback_models = 5;
+  reserved 6; // was temperature
+  reserved 7; // was max_tokens
+  optional string avatar_emoji = 8;
+  optional string theme_color = 9;
+  optional bool is_default = 10;
+  repeated string enabled_skills = 11;
+  optional common.v1.VisibilityScope visibility = 12;
+  repeated string group_ids = 13;
+  reserved 14;
+  reserved 15;
+  reserved 16; // was thinking_budget_tokens
+  // Image generation model (empty string = disabled)
+  optional string image_model = 17;
+  // Provider key ID for the primary model
+  optional string primary_provider_key_id = 18;
+  // Provider key ID for the image model
+  optional string image_provider_key_id = 19;
+  // Prompt template ID
+  optional string prompt_id = 20;
+}
+
+message AgentResponse {
+  AgentInfo agent = 1;
+}
+
+message GetAgentRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message ListAgentsRequest {
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+  optional common.v1.VisibilityScope visibility = 3;
+  optional bool personal_only = 4;
+  optional string group_id = 5;
+}
+
+message ListAgentsResponse {
+  repeated AgentInfo agents = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateAgentRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  optional string name = 3;
+  optional string soul_prompt = 4;
+  optional string primary_model = 5;
+  repeated string fallback_models = 6;
+  reserved 7; // was temperature
+  reserved 8; // was max_tokens
+  optional string avatar_emoji = 9;
+  optional string theme_color = 10;
+  optional bool is_default = 11;
+  repeated string enabled_skills = 12;
+  optional common.v1.VisibilityScope visibility = 13;
+  repeated string group_ids = 14;
+  repeated string enabled_tools = 15;
+  reserved 16;
+  reserved 17; // was thinking_budget_tokens
+  // Image generation model (empty string = disabled)
+  optional string image_model = 18;
+  // Provider key ID for the primary model
+  optional string primary_provider_key_id = 19;
+  // Provider key ID for the image model
+  optional string image_provider_key_id = 20;
+  // Prompt template ID
+  optional string prompt_id = 21;
+  // Clear the prompt template (set to null)
+  optional bool clear_prompt = 22;
+}
+
+message DeleteAgentRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message DeleteAgentResponse {
+  bool success = 1;
+}
+
+message UploadAgentAvatarRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  bytes image_data = 3;
+  string filename = 4;
+}
+
+message DeleteAgentAvatarRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message PreviewSystemPromptRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message PreviewSystemPromptResponse {
+  string system_prompt = 1;
+}

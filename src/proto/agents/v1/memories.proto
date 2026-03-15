@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// MemoriesService manages agent memory entries for users.
+service MemoriesService {
+  // List memories for a specific agent (scoped to current user)
+  rpc ListMemories(ListMemoriesRequest) returns (ListMemoriesResponse) {}
+
+  // Create a new memory entry
+  rpc CreateMemory(CreateMemoryRequest) returns (MemoryResponse) {}
+
+  // Update a memory entry (content, category, importance)
+  rpc UpdateMemory(UpdateMemoryRequest) returns (MemoryResponse) {}
+
+  // Delete a memory entry
+  rpc DeleteMemory(DeleteMemoryRequest) returns (DeleteMemoryResponse) {}
+}
+
+// Memory category
+enum MemoryCategory {
+  MEMORY_CATEGORY_UNSPECIFIED = 0;
+  MEMORY_CATEGORY_PREFERENCES = 1;
+  MEMORY_CATEGORY_FACTS = 2;
+  MEMORY_CATEGORY_CONTEXT = 3;
+  MEMORY_CATEGORY_INSTRUCTIONS = 4;
+}
+
+// Memory info returned to clients
+message MemoryInfo {
+  string id = 1;
+  string agent_id = 2;
+  string key = 3;
+  string content = 4;
+  MemoryCategory category = 5;
+  float importance = 6;
+  int32 access_count = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// --- Requests and Responses ---
+
+message ListMemoriesRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  optional MemoryCategory category = 3;
+  optional string search = 4;
+  optional common.v1.PaginationRequest pagination = 5;
+}
+
+message ListMemoriesResponse {
+  repeated MemoryInfo memories = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateMemoryRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  string key = 3;
+  string content = 4;
+  MemoryCategory category = 5;
+  optional float importance = 6;
+}
+
+message UpdateMemoryRequest {
+  string organization_id = 1;
+  string memory_id = 2;
+  optional string content = 3;
+  optional MemoryCategory category = 4;
+  optional float importance = 5;
+}
+
+message MemoryResponse {
+  MemoryInfo memory = 1;
+}
+
+message DeleteMemoryRequest {
+  string organization_id = 1;
+  string memory_id = 2;
+}
+
+message DeleteMemoryResponse {
+  bool success = 1;
+}

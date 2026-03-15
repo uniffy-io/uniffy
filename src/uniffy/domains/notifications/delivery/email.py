@@ -57,7 +57,5 @@ class EmailAdapter(DeliveryAdapter):
         # 3. If frequency == "hourly" or "daily":
         #      - Skip (the send_email_digest cron aggregates these)
         #      - Return True to indicate "handled"
-        logger.debug(
-            f"Email delivery deferred: user={user_id} title={event.title}"
-        )
+        logger.debug(f"Email delivery deferred: user={user_id} title={event.title}")
         return False

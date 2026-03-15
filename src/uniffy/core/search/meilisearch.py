@@ -529,15 +529,11 @@ class MeilisearchClient:
 
         # GROUP visibility - user must be in a shared group
         if user_group_ids:
-            group_conditions = " OR ".join(
-                f'shared_group_ids = "{gid}"' for gid in user_group_ids
-            )
-            permission_conditions.append(
-                f'(visibility = "GROUP" AND ({group_conditions}))'
-            )
+            group_conditions = " OR ".join(f'shared_group_ids = "{gid}"' for gid in user_group_ids)
+            permission_conditions.append(f'(visibility = "GROUP" AND ({group_conditions}))')
 
         permission_filter = " OR ".join(permission_conditions)
-        return f'{org_filter} AND ({permission_filter})'
+        return f"{org_filter} AND ({permission_filter})"
 
     async def update_document_sharing(
         self,

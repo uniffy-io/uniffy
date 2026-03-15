@@ -44,7 +44,8 @@ def escape_loguru_markup(s: str) -> str:
 
     # Slow path: escape special characters
     return (
-        s.replace("{", "{{")
+        s
+        .replace("{", "{{")
         .replace("}", "}}")
         .replace("<", "\\<")
         .replace(">", "\\>")

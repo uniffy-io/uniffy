@@ -18,6 +18,14 @@ down_revision: str | None = "001"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_organization_role_enum = postgresql.ENUM(
+    "owner", "admin", "member", name="organizationrole", create_type=False
+)
+_group_role_enum = postgresql.ENUM("admin", "member", name="grouprole", create_type=False)
+_sso_provider_enum = postgresql.ENUM(
+    "saml", "oidc", "google", "microsoft", "okta", name="ssoprovider", create_type=False
+)
+
 
 def upgrade() -> None:
     """Create identity and access management tables."""
@@ -73,7 +81,7 @@ def upgrade() -> None:
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column(
             "role",
-            postgresql.ENUM("owner", "admin", "member", name="organizationrole", create_type=False),
+            _organization_role_enum,
             nullable=False,
         ),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
@@ -126,7 +134,7 @@ def upgrade() -> None:
         sa.Column("group_id", sa.Uuid(), nullable=False),
         sa.Column(
             "role",
-            postgresql.ENUM("admin", "member", name="grouprole", create_type=False),
+            _group_role_enum,
             nullable=False,
         ),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
@@ -150,9 +158,7 @@ def upgrade() -> None:
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column(
             "provider",
-            postgresql.ENUM(
-                "saml", "oidc", "google", "microsoft", "okta", name="ssoprovider", create_type=False
-            ),
+            _sso_provider_enum,
             nullable=False,
         ),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default="false"),

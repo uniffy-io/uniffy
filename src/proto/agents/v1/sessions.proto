@@ -1,0 +1,229 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// SessionsService manages conversation sessions between users and agents.
+service SessionsService {
+  // Create a new session (find-or-create for DIRECT kind)
+  rpc CreateSession(CreateSessionRequest) returns (SessionResponse) {}
+
+  // Get a session by ID
+  rpc GetSession(GetSessionRequest) returns (SessionResponse) {}
+
+  // List sessions for the user in an organization
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {}
+
+  // Update session settings (display name, model override)
+  rpc UpdateSession(UpdateSessionRequest) returns (SessionResponse) {}
+
+  // Archive a session (soft delete)
+  rpc ArchiveSession(ArchiveSessionRequest) returns (ArchiveSessionResponse) {}
+
+  // Add a message to a session
+  rpc AddMessage(AddMessageRequest) returns (MessageResponse) {}
+
+  // List messages in a session
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {}
+
+  // Get recent messages for LLM context assembly
+  rpc GetSessionContext(GetSessionContextRequest) returns (GetSessionContextResponse) {}
+
+  // Get session context statistics (message counts, compaction info)
+  rpc GetSessionContextStats(GetSessionContextStatsRequest) returns (GetSessionContextStatsResponse) {}
+
+  // Manually trigger session compaction
+  rpc CompactSession(CompactSessionRequest) returns (CompactSessionResponse) {}
+}
+
+// Kind of session
+enum SessionKind {
+  SESSION_KIND_UNSPECIFIED = 0;
+  SESSION_KIND_DIRECT = 1;    // 1:1 user<->agent
+  SESSION_KIND_GROUP = 2;     // multi-user with agent
+  SESSION_KIND_GLOBAL = 3;    // agent background/automation session
+}
+
+// Role of a message in the conversation
+enum MessageRole {
+  MESSAGE_ROLE_UNSPECIFIED = 0;
+  MESSAGE_ROLE_USER = 1;
+  MESSAGE_ROLE_ASSISTANT = 2;
+  MESSAGE_ROLE_TOOL = 3;
+  MESSAGE_ROLE_SYSTEM = 4;
+  MESSAGE_ROLE_SUMMARY = 5;   // compaction output
+}
+
+// Session info returned to clients
+message SessionInfo {
+  string id = 1;
+  string organization_id = 2;
+  string agent_id = 3;
+  string user_id = 4;
+  SessionKind kind = 5;
+  optional string display_name = 6;
+  reserved 7; // was thinking_level
+  optional string model_override = 8;
+  int64 total_input_tokens = 9;
+  int64 total_output_tokens = 10;
+  int32 message_count = 11;
+  optional string last_model_used = 12;
+  bool is_archived = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+// Message info returned to clients
+message MessageInfo {
+  string id = 1;
+  string session_id = 2;
+  MessageRole role = 3;
+  optional string content = 4;
+  int32 input_tokens = 5;
+  int32 output_tokens = 6;
+  optional string model = 7;
+  optional string tool_name = 8;
+  optional string tool_call_id = 9;
+  optional string tool_args_json = 10;
+  optional string tool_result = 11;
+  bool is_thinking = 12;
+  bool is_compacted = 13;
+  google.protobuf.Timestamp created_at = 14;
+  // File IDs attached to this message (for displaying file references in history)
+  repeated string file_ids = 15;
+}
+
+// --- Requests and Responses ---
+
+message CreateSessionRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  SessionKind kind = 3;
+  optional string display_name = 4;
+  reserved 5; // was thinking_level
+  optional string model_override = 6;
+}
+
+message SessionResponse {
+  SessionInfo session = 1;
+}
+
+message GetSessionRequest {
+  string organization_id = 1;
+  string session_id = 2;
+}
+
+message ListSessionsRequest {
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+  optional string agent_id = 3;
+  optional SessionKind kind = 4;
+  optional bool is_archived = 5;
+}
+
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateSessionRequest {
+  string organization_id = 1;
+  string session_id = 2;
+  optional string display_name = 3;
+  reserved 4; // was thinking_level
+  optional string model_override = 5;
+}
+
+message ArchiveSessionRequest {
+  string organization_id = 1;
+  string session_id = 2;
+}
+
+message ArchiveSessionResponse {
+  bool success = 1;
+}
+
+message AddMessageRequest {
+  string organization_id = 1;
+  string session_id = 2;
+  MessageRole role = 3;
+  optional string content = 4;
+  int32 input_tokens = 5;
+  int32 output_tokens = 6;
+  optional string model = 7;
+  optional string tool_name = 8;
+  optional string tool_call_id = 9;
+  optional string tool_args_json = 10;
+  optional string tool_result = 11;
+  bool is_thinking = 12;
+}
+
+message MessageResponse {
+  MessageInfo message = 1;
+}
+
+message ListMessagesRequest {
+  string organization_id = 1;
+  string session_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+  optional bool include_compacted = 4;
+}
+
+message ListMessagesResponse {
+  repeated MessageInfo messages = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message GetSessionContextRequest {
+  string organization_id = 1;
+  string session_id = 2;
+  optional int32 max_messages = 3;
+}
+
+message GetSessionContextResponse {
+  repeated MessageInfo messages = 1;
+  int32 total_messages = 2;
+}
+
+message GetSessionContextStatsRequest {
+  string organization_id = 1;
+  string session_id = 2;
+}
+
+message GetSessionContextStatsResponse {
+  // Total messages ever created in this session (including compacted)
+  int32 total_messages = 1;
+  // Messages currently active (not compacted)
+  int32 active_messages = 2;
+  // Messages that have been compacted
+  int32 compacted_messages = 3;
+  // Number of summary messages currently in the context window
+  int32 summary_count = 4;
+  // Estimated tokens used by active messages
+  int32 active_tokens = 5;
+  // Token budget for conversation history (65% of context window)
+  int32 token_budget = 6;
+  // Estimated tokens remaining before compaction triggers
+  int32 tokens_until_compaction = 7;
+  // Model context window size in tokens
+  int32 context_window_tokens = 8;
+}
+
+message CompactSessionRequest {
+  string organization_id = 1;
+  string session_id = 2;
+}
+
+message CompactSessionResponse {
+  bool compacted = 1;
+  // Updated stats after compaction
+  GetSessionContextStatsResponse stats = 2;
+  // Compaction-specific results
+  int32 messages_compacted = 3;
+  int32 tokens_before = 4;
+  int32 tokens_after = 5;
+  int32 tokens_saved = 6;
+  int32 summary_tokens = 7;
+}

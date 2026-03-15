@@ -44,9 +44,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("user_id", "name", name="uq_settings_profiles_user_name"),
     )
 
-    op.create_index(
-        "ix_settings_profiles_user_id", "settings_profiles", ["user_id"], unique=False
-    )
+    op.create_index("ix_settings_profiles_user_id", "settings_profiles", ["user_id"], unique=False)
     op.create_index(
         "ix_settings_profiles_is_default", "settings_profiles", ["is_default"], unique=False
     )
@@ -102,17 +100,13 @@ def upgrade() -> None:
         sa.Column("urn", sa.String(length=500), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "urn", name="uq_bookmarks_user_urn"),
     )
 
     op.create_index("ix_bookmarks_user_id", "bookmarks", ["user_id"], unique=False)
-    op.create_index(
-        "ix_bookmarks_organization_id", "bookmarks", ["organization_id"], unique=False
-    )
+    op.create_index("ix_bookmarks_organization_id", "bookmarks", ["organization_id"], unique=False)
     op.create_index("ix_bookmarks_urn", "bookmarks", ["urn"], unique=False)
 
 

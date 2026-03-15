@@ -93,10 +93,10 @@ class FileOperations(BaseContentOperations[File]):
     # ─────────────────────────────────────────────────────────────
 
     def _build_search_keywords(self, model: File) -> str:
-        """
-        Build search keywords from file metadata.
+        """Build search keywords from file metadata.
 
-        Includes filename, original filename, tags, description, and mime type.
+        Includes filename, original filename, tags, description, mime type,
+        and extracted text content.
         """
         parts = [model.filename, model.original_filename]
         if model.tags:
@@ -105,6 +105,8 @@ class FileOperations(BaseContentOperations[File]):
             parts.append(model.description)
         if model.mime_type:
             parts.append(model.mime_type)
+        if model.media_info and model.media_info.extracted_text:
+            parts.append(model.media_info.extracted_text)
         return " ".join(filter(None, parts))
 
     def _get_search_title(self, model: File) -> str:

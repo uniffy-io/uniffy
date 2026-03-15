@@ -82,9 +82,7 @@ class AttachmentsHandlers:
 
                 await session.commit()
 
-                return AttachFileResponse(
-                    attachment=attachment_to_proto(attachment, file, owner)
-                )
+                return AttachFileResponse(attachment=attachment_to_proto(attachment, file, owner))
 
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
@@ -162,9 +160,7 @@ class AttachmentsHandlers:
                 )
 
                 return ListAttachmentsResponse(
-                    attachments=[
-                        attachment_to_proto(a, f, o) for a, f, o in attachments
-                    ],
+                    attachments=[attachment_to_proto(a, f, o) for a, f, o in attachments],
                     total_count=len(attachments),
                 )
 

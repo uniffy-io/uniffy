@@ -296,10 +296,7 @@ class SearchHandlers:
             return ResolveUrnsResponse(resolved={})
 
         if len(request.urns) > 100:
-            raise ConnectError(
-                Code.INVALID_ARGUMENT,
-                "Maximum 100 URNs allowed per request"
-            )
+            raise ConnectError(Code.INVALID_ARGUMENT, "Maximum 100 URNs allowed per request")
 
         user_id = get_user_id_from_context(ctx)
 
@@ -314,8 +311,7 @@ class SearchHandlers:
 
                 # Convert to proto map
                 resolved = {
-                    urn: search_result_to_urn_metadata(item)
-                    for urn, item in results.items()
+                    urn: search_result_to_urn_metadata(item) for urn, item in results.items()
                 }
 
                 return ResolveUrnsResponse(resolved=resolved)

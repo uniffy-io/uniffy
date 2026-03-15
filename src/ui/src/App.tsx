@@ -27,6 +27,7 @@ import { useAppSelector } from '@/app/hooks';
 import { CalendarPage } from '@/features/calendar';
 import { FilesPage, FiltersPage, FilesTagsPage, FileViewerModal } from '@/features/files';
 import { ProjectsPage } from '@/features/projects/pages/ProjectsPage';
+import { AgentsPage } from '@/features/agents/pages/AgentsPage';
 import { Toaster, toast } from 'sonner';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react';
@@ -315,6 +316,34 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <ProjectsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    {/* Agents routes */}
+                    <Route
+                        path="/agents"
+                        element={
+                            <ProtectedRoute>
+                                <AgentsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/agents/:tab"
+                        element={
+                            <ProtectedRoute>
+                                <AgentsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/agents/:tab/:subId"
+                        element={
+                            <ProtectedRoute>
+                                <AgentsPage />
                             </ProtectedRoute>
                         }
                     />

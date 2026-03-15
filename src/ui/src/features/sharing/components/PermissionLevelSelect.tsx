@@ -2,12 +2,14 @@
  * Permission Level Select Component
  *
  * Dropdown for selecting permission level (View, Edit, Admin).
+ * Supports filtering available levels via allowedLevels prop.
  */
 
+import { useMemo } from 'react';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { PermissionLevel } from '@/gen/common/v1/common_pb';
 
-const PERMISSION_OPTIONS: SelectOption<number>[] = [
+const ALL_PERMISSION_OPTIONS: SelectOption<number>[] = [
     { value: PermissionLevel.VIEW, label: 'Can view' },
     { value: PermissionLevel.EDIT, label: 'Can edit' },
     { value: PermissionLevel.ADMIN, label: 'Admin' },
@@ -18,6 +20,7 @@ interface PermissionLevelSelectProps {
     onChange: (level: number) => void;
     disabled?: boolean;
     compact?: boolean;
+    allowedLevels?: number[];
 }
 
 export function PermissionLevelSelect({
@@ -25,12 +28,21 @@ export function PermissionLevelSelect({
     onChange,
     disabled = false,
     compact = false,
+    allowedLevels,
 }: PermissionLevelSelectProps) {
+    const options = useMemo(
+        () =>
+            allowedLevels
+                ? ALL_PERMISSION_OPTIONS.filter((o) => allowedLevels.includes(o.value))
+                : ALL_PERMISSION_OPTIONS,
+        [allowedLevels],
+    );
+
     return (
         <Select
             value={value}
             onChange={onChange}
-            options={PERMISSION_OPTIONS}
+            options={options}
             disabled={disabled}
             size={compact ? 'sm' : 'md'}
         />

@@ -108,6 +108,10 @@ class ContentType(str, Enum):
     USER = "USER"
     PROJECT = "PROJECT"
     TASK = "TASK"
+    AGENT = "AGENT"
+    PROVIDER_KEY = "PROVIDER_KEY"
+    PROMPT = "PROMPT"
+    AGENT_CRON_TASK = "AGENT_CRON_TASK"
 
 
 class SubjectType(str, Enum):

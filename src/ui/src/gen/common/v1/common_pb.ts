@@ -57,6 +57,21 @@ export enum ContentType {
    * @generated from enum value: CONTENT_TYPE_TASK = 12;
    */
   TASK = 12,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_AGENT = 13;
+   */
+  AGENT = 13,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_PROVIDER_KEY = 14;
+   */
+  PROVIDER_KEY = 14,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_PROMPT = 15;
+   */
+  PROMPT = 15,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ContentType)
 proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
@@ -69,6 +84,9 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
   { no: 10, name: "CONTENT_TYPE_FOLDER" },
   { no: 11, name: "CONTENT_TYPE_PROJECT" },
   { no: 12, name: "CONTENT_TYPE_TASK" },
+  { no: 13, name: "CONTENT_TYPE_AGENT" },
+  { no: 14, name: "CONTENT_TYPE_PROVIDER_KEY" },
+  { no: 15, name: "CONTENT_TYPE_PROMPT" },
 ]);
 
 /**

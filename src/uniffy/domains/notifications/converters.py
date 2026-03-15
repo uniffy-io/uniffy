@@ -46,9 +46,7 @@ def notification_type_to_proto(nt: NotificationType) -> int:
         Proto enum value.
 
     """
-    return NOTIFICATION_TYPE_TO_PROTO.get(
-        nt, ProtoNotificationType.NOTIFICATION_TYPE_UNSPECIFIED
-    )
+    return NOTIFICATION_TYPE_TO_PROTO.get(nt, ProtoNotificationType.NOTIFICATION_TYPE_UNSPECIFIED)
 
 
 def notification_type_from_proto(proto_val: int) -> NotificationType | None:

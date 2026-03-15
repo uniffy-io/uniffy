@@ -21,6 +21,16 @@ down_revision: str | None = "010"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_content_type_enum = postgresql.ENUM(
+    "NOTE",
+    "FILE",
+    "CALENDAR_EVENT",
+    "CHAT_MESSAGE",
+    "USER",
+    name="contenttype",
+    create_type=False,
+)
+
 
 def upgrade() -> None:
     """Add attachments system tables and columns."""
@@ -36,19 +46,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("file_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "content_type",
-            postgresql.ENUM(
-                "NOTE",
-                "FILE",
-                "CALENDAR_EVENT",
-                "CHAT_MESSAGE",
-                "USER",
-                name="contenttype",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("content_type", _content_type_enum, nullable=False),
         sa.Column("content_id", sa.Uuid(), nullable=False),
         sa.Column("attached_by_user_id", sa.Uuid(), nullable=False),
         sa.Column("attached_at", sa.DateTime(timezone=True), nullable=False),

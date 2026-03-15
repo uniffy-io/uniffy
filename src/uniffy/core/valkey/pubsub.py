@@ -190,7 +190,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
                 try:
                     data = json.loads(message["data"])
                     yield data
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     logger.warning(f"Invalid message on channel {channel}")
             else:
                 # Timeout tick -- caller can use for heartbeats / cancellation
@@ -203,7 +203,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
                 _close_subscriber(pubsub, subscriber, channel),
                 timeout=_CLEANUP_TIMEOUT,
             )
-        except (TimeoutError, BaseException):
+        except TimeoutError, BaseException:
             logger.warning(f"cleanup timed out for {channel}", component=LOGGER_COMPONENT)
         logger.info(f"unsubscribed from {channel} ", component=LOGGER_COMPONENT)
 

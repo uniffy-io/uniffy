@@ -66,9 +66,7 @@ class Notification(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     notification_type: NotificationType = Field(
         sa_column=Column(
@@ -82,9 +80,7 @@ class Notification(SQLModel, table=True):
         sa_column=Column(Text, nullable=False, server_default=""),
     )
     source_urn: str | None = Field(default=None, max_length=500, index=True)
-    actor_id: UUID | None = Field(
-        default=None, foreign_key="login_users.id", nullable=True
-    )
+    actor_id: UUID | None = Field(default=None, foreign_key="login_users.id", nullable=True)
     is_read: bool = Field(default=False, nullable=False)
     read_at: datetime | None = Field(
         default=None,
@@ -106,6 +102,5 @@ class Notification(SQLModel, table=True):
     def __repr__(self) -> str:
         """Return string representation of Notification."""
         return (
-            f"<Notification(id={self.id}, user_id={self.user_id}, "
-            f"type={self.notification_type!r})>"
+            f"<Notification(id={self.id}, user_id={self.user_id}, type={self.notification_type!r})>"
         )

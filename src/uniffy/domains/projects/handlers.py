@@ -167,9 +167,7 @@ class ProjectsHandlers:
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
 
-                return ProjectResponse(
-                    project=project_to_proto(project, fields, views, perm_level)
-                )
+                return ProjectResponse(project=project_to_proto(project, fields, views, perm_level))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Project not found")

@@ -224,10 +224,7 @@ class AuthHandlers:
                 sessions = await auth_ops.list_sessions(user_id)
 
                 return ListSessionsResponse(
-                    sessions=[
-                        session_to_proto(s, current_session_id)
-                        for s in sessions
-                    ]
+                    sessions=[session_to_proto(s, current_session_id) for s in sessions]
                 )
         except Exception as e:
             logger.error(f"Error listing sessions: {e}", exc_info=True)
@@ -275,9 +272,7 @@ class AuthHandlers:
         try:
             async for session in get_async_session():
                 auth_ops = AuthOperations(session)
-                revoked_count = await auth_ops.revoke_other_sessions(
-                    user_id, current_session_id
-                )
+                revoked_count = await auth_ops.revoke_other_sessions(user_id, current_session_id)
                 return RevokeOtherSessionsResponse(revoked_count=revoked_count)
         except Exception as e:
             logger.error(f"Error revoking other sessions: {e}", exc_info=True)

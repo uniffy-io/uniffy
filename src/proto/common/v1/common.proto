@@ -20,9 +20,9 @@ enum ContentType {
   CONTENT_TYPE_FOLDER = 10;
   CONTENT_TYPE_PROJECT = 11;
   CONTENT_TYPE_TASK = 12;
-  // Reserved for removed types (BOOK=4, PASSWORD=5, WORKFLOW=6, SPACE=8)
-  reserved 4, 5, 6, 8;
-  reserved "CONTENT_TYPE_BOOK", "CONTENT_TYPE_PASSWORD", "CONTENT_TYPE_WORKFLOW", "CONTENT_TYPE_SPACE";
+  CONTENT_TYPE_AGENT = 13;
+  CONTENT_TYPE_PROVIDER_KEY = 14;
+  CONTENT_TYPE_PROMPT = 15;
 }
 
 // SubjectType defines who can be granted permissions.

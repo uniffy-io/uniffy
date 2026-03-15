@@ -292,9 +292,7 @@ class AttachmentOperations:
             )
 
         # Get and delete the file
-        file_result = await self._session.execute(
-            select(File).where(File.id == attachment.file_id)
-        )
+        file_result = await self._session.execute(select(File).where(File.id == attachment.file_id))
         file = file_result.scalar_one_or_none()
 
         if file:

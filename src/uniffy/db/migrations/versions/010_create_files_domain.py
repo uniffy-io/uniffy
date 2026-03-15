@@ -25,32 +25,54 @@ down_revision: str | None = "009"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_visibility_enum = postgresql.ENUM(
+    "PRIVATE",
+    "GROUP",
+    "ORGANIZATION",
+    "PUBLIC",
+    name="visibilityscope",
+    create_type=False,
+)
+_extraction_status_enum = postgresql.ENUM(
+    "PENDING",
+    "PROCESSING",
+    "COMPLETED",
+    "FAILED",
+    "SKIPPED",
+    name="extractionstatus",
+    create_type=False,
+)
+_upload_status_enum = postgresql.ENUM(
+    "ACTIVE",
+    "COMPLETED",
+    "ABORTED",
+    "EXPIRED",
+    name="uploadstatus",
+    create_type=False,
+)
+
 
 def upgrade() -> None:
     """Create files domain tables."""
     # Add FOLDER to contenttype enum
     op.execute("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'FOLDER'")
 
-    # Create extraction status enum
-    extraction_status_enum = postgresql.ENUM(
+    # Create new enums
+    postgresql.ENUM(
         "PENDING",
         "PROCESSING",
         "COMPLETED",
         "FAILED",
         "SKIPPED",
         name="extractionstatus",
-    )
-    extraction_status_enum.create(op.get_bind(), checkfirst=True)
-
-    # Create upload status enum
-    upload_status_enum = postgresql.ENUM(
+    ).create(op.get_bind(), checkfirst=True)
+    postgresql.ENUM(
         "ACTIVE",
         "COMPLETED",
         "ABORTED",
         "EXPIRED",
         name="uploadstatus",
-    )
-    upload_status_enum.create(op.get_bind(), checkfirst=True)
+    ).create(op.get_bind(), checkfirst=True)
 
     # Create folders table first (files references it)
     op.create_table(
@@ -58,18 +80,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "visibility",
-            postgresql.ENUM(
-                "PRIVATE",
-                "GROUP",
-                "ORGANIZATION",
-                "PUBLIC",
-                name="visibilityscope",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("visibility", _visibility_enum, nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("parent_id", sa.Uuid(), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="false"),
@@ -110,22 +121,9 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "visibility",
-            postgresql.ENUM(
-                "PRIVATE",
-                "GROUP",
-                "ORGANIZATION",
-                "PUBLIC",
-                name="visibilityscope",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("visibility", _visibility_enum, nullable=False),
         sa.Column("filename", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
-        sa.Column(
-            "original_filename", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False
-        ),
+        sa.Column("original_filename", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
         sa.Column("mime_type", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("size_bytes", sa.BigInteger(), nullable=False),
         sa.Column("storage_key", sqlmodel.sql.sqltypes.AutoString(length=1000), nullable=False),
@@ -138,15 +136,7 @@ def upgrade() -> None:
         sa.Column("current_version_id", sa.Uuid(), nullable=True),
         sa.Column(
             "extraction_status",
-            postgresql.ENUM(
-                "PENDING",
-                "PROCESSING",
-                "COMPLETED",
-                "FAILED",
-                "SKIPPED",
-                name="extractionstatus",
-                create_type=False,
-            ),
+            _extraction_status_enum,
             nullable=False,
             server_default="PENDING",
         ),
@@ -189,31 +179,8 @@ def upgrade() -> None:
         sa.Column("total_chunks", sa.Integer(), nullable=False),
         sa.Column("chunk_size", sa.Integer(), nullable=False),
         sa.Column("folder_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "visibility",
-            postgresql.ENUM(
-                "PRIVATE",
-                "GROUP",
-                "ORGANIZATION",
-                "PUBLIC",
-                name="visibilityscope",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
-        sa.Column(
-            "status",
-            postgresql.ENUM(
-                "ACTIVE",
-                "COMPLETED",
-                "ABORTED",
-                "EXPIRED",
-                name="uploadstatus",
-                create_type=False,
-            ),
-            nullable=False,
-            server_default="ACTIVE",
-        ),
+        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column("status", _upload_status_enum, nullable=False, server_default="ACTIVE"),
         sa.Column("parts_completed", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -253,9 +220,7 @@ def upgrade() -> None:
             "user_id", "organization_id", "name", name="uq_saved_filters_user_org_name"
         ),
     )
-    op.create_index(
-        "ix_files_saved_filters_user_id", "files_saved_filters", ["user_id"]
-    )
+    op.create_index("ix_files_saved_filters_user_id", "files_saved_filters", ["user_id"])
     op.create_index(
         "ix_files_saved_filters_organization_id", "files_saved_filters", ["organization_id"]
     )

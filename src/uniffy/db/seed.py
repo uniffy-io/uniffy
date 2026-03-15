@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 
 # Path to docs folder in repository root
 DOCS_DIR = Path(__file__).parent.parent.parent.parent / "docs"
+
+# Path to seed_data folder next to this file
+SEED_DATA_DIR = Path(__file__).parent / "seed_data"
 
 # Mapping of file paths (relative to docs/) to note slugs for URN resolution
 FILE_PATH_TO_SLUG: dict[str, str] = {
@@ -117,8 +120,7 @@ async def seed_initial_data() -> None:
             org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
             org_slug = os.getenv("DEFAULT_ORG_SLUG")
             if not org_slug:
-                # Lazy import to avoid circular dependency
-                from uniffy.domains.notes.queries import slugify
+                from uniffy.core.types import slugify
 
                 org_slug = slugify(org_name)
 
@@ -318,15 +320,11 @@ async def seed_initial_data() -> None:
             from uniffy.core.content.references import extract_urns_from_content
 
             about_content = (DOCS_DIR / "ABOUT.md").read_text()
-            about_note.content = replace_markdown_links_with_urns(
-                about_content, slug_to_urn
-            )
+            about_note.content = replace_markdown_links_with_urns(about_content, slug_to_urn)
             about_note.outgoing_references = extract_urns_from_content(about_note.content) or None
 
             plans_content = (DOCS_DIR / "PLANS.md").read_text()
-            plans_note.content = replace_markdown_links_with_urns(
-                plans_content, slug_to_urn
-            )
+            plans_note.content = replace_markdown_links_with_urns(plans_content, slug_to_urn)
             plans_note.outgoing_references = extract_urns_from_content(plans_note.content) or None
 
             transparency_content = (DOCS_DIR / "TRANSPARENCY.md").read_text()
@@ -338,25 +336,19 @@ async def seed_initial_data() -> None:
             )
 
             licenses_content = (DOCS_DIR / "LICENSES.md").read_text()
-            licenses_note.content = replace_markdown_links_with_urns(
-                licenses_content, slug_to_urn
-            )
+            licenses_note.content = replace_markdown_links_with_urns(licenses_content, slug_to_urn)
             licenses_note.outgoing_references = (
                 extract_urns_from_content(licenses_note.content) or None
             )
 
             searching_content = (DOCS_DIR / "documentation" / "SEARCHING.md").read_text()
-            searching_note.content = replace_markdown_links_with_urns(
-                searching_content, slug_to_urn
-            )
+            searching_note.content = replace_markdown_links_with_urns(searching_content, slug_to_urn)
             searching_note.outgoing_references = (
                 extract_urns_from_content(searching_note.content) or None
             )
 
             sharing_content = (DOCS_DIR / "documentation" / "SHARING.md").read_text()
-            sharing_note.content = replace_markdown_links_with_urns(
-                sharing_content, slug_to_urn
-            )
+            sharing_note.content = replace_markdown_links_with_urns(sharing_content, slug_to_urn)
             sharing_note.outgoing_references = (
                 extract_urns_from_content(sharing_note.content) or None
             )
@@ -413,13 +405,17 @@ async def seed_initial_data() -> None:
                     url_path=f"/notes/{note.id}",
                     visibility=note.visibility.value,
                     owner_id=admin_user.id,
-                    keywords=" ".join(
-                        [note.title] + (note.tags or []) + [note.content[:1000]]
-                    ),
+                    keywords=" ".join([note.title] + (note.tags or []) + [note.content[:1000]]),
                     description=note.content[:200] if note.content else None,
                 )
 
             logger.info("Indexed seed notes for search")
+
+            # 10. Seed bundled agent skills
+            await _seed_bundled_skills(session)
+
+            # 10b. Seed bundled agent prompts
+            await _seed_bundled_prompts(session)
 
             # Development-only seeding for testing
             environment = os.getenv("ENVIRONMENT", "production")
@@ -436,7 +432,7 @@ async def seed_initial_data() -> None:
                 )
                 logger.info("Development test data seeding completed")
 
-            # 10. Auto-generate VAPID keys for push notifications
+            # 11. Auto-generate VAPID keys for push notifications
             await _seed_vapid_keys(session, admin_email)
 
             await session.commit()
@@ -446,6 +442,156 @@ async def seed_initial_data() -> None:
             await session.rollback()
             logger.error(f"Failed to seed initial data: {e}")
             raise
+
+
+def _parse_simple_yaml(text: str) -> dict[str, str]:
+    """Parse simple single-level YAML key-value pairs.
+
+    Only supports ``key: value`` lines where the value is a plain string.
+    This avoids adding PyYAML as a dependency for trivial frontmatter.
+
+    Parameters
+    ----------
+    text : str
+        YAML text block to parse.
+
+    Returns
+    -------
+    dict[str, str]
+        Parsed key-value pairs.
+
+    """
+    result: dict[str, str] = {}
+    for line in text.strip().splitlines():
+        line = line.strip()
+        if not line or ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        result[key.strip()] = value.strip()
+    return result
+
+
+def _load_seed_markdown(directory: Path) -> list[dict[str, Any]]:
+    """Load seed data from markdown files with YAML frontmatter.
+
+    Each file must have a YAML frontmatter block delimited by ``---``
+    containing ``name``, ``display_name``, and ``description``.
+    Everything after the frontmatter is the ``content``.
+
+    Parameters
+    ----------
+    directory : Path
+        Directory containing ``.md`` files to load.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        List of dicts with keys: name, display_name, description, content.
+
+    """
+    items: list[dict[str, Any]] = []
+    if not directory.is_dir():
+        return items
+
+    for md_file in sorted(directory.glob("*.md")):
+        raw = md_file.read_text()
+
+        if not raw.startswith("---"):
+            logger.warning(f"Seed file {md_file.name} missing YAML frontmatter, skipping")
+            continue
+
+        # Split on the closing --- delimiter
+        parts = raw.split("---", 2)
+        if len(parts) < 3:
+            logger.warning(f"Seed file {md_file.name} has malformed frontmatter, skipping")
+            continue
+
+        frontmatter = _parse_simple_yaml(parts[1])
+        content = parts[2].strip()
+
+        items.append({
+            "name": frontmatter["name"],
+            "display_name": frontmatter["display_name"],
+            "description": frontmatter["description"],
+            "content": content,
+        })
+
+    return items
+
+
+async def _seed_bundled_skills(session: AsyncSession) -> None:
+    """Seed bundled agent skills from markdown files in seed_data/skills/.
+
+    Parameters
+    ----------
+    session : AsyncSession
+        Active database session (caller manages commit/rollback).
+
+    """
+    from uniffy.core.models.agents.skill import AgentSkill
+
+    skills = _load_seed_markdown(SEED_DATA_DIR / "skills")
+
+    for skill_data in skills:
+        existing = await session.execute(
+            select(AgentSkill).where(
+                AgentSkill.organization_id.is_(None),
+                AgentSkill.name == skill_data["name"],
+            )
+        )
+        if existing.scalar_one_or_none():
+            continue
+
+        skill = AgentSkill(
+            organization_id=None,
+            name=skill_data["name"],
+            display_name=skill_data["display_name"],
+            description=skill_data["description"],
+            content=skill_data["content"],
+            source="bundled",
+            always_active=False,
+        )
+        session.add(skill)
+
+    await session.flush()
+    logger.info(f"Seeded {len(skills)} bundled agent skills")
+
+
+async def _seed_bundled_prompts(session: AsyncSession) -> None:
+    """Seed bundled agent prompts from markdown files in seed_data/prompts/.
+
+    Parameters
+    ----------
+    session : AsyncSession
+        Active database session (caller manages commit/rollback).
+
+    """
+    from uniffy.core.models.agents.prompt import AgentPrompt
+
+    prompts = _load_seed_markdown(SEED_DATA_DIR / "prompts")
+
+    for prompt_data in prompts:
+        existing = await session.execute(
+            select(AgentPrompt).where(
+                AgentPrompt.organization_id.is_(None),
+                AgentPrompt.name == prompt_data["name"],
+            )
+        )
+        if existing.scalar_one_or_none():
+            continue
+
+        prompt = AgentPrompt(
+            organization_id=None,
+            name=prompt_data["name"],
+            display_name=prompt_data["display_name"],
+            description=prompt_data["description"],
+            content=prompt_data["content"],
+            source="bundled",
+        )
+        session.add(prompt)
+
+    await session.flush()
+    logger.info(f"Seeded {len(prompts)} bundled agent prompts")
 
 
 async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
@@ -475,9 +621,7 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
     priv_b64 = base64.urlsafe_b64encode(priv_bytes).rstrip(b"=").decode("ascii")
 
     # Uncompressed public key point, base64url-encoded (no padding)
-    pub_bytes = private_key.public_key().public_bytes(
-        Encoding.X962, PublicFormat.UncompressedPoint
-    )
+    pub_bytes = private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
     pub_b64 = base64.urlsafe_b64encode(pub_bytes).rstrip(b"=").decode("ascii")
 
     contact = f"mailto:{admin_email}"

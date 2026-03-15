@@ -30,6 +30,56 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+
+  --color-chat-user: hsl(var(--chat-user));
+  --color-chat-user-foreground: hsl(var(--chat-user-foreground));
+}
+
+/* Shared keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Agent chat streaming animations */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes thinking-dot {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bubble-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.streaming-cursor {
+  animation: cursor-blink 1.06s step-end infinite;
+}
+
+.bubble-enter {
+  animation: bubble-enter 0.25s ease-out;
+}
+
+.thinking-dot:nth-child(1) { animation: thinking-dot 1.4s ease-in-out infinite 0s; }
+.thinking-dot:nth-child(2) { animation: thinking-dot 1.4s ease-in-out infinite 0.2s; }
+.thinking-dot:nth-child(3) { animation: thinking-dot 1.4s ease-in-out infinite 0.4s; }
+
+@keyframes wrench-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+}
+
+.wrench-active {
+  animation: wrench-wiggle 0.8s ease-in-out infinite;
+  transform-origin: center center;
 }
 
 /* Status colors — semantic, theme-independent (see config/theme/statusColors.ts) */
@@ -79,6 +129,8 @@
   --border: 220 13% 82%;
   --input: 220 13% 82%;
   --ring: 217 91% 50%;
+  --chat-user: 220 14% 88%;
+  --chat-user-foreground: 222.2 84% 4.9%;
 }
 
 .dark {
@@ -93,6 +145,8 @@
   --border: 228 10% 21%;
   --input: 228 12% 10%;
   --ring: 217 91% 55%;
+  --chat-user: 225 12% 22%;
+  --chat-user-foreground: 220 14% 95%;
 }
 
 /* Base styles */

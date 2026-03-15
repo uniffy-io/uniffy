@@ -101,9 +101,7 @@ class LoggingMiddleware:
             duration = time.time() - start_time
 
             # Record Prometheus metrics
-            HTTP_REQUESTS_TOTAL.labels(
-                method=method, path=normalized_path, status="500"
-            ).inc()
+            HTTP_REQUESTS_TOTAL.labels(method=method, path=normalized_path, status="500").inc()
             HTTP_REQUEST_DURATION.labels(method=method, path=normalized_path).observe(duration)
 
             # Log error (matching ConnectRPC format)

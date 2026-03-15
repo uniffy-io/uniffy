@@ -83,9 +83,7 @@ class CommentsHandlers:
             try:
                 parent_comment_id = UUID(request.parent_comment_id)
             except ValueError:
-                raise ConnectError(
-                    Code.INVALID_ARGUMENT, "Invalid parent_comment_id format"
-                )
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_comment_id format")
 
         anchor_type = anchor_type_from_proto(request.anchor_type)
 
@@ -312,9 +310,7 @@ class CommentsHandlers:
                 )
 
                 proto_comments = []
-                for comment, author_name, avatar_url, reply_count, reactions in (
-                    comments_data
-                ):
+                for comment, author_name, avatar_url, reply_count, reactions in comments_data:
                     proto_comments.append(
                         comment_to_proto(
                             comment=comment,
@@ -694,7 +690,7 @@ class CommentsHandlers:
                 ct = content_type_from_proto(ref.content_type)
                 cid = UUID(ref.content_id)
                 content_refs.append((ct, cid))
-            except (ValueError, KeyError):
+            except ValueError, KeyError:
                 continue
 
         try:

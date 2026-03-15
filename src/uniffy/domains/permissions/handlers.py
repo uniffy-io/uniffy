@@ -477,9 +477,7 @@ class PermissionsHandlers:
                     if isinstance(target, User):
                         response.targets.append(user_to_share_target(target))
                     elif isinstance(target, Group):
-                        response.targets.append(
-                            group_to_share_target(target, member_count)
-                        )
+                        response.targets.append(group_to_share_target(target, member_count))
 
                 return response
 

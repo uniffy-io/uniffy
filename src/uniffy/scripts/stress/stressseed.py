@@ -39,27 +39,110 @@ class StressConfig:
 
 # Sample data for realistic content generation
 ADJECTIVES = [
-    "Quick", "Lazy", "Happy", "Sad", "Bright", "Dark", "Old", "New", "Big", "Small",
-    "Fast", "Slow", "Hot", "Cold", "Soft", "Hard", "Light", "Heavy", "Clean", "Dirty",
-    "Fresh", "Stale", "Sweet", "Sour", "Sharp", "Dull", "Smooth", "Rough", "Wet", "Dry",
+    "Quick",
+    "Lazy",
+    "Happy",
+    "Sad",
+    "Bright",
+    "Dark",
+    "Old",
+    "New",
+    "Big",
+    "Small",
+    "Fast",
+    "Slow",
+    "Hot",
+    "Cold",
+    "Soft",
+    "Hard",
+    "Light",
+    "Heavy",
+    "Clean",
+    "Dirty",
+    "Fresh",
+    "Stale",
+    "Sweet",
+    "Sour",
+    "Sharp",
+    "Dull",
+    "Smooth",
+    "Rough",
+    "Wet",
+    "Dry",
 ]
 
 NOUNS = [
-    "Project", "Report", "Meeting", "Plan", "Design", "Review", "Analysis", "Summary",
-    "Draft", "Notes", "Ideas", "Tasks", "Goals", "Updates", "Research", "Strategy",
-    "Budget", "Timeline", "Roadmap", "Proposal", "Documentation", "Guide", "Tutorial",
-    "Overview", "Checklist", "Template", "Archive", "Reference", "Index", "Changelog",
+    "Project",
+    "Report",
+    "Meeting",
+    "Plan",
+    "Design",
+    "Review",
+    "Analysis",
+    "Summary",
+    "Draft",
+    "Notes",
+    "Ideas",
+    "Tasks",
+    "Goals",
+    "Updates",
+    "Research",
+    "Strategy",
+    "Budget",
+    "Timeline",
+    "Roadmap",
+    "Proposal",
+    "Documentation",
+    "Guide",
+    "Tutorial",
+    "Overview",
+    "Checklist",
+    "Template",
+    "Archive",
+    "Reference",
+    "Index",
+    "Changelog",
 ]
 
 TOPICS = [
-    "engineering", "marketing", "sales", "product", "design", "operations", "finance",
-    "hr", "legal", "support", "infrastructure", "security", "analytics", "growth",
-    "partnerships", "content", "community", "devops", "qa", "research",
+    "engineering",
+    "marketing",
+    "sales",
+    "product",
+    "design",
+    "operations",
+    "finance",
+    "hr",
+    "legal",
+    "support",
+    "infrastructure",
+    "security",
+    "analytics",
+    "growth",
+    "partnerships",
+    "content",
+    "community",
+    "devops",
+    "qa",
+    "research",
 ]
 
 VERBS = [
-    "implement", "review", "update", "create", "delete", "modify", "analyze", "test",
-    "deploy", "monitor", "optimize", "refactor", "document", "validate", "integrate",
+    "implement",
+    "review",
+    "update",
+    "create",
+    "delete",
+    "modify",
+    "analyze",
+    "test",
+    "deploy",
+    "monitor",
+    "optimize",
+    "refactor",
+    "document",
+    "validate",
+    "integrate",
 ]
 
 LOREM_SENTENCES = [
@@ -84,10 +167,29 @@ LOREM_SENTENCES = [
 def generate_tags(count: int) -> list[str]:
     """Generate a list of unique tags."""
     base_tags = [
-        "important", "urgent", "draft", "review", "approved", "archived",
-        "todo", "in-progress", "done", "blocked", "backlog", "sprint",
-        "q1", "q2", "q3", "q4", "2024", "2025", "2026",
-        "internal", "external", "confidential", "public",
+        "important",
+        "urgent",
+        "draft",
+        "review",
+        "approved",
+        "archived",
+        "todo",
+        "in-progress",
+        "done",
+        "blocked",
+        "backlog",
+        "sprint",
+        "q1",
+        "q2",
+        "q3",
+        "q4",
+        "2024",
+        "2025",
+        "2026",
+        "internal",
+        "external",
+        "confidential",
+        "public",
     ]
     topic_tags = [f"{topic}" for topic in TOPICS]
     action_tags = [f"{verb}" for verb in VERBS[:10]]
@@ -239,9 +341,7 @@ async def run_stress_seed(config: StressConfig) -> None:
                 logger.error("Default organization not found. Run normal seed first.")
                 return
 
-            result = await session.execute(
-                select(User).where(User.username == "admin")
-            )
+            result = await session.execute(select(User).where(User.username == "admin"))
             admin = result.scalar_one_or_none()
 
             if not admin:
@@ -250,10 +350,12 @@ async def run_stress_seed(config: StressConfig) -> None:
 
             # Check for existing stress test data
             result = await session.execute(
-                select(Note).where(
+                select(Note)
+                .where(
                     Note.organization_id == org.id,
                     Note.slug.like("stress-%"),
-                ).limit(1)
+                )
+                .limit(1)
             )
             existing = result.scalar_one_or_none()
 
@@ -300,8 +402,7 @@ async def run_stress_seed(config: StressConfig) -> None:
 
                     # Distribute ~equal folders per level, more at shallower levels
                     level_count = min(
-                        remaining,
-                        max(1, remaining // (config.max_folder_depth - depth + 1))
+                        remaining, max(1, remaining // (config.max_folder_depth - depth + 1))
                     )
                     next_level = []
 
@@ -389,9 +490,7 @@ async def run_stress_seed(config: StressConfig) -> None:
                 for chain_idx in range(config.ref_chain_count):
                     chain_length = random.randint(2, config.max_chain_length)
 
-                    available_indices = [
-                        i for i in range(len(notes)) if i not in notes_with_refs
-                    ]
+                    available_indices = [i for i in range(len(notes)) if i not in notes_with_refs]
                     if len(available_indices) < chain_length:
                         available_indices = list(range(len(notes)))
 
@@ -419,9 +518,7 @@ async def run_stress_seed(config: StressConfig) -> None:
 
                     if (chain_idx + 1) % 20 == 0:
                         await session.flush()
-                        logger.info(
-                            f"  Created {chain_idx + 1}/{config.ref_chain_count} chains"
-                        )
+                        logger.info(f"  Created {chain_idx + 1}/{config.ref_chain_count} chains")
 
                 await session.flush()
                 logger.info(f"Created {config.ref_chain_count} reference chains")
@@ -480,31 +577,44 @@ def main() -> None:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "--notes", type=int, default=1000,
+        "--notes",
+        type=int,
+        default=1000,
         help="Number of notes to generate",
     )
     parser.add_argument(
-        "--folders", type=int, default=50,
+        "--folders",
+        type=int,
+        default=50,
         help="Number of folders to generate",
     )
     parser.add_argument(
-        "--max-depth", type=int, default=4,
+        "--max-depth",
+        type=int,
+        default=4,
         help="Maximum folder nesting depth",
     )
     parser.add_argument(
-        "--ref-chains", type=int, default=100,
+        "--ref-chains",
+        type=int,
+        default=100,
         help="Number of reference chains to create",
     )
     parser.add_argument(
-        "--max-chain", type=int, default=5,
+        "--max-chain",
+        type=int,
+        default=5,
         help="Maximum reference chain length",
     )
     parser.add_argument(
-        "--tags", type=int, default=30,
+        "--tags",
+        type=int,
+        default=30,
         help="Number of unique tags to use",
     )
     parser.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Print stats without writing to database",
     )
 

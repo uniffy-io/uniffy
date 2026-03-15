@@ -19,6 +19,8 @@ ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
     "calendar_event": SearchResultType.SEARCH_RESULT_TYPE_CALENDAR_EVENT,
     "project": SearchResultType.SEARCH_RESULT_TYPE_PROJECT,
     "task": SearchResultType.SEARCH_RESULT_TYPE_TASK,
+    "agent": SearchResultType.SEARCH_RESULT_TYPE_AGENT,
+    "prompt": SearchResultType.SEARCH_RESULT_TYPE_PROMPT,
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}

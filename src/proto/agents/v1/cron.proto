@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// CronService manages scheduled recurring agent tasks.
+service CronService {
+  // Create a new scheduled task
+  rpc CreateCronTask(CreateCronTaskRequest) returns (CronTaskResponse) {}
+
+  // Get a scheduled task by ID
+  rpc GetCronTask(GetCronTaskRequest) returns (CronTaskResponse) {}
+
+  // List scheduled tasks for an organization
+  rpc ListCronTasks(ListCronTasksRequest) returns (ListCronTasksResponse) {}
+
+  // Update a scheduled task
+  rpc UpdateCronTask(UpdateCronTaskRequest) returns (CronTaskResponse) {}
+
+  // Delete a scheduled task
+  rpc DeleteCronTask(DeleteCronTaskRequest) returns (DeleteCronTaskResponse) {}
+
+  // List execution history for a task
+  rpc ListCronRunLogs(ListCronRunLogsRequest) returns (ListCronRunLogsResponse) {}
+
+  // Trigger immediate execution of a scheduled task
+  rpc TriggerCronTask(TriggerCronTaskRequest) returns (TriggerCronTaskResponse) {}
+}
+
+// Scheduled task info returned to clients
+message CronTaskInfo {
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  string agent_id = 4;
+  string execution_user_id = 5;
+  optional string session_id = 6;
+  string name = 7;
+  string description = 8;
+  string prompt = 9;
+  string cron_expression = 10;
+  string timezone = 11;
+  bool is_enabled = 12;
+  optional google.protobuf.Timestamp last_run_at = 13;
+  optional google.protobuf.Timestamp next_run_at = 14;
+  optional string last_run_status = 15;
+  optional string last_run_error = 16;
+  int32 run_count = 17;
+  int32 consecutive_failures = 18;
+  int32 max_consecutive_failures = 19;
+  common.v1.VisibilityScope visibility = 20;
+  google.protobuf.Timestamp created_at = 21;
+  optional google.protobuf.Timestamp updated_at = 22;
+  // Agent name for display purposes
+  optional string agent_name = 23;
+}
+
+// Execution log entry
+message CronRunLogInfo {
+  string id = 1;
+  string cron_task_id = 2;
+  string organization_id = 3;
+  optional string agent_run_log_id = 4;
+  string session_id = 5;
+  string status = 6;
+  optional string error = 7;
+  optional string result_summary = 8;
+  google.protobuf.Timestamp started_at = 9;
+  optional google.protobuf.Timestamp completed_at = 10;
+  int32 input_tokens = 11;
+  int32 output_tokens = 12;
+}
+
+// --- Requests and Responses ---
+
+message CreateCronTaskRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  string name = 3;
+  string prompt = 4;
+  string cron_expression = 5;
+  optional string timezone = 6;
+  optional string description = 7;
+  optional common.v1.VisibilityScope visibility = 8;
+}
+
+message CronTaskResponse {
+  CronTaskInfo task = 1;
+}
+
+message GetCronTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+}
+
+message ListCronTasksRequest {
+  string organization_id = 1;
+  optional string agent_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+}
+
+message ListCronTasksResponse {
+  repeated CronTaskInfo tasks = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateCronTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  optional string name = 3;
+  optional string prompt = 4;
+  optional string cron_expression = 5;
+  optional string timezone = 6;
+  optional string description = 7;
+  optional bool is_enabled = 8;
+}
+
+message DeleteCronTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+}
+
+message DeleteCronTaskResponse {
+  bool success = 1;
+}
+
+message ListCronRunLogsRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+}
+
+message ListCronRunLogsResponse {
+  repeated CronRunLogInfo logs = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message TriggerCronTaskRequest {
+  string organization_id = 1;
+  string task_id = 2;
+}
+
+message TriggerCronTaskResponse {
+  // The run log entry created for this execution
+  CronRunLogInfo run_log = 1;
+  // Updated task info (run_count, last_run_at, etc.)
+  CronTaskInfo task = 2;
+}

@@ -138,10 +138,7 @@ async def execute_search(
     )
 
     # Convert hits to SearchResult objects
-    search_results = [
-        SearchResult.from_meilisearch_hit(hit)
-        for hit in results.hits
-    ]
+    search_results = [SearchResult.from_meilisearch_hit(hit) for hit in results.hits]
 
     return search_results, results.estimated_total_hits or len(search_results)
 
@@ -172,7 +169,4 @@ async def get_documents_by_urns(
     client = get_meilisearch_client()
     docs = await client.get_documents_by_urns(urns, organization_id)
 
-    return {
-        urn: SearchResult.from_meilisearch_hit(doc)
-        for urn, doc in docs.items()
-    }
+    return {urn: SearchResult.from_meilisearch_hit(doc) for urn, doc in docs.items()}

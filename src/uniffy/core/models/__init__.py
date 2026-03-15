@@ -1,5 +1,12 @@
 """Database models package."""
 
+from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.agents.audit_log import AgentAuditLog
+from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.prompt import AgentPrompt
+from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.core.models.agents.session import AgentSession
+from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.app_settings.application_setting import ApplicationSetting
 from uniffy.core.models.attachments.attachment import Attachment
 from uniffy.core.models.bookmarks.bookmark import Bookmark
@@ -83,6 +90,14 @@ __all__ = [
     "UploadStatus",
     # Bookmarks
     "Bookmark",
+    # Agents
+    "Agent",
+    "AgentAuditLog",
+    "AgentMessage",
+    "AgentSession",
+    "AgentPrompt",
+    "AgentSkill",
+    "ProviderKey",
     # Comments
     "Comment",
     "CommentAnchorType",

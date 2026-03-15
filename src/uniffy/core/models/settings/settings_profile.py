@@ -43,9 +43,7 @@ class SettingsProfile(SQLModel, table=True):
     """
 
     __tablename__ = "settings_profiles"
-    __table_args__ = (
-        UniqueConstraint("user_id", "name", name="uq_settings_profiles_user_name"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_settings_profiles_user_name"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)

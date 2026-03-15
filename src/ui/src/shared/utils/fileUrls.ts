@@ -9,6 +9,7 @@
  *   /api/files/{orgId}/{fileId}          - images, documents (service worker auth + caching)
  *   /api/thumbnails/{orgId}/{fileId}     - thumbnails (service worker auth + caching)
  *   /api/avatars/{userId}/{size}         - user avatars
+ *   /api/agents/avatars/{agentId}/{size} - agent avatars
  *   /media-stream/{orgId}/{fileId}       - video/audio streaming (Range header support)
  */
 
@@ -47,6 +48,9 @@ export const MEDIA_STREAM_URL_PATTERN = /^\/media-stream\/([^/]+)\/([^/]+)$/;
 
 /** Matches /api/avatars/{userId}/{size} - groups: [userId, size] */
 export const AVATAR_URL_PATTERN = /^\/api\/avatars\/([^/]+)\/([^/]+)$/;
+
+/** Matches /api/agents/avatars/{agentId}/{size} - groups: [agentId, size] */
+export const AGENT_AVATAR_URL_PATTERN = /^\/api\/agents\/avatars\/([^/]+)\/([^/]+)/;
 
 // -- URL Parsers --
 

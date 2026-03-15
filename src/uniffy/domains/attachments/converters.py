@@ -40,9 +40,7 @@ CONTENT_TYPE_FROM_PROTO = {
 
 def content_type_to_proto(content_type: ContentType) -> ProtoContentType:
     """Convert domain ContentType to proto enum."""
-    return CONTENT_TYPE_TO_PROTO.get(
-        content_type, ProtoContentType.CONTENT_TYPE_UNSPECIFIED
-    )
+    return CONTENT_TYPE_TO_PROTO.get(content_type, ProtoContentType.CONTENT_TYPE_UNSPECIFIED)
 
 
 def content_type_from_proto(proto_type: ProtoContentType) -> ContentType | None:

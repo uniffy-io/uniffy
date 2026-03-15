@@ -29,6 +29,7 @@ import {
     FILE_URL_PATTERN,
     THUMBNAIL_URL_PATTERN,
     AVATAR_URL_PATTERN,
+    AGENT_AVATAR_URL_PATTERN,
 } from '@/shared/utils/fileUrls';
 
 // Alias patterns for local readability
@@ -36,6 +37,7 @@ const MEDIA_STREAM_PATTERN = MEDIA_STREAM_URL_PATTERN;
 const THUMBNAIL_PATTERN = THUMBNAIL_URL_PATTERN;
 const FILES_PATTERN = FILE_URL_PATTERN;
 const AVATARS_PATTERN = AVATAR_URL_PATTERN;
+const AGENT_AVATARS_PATTERN = AGENT_AVATAR_URL_PATTERN;
 
 // BroadcastChannel for real-time token sync
 const TOKEN_CHANNEL_NAME = 'uniffy-auth-token';
@@ -434,9 +436,15 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         return;
     }
 
-    // Check for avatar requests
+    // Check for avatar requests (user + agent)
     const avatarsMatch = url.pathname.match(AVATARS_PATTERN);
     if (avatarsMatch) {
+        event.respondWith(handleFileRequest(event.request));
+        return;
+    }
+
+    const agentAvatarsMatch = url.pathname.match(AGENT_AVATARS_PATTERN);
+    if (agentAvatarsMatch) {
         event.respondWith(handleFileRequest(event.request));
         return;
     }

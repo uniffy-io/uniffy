@@ -232,8 +232,8 @@ export function getPositionedEventsForDay(
   hourHeight: number = GRID.HOUR_HEIGHT,
   columnWidth: number = 100 // percentage
 ): PositionedEvent[] {
-  // Filter events that span this day (includes multi-day events)
-  const dayEvents = events.filter((event) => eventSpansDate(event, date));
+  // Filter timed events for this day; all-day events render separately
+  const dayEvents = events.filter((e) => !e.isAllDay && eventSpansDate(e, date));
 
   if (dayEvents.length === 0) return [];
 

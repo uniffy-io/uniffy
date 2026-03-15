@@ -12,6 +12,7 @@ import {
     CalendarDots,
     WarningCircle,
     Kanban,
+    Robot,
 } from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '@/features/admin/hooks/useAdminHooks';
 import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
@@ -30,6 +31,7 @@ const CONTENT_TYPE_ICONS: Record<number, typeof NotePencil> = {
     [ContentType.FILE]: FolderSimple,
     [ContentType.PROJECT]: Kanban,
     [ContentType.CALENDAR_EVENT]: CalendarDots,
+    [ContentType.AGENT]: Robot,
 };
 
 const ALL_CONTENT_TYPES = [
@@ -37,7 +39,17 @@ const ALL_CONTENT_TYPES = [
     ContentType.FILE,
     ContentType.PROJECT,
     ContentType.CALENDAR_EVENT,
+    ContentType.AGENT,
 ];
+
+// Default visibility per content type when no DB record exists yet
+const DEFAULT_VISIBILITY_BY_TYPE: Record<number, number> = {
+    [ContentType.AGENT]: VisibilityScope.ORGANIZATION,
+};
+
+function getDefaultVisibility(contentType: number): number {
+    return DEFAULT_VISIBILITY_BY_TYPE[contentType] ?? VisibilityScope.PRIVATE;
+}
 
 interface ContentTypeCardProps {
     contentType: number;
@@ -55,7 +67,7 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
     const [membersCanDelete, setMembersCanDelete] = useState(defaults?.membersCanDelete ?? false);
     const [membersCanShare, setMembersCanShare] = useState(defaults?.membersCanShare ?? false);
     const [defaultVisibility, setDefaultVisibility] = useState(
-        defaults?.defaultVisibility ?? VisibilityScope.PRIVATE
+        defaults?.defaultVisibility ?? getDefaultVisibility(contentType)
     );
 
     // Sync with props

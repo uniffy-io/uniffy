@@ -62,26 +62,19 @@ async def process_notification_event(
         recipient_ids = await _resolve_recipients(session, event)
 
         if not recipient_ids:
-            logger.debug(
-                f"No recipients for notification type={event.notification_type}"
-            )
+            logger.debug(f"No recipients for notification type={event.notification_type}")
             NOTIFICATION_EVENTS_TOTAL.labels(status="skipped").inc()
             return {"status": "skipped", "reason": "no_recipients"}
 
-        # Phase 1: In-app delivery (DB records) -- batched per transaction
         in_app_adapter = DELIVERY_ADAPTERS.get("in_app")
         pending_notifications: list[Notification] = []
 
         for user_id in recipient_ids:
-            channels = await _get_delivery_channels(
-                session, user_id, event.notification_type
-            )
+            channels = await _get_delivery_channels(session, user_id, event.notification_type)
 
             # In-app: persist to DB (returns Notification, ID set after commit)
             if "in_app" in channels and isinstance(in_app_adapter, InAppAdapter):
-                notification = await in_app_adapter.deliver_with_session(
-                    session, user_id, event
-                )
+                notification = await in_app_adapter.deliver_with_session(session, user_id, event)
                 pending_notifications.append(notification)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="in_app").inc()
 
@@ -89,9 +82,7 @@ async def process_notification_event(
             if "browser" in channels:
                 push_adapter = DELIVERY_ADAPTERS.get("browser")
                 if isinstance(push_adapter, PushAdapter):
-                    await push_adapter.deliver_with_session(
-                        session, user_id, event
-                    )
+                    await push_adapter.deliver_with_session(session, user_id, event)
                 elif push_adapter:
                     await push_adapter.deliver(user_id, event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="browser").inc()
@@ -103,24 +94,18 @@ async def process_notification_event(
                     await email_adapter.deliver(user_id, event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="email").inc()
 
-        # Batch commit all DB writes (notifications + subscription updates)
         if pending_notifications:
             await session.commit()
 
-        # Resolve actor display name for real-time payload
         actor_name = ""
         if event.actor_id:
             result = await session.execute(
-                select(User.full_name, User.username).where(
-                    User.id == event.actor_id
-                )
+                select(User.full_name, User.username).where(User.id == event.actor_id)
             )
             row = result.first()
             if row:
                 actor_name = row[0] or row[1]
 
-        # Phase 2: Real-time delivery (Valkey Pub/Sub) -- after DB commit
-        # Notification IDs are now populated by the DB commit above
         if isinstance(in_app_adapter, InAppAdapter):
             for notification in pending_notifications:
                 await in_app_adapter.publish_realtime(notification, actor_name=actor_name)
@@ -322,9 +307,7 @@ async def _resolve_recipients(
             from uniffy.core.models.calendar.event import CalendarEvent
 
             org_result = await session.execute(
-                select(CalendarEvent.organizer_id).where(
-                    CalendarEvent.id == event.content_id
-                )
+                select(CalendarEvent.organizer_id).where(CalendarEvent.id == event.content_id)
             )
             organizer_id = org_result.scalar_one_or_none()
             if organizer_id:
@@ -394,8 +377,6 @@ async def _get_delivery_channels(
         overrides = profile.notifications if profile else None
         await set_cached_settings(user_id, overrides)
 
-    channels = get_effective_notification_channels(
-        notification_type.value, overrides
-    )
+    channels = get_effective_notification_channels(notification_type.value, overrides)
 
     return {ch for ch, enabled in channels.items() if enabled}

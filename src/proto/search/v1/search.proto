@@ -23,30 +23,29 @@ service SearchService {
 }
 
 enum SearchResultType {
-  SEARCH_RESULT_TYPE_UNSPECIFIED = 0;
-  SEARCH_RESULT_TYPE_NOTE = 1;
-  SEARCH_RESULT_TYPE_FILE = 2;
-  SEARCH_RESULT_TYPE_CHAT = 3;
-  SEARCH_RESULT_TYPE_USER = 4;
+  SEARCH_RESULT_TYPE_UNSPECIFIED    = 0;
+  SEARCH_RESULT_TYPE_NOTE           = 1;
+  SEARCH_RESULT_TYPE_FILE           = 2;
+  SEARCH_RESULT_TYPE_CHAT           = 3;
+  SEARCH_RESULT_TYPE_USER           = 4;
   SEARCH_RESULT_TYPE_CALENDAR_EVENT = 5;
-  SEARCH_RESULT_TYPE_PROJECT = 6;
-  SEARCH_RESULT_TYPE_TASK = 7;
-  // Reserved for removed types (BOOK, PASSWORD, WORKFLOW, SPACE)
-  reserved 8, 9, 10, 11;
-  reserved "SEARCH_RESULT_TYPE_BOOK", "SEARCH_RESULT_TYPE_PASSWORD", "SEARCH_RESULT_TYPE_WORKFLOW", "SEARCH_RESULT_TYPE_SPACE";
+  SEARCH_RESULT_TYPE_PROJECT        = 6;
+  SEARCH_RESULT_TYPE_TASK           = 7;
+  SEARCH_RESULT_TYPE_AGENT          = 8;
+  SEARCH_RESULT_TYPE_PROMPT         = 9;
 }
 
 message SearchRequest {
-  string organization_id = 1;
-  string query = 2;
-  repeated SearchResultType type_filters = 3;
-  int32 limit = 4;
+  string                    organization_id = 1;
+  string                    query           = 2;
+  repeated SearchResultType type_filters    = 3;
+  int32                     limit           = 4;
 
   // Advanced filters (parsed from query or set explicitly)
-  repeated string tag_filters = 5;
+  repeated string tag_filters     = 5;
   repeated string project_filters = 6;
-  bool my_content_only = 7;
-  string owner_filter = 8;
+  bool            my_content_only = 7;
+  string          owner_filter    = 8;
 }
 
 message SearchResponse {
@@ -54,24 +53,24 @@ message SearchResponse {
 }
 
 message SearchResultItem {
-  string urn = 1; // Universal Resource Name (urn:uniffy:note:uuid)
-  string title = 2;
-  string description = 3; // Snippet or subtitle
-  SearchResultType type = 4;
-  string url = 5; // Frontend route path
-  double score = 6; // Relevance score
-  map<string, string> metadata = 7; // Extra icon info, etc.
-  repeated string tags = 8; // Tags associated with the content
+  string              urn         = 1; // Universal Resource Name (urn:uniffy:note:uuid)
+  string              title       = 2;
+  string              description = 3; // Snippet or subtitle
+  SearchResultType    type        = 4;
+  string              url         = 5; // Frontend route path
+  double              score       = 6; // Relevance score
+  map<string, string> metadata    = 7; // Extra icon info, etc.
+  repeated string     tags        = 8; // Tags associated with the content
 }
 
 message IndexItemRequest {
-  string organization_id = 1;
-  string urn = 2;
-  SearchResultType type = 3;
-  string title = 4;
-  string content = 5; // Content to be indexed for full text
-  string url = 6;
-  map<string, string> metadata = 7;
+  string              organization_id = 1;
+  string              urn             = 2;
+  SearchResultType    type            = 3;
+  string              title           = 4;
+  string              content         = 5; // Content to be indexed for full text
+  string              url             = 6;
+  map<string, string> metadata        = 7;
 }
 
 message IndexItemResponse {
@@ -79,7 +78,7 @@ message IndexItemResponse {
 }
 
 message DeleteItemRequest {
-  string urn = 1;
+  string urn             = 1;
   string organization_id = 2;
 }
 
@@ -121,9 +120,9 @@ message ResolveUrnsResponse {
 
 // Lightweight metadata for a URN
 message UrnMetadata {
-  string title = 1;
-  string description = 2;
-  SearchResultType type = 3;
-  string url = 4;
-  map<string, string> metadata = 5;
+  string              title       = 1;
+  string              description = 2;
+  SearchResultType    type        = 3;
+  string              url         = 4;
+  map<string, string> metadata    = 5;
 }

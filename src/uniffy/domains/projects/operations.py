@@ -820,7 +820,12 @@ class TaskOperations(BaseContentOperations[Task]):
 
         # Fields that can be explicitly set to None (cleared)
         nullable_fields = {
-            "start_date", "due_date", "description", "parent_id", "recurrence_rule", "sprint_id"
+            "start_date",
+            "due_date",
+            "description",
+            "parent_id",
+            "recurrence_rule",
+            "sprint_id",
         }
 
         # Track changes for activity log
@@ -1510,9 +1515,7 @@ class SprintOperations:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_task_counts(
-        self, sprint_ids: list[UUID]
-    ) -> dict[str, tuple[int, int]]:
+    async def get_task_counts(self, sprint_ids: list[UUID]) -> dict[str, tuple[int, int]]:
         """
         Get total and completed task counts for a list of sprints.
 

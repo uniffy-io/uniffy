@@ -1,5 +1,7 @@
 """Development-only seeding data."""
 
+import os
+
 from loguru import logger
 
 
@@ -160,3 +162,225 @@ async def seed_development_data(
         )
 
     logger.info("Indexed test users for search")
+
+    # Seed LLM provider keys from environment variables
+    provider_keys = await _seed_provider_keys(session, default_org, admin_user)
+
+    # Seed dev agents (one per provider key, all tools enabled)
+    await _seed_dev_agents(session, default_org, admin_user, provider_keys)
+
+
+async def _seed_provider_keys(session, default_org, admin_user) -> list:
+    """Seed LLM provider keys from environment variables.
+
+    Reads CLAUDE_SETUP_TOKEN, OPENAI_API_KEY, and GOOGLE_GENAI_API_KEY
+    from the environment and creates provider key records for the default org.
+
+    Parameters
+    ----------
+    session
+        Database session.
+    default_org
+        Default organization.
+    admin_user
+        Admin user who owns the keys.
+
+    Returns
+    -------
+    list
+        List of (provider_name, ProviderKey) tuples for successfully seeded keys.
+
+    """
+    from uniffy.core.crypto import encrypt_value
+    from uniffy.core.models.agents.provider_key import ProviderKey
+    from uniffy.core.types import VisibilityScope
+    from uniffy.domains.agents.providers.utils import build_key_hint
+
+    provider_key_configs = [
+        {
+            "env_var": "CLAUDE_SETUP_TOKEN",
+            "provider": "anthropic",
+            "credential_type": "setup_token",
+            "label": "anthropic-gt-cc",
+        },
+        {
+            "env_var": "OPENAI_API_KEY",
+            "provider": "openai",
+            "credential_type": "api_key",
+            "label": "openai-gt-prod",
+        },
+        {
+            "env_var": "GOOGLE_GENAI_API_KEY",
+            "provider": "google",
+            "credential_type": "api_key",
+            "label": "google-g-prod",
+        },
+    ]
+
+    seeded_keys: list[tuple[str, ProviderKey]] = []
+    for config in provider_key_configs:
+        credential = os.getenv(config["env_var"])
+        if not credential:
+            logger.warning(f"{config['env_var']} not set, skipping {config['label']} provider key")
+            continue
+
+        credential = credential.strip()
+        key = ProviderKey(
+            organization_id=default_org.id,
+            provider=config["provider"],
+            credential_type=config["credential_type"],
+            label=config["label"],
+            encrypted_credential=encrypt_value(credential),
+            key_hint=build_key_hint(credential),
+            is_valid=True,
+            is_enabled=True,
+            visibility=VisibilityScope.ORGANIZATION,
+            created_by=admin_user.id,
+        )
+        session.add(key)
+        seeded_keys.append((config["provider"], key))
+        logger.info(f"Seeded provider key: {config['label']} ({config['provider']})")
+
+    if seeded_keys:
+        await session.flush()
+        for _, key in seeded_keys:
+            await session.refresh(key)
+    logger.info(f"Seeded {len(seeded_keys)} LLM provider keys")
+
+    return seeded_keys
+
+
+ALL_TOOL_NAMES: list[str] = [
+    "notes.search_notes",
+    "notes.list_notes",
+    "notes.read_note",
+    "notes.create_note",
+    "notes.update_note",
+    "notes.delete_note",
+    "files.search_files",
+    "files.list_files",
+    "files.get_file_info",
+    "files.read_file_content",
+    "files.update_file",
+    "files.delete_file",
+    "calendar.list_events",
+    "calendar.create_event",
+    "calendar.update_event",
+    "calendar.delete_event",
+    "projects.list_projects",
+    "projects.create_project",
+    "projects.update_project",
+    "projects.delete_project",
+    "tasks.list_tasks",
+    "tasks.create_task",
+    "tasks.update_task",
+    "tasks.delete_task",
+    "tasks.move_task",
+    "search.query",
+    "people.list_members",
+    "memory.save",
+    "memory.recall",
+    "memory.list",
+    "memory.forget",
+    "images.generate_image",
+    "cron.create",
+    "cron.list",
+    "cron.update",
+    "cron.delete",
+    "cron.get_runs",
+]
+
+PROVIDER_AGENT_CONFIGS: dict[str, dict[str, str]] = {
+    "anthropic": {
+        "name": "Uniffy Anthropic",
+        "primary_model": "claude-sonnet-4-6",
+        "avatar_emoji": "A",
+        "theme_color": "#d97706",
+    },
+    "openai": {
+        "name": "Uniffy OpenAI",
+        "primary_model": "gpt-4o",
+        "avatar_emoji": "O",
+        "theme_color": "#10a37f",
+    },
+    "google": {
+        "name": "Uniffy Google",
+        "primary_model": "gemini-2.0-flash",
+        "avatar_emoji": "G",
+        "theme_color": "#4285f4",
+    },
+}
+
+
+async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list) -> None:
+    """Seed one agent per provider key with all tools enabled.
+
+    Parameters
+    ----------
+    session
+        Database session.
+    default_org
+        Default organization.
+    admin_user
+        Admin user who owns the agents.
+    provider_keys
+        List of (provider_name, ProviderKey) tuples from _seed_provider_keys.
+
+    """
+    from sqlalchemy import select
+
+    from uniffy.core.models.agents.agent import Agent
+    from uniffy.core.models.agents.prompt import AgentPrompt
+    from uniffy.core.types import VisibilityScope
+
+    if not provider_keys:
+        logger.info("No provider keys seeded, skipping dev agent creation")
+        return
+
+    # Look up the bundled default prompt (seeded before dev data)
+    result = await session.execute(
+        select(AgentPrompt).where(
+            AgentPrompt.organization_id.is_(None),
+            AgentPrompt.name == "uniffy_default",
+        )
+    )
+    default_prompt = result.scalar_one_or_none()
+    prompt_id = default_prompt.id if default_prompt else None
+    if default_prompt:
+        logger.info(f"Attaching bundled prompt '{default_prompt.name}' to dev agents")
+    else:
+        logger.warning("Bundled prompt 'uniffy_default' not found, agents will have no prompt")
+
+    is_first = True
+    for provider_name, provider_key in provider_keys:
+        config = PROVIDER_AGENT_CONFIGS.get(provider_name)
+        if not config:
+            logger.warning(f"No agent config for provider {provider_name}, skipping")
+            continue
+
+        agent = Agent(
+            organization_id=default_org.id,
+            owner_id=admin_user.id,
+            name=config["name"],
+            soul_prompt=(
+                "You are a helpful AI assistant within the Uniffy workspace. "
+                "You can help users manage their notes, files, calendar events, projects, and tasks."
+                "Be concise and helpful."
+            ),
+            primary_model=config["primary_model"],
+            fallback_models=[],
+            primary_provider_key_id=provider_key.id,
+            prompt_id=prompt_id,
+            enabled_tools=ALL_TOOL_NAMES,
+            enabled_skills=[],
+            avatar_emoji=config["avatar_emoji"],
+            theme_color=config["theme_color"],
+            is_default=is_first,
+            visibility=VisibilityScope.ORGANIZATION,
+        )
+        session.add(agent)
+        is_first = False
+        logger.info(f"Seeded dev agent: {config['name']}")
+
+    await session.flush()
+    logger.info(f"Seeded {len(provider_keys)} dev agents")

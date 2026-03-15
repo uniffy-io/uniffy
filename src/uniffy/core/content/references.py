@@ -181,7 +181,7 @@ def extract_all_outgoing_references_from_canvas(
 
         try:
             data = _json.loads(canvas_data)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return []
     else:
         data = canvas_data

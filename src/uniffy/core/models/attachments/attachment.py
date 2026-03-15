@@ -62,9 +62,7 @@ class Attachment(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
-    __table_args__ = (
-        Index("ix_attachments_content", "content_type", "content_id"),
-    )
+    __table_args__ = (Index("ix_attachments_content", "content_type", "content_id"),)
 
     def __repr__(self) -> str:
         """Return string representation of Attachment."""

@@ -20,6 +20,15 @@ down_revision: Union[str, None] = "007"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+_visibility_enum = postgresql.ENUM(
+    "PRIVATE",
+    "GROUP",
+    "ORGANIZATION",
+    "PUBLIC",
+    name="visibilityscope",
+    create_type=False,
+)
+
 
 def upgrade() -> None:
     """Upgrade database schema."""
@@ -35,18 +44,7 @@ def upgrade() -> None:
         sa.Column("meeting_url", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("category_id", sa.Uuid(), nullable=True),
         sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column(
-            "visibility",
-            postgresql.ENUM(
-                "PRIVATE",
-                "GROUP",
-                "ORGANIZATION",
-                "PUBLIC",
-                name="visibilityscope",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("visibility", _visibility_enum, nullable=False),
         sa.Column("created_by", sa.Uuid(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),

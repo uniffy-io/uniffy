@@ -79,9 +79,7 @@ class CommentOperations:
             Created comment, author name, and author avatar URL.
 
         """
-        await self._verify_content_access(
-            user_id, organization_id, content_type, content_id
-        )
+        await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
         # Validate parent comment exists if replying
         if parent_comment_id:
@@ -241,9 +239,7 @@ class CommentOperations:
             total_count, open_count, resolved_count.
 
         """
-        await self._verify_content_access(
-            user_id, organization_id, content_type, content_id
-        )
+        await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
         # Get counts
         total_count = (
@@ -254,17 +250,13 @@ class CommentOperations:
 
         open_count = (
             await self._session.execute(
-                count_comments_query(
-                    organization_id, content_type, content_id, is_resolved=False
-                )
+                count_comments_query(organization_id, content_type, content_id, is_resolved=False)
             )
         ).scalar() or 0
 
         resolved_count = (
             await self._session.execute(
-                count_comments_query(
-                    organization_id, content_type, content_id, is_resolved=True
-                )
+                count_comments_query(organization_id, content_type, content_id, is_resolved=True)
             )
         ).scalar() or 0
 
@@ -294,9 +286,7 @@ class CommentOperations:
             # Get aggregated reactions
             reactions = await aggregate_reactions(self._session, comment.id)
 
-            comments_data.append(
-                (comment, author_name, None, reply_count, reactions)
-            )
+            comments_data.append((comment, author_name, None, reply_count, reactions))
 
         return comments_data, total_count, open_count, resolved_count
 
@@ -582,9 +572,7 @@ class CommentOperations:
         # Build conditions for each content ref
         conditions = []
         for ct, cid in content_refs:
-            conditions.append(
-                and_(Comment.content_type == ct, Comment.content_id == cid)
-            )
+            conditions.append(and_(Comment.content_type == ct, Comment.content_id == cid))
 
         result = await self._session.execute(
             select(
@@ -599,12 +587,10 @@ class CommentOperations:
             )
             .where(
                 # OR all conditions together
-                func.bool_or(
-                    *[
-                        and_(Comment.content_type == ct, Comment.content_id == cid)
-                        for ct, cid in content_refs
-                    ]
-                )
+                func.bool_or(*[
+                    and_(Comment.content_type == ct, Comment.content_id == cid)
+                    for ct, cid in content_refs
+                ])
                 if len(content_refs) > 1
                 else conditions[0]
             )
@@ -664,9 +650,7 @@ class CommentOperations:
 
     # Private helpers
 
-    async def _get_comment(
-        self, comment_id: UUID, organization_id: UUID
-    ) -> Comment | None:
+    async def _get_comment(self, comment_id: UUID, organization_id: UUID) -> Comment | None:
         """Get a comment by ID."""
         result = await self._session.execute(
             select(Comment).where(
@@ -679,9 +663,7 @@ class CommentOperations:
 
     async def _get_user_info(self, user_id: UUID) -> tuple[str, str | None]:
         """Get user display name and avatar URL."""
-        result = await self._session.execute(
-            select(User.full_name).where(User.id == user_id)
-        )
+        result = await self._session.execute(select(User.full_name).where(User.id == user_id))
         row = result.one_or_none()
         if not row:
             return "Unknown", None

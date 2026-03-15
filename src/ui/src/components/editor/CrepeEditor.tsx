@@ -11,7 +11,9 @@ import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files';
-import { parseFileUrl } from '@/shared/utils/fileUrls';
+import { parseFileUrl, buildFileUrl, buildMediaStreamUrl } from '@/shared/utils/fileUrls';
+import { parseUrn, UrnType } from '@/shared/utils/urn';
+import { searchApi } from '@/features/search';
 import { tagPlugins } from '@/components/editor/plugins/tag';
 import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from '@/components/editor/plugins/mention';
 import { videoPlugins } from '@/components/editor/plugins/video';
@@ -75,6 +77,8 @@ interface CrepeEditorProps {
   compact?: boolean;
   /** Called with each uploaded file ID (for deferred attachment when contentId is empty) */
   onFileUploaded?: (fileId: string) => void;
+  /** Auto-embed media file mentions as inline image/video/audio blocks (default: false) */
+  autoEmbedMedia?: boolean;
 }
 
 // SVG icon for the comment toolbar button (Phosphor chat-circle, 24x24)
@@ -430,6 +434,124 @@ function createCrepeConfig(
   };
 }
 
+/**
+ * Walk the ProseMirror document, find FILE mention nodes that are media files,
+ * resolve their metadata, and replace them with inline image/video/audio blocks.
+ * Same transformation as MentionNodeView.handleReplaceWithMedia but applied automatically.
+ */
+async function autoEmbedMediaMentions(view: EditorView, organizationId: string) {
+  // Collect all FILE mention nodes with their positions
+  const fileMentions: Array<{ pos: number; node: Node; urn: string; label: string; fileId: string }> = [];
+
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'mention') return;
+    const { urn, label } = node.attrs as { urn: string; label: string };
+    const parsed = parseUrn(urn);
+    if (parsed.type === UrnType.FILE && parsed.id) {
+      fileMentions.push({ pos, node, urn, label, fileId: parsed.id });
+    }
+  });
+
+  if (fileMentions.length === 0) return;
+
+  // Batch resolve URN metadata to get mime types
+  const urns = fileMentions.map((m) => m.urn);
+  let resolvedMap: Record<string, { metadata?: Record<string, string> }>;
+  try {
+    const response = await searchApi.resolveUrns({ organizationId, urns });
+    resolvedMap = (response.resolved ?? {}) as Record<string, { metadata?: Record<string, string> }>;
+  } catch {
+    return;
+  }
+
+  // Build replacements in reverse order so positions stay valid
+  const replacements: Array<{
+    pos: number;
+    nodeSize: number;
+    mediaType: 'image' | 'video' | 'audio';
+    url: string;
+    title: string;
+  }> = [];
+
+  for (const mention of fileMentions) {
+    const resolved = resolvedMap[mention.urn];
+    const mime = resolved?.metadata?.mime_type;
+    if (!mime) continue;
+
+    let mediaType: 'image' | 'video' | 'audio';
+    let url: string;
+
+    if (mime.startsWith('image/')) {
+      mediaType = 'image';
+      url = buildFileUrl(organizationId, mention.fileId);
+    } else if (mime.startsWith('video/')) {
+      mediaType = 'video';
+      url = buildMediaStreamUrl(organizationId, mention.fileId);
+    } else if (mime.startsWith('audio/')) {
+      mediaType = 'audio';
+      url = buildMediaStreamUrl(organizationId, mention.fileId);
+    } else {
+      continue;
+    }
+
+    replacements.push({
+      pos: mention.pos,
+      nodeSize: mention.node.nodeSize,
+      mediaType,
+      url,
+      title: mention.label,
+    });
+  }
+
+  if (replacements.length === 0) return;
+
+  // Apply replacements in reverse document order
+  replacements.sort((a, b) => b.pos - a.pos);
+
+  const { schema } = view.state;
+  let tr = view.state.tr;
+
+  for (const rep of replacements) {
+    let mediaNode: Node | null = null;
+
+    if (rep.mediaType === 'image') {
+      const imageType = schema.nodes['image-block'] ?? schema.nodes.image;
+      mediaNode = imageType?.createAndFill?.({ src: rep.url, alt: rep.title }) ?? null;
+    } else if (rep.mediaType === 'video') {
+      const videoType = schema.nodes.video_block;
+      mediaNode = videoType?.create({ src: rep.url, title: rep.title }) ?? null;
+    } else if (rep.mediaType === 'audio') {
+      const audioType = schema.nodes.audio_block;
+      mediaNode = audioType?.create({ src: rep.url, title: rep.title }) ?? null;
+    }
+
+    if (!mediaNode) continue;
+
+    // Delete the inline mention node
+    tr = tr.delete(rep.pos, rep.pos + rep.nodeSize);
+
+    // Resolve position to find the parent paragraph
+    const mappedPos = tr.mapping.map(rep.pos);
+    const $pos = tr.doc.resolve(mappedPos);
+
+    if ($pos.depth >= 1) {
+      const parentNode = $pos.node(1);
+      const parentStart = $pos.before(1);
+      const parentEnd = $pos.after(1);
+
+      if (parentNode.textContent.trim() === '') {
+        // Paragraph is empty after removing mention - replace with media block
+        tr = tr.replaceWith(parentStart, parentEnd, mediaNode);
+      } else {
+        // Paragraph has other content - insert media block after it
+        tr = tr.insert(parentEnd, mediaNode);
+      }
+    }
+  }
+
+  view.dispatch(tr);
+}
+
 const defaultSettings = { editorMode: 'crepe' as const, showMarkdownPreview: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
 
 export function CrepeEditor({
@@ -446,6 +568,7 @@ export function CrepeEditor({
   maxHeight,
   compact = false,
   onFileUploaded,
+  autoEmbedMedia = false,
 }: CrepeEditorProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
@@ -848,6 +971,20 @@ export function CrepeEditor({
       if (readonly) {
         crepe.setReadonly(true);
       }
+
+      // Auto-embed media file mentions after editor is ready
+      if (autoEmbedMedia && organizationId) {
+        try {
+          crepe.editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            if (view) {
+              autoEmbedMediaMentions(view, organizationId);
+            }
+          });
+        } catch {
+          // Editor action failed silently
+        }
+      }
     });
 
     return () => {
@@ -910,12 +1047,26 @@ export function CrepeEditor({
       crepeRef.current = crepe;
 
       crepe.setReadonly(true);
+
+      // Auto-embed media file mentions after editor is ready
+      if (autoEmbedMedia && organizationId) {
+        try {
+          crepe.editor.action((ctx) => {
+            const editorView = ctx.get(editorViewCtx);
+            if (editorView) {
+              autoEmbedMediaMentions(editorView, organizationId);
+            }
+          });
+        } catch {
+          // Editor action failed silently
+        }
+      }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [content, readonly, compact, placeholder]);
+  }, [content, readonly, compact, placeholder, autoEmbedMedia, organizationId]);
 
   // Get shortcut matching function from settings
   const { matches } = useGlobalShortcuts();
@@ -1025,7 +1176,7 @@ export function CrepeEditor({
         <div
           ref={editorRef}
           className={`crepe-editor prose max-w-none ${compact ? 'crepe-editor-compact px-3 py-2' : ''}`}
-          style={{
+          style={className?.includes('chat-bubble-editor') ? undefined : {
             fontSize: `${settings?.fontSize || 16}px`,
             lineHeight: settings?.lineHeight || 1.6,
           }}

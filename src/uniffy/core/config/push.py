@@ -82,13 +82,11 @@ async def load_vapid_config() -> None:
         async for session in get_async_session():
             result = await session.execute(
                 select(ApplicationSetting).where(
-                    ApplicationSetting.key.in_(
-                        [
-                            "vapid_private_key",
-                            "vapid_public_key",
-                            "vapid_contact_email",
-                        ]
-                    )
+                    ApplicationSetting.key.in_([
+                        "vapid_private_key",
+                        "vapid_public_key",
+                        "vapid_contact_email",
+                    ])
                 )
             )
             rows = {row.key: row for row in result.scalars().all()}
@@ -116,6 +114,5 @@ async def load_vapid_config() -> None:
             logger.info("VAPID config loaded from application_settings table")
     except Exception:
         logger.opt(exception=True).warning(
-            "Failed to load VAPID config from database -- "
-            "push notifications disabled"
+            "Failed to load VAPID config from database -- push notifications disabled"
         )

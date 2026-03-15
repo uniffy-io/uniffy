@@ -108,14 +108,16 @@ async def _process_due_reminders(session: AsyncSession) -> int:
 
         # Emit CALENDAR_REMINDER notification
         interval_text = _format_reminder_interval(reminder.minutes_before)
-        await emit_notification(NotificationEvent(
-            notification_type=NotificationType.CALENDAR_REMINDER,
-            organization_id=event.organization_id,
-            actor_id=event.organizer_id,
-            title=f"{event.title} starts {interval_text}",
-            source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-            target_user_ids=[reminder.user_id],
-        ))
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.CALENDAR_REMINDER,
+                organization_id=event.organization_id,
+                actor_id=event.organizer_id,
+                title=f"{event.title} starts {interval_text}",
+                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                target_user_ids=[reminder.user_id],
+            )
+        )
 
         # Mark as sent
         reminder.sent_at = now

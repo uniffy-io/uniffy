@@ -191,15 +191,21 @@ export function DetailPanel() {
             {/* Time */}
             <div className="flex items-center gap-3 text-sm">
               <Clock size={16} weight="duotone" className="text-muted-foreground" />
-              <span className="text-foreground">
-                {formatTimeRange(
-                  selectedEvent.startTime,
-                  selectedEvent.endTime
-                )}
-              </span>
-              <span className="text-muted-foreground text-xs">
-                ({timezoneOffset})
-              </span>
+              {selectedEvent.isAllDay ? (
+                <span className="text-foreground">All day</span>
+              ) : (
+                <>
+                  <span className="text-foreground">
+                    {formatTimeRange(
+                      selectedEvent.startTime,
+                      selectedEvent.endTime
+                    )}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    ({timezoneOffset})
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Recurrence */}

@@ -28,6 +28,9 @@ DOMAIN_CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType] = {
     DomainContentType.USER: ProtoContentType.CONTENT_TYPE_USER,
     DomainContentType.PROJECT: ProtoContentType.CONTENT_TYPE_PROJECT,
     DomainContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
+    DomainContentType.AGENT: ProtoContentType.CONTENT_TYPE_AGENT,
+    DomainContentType.PROVIDER_KEY: ProtoContentType.CONTENT_TYPE_PROVIDER_KEY,
+    DomainContentType.PROMPT: ProtoContentType.CONTENT_TYPE_PROMPT,
 }
 
 # Proto ContentType to Domain ContentType mapping
@@ -65,9 +68,7 @@ PROTO_PERMISSION_LEVEL_TO_DOMAIN: dict[PermissionLevel, DomainPermissionLevel] =
 
 def content_type_to_proto(content_type: DomainContentType) -> ProtoContentType:
     """Convert domain ContentType to proto ContentType."""
-    return DOMAIN_CONTENT_TYPE_TO_PROTO.get(
-        content_type, ProtoContentType.CONTENT_TYPE_UNSPECIFIED
-    )
+    return DOMAIN_CONTENT_TYPE_TO_PROTO.get(content_type, ProtoContentType.CONTENT_TYPE_UNSPECIFIED)
 
 
 def proto_to_content_type(proto_type: ProtoContentType) -> DomainContentType | None:
@@ -77,9 +78,7 @@ def proto_to_content_type(proto_type: ProtoContentType) -> DomainContentType | N
 
 def subject_type_to_proto(subject_type: DomainSubjectType) -> ProtoSubjectType:
     """Convert domain SubjectType to proto SubjectType."""
-    return DOMAIN_SUBJECT_TYPE_TO_PROTO.get(
-        subject_type, ProtoSubjectType.SUBJECT_TYPE_UNSPECIFIED
-    )
+    return DOMAIN_SUBJECT_TYPE_TO_PROTO.get(subject_type, ProtoSubjectType.SUBJECT_TYPE_UNSPECIFIED)
 
 
 def proto_to_subject_type(proto_type: ProtoSubjectType) -> DomainSubjectType | None:
@@ -89,16 +88,12 @@ def proto_to_subject_type(proto_type: ProtoSubjectType) -> DomainSubjectType | N
 
 def permission_level_to_proto(level: DomainPermissionLevel) -> PermissionLevel:
     """Convert domain PermissionLevel to proto PermissionLevel."""
-    return DOMAIN_PERMISSION_LEVEL_TO_PROTO.get(
-        level, PermissionLevel.PERMISSION_LEVEL_VIEW
-    )
+    return DOMAIN_PERMISSION_LEVEL_TO_PROTO.get(level, PermissionLevel.PERMISSION_LEVEL_VIEW)
 
 
 def proto_to_permission_level(proto_level: PermissionLevel) -> DomainPermissionLevel:
     """Convert proto PermissionLevel to domain PermissionLevel."""
-    return PROTO_PERMISSION_LEVEL_TO_DOMAIN.get(
-        proto_level, DomainPermissionLevel.VIEW
-    )
+    return PROTO_PERMISSION_LEVEL_TO_DOMAIN.get(proto_level, DomainPermissionLevel.VIEW)
 
 
 def user_to_share_target(user: User) -> ShareTarget:

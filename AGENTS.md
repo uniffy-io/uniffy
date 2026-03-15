@@ -1,24 +1,86 @@
-# Uniffy
+## Project Overview
 
-Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. This is an enterprise application in which everything should be almost perfect and pushed to the standards. Don't make shortcuts or easy solutions, just to quickly solve something. When doing something always check if the logic is repeating first in other domains or already build components / classes. The buttons, pickers, tables, etc ... should be the same in every aspect of the app. 
+Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. This is an enterprise application in which everything should be almost perfect and pushed to the standards. Don't make shortcuts or easy solutions, just to quickly solve something. When doing something always check if the logic is repeating first in other domains or already build components / classes. The buttons, pickers, tables, etc ... should be the same in every aspect of the app.
+
+---
+
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| Python 3.13+ | Backend language |
+| FastAPI | Web framework (async only) |
+| SQLModel + asyncpg | ORM and async database driver |
+| PostgreSQL 18 | Primary database |
+| Meilisearch | Typo-tolerant full-text search |
+| React 19 | Frontend framework |
+| TypeScript | Frontend language |
+| Vite | Frontend build tool |
+| Redux Toolkit | State management |
+| Tailwind CSS 4 | Styling framework |
+| ConnectRPC | API layer (Protocol Buffers + Connect) -- not REST |
+| ARQ + Valkey | Background task queue |
+| Alembic | Database migrations |
+
+---
 
 ## Commands
 
 ```bash
-./run.sh proto  # generate protos
-./run.sh lint-backend # run backend linters
-./run.sh lint-frontend # run frontend linters
+# Code Generation
+./run.sh proto            # Generate protobuf code (backend + frontend)
+
+# Setup
+./run.sh install          # Install all dependencies (uv + pnpm)
 ```
 
 Migrations run automatically on startup.
 
-## Stack
+---
 
-- **Backend**: Python 3.13+, FastAPI, SQLModel, asyncpg (async only)
-- **Frontend**: React 19, TypeScript, Vite, Redux Toolkit, Tailwind CSS 4
-- **API**: ConnectRPC (Protocol Buffers + Connect) - not REST
-- **Database**: PostgreSQL 18
-- **Search**: Meilisearch (typo-tolerant full-text search)
+## Project Structure
+
+```
+uwos/
+├── src/uniffy/           # Python backend (FastAPI + ConnectRPC)
+│   ├── core/             # Core models, auth, search, types, errors
+│   ├── domains/          # Domain modules (vertical slices)
+│   ├── db/               # Database session, migrations, seed data
+│   ├── gen/              # Generated ConnectRPC code (DO NOT EDIT)
+│   ├── workers/          # Background task workers (ARQ)
+│   └── factory.py        # App factory mounting services
+├── src/ui/               # React frontend (TypeScript + Vite)
+│   └── src/
+│       ├── app/          # Redux store, hooks, router
+│       ├── components/   # Shared UI primitives
+│       ├── config/       # API setup, theme system, error handling
+│       ├── features/     # Domain modules (auth, notes, files, etc.)
+│       ├── gen/          # Generated ConnectRPC clients (DO NOT EDIT)
+│       └── shared/       # Shared hooks, utils, layouts
+├── src/proto/            # Protocol Buffer definitions
+├── docs/agents/          # Layer-specific documentation
+└── .claude/              # AI development artifacts
+```
+
+---
+
+## Architecture
+
+Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
+
+- **Backend**: `src/uniffy/domains/{feature}/` with operations, handlers, service, converters
+- **Frontend**: `src/ui/src/features/{feature}/` with api, store, components, pages, hooks
+- **Proto**: `src/proto/{service}/v1/{service}.proto` defines the API contract
+
+**API layer**: ConnectRPC (Protocol Buffers + Connect). All API communication uses generated clients -- never REST. Proto definitions are the source of truth.
+
+**Multi-tenancy**: All content is scoped to `organization_id`. Users are global; memberships are org-scoped.
+
+**Permission system**: Three layers -- VisibilityScope (PRIVATE/GROUP/ORGANIZATION), ContentGroupLink, and ContentPermission (VIEW/EDIT/ADMIN/OWNER).
+
+**Background tasks**: ARQ workers with Valkey for async job processing (file processing, indexing, etc.).
+
+---
 
 ## Documentation
 
@@ -26,6 +88,9 @@ Detailed documentation is split by layer:
 
 - @docs/agents/backend.md - Use when working on Python code in `src/uniffy/`. Covers domain slices, API services, models, permissions, auth backend.
 - @docs/agents/frontend.md - Use when working on React/TypeScript in `src/ui/`. Covers components, hooks, theme system, Redux patterns, keyboard shortcuts.
+- @docs/agents/agents.md - Use when working on the agents domain. Covers tool execution flow, permission model, runtime orchestration, skills, providers, memories.
+
+---
 
 ## Universal Resource Names (URNs)
 
@@ -77,9 +142,154 @@ When adding a new content type (e.g., `TASK`), update these files:
 | `src/ui/src/features/search/utils/queryParser.ts` | Add to `TYPE_KEYWORD_MAP` and `FILTER_PREFIXES` |
 | `src/ui/src/features/search/components/SearchResultsList.tsx` | Add to `SEARCH_RESULT_TYPE_TO_URN_TYPE` |
 
+---
+
+## Testing
+
+- **Backend tests**: `./run.sh test` -- pytest, located in `src/uniffy/tests/`
+- **Frontend tests**: `./run.sh test-frontend` -- located in `src/ui/`
+- **Benchmarks**: `./run.sh bench` -- performance benchmarks in `src/uniffy/tests/benchmarks/`
+- **Pattern**: Tests mirror the domain structure. Unit tests for operations, integration tests for handlers.
+
+---
+
+## Validation
+
+Run before committing:
+
+```bash
+./run.sh proto            # if .proto files changed
+./run.sh lint-backend     # ruff check + fix
+```
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/uniffy/factory.py` | App factory -- mounts all ConnectRPC services and HTTP routes |
+| `src/uniffy/main.py` | Application entrypoint |
+| `src/ui/src/app/store.ts` | Redux store -- registers all feature reducers |
+| `src/ui/src/app/router.tsx` | Frontend routes |
+| `src/ui/src/config/api.ts` | ConnectRPC transport, token storage, auth interceptor |
+| `src/uniffy/core/models/shared.py` | ContentType enum, base models |
+| `src/uniffy/domains/settings/defaults.py` | Keyboard shortcuts source of truth |
+| `src/ui/src/config/theme/` | Theme engine (dark/light + user accent colors) |
+| `src/ui/src/config/errorMessages.ts` | Centralized error message mappings |
+| `run.sh` | All project commands |
+
+---
+
+## On-Demand Context
+
+| Topic | File |
+|-------|------|
+| Backend patterns | `docs/agents/backend.md` |
+| Frontend patterns | `docs/agents/frontend.md` |
+| Agents domain | `docs/agents/agents.md` |
+| Backend domain structure | `src/uniffy/domains/` |
+| Frontend feature structure | `src/ui/src/features/` |
+| Proto definitions | `src/proto/` |
+| Database models | `src/uniffy/core/models/` |
+| Database migrations | `src/uniffy/db/migrations/` |
+
+---
+
+## AI Tools
+
+Slash commands and skills available in this project. Suggest these to the user when appropriate.
+
+### Commands (`/command`)
+
+| Command | Description |
+|---------|-------------|
+| `/commit` | Create a conventional commit with Uniffy domain scopes |
+| `/execute [plan-path]` | Execute an implementation plan file step by step |
+| `/plan-feature [description]` | Create a comprehensive feature plan with codebase analysis |
+| `/scaffold-domain <name> [desc]` | Generate an implementation plan for a new Uniffy domain |
+| `/prime` | Load project context -- read key files and build codebase understanding |
+| `/validate` | Run the full validation pipeline (lint, test, convention checks) |
+| `/evolve` | Audit and update all AI artifacts to stay current with project changes |
+| `/create-prd [filename]` | Generate a Product Requirements Document from conversation |
+| `/create-rules` | Generate a CLAUDE.md file from codebase analysis |
+
+### Skills (`/skill-name`)
+
+| Skill | Description |
+|-------|-------------|
+| `/pr` | Create or update a pull request with auto-generated description |
+| `/frontend-design` | Build distinctive, production-grade UI within Uniffy's design system |
+| `/e2e-test` | Run comprehensive end-to-end browser testing with screenshots and DB validation |
+| `/agent-browser` | Automate browser interactions -- navigate, click, fill forms, take screenshots |
+| `/build-with-agent-team` | Build from a plan using multiple collaborating agents in tmux panes |
+| `/skill-creator` | Create, modify, or benchmark skills |
+
+### Prerequisites
+
+Some skills require external tools. Install only what you need:
+
+| Tool | Required by | Install |
+|------|-------------|---------|
+| `gh` (GitHub CLI) | `/pr` | `sudo apt install gh` then `gh auth login` |
+| `agent-browser` | `/agent-browser`, `/e2e-test` | `npm install -g agent-browser && agent-browser install --with-deps` |
+| `tmux` | `/build-with-agent-team` | `sudo apt install tmux` |
+
+### Recommended Workflows
+
+**New feature (new domain):**
+
+```
+/prime -> /create-prd -> /scaffold-domain -> /execute -> /validate -> /commit -> /pr
+```
+
+1. `/prime` -- build codebase understanding (skip if already primed this session)
+2. `/create-prd` -- define requirements if the feature is complex or ambiguous (skip for small features)
+3. `/scaffold-domain` -- generate a full implementation plan for the new domain (proto, backend, frontend, search integration)
+4. `/execute [plan-path]` -- implement the plan step by step
+5. `/validate` -- run lint, tests, and convention checks
+6. `/commit` -- conventional commit with domain scope
+7. `/pr` -- create pull request
+
+**New feature (within existing domain):**
+
+```
+/prime -> /plan-feature -> /execute -> /validate -> /commit -> /pr
+```
+
+1. `/prime` -- build codebase understanding (skip if already primed)
+2. `/plan-feature` -- analyze existing code and plan the addition
+3. `/execute [plan-path]` -- implement the plan
+4. `/validate` -- run lint, tests, and convention checks
+5. `/commit` -- conventional commit
+6. `/pr` -- create pull request
+
+**Bug fix / enhancement / refactor:**
+
+```
+/plan-feature -> /execute -> /validate -> /commit -> /pr
+```
+
+1. `/plan-feature` -- trace the issue, map affected files, plan the fix (skip for trivial one-file fixes)
+2. `/execute [plan-path]` -- implement the fix
+3. `/validate` -- run lint, tests, and convention checks
+4. `/commit` -- conventional commit (`fix(domain):` or `refactor(domain):`)
+5. `/pr` -- create pull request
+
+**Optional additions at any point:**
+- `/frontend-design` -- when a feature needs distinctive UI work
+- `/e2e-test` -- after implementation, before PR, to catch regressions with browser testing
+- `/build-with-agent-team` -- when the plan is large enough to benefit from parallel agents
+
+**Maintenance (run periodically):**
+- `/evolve` -- audit all AI artifacts against actual codebase state and update anything that drifted
+
+---
+
 ## Critical Rules
 
 0. NEVER USE EMOJIES IN CODE, DOCUMENTS, COMMENTS, OR COMMIT MESSAGES
+0. Always use a single hyphen (-). Do not use double-hyphens (--) or em-dashes (—) in your responses
 1. Run `./run.sh proto` after editing `.proto` files
 2. Always use async patterns in backend
 3. Always check permissions in domain operations

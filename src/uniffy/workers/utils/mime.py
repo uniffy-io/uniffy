@@ -47,6 +47,26 @@ EXTRACTION_MIME_TYPES: dict[str, str] = {
     "audio/x-m4a": "extract_audio_metadata",
     "audio/opus": "extract_audio_metadata",
     "audio/webm": "extract_audio_metadata",
+    # Documents (text extraction)
+    "application/pdf": "extract_document_content",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+        "extract_document_content"
+    ),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": (
+        "extract_document_content"
+    ),
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": (
+        "extract_document_content"
+    ),
+    "text/html": "extract_document_content",
+    "application/rtf": "extract_document_content",
+    "text/rtf": "extract_document_content",
+    "text/csv": "extract_document_content",
+    "text/tab-separated-values": "extract_document_content",
+    "text/plain": "extract_document_content",
+    "text/markdown": "extract_document_content",
+    "application/json": "extract_document_content",
+    "application/xml": "extract_document_content",
 }
 
 

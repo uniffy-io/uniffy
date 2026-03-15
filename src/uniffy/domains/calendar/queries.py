@@ -367,12 +367,8 @@ async def permanent_delete_event(
 
     """
     # Delete attendees first
-    await session.execute(
-        select(EventAttendee).where(EventAttendee.event_id == event.id)
-    )
-    result = await session.execute(
-        select(EventAttendee).where(EventAttendee.event_id == event.id)
-    )
+    await session.execute(select(EventAttendee).where(EventAttendee.event_id == event.id))
+    result = await session.execute(select(EventAttendee).where(EventAttendee.event_id == event.id))
     for attendee in result.scalars().all():
         await session.delete(attendee)
 

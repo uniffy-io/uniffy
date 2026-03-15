@@ -17,6 +17,25 @@ down_revision: str | None = "002"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_content_type_enum = postgresql.ENUM(
+    "note",
+    "file",
+    "calendar_event",
+    "book",
+    "password",
+    "workflow",
+    "chat_message",
+    "space",
+    name="contenttype",
+    create_type=False,
+)
+_subject_type_enum = postgresql.ENUM(
+    "user", "group", "organization", name="subjecttype", create_type=False
+)
+_permission_level_enum = postgresql.ENUM(
+    "view", "edit", "admin", "owner", name="permissionlevel", create_type=False
+)
+
 
 def upgrade() -> None:
     """Create permission tables for content access control."""
@@ -25,36 +44,11 @@ def upgrade() -> None:
         "permissions_content_permissions",
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "content_type",
-            postgresql.ENUM(
-                "note",
-                "file",
-                "calendar_event",
-                "book",
-                "password",
-                "workflow",
-                "chat_message",
-                "space",
-                name="contenttype",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("content_type", _content_type_enum, nullable=False),
         sa.Column("content_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "subject_type",
-            postgresql.ENUM("user", "group", "organization", name="subjecttype", create_type=False),
-            nullable=False,
-        ),
+        sa.Column("subject_type", _subject_type_enum, nullable=False),
         sa.Column("subject_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "permission_level",
-            postgresql.ENUM(
-                "view", "edit", "admin", "owner", name="permissionlevel", create_type=False
-            ),
-            nullable=False,
-        ),
+        sa.Column("permission_level", _permission_level_enum, nullable=False),
         sa.Column("can_view", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("can_edit", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("can_delete", sa.Boolean(), nullable=False, server_default="false"),
@@ -104,22 +98,7 @@ def upgrade() -> None:
         "permissions_content_group_links",
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "content_type",
-            postgresql.ENUM(
-                "note",
-                "file",
-                "calendar_event",
-                "book",
-                "password",
-                "workflow",
-                "chat_message",
-                "space",
-                name="contenttype",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("content_type", _content_type_enum, nullable=False),
         sa.Column("content_id", sa.Uuid(), nullable=False),
         sa.Column("group_id", sa.Uuid(), nullable=False),
         sa.Column("linked_by_user_id", sa.Uuid(), nullable=False),

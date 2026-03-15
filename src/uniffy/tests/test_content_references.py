@@ -132,10 +132,7 @@ class TestExtractInlineFileIds:
         """Same file ID in multiple URLs is deduplicated."""
         org = "11111111-1111-1111-1111-111111111111"
         fid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-        content = (
-            f"![img](/api/files/{org}/{fid}) "
-            f"and ![thumb](/api/thumbnails/{org}/{fid})"
-        )
+        content = f"![img](/api/files/{org}/{fid}) and ![thumb](/api/thumbnails/{org}/{fid})"
         result = extract_inline_file_ids(content)
         assert result == [UUID(fid)]
 
@@ -177,10 +174,7 @@ class TestExtractInlineFileIds:
         foreign = "99999999-9999-9999-9999-999999999999"
         f1 = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         f2 = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-        content = (
-            f"![mine](/api/files/{my_org}/{f1}) "
-            f"![foreign](/api/files/{foreign}/{f2})"
-        )
+        content = f"![mine](/api/files/{my_org}/{f1}) ![foreign](/api/files/{foreign}/{f2})"
         result = extract_inline_file_ids(content, organization_id=my_org)
         assert result == [UUID(f1)]
 
@@ -190,10 +184,7 @@ class TestExtractInlineFileIds:
         org2 = "99999999-9999-9999-9999-999999999999"
         f1 = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         f2 = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-        content = (
-            f"![a](/api/files/{org1}/{f1}) "
-            f"![b](/api/files/{org2}/{f2})"
-        )
+        content = f"![a](/api/files/{org1}/{f1}) ![b](/api/files/{org2}/{f2})"
         result = extract_inline_file_ids(content)
         assert sorted(result) == sorted([UUID(f1), UUID(f2)])
 
@@ -254,18 +245,14 @@ class TestMentionPattern:
 
     def test_captures_label_and_urn(self):
         """Pattern captures label in group 1 and URN in group 2."""
-        match = MENTION_PATTERN.search(
-            "[[[My Note|urn:uniffy:content:NOTE:abc-123]]]"
-        )
+        match = MENTION_PATTERN.search("[[[My Note|urn:uniffy:content:NOTE:abc-123]]]")
         assert match is not None
         assert match.group(1) == "My Note"
         assert match.group(2) == "urn:uniffy:content:NOTE:abc-123"
 
     def test_escaped_brackets(self):
         """Pattern matches escaped bracket variants."""
-        match = MENTION_PATTERN.search(
-            "\\[\\[\\[Escaped|urn:uniffy:content:NOTE:abc\\]\\]\\]"
-        )
+        match = MENTION_PATTERN.search("\\[\\[\\[Escaped|urn:uniffy:content:NOTE:abc\\]\\]\\]")
         assert match is not None
         assert match.group(2) == "urn:uniffy:content:NOTE:abc"
 
@@ -298,9 +285,7 @@ class TestInlineFileUrlPattern:
             ),
         ],
     )
-    def test_matches_url_patterns(
-        self, url: str, expected_org: str, expected_file: str
-    ):
+    def test_matches_url_patterns(self, url: str, expected_org: str, expected_file: str):
         """Pattern matches all supported URL prefixes and captures org + file UUIDs."""
         match = INLINE_FILE_URL_PATTERN.search(url)
         assert match is not None
@@ -345,10 +330,7 @@ class TestExtractAllOutgoingReferences:
         """Content with both URN mentions and inline files returns all."""
         org = "11111111-1111-1111-1111-111111111111"
         fid = "22222222-2222-2222-2222-222222222222"
-        content = (
-            "[[[My Note|urn:uniffy:content:NOTE:aaa]]] "
-            f"![image](/api/files/{org}/{fid})"
-        )
+        content = f"[[[My Note|urn:uniffy:content:NOTE:aaa]]] ![image](/api/files/{org}/{fid})"
         result = sorted(extract_all_outgoing_references(content))
         assert result == sorted([
             "urn:uniffy:content:NOTE:aaa",
@@ -359,10 +341,7 @@ class TestExtractAllOutgoingReferences:
         """File referenced both as URN mention and inline URL is deduplicated."""
         org = "11111111-1111-1111-1111-111111111111"
         fid = "22222222-2222-2222-2222-222222222222"
-        content = (
-            f"[[[Report|urn:uniffy:content:FILE:{fid}]]] "
-            f"![image](/api/files/{org}/{fid})"
-        )
+        content = f"[[[Report|urn:uniffy:content:FILE:{fid}]]] ![image](/api/files/{org}/{fid})"
         result = extract_all_outgoing_references(content)
         assert result == [f"urn:uniffy:content:FILE:{fid}"]
 
@@ -373,21 +352,16 @@ class TestExtractAllOutgoingReferences:
         my_fid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         foreign_fid = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
         content = (
-            f"![mine](/api/files/{my_org}/{my_fid}) "
-            f"![foreign](/api/files/{foreign}/{foreign_fid})"
+            f"![mine](/api/files/{my_org}/{my_fid}) ![foreign](/api/files/{foreign}/{foreign_fid})"
         )
-        result = extract_all_outgoing_references(
-            content, organization_id=my_org
-        )
+        result = extract_all_outgoing_references(content, organization_id=my_org)
         assert result == [f"urn:uniffy:content:FILE:{my_fid}"]
 
     def test_org_filter_does_not_affect_urn_mentions(self):
         """Organization filter only applies to inline files, not URN mentions."""
         my_org = UUID("11111111-1111-1111-1111-111111111111")
         content = "[[[Note|urn:uniffy:content:NOTE:aaa]]]"
-        result = extract_all_outgoing_references(
-            content, organization_id=my_org
-        )
+        result = extract_all_outgoing_references(content, organization_id=my_org)
         assert result == ["urn:uniffy:content:NOTE:aaa"]
 
     def test_multiple_inline_file_types(self):
@@ -424,27 +398,15 @@ class TestReplaceMentionLabel:
 
     def test_multiple_mentions_same_urn(self):
         """Replaces label in all mentions of the same URN."""
-        content = (
-            f"See [[[Draft|{self.URN_NOTE}]]] "
-            f"and also [[[Draft|{self.URN_NOTE}]]]"
-        )
+        content = f"See [[[Draft|{self.URN_NOTE}]]] and also [[[Draft|{self.URN_NOTE}]]]"
         result = replace_mention_label(content, self.URN_NOTE, "Final")
-        assert result == (
-            f"See [[[Final|{self.URN_NOTE}]]] "
-            f"and also [[[Final|{self.URN_NOTE}]]]"
-        )
+        assert result == (f"See [[[Final|{self.URN_NOTE}]]] and also [[[Final|{self.URN_NOTE}]]]")
 
     def test_only_target_urn_replaced(self):
         """Mentions of other URNs are left untouched."""
-        content = (
-            f"[[[Note A|{self.URN_NOTE}]]] "
-            f"and [[[Report.pdf|{self.URN_FILE}]]]"
-        )
+        content = f"[[[Note A|{self.URN_NOTE}]]] and [[[Report.pdf|{self.URN_FILE}]]]"
         result = replace_mention_label(content, self.URN_NOTE, "Note B")
-        assert result == (
-            f"[[[Note B|{self.URN_NOTE}]]] "
-            f"and [[[Report.pdf|{self.URN_FILE}]]]"
-        )
+        assert result == (f"[[[Note B|{self.URN_NOTE}]]] and [[[Report.pdf|{self.URN_FILE}]]]")
 
     def test_escaped_brackets(self):
         """Replaces label in escaped bracket mentions."""
@@ -513,13 +475,9 @@ class TestReplaceMentionLabelInCanvas:
         canvas = self._make_canvas([
             {"type": "text", "content": f"See [[[Old|{self.URN_NOTE}]]]"},
         ])
-        result, changed = replace_mention_label_in_canvas(
-            canvas, self.URN_NOTE, "New"
-        )
+        result, changed = replace_mention_label_in_canvas(canvas, self.URN_NOTE, "New")
         assert changed is True
-        assert result["nodes"][0]["data"]["content"] == (
-            f"See [[[New|{self.URN_NOTE}]]]"
-        )
+        assert result["nodes"][0]["data"]["content"] == (f"See [[[New|{self.URN_NOTE}]]]")
 
     def test_leaves_non_text_nodes_unchanged(self):
         """Non-text nodes (media, note, shape) are not modified."""
@@ -528,9 +486,7 @@ class TestReplaceMentionLabelInCanvas:
             {"type": "note", "urn": self.URN_NOTE},
             {"type": "shape", "label": f"[[[Old|{self.URN_NOTE}]]]"},
         ])
-        result, changed = replace_mention_label_in_canvas(
-            canvas, self.URN_NOTE, "New"
-        )
+        result, changed = replace_mention_label_in_canvas(canvas, self.URN_NOTE, "New")
         assert changed is False
         assert result is canvas
 
@@ -541,9 +497,7 @@ class TestReplaceMentionLabelInCanvas:
             {"type": "text", "content": "No mentions here"},
             {"type": "text", "content": f"Third [[[Old|{self.URN_NOTE}]]]"},
         ])
-        result, changed = replace_mention_label_in_canvas(
-            canvas, self.URN_NOTE, "New"
-        )
+        result, changed = replace_mention_label_in_canvas(canvas, self.URN_NOTE, "New")
         assert changed is True
         assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][0]["data"]["content"]
         assert result["nodes"][1]["data"]["content"] == "No mentions here"
@@ -554,9 +508,7 @@ class TestReplaceMentionLabelInCanvas:
         canvas = self._make_canvas([
             {"type": "text", "content": f"[[[Report|{self.URN_FILE}]]]"},
         ])
-        result, changed = replace_mention_label_in_canvas(
-            canvas, self.URN_NOTE, "New"
-        )
+        result, changed = replace_mention_label_in_canvas(canvas, self.URN_NOTE, "New")
         assert changed is False
         assert result is canvas
 
@@ -578,9 +530,7 @@ class TestReplaceMentionLabelInCanvas:
             {"type": "text", "content": f"[[[Old|{self.URN_NOTE}]]]"},
         ])
         original_content = canvas["nodes"][0]["data"]["content"]
-        result, changed = replace_mention_label_in_canvas(
-            canvas, self.URN_NOTE, "New"
-        )
+        result, changed = replace_mention_label_in_canvas(canvas, self.URN_NOTE, "New")
         assert changed is True
         assert canvas["nodes"][0]["data"]["content"] == original_content
         assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][0]["data"]["content"]
@@ -591,9 +541,7 @@ class TestReplaceMentionLabelInCanvas:
             {"type": "text", "content": ""},
             {"type": "text", "content": f"[[[Old|{self.URN_NOTE}]]]"},
         ])
-        result, changed = replace_mention_label_in_canvas(
-            canvas, self.URN_NOTE, "New"
-        )
+        result, changed = replace_mention_label_in_canvas(canvas, self.URN_NOTE, "New")
         assert changed is True
         assert result["nodes"][0]["data"]["content"] == ""
         assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][1]["data"]["content"]

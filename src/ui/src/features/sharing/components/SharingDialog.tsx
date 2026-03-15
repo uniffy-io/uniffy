@@ -14,6 +14,7 @@ import {
     WarningCircle,
 } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
+import { ContentType, PermissionLevel } from '@/gen/common/v1/common_pb';
 import {
     useSharingDialog,
     useContentPermissions,
@@ -23,6 +24,8 @@ import { ShareTargetSearch } from '@/features/sharing/components/ShareTargetSear
 import { PermissionRow } from '@/features/sharing/components/PermissionRow';
 import type { SerializedShareTarget } from '@/features/sharing/store/sharingSlice';
 import { getInitials } from '@/components/subject/utils';
+
+const AGENT_LEVELS = [PermissionLevel.VIEW, PermissionLevel.ADMIN];
 
 export function SharingDialog() {
     const { isOpen, activeContent, close } = useSharingDialog();
@@ -56,6 +59,12 @@ export function SharingDialog() {
 
     // Check if current user is the owner
     const isOwner = currentUser && owner && owner.id === currentUser.id;
+
+    // Agents and provider keys only support VIEW and ADMIN (no separate EDIT level)
+    const allowedLevels =
+        contentType === ContentType.AGENT || contentType === ContentType.PROVIDER_KEY
+            ? AGENT_LEVELS
+            : undefined;
 
     // Handle granting permission
     const handleGrant = async (target: SerializedShareTarget, level: number) => {
@@ -148,6 +157,7 @@ export function SharingDialog() {
                                             onSelect={handleGrant}
                                             existingSubjectIds={existingSubjectIds}
                                             disabled={granting}
+                                            allowedLevels={allowedLevels}
                                         />
                                         {grantError && (
                                             <div className="mt-2 flex items-center gap-2 text-sm" style={{ color: 'var(--status-error)' }}>
@@ -252,6 +262,7 @@ export function SharingDialog() {
                                                                 onUpdate={handleUpdate}
                                                                 onRemove={handleRemove}
                                                                 canEdit={isOwner ?? false}
+                                                                allowedLevels={allowedLevels}
                                                             />
                                                         ))}
                                                     </div>

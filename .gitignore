@@ -210,3 +210,8 @@ __marimo__/
 postgres_data/
 *.tar.gz
 postgres-backup.tar.gz
+
+# OpenClaw inspiration for assistants page
+ui-inspiration-for-assistants-page/
+openclaw-architecture-and-concepts-for-inspiration/
+.agents/

@@ -5,6 +5,7 @@ This module centralizes all enum definitions to ensure consistency
 across domains and avoid circular imports.
 """
 
+import re
 from enum import Enum
 from uuid import uuid7
 
@@ -120,6 +121,10 @@ class ContentType(str, Enum):
     USER = "USER"
     PROJECT = "PROJECT"
     TASK = "TASK"
+    AGENT = "AGENT"
+    PROVIDER_KEY = "PROVIDER_KEY"
+    PROMPT = "PROMPT"
+    AGENT_CRON_TASK = "AGENT_CRON_TASK"
 
 
 class SubjectType(str, Enum):
@@ -142,3 +147,25 @@ class SubjectType(str, Enum):
     USER = "USER"
     GROUP = "GROUP"
     ORGANIZATION = "ORGANIZATION"
+
+
+def slugify(text: str, max_length: int = 500) -> str:
+    """Convert text to a URL-friendly slug.
+
+    Parameters
+    ----------
+    text : str
+        Text to slugify.
+    max_length : int
+        Maximum length of the slug (default 500).
+
+    Returns
+    -------
+    str
+        Lowercase, hyphen-separated slug.
+
+    """
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[-\s]+", "-", text)
+    return text.strip("-")[:max_length]

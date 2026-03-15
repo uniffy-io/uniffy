@@ -205,7 +205,7 @@ def note_to_reference(note: Note) -> NoteReference:
         id=str(note.id),
         title=note.title,
         slug=note.slug,
-        created_by=str(note.owner_id),
+        owner_id=str(note.owner_id),
         updated_at=datetime_to_timestamp(note.updated_at),
     )
 

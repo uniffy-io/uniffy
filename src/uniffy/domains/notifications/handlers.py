@@ -120,9 +120,7 @@ class NotificationsHandlers:
                 actor_map: dict[UUID, str] = {}
                 if actor_ids:
                     result = await session.execute(
-                        select(User.id, User.full_name, User.username).where(
-                            User.id.in_(actor_ids)
-                        )
+                        select(User.id, User.full_name, User.username).where(User.id.in_(actor_ids))
                     )
                     for row in result.all():
                         actor_map[row[0]] = row[1] or row[2]
@@ -546,7 +544,7 @@ class NotificationsHandlers:
                     )
                     last_send = now
 
-        except (asyncio.CancelledError, GeneratorExit):
+        except asyncio.CancelledError, GeneratorExit:
             logger.info(
                 f"cancelled for user {user_id} (client disconnect)",
                 component="notifications handler",

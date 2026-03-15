@@ -43,12 +43,8 @@ class Sprint(SQLModel, table=True):
     __tablename__ = "projects_sprints"
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    project_id: UUID = Field(
-        foreign_key="projects_projects.id", nullable=False, index=True
-    )
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    project_id: UUID = Field(foreign_key="projects_projects.id", nullable=False, index=True)
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     name: str = Field(max_length=255, nullable=False)
     goal: str = Field(default="", nullable=False)
     status: str = Field(default="planned", max_length=20, nullable=False)

@@ -57,9 +57,7 @@ class Project(SQLModel, table=True):
     __tablename__ = "projects_projects"
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     visibility: VisibilityScope = Field(
         default=VisibilityScope.PRIVATE,
@@ -92,9 +90,7 @@ class Project(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
-    deleted_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
     @property
     def urn(self) -> str:

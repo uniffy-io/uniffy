@@ -128,9 +128,9 @@ class ContentAccessQuery:
             content_id_column.in_(group_subquery),
         )
 
-        # Explicit permission grants (e.g., shared with specific user)
+        # Explicit permission grants (shared with specific user)
         now = datetime.now(UTC)
-        explicit_permission_subquery = (
+        user_permission_subquery = (
             select(ContentPermission.content_id)
             .where(ContentPermission.organization_id == organization_id)
             .where(ContentPermission.content_type == content_type)
@@ -145,7 +145,31 @@ class ContentAccessQuery:
             )
         )
 
-        explicit_permission_condition = content_id_column.in_(explicit_permission_subquery)
+        # Group permission grants (shared with a group the user belongs to)
+        user_groups_subquery = (
+            select(GroupMember.group_id)
+            .where(GroupMember.user_id == user_id)
+            .where(GroupMember.is_active == True)  # noqa: E712
+        )
+        group_permission_subquery = (
+            select(ContentPermission.content_id)
+            .where(ContentPermission.organization_id == organization_id)
+            .where(ContentPermission.content_type == content_type)
+            .where(ContentPermission.subject_type == SubjectType.GROUP)
+            .where(ContentPermission.subject_id.in_(user_groups_subquery))
+            .where(ContentPermission.can_view == True)  # noqa: E712
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
+        )
+
+        explicit_permission_condition = or_(
+            content_id_column.in_(user_permission_subquery),
+            content_id_column.in_(group_permission_subquery),
+        )
 
         # Combine all conditions with OR
         return or_(
@@ -368,9 +392,9 @@ class ContentAccessQuery:
             content_id_column.in_(group_subquery),
         )
 
-        # Explicit permission grants (not owned by user)
+        # Explicit user permission grants (not owned by user)
         now = datetime.now(UTC)
-        explicit_permission_subquery = (
+        user_permission_subquery = (
             select(ContentPermission.content_id)
             .where(ContentPermission.organization_id == organization_id)
             .where(ContentPermission.content_type == content_type)
@@ -385,9 +409,33 @@ class ContentAccessQuery:
             )
         )
 
+        # Group permission grants (shared with a group the user belongs to)
+        user_groups_subquery = (
+            select(GroupMember.group_id)
+            .where(GroupMember.user_id == user_id)
+            .where(GroupMember.is_active == True)  # noqa: E712
+        )
+        group_permission_subquery = (
+            select(ContentPermission.content_id)
+            .where(ContentPermission.organization_id == organization_id)
+            .where(ContentPermission.content_type == content_type)
+            .where(ContentPermission.subject_type == SubjectType.GROUP)
+            .where(ContentPermission.subject_id.in_(user_groups_subquery))
+            .where(ContentPermission.can_view == True)  # noqa: E712
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
+        )
+
         explicit_condition = and_(
             not_owner,
-            content_id_column.in_(explicit_permission_subquery),
+            or_(
+                content_id_column.in_(user_permission_subquery),
+                content_id_column.in_(group_permission_subquery),
+            ),
         )
 
         # Combine: content shared with user via any mechanism

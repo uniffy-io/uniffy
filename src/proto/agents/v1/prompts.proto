@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// PromptsService manages prompt templates for agents.
+// Prompts are reusable instruction sets that define agent behavior.
+service PromptsService {
+  // Create a new prompt
+  rpc CreatePrompt(CreatePromptRequest) returns (PromptResponse) {}
+
+  // Get a prompt by ID
+  rpc GetPrompt(GetPromptRequest) returns (PromptResponse) {}
+
+  // List prompts (bundled + organization + personal)
+  rpc ListPrompts(ListPromptsRequest) returns (ListPromptsResponse) {}
+
+  // Update a prompt
+  rpc UpdatePrompt(UpdatePromptRequest) returns (PromptResponse) {}
+
+  // Delete a prompt
+  rpc DeletePrompt(DeletePromptRequest) returns (DeletePromptResponse) {}
+}
+
+// Source of a prompt definition
+enum PromptSource {
+  PROMPT_SOURCE_UNSPECIFIED = 0;
+  PROMPT_SOURCE_BUNDLED = 1;       // shipped with the app, org_id is null
+  PROMPT_SOURCE_ORGANIZATION = 2;  // created by an org admin
+  PROMPT_SOURCE_PERSONAL = 3;      // created by a user for personal use
+}
+
+// Prompt definition returned to clients
+message PromptInfo {
+  string id = 1;
+  optional string organization_id = 2;  // null for bundled prompts
+  string name = 3;
+  string display_name = 4;
+  string description = 5;
+  string content = 6;                   // markdown instructions
+  PromptSource source = 7;
+  // Owner user ID for personal prompts (null for org/bundled prompts)
+  optional string owner_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  common.v1.VisibilityScope visibility = 11;
+  string created_by = 12;
+}
+
+// --- Requests and Responses ---
+
+message CreatePromptRequest {
+  string organization_id = 1;
+  optional string name = 2;  // auto-generated from display_name if not provided
+  string display_name = 3;
+  string description = 4;
+  string content = 5;
+  // Owner user ID for personal prompts
+  optional string owner_id = 6;
+  optional common.v1.VisibilityScope visibility = 7;
+}
+
+message PromptResponse {
+  PromptInfo prompt = 1;
+}
+
+message GetPromptRequest {
+  string organization_id = 1;
+  string prompt_id = 2;
+}
+
+message ListPromptsRequest {
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+}
+
+message ListPromptsResponse {
+  repeated PromptInfo prompts = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdatePromptRequest {
+  string organization_id = 1;
+  string prompt_id = 2;
+  optional string name = 3;
+  optional string display_name = 4;
+  optional string description = 5;
+  optional string content = 6;
+  optional common.v1.VisibilityScope visibility = 7;
+}
+
+message DeletePromptRequest {
+  string organization_id = 1;
+  string prompt_id = 2;
+}
+
+message DeletePromptResponse {
+  bool success = 1;
+}

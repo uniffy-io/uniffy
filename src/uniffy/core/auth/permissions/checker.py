@@ -171,9 +171,7 @@ class PermissionChecker:
         if content_visibility == VisibilityScope.ORGANIZATION:
             # Tasks use project defaults (tasks are children of projects)
             defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
-            if await self._org_defaults_allow(
-                organization_id, defaults_type, "members_can_edit"
-            ):
+            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_edit"):
                 return True
 
         # Check for explicit edit permission
@@ -229,9 +227,7 @@ class PermissionChecker:
         # For org-wide content, check org permission defaults
         if content_visibility == VisibilityScope.ORGANIZATION:
             defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
-            if await self._org_defaults_allow(
-                organization_id, defaults_type, "members_can_delete"
-            ):
+            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_delete"):
                 return True
 
         # Check for explicit delete permission
@@ -285,9 +281,7 @@ class PermissionChecker:
         # For org-wide content, check org permission defaults
         if content_visibility == VisibilityScope.ORGANIZATION:
             defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
-            if await self._org_defaults_allow(
-                organization_id, defaults_type, "members_can_share"
-            ):
+            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_share"):
                 return True
 
         # Check for explicit share permission
@@ -560,12 +554,15 @@ class PermissionChecker:
         content_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Check if user has an explicit permission grant (not expired)."""
+        """Check if user has an explicit permission grant (not expired), including group grants."""
         from sqlalchemy import or_
 
+        from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_permission import ContentPermission
 
         now = datetime.now(UTC)
+
+        # Check direct user grant
         result = await self.session.execute(
             select(ContentPermission)
             .where(ContentPermission.organization_id == organization_id)
@@ -582,7 +579,32 @@ class PermissionChecker:
             )
         )
 
-        return result.scalar_one_or_none() is not None
+        if result.scalar_one_or_none() is not None:
+            return True
+
+        # Check group grant (user is member of a group that has permission)
+        user_groups_subquery = (
+            select(GroupMember.group_id)
+            .where(GroupMember.user_id == user_id)
+            .where(GroupMember.is_active == True)  # noqa: E712
+        )
+        group_result = await self.session.execute(
+            select(ContentPermission)
+            .where(ContentPermission.organization_id == organization_id)
+            .where(ContentPermission.content_type == content_type)
+            .where(ContentPermission.content_id == content_id)
+            .where(ContentPermission.subject_type == SubjectType.GROUP)
+            .where(ContentPermission.subject_id.in_(user_groups_subquery))
+            .where(ContentPermission.can_view == True)  # noqa: E712
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
+        )
+
+        return group_result.scalar_one_or_none() is not None
 
     async def _has_permission_level(
         self,
@@ -620,12 +642,18 @@ class PermissionChecker:
         content_id: UUID,
         organization_id: UUID,
     ):
-        """Get the explicit permission for a user on content (not expired)."""
+        """Get the explicit permission for a user on content (not expired).
+
+        Also checks group-level permission grants.
+        """
         from sqlalchemy import or_
 
+        from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_permission import ContentPermission
 
         now = datetime.now(UTC)
+
+        # Check direct user grant first
         result = await self.session.execute(
             select(ContentPermission)
             .where(ContentPermission.organization_id == organization_id)
@@ -640,8 +668,34 @@ class PermissionChecker:
                 )
             )
         )
+        user_permission = result.scalar_one_or_none()
+        if user_permission:
+            return user_permission
 
-        return result.scalar_one_or_none()
+        # Check group grant (user is member of a group that has permission)
+        user_groups_subquery = (
+            select(GroupMember.group_id)
+            .where(GroupMember.user_id == user_id)
+            .where(GroupMember.is_active == True)  # noqa: E712
+        )
+        group_result = await self.session.execute(
+            select(ContentPermission)
+            .where(ContentPermission.organization_id == organization_id)
+            .where(ContentPermission.content_type == content_type)
+            .where(ContentPermission.content_id == content_id)
+            .where(ContentPermission.subject_type == SubjectType.GROUP)
+            .where(ContentPermission.subject_id.in_(user_groups_subquery))
+            .where(
+                or_(
+                    ContentPermission.expires_at.is_(None),
+                    ContentPermission.expires_at > now,
+                )
+            )
+            .order_by(ContentPermission.permission_level.desc())
+            .limit(1)
+        )
+
+        return group_result.scalar_one_or_none()
 
     async def _get_user_org_role(
         self,

@@ -8,12 +8,14 @@ interface ShareTargetSearchProps {
     onSelect: (target: SerializedShareTarget, level: number) => void;
     existingSubjectIds: string[];
     disabled?: boolean;
+    allowedLevels?: number[];
 }
 
 export function ShareTargetSearch({
     onSelect,
     existingSubjectIds,
     disabled = false,
+    allowedLevels,
 }: ShareTargetSearchProps) {
     const [selectedLevel, setSelectedLevel] = useState<number>(PermissionLevel.VIEW);
     const [isOpen, setIsOpen] = useState(false);
@@ -56,6 +58,7 @@ export function ShareTargetSearch({
                     value={selectedLevel}
                     onChange={setSelectedLevel}
                     disabled={disabled}
+                    allowedLevels={allowedLevels}
                 />
             </div>
         </div>

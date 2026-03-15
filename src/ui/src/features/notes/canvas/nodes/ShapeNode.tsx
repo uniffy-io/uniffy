@@ -125,7 +125,7 @@ export const ShapeNode = memo(function ShapeNode({
         </div>
       </div>
 
-      {/* Style toolbar -- shown when selected */}
+      {/* Style toolbar -shown when selected */}
       {selected && !readonly && (
         <NodeStyleToolbar
           fillColor={color}

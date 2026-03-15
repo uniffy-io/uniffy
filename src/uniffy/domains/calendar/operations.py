@@ -198,9 +198,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         from uniffy.core.models.login.group_member import GroupMember
 
         # Check which IDs are groups
-        result = await self.session.execute(
-            select(Group.id).where(Group.id.in_(attendee_ids))
-        )
+        result = await self.session.execute(select(Group.id).where(Group.id.in_(attendee_ids)))
         group_ids = {row[0] for row in result.all()}
 
         if not group_ids:
@@ -319,8 +317,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         # Extract URN references and inline file refs from description
         outgoing_refs = (
-            extract_all_outgoing_references(description, organization_id)
-            if description else None
+            extract_all_outgoing_references(description, organization_id) if description else None
         )
 
         # Resolve reminder intervals (use user defaults if not specified)
@@ -395,9 +392,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if reminders:
             reminder_user_ids = [user_id]
             if attendee_ids:
-                reminder_user_ids.extend(
-                    aid for aid in attendee_ids if aid != user_id
-                )
+                reminder_user_ids.extend(aid for aid in attendee_ids if aid != user_id)
             await self._create_reminder_rows(
                 event_id=event.id,
                 user_ids=reminder_user_ids,
@@ -419,14 +414,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if attendee_ids:
             invited = [aid for aid in attendee_ids if aid != user_id]
             if invited:
-                await emit_notification(NotificationEvent(
-                    notification_type=NotificationType.CALENDAR_INVITE,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Invited to: {event.title}",
-                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                    target_user_ids=invited,
-                ))
+                await emit_notification(
+                    NotificationEvent(
+                        notification_type=NotificationType.CALENDAR_INVITE,
+                        organization_id=organization_id,
+                        actor_id=user_id,
+                        title=f"Invited to: {event.title}",
+                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                        target_user_ids=invited,
+                    )
+                )
 
         # Notify mentioned users (excluding attendees who get CALENDAR_INVITE)
         mentioned_ids = extract_mentioned_user_ids(outgoing_refs)
@@ -434,14 +431,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if attendee_ids:
             mentioned_ids -= set(attendee_ids)
         if mentioned_ids:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CONTENT_MENTIONED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Mentioned you in: {event.title}",
-                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                target_user_ids=list(mentioned_ids),
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Mentioned you in: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=list(mentioned_ids),
+                )
+            )
 
         return event
 
@@ -631,14 +630,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         # Notify newly invited attendees
         if newly_invited_ids:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CALENDAR_INVITE,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Invited to: {event.title}",
-                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                target_user_ids=newly_invited_ids,
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CALENDAR_INVITE,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Invited to: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=newly_invited_ids,
+                )
+            )
 
         # Notify newly mentioned users (excluding attendees)
         if description is not None:
@@ -653,14 +654,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 new_mentioned -= set(result.scalars().all())
             newly_mentioned = new_mentioned - old_mentioned
             if newly_mentioned:
-                await emit_notification(NotificationEvent(
-                    notification_type=NotificationType.CONTENT_MENTIONED,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Mentioned you in: {event.title}",
-                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                    target_user_ids=list(newly_mentioned),
-                ))
+                await emit_notification(
+                    NotificationEvent(
+                        notification_type=NotificationType.CONTENT_MENTIONED,
+                        organization_id=organization_id,
+                        actor_id=user_id,
+                        title=f"Mentioned you in: {event.title}",
+                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                        target_user_ids=list(newly_mentioned),
+                    )
+                )
 
         return event
 
@@ -698,9 +701,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self._require_delete(user_id, organization_id, event)
 
         # Delete all reminder rows for this event
-        await self.session.execute(
-            delete(EventReminder).where(EventReminder.event_id == event_id)
-        )
+        await self.session.execute(delete(EventReminder).where(EventReminder.event_id == event_id))
 
         if permanent:
             await queries.permanent_delete_event(self.session, event)
@@ -772,10 +773,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
 
         # Also include events where user is an attendee (including declined)
-        attendee_subquery = (
-            select(EventAttendee.event_id)
-            .where(EventAttendee.user_id == user_id)
-        )
+        attendee_subquery = select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
         attendee_filter = CalendarEvent.id.in_(attendee_subquery)
 
         # Combine: user can access OR user is attendee
@@ -859,10 +857,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
 
         # Also include events where user is an attendee (including declined)
-        attendee_subquery = (
-            select(EventAttendee.event_id)
-            .where(EventAttendee.user_id == user_id)
-        )
+        attendee_subquery = select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
         attendee_filter = CalendarEvent.id.in_(attendee_subquery)
 
         # Combine access filter with attendee filter
@@ -1008,14 +1003,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         # Notify newly added attendees
         if added_ids:
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CALENDAR_INVITE,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Invited to: {event.title}",
-                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                target_user_ids=added_ids,
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CALENDAR_INVITE,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Invited to: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=added_ids,
+                )
+            )
 
         return event
 
@@ -1148,14 +1145,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         # Notify organizer of RSVP response
         if event.organizer_id != user_id:
             status_label = status.value.lower()
-            await emit_notification(NotificationEvent(
-                notification_type=NotificationType.CALENDAR_RESPONSE,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"RSVP {status_label}: {event.title}",
-                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                target_user_ids=[event.organizer_id],
-            ))
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CALENDAR_RESPONSE,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"RSVP {status_label}: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=[event.organizer_id],
+                )
+            )
 
         return True
 

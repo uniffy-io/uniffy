@@ -2,9 +2,9 @@
 
 from uuid import UUID
 
+from uniffy.core.avatars import get_avatar_url
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
-from uniffy.domains.users.avatars import get_avatar_url
 from uniffy.gen.auth.v1.auth_pb2 import CurrentUserResponse, SessionInfo
 
 

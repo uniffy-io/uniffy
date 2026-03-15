@@ -107,6 +107,7 @@ def organization_overview_to_proto(
     if content_counts:
         for ct_name, count in content_counts:
             from uniffy.core.models.shared import ContentType
+
             try:
                 ct = ContentType(ct_name)
                 proto_content_counts.append(

@@ -1,0 +1,206 @@
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import { sessionsApi } from '@/features/agents/api/sessionsApi';
+import { runtimeApi } from '@/features/agents/api/runtimeApi';
+import type { RootState } from '@/app/store';
+import type { MessageInfo } from '@/gen/agents/v1/sessions_pb';
+import { MessageRole } from '@/gen/agents/v1/sessions_pb';
+import {
+    streamStarted,
+    addOptimisticUserMessage,
+    appendStreamingToken,
+    addStreamingToolCall,
+    addStreamingToolResult,
+    setConfirmationRequired,
+    clearConfirmation,
+    streamCompleted,
+    streamError,
+} from '@/features/agents/store/agentMessagesSlice';
+
+const getOrganizationId = (state: RootState): string => {
+    const orgId = state.auth.currentOrganizationId;
+    if (!orgId) throw new Error('No organization selected');
+    return orgId;
+};
+
+const timestampToPlain = (ts?: { seconds: bigint | number; nanos: bigint | number }) => {
+    if (!ts) return undefined;
+    return {
+        seconds: typeof ts.seconds === 'bigint' ? Number(ts.seconds) : ts.seconds,
+        nanos: typeof ts.nanos === 'bigint' ? Number(ts.nanos) : ts.nanos,
+    };
+};
+
+export const messageToPlain = (msg: MessageInfo) => ({
+    id: msg.id,
+    sessionId: msg.sessionId,
+    role: msg.role,
+    content: msg.content,
+    inputTokens: msg.inputTokens,
+    outputTokens: msg.outputTokens,
+    model: msg.model,
+    toolName: msg.toolName,
+    toolCallId: msg.toolCallId,
+    toolArgsJson: msg.toolArgsJson,
+    toolResult: msg.toolResult,
+    isThinking: msg.isThinking,
+    isCompacted: msg.isCompacted,
+    createdAt: timestampToPlain(msg.createdAt),
+    fileIds: msg.fileIds?.length ? [...msg.fileIds] : undefined,
+});
+
+export type SerializedMessage = ReturnType<typeof messageToPlain>;
+
+export const fetchMessages = createAsyncThunk<
+    { sessionId: string; messages: SerializedMessage[] },
+    { sessionId: string },
+    { state: RootState; rejectValue: string }
+>('agentMessages/fetchMessages', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+
+        // First request with max page size to get all messages.
+        // Backend caps at 200 per page; compaction keeps active
+        // messages well under that for most sessions.
+        const first = await sessionsApi.listMessages({
+            organizationId,
+            sessionId: params.sessionId,
+            pagination: { page: 1, pageSize: 200 },
+        });
+        const allMessages = first.messages.map(messageToPlain);
+        const totalPages = first.pagination?.totalPages ?? 1;
+
+        // Fetch remaining pages if the session is very long
+        for (let page = 2; page <= totalPages; page++) {
+            const next = await sessionsApi.listMessages({
+                organizationId,
+                sessionId: params.sessionId,
+                pagination: { page, pageSize: 200 },
+            });
+            allMessages.push(...next.messages.map(messageToPlain));
+        }
+
+        return {
+            sessionId: params.sessionId,
+            messages: allMessages,
+        };
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch messages');
+    }
+});
+
+export const streamSendMessage = createAsyncThunk<
+    void,
+    {
+        sessionId: string;
+        content: string;
+        fileIds?: string[];
+    },
+    { state: RootState; rejectValue: string }
+>('agentMessages/streamSendMessage', async (params, { getState, dispatch, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        dispatch(streamStarted());
+        dispatch(addOptimisticUserMessage({
+            sessionId: params.sessionId,
+            content: params.content,
+            fileIds: params.fileIds,
+        }));
+
+        const stream = runtimeApi.streamSendMessage({
+            organizationId,
+            sessionId: params.sessionId,
+            content: params.content,
+            fileIds: params.fileIds ?? [],
+            userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+
+        // RAF-based token batching: buffer tokens and flush once per
+        // animation frame so React re-renders at most ~60fps regardless
+        // of how fast individual tokens arrive from the server.
+        let tokenBuffer = '';
+        let rafId: number | null = null;
+
+        const flushTokens = () => {
+            if (tokenBuffer) {
+                dispatch(appendStreamingToken(tokenBuffer));
+                tokenBuffer = '';
+            }
+            rafId = null;
+        };
+
+        const bufferToken = (text: string) => {
+            tokenBuffer += text;
+            if (rafId === null) {
+                rafId = requestAnimationFrame(flushTokens);
+            }
+        };
+
+        for await (const event of stream) {
+            if (event.event.case === 'token') {
+                bufferToken(event.event.value.text);
+            } else if (event.event.case === 'toolCall') {
+                dispatch(addStreamingToolCall({
+                    toolCallId: event.event.value.toolCallId,
+                    toolName: event.event.value.toolName,
+                    toolArgsJson: event.event.value.toolArgsJson,
+                }));
+            } else if (event.event.case === 'toolResult') {
+                dispatch(addStreamingToolResult({
+                    toolCallId: event.event.value.toolCallId,
+                    toolName: event.event.value.toolName,
+                    success: event.event.value.success,
+                    result: event.event.value.result,
+                }));
+            } else if (event.event.case === 'messageStored') {
+                // A message was stored server-side; we can use this to
+                // reconcile or just ignore since we get final from 'done'.
+            } else if (event.event.case === 'done') {
+                // Flush any remaining buffered tokens before completing
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                flushTokens();
+                const assistantMsg = event.event.value.assistantMessage;
+                dispatch(streamCompleted({
+                    sessionId: params.sessionId,
+                    assistantMessage: assistantMsg ? messageToPlain(assistantMsg) : undefined,
+                }));
+            } else if (event.event.case === 'confirmationRequired') {
+                dispatch(setConfirmationRequired({
+                    toolCallId: event.event.value.toolCallId,
+                    toolName: event.event.value.toolName,
+                    toolArgsJson: event.event.value.toolArgsJson,
+                    description: event.event.value.description,
+                }));
+            } else if (event.event.case === 'error') {
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                flushTokens();
+                dispatch(streamError(event.event.value.message));
+                return rejectWithValue(event.event.value.message);
+            }
+        }
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Streaming failed';
+        dispatch(streamError(msg));
+        return rejectWithValue(msg);
+    }
+});
+
+export const respondToConfirmation = createAsyncThunk<
+    void,
+    { sessionId: string; toolCallId: string; approved: boolean },
+    { state: RootState; rejectValue: string }
+>('agentMessages/respondToConfirmation', async (params, { getState, dispatch, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        dispatch(clearConfirmation());
+        await runtimeApi.respondToConfirmation({
+            organizationId,
+            sessionId: params.sessionId,
+            toolCallId: params.toolCallId,
+            approved: params.approved,
+        });
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to respond to confirmation');
+    }
+});
+
+export { MessageRole };

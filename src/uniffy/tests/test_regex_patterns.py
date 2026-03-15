@@ -6,9 +6,9 @@ from uniffy.core.content.references import (
     MENTION_PATTERN,
     extract_urns_from_content,
 )
+from uniffy.core.types import slugify
 from uniffy.domains.notes.queries import (
     extract_inline_tags_from_content,
-    slugify,
 )
 from uniffy.domains.search.parser import (
     FILTER_PATTERN,
@@ -199,9 +199,7 @@ class TestSearchFilterPattern:
         """Test filter pattern matching."""
         matches = list(FILTER_PATTERN.finditer(query))
         assert len(matches) == len(expected_filters)
-        for match, (keyword, quoted, unquoted) in zip(
-            matches, expected_filters, strict=True
-        ):
+        for match, (keyword, quoted, unquoted) in zip(matches, expected_filters, strict=True):
             assert match.group(1).lower() == keyword.lower()
             if quoted:
                 assert match.group(2) == quoted

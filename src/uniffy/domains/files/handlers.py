@@ -709,8 +709,7 @@ class FilesHandlers:
                 owner_info_map: dict[UUID, dict] = {}
                 if owner_ids:
                     result = await session.execute(
-                        select(User.id, User.full_name, User.email)
-                        .where(User.id.in_(owner_ids))
+                        select(User.id, User.full_name, User.email).where(User.id.in_(owner_ids))
                     )
                     for row in result.all():
                         owner_info_map[row.id] = {
@@ -724,8 +723,7 @@ class FilesHandlers:
 
                 return ListFilesResponse(
                     files=[
-                        file_to_proto(f, owner_info=owner_info_map.get(f.owner_id))
-                        for f in files
+                        file_to_proto(f, owner_info=owner_info_map.get(f.owner_id)) for f in files
                     ],
                     total_count=total,
                     page=request.page or 1,
@@ -1120,8 +1118,7 @@ class FilesHandlers:
 
                     # Check if visibility is actually changing
                     visibility_changing = (
-                        target_visibility is not None and
-                        target_visibility != file.visibility
+                        target_visibility is not None and target_visibility != file.visibility
                     )
 
                     # Check ownership only for visibility changes
@@ -1155,8 +1152,7 @@ class FilesHandlers:
 
                     # Check if visibility is actually changing
                     visibility_changing = (
-                        target_visibility is not None and
-                        target_visibility != folder.visibility
+                        target_visibility is not None and target_visibility != folder.visibility
                     )
 
                     # Check ownership only for visibility changes

@@ -73,7 +73,7 @@ async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
 
     try:
         return json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         logger.warning(f"Cache decode failed for key {key}", component="cache")
         return CACHE_MISS
 

@@ -18,6 +18,15 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.shared import ContentType, VisibilityScope
 from uniffy.domains.users.search import UserSearchIndexer
 
+_CONTENT_TYPE_DEFAULT_VISIBILITY: dict[ContentType, VisibilityScope] = {
+    ContentType.AGENT: VisibilityScope.ORGANIZATION,
+}
+
+
+def _default_visibility_for(content_type: ContentType) -> VisibilityScope:
+    """Return the default visibility for a content type when no record exists."""
+    return _CONTENT_TYPE_DEFAULT_VISIBILITY.get(content_type, VisibilityScope.PRIVATE)
+
 
 class OrganizationOperations:
     """Organization management operations."""
@@ -805,7 +814,7 @@ class OrganizationOperations:
             defaults = OrganizationPermissionDefaults(
                 organization_id=org_id,
                 content_type=content_type,
-                default_visibility=default_visibility or VisibilityScope.PRIVATE,
+                default_visibility=default_visibility or _default_visibility_for(content_type),
                 members_can_view=members_can_view if members_can_view is not None else True,
                 members_can_edit=members_can_edit if members_can_edit is not None else False,
                 members_can_delete=members_can_delete if members_can_delete is not None else False,

@@ -37,9 +37,7 @@ class TaskActivity(SQLModel, table=True):
     __tablename__ = "projects_activities"
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    task_id: UUID = Field(
-        foreign_key="projects_tasks.id", nullable=False, index=True
-    )
+    task_id: UUID = Field(foreign_key="projects_tasks.id", nullable=False, index=True)
     actor_id: UUID = Field(foreign_key="login_users.id", nullable=False)
     action: str = Field(max_length=50, nullable=False)
     field_id: str | None = Field(default=None, max_length=100)

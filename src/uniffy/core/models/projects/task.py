@@ -80,12 +80,8 @@ class Task(SQLModel, table=True):
     __tablename__ = "projects_tasks"
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    project_id: UUID = Field(
-        foreign_key="projects_projects.id", nullable=False, index=True
-    )
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    project_id: UUID = Field(foreign_key="projects_projects.id", nullable=False, index=True)
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     visibility: VisibilityScope = Field(
         default=VisibilityScope.PRIVATE,
@@ -102,32 +98,22 @@ class Task(SQLModel, table=True):
     )
     title: str = Field(max_length=500, nullable=False)
     description: str = Field(default="", nullable=False)
-    status: str = Field(
-        default="status_todo", max_length=100, nullable=False, index=True
-    )
+    status: str = Field(default="status_todo", max_length=100, nullable=False, index=True)
     priority: str = Field(default="priority_medium", max_length=100, nullable=False)
     assignee_ids: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     start_date: str | None = Field(default=None, max_length=20)
     due_date: str | None = Field(default=None, max_length=20)
-    completed_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
-    parent_id: UUID | None = Field(
-        default=None, foreign_key="projects_tasks.id", index=True
-    )
+    completed_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    parent_id: UUID | None = Field(default=None, foreign_key="projects_tasks.id", index=True)
     blocked_by_task_ids: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     is_milestone: bool = Field(default=False, nullable=False)
     recurrence_rule: str | None = Field(default=None, max_length=500)
     sort_order: int = Field(default=0, sa_column=Column(Integer, nullable=False))
     number: int = Field(default=0, nullable=False)
     task_type: str = Field(default="task", max_length=50, nullable=False)
-    sprint_id: UUID | None = Field(
-        default=None, foreign_key="projects_sprints.id", index=True
-    )
+    sprint_id: UUID | None = Field(default=None, foreign_key="projects_sprints.id", index=True)
     field_values: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
-    outgoing_references: list[str] | None = Field(
-        default=None, sa_column=Column(JSONB)
-    )
+    outgoing_references: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     is_deleted: bool = Field(default=False, nullable=False)
     version: int = Field(default=1, nullable=False)
     created_at: datetime = Field(
@@ -138,9 +124,7 @@ class Task(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
-    deleted_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
     @property
     def urn(self) -> str:

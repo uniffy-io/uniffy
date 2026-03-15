@@ -95,7 +95,7 @@ class NotesHandlers:
                     try:
                         canvas_content = json.loads(content)
                         content = ""
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         pass
 
                 note = await ops.create(
@@ -209,7 +209,7 @@ class NotesHandlers:
                         parsed = json.loads(content)
                         if isinstance(parsed, dict):
                             canvas_content = parsed
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         pass
 
                 note = await ops.update(
@@ -420,7 +420,7 @@ class NotesHandlers:
                     parsed = json.loads(content)
                     if isinstance(parsed, dict):
                         canvas_content = parsed
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     pass
 
                 note = await ops.autosave(

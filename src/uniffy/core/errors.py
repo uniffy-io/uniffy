@@ -175,3 +175,54 @@ class AuthenticationError(UNIFFYError):
         """
         self.reason = reason
         super().__init__(f"Authentication failed: {reason}")
+
+
+class RateLimitExceededError(UNIFFYError):
+    """
+    Rate limit exceeded exception.
+
+    Raised when a user exceeds the allowed request rate.
+
+    Attributes
+    ----------
+    resource : str
+        The resource being rate-limited (e.g., "agent_messages").
+    limit : int
+        Maximum allowed requests in the window.
+    window_seconds : int
+        Duration of the rate limit window.
+    retry_after : int
+        Seconds until the rate limit resets.
+
+    """
+
+    def __init__(
+        self,
+        resource: str,
+        limit: int,
+        window_seconds: int,
+        retry_after: int = 0,
+    ) -> None:
+        """
+        Initialize RateLimitExceededError.
+
+        Parameters
+        ----------
+        resource : str
+            The resource being rate-limited.
+        limit : int
+            Maximum allowed requests in the window.
+        window_seconds : int
+            Duration of the rate limit window.
+        retry_after : int
+            Seconds until the rate limit resets.
+
+        """
+        self.resource = resource
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self.retry_after = retry_after
+        super().__init__(
+            f"Rate limit exceeded for {resource}: "
+            f"max {limit} requests per {window_seconds}s"
+        )

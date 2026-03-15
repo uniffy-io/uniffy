@@ -13,6 +13,8 @@ export const UrnType = {
   CALENDAR_EVENT: 'calendar_event',
   PROJECT: 'project',
   TASK: 'task',
+  AGENT: 'agent',
+  PROMPT: 'prompt',
   UNKNOWN: 'unknown',
 } as const;
 

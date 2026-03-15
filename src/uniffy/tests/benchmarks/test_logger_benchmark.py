@@ -40,7 +40,8 @@ LONG_DIRTY_MSG = "Error in {module} at <line> with [context]: " * 10
 def escape_naive(s: str) -> str:
     """Naive approach: always run 6x replace chains."""
     return (
-        s.replace("{", "{{")
+        s
+        .replace("{", "{{")
         .replace("}", "}}")
         .replace("<", "\\<")
         .replace(">", "\\>")
@@ -54,7 +55,8 @@ def escape_simple_check(s: str) -> str:
     if not ("{" in s or "}" in s or "<" in s or ">" in s or "[" in s or "]" in s):
         return s
     return (
-        s.replace("{", "{{")
+        s
+        .replace("{", "{{")
         .replace("}", "}}")
         .replace("<", "\\<")
         .replace(">", "\\>")
@@ -71,7 +73,8 @@ def escape_frozenset_check(s: str) -> str:
     if _SPECIAL_CHARS_FROZENSET.isdisjoint(s):
         return s
     return (
-        s.replace("{", "{{")
+        s
+        .replace("{", "{{")
         .replace("}", "}}")
         .replace("<", "\\<")
         .replace(">", "\\>")
