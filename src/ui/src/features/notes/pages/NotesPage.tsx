@@ -7,6 +7,7 @@ import { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
 import { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
 import { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMetadataPanel';
 import { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
+import { NotesEmptyState } from '@/features/notes/components/NotesEmptyState';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { toggleSidebar, setEditorMode, setSidebarOpen, toggleMetadataPanel } from '@/features/notes/store/editorSlice';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
@@ -80,6 +81,7 @@ export function NotesPage() {
   }, [dispatch, defaultEditor]);
 
   // Check if notes are already loaded
+  const notesLoading = notesState?.loading ?? false;
   const notesCount = Object.keys(notesState?.notes ?? {}).length;
 
   // Load notes on mount only if not already loaded
@@ -108,7 +110,12 @@ export function NotesPage() {
       <AppHeader />
       <NotesLayout
         sidebar={<NotesSidebar />}
-        editor={showDashboard ? <NotesGraphDashboard key="graph-dashboard" /> : <NotesEditor key="note-editor" />}
+        editor={showDashboard
+          ? (notesCount === 0 && !notesLoading && !isGraphRoute
+            ? <NotesEmptyState key="empty-state" />
+            : <NotesGraphDashboard key="graph-dashboard" />)
+          : <NotesEditor key="note-editor" />
+        }
         metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}
         showSidebar={!isZenMode && isSidebarOpen}
         showMetadataPanel={!isZenMode && isMetadataPanelOpen && !!currentNoteId}

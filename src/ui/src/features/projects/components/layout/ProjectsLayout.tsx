@@ -39,7 +39,8 @@ import {
   closeDetailPanel,
   selectTask,
 } from "@/features/projects/store/projectsUiSlice";
-import { selectCurrentProject, selectTasksForProject } from "@/features/projects/store/projectsSlice";
+import { selectCurrentProject, selectTasksForProject, selectProjects } from "@/features/projects/store/projectsSlice";
+import { ProjectsEmptyState } from "@/features/projects/components/ProjectsEmptyState";
 
 const EMPTY_TASKS: ReturnType<ReturnType<typeof selectTasksForProject>> = [];
 
@@ -227,6 +228,7 @@ function NoProjectSelected() {
   const dispatch = useAppDispatch();
   const { isMobile } = useBreakpoint();
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
+  const projects = useAppSelector(selectProjects);
 
   return (
     <div className="flex-1 flex flex-col bg-background">
@@ -243,17 +245,21 @@ function NoProjectSelected() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <div className="mb-4 flex justify-center">
-            <Kanban size={48} weight="duotone" className="text-muted-foreground" />
+      {projects.length === 0 ? (
+        <ProjectsEmptyState />
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="text-center max-w-md">
+            <div className="mb-4 flex justify-center">
+              <Kanban size={48} weight="duotone" className="text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">No Project Selected</h2>
+            <p className="text-sm text-muted-foreground">
+              Select a project from the sidebar or create a new one to get started.
+            </p>
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">No Project Selected</h2>
-          <p className="text-sm text-muted-foreground">
-            Select a project from the sidebar or create a new one to get started.
-          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }

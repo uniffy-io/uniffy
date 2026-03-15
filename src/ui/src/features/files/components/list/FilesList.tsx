@@ -67,6 +67,7 @@ import { FolderCard } from '@/features/files/components/list/FolderCard';
 import { FileCard } from '@/features/files/components/list/FileCard';
 import { MoveDialog } from '@/features/files/components/list/MoveDialog';
 import { ICON_SIZE_CONFIG, SORT_OPTIONS, SORT_ORDER_OPTIONS, type SortByValue, type SortOrderValue } from '@/features/files/components/list/constants';
+import { FilesListSkeleton } from '@/features/files/components/list/FilesListSkeleton';
 
 /**
  * Build breadcrumb path by walking up folder parentId chain.
@@ -701,11 +702,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const someSelected = totalSelectedCount > 0 && totalSelectedCount < totalItemCount;
 
     if (loading) {
-        return (
-            <div className="flex-1 flex items-center justify-center">
-                <ArrowsClockwise size={32} className="text-muted-foreground animate-spin" />
-            </div>
-        );
+        return <FilesListSkeleton viewMode={viewMode} />;
     }
 
     return (

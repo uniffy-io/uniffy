@@ -15,6 +15,7 @@ import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { PageLoader } from '@/components/feedback/PageLoader';
 import { PageErrorFallback } from '@/components/feedback/PageErrorFallback';
 import { AppErrorFallback } from '@/components/feedback/AppErrorFallback';
+import { NotFoundPage } from '@/components/feedback/NotFoundPage';
 import { lazyImport } from '@/shared/utils/lazyImport';
 
 // Expose toast on window in dev mode for testing
@@ -219,7 +220,7 @@ export function App() {
                             <Route path="settings" element={<Navigate to="/admin/server-settings" replace />} />
 
                             {/* 404 for admin */}
-                            <Route path="*" element={<div>Admin Page Not Found</div>} />
+                            <Route path="*" element={<NotFoundPage compact heading="Admin Page Not Found" />} />
                         </Route>
 
                         <Route
@@ -397,18 +398,7 @@ export function App() {
                         <Route path="/organization" element={<Navigate to="/admin/groups" replace />} />
 
                         {/* Fallback for 404s */}
-                        <Route
-                            path="*"
-                            element={
-                                <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-                                    <h1 className="text-4xl font-bold mb-4">404</h1>
-                                    <p className="text-muted-foreground mb-4">Page not found</p>
-                                    <a href="/" className="text-primary hover:underline">
-                                        Go back home
-                                    </a>
-                                </div>
-                            }
-                        />
+                        <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                 </BrowserRouter>
             </ErrorBoundary>

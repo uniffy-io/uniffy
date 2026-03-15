@@ -49,6 +49,7 @@ import { TreeNodeContextMenu } from '@/features/notes/components/sidebar/TreeNod
 import { TrashSection } from '@/features/notes/components/sidebar/TrashSection';
 import { NoteMoveDialog } from '@/features/notes/components/sidebar/NoteMoveDialog';
 import { CreateDropdown } from '@/features/notes/components/sidebar/CreateDropdown';
+import { NotesSidebarSkeleton } from '@/features/notes/components/sidebar/NotesSidebarSkeleton';
 import type { ActiveMenuState, MoveTarget } from '@/features/notes/components/sidebar/types';
 
 // Section configuration
@@ -696,8 +697,14 @@ export function NotesSidebar() {
                             <ArrowsClockwise size={14} weight="bold" className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
-                    {SECTIONS.map(renderSection)}
-                    {renderGroups()}
+                    {loading && tree.personal.length === 0 && tree.organization.length === 0 && tree.shared.length === 0 && tree.bookmarked.length === 0 ? (
+                        <NotesSidebarSkeleton />
+                    ) : (
+                        <>
+                            {SECTIONS.map(renderSection)}
+                            {renderGroups()}
+                        </>
+                    )}
                     <TrashSection
                         trashNodes={tree.trash}
                         currentNoteId={currentNoteId}
