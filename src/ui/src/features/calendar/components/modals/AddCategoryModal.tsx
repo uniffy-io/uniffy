@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { createCategory, updateCategory } from '@/features/calendar/store/calendarThunks';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 
 interface AddCategoryModalProps {
   isOpen: boolean;
@@ -169,28 +170,23 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
 
           {/* Footer */}
           <div className="flex justify-end gap-2 pt-4">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="md"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
               disabled={isSubmitting}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              size="md"
+              loading={isSubmitting}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-opacity disabled:opacity-50 flex items-center gap-2"
             >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                isEditing ? 'Save Changes' : 'Create Category'
-              )}
-            </button>
+              {isSubmitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Category'}
+            </Button>
           </div>
         </form>
       </div>

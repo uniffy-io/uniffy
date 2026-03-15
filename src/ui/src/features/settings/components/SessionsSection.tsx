@@ -13,6 +13,7 @@ import {
     X,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { Button } from '@/components/ui/button';
 import {
     fetchSessions,
     revokeSession,
@@ -49,19 +50,15 @@ export function SessionsSection() {
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-foreground">Active Sessions</h2>
                 {otherSessionCount > 0 && (
-                    <button
+                    <Button
+                        variant="destructive"
+                        size="xs"
                         onClick={() => dispatch(revokeOtherSessions())}
-                        disabled={revokingAll}
-                        className="text-sm disabled:opacity-50 flex items-center gap-1"
-                        style={{ color: 'var(--status-error)' }}
+                        loading={revokingAll}
                     >
-                        {revokingAll ? (
-                            <SpinnerGap className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                            <SignOut className="w-3.5 h-3.5" />
-                        )}
+                        <SignOut className="w-3.5 h-3.5" />
                         Sign out all other sessions
-                    </button>
+                    </Button>
                 )}
             </div>
 

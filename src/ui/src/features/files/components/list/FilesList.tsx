@@ -26,6 +26,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { renderIcon } from '@/components/icon-picker';
 import { useNavigate } from 'react-router-dom';
@@ -1025,13 +1026,10 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             <p className="text-lg font-medium">No files yet</p>
                             <p className="text-sm mb-4">Right-click to upload files or create a folder</p>
                             {onUpload && (
-                                <button
-                                    onClick={onUpload}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                                >
-                                    <CloudArrowUp size={18} />
+                                <Button size="md" onClick={onUpload}>
+                                    <CloudArrowUp size={16} />
                                     Upload Files
-                                </button>
+                                </Button>
                             )}
                         </>
                     )}

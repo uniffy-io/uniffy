@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -177,22 +178,14 @@ function MemoryEditForm({
             </div>
 
             <div className="flex items-center gap-2 justify-end">
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                >
+                <Button variant="secondary" size="sm" onClick={onCancel}>
                     <X size={14} />
                     Cancel
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onSave(form)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
-                >
+                </Button>
+                <Button size="sm" onClick={() => onSave(form)}>
                     <FloppyDisk size={14} />
                     Save
-                </button>
+                </Button>
             </div>
         </div>
     );
@@ -304,28 +297,14 @@ function NewMemoryForm({
                     </div>
                 </div>
                 <div className="flex items-center gap-2 justify-end">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                    >
+                    <Button variant="secondary" size="sm" onClick={onCancel}>
                         <X size={14} />
                         Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={!canSubmit}
-                        className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground transition-colors",
-                            canSubmit
-                                ? "hover:bg-primary/90 cursor-pointer"
-                                : "opacity-50 cursor-not-allowed"
-                        )}
-                    >
+                    </Button>
+                    <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
                         <Plus size={14} />
                         Add Memory
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

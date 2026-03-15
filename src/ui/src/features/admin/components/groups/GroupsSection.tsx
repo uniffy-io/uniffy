@@ -14,6 +14,7 @@ import {
     UserPlus,
     X,
 } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import { useGroups, useGroupMembers } from '@/features/admin/hooks/useAdminHooks';
 import type { SerializedGroupInfo } from '@/features/admin/store/adminSlice';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -198,23 +199,12 @@ function GroupFormModal({ group, onSave, onClose }: GroupFormModalProps) {
                     </div>
 
                     <div className="flex justify-end gap-3 pt-2">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 rounded-md text-sm font-medium text-muted-foreground
-                                hover:bg-muted transition-colors"
-                        >
+                        <Button variant="ghost" size="md" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="px-4 py-2 rounded-md text-sm font-medium
-                                bg-primary text-primary-foreground hover:bg-primary/90
-                                disabled:opacity-50 transition-colors"
-                        >
+                        </Button>
+                        <Button type="submit" size="md" loading={saving} disabled={saving}>
                             {saving ? 'Saving...' : group ? 'Save Changes' : 'Create Group'}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>
@@ -371,14 +361,9 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                 </div>
 
                 <div className="flex justify-end px-4 md:px-6 py-3 md:py-4 border-t border-border">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-md text-sm font-medium
-                            bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
+                    <Button size="md" onClick={onClose}>
                         Done
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

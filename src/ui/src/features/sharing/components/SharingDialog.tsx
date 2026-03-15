@@ -24,6 +24,7 @@ import { ShareTargetSearch } from '@/features/sharing/components/ShareTargetSear
 import { PermissionRow } from '@/features/sharing/components/PermissionRow';
 import type { SerializedShareTarget } from '@/features/sharing/store/sharingSlice';
 import { getInitials } from '@/components/subject/utils';
+import { Button } from '@/components/ui/button';
 
 const AGENT_LEVELS = [PermissionLevel.VIEW, PermissionLevel.ADMIN];
 
@@ -274,15 +275,12 @@ export function SharingDialog() {
 
                                 {/* Footer */}
                                 <div className="flex items-center justify-end gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-border bg-muted/30">
-                                    <button
-                                        type="button"
+                                    <Button
+                                        size="md"
                                         onClick={close}
-                                        className="px-4 py-2 rounded-md text-sm font-medium
-                                            bg-primary text-primary-foreground
-                                            hover:bg-primary/90 transition-colors"
                                     >
                                         Done
-                                    </button>
+                                    </Button>
                                 </div>
                             </Dialog.Panel>
                         </Transition.Child>

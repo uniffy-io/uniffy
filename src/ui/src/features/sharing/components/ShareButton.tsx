@@ -7,6 +7,7 @@
 import { ShareNetwork } from '@phosphor-icons/react';
 import { useSharingDialog } from '@/features/sharing/hooks/useSharingHooks';
 import { ContentType } from '@/gen/common/v1/common_pb';
+import { Button } from '@/components/ui/button';
 
 interface ShareButtonProps {
     contentType: ContentType;
@@ -43,20 +44,14 @@ export function ShareButton({
     }
 
     return (
-        <button
-            type="button"
+        <Button
+            size="sm"
             onClick={handleClick}
-            className={`
-                flex items-center gap-2 px-3 py-2 rounded-md
-                bg-primary text-primary-foreground
-                hover:bg-primary/90 transition-colors
-                text-sm font-medium
-                ${className}
-            `}
+            className={className}
         >
             <ShareNetwork size={16} />
-            <span>Share</span>
-        </button>
+            Share
+        </Button>
     );
 }
 

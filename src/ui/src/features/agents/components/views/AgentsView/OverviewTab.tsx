@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import {
     Brain,
     ImageSquare,
@@ -259,13 +260,9 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                         disabled={!canEdit}
                                     />
                                     {nameChanged && (
-                                        <button
-                                            type="button"
-                                            onClick={handleSaveName}
-                                            className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                                        >
+                                        <Button size="md" onClick={handleSaveName}>
                                             Save
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
                             </div>
@@ -324,19 +321,14 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                     Add an API key from Anthropic, OpenAI, or Google to start using this agent.
                                     Provider keys are managed in the configuration panel.
                                 </p>
-                                <button
-                                    type="button"
+                                <Button
+                                    size="md"
                                     onClick={() => navigate("/agents/config")}
-                                    className={cn(
-                                        "inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg",
-                                        "bg-primary text-primary-foreground",
-                                        "hover:bg-primary/90 transition-colors",
-                                    )}
                                 >
                                     <Key size={16} weight="bold" />
                                     Add Provider Key
                                     <ArrowRight size={14} />
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     ) : (

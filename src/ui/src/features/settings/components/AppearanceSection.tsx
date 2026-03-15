@@ -3,6 +3,7 @@
  */
 
 import { Sun, Moon, Desktop, Check } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import { useSettings, useAppearanceSettings } from '@/features/settings/hooks/useSettings';
 
 // Predefined accent colors (quick picks)
@@ -186,14 +187,14 @@ export function AppearanceSection() {
                             Click to open the color picker, or choose a preset below.
                         </p>
                     </div>
-                    <button
-                        type="button"
+                    <Button
+                        variant="outline"
+                        size="sm"
                         disabled={saving || !appearance.accentColor}
                         onClick={() => handleAccentColorChange(undefined)}
-                        className="px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         Reset
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Quick pick presets */}

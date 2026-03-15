@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { useKeyboardBindings, formatShortcut } from '@/features/settings/hooks/useKeyboardShortcuts';
 import { useSettings } from '@/features/settings/hooks/useSettings';
+import { Button } from '@/components/ui/button';
 
 // Group shortcuts by category
 const SHORTCUT_CATEGORIES = [
@@ -189,26 +190,21 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
                             onKeyDown={handleKeyDown}
                             autoFocus
                         />
-                        <button
-                            type="button"
-                            className={`px-2 py-1 text-xs rounded ${
-                                conflict
-                                    ? 'text-white hover:opacity-90'
-                                    : 'bg-primary text-primary-foreground'
-                            }`}
-                            style={conflict ? { backgroundColor: 'var(--status-warning)' } : undefined}
+                        <Button
+                            size="xs"
                             onClick={handleSave}
                             disabled={!tempBinding}
+                            style={conflict ? { backgroundColor: 'var(--status-warning)' } : undefined}
                         >
                             {conflict ? 'Overwrite' : 'Save'}
-                        </button>
-                        <button
-                            type="button"
-                            className="px-2 py-1 text-xs bg-muted text-muted-foreground rounded"
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="xs"
                             onClick={handleCancel}
                         >
                             Cancel
-                        </button>
+                        </Button>
                     </div>
                 </div>
                 {conflict && (
@@ -231,13 +227,14 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
                 >
                     {formatShortcut(currentBinding)}
                 </button>
-                <button
-                    type="button"
-                    className="px-2 py-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                <Button
+                    variant="ghost"
+                    size="xs"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => onReset(action)}
                 >
                     Reset
-                </button>
+                </Button>
             </div>
         </div>
     );

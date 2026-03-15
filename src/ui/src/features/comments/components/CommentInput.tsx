@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 
 interface CommentInputProps {
     placeholder?: string;
@@ -90,24 +91,18 @@ export function CommentInput({
                 </span>
                 <div className="flex gap-2">
                     {onCancel && (
-                        <button
-                            onClick={onCancel}
-                            className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
+                        <Button variant="ghost" size="xs" onClick={onCancel}>
                             Cancel
-                        </button>
+                        </Button>
                     )}
-                    <button
+                    <Button
+                        size="xs"
                         onClick={handleSubmit}
                         disabled={!body.trim() || isSubmitting}
-                        className={cn(
-                            'px-3 py-1 text-xs rounded-md transition-colors',
-                            'bg-primary text-primary-foreground',
-                            'disabled:opacity-50 disabled:cursor-not-allowed',
-                        )}
+                        loading={isSubmitting}
                     >
                         {isSubmitting ? 'Posting...' : 'Submit'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

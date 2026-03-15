@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';
 
@@ -206,26 +207,12 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
 
           {/* Action buttons */}
           <div className="flex gap-2 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
-            >
+            <Button variant="outline" size="md" className="flex-1" onClick={onClose} disabled={isLoading}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className={cn(
-                'flex-1 px-4 py-2 rounded-md font-medium transition-colors',
-                name.trim() && !isLoading
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              )}
-              disabled={!name.trim() || isLoading}
-            >
+            </Button>
+            <Button type="submit" size="md" className="flex-1" loading={isLoading} disabled={!name.trim() || isLoading}>
               {isLoading ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
