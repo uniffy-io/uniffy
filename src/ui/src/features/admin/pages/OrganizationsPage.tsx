@@ -20,7 +20,7 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Buildings, Plus, PencilSimple, Clipboard, Check } from '@phosphor-icons/react';
 
 
-export default function OrganizationsPage() {
+export function OrganizationsPage() {
   useDocumentTitle('Organizations');
   const [organizations, setOrganizations] = useState<OrganizationDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,21 +102,22 @@ export default function OrganizationsPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-3 shadow-lg">
-            <Buildings size={28} weight="duotone" className="text-primary-foreground" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="rounded-xl bg-primary p-2.5 md:p-3 shadow-lg shrink-0">
+            <Buildings size={24} weight="duotone" className="text-primary-foreground md:hidden" />
+            <Buildings size={28} weight="duotone" className="text-primary-foreground hidden md:block" />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Organizations</h1>
+            <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
               Manage all organizations in the system
             </p>
           </div>
         </div>
-        <Button size="md" onClick={handleCreate}>
+        <Button size="md" onClick={handleCreate} className="shrink-0">
           <Plus size={16} />
-          Add Organization
+          <span className="hidden sm:inline">Add Organization</span>
         </Button>
       </div>
 
@@ -131,11 +132,11 @@ export default function OrganizationsPage() {
         <TableHeader>
           <TableRow hoverable={false}>
             <TableHead>Name</TableHead>
-            <TableHead>Slug</TableHead>
-            <TableHead>Domain</TableHead>
-            <TableHead>Plan</TableHead>
+            <TableHead className="hidden lg:table-cell">Slug</TableHead>
+            <TableHead className="hidden lg:table-cell">Domain</TableHead>
+            <TableHead className="hidden md:table-cell">Plan</TableHead>
             <TableHead align="center">Members</TableHead>
-            <TableHead align="center">Status</TableHead>
+            <TableHead align="center" className="hidden sm:table-cell">Status</TableHead>
             <TableHead align="right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -177,11 +178,11 @@ export default function OrganizationsPage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden lg:table-cell">
                   <code className="px-2 py-1 rounded bg-muted text-xs font-mono">{org.organization?.slug}</code>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{org.organization?.logoUrl || '-'}</TableCell>
-                <TableCell>
+                <TableCell className="text-muted-foreground hidden lg:table-cell">{org.organization?.logoUrl || '-'}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize">
                     -
                   </span>
@@ -191,7 +192,7 @@ export default function OrganizationsPage() {
                     {org.memberCount}
                   </span>
                 </TableCell>
-                <TableCell align="center">
+                <TableCell align="center" className="hidden sm:table-cell">
                   <div className="flex items-center justify-center gap-2">
                     <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: org.isActive ? 'var(--status-success)' : 'var(--status-error)' }} />
                     <span className="text-xs font-medium" style={{ color: org.isActive ? 'var(--status-success)' : 'var(--status-error)' }}>

@@ -304,7 +304,7 @@ export const {
     updateEffectiveSettingsLocal,
 } = settingsSlice.actions;
 
-export default settingsSlice.reducer;
+export const settingsReducer = settingsSlice.reducer;
 
 // Re-export thunks for convenience
 export {

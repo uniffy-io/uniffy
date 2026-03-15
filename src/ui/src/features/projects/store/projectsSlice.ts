@@ -531,4 +531,4 @@ export const selectProjectsLoading = (state: RootState) => state.projects.loadin
 
 export const selectProjectsErrors = (state: RootState) => state.projects.errors;
 
-export default projectsSlice.reducer;
+export const projectsReducer = projectsSlice.reducer;

@@ -187,4 +187,4 @@ export const {
     setMetadataPanelTab,
 } = editorSlice.actions;
 
-export default editorSlice.reducer;
+export const editorReducer = editorSlice.reducer;

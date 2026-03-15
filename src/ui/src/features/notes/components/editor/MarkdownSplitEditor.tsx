@@ -11,6 +11,7 @@ import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;
@@ -24,6 +25,8 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
   const settings = editorState?.settings ?? defaultSettings;
   const showMarkdownPreview = settings.showMarkdownPreview ?? true;
+  const { isMobile } = useBreakpoint();
+  const stackVertically = isMobile && showMarkdownPreview;
 
   // Autosave hook
   const { scheduleAutosave, draftContent } = useAutosave(note.id);
@@ -114,7 +117,7 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
             lineHeight: `${settings?.lineHeight || 1.6}`,
           },
           '.cm-content': {
-            padding: '24px 32px',
+            padding: isMobile ? '16px' : '24px 32px',
           },
         }),
       ],
@@ -135,7 +138,7 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
     // This effect only re-initializes the editor when note.id or settings change.
     // Content sync is handled by the separate useEffect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id, settings?.fontSize, settings?.lineHeight]);
+  }, [note.id, settings?.fontSize, settings?.lineHeight, isMobile]);
 
   // Update CodeMirror content when external changes happen
   useEffect(() => {
@@ -156,17 +159,20 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Editor Content */}
-      <div ref={containerRef} className="flex-1 flex overflow-hidden relative">
+      <div ref={containerRef} className={`flex-1 overflow-hidden relative ${stackVertically ? 'flex flex-col' : 'flex'}`}>
         {/* CodeMirror Editor Pane */}
-        <div 
-          className="overflow-hidden h-full"
-          style={{ width: showMarkdownPreview ? `${splitRatio * 100}%` : '100%' }}
+        <div
+          className="overflow-hidden"
+          style={stackVertically
+            ? { height: showMarkdownPreview ? '50%' : '100%', width: '100%' }
+            : { width: showMarkdownPreview ? `${splitRatio * 100}%` : '100%', height: '100%' }
+          }
         >
           <div ref={editorContainerRef} className="h-full" />
         </div>
-        
-        {/* Resizer Handle */}
-        {showMarkdownPreview && (
+
+        {/* Resizer Handle - horizontal on mobile, vertical on desktop */}
+        {showMarkdownPreview && !stackVertically && (
           <div
             onMouseDown={handleMouseDown}
             className={`
@@ -178,7 +184,7 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
             {/* Wider hit area for easier grabbing */}
             <div className="absolute inset-y-0 -left-1 -right-1" />
             {/* Visual indicator on hover/drag */}
-            <div 
+            <div
               className={`
                 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                 w-1 h-8 rounded-full
@@ -188,12 +194,20 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
             />
           </div>
         )}
-        
+
+        {/* Horizontal separator on mobile stacked layout */}
+        {showMarkdownPreview && stackVertically && (
+          <div className="h-px w-full bg-border flex-shrink-0" />
+        )}
+
         {/* Preview Pane - Using CrepeEditor in readonly mode */}
         {showMarkdownPreview && (
-          <div 
-            className="overflow-hidden h-full"
-            style={{ width: `${(1 - splitRatio) * 100}%` }}
+          <div
+            className="overflow-hidden"
+            style={stackVertically
+              ? { height: '50%', width: '100%' }
+              : { width: `${(1 - splitRatio) * 100}%`, height: '100%' }
+            }
           >
             <CrepeEditor
               contentType={ContentType.NOTE}
@@ -204,7 +218,7 @@ export function MarkdownSplitEditor({ note }: MarkdownSplitEditorProps) {
             />
           </div>
         )}
-        
+
         {/* Overlay to capture mouse events while dragging */}
         {isDragging && (
           <div className="absolute inset-0 cursor-col-resize z-50" />

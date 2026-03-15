@@ -456,4 +456,4 @@ export const selectAbortedUploads = createSelector(
     (failedUploads) => failedUploads.filter((item) => item.status === 'aborted')
 );
 
-export default uploadSlice.reducer;
+export const uploadReducer = uploadSlice.reducer;

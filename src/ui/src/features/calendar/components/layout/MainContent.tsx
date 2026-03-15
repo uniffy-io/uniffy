@@ -3,8 +3,9 @@
  *
  * Contains:
  * - Calendar header with navigation
- * - Day headers
  * - Calendar grid (week/day/month view)
+ *
+ * On mobile, WeekView automatically shows a 3-day view instead of 7.
  */
 
 import { CalendarHeader } from '@/features/calendar/components/layout/CalendarHeader';

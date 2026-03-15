@@ -124,4 +124,4 @@ export const authSlice = createSlice({
 
 export const { setCredentials, startRehydrating, rehydrateComplete, rehydrateFailed, updateUser, logout } = authSlice.actions;
 
-export default authSlice.reducer;
+export const authReducer = authSlice.reducer;

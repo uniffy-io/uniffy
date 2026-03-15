@@ -33,7 +33,7 @@ export type { MyPermission } from '@/features/sharing/hooks/useSharingHooks';
 
 // Store - Slice & Actions
 export {
-    default as sharingReducer,
+    sharingReducer,
     openSharingDialog,
     closeSharingDialog,
     clearSearchResults,

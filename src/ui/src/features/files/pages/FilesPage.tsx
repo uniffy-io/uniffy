@@ -17,7 +17,7 @@ import { UploadPanel } from '@/features/files/components/upload/UploadPanel';
 import { FileDetailsPanel } from '@/features/files/components/details';
 import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 import { SharingDialog } from '@/features/sharing';
-import { initializeFilesData, setFolderId } from '@/features/files/store/filesSlice';
+import { initializeFilesData, setFolderId, setDetailsPanelOpen } from '@/features/files/store/filesSlice';
 import { fetchFilesTree, setSelectedFolder, createFolder } from '@/features/files/store/filesTreeSlice';
 import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '@/features/files/store/selectors';
 import { openViewer } from '@/features/files/store/viewerSlice';
@@ -177,6 +177,14 @@ export function FilesPage() {
         setShowSidebar((prev) => !prev);
     }, []);
 
+    const handleCloseSidebar = useCallback(() => {
+        setShowSidebar(false);
+    }, []);
+
+    const handleCloseDetailPanel = useCallback(() => {
+        dispatch(setDetailsPanelOpen(false));
+    }, [dispatch]);
+
     // Keyboard shortcut for toggling sidebar (global shortcut)
     useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
@@ -276,6 +284,8 @@ export function FilesPage() {
                 showSidebar={!isZenMode && showSidebar}
                 showDetailPanel={!isZenMode && isDetailsPanelOpen}
                 onToggleSidebar={handleToggleSidebar}
+                onCloseSidebar={handleCloseSidebar}
+                onCloseDetailPanel={handleCloseDetailPanel}
                 sidebar={<FilesSidebar onToggleSidebar={handleToggleSidebar} onUpload={handleUpload} />}
                 content={
                     <FilesList
@@ -286,6 +296,7 @@ export function FilesPage() {
                         onBulkDownload={handleBulkDownload}
                         onUpload={handleUpload}
                         onCreateFolder={handleCreateFolder}
+                        onToggleSidebar={handleToggleSidebar}
                         folderTree={folderTree}
                     />
                 }
@@ -312,5 +323,3 @@ export function FilesPage() {
     );
 }
 
-// Default export for lazy loading
-export default FilesPage;

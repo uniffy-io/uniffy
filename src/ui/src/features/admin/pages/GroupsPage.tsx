@@ -8,7 +8,7 @@
 import { GroupsSection } from '@/features/admin/components/groups/GroupsSection';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 
-export default function GroupsPage() {
+export function GroupsPage() {
     useDocumentTitle('Groups');
     return <GroupsSection />;
 }

@@ -45,12 +45,12 @@ export function SettingsLayout({
     children,
 }: SettingsLayoutProps) {
     return (
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-8">
             {/* Sidebar */}
-            <aside className="w-full md:w-64 shrink-0">
-                <nav className="space-y-6">
-                    {/* Profile switcher */}
-                    <div className="space-y-1">
+            <aside className="w-full md:w-56 lg:w-64 shrink-0">
+                <nav className="flex md:flex-col gap-2 md:gap-6 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+                    {/* Profile switcher - hidden on mobile, shown on tablet+ */}
+                    <div className="hidden md:block space-y-1">
                         <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             Settings Profile
                         </div>
@@ -60,8 +60,8 @@ export function SettingsLayout({
                     </div>
 
                     {/* Navigation */}
-                    <div className="space-y-1">
-                        <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <div className="flex md:flex-col gap-1 shrink-0">
+                        <div className="hidden md:block px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             Preferences
                         </div>
                         {SECTIONS.map(({ id, label, icon: Icon }) => (
@@ -69,15 +69,15 @@ export function SettingsLayout({
                                 key={id}
                                 type="button"
                                 className={cn(
-                                    'flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                                    'flex items-center gap-2 md:gap-3 w-auto md:w-full px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
                                     activeSection === id
                                         ? 'bg-primary text-primary-foreground'
                                         : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                                 )}
                                 onClick={() => onSectionChange(id)}
                             >
-                                <Icon size={20} weight="duotone" />
-                                <span>{label}</span>
+                                <Icon size={18} weight="duotone" className="shrink-0" />
+                                <span className="hidden sm:inline">{label}</span>
                             </button>
                         ))}
                     </div>

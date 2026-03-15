@@ -16,6 +16,7 @@ import {
 import { Plus } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "../../../constants";
 import type { Task, SelectOption } from "../../../types";
 import { TaskCard } from "./TaskCard";
@@ -41,6 +42,7 @@ export function BoardColumn({
   onAddTask,
   projectSlug,
 }: BoardColumnProps) {
+  const { isMobile } = useBreakpoint();
   const { setNodeRef, isOver } = useDroppable({
     id: statusOption.id,
   });
@@ -54,7 +56,7 @@ export function BoardColumn({
   return (
     <div
       className="flex-shrink-0 flex flex-col bg-muted/30 rounded-lg"
-      style={{ width: LAYOUT.BOARD_COLUMN_WIDTH }}
+      style={{ width: isMobile ? 280 : LAYOUT.BOARD_COLUMN_WIDTH }}
     >
       {/* Column Header */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">

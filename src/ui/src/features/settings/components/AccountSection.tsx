@@ -42,8 +42,8 @@ export function AccountSection() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">Account</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Account</h1>
+                <p className="text-sm text-muted-foreground">
                     View your account information and manage sessions.
                 </p>
             </div>
@@ -51,7 +51,7 @@ export function AccountSection() {
             {/* Avatar Section */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Avatar</h2>
-                <div className="bg-card rounded-lg border border-border p-6">
+                <div className="bg-card rounded-lg border border-border p-4 md:p-6">
                     <AvatarUpload
                         imageUrl={user.avatarUrl || undefined}
                         fallback={displayInitials}

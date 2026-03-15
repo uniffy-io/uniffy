@@ -50,8 +50,8 @@ function NavSection({
     currentPath: string;
 }) {
     return (
-        <div className="space-y-1">
-            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="flex md:flex-col gap-1 shrink-0">
+            <div className="hidden md:block px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 {title}
             </div>
             {items.map((item) => {
@@ -62,14 +62,14 @@ function NavSection({
                         key={item.path}
                         to={item.path}
                         className={cn(
-                            'flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                            'flex items-center gap-2 md:gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap',
                             isActive
                                 ? 'bg-primary text-primary-foreground'
                                 : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                         )}
                     >
-                        <Icon size={20} weight="duotone" />
-                        {item.name}
+                        <Icon size={18} weight="duotone" className="shrink-0" />
+                        <span className="hidden sm:inline">{item.name}</span>
                     </Link>
                 );
             })}
@@ -87,11 +87,11 @@ export function AdminLayout() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground font-sans antialiased">
+        <div className="min-h-dvh bg-background text-foreground font-sans antialiased">
             <AppHeader />
-            <div className="container mx-auto py-6 px-4 flex flex-col md:flex-row gap-8">
-                <aside className="w-full md:w-64 shrink-0">
-                    <nav className="space-y-6">
+            <div className="container mx-auto py-4 md:py-6 px-3 md:px-4 flex flex-col md:flex-row gap-4 md:gap-8">
+                <aside className="w-full md:w-56 lg:w-64 shrink-0">
+                    <nav className="flex md:flex-col gap-2 md:gap-6 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
                         {/* Organization Admin Section */}
                         {canAccessOrgSection && (
                             <NavSection

@@ -29,7 +29,7 @@ export {
 
 // Store - Slice & Actions
 export {
-    default as adminReducer,
+    adminReducer,
     clearAdminError,
     clearAdmin,
     serializeContentTypeDefaults,

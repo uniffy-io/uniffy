@@ -8,14 +8,14 @@ import { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
 import { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMetadataPanel';
 import { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { toggleSidebar, setEditorMode } from '@/features/notes/store/editorSlice';
+import { toggleSidebar, setEditorMode, setSidebarOpen, toggleMetadataPanel } from '@/features/notes/store/editorSlice';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
 import { setCurrentNote, fetchNote, initializeNotesData, loadLastOpenedNote } from '@/features/notes/store/notesSlice';
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
 import { SharingDialog } from '@/features/sharing';
 import { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
 
-export default function NotesPage() {
+export function NotesPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,6 +46,14 @@ export default function NotesPage() {
   // Keyboard shortcut for toggling sidebar (global shortcut)
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
+  }, [dispatch]);
+
+  const handleCloseSidebar = useCallback(() => {
+    dispatch(setSidebarOpen(false));
+  }, [dispatch]);
+
+  const handleCloseMetadataPanel = useCallback(() => {
+    dispatch(toggleMetadataPanel());
   }, [dispatch]);
 
   useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
@@ -104,6 +112,8 @@ export default function NotesPage() {
         metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}
         showSidebar={!isZenMode && isSidebarOpen}
         showMetadataPanel={!isZenMode && isMetadataPanelOpen && !!currentNoteId}
+        onCloseSidebar={handleCloseSidebar}
+        onCloseMetadataPanel={handleCloseMetadataPanel}
       />
       <SharingDialog />
     </>

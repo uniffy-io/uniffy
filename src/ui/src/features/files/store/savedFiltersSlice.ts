@@ -387,4 +387,4 @@ export const selectPresetFilters = createSelector(
     (filters): SerializedSavedFilter[] => filters.filter((f) => f.isPreset)
 );
 
-export default savedFiltersSlice.reducer;
+export const savedFiltersReducer = savedFiltersSlice.reducer;

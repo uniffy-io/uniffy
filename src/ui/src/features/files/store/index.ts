@@ -3,7 +3,7 @@
  */
 
 export {
-    default as filesReducer,
+    filesReducer,
     setFiles,
     setFile,
     removeFile,
@@ -33,7 +33,7 @@ export {
 export type { SerializedFile } from '@/features/files/store/filesThunks';
 
 export {
-    default as filesTreeReducer,
+    filesTreeReducer,
     toggleNodeExpanded,
     expandAll,
     collapseAll,
@@ -49,7 +49,7 @@ export type { FilesTreeState, SerializedTreeNode, SerializedFolder } from '@/fea
 export type { SerializedTreeNode as TreeNode, SerializedFolder as Folder } from '@/features/files/store/filesTreeThunks';
 
 export {
-    default as uploadReducer,
+    uploadReducer,
     addToQueue,
     removeFromQueue,
     startUpload,
@@ -81,7 +81,7 @@ export {
 
 // Saved filters
 export {
-    default as savedFiltersReducer,
+    savedFiltersReducer,
     fetchSavedFilters,
     createSavedFilter,
     updateSavedFilter,

@@ -14,6 +14,7 @@ import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
 import { toggleSidebar } from '@/features/notes/store/editorSlice';
 import { cn } from '@/shared/utils/cn';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { CreateDropdown } from '@/features/notes/components/sidebar/CreateDropdown';
 
 interface NotesNavItem {
@@ -91,6 +92,7 @@ export function SidebarHeader({
 }: SidebarHeaderProps) {
     const dispatch = useAppDispatch();
     const location = useLocation();
+    const { isMobile } = useBreakpoint();
 
     return (
         <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
@@ -104,13 +106,16 @@ export function SidebarHeader({
                 <CompactNavItem key={item.path} item={item} isActive={location.pathname === item.path} />
             ))}
             <div className="flex-1" />
-            <button
-                onClick={() => dispatch(toggleSidebar())}
-                className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
-                title="Toggle sidebar"
-            >
-                <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
-            </button>
+            {/* Hide collapse button on mobile - sidebar is a drawer there with its own close button */}
+            {!isMobile && (
+                <button
+                    onClick={() => dispatch(toggleSidebar())}
+                    className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
+                    title="Toggle sidebar"
+                >
+                    <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+                </button>
+            )}
         </div>
     );
 }

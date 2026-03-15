@@ -1,8 +1,10 @@
 /**
  * Files Layout Component
  *
- * Three-panel layout with resizable sidebar and main content area.
- * Follows the same pattern as NotesLayout.
+ * Responsive three-panel layout with resizable sidebar and main content area.
+ * Mobile: sidebar and detail panel as drawers, content full width.
+ * Tablet: sidebar inline (narrower), detail panel as drawer.
+ * Desktop: all panels inline and resizable.
  */
 
 import { type ReactNode, useState, useCallback } from 'react';
@@ -11,6 +13,8 @@ import { CaretDoubleRight } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { Drawer } from '@/components/ui/drawer';
 
 interface FilesLayoutProps {
     sidebar: ReactNode;
@@ -19,6 +23,8 @@ interface FilesLayoutProps {
     showSidebar?: boolean;
     showDetailPanel?: boolean;
     onToggleSidebar?: () => void;
+    onCloseSidebar?: () => void;
+    onCloseDetailPanel?: () => void;
 }
 
 export function FilesLayout({
@@ -28,19 +34,28 @@ export function FilesLayout({
     showSidebar = true,
     showDetailPanel = false,
     onToggleSidebar,
+    onCloseSidebar,
+    onCloseDetailPanel,
 }: FilesLayoutProps) {
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+    const { isMobile, isMobileOrTablet } = useBreakpoint();
     const [defaultLayout] = useState(() => loadPanelLayout('files'));
 
     const handleLayoutChange = useCallback((layout: Record<string, number>) => {
         savePanelLayout('files', layout);
     }, []);
 
+    // On mobile: sidebar and detail are both drawers, content is full width
+    // On tablet: sidebar is inline (narrower), detail is drawer
+    // On desktop: all panels inline and resizable
+    const sidebarAsDrawer = isMobile;
+    const detailAsDrawer = isMobileOrTablet;
+
     return (
         <div
             className={cn(
                 "bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
-                isZenMode ? "h-screen delay-150" : "h-[calc(100vh-4rem)] delay-0"
+                isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-4rem)] delay-0"
             )}
         >
             <Group
@@ -49,8 +64,8 @@ export function FilesLayout({
                 defaultLayout={defaultLayout}
                 onLayoutChange={handleLayoutChange}
             >
-                {/* Collapsed sidebar toggle (shown when sidebar is hidden) */}
-                {!showSidebar && onToggleSidebar && (
+                {/* Collapsed sidebar toggle (shown when sidebar is hidden, not on mobile) */}
+                {!showSidebar && onToggleSidebar && !isMobile && (
                     <div className="flex flex-col items-center py-3 px-1 bg-card border-r border-border">
                         <button
                             onClick={onToggleSidebar}
@@ -62,14 +77,14 @@ export function FilesLayout({
                     </div>
                 )}
 
-                {/* Left Sidebar */}
-                {showSidebar && (
+                {/* Left Sidebar - inline on tablet+, drawer on mobile */}
+                {showSidebar && !sidebarAsDrawer && (
                     <>
                         <Panel
                             id="files-sidebar"
-                            defaultSize={260}
-                            minSize={200}
-                            maxSize={400}
+                            defaultSize={isMobileOrTablet ? 200 : 260}
+                            minSize={160}
+                            maxSize={isMobileOrTablet ? 300 : 400}
                             className="bg-card overflow-hidden"
                         >
                             {sidebar}
@@ -80,14 +95,14 @@ export function FilesLayout({
                 )}
 
                 {/* Main Content Area */}
-                <Panel id="files-content" minSize={400}>
+                <Panel id="files-content" minSize={isMobileOrTablet ? 200 : 400}>
                     <div className="h-full overflow-hidden bg-card">
                         {content}
                     </div>
                 </Panel>
 
-                {/* Right Detail Panel (for file preview) */}
-                {showDetailPanel && detailPanel && (
+                {/* Right Detail Panel - inline on desktop, drawer on tablet/mobile */}
+                {showDetailPanel && detailPanel && !detailAsDrawer && (
                     <>
                         <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
                         <Panel
@@ -102,6 +117,33 @@ export function FilesLayout({
                     </>
                 )}
             </Group>
+
+            {/* Mobile sidebar drawer */}
+            {sidebarAsDrawer && (
+                <Drawer
+                    open={showSidebar}
+                    onClose={onCloseSidebar ?? (() => {})}
+                    side="left"
+                    className="w-72"
+                    ariaLabel="Files sidebar"
+                >
+                    {sidebar}
+                </Drawer>
+            )}
+
+            {/* Tablet/mobile detail drawer */}
+            {detailAsDrawer && (
+                <Drawer
+                    open={showDetailPanel && !!detailPanel}
+                    onClose={onCloseDetailPanel ?? (() => {})}
+                    side="right"
+                    className="w-80"
+                    showClose={false}
+                    ariaLabel="File details"
+                >
+                    {detailPanel}
+                </Drawer>
+            )}
         </div>
     );
 }

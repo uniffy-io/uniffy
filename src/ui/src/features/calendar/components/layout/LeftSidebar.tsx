@@ -10,9 +10,10 @@
  * - Tags
  */
 
-import { Plus, CalendarBlank } from '@phosphor-icons/react';
+import { Plus, CalendarBlank, CaretDoubleLeft } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { openEventModal } from '@/features/calendar/store';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { openEventModal, toggleSidebar } from '@/features/calendar/store';
 import { setEventScope } from '@/features/calendar/store/calendarUiSlice';
 import { QuickAccess } from '@/features/calendar/components/sidebar/QuickAccess';
 import { MiniCalendar } from '@/features/calendar/components/sidebar/MiniCalendar';
@@ -24,6 +25,7 @@ import { SCOPE_FILTERS } from '@/features/calendar/components/sidebar/eventScope
 
 export function LeftSidebar() {
   const dispatch = useAppDispatch();
+  const { isMobile } = useBreakpoint();
   const eventScope = useAppSelector((state) => state.calendarUi.eventScope);
 
   const handleNewEvent = () => {
@@ -57,10 +59,20 @@ export function LeftSidebar() {
             onClick={() => dispatch(setEventScope(filter.id))}
           />
         ))}
+        <div className="flex-1" />
+        {!isMobile && (
+          <button
+            onClick={() => dispatch(toggleSidebar())}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
+            title="Toggle sidebar"
+          >
+            <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+          </button>
+        )}
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-6 pt-4">
+      <div className="flex-1 overflow-y-auto px-3 md:px-5 pb-4 space-y-4 md:space-y-6 pt-3 md:pt-4">
         {/* Quick Access */}
         <QuickAccess />
 

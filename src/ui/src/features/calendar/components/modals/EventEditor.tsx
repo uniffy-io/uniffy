@@ -229,7 +229,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       />
 
       {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl animate-in zoom-in-95 fade-in duration-200">
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto animate-in zoom-in-95 fade-in duration-200">
         <div className="bg-background rounded-xl shadow-2xl border border-border overflow-hidden relative">
           {/* Close button */}
           <button

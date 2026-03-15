@@ -243,12 +243,12 @@ export function PermissionDefaultsSection() {
             {/* Header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">
-                    <ShieldCheck size={24} weight="duotone" className="text-primary" />
-                    <h1 className="text-2xl font-bold">Permission Defaults</h1>
+                    <ShieldCheck size={24} weight="duotone" className="text-primary shrink-0" />
+                    <h1 className="text-xl md:text-2xl font-bold">Permission Defaults</h1>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                     Configure default permissions for each content type when shared at the organization level.
-                    These settings apply to all new content and can be overridden per-item.
+                    <span className="hidden sm:inline"> These settings apply to all new content and can be overridden per-item.</span>
                 </p>
             </div>
 

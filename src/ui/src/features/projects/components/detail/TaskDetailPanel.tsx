@@ -10,7 +10,8 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Repeat, Bell, Diamond, PencilSimple, Check } from "@phosphor-icons/react";
+import { X, Repeat, Bell, Diamond, PencilSimple, Check, SidebarSimple } from "@phosphor-icons/react";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -42,6 +43,7 @@ interface TaskDetailPanelProps {
 
 export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
   const dispatch = useAppDispatch();
+  const { isMobileOrTablet } = useBreakpoint();
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
   const project = useAppSelector(selectCurrentProject);
   const projectId = project?.id;
@@ -97,8 +99,17 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 border-b border-border">
         <div className="flex items-center gap-2">
+          {isMobileOrTablet && (
+            <button
+              onClick={handleClose}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              aria-label="Close panel"
+            >
+              <X size={16} weight="bold" />
+            </button>
+          )}
           <TypeIcon size={14} className="text-muted-foreground" weight="fill" />
           <span
             className="text-sm font-mono text-muted-foreground hover:text-foreground cursor-pointer"
@@ -108,9 +119,15 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
             {ticketId}
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleClose}>
-          <X size={16} />
-        </Button>
+        {!isMobileOrTablet && (
+          <button
+            onClick={handleClose}
+            className="px-2 py-1 rounded-md text-primary bg-primary/10 transition-colors"
+            aria-label="Close panel"
+          >
+            <SidebarSimple size={16} className="transform -scale-x-100" />
+          </button>
+        )}
       </div>
 
       <ScrollArea className="flex-1">

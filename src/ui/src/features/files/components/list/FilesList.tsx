@@ -59,6 +59,7 @@ import type { SerializedFile } from '@/features/files/store/filesThunks';
 import type { SerializedTreeNode, SerializedFolder } from '@/features/files/store/filesTreeThunks';
 import { useSharingDialog, useMyPermission } from '@/features/sharing';
 import { toggleBookmark } from '@/features/bookmarks';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
 import type { FileDownloadItem } from '@/features/files/utils/archiveDownload';
 import { collectAllDownloadFiles, createFileInfoArray } from '@/features/files/utils/folderDownload';
@@ -97,6 +98,7 @@ interface FilesListProps {
     onBulkDownload?: (items: FileDownloadItem[]) => Promise<void>;
     onUpload?: () => void;
     onCreateFolder?: () => void;
+    onToggleSidebar?: () => void;
     folderTree?: {
         personal: SerializedTreeNode[];
         shared: SerializedTreeNode[];
@@ -104,9 +106,10 @@ interface FilesListProps {
     };
 }
 
-export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload, onUpload, onCreateFolder, folderTree }: FilesListProps) {
+export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload, onUpload, onCreateFolder, onToggleSidebar, folderTree }: FilesListProps) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const { isMobile } = useBreakpoint();
     const currentFileId = useAppSelector((state) => state.files.currentFileId);
     const filesMap = useAppSelector((state) => state.files.files);
     const viewMode = useAppSelector((state) => state.files.viewMode);
@@ -709,20 +712,31 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         <div className="flex flex-col h-full" onContextMenu={handleContextMenu}>
             {/* Persistent Toolbar */}
             <div className={cn(
-                "flex items-center justify-between px-4 py-2 border-b border-border",
+                "flex items-center justify-between px-3 md:px-4 py-2 border-b border-border gap-2",
                 isSelectMode && "bg-primary/5"
             )}>
-                {/* Left side: Selection/Count + Select button */}
-                <div className="flex items-center gap-3">
+                {/* Left side: Sidebar toggle (mobile) + Selection/Count + Select button */}
+                <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                    {/* Mobile sidebar toggle */}
+                    {isMobile && onToggleSidebar && (
+                        <button
+                            onClick={onToggleSidebar}
+                            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
+                            title="Show sidebar"
+                        >
+                            <SidebarSimple size={16} className="text-primary" />
+                        </button>
+                    )}
+
                     {/* Select mode button (left side when not in select mode) */}
                     {!isSelectMode && totalItemCount > 0 && (
                         <button
                             onClick={() => dispatch(setSelectMode(true))}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
                             title="Select files"
                         >
                             <CheckSquare size={16} />
-                            <span className="text-sm">Select</span>
+                            <span className="hidden sm:inline text-sm">Select</span>
                         </button>
                     )}
 
@@ -731,7 +745,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                         <>
                             <button
                                 onClick={allSelected ? handleClearSelection : handleSelectAll}
-                                className="p-1 rounded hover:bg-muted transition-colors"
+                                className="p-1 rounded hover:bg-muted transition-colors shrink-0"
                                 title={allSelected ? 'Clear selection' : 'Select all'}
                             >
                                 {allSelected ? (
@@ -742,20 +756,20 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                     <Square size={20} weight="regular" className="text-muted-foreground" />
                                 )}
                             </button>
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium truncate">
                                 {totalSelectedCount > 0 ? `${totalSelectedCount} selected` : 'Select items'}
                             </span>
                             {/* Exit select mode - X button next to selection info */}
                             <button
                                 onClick={handleExitSelectMode}
-                                className="p-1 rounded-md hover:bg-muted transition-colors"
+                                className="p-1 rounded-md hover:bg-muted transition-colors shrink-0"
                                 title="Exit select mode"
                             >
                                 <X size={18} className="text-muted-foreground" />
                             </button>
                         </>
                     ) : (
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-muted-foreground truncate">
                             {scopedSubfolders.length > 0 && `${scopedSubfolders.length} folder${scopedSubfolders.length !== 1 ? 's' : ''}`}
                             {scopedSubfolders.length > 0 && scopedFiles.length > 0 && ', '}
                             {scopedFiles.length > 0 && `${scopedFiles.length} file${scopedFiles.length !== 1 ? 's' : ''}`}
@@ -765,29 +779,29 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                 </div>
 
                 {/* Right side: Bulk actions OR View controls */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 md:gap-3 shrink-0">
                     {isSelectMode ? (
                         <>
                             {/* Bulk bookmark */}
                             <button
                                 onClick={handleBulkBookmark}
                                 disabled={bulkActionLoading || selectedFileIds.length === 0}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                                 title="Bookmark selected"
                             >
                                 <BookmarkSimple size={16} weight="duotone" />
-                                <span className="hidden sm:inline">Bookmark</span>
+                                <span className="hidden md:inline">Bookmark</span>
                             </button>
 
                             {/* Bulk move */}
                             <button
                                 onClick={handleBulkMove}
                                 disabled={bulkActionLoading || totalSelectedCount === 0}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                                 title="Move selected"
                             >
                                 <ArrowRight size={16} />
-                                <span className="hidden sm:inline">Move</span>
+                                <span className="hidden md:inline">Move</span>
                             </button>
 
                             {/* Bulk download as archive */}
@@ -795,11 +809,11 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 <button
                                     onClick={handleBulkDownload}
                                     disabled={bulkActionLoading || totalSelectedCount === 0}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                                    className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                                     title="Download selected files as zip"
                                 >
                                     <FileArrowDown size={16} />
-                                    <span className="hidden sm:inline">Download Zip</span>
+                                    <span className="hidden md:inline">Download</span>
                                 </button>
                             )}
 
@@ -807,18 +821,18 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             <button
                                 onClick={handleBulkDelete}
                                 disabled={bulkActionLoading || totalSelectedCount === 0}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm rounded-md text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                                 title="Delete selected"
                             >
                                 <Trash size={16} />
-                                <span className="hidden sm:inline">Delete</span>
+                                <span className="hidden md:inline">Delete</span>
                             </button>
                         </>
                     ) : (
                         <>
-                            {/* Filter dropdown */}
+                            {/* Filter dropdown - hidden on mobile */}
                             {savedFilters.length > 0 && (
-                                <>
+                                <div className="hidden sm:flex items-center gap-1">
                                     <Select
                                         value={activeFilterId ?? ''}
                                         onChange={handleFilterChange}
@@ -838,25 +852,27 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                         </button>
                                     )}
                                     <div className="h-6 w-px bg-border" />
-                                </>
+                                </div>
                             )}
 
-                            {/* Sort controls */}
-                            <Select
-                                value={sortBy}
-                                onChange={(value) => dispatch(setSortBy(value as SortByValue))}
-                                options={[...SORT_OPTIONS]}
-                                size="sm"
-                            />
+                            {/* Sort controls - hidden on mobile */}
+                            <div className="hidden sm:flex items-center gap-1">
+                                <Select
+                                    value={sortBy}
+                                    onChange={(value) => dispatch(setSortBy(value as SortByValue))}
+                                    options={[...SORT_OPTIONS]}
+                                    size="sm"
+                                />
 
-                            <Select
-                                value={sortOrder}
-                                onChange={handleSortOrderChange}
-                                options={[...SORT_ORDER_OPTIONS]}
-                                size="sm"
-                            />
+                                <Select
+                                    value={sortOrder}
+                                    onChange={handleSortOrderChange}
+                                    options={[...SORT_ORDER_OPTIONS]}
+                                    size="sm"
+                                />
 
-                            <div className="h-6 w-px bg-border" />
+                                <div className="h-6 w-px bg-border" />
+                            </div>
 
                             {/* View mode toggle */}
                             <div className="flex items-center gap-0.5">
@@ -886,15 +902,15 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 </button>
                             </div>
 
-                            {/* Icon size slider (only visible in grid mode) */}
+                            {/* Icon size slider (only visible in grid mode, hidden on mobile) */}
                             {viewMode === 'grid' && (
-                                <>
+                                <div className="hidden md:flex items-center gap-1">
                                     <div className="h-6 w-px bg-border" />
                                     <IconSizeSlider
                                         value={iconSize}
                                         onChange={(size) => dispatch(setIconSize(size))}
                                     />
-                                </>
+                                </div>
                             )}
 
                             {/* Share button (visible when a file is selected and user can share) */}
@@ -1080,19 +1096,19 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
             ) : (
                 <div className="flex-1 overflow-y-auto">
                     {/* List header */}
-                    <div className="flex items-center gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border bg-muted/30">
+                    <div className="flex items-center gap-4 px-3 md:px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border bg-muted/30">
                         {/* Checkbox column (only in select mode) */}
                         {isSelectMode && <div className="flex-shrink-0 w-5" />}
                         <div className="w-8" />
                         <div className="flex-1">Name</div>
-                        <div className="w-36">Tags</div>
+                        <div className="hidden lg:block w-36">Tags</div>
                         {/* Owner column (only in shared/organization views) */}
                         {(viewScope === 'shared' || viewScope === 'organization') && (
-                            <div className="w-28">Owner</div>
+                            <div className="hidden md:block w-28">Owner</div>
                         )}
                         <div className="w-24 text-right">Size</div>
-                        <div className="w-20 text-right">Items</div>
-                        <div className="w-24 text-right">Modified</div>
+                        <div className="hidden lg:block w-20 text-right">Items</div>
+                        <div className="hidden sm:block w-24 text-right">Modified</div>
                     </div>
 
                     {/* Folders first */}

@@ -23,7 +23,7 @@ export { SettingsPage } from '@/features/settings/pages/SettingsPage';
 
 // Store - Slice & Actions
 export {
-    default as settingsReducer,
+    settingsReducer,
     setActiveProfileId,
     setLoading,
     setError,

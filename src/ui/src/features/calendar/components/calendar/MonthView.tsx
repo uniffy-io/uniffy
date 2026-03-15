@@ -8,14 +8,17 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCurrentDate, setViewMode, startDrag, endDrag, updateEventThunk } from '@/features/calendar/store';
 import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { cn } from '@/shared/utils/cn';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_HEADERS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 // Default color when category is not found
 const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
 
 export function MonthView() {
   const dispatch = useAppDispatch();
+  const { isMobile } = useBreakpoint();
   const { monthColumns } = useCalendarNavigation();
   const { getEventsForDate, events } = useCalendarEvents();
   const categories = useAppSelector((state) => state.calendar.categories);
@@ -95,13 +98,13 @@ export function MonthView() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <div className="h-full flex flex-col p-2 md:p-4">
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-border mb-2">
-        {DAY_HEADERS.map((day) => (
+      <div className="grid grid-cols-7 border-b border-border mb-1 md:mb-2">
+        {(isMobile ? DAY_HEADERS_SHORT : DAY_HEADERS).map((day, i) => (
           <div
-            key={day}
-            className="py-2 text-center text-sm font-medium text-muted-foreground"
+            key={`${day}-${i}`}
+            className="py-1.5 md:py-2 text-center text-xs md:text-sm font-medium text-muted-foreground"
           >
             {day}
           </div>
@@ -117,7 +120,8 @@ export function MonthView() {
           >
             {week.map((day) => {
               const dayEvents = getEventsForDate(day.date);
-              const displayEvents = dayEvents.slice(0, 3);
+              const maxVisible = isMobile ? 2 : 3;
+              const displayEvents = dayEvents.slice(0, maxVisible);
               const moreCount = dayEvents.length - displayEvents.length;
 
               return (
@@ -127,7 +131,7 @@ export function MonthView() {
                   onDragOver={(e) => handleDragOver(e, day.dateString)}
                   onDrop={(e) => handleDrop(e, day.dateString)}
                   className={cn(
-                    'min-h-[100px] p-2 text-left border-r border-border last:border-r-0',
+                    'min-h-[60px] md:min-h-[100px] p-1 md:p-2 text-left border-r border-border last:border-r-0',
                     'hover:bg-muted/50 transition-colors',
                     day.isToday && 'bg-primary/5',
                     !day.isCurrentMonth && 'bg-muted/30',
@@ -135,10 +139,10 @@ export function MonthView() {
                   )}
                 >
                   {/* Day number */}
-                  <div className="flex justify-center mb-1">
+                  <div className="flex justify-center mb-0.5 md:mb-1">
                     <span
                       className={cn(
-                        'w-7 h-7 flex items-center justify-center text-sm rounded-full',
+                        'w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-xs md:text-sm rounded-full',
                         day.isToday
                           ? 'bg-primary text-primary-foreground font-semibold'
                           : day.isCurrentMonth

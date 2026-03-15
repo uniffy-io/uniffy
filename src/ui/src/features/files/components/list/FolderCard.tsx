@@ -107,7 +107,7 @@ export function FolderCard({
         return (
             <div
                 className={cn(
-                    "flex items-center gap-4 px-4 py-2.5 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border group",
+                    "flex items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border group",
                     isChecked && "bg-primary/10",
                     isSelectMode && "select-none"
                 )}
@@ -154,14 +154,14 @@ export function FolderCard({
                     </div>
                 )}
 
-                {/* Tags column placeholder (folders don't have tags) */}
-                <div className="w-36">
+                {/* Tags column placeholder (folders don't have tags, hidden on mobile/tablet) */}
+                <div className="hidden lg:block w-36">
                     <span className="text-xs text-muted-foreground">--</span>
                 </div>
 
-                {/* Owner column placeholder (only in shared/organization views) */}
+                {/* Owner column placeholder (only in shared/organization views, hidden on mobile) */}
                 {showOwner && (
-                    <div className="w-28">
+                    <div className="hidden md:block w-28">
                         <span className="text-sm text-muted-foreground">--</span>
                     </div>
                 )}
@@ -175,15 +175,15 @@ export function FolderCard({
                     </span>
                 </div>
 
-                {/* Item count */}
-                <div className="w-20 text-right">
+                {/* Item count - hidden on mobile/tablet */}
+                <div className="hidden lg:block w-20 text-right">
                     <span className="text-sm text-muted-foreground">
                         {folder.childCount > 0 ? folder.childCount : '--'}
                     </span>
                 </div>
 
-                {/* Modified - folders don't have a single modified date */}
-                <div className="w-24 text-right">
+                {/* Modified - hidden on mobile */}
+                <div className="hidden sm:block w-24 text-right">
                     <span className="text-sm text-muted-foreground">--</span>
                 </div>
 

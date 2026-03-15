@@ -127,7 +127,7 @@ export function EditProjectModal() {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4">
+          <div className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">

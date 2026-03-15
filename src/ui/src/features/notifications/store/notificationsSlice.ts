@@ -340,4 +340,4 @@ export const {
     setUnreadCount,
     clearError,
 } = notificationsSlice.actions;
-export default notificationsSlice.reducer;
+export const notificationsReducer = notificationsSlice.reducer;

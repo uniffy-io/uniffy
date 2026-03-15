@@ -242,4 +242,4 @@ const bookmarksSlice = createSlice({
 });
 
 export const { clearBookmarks, setBookmarkStatus, clearError } = bookmarksSlice.actions;
-export default bookmarksSlice.reducer;
+export const bookmarksReducer = bookmarksSlice.reducer;

@@ -732,4 +732,4 @@ export const {
     clearTree,
 } = notesTreeSlice.actions;
 
-export default notesTreeSlice.reducer;
+export const notesTreeReducer = notesTreeSlice.reducer;

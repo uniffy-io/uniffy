@@ -90,17 +90,15 @@ export function ProjectScopeFilter() {
   };
 
   return (
-    <div className="px-3 pt-2 pb-3 border-b border-border">
-      <nav className="flex items-center gap-0.5">
-        {SCOPE_FILTERS.map((filter) => (
-          <CompactScopeItem
-            key={filter.id}
-            filter={filter}
-            isActive={projectScope === filter.id}
-            onClick={() => handleScopeChange(filter.id)}
-          />
-        ))}
-      </nav>
-    </div>
+    <nav className="flex items-center gap-0.5">
+      {SCOPE_FILTERS.map((filter) => (
+        <CompactScopeItem
+          key={filter.id}
+          filter={filter}
+          isActive={projectScope === filter.id}
+          onClick={() => handleScopeChange(filter.id)}
+        />
+      ))}
+    </nav>
   );
 }

@@ -488,7 +488,7 @@ export const {
     clearNotes,
 } = notesSlice.actions;
 
-export default notesSlice.reducer;
+export const notesReducer = notesSlice.reducer;
 
 // Re-export thunks for convenience
 // Note: Bookmark functionality is now in the bookmarks feature

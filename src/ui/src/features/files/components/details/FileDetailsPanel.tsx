@@ -6,8 +6,9 @@
  */
 
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { setDetailsPanelTab } from '@/features/files/store/filesSlice';
+import { setDetailsPanelTab, setDetailsPanelOpen } from '@/features/files/store/filesSlice';
 import type { DetailsPanelTab } from '@/features/files/store/filesSlice';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize } from '@/features/files/components/list/utils';
 import { formatProtoDateTime, formatMediaTime } from '@/shared/utils/dateFormatting';
@@ -38,6 +39,7 @@ import {
     CircleNotch,
     Waveform,
     SpeakerHigh,
+    X,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';
@@ -135,6 +137,7 @@ function formatExifValue(_key: string, value: string): string {
 
 export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
     const dispatch = useAppDispatch();
+    const { isMobileOrTablet } = useBreakpoint();
     const detailsPanelTab = useAppSelector((state) => state.files.detailsPanelTab);
     const currentUser = useAppSelector((state) => state.auth.user);
 
@@ -559,6 +562,15 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
         <div className="h-full flex flex-col">
             {/* Tabs */}
             <div className="flex border-b border-border shrink-0">
+                {isMobileOrTablet && (
+                    <button
+                        onClick={() => dispatch(setDetailsPanelOpen(false))}
+                        className="flex items-center justify-center px-2 py-3 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                        aria-label="Close panel"
+                    >
+                        <X size={16} weight="bold" />
+                    </button>
+                )}
                 {tabs.map(({ id, label, icon: Icon }) => (
                     <button
                         key={id}

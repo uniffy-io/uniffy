@@ -31,6 +31,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { closeDetailPanel, openEditEvent } from '@/features/calendar/store';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { deleteEvent, updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
 import { cn } from '@/shared/utils/cn';
 import { useCalendarEvents } from '@/features/calendar/hooks';
@@ -52,6 +53,7 @@ const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
 
 export function DetailPanel() {
   const dispatch = useAppDispatch();
+  const { isMobileOrTablet } = useBreakpoint();
   const { selectedEvent, visibleEvents } = useCalendarEvents();
   const displayTimezone = useAppSelector(
     (state) => state.calendarUi.displayTimezone
@@ -130,13 +132,23 @@ export function DetailPanel() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-        <button
-          onClick={handleBack}
-          className="px-2 py-1 rounded-md text-primary bg-primary/10 transition-colors"
-          title="Close panel"
-        >
-          <SidebarSimple size={16} className="transform -scale-x-100" />
-        </button>
+        {isMobileOrTablet ? (
+          <button
+            onClick={handleBack}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Close panel"
+          >
+            <X size={16} weight="bold" />
+          </button>
+        ) : (
+          <button
+            onClick={handleBack}
+            className="px-2 py-1 rounded-md text-primary bg-primary/10 transition-colors"
+            title="Close panel"
+          >
+            <SidebarSimple size={16} className="transform -scale-x-100" />
+          </button>
+        )}
         <div className="flex items-center gap-1">
           <button
             onClick={toggleBookmark}
@@ -496,7 +508,7 @@ export function DetailPanel() {
       {showDeleteConfirm && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" />
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-96 border border-border p-6">
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border p-4 md:p-6">
             <h3 className="text-lg font-semibold text-foreground mb-2">Delete Event?</h3>
             <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to delete "{selectedEvent.title}"? This action cannot be undone.

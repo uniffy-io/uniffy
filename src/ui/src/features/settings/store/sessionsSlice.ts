@@ -109,4 +109,4 @@ export const sessionsSlice = createSlice({
 
 export const { clearSessionsError } = sessionsSlice.actions;
 
-export default sessionsSlice.reducer;
+export const sessionsReducer = sessionsSlice.reducer;

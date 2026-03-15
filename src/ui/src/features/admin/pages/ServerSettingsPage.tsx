@@ -66,7 +66,7 @@ function SettingItem({ icon: Icon, title, description, enabled, onChange, badge 
     return (
         <div className="group relative overflow-hidden rounded-xl border border-border bg-card hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:shadow-primary/5">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative flex items-center justify-between p-5">
+            <div className="relative flex items-center justify-between p-3 md:p-5">
                 <div className="flex items-start gap-4 flex-1">
                     <div className="rounded-lg bg-primary/10 p-2.5 group-hover:bg-primary/20 transition-colors duration-300">
                         <Icon className="h-5 w-5 text-primary" />
@@ -89,7 +89,7 @@ function SettingItem({ icon: Icon, title, description, enabled, onChange, badge 
     );
 }
 
-export default function ServerSettingsPage() {
+export function ServerSettingsPage() {
     useDocumentTitle('Server Settings');
     const { themeMode, availableModes, setTheme } = useTheme();
 
@@ -106,14 +106,15 @@ export default function ServerSettingsPage() {
             {/* Header Section */}
             <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-primary p-3 shadow-lg">
-                        <HardDrives size={28} weight="duotone" className="text-primary-foreground" />
+                    <div className="rounded-xl bg-primary p-2.5 md:p-3 shadow-lg shrink-0">
+                        <HardDrives size={24} weight="duotone" className="text-primary-foreground md:hidden" />
+                        <HardDrives size={28} weight="duotone" className="text-primary-foreground hidden md:block" />
                     </div>
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">
+                    <div className="min-w-0">
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
                             Server Settings
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
                             Configure global system behavior and preferences
                         </p>
                     </div>
@@ -122,7 +123,7 @@ export default function ServerSettingsPage() {
 
             {/* Theme Selector Card */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="border-b border-border bg-muted/30 px-6 py-4">
+                <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
                         <PaintBrush size={20} weight="duotone" className="text-primary" />
                         <div>
@@ -131,8 +132,8 @@ export default function ServerSettingsPage() {
                         </div>
                     </div>
                 </div>
-                <div className="p-6">
-                    <div className="flex gap-3">
+                <div className="p-4 md:p-6">
+                    <div className="flex gap-2 md:gap-3">
                         {availableModes.map((mode) => {
                             const Icon = mode === 'dark' ? Moon : mode === 'light' ? Sun : Desktop;
                             return (
@@ -162,7 +163,7 @@ export default function ServerSettingsPage() {
 
             {/* Security & Access Section */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="border-b border-border bg-muted/30 px-6 py-4">
+                <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
                         <ShieldCheck size={20} weight="duotone" className="text-primary" />
                         <div>
@@ -171,7 +172,7 @@ export default function ServerSettingsPage() {
                         </div>
                     </div>
                 </div>
-                <div className="p-6 space-y-3">
+                <div className="p-4 md:p-6 space-y-3">
                     <SettingItem
                         icon={HardDrives}
                         title="Maintenance Mode"
@@ -199,7 +200,7 @@ export default function ServerSettingsPage() {
 
             {/* System & Monitoring Section */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="border-b border-border bg-muted/30 px-6 py-4">
+                <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
                         <HardDrives size={20} weight="duotone" className="text-primary" />
                         <div>
@@ -208,7 +209,7 @@ export default function ServerSettingsPage() {
                         </div>
                     </div>
                 </div>
-                <div className="p-6 space-y-3">
+                <div className="p-4 md:p-6 space-y-3">
                     <SettingItem
                         icon={ShieldCheck}
                         title="Audit Logging"
@@ -229,7 +230,7 @@ export default function ServerSettingsPage() {
 
             {/* Notifications Section */}
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="border-b border-border bg-muted/30 px-6 py-4">
+                <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-3">
                         <Bell size={20} weight="duotone" className="text-primary" />
                         <div>
@@ -238,7 +239,7 @@ export default function ServerSettingsPage() {
                         </div>
                     </div>
                 </div>
-                <div className="p-6 space-y-3">
+                <div className="p-4 md:p-6 space-y-3">
                     <SettingItem
                         icon={Envelope}
                         title="Email Notifications"
@@ -250,12 +251,12 @@ export default function ServerSettingsPage() {
             </div>
 
             {/* Actions Footer */}
-            <div className="flex items-center justify-between rounded-xl border border-dashed border-primary/30 bg-primary/5 p-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 md:p-5">
                 <div>
                     <div className="font-medium text-foreground">Need to reset settings?</div>
                     <div className="text-sm text-muted-foreground">Restore all settings to their default values</div>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="shrink-0">
                     Reset to Defaults
                 </Button>
             </div>

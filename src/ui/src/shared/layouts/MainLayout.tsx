@@ -10,7 +10,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="min-h-screen bg-background text-foreground font-sans antialiased">
       <PushNotificationBanner />
       <AppHeader />
-      <main className="container mx-auto py-6 px-4">
+      <main className="container mx-auto py-4 px-3 md:py-6 md:px-4">
         {children}
       </main>
     </div>

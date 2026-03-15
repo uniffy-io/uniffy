@@ -111,9 +111,26 @@
 
 /*
  * Milkdown's reset.css sets .ProseMirror { padding: 60px 120px }.
- * In full mode we keep that default (nice centered content for notes).
+ * On desktop we keep generous padding for comfortable reading.
+ * On tablet/mobile we reduce horizontal padding so content uses available width.
  * In compact mode (modals/panels) we zero it out - wrapper handles padding.
  */
+.crepe-editor .ProseMirror {
+  padding: 24px 16px !important;
+}
+
+@media (min-width: 768px) {
+  .crepe-editor .ProseMirror {
+    padding: 40px 48px !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .crepe-editor .ProseMirror {
+    padding: 60px 120px !important;
+  }
+}
+
 .crepe-editor-compact .ProseMirror {
   padding: 0 !important;
 }

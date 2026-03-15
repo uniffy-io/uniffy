@@ -4,6 +4,7 @@
  * Page for managing saved file filters.
  */
 
+import { useState, useCallback } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -16,13 +17,24 @@ export function FiltersPage() {
     useDocumentTitle('Filters');
 
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+    const [showSidebar, setShowSidebar] = useState(true);
+
+    const handleToggleSidebar = useCallback(() => {
+        setShowSidebar((prev) => !prev);
+    }, []);
+
+    const handleCloseSidebar = useCallback(() => {
+        setShowSidebar(false);
+    }, []);
 
     return (
         <>
             <AppHeader />
             <FilesLayout
-                showSidebar={!isZenMode}
-                sidebar={<FilesSidebar />}
+                showSidebar={!isZenMode && showSidebar}
+                onToggleSidebar={handleToggleSidebar}
+                onCloseSidebar={handleCloseSidebar}
+                sidebar={<FilesSidebar onToggleSidebar={handleToggleSidebar} />}
                 content={
                     <div className="h-full overflow-y-auto">
                         <div className={cn(
@@ -38,4 +50,3 @@ export function FiltersPage() {
     );
 }
 
-export default FiltersPage;

@@ -150,7 +150,7 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
                 </TableCell>
 
                 {/* Status */}
-                <TableCell align="center">
+                <TableCell align="center" className="hidden sm:table-cell">
                     <span
                         className="text-xs font-medium"
                         style={member.isActive ? { color: 'var(--status-success)' } : undefined}
@@ -241,32 +241,32 @@ export function MembersSection() {
             {/* Header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">
-                    <Users size={24} weight="duotone" className="text-primary" />
-                    <h1 className="text-2xl font-bold">Members</h1>
+                    <Users size={24} weight="duotone" className="text-primary shrink-0" />
+                    <h1 className="text-xl md:text-2xl font-bold">Members</h1>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                     Manage organization members and their roles.
                 </p>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg border border-border bg-card">
-                    <p className="text-2xl font-bold">{totalCount}</p>
-                    <p className="text-sm text-muted-foreground">Total Members</p>
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{totalCount}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Total Members</p>
                 </div>
-                <div className="p-4 rounded-lg border border-border bg-card">
-                    <p className="text-2xl font-bold">{ownerCount + adminCount}</p>
-                    <p className="text-sm text-muted-foreground">Administrators</p>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{ownerCount + adminCount}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Administrators</p>
                 </div>
-                <div className="p-4 rounded-lg border border-border bg-card">
-                    <p className="text-2xl font-bold">{memberCount}</p>
-                    <p className="text-sm text-muted-foreground">Regular Members</p>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{memberCount}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Regular Members</p>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
                 {/* Search */}
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -305,7 +305,7 @@ export function MembersSection() {
                     <TableRow hoverable={false}>
                         <TableHead>Member</TableHead>
                         <TableHead align="center">Role</TableHead>
-                        <TableHead align="center">Status</TableHead>
+                        <TableHead align="center" className="hidden sm:table-cell">Status</TableHead>
                         <TableHead align="right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>

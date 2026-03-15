@@ -1,36 +1,33 @@
 /**
  * ProjectsLayout - Main three-panel layout for the Projects feature
  *
- * Structure:
- * - Left sidebar (280px default): Project list, filters, navigation
- * - Main content (flexible): Table/Board/Roadmap views
- * - Right detail panel (400px): Task details (conditional)
- *
- * Supports:
- * - Zen Mode (full screen, hides sidebars)
- * - Resizable panels with localStorage persistence
- * - Responsive behavior
+ * Responsive:
+ * - Mobile: sidebar as drawer, detail panel as drawer
+ * - Tablet: sidebar inline (narrower), detail panel as drawer
+ * - Desktop: all panels inline and resizable
  */
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { Kanban } from "@phosphor-icons/react";
+import { Kanban, CaretDoubleRight, SidebarSimple } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
-import { LAYOUT } from "../../constants";
-import { ProjectsSidebar } from "../sidebar/ProjectsSidebar";
-import { ProjectHeader } from "../header/ProjectHeader";
-import { TableView } from "../views/table/TableView";
-import { BoardView } from "../views/board/BoardView";
-import { RoadmapView } from "../views/roadmap/RoadmapView";
-import { BacklogView } from "../backlog/BacklogView";
-import { DependencyGraphView } from "../views/graph/DependencyGraphView";
-import { TaskDetailPanel } from "../detail/TaskDetailPanel";
-import { CreateTaskModal } from "../modals/CreateTaskModal";
-import { CreateProjectModal } from "../modals/CreateProjectModal";
-import { EditProjectModal } from "../modals/EditProjectModal";
-import { fetchSprints } from "../../store/sprintsThunks";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { Drawer } from "@/components/ui/drawer";
+import { LAYOUT } from "@/features/projects/constants";
+import { ProjectsSidebar } from "@/features/projects/components/sidebar/ProjectsSidebar";
+import { ProjectHeader } from "@/features/projects/components/header/ProjectHeader";
+import { TableView } from "@/features/projects/components/views/table/TableView";
+import { BoardView } from "@/features/projects/components/views/board/BoardView";
+import { RoadmapView } from "@/features/projects/components/views/roadmap/RoadmapView";
+import { BacklogView } from "@/features/projects/components/backlog/BacklogView";
+import { DependencyGraphView } from "@/features/projects/components/views/graph/DependencyGraphView";
+import { TaskDetailPanel } from "@/features/projects/components/detail/TaskDetailPanel";
+import { CreateTaskModal } from "@/features/projects/components/modals/CreateTaskModal";
+import { CreateProjectModal } from "@/features/projects/components/modals/CreateProjectModal";
+import { EditProjectModal } from "@/features/projects/components/modals/EditProjectModal";
+import { fetchSprints } from "@/features/projects/store/sprintsThunks";
 import { fetchMembers } from "@/features/admin";
 import {
   selectEditProjectId,
@@ -38,13 +35,17 @@ import {
   selectIsSidebarOpen,
   selectSelectedTaskId,
   selectViewMode,
-} from "../../store/projectsUiSlice";
-import { selectCurrentProject, selectTasksForProject } from "../../store/projectsSlice";
+  toggleSidebar,
+  closeDetailPanel,
+  selectTask,
+} from "@/features/projects/store/projectsUiSlice";
+import { selectCurrentProject, selectTasksForProject } from "@/features/projects/store/projectsSlice";
 
 const EMPTY_TASKS: ReturnType<ReturnType<typeof selectTasksForProject>> = [];
 
 export function ProjectsLayout() {
   const dispatch = useAppDispatch();
+  const { isMobile, isMobileOrTablet } = useBreakpoint();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const isDetailPanelOpen = useAppSelector(selectIsDetailPanelOpen);
@@ -85,9 +86,18 @@ export function ProjectsLayout() {
     savePanelLayout("projects", layout);
   }, []);
 
+  // Responsive panel mode
+  const sidebarAsDrawer = isMobile;
+  const detailAsDrawer = isMobileOrTablet;
+
   // Determine if we should show each panel
   const showSidebar = !isZenMode && isSidebarOpen;
   const showDetailPanel = !isZenMode && isDetailPanelOpen && selectedTaskId;
+
+  const handleCloseDetailPanel = () => {
+    dispatch(closeDetailPanel());
+    dispatch(selectTask(null));
+  };
 
   return (
     <>
@@ -95,7 +105,7 @@ export function ProjectsLayout() {
       className={cn(
         "flex flex-col bg-background text-foreground overflow-hidden",
         "transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-screen delay-150" : "h-[calc(100vh-4rem)] delay-0"
+        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-4rem)] delay-0"
       )}
     >
       <Group
@@ -104,12 +114,25 @@ export function ProjectsLayout() {
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {/* Left Sidebar */}
-        {showSidebar && (
+        {/* Collapsed sidebar toggle - inline in flow, not absolute */}
+        {!showSidebar && !sidebarAsDrawer && !isZenMode && (
+          <div className="flex flex-col items-center py-3 px-1 bg-card border-r border-border">
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
+              title="Show sidebar"
+            >
+              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
+            </button>
+          </div>
+        )}
+
+        {/* Left Sidebar - inline on tablet/desktop */}
+        {showSidebar && !sidebarAsDrawer && (
           <>
             <Panel
               id="projects-sidebar"
-              defaultSize={LAYOUT.SIDEBAR_WIDTH}
+              defaultSize={isMobileOrTablet ? 200 : LAYOUT.SIDEBAR_WIDTH}
               minSize={LAYOUT.SIDEBAR_MIN_WIDTH}
               maxSize={LAYOUT.SIDEBAR_MAX_WIDTH}
               className="bg-card border-r border-border"
@@ -124,7 +147,7 @@ export function ProjectsLayout() {
         {/* Main Content */}
         <Panel
           id="projects-main"
-          minSize={400}
+          minSize={isMobileOrTablet ? 100 : 400}
           className="flex flex-col overflow-hidden"
         >
           {currentProject ? (
@@ -143,8 +166,8 @@ export function ProjectsLayout() {
           )}
         </Panel>
 
-        {/* Right Detail Panel */}
-        {showDetailPanel && (
+        {/* Right Detail Panel - inline on desktop only */}
+        {showDetailPanel && !detailAsDrawer && (
           <>
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
 
@@ -162,6 +185,33 @@ export function ProjectsLayout() {
       </Group>
     </div>
 
+    {/* Mobile sidebar drawer */}
+    {sidebarAsDrawer && (
+      <Drawer
+        open={showSidebar}
+        onClose={() => dispatch(toggleSidebar())}
+        side="left"
+        className="w-72"
+        ariaLabel="Projects sidebar"
+      >
+        <ProjectsSidebar />
+      </Drawer>
+    )}
+
+    {/* Detail panel drawer (mobile + tablet) */}
+    {detailAsDrawer && (
+      <Drawer
+        open={!!showDetailPanel}
+        onClose={handleCloseDetailPanel}
+        side="right"
+        className="w-80"
+        showClose={false}
+        ariaLabel="Task details"
+      >
+        {selectedTaskId && <TaskDetailPanel taskId={selectedTaskId} />}
+      </Drawer>
+    )}
+
     {/* Modals */}
     {isCreateTaskModalOpen && <CreateTaskModal />}
     {isCreateProjectModalOpen && <CreateProjectModal />}
@@ -174,16 +224,35 @@ export function ProjectsLayout() {
  * Placeholder when no project is selected
  */
 function NoProjectSelected() {
+  const dispatch = useAppDispatch();
+  const { isMobile } = useBreakpoint();
+  const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-      <div className="text-center max-w-md">
-        <div className="mb-4 flex justify-center">
-          <Kanban size={48} weight="duotone" className="text-muted-foreground" />
+    <div className="flex-1 flex flex-col bg-background">
+      {/* Mobile sidebar toggle when no project selected */}
+      {isMobile && !isSidebarOpen && (
+        <div className="px-3 py-2">
+          <button
+            onClick={() => dispatch(toggleSidebar())}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
+            title="Show sidebar"
+          >
+            <SidebarSimple size={16} className="text-primary" />
+          </button>
         </div>
-        <h2 className="text-xl font-semibold text-foreground mb-2">No Project Selected</h2>
-        <p className="text-sm text-muted-foreground">
-          Select a project from the sidebar or create a new one to get started.
-        </p>
+      )}
+
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="mb-4 flex justify-center">
+            <Kanban size={48} weight="duotone" className="text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">No Project Selected</h2>
+          <p className="text-sm text-muted-foreground">
+            Select a project from the sidebar or create a new one to get started.
+          </p>
+        </div>
       </div>
     </div>
   );

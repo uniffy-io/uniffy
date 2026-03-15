@@ -20,4 +20,4 @@ const zenModeSlice = createSlice({
 
 export const { toggleZenMode } = zenModeSlice.actions;
 
-export default zenModeSlice.reducer;
+export const zenModeReducer = zenModeSlice.reducer;

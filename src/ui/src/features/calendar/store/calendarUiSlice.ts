@@ -400,4 +400,4 @@ export const {
   resetCalendarUiState,
 } = calendarUiSlice.actions;
 
-export default calendarUiSlice.reducer;
+export const calendarUiReducer = calendarUiSlice.reducer;

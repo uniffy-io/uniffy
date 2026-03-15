@@ -319,7 +319,7 @@ export const {
     clearError,
 } = filesTreeSlice.actions;
 
-export default filesTreeSlice.reducer;
+export const filesTreeReducer = filesTreeSlice.reducer;
 
 // Re-export thunks and types
 export {

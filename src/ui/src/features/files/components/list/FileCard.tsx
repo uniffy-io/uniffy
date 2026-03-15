@@ -14,6 +14,7 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useBookmarkToggle } from '@/features/bookmarks';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { TagInput } from '@/components/tag-input';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import type { ICON_SIZE_CONFIG } from '@/features/files/components/list/constants';
@@ -63,6 +64,7 @@ export function FileCard({
     canShare = true,
 }: FileCardProps) {
     const navigate = useNavigate();
+    const { isMobile } = useBreakpoint();
     const showOwner = viewScope === 'shared' || viewScope === 'organization';
     const [isRenaming, setIsRenaming] = useState(false);
     const [isEditingTags, setIsEditingTags] = useState(false);
@@ -111,7 +113,7 @@ export function FileCard({
         setIsEditingTags(true);
     };
 
-    // Handle single click - select file (for details panel)
+    // Handle single click - select file (for details panel), or open on mobile
     const handleClick = (e: React.MouseEvent) => {
         // Don't trigger if renaming
         if (isRenaming) return;
@@ -122,12 +124,15 @@ export function FileCard({
         }
         if (isSelectMode) {
             onToggleCheck(file.id, e.shiftKey);
+        } else if (isMobile) {
+            // On mobile, single tap opens the file viewer (no double-tap on touch)
+            onOpen(file.id);
         } else {
             onSelect(file.id);
         }
     };
 
-    // Handle double click - open file viewer
+    // Handle double click - open file viewer (desktop only)
     const handleDoubleClick = (e: React.MouseEvent) => {
         // Don't trigger if renaming or in select mode
         if (isRenaming || isSelectMode) return;
@@ -159,7 +164,7 @@ export function FileCard({
         return (
             <div
                 className={cn(
-                    "flex items-center gap-4 px-4 py-2.5 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border group",
+                    "flex items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border group",
                     isSelected && !isSelectMode && "bg-accent",
                     isChecked && "bg-primary/10",
                     isSelectMode && "select-none"
@@ -217,8 +222,8 @@ export function FileCard({
                     </div>
                 )}
 
-                {/* Tags */}
-                <div className="w-36 relative">
+                {/* Tags - hidden on mobile/tablet */}
+                <div className="hidden lg:block w-36 relative">
                     {isEditingTags ? (
                         <div
                             ref={tagsPopoverRef}
@@ -262,9 +267,9 @@ export function FileCard({
                     )}
                 </div>
 
-                {/* Owner (only in shared/organization views) */}
+                {/* Owner (only in shared/organization views, hidden on mobile) */}
                 {showOwner && (
-                    <div className="w-28 flex items-center gap-2">
+                    <div className="hidden md:flex w-28 items-center gap-2">
                         <div
                             className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground"
                             title={file.ownerInfo?.name || file.ownerInfo?.email || 'Unknown'}
@@ -286,13 +291,13 @@ export function FileCard({
                     </span>
                 </div>
 
-                {/* Items - files don't have items */}
-                <div className="w-20 text-right">
+                {/* Items - files don't have items, hidden on mobile/tablet */}
+                <div className="hidden lg:block w-20 text-right">
                     <span className="text-sm text-muted-foreground">--</span>
                 </div>
 
-                {/* Date */}
-                <div className="w-24 text-right">
+                {/* Date - hidden on mobile */}
+                <div className="hidden sm:block w-24 text-right">
                     <span className="text-sm text-muted-foreground">
                         {formatDate(file.updatedAt)}
                     </span>

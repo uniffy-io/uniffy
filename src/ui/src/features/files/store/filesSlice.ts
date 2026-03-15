@@ -602,7 +602,7 @@ export const {
     clearFiles,
 } = filesSlice.actions;
 
-export default filesSlice.reducer;
+export const filesReducer = filesSlice.reducer;
 
 // Re-export thunks for convenience
 export {

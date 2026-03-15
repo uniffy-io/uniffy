@@ -4,6 +4,10 @@
 /* Use class-based dark mode (matches ThemeProvider's .dark class on root) */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Touch device variant - matches devices without hover capability (tablets, phones) */
+/* Usage: touch:opacity-100 to make hover-only elements visible on touch devices */
+@custom-variant touch (@media (hover: none));
+
 /* Any custom base styles or theme overrides can go here */
 @theme {
   /* Font families */

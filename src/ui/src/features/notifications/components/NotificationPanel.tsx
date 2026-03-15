@@ -1,13 +1,14 @@
 /**
- * Notification panel dropdown showing time-grouped notifications.
+ * Notification panel - dropdown on desktop, full-screen sheet on mobile.
  *
  * Groups notifications by: Today, Yesterday, This Week, Earlier.
  * Provides filter tabs (All / Unread), mark-all-read, and refresh.
  */
 
 import { useEffect, useRef, useMemo, useState } from 'react';
-import { CheckCircle, ArrowsClockwise, BellSimple, Funnel } from '@phosphor-icons/react';
+import { CheckCircle, ArrowsClockwise, BellSimple, Funnel, X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { useNotifications } from '@/features/notifications/hooks/useNotifications';
 import { NotificationItem } from '@/features/notifications/components/NotificationItem';
 import { useNavigate } from 'react-router-dom';
@@ -58,81 +59,44 @@ interface NotificationPanelProps {
     onClose: () => void;
 }
 
-export function NotificationPanel({ onClose }: NotificationPanelProps) {
-    const {
-        notifications,
-        unreadCount,
-        loading,
-        refresh,
-        markAsRead,
-        markAllAsRead,
-        remove,
-    } = useNotifications();
-    const navigate = useNavigate();
-    const panelRef = useRef<HTMLDivElement>(null);
-    const [filter, setFilter] = useState<FilterMode>('all');
-
-    // Fetch notifications on mount
-    useEffect(() => {
-        refresh();
-    }, [refresh]);
-
-    // Close on click outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-                onClose();
-            }
-        }
-
-        const timeoutId = setTimeout(() => {
-            document.addEventListener('click', handleClickOutside, true);
-        }, 0);
-
-        return () => {
-            clearTimeout(timeoutId);
-            document.removeEventListener('click', handleClickOutside, true);
-        };
-    }, [onClose]);
-
-    const filteredNotifications = useMemo(() => {
-        if (filter === 'unread') {
-            return notifications.filter((n) => !n.isRead);
-        }
-        return notifications;
-    }, [notifications, filter]);
-
-    const timeGroups = useMemo(() => groupByTime(filteredNotifications), [filteredNotifications]);
-
-    const handleNotificationClick = (notification: SerializedNotification) => {
-        if (!notification.isRead) {
-            markAsRead(notification.id);
-        }
-
-        if (notification.sourceUrn) {
-            const parsed = parseUrn(notification.sourceUrn);
-            if (parsed) {
-                const path = urnToPath(notification.sourceUrn);
-                if (path) {
-                    navigate(path);
-                    onClose();
-                }
-            }
-        }
-    };
-
+/**
+ * Shared content used by both mobile and desktop views.
+ */
+function NotificationContent({
+    filter,
+    setFilter,
+    loading,
+    unreadCount,
+    refresh,
+    markAllAsRead,
+    filteredNotifications,
+    timeGroups,
+    notifications,
+    onNotificationClick,
+    markAsRead,
+    remove,
+    onClose,
+    isMobile,
+}: {
+    filter: FilterMode;
+    setFilter: (f: FilterMode) => void;
+    loading: boolean;
+    unreadCount: number;
+    refresh: () => void;
+    markAllAsRead: () => void;
+    filteredNotifications: SerializedNotification[];
+    timeGroups: TimeGroup[];
+    notifications: SerializedNotification[];
+    onNotificationClick: (n: SerializedNotification) => void;
+    markAsRead: (id: string) => void;
+    remove: (id: string) => void;
+    onClose: () => void;
+    isMobile: boolean;
+}) {
     return (
-        <div
-            ref={panelRef}
-            className={cn(
-                'absolute right-0 z-[100] mt-1.5 w-[400px] max-h-[70vh] origin-top-right rounded-xl',
-                'bg-card shadow-xl border border-border',
-                'animate-in fade-in slide-in-from-top-2 duration-200',
-                'flex flex-col overflow-hidden'
-            )}
-        >
+        <>
             {/* Header */}
-            <div className="px-4 pt-3.5 pb-2.5 border-b border-border">
+            <div className="px-4 pt-3.5 pb-2.5 border-b border-border shrink-0">
                 <div className="flex items-center justify-between mb-2.5">
                     <h3 className="text-sm font-semibold text-foreground">
                         Notifications
@@ -156,6 +120,15 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                                 title="Mark all as read"
                             >
                                 <CheckCircle size={14} />
+                            </button>
+                        )}
+                        {isMobile && (
+                            <button
+                                onClick={onClose}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                title="Close"
+                            >
+                                <X size={14} weight="bold" />
                             </button>
                         )}
                     </div>
@@ -250,7 +223,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                                             notification={notification}
                                             onMarkAsRead={markAsRead}
                                             onDelete={remove}
-                                            onClick={handleNotificationClick}
+                                            onClick={onNotificationClick}
                                         />
                                     ))}
                                 </div>
@@ -259,6 +232,143 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                     </div>
                 )}
             </div>
+        </>
+    );
+}
+
+export function NotificationPanel({ onClose }: NotificationPanelProps) {
+    const {
+        notifications,
+        unreadCount,
+        loading,
+        refresh,
+        markAsRead,
+        markAllAsRead,
+        remove,
+    } = useNotifications();
+    const navigate = useNavigate();
+    const panelRef = useRef<HTMLDivElement>(null);
+    const [filter, setFilter] = useState<FilterMode>('all');
+    const { isMobile } = useBreakpoint();
+
+    // Fetch notifications on mount
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    // Close on click outside (desktop only - mobile has explicit close button)
+    useEffect(() => {
+        if (isMobile) return;
+
+        function handleClickOutside(event: MouseEvent) {
+            if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        }
+
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('click', handleClickOutside, true);
+        }, 0);
+
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('click', handleClickOutside, true);
+        };
+    }, [onClose, isMobile]);
+
+    // Lock body scroll on mobile
+    useEffect(() => {
+        if (!isMobile) return;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isMobile]);
+
+    const filteredNotifications = useMemo(() => {
+        if (filter === 'unread') {
+            return notifications.filter((n) => !n.isRead);
+        }
+        return notifications;
+    }, [notifications, filter]);
+
+    const timeGroups = useMemo(() => groupByTime(filteredNotifications), [filteredNotifications]);
+
+    const handleNotificationClick = (notification: SerializedNotification) => {
+        if (!notification.isRead) {
+            markAsRead(notification.id);
+        }
+
+        if (notification.sourceUrn) {
+            const parsed = parseUrn(notification.sourceUrn);
+            if (parsed) {
+                const path = urnToPath(notification.sourceUrn);
+                if (path) {
+                    navigate(path);
+                    onClose();
+                }
+            }
+        }
+    };
+
+    const contentProps = {
+        filter,
+        setFilter,
+        loading,
+        unreadCount,
+        refresh,
+        markAllAsRead,
+        filteredNotifications,
+        timeGroups,
+        notifications,
+        onNotificationClick: handleNotificationClick,
+        markAsRead,
+        remove,
+        onClose,
+        isMobile,
+    };
+
+    // Mobile: fixed full-screen overlay
+    if (isMobile) {
+        return (
+            <>
+                {/* Backdrop */}
+                <div
+                    className="fixed inset-0 z-[99] bg-black/50 animate-in fade-in duration-200"
+                    onClick={onClose}
+                />
+                {/* Sheet */}
+                <div
+                    ref={panelRef}
+                    className={cn(
+                        'fixed inset-x-0 bottom-0 z-[100] max-h-[85dvh]',
+                        'bg-card border-t border-border rounded-t-2xl shadow-xl',
+                        'animate-in slide-in-from-bottom duration-300',
+                        'flex flex-col overflow-hidden'
+                    )}
+                >
+                    {/* Drag handle */}
+                    <div className="flex justify-center pt-2 pb-1 shrink-0">
+                        <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
+                    </div>
+                    <NotificationContent {...contentProps} />
+                </div>
+            </>
+        );
+    }
+
+    // Desktop: absolute dropdown
+    return (
+        <div
+            ref={panelRef}
+            className={cn(
+                'absolute right-0 z-[100] mt-1.5 w-[min(400px,calc(100vw-2rem))] max-h-[70vh] origin-top-right rounded-xl',
+                'bg-card shadow-xl border border-border',
+                'animate-in fade-in slide-in-from-top-2 duration-200',
+                'flex flex-col overflow-hidden'
+            )}
+        >
+            <NotificationContent {...contentProps} />
         </div>
     );
 }

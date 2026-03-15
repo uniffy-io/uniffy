@@ -12,6 +12,7 @@ import { toggleSidebar } from '@/features/notes/store/editorSlice';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
 import { CaretDoubleRight } from '@phosphor-icons/react';
 import { useMyPermission } from '@/features/sharing';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { NodeType } from '@/gen/notes/v1/notes_pb';
 
@@ -58,6 +59,7 @@ export function NotesEditor() {
   const settings = editorState?.settings;
   const userSelectedMode = settings?.editorMode || 'crepe';
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
+  const { isMobile } = useBreakpoint();
 
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
@@ -126,35 +128,61 @@ export function NotesEditor() {
   // Uses capture-phase scroll listener on the container so it catches
   // scroll events from any nested scrollable element (CrepeEditor wrapper,
   // CodeMirror scroller, etc.) without needing to query for them.
+  // A cooldown timer prevents rapid toggling during fast/momentum scrolling
+  // by locking the state for the duration of the CSS transition.
   const [titleVisible, setTitleVisible] = useState(true);
   const lastScrollTopRef = useRef(0);
+  const titleVisibleRef = useRef(true);
+  const cooldownRef = useRef(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = editorContainerRef.current;
     if (!container) return;
 
+    let cooldownTimer: ReturnType<typeof setTimeout>;
+
     const onScroll = (e: Event) => {
       const target = e.target;
       if (!(target instanceof Element)) return;
 
       const scrollTop = target.scrollTop;
-      const isAtTop = scrollTop <= 10;
-      const scrollingUp = scrollTop < lastScrollTopRef.current;
-
-      setTitleVisible(isAtTop || scrollingUp);
+      const prev = lastScrollTopRef.current;
       lastScrollTopRef.current = scrollTop;
+
+      // Ignore tiny deltas (sub-pixel / momentum noise)
+      if (Math.abs(scrollTop - prev) < 2) return;
+
+      const shouldShow = scrollTop <= 10 || scrollTop < prev;
+
+      // Only update if the value actually changed AND we're not in cooldown
+      if (shouldShow !== titleVisibleRef.current && !cooldownRef.current) {
+        titleVisibleRef.current = shouldShow;
+        setTitleVisible(shouldShow);
+
+        // Lock state for 250ms (matches CSS transition) to prevent flicker
+        cooldownRef.current = true;
+        clearTimeout(cooldownTimer);
+        cooldownTimer = setTimeout(() => {
+          cooldownRef.current = false;
+        }, 250);
+      }
     };
 
     // Capture phase catches scroll events from any descendant
     container.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    return () => container.removeEventListener('scroll', onScroll, { capture: true });
+    return () => {
+      container.removeEventListener('scroll', onScroll, { capture: true });
+      clearTimeout(cooldownTimer);
+    };
   }, [currentNoteId, editorMode]);
 
   // Reset title visibility when switching notes
   useEffect(() => {
     setTitleVisible(true);
+    titleVisibleRef.current = true;
     lastScrollTopRef.current = 0;
+    cooldownRef.current = false;
   }, [currentNoteId]);
 
   const handleContentChange = useCallback((markdown: string) => {
@@ -184,7 +212,7 @@ export function NotesEditor() {
   if (shouldShowLoading) {
     return (
       <div className="flex flex-col h-full bg-card">
-        {!isSidebarOpen && (
+        {!isSidebarOpen && !isMobile && (
           <div className="flex items-center px-4 py-2 border-b border-border">
             <button
               onClick={() => dispatch(toggleSidebar())}
@@ -207,8 +235,8 @@ export function NotesEditor() {
   if (!currentNote) {
     return (
       <div className="flex flex-col h-full bg-card">
-        {/* Header with sidebar toggle when sidebar is hidden */}
-        {!isSidebarOpen && (
+        {/* Header with sidebar toggle when sidebar is hidden (not on mobile - sidebar is a drawer there) */}
+        {!isSidebarOpen && !isMobile && (
           <div className="flex items-center px-4 py-2 border-b border-border">
             <button
               onClick={() => dispatch(toggleSidebar())}

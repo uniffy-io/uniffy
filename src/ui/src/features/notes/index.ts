@@ -19,13 +19,13 @@ export { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
 export { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 
 // Pages
-export { default as NotesPage } from '@/features/notes/pages/NotesPage';
+export { NotesPage } from '@/features/notes/pages/NotesPage';
 export { NotesTagsPage } from '@/features/notes/pages/NotesTagsPage';
 
 // Store - Slices
-export { default as notesReducer } from '@/features/notes/store/notesSlice';
-export { default as notesTreeReducer } from '@/features/notes/store/notesTreeSlice';
-export { default as editorReducer } from '@/features/notes/store/editorSlice';
+export { notesReducer } from '@/features/notes/store/notesSlice';
+export { notesTreeReducer } from '@/features/notes/store/notesTreeSlice';
+export { editorReducer } from '@/features/notes/store/editorSlice';
 
 // Store - Actions
 export {

@@ -3,8 +3,8 @@
  */
 
 // Reducers
-export { default as calendarReducer } from '@/features/calendar/store/calendarSlice';
-export { default as calendarUiReducer } from '@/features/calendar/store/calendarUiSlice';
+export { calendarReducer } from '@/features/calendar/store/calendarSlice';
+export { calendarUiReducer } from '@/features/calendar/store/calendarUiSlice';
 
 // Thunks (API calls)
 export {

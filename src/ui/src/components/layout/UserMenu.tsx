@@ -147,7 +147,7 @@ export function UserMenu() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 z-100 mt-1.5 w-60 origin-top-right rounded-lg bg-card py-1.5 shadow-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 z-100 mt-1.5 w-[min(240px,calc(100vw-2rem))] origin-top-right rounded-lg bg-card py-1.5 shadow-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* User info header */}
                     <div className="px-3 py-2.5 border-b border-border">
                         <div className="flex items-center gap-2.5">

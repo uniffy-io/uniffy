@@ -112,7 +112,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
         <th
             ref={ref}
             className={cn(
-                'px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider',
+                'px-3 md:px-4 lg:px-6 py-2.5 md:py-3 lg:py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider',
                 align === 'left' && 'text-left',
                 align === 'center' && 'text-center',
                 align === 'right' && 'text-right',
@@ -138,7 +138,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
         <td
             ref={ref}
             className={cn(
-                'px-6 py-4',
+                'px-3 md:px-4 lg:px-6 py-2.5 md:py-3 lg:py-4',
                 align === 'left' && 'text-left',
                 align === 'center' && 'text-center',
                 align === 'right' && 'text-right',

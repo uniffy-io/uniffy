@@ -221,12 +221,12 @@ function ShortcutEditor({ action, label, currentBinding, allBindings, onUpdate, 
     }
 
     return (
-        <div className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-muted/50 transition-colors group">
+        <div className="flex items-center justify-between py-2.5 md:py-3 px-3 md:px-4 rounded-lg hover:bg-muted/50 transition-colors group">
             <span className="text-sm font-medium text-foreground">{label}</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
                 <button
                     type="button"
-                    className="px-3 py-1 text-sm font-mono bg-muted rounded text-foreground hover:bg-muted/80 transition-colors"
+                    className="px-2 md:px-3 py-1 text-xs md:text-sm font-mono bg-muted rounded text-foreground hover:bg-muted/80 transition-colors"
                     onClick={() => setIsEditing(true)}
                 >
                     {formatShortcut(currentBinding)}
@@ -273,8 +273,8 @@ export function KeyboardShortcutsSection() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">Keyboard Shortcuts</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Keyboard Shortcuts</h1>
+                <p className="text-sm text-muted-foreground">
                     Customize keyboard shortcuts for common actions.
                 </p>
             </div>

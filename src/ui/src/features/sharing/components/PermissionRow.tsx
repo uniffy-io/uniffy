@@ -154,7 +154,7 @@ export function PermissionRow({
                             disabled={disabled || isRemoving}
                             className="p-1.5 rounded-md text-muted-foreground hover-destructive
                                 transition-colors
-                                opacity-0 group-hover:opacity-100
+                                md:opacity-0 md:group-hover:opacity-100
                                 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Remove access"
                         >

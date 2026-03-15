@@ -44,4 +44,4 @@ export const themeSlice = createSlice({
 
 export const { setThemeMode, toggleTheme, setAccentColor, setFontFamily } = themeSlice.actions;
 
-export default themeSlice.reducer;
+export const themeReducer = themeSlice.reducer;

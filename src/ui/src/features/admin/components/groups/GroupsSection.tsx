@@ -151,9 +151,9 @@ function GroupFormModal({ group, onSave, onClose }: GroupFormModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md bg-card rounded-xl border border-border shadow-xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+            <div className="w-full sm:w-[calc(100vw-2rem)] sm:max-w-md bg-card rounded-t-xl sm:rounded-xl border border-border shadow-xl">
+                <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-border">
                     <h2 className="text-lg font-semibold">
                         {group ? 'Edit Group' : 'Create Group'}
                     </h2>
@@ -166,7 +166,7 @@ function GroupFormModal({ group, onSave, onClose }: GroupFormModalProps) {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                     {error && (
                         <div className="p-3 rounded-md text-sm status-error">
                             {error}
@@ -264,9 +264,9 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
     );
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-lg bg-card rounded-xl border border-border shadow-xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+            <div className="w-full sm:w-[calc(100vw-2rem)] sm:max-w-lg bg-card rounded-t-xl sm:rounded-xl border border-border shadow-xl">
+                <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-border">
                     <div>
                         <h2 className="text-lg font-semibold">{group.name}</h2>
                         <p className="text-sm text-muted-foreground">
@@ -295,7 +295,7 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
 
                 {/* Add member picker */}
                 {showAddPicker && (
-                    <div className="px-6 pt-4">
+                    <div className="px-4 md:px-6 pt-4">
                         <SubjectPicker
                             mode="single"
                             subjectTypes="users"
@@ -310,12 +310,12 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                 )}
 
                 {adding && (
-                    <div className="px-6 pt-2">
+                    <div className="px-4 md:px-6 pt-2">
                         <p className="text-xs text-muted-foreground">Adding member...</p>
                     </div>
                 )}
 
-                <div className="p-6 max-h-96 overflow-y-auto">
+                <div className="p-4 md:p-6 max-h-[50vh] md:max-h-96 overflow-y-auto">
                     {loading ? (
                         <div className="py-8 text-center">
                             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
@@ -370,7 +370,7 @@ function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                     )}
                 </div>
 
-                <div className="flex justify-end px-6 py-4 border-t border-border">
+                <div className="flex justify-end px-4 md:px-6 py-3 md:py-4 border-t border-border">
                     <button
                         type="button"
                         onClick={onClose}
@@ -409,24 +409,24 @@ export function GroupsSection() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                        <UsersThree size={24} weight="duotone" className="text-primary" />
-                        <h1 className="text-2xl font-bold">Groups</h1>
+                        <UsersThree size={24} weight="duotone" className="text-primary shrink-0" />
+                        <h1 className="text-xl md:text-2xl font-bold">Groups</h1>
                     </div>
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground text-sm hidden sm:block">
                         Create and manage groups to organize members and share content.
                     </p>
                 </div>
                 <button
                     type="button"
                     onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
+                    className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-md text-sm font-medium shrink-0
                         bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                     <Plus size={16} />
-                    Create Group
+                    <span className="hidden sm:inline">Create Group</span>
                 </button>
             </div>
 

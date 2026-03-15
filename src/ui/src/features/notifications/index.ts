@@ -8,7 +8,7 @@
 export { notificationsApi } from '@/features/notifications/api/notificationsApi';
 
 export {
-    default as notificationsReducer,
+    notificationsReducer,
     clearNotifications,
     togglePanel,
     setPanel,

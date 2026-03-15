@@ -47,6 +47,49 @@ src/gen/
 └── settings/v1/        # Settings domain
 ```
 
+## Responsive Design
+
+**Every page, layout, and component MUST be responsive across three tiers:**
+
+| Tier | Breakpoint | Priority | Expectation |
+|------|-----------|----------|-------------|
+| Desktop | `lg` and above (1024px+) | First-class | Full experience, all features visible, resizable panels, hover interactions |
+| Tablet | `md` (768-1024px) | Critical | Must feel polished and natural. Sidebars as drawers or collapsible, simplified toolbars, touch-friendly targets |
+| Mobile | below `md` (<768px) | Functional | Usable but not feature-rich. There is a native mobile app, so web mobile is a fallback. Hide non-essential columns/controls, stack layouts, use bottom sheets instead of dropdowns |
+
+**Breakpoint hook** (`@/shared/hooks/useBreakpoint`):
+
+```typescript
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+
+const { isMobile, isTablet, isMobileOrTablet, isDesktop } = useBreakpoint();
+```
+
+**Responsive layout patterns:**
+
+| Pattern | Implementation |
+|---------|---------------|
+| Sidebar on desktop, drawer on mobile | `useBreakpoint()` + `Drawer` component from `@/components/ui/drawer` |
+| Sidebar collapse/expand | `CaretDoubleLeft` inside sidebar header (collapse), `CaretDoubleRight` inline column in layout (expand on tablet/desktop), `SidebarSimple` in content header (expand on mobile) |
+| Three-panel layouts | `react-resizable-panels` on desktop, detail panel as drawer on tablet, both sidebar and detail as drawers on mobile |
+| Tables | Hide less important columns with `hidden md:table-cell` / `hidden lg:table-cell` |
+| Modals | `w-[calc(100vw-2rem)] max-w-{size}` for proper mobile sizing, `max-h-[60vh] overflow-y-auto` for content, slide-up from bottom on mobile (`items-end sm:items-center`, `rounded-t-xl sm:rounded-xl`) |
+| Dropdowns/panels | Use bottom sheets on mobile (fixed, slide-up) instead of absolute dropdowns that clip off-screen |
+| Hover-only actions | Always visible on mobile (`md:opacity-0 md:group-hover:opacity-100`), hover-reveal on desktop |
+| Headers | Smaller text on mobile (`text-2xl md:text-3xl`), hide descriptions below `sm`, buttons icon-only on mobile |
+| Padding | Tighter on mobile (`px-3 md:px-4 lg:px-6`, `py-2 md:py-3 lg:py-4`) |
+
+**Dynamic viewport height**: Use `h-dvh` / `100dvh` instead of `h-screen` / `100vh` for fixed-height layouts. This handles mobile browser chrome (address bar, virtual keyboard).
+
+**Rules:**
+
+1. Never build a page or layout that only works on desktop - always consider all three tiers
+2. Use `useBreakpoint()` for JS-level responsive logic (drawer vs inline, different component structure)
+3. Use Tailwind responsive classes (`sm:`, `md:`, `lg:`) for CSS-level responsive styling
+4. Touch targets must be at least 44x44px on mobile (use `p-2` or larger on interactive elements)
+5. Never rely solely on hover for critical actions - provide tap alternatives on touch devices
+6. Test layouts at 768px (tablet portrait), 1024px (tablet landscape), and 375px (mobile) widths
+
 ## Adding a New Frontend Feature
 
 Each feature is self-contained in `src/ui/src/features/{feature}/`:
@@ -534,6 +577,72 @@ The middleware handles both `rejectWithValue` payloads and thrown error messages
    const friendly = friendlyErrorMessage(error.message);
    if (friendly) toast.error(friendly);
    ```
+
+## Lazy Loading and Error Boundaries
+
+All route-level page components MUST be lazy-loaded using `React.lazy` via the `lazyImport` utility, and wrapped with `Suspense` + `ErrorBoundary` via the `<LazyRoute>` wrapper.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/shared/utils/lazyImport.ts` | Type-safe `React.lazy` wrapper for named exports |
+| `src/ui/src/components/feedback/ErrorBoundary.tsx` | Reusable class-based error boundary |
+| `src/ui/src/components/feedback/PageLoader.tsx` | Suspense fallback spinner for lazy-loaded pages |
+| `src/ui/src/components/feedback/PageErrorFallback.tsx` | Route-level error UI (with chunk error detection) |
+| `src/ui/src/components/feedback/AppErrorFallback.tsx` | App-level catastrophic error UI |
+| `src/ui/src/components/feedback/index.ts` | Barrel exports |
+
+**Architecture - Two-layer error boundaries:**
+
+1. **App-level** (`AppErrorFallback`): Wraps `BrowserRouter`. Catches catastrophic errors that escape route boundaries. Shows "Reload application" prompt.
+2. **Route-level** (`PageErrorFallback`): Wraps each lazy-loaded page via `<LazyRoute>`. Isolates page crashes so global chrome (header, spotlight, toaster) keeps working. Auto-detects stale chunk errors from deployments and shows "Update available - Reload" instead of generic error.
+
+**Adding a new lazy-loaded page:**
+
+1. Create the page with a **named export** (never `export default`):
+   ```typescript
+   export function MyPage() { ... }
+   ```
+
+2. Add lazy import in `App.tsx` using `lazyImport` (import from the page file directly, NOT from barrel):
+   ```typescript
+   const MyPage = lazyImport(() => import('@/features/myFeature/pages/MyPage'), 'MyPage');
+   ```
+
+3. Wrap in route with `<LazyRoute>`:
+   ```typescript
+   <Route path="/my-feature" element={
+       <ProtectedRoute>
+           <LazyRoute><MyPage /></LazyRoute>
+       </ProtectedRoute>
+   } />
+   ```
+
+**Rules:**
+
+1. **Always import page files directly** in lazy imports (e.g., `@/features/notes/pages/NotesPage`), never from barrel files (`@/features/notes`). Importing from barrels defeats code splitting by pulling in the entire feature module.
+2. **Global components stay eagerly imported** - modals, search overlays, toasters, and auth guards (`ProtectedRoute`, `AdminRoute`) must be ready instantly and are NOT lazy-loaded.
+3. **Every lazy-loaded route MUST be wrapped in `<LazyRoute>`** which provides both `Suspense` fallback and `ErrorBoundary`.
+4. The `ErrorBoundary` component can also be used around risky sub-trees within pages (e.g., third-party integrations):
+   ```typescript
+   import { ErrorBoundary } from '@/components/feedback';
+
+   <ErrorBoundary fallback={({ error, reset }) => <MyFallback error={error} onRetry={reset} />}>
+       <RiskyThirdPartyWidget />
+   </ErrorBoundary>
+   ```
+
+**Adding a new Redux slice reducer:**
+
+Always use named exports for reducers:
+```typescript
+// CORRECT
+export const myFeatureReducer = myFeatureSlice.reducer;
+
+// WRONG - never use export default for reducers
+export default myFeatureSlice.reducer;
+```
 
 ## Authentication (Frontend)
 

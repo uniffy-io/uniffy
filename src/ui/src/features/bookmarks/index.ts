@@ -7,7 +7,7 @@
 export { bookmarksApi } from '@/features/bookmarks/api/bookmarksApi';
 
 export {
-    default as bookmarksReducer,
+    bookmarksReducer,
     clearBookmarks,
     setBookmarkStatus,
     clearError,

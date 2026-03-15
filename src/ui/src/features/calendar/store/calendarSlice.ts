@@ -473,4 +473,4 @@ export const {
   resetCalendarState,
 } = calendarSlice.actions;
 
-export default calendarSlice.reducer;
+export const calendarReducer = calendarSlice.reducer;

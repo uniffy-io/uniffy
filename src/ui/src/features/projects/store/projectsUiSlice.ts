@@ -478,4 +478,4 @@ export const selectEditProjectId = (state: RootState) => state.projectsUi.editPr
 export const selectCanUndo = (state: RootState) => state.projectsUi.undoStack.length > 0;
 export const selectCanRedo = (state: RootState) => state.projectsUi.redoStack.length > 0;
 
-export default projectsUiSlice.reducer;
+export const projectsUiReducer = projectsUiSlice.reducer;

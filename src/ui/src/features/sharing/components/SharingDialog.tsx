@@ -121,9 +121,9 @@ export function SharingDialog() {
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-card border border-border shadow-xl transition-all">
+                            <Dialog.Panel className="w-[calc(100vw-2rem)] max-w-lg transform overflow-hidden rounded-xl bg-card border border-border shadow-xl transition-all">
                                 {/* Header */}
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                                <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-border">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 rounded-lg bg-primary/10">
                                             <ShareNetwork size={20} weight="duotone" className="text-primary" />
@@ -147,7 +147,7 @@ export function SharingDialog() {
                                 </div>
 
                                 {/* Content */}
-                                <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+                                <div className="px-4 md:px-6 py-4 max-h-[60vh] overflow-y-auto">
                                     {/* Search */}
                                     <div className="mb-6">
                                         <label className="block text-sm font-medium mb-2">
@@ -273,7 +273,7 @@ export function SharingDialog() {
                                 </div>
 
                                 {/* Footer */}
-                                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
+                                <div className="flex items-center justify-end gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-border bg-muted/30">
                                     <button
                                         type="button"
                                         onClick={close}

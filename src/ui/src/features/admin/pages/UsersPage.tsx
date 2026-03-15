@@ -21,7 +21,7 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { UsersThree, Plus, PencilSimple, ShieldCheck } from '@phosphor-icons/react';
 import { cn } from "@/shared/utils/cn";
 
-export default function UsersPage() {
+export function UsersPage() {
   useDocumentTitle('Users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,21 +64,22 @@ export default function UsersPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-3 shadow-lg">
-            <UsersThree size={28} weight="duotone" className="text-primary-foreground" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="rounded-xl bg-primary p-2.5 md:p-3 shadow-lg shrink-0">
+            <UsersThree size={24} weight="duotone" className="text-primary-foreground md:hidden" />
+            <UsersThree size={28} weight="duotone" className="text-primary-foreground hidden md:block" />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Users</h1>
+            <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
               Manage all user accounts in the system
             </p>
           </div>
         </div>
-        <Button size="md" onClick={() => setIsCreateOpen(true)}>
+        <Button size="md" onClick={() => setIsCreateOpen(true)} className="shrink-0">
           <Plus size={16} />
-          Add User
+          <span className="hidden sm:inline">Add User</span>
         </Button>
       </div>
 
@@ -93,10 +94,10 @@ export default function UsersPage() {
         <TableHeader>
           <TableRow hoverable={false}>
             <TableHead>User</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Full Name</TableHead>
+            <TableHead className="hidden md:table-cell">Email</TableHead>
+            <TableHead className="hidden lg:table-cell">Full Name</TableHead>
             <TableHead align="center">Role</TableHead>
-            <TableHead align="center">Status</TableHead>
+            <TableHead align="center" className="hidden sm:table-cell">Status</TableHead>
             <TableHead align="right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -134,8 +135,8 @@ export default function UsersPage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                <TableCell className="text-muted-foreground">{user.fullName || '-'}</TableCell>
+                <TableCell className="text-muted-foreground hidden md:table-cell">{user.email}</TableCell>
+                <TableCell className="text-muted-foreground hidden lg:table-cell">{user.fullName || '-'}</TableCell>
                 <TableCell align="center">
                   {user.isSystemAdmin && (
                     <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-950 dark:to-purple-900 dark:text-purple-300">
@@ -143,7 +144,7 @@ export default function UsersPage() {
                     </span>
                   )}
                 </TableCell>
-                <TableCell align="center">
+                <TableCell align="center" className="hidden sm:table-cell">
                   <div className="flex items-center justify-center gap-2">
                     <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: user.isActive ? 'var(--status-success)' : 'var(--status-error)' }} />
                     <span className="text-xs font-medium" style={{ color: user.isActive ? 'var(--status-success)' : 'var(--status-error)' }}>

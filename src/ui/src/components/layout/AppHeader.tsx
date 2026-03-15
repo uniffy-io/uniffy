@@ -1,5 +1,6 @@
+import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Kanban, Cpu } from '@phosphor-icons/react';
+import { Kanban, Cpu, List, MagnifyingGlass } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
@@ -9,6 +10,8 @@ import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
 import { UniffyLogo } from '@/components/ui/uniffy-logo';
+import { Drawer } from '@/components/ui/drawer';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 // Get content type configs for nav items
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
@@ -127,71 +130,149 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
   );
 }
 
+// Full-screen mobile navigation drawer
+function MobileNavDrawer({
+  open,
+  onClose,
+  currentPath,
+}: {
+  open: boolean;
+  onClose: () => void;
+  currentPath: string;
+}) {
+  return (
+    <Drawer open={open} onClose={onClose} side="left" ariaLabel="Navigation" className="w-64">
+      <div className="pt-12 px-3">
+        <nav className="flex flex-col gap-0.5">
+          <Link
+            to="/"
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              currentPath === '/'
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <UniffyLogo className="w-5 h-5" />
+            Home
+          </Link>
+          {navItems.map((item) => {
+            const isActive = currentPath.startsWith(item.path);
+            const NavIcon = item.icon;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <NavIcon size={20} weight={isActive ? "fill" : "duotone"} />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </Drawer>
+  );
+}
+
 export function AppHeader() {
   const location = useLocation();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+  const { isMobile } = useBreakpoint();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 w-full transition-[height,opacity] duration-300 ease-in-out",
-        isZenMode ? "h-0 opacity-0 delay-150 overflow-hidden" : "h-12 opacity-100 delay-0"
-      )}
+    <>
+      <header
+        className={cn(
+          "sticky top-0 z-40 w-full transition-[height,opacity] duration-300 ease-in-out",
+          isZenMode ? "h-0 opacity-0 delay-150 overflow-hidden" : "h-12 opacity-100 delay-0"
+        )}
+      >
+        {/* Background */}
+        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
+
+        <div className="relative flex h-12 items-center px-3 lg:px-4 justify-between">
+          {/* Left: Navigation */}
+          <div className="flex items-center gap-0.5 z-20">
+            {/* Mobile: Hamburger + Logo */}
+            <div className="flex md:hidden items-center gap-0.5">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="relative p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                aria-label="Open menu"
+              >
+                <List size={20} weight="bold" />
+              </button>
+              <LogoNavItem isActive={location.pathname === '/'} />
+            </div>
+
+            {/* Desktop/Tablet Navigation - all items visible */}
+            <nav className="hidden md:flex items-center gap-0.5">
+              <LogoNavItem isActive={location.pathname === '/'} />
+              {navItems.map((item) => {
+                const isActive = location.pathname.startsWith(item.path);
+                return (
+                  <CompactNavItem key={item.path} item={item} isActive={isActive} />
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Center: Search - hidden on mobile, shown on tablet+ */}
+          <div className={cn(
+            "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10",
+            "hidden sm:block"
+          )}>
+            <GlobalSearch />
+          </div>
+
+          {/* Right: Search (mobile) + Notifications + User */}
+          <div className="flex items-center gap-0.5 z-20">
+            {/* Mobile search icon - opens spotlight instead */}
+            {isMobile && (
+              <MobileSearchButton />
+            )}
+            <NotificationBell />
+            <UserMenu />
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile nav drawer */}
+      <MobileNavDrawer
+        open={mobileMenuOpen}
+        onClose={closeMobileMenu}
+        currentPath={location.pathname}
+      />
+    </>
+  );
+}
+
+/** On mobile, show a search icon that triggers spotlight search */
+function MobileSearchButton() {
+  const handleClick = () => {
+    // Trigger spotlight search via keyboard shortcut dispatch
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="relative p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors sm:hidden"
+      aria-label="Search"
     >
-      {/* Background */}
-      <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
-
-      <div className="relative flex h-12 items-center px-3 lg:px-4 justify-between">
-        {/* Left: Navigation */}
-        <div className="flex items-center gap-0.5 z-20">
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-0.5">
-            <LogoNavItem isActive={location.pathname === '/'} />
-            {navItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
-
-              return (
-                <CompactNavItem key={item.path} item={item} isActive={isActive} />
-              );
-            })}
-          </nav>
-
-          {/* Mobile: Show only icons */}
-          <nav className="flex md:hidden items-center gap-0.5">
-            <LogoNavItem isActive={location.pathname === '/'} />
-            {navItems.slice(0, 4).map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
-              const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "relative p-1.5 rounded-md transition-all duration-200",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <Icon size={18} weight={isActive ? "fill" : "duotone"} />
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Center: Search */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-          <GlobalSearch />
-        </div>
-
-        {/* Right: Notifications + User */}
-        <div className="flex items-center gap-0.5 z-20">
-          <NotificationBell />
-          <UserMenu />
-        </div>
-      </div>
-    </header>
+      <MagnifyingGlass size={20} weight="duotone" />
+    </button>
   );
 }

@@ -87,4 +87,4 @@ export const selectSprintById = (sprintId: string) => (state: RootState): Sprint
 
 export const selectSprintsLoading = (state: RootState) => state.sprints.loading;
 
-export default sprintsSlice.reducer;
+export const sprintsReducer = sprintsSlice.reducer;

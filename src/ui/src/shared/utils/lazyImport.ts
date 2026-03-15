@@ -1,0 +1,24 @@
+import { lazy } from 'react';
+import type { ComponentType } from 'react';
+
+/**
+ * Lazy-load a named export from a module.
+ *
+ * React.lazy requires a default export. This utility adapts a named export
+ * to satisfy that requirement while keeping the project convention of named exports.
+ *
+ * Usage:
+ *   const NotesPage = lazyImport(() => import('@/features/notes/pages/NotesPage'), 'NotesPage');
+ */
+export function lazyImport<
+  T extends Record<string, unknown>,
+  K extends keyof T,
+>(
+  factory: () => Promise<T>,
+  name: K,
+): T[K] extends ComponentType<infer P> ? React.LazyExoticComponent<ComponentType<P>> : never {
+  return lazy(() =>
+    factory().then((module) => ({ default: module[name] as ComponentType<never> })),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) as any;
+}

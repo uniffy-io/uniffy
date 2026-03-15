@@ -120,8 +120,8 @@ export function AppearanceSection() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">Appearance</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Appearance</h1>
+                <p className="text-sm text-muted-foreground">
                     Customize the look and feel of your workspace.
                 </p>
             </div>
@@ -135,7 +135,7 @@ export function AppearanceSection() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2 md:gap-4">
                     {[
                         { id: 'light', label: 'Light', icon: Sun },
                         { id: 'dark', label: 'Dark', icon: Moon },
@@ -145,7 +145,7 @@ export function AppearanceSection() {
                             key={id}
                             type="button"
                             disabled={saving}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                            className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border-2 transition-colors ${
                                 appearance.theme === id
                                     ? 'border-primary bg-primary/5'
                                     : 'border-border hover:border-primary/50 bg-card'

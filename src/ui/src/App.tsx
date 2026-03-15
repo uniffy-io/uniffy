@@ -1,41 +1,55 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthForms } from '@/features/auth/components/AuthForms';
-import { OrganizationPicker } from '@/features/auth/components/OrganizationPicker';
-import { MainLayout } from '@/shared/layouts/MainLayout';
-import { Dashboard } from '@/features/dashboard';
+import { Toaster, toast } from 'sonner';
+import { WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react';
+import { useAppSelector } from '@/app/hooks';
+import { rehydrateAuth } from '@/config';
+import { useTheme } from '@/config/theme/ThemeProvider';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminRoute } from '@/features/admin/components/AdminRoute';
-import { AdminLayout } from '@/features/admin/layouts/AdminLayout';
-// Organization admin pages
-import MembersPage from '@/features/admin/pages/MembersPage';
-import GroupsPage from '@/features/admin/pages/GroupsPage';
-import PermissionsPage from '@/features/admin/pages/PermissionsPage';
-import OrgSettingsPage from '@/features/admin/pages/OrgSettingsPage';
-// Server admin pages
-import OrganizationsPage from '@/features/admin/pages/OrganizationsPage';
-import UsersPage from '@/features/admin/pages/UsersPage';
-import ServerSettingsPage from '@/features/admin/pages/ServerSettingsPage';
-// Other pages
-import NotesPage from '@/features/notes/pages/NotesPage';
-import { NotesTagsPage } from '@/features/notes/pages/NotesTagsPage';
-import { SettingsPage as UserSettingsPage } from '@/features/settings';
+import { MainLayout } from '@/shared/layouts/MainLayout';
 import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
-import { rehydrateAuth } from '@/config';
-import { useAppSelector } from '@/app/hooks';
-import { CalendarPage } from '@/features/calendar';
-import { FilesPage, FiltersPage, FilesTagsPage, FileViewerModal } from '@/features/files';
-import { ProjectsPage } from '@/features/projects/pages/ProjectsPage';
-import { AgentsPage } from '@/features/agents/pages/AgentsPage';
-import { Toaster, toast } from 'sonner';
-import { useTheme } from '@/config/theme/ThemeProvider';
-import { WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react';
+import { FileViewerModal } from '@/features/files';
+import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
+import { PageLoader } from '@/components/feedback/PageLoader';
+import { PageErrorFallback } from '@/components/feedback/PageErrorFallback';
+import { AppErrorFallback } from '@/components/feedback/AppErrorFallback';
+import { lazyImport } from '@/shared/utils/lazyImport';
 
 // Expose toast on window in dev mode for testing
 if (import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__toast = toast;
 }
+
+// Lazy-loaded page components (route-level code splitting)
+// Auth pages
+const AuthForms = lazyImport(() => import('@/features/auth/components/AuthForms'), 'AuthForms');
+const OrganizationPicker = lazyImport(() => import('@/features/auth/components/OrganizationPicker'), 'OrganizationPicker');
+
+// Dashboard
+const Dashboard = lazyImport(() => import('@/features/dashboard/components/Dashboard'), 'Dashboard');
+
+// Admin
+const AdminLayout = lazyImport(() => import('@/features/admin/layouts/AdminLayout'), 'AdminLayout');
+const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'), 'MembersPage');
+const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
+const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
+const OrgSettingsPage = lazyImport(() => import('@/features/admin/pages/OrgSettingsPage'), 'OrgSettingsPage');
+const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
+const UsersPage = lazyImport(() => import('@/features/admin/pages/UsersPage'), 'UsersPage');
+const ServerSettingsPage = lazyImport(() => import('@/features/admin/pages/ServerSettingsPage'), 'ServerSettingsPage');
+
+// Content pages
+const NotesPage = lazyImport(() => import('@/features/notes/pages/NotesPage'), 'NotesPage');
+const NotesTagsPage = lazyImport(() => import('@/features/notes/pages/NotesTagsPage'), 'NotesTagsPage');
+const CalendarPage = lazyImport(() => import('@/features/calendar/pages/CalendarPage'), 'CalendarPage');
+const FilesPage = lazyImport(() => import('@/features/files/pages/FilesPage'), 'FilesPage');
+const FiltersPage = lazyImport(() => import('@/features/files/pages/FiltersPage'), 'FiltersPage');
+const FilesTagsPage = lazyImport(() => import('@/features/files/pages/FilesTagsPage'), 'FilesTagsPage');
+const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
+const AgentsPage = lazyImport(() => import('@/features/agents/pages/AgentsPage'), 'AgentsPage');
+const UserSettingsPage = lazyImport(() => import('@/features/settings/pages/SettingsPage'), 'SettingsPage');
 
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
@@ -99,12 +113,28 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
 }
 
-// Layout for authentication pages — full bleed, no padding (pages own their own layout)
+// Layout for authentication pages - full bleed, no padding (pages own their own layout)
 function AuthLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-screen bg-background text-foreground">
             {children}
         </div>
+    );
+}
+
+/**
+ * LazyRoute - Wraps lazy-loaded page components with Suspense and ErrorBoundary.
+ *
+ * Provides route-level error isolation: if a page crashes, the global chrome
+ * (header, spotlight search, toaster) keeps working.
+ */
+function LazyRoute({ children }: { children: React.ReactNode }) {
+    return (
+        <ErrorBoundary fallback={(props) => <PageErrorFallback {...props} />}>
+            <Suspense fallback={<PageLoader />}>
+                {children}
+            </Suspense>
+        </ErrorBoundary>
     );
 }
 
@@ -130,255 +160,258 @@ function AdminIndexRedirect() {
     return <Navigate to="/" replace />;
 }
 
-export default function App() {
+export function App() {
     return (
         <AuthInitializer>
-            <BrowserRouter>
-                {/* Global Spotlight Search - available on all pages */}
-                <SpotlightSearch />
-                {/* Global File Viewer Modal - can be opened from search without navigating */}
-                <FileViewerModal />
-                {/* Global Zen Mode handler - toggles distraction-free mode */}
-                <ZenModeHandler />
-                {/* Global toast notifications */}
-                <ThemedToaster />
+            <ErrorBoundary fallback={(props) => <AppErrorFallback {...props} />}>
+                <BrowserRouter>
+                    {/* Global Spotlight Search - available on all pages */}
+                    <SpotlightSearch />
+                    {/* Global File Viewer Modal - can be opened from search without navigating */}
+                    <FileViewerModal />
+                    {/* Global Zen Mode handler - toggles distraction-free mode */}
+                    <ZenModeHandler />
+                    {/* Global toast notifications */}
+                    <ThemedToaster />
 
-                <Routes>
-                    <Route
-                        path="/auth"
-                        element={
-                            <AuthLayout>
-                                <AuthForms />
-                            </AuthLayout>
-                        }
-                    />
+                    <Routes>
+                        <Route
+                            path="/auth"
+                            element={
+                                <AuthLayout>
+                                    <LazyRoute><AuthForms /></LazyRoute>
+                                </AuthLayout>
+                            }
+                        />
 
-                    <Route
-                        path="/select-org"
-                        element={
-                            <AuthLayout>
-                                <OrganizationPicker />
-                            </AuthLayout>
-                        }
-                    />
+                        <Route
+                            path="/select-org"
+                            element={
+                                <AuthLayout>
+                                    <LazyRoute><OrganizationPicker /></LazyRoute>
+                                </AuthLayout>
+                            }
+                        />
 
-                    {/* Admin Routes - Unified for org admins and system admins */}
-                    <Route
-                        path="/admin"
-                        element={
-                            <AdminRoute>
-                                <AdminLayout />
-                            </AdminRoute>
-                        }
-                    >
-                        <Route index element={<AdminIndexRedirect />} />
+                        {/* Admin Routes - Unified for org admins and system admins */}
+                        <Route
+                            path="/admin"
+                            element={
+                                <AdminRoute>
+                                    <LazyRoute><AdminLayout /></LazyRoute>
+                                </AdminRoute>
+                            }
+                        >
+                            <Route index element={<AdminIndexRedirect />} />
 
-                        {/* Organization Admin Pages */}
-                        <Route path="members" element={<MembersPage />} />
-                        <Route path="groups" element={<GroupsPage />} />
-                        <Route path="permissions" element={<PermissionsPage />} />
-                        <Route path="org-settings" element={<OrgSettingsPage />} />
+                            {/* Organization Admin Pages */}
+                            <Route path="members" element={<LazyRoute><MembersPage /></LazyRoute>} />
+                            <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
+                            <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
+                            <Route path="org-settings" element={<LazyRoute><OrgSettingsPage /></LazyRoute>} />
 
-                        {/* Server Admin Pages */}
-                        <Route path="organizations" element={<OrganizationsPage />} />
-                        <Route path="users" element={<UsersPage />} />
-                        <Route path="server-settings" element={<ServerSettingsPage />} />
+                            {/* Server Admin Pages */}
+                            <Route path="organizations" element={<LazyRoute><OrganizationsPage /></LazyRoute>} />
+                            <Route path="users" element={<LazyRoute><UsersPage /></LazyRoute>} />
+                            <Route path="server-settings" element={<LazyRoute><ServerSettingsPage /></LazyRoute>} />
 
-                        {/* Legacy route redirects */}
-                        <Route path="settings" element={<Navigate to="/admin/server-settings" replace />} />
+                            {/* Legacy route redirects */}
+                            <Route path="settings" element={<Navigate to="/admin/server-settings" replace />} />
 
-                        {/* 404 for admin */}
-                        <Route path="*" element={<div>Admin Page Not Found</div>} />
-                    </Route>
+                            {/* 404 for admin */}
+                            <Route path="*" element={<div>Admin Page Not Found</div>} />
+                        </Route>
 
-                    <Route
-                        path="/"
-                        element={
-                            <ProtectedRoute>
-                                <MainLayout>
-                                    <Dashboard />
-                                </MainLayout>
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/"
+                            element={
+                                <ProtectedRoute>
+                                    <MainLayout>
+                                        <LazyRoute><Dashboard /></LazyRoute>
+                                    </MainLayout>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/calendar"
-                        element={
-                            <ProtectedRoute>
-                                    <CalendarPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/calendar"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><CalendarPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/calendar/:eventId"
-                        element={
-                            <ProtectedRoute>
-                                    <CalendarPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/notes"
-                        element={
-                            <ProtectedRoute>
-                                <NotesPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/calendar/:eventId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><CalendarPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/notes/graph"
-                        element={
-                            <ProtectedRoute>
-                                <NotesPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/notes"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><NotesPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/notes/tags"
-                        element={
-                            <ProtectedRoute>
-                                <NotesTagsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/notes/graph"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><NotesPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/notes/:noteId"
-                        element={
-                            <ProtectedRoute>
-                                <NotesPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/notes/tags"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><NotesTagsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    {/* Files routes */}
-                    <Route
-                        path="/files"
-                        element={
-                            <ProtectedRoute>
-                                <FilesPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/notes/:noteId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><NotesPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/files/:fileId"
-                        element={
-                            <ProtectedRoute>
-                                <FilesPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        {/* Files routes */}
+                        <Route
+                            path="/files"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><FilesPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/files/filters"
-                        element={
-                            <ProtectedRoute>
-                                <FiltersPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/files/:fileId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><FilesPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/files/tags"
-                        element={
-                            <ProtectedRoute>
-                                <FilesTagsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/files/filters"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><FiltersPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    {/* Projects routes */}
-                    <Route
-                        path="/projects"
-                        element={
-                            <ProtectedRoute>
-                                <ProjectsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/files/tags"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><FilesTagsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/projects/:projectId"
-                        element={
-                            <ProtectedRoute>
-                                <ProjectsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        {/* Projects routes */}
+                        <Route
+                            path="/projects"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ProjectsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/projects/:projectId/tasks/:taskId"
-                        element={
-                            <ProtectedRoute>
-                                <ProjectsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/projects/:projectId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ProjectsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    {/* Agents routes */}
-                    <Route
-                        path="/agents"
-                        element={
-                            <ProtectedRoute>
-                                <AgentsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/projects/:projectId/tasks/:taskId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ProjectsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/agents/:tab"
-                        element={
-                            <ProtectedRoute>
-                                <AgentsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        {/* Agents routes */}
+                        <Route
+                            path="/agents"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><AgentsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/agents/:tab/:subId"
-                        element={
-                            <ProtectedRoute>
-                                <AgentsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/agents/:tab"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><AgentsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    {/* User settings (personal preferences only) */}
-                    <Route
-                        path="/settings"
-                        element={
-                            <ProtectedRoute>
-                                <MainLayout>
-                                    <UserSettingsPage />
-                                </MainLayout>
-                            </ProtectedRoute>
-                        }
-                    />
+                        <Route
+                            path="/agents/:tab/:subId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><AgentsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    {/* Redirect old routes */}
-                    <Route path="/preferences" element={<Navigate to="/settings" replace />} />
-                    <Route path="/organization" element={<Navigate to="/admin/groups" replace />} />
+                        {/* User settings (personal preferences only) */}
+                        <Route
+                            path="/settings"
+                            element={
+                                <ProtectedRoute>
+                                    <MainLayout>
+                                        <LazyRoute><UserSettingsPage /></LazyRoute>
+                                    </MainLayout>
+                                </ProtectedRoute>
+                            }
+                        />
 
-                    {/* Fallback for 404s */}
-                    <Route
-                        path="*"
-                        element={
-                            <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-                                <h1 className="text-4xl font-bold mb-4">404</h1>
-                                <p className="text-muted-foreground mb-4">Page not found</p>
-                                <a href="/" className="text-primary hover:underline">
-                                    Go back home
-                                </a>
-                            </div>
-                        }
-                    />
-                </Routes>
-            </BrowserRouter>
+                        {/* Redirect old routes */}
+                        <Route path="/preferences" element={<Navigate to="/settings" replace />} />
+                        <Route path="/organization" element={<Navigate to="/admin/groups" replace />} />
+
+                        {/* Fallback for 404s */}
+                        <Route
+                            path="*"
+                            element={
+                                <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
+                                    <h1 className="text-4xl font-bold mb-4">404</h1>
+                                    <p className="text-muted-foreground mb-4">Page not found</p>
+                                    <a href="/" className="text-primary hover:underline">
+                                        Go back home
+                                    </a>
+                                </div>
+                            }
+                        />
+                    </Routes>
+                </BrowserRouter>
+            </ErrorBoundary>
         </AuthInitializer>
     );
 }

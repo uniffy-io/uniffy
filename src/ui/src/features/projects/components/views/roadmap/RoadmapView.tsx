@@ -202,21 +202,21 @@ export function RoadmapView() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+      <div className="flex items-center justify-between px-3 md:px-4 py-2 border-b border-border bg-card gap-2">
         {/* Navigation */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           <Button variant="outline" size="sm" onClick={handlePrevious}>
             <CaretLeft size={16} />
           </Button>
           <Button variant="outline" size="sm" onClick={handleToday}>
-            <CalendarBlank size={16} className="mr-1" />
-            Today
+            <CalendarBlank size={16} className="md:mr-1" />
+            <span className="hidden md:inline">Today</span>
           </Button>
           <Button variant="outline" size="sm" onClick={handleNext}>
             <CaretRight size={16} />
           </Button>
 
-          <span className="text-sm text-muted-foreground ml-2">
+          <span className="hidden md:inline text-sm text-muted-foreground ml-2">
             {format(timelineStart, "MMM d")} - {format(timelineEnd, "MMM d, yyyy")}
           </span>
         </div>
@@ -317,8 +317,8 @@ export function RoadmapView() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2 border-t border-border bg-card text-xs text-muted-foreground">
+      {/* Legend - hidden on mobile */}
+      <div className="hidden md:flex items-center gap-4 px-4 py-2 border-t border-border bg-card text-xs text-muted-foreground">
         <span className="font-medium">Legend:</span>
         {statusOptions.map((status) => (
           <div key={status.id} className="flex items-center gap-1">

@@ -8,7 +8,7 @@
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { Buildings, Gear } from '@phosphor-icons/react';
 
-export default function OrgSettingsPage() {
+export function OrgSettingsPage() {
     useDocumentTitle('Organization Settings');
 
     return (

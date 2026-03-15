@@ -35,6 +35,7 @@ import { VisibilityScope } from '@/gen/common/v1/common_pb';
 import { useBookmarks } from '@/features/bookmarks';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { filesApi } from '@/features/files/api/filesApi';
 import {
     toggleNodeExpanded,
@@ -318,6 +319,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const location = useLocation();
+    const { isMobile } = useBreakpoint();
 
     // Redux state
     const tree = useAppSelector((state) => state.filesTree.tree);
@@ -792,7 +794,8 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                     );
                 })}
                 <div className="flex-1" />
-                {onToggleSidebar && (
+                {/* Hide collapse button on mobile - sidebar is a drawer there with its own close button */}
+                {onToggleSidebar && !isMobile && (
                     <button
                         onClick={onToggleSidebar}
                         className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors flex-shrink-0"

@@ -216,4 +216,4 @@ export const {
     clearSharing,
 } = sharingSlice.actions;
 
-export default sharingSlice.reducer;
+export const sharingReducer = sharingSlice.reducer;

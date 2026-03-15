@@ -2,22 +2,25 @@
  * CalendarHeader - Top navigation bar for the calendar
  *
  * Contains:
+ * - Sidebar toggle (mobile only)
  * - Month/year display with navigation arrows
  * - Today button
- * - Timezone indicator
- * - View mode toggle (Day/Week/Month)
+ * - Timezone indicator (hidden on mobile)
+ * - View mode toggle (Day/Week/Month - Week hidden on mobile)
  */
 
-import { CaretLeft, CaretRight, GlobeHemisphereWest, CaretDown } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, GlobeHemisphereWest, CaretDown, SidebarSimple } from '@phosphor-icons/react';
 import { useCalendarNavigation } from '@/features/calendar/hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { openTimezoneModal } from '@/features/calendar/store';
+import { openTimezoneModal, toggleSidebar } from '@/features/calendar/store';
 import { getTimezoneOffset } from '@/features/calendar/utils';
 import { cn } from '@/shared/utils/cn';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import type { ViewMode } from '@/features/calendar/types';
 
 export function CalendarHeader() {
   const dispatch = useAppDispatch();
+  const { isMobile } = useBreakpoint();
   const {
     headerTitle,
     viewMode,
@@ -30,33 +33,47 @@ export function CalendarHeader() {
   const displayTimezone = useAppSelector(
     (state) => state.calendarUi.displayTimezone
   );
+  const isSidebarCollapsed = useAppSelector(
+    (state) => state.calendarUi.isSidebarCollapsed
+  );
 
   const timezoneOffset = getTimezoneOffset(displayTimezone);
 
   const viewModes: ViewMode[] = ['day', 'week', 'month'];
 
   return (
-    <div className="flex items-center justify-between px-5 py-3 bg-card border-b border-border">
-      {/* Left: Navigation */}
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-card border-b border-border">
+      {/* Left: Sidebar toggle (mobile) + Navigation */}
+      <div className="flex items-center gap-1 md:gap-2 min-w-0">
+        {/* Mobile sidebar toggle */}
+        {isMobile && isSidebarCollapsed && (
+          <button
+            onClick={() => dispatch(toggleSidebar())}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
+            title="Show sidebar"
+          >
+            <SidebarSimple size={16} className="text-primary" />
+          </button>
+        )}
+
         {/* Previous arrow */}
         <button
           onClick={goToPrevious}
-          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          className="p-1.5 rounded-md hover:bg-muted transition-colors shrink-0"
           aria-label="Previous period"
         >
           <CaretLeft size={16} weight="bold" className="text-muted-foreground" />
         </button>
 
         {/* Month/Year title */}
-        <h1 className="text-base font-medium text-foreground min-w-[140px]">
+        <h1 className="text-sm md:text-base font-medium text-foreground min-w-0 truncate">
           {headerTitle}
         </h1>
 
         {/* Next arrow */}
         <button
           onClick={goToNext}
-          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          className="p-1.5 rounded-md hover:bg-muted transition-colors shrink-0"
           aria-label="Next period"
         >
           <CaretRight size={16} weight="bold" className="text-muted-foreground" />
@@ -65,18 +82,21 @@ export function CalendarHeader() {
         {/* Today button */}
         <button
           onClick={goToToday}
-          className="px-3 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+          className="px-2 md:px-3 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors shrink-0"
         >
           Today
         </button>
       </div>
 
       {/* Right: Timezone and View Toggle */}
-      <div className="flex items-center gap-4">
-        {/* Timezone indicator */}
+      <div className="flex items-center gap-1 md:gap-4 shrink-0">
+        {/* Timezone indicator - hidden on mobile */}
         <button
           onClick={() => dispatch(openTimezoneModal())}
-          className="flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+          className={cn(
+            "items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors",
+            isMobile ? "hidden" : "flex"
+          )}
         >
           <GlobeHemisphereWest size={16} weight="duotone" />
           <span>{timezoneOffset}</span>
@@ -90,7 +110,7 @@ export function CalendarHeader() {
               key={mode}
               onClick={() => changeViewMode(mode)}
               className={cn(
-                'px-3 py-1 text-sm rounded-md transition-colors',
+                'px-2 md:px-3 py-1 text-sm rounded-md transition-colors',
                 viewMode === mode
                   ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'

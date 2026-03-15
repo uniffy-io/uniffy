@@ -12,6 +12,7 @@ import { useRef, useEffect } from "react";
 import { Circle, CheckCircle, Spinner } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarStack } from "@/components/subject";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "@/features/projects/constants";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import type { Task, SelectOption } from "@/features/projects/types";
@@ -37,6 +38,7 @@ export function RoadmapTaskList({
   onWheel,
   scrollTop,
 }: RoadmapTaskListProps) {
+  const { isMobile } = useBreakpoint();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Non-passive wheel listener to prevent page scroll and forward delta
@@ -62,7 +64,7 @@ export function RoadmapTaskList({
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
-      style={{ width: LAYOUT.ROADMAP_TASK_LIST_WIDTH }}
+      style={{ width: isMobile ? 200 : LAYOUT.ROADMAP_TASK_LIST_WIDTH }}
     >
       {/* Header */}
       <div

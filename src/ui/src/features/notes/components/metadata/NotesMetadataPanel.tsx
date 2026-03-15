@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { setMetadataPanelTab } from '@/features/notes/store/editorSlice';
+import { setMetadataPanelTab, setMetadataPanelOpen } from '@/features/notes/store/editorSlice';
 import type { MetadataPanelTab } from '@/features/notes/store/editorSlice';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import {
   Link,
   Gear,
@@ -12,6 +13,7 @@ import {
   FileText,
   Cube,
   ChatCircle,
+  X,
 } from '@phosphor-icons/react';
 import { CommentsPanel } from '@/features/comments/components/CommentsPanel';
 import { useComments } from '@/features/comments/hooks/useComments';
@@ -66,6 +68,7 @@ function getTypeStyle(type: UrnType) {
 export function NotesMetadataPanel() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { isMobileOrTablet } = useBreakpoint();
   const { currentNoteId, notes } = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
   const currentUser = useAppSelector((state) => state.auth.user);
@@ -476,6 +479,15 @@ export function NotesMetadataPanel() {
     <div className="h-full flex flex-col">
       {/* Tabs */}
       <div className="flex border-b border-border">
+        {isMobileOrTablet && (
+          <button
+            onClick={() => dispatch(setMetadataPanelOpen(false))}
+            className="flex items-center justify-center px-2 py-3 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            aria-label="Close panel"
+          >
+            <X size={16} weight="bold" />
+          </button>
+        )}
         {tabs.map(({ id, label, icon: Icon, badge }) => (
           <button
             key={id}

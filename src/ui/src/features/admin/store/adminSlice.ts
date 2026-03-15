@@ -360,4 +360,4 @@ const adminSlice = createSlice({
 
 export const { clearAdminError, clearAdmin } = adminSlice.actions;
 
-export default adminSlice.reducer;
+export const adminReducer = adminSlice.reducer;

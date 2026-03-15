@@ -9,9 +9,10 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork } from "@phosphor-icons/react";
+import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -31,6 +32,8 @@ import {
   selectTaskTypeFilter,
   clearSelection,
   openCreateTaskModal,
+  toggleSidebar,
+  selectIsSidebarOpen,
 } from "@/features/projects/store/projectsUiSlice";
 import { deleteTasks } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
@@ -52,11 +55,13 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const dispatch = useAppDispatch();
+  const { isMobile, isMobileOrTablet } = useBreakpoint();
   const viewMode = useAppSelector(selectViewMode);
   const searchQuery = useAppSelector(selectSearchQuery);
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const activeFilterConfig = useAppSelector(selectActiveFilterConfig);
   const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
+  const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const { canEdit } = useProjectPermission();
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
@@ -121,77 +126,87 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
     <>
     <div className="shrink-0 border-b border-border bg-card">
       {/* Project Info Bar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 border-b border-border">
+        {/* Sidebar toggle (mobile + tablet when collapsed) */}
+        {isMobileOrTablet && !isSidebarOpen && (
+          <button
+            onClick={() => dispatch(toggleSidebar())}
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
+            title="Show sidebar"
+          >
+            <SidebarSimple size={16} className="text-primary" />
+          </button>
+        )}
+
         <ProjectIcon
           icon={project.icon}
-          size={20}
+          size={isMobile ? 16 : 20}
           weight="duotone"
           className="text-primary shrink-0"
         />
-        <div className="min-w-0">
-          <h1 className="font-medium text-foreground truncate">{project.name}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-medium text-sm md:text-base text-foreground truncate">{project.name}</h1>
           <p className="text-xs text-muted-foreground">
-            {taskCount} task{taskCount !== 1 ? "s" : ""} · {project.memberIds.length} member
-            {project.memberIds.length !== 1 ? "s" : ""}
+            {taskCount} task{taskCount !== 1 ? "s" : ""}{!isMobile && <> · {project.memberIds.length} member{project.memberIds.length !== 1 ? "s" : ""}</>}
           </p>
         </div>
         {canEdit && (
           <button
             type="button"
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors shrink-0"
+            className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors shrink-0"
             onClick={() => dispatch(openCreateTaskModal())}
           >
             <Plus size={16} weight="bold" />
-            New Task
+            {!isMobile && "New Task"}
           </button>
         )}
       </div>
 
       {/* View Tabs + Filter Bar */}
-      <div className="flex items-center gap-4 px-4 py-2">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-2 md:gap-4 px-3 md:px-4 py-2">
+        <div className="flex items-center gap-0.5 md:gap-1">
           <ViewTab
             icon={<Table size={16} />}
-            label="Table"
+            label={isMobile ? "" : "Table"}
             isActive={viewMode === "table"}
             onClick={() => handleViewChange("table")}
           />
           <ViewTab
             icon={<Columns size={16} />}
-            label="Board"
+            label={isMobile ? "" : "Board"}
             isActive={viewMode === "board"}
             onClick={() => handleViewChange("board")}
           />
           <ViewTab
             icon={<ChartLine size={16} />}
-            label="Roadmap"
+            label={isMobile ? "" : "Roadmap"}
             isActive={viewMode === "roadmap"}
             onClick={() => handleViewChange("roadmap")}
           />
           <ViewTab
             icon={<Archive size={16} />}
-            label="Backlog"
+            label={isMobile ? "" : "Backlog"}
             isActive={viewMode === "backlog"}
             onClick={() => handleViewChange("backlog")}
           />
           <ViewTab
             icon={<ShareNetwork size={16} />}
-            label="Graph"
+            label={isMobile ? "" : "Graph"}
             isActive={viewMode === "graph"}
             onClick={() => handleViewChange("graph")}
           />
         </div>
 
-        {activeSprint && (
-          <span className="ml-2 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+        {activeSprint && !isMobile && (
+          <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
             {activeSprint.name}
           </span>
         )}
 
-        <div className="h-5 w-px bg-border" />
+        <div className="hidden md:block h-5 w-px bg-border" />
 
         {/* Search */}
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 min-w-[120px] max-w-sm">
           <MagnifyingGlass
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -213,8 +228,8 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             className={cn("h-8", activeFilterConfig && "text-primary")}
             onClick={() => setIsFilterOpen(!isFilterOpen)}
           >
-            <Funnel size={16} className="mr-1" />
-            Filter
+            <Funnel size={16} className={isMobile ? "" : "mr-1"} />
+            {!isMobile && "Filter"}
             {activeFilterConfig && activeFilterConfig.conditions.length > 0 && (
               <span className="ml-1 text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
                 {activeFilterConfig.conditions.length}
@@ -231,8 +246,8 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           )}
         </div>
 
-        {/* Sprint Filter */}
-        {hasSprintsWithTasks && viewMode !== "backlog" && (
+        {/* Sprint Filter - hidden on mobile */}
+        {hasSprintsWithTasks && viewMode !== "backlog" && !isMobile && (
           <QuickFilterDropdown
             label="Sprint"
             value={sprintFilter}
@@ -247,19 +262,21 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           />
         )}
 
-        {/* Task Type Filter */}
-        <QuickFilterDropdown
-          label="Type"
-          value={taskTypeFilter}
-          options={[
-            { value: null, label: "All types" },
-            ...TASK_TYPES.map((t) => ({ value: t.value, label: t.label })),
-          ]}
-          onSelect={(value) => dispatch(setTaskTypeFilter(value))}
-        />
+        {/* Task Type Filter - hidden on mobile */}
+        {!isMobile && (
+          <QuickFilterDropdown
+            label="Type"
+            value={taskTypeFilter}
+            options={[
+              { value: null, label: "All types" },
+              ...TASK_TYPES.map((t) => ({ value: t.value, label: t.label })),
+            ]}
+            onSelect={(value) => dispatch(setTaskTypeFilter(value))}
+          />
+        )}
 
-        {/* Manage Statuses Button (Board view only) */}
-        {viewMode === "board" && (
+        {/* Manage Statuses Button (Board view only) - hidden on mobile */}
+        {viewMode === "board" && !isMobile && (
             <div className="relative">
                 <Button
                     variant="ghost"
@@ -267,8 +284,8 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
                     className="h-8 text-muted-foreground hover:text-foreground"
                     onClick={() => setIsManageStatusesOpen(!isManageStatusesOpen)}
                 >
-                    <SquaresFour size={16} className="mr-1" />
-                    Manage Statuses
+                    <SquaresFour size={16} className={isMobileOrTablet ? "" : "mr-1"} />
+                    {!isMobileOrTablet && "Manage Statuses"}
                 </Button>
                 {isManageStatusesOpen && (
                     <div className="absolute top-9 right-0 z-50">
@@ -282,8 +299,8 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             </div>
         )}
 
-        {/* Group By (Table view only) */}
-        {viewMode === "table" && (
+        {/* Group By (Table view only) - hidden on mobile */}
+        {viewMode === "table" && !isMobile && (
           <GroupByDropdown
             activeGroupByFieldId={activeGroupByFieldId}
             onSelect={(value) => dispatch(setGroupBy(value))}
@@ -343,14 +360,15 @@ function ViewTab({ icon, label, isActive, onClick }: ViewTabProps) {
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md transition-colors",
+        "flex items-center gap-1.5 px-2 md:px-2.5 py-1 text-sm rounded-md transition-colors",
         isActive
           ? "text-primary bg-primary/10"
           : "text-muted-foreground hover:text-foreground hover:bg-muted"
       )}
+      title={label || undefined}
     >
       {icon}
-      <span>{label}</span>
+      {label && <span>{label}</span>}
     </button>
   );
 }

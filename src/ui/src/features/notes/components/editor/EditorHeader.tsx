@@ -34,6 +34,7 @@ import { useBookmarkToggle } from '@/features/bookmarks';
 import { useSharingDialog } from '@/features/sharing';
 import { cn } from '@/shared/utils/cn';
 import { formatProtoDate } from '@/shared/utils/dateFormatting';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 
@@ -219,6 +220,8 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
 
+  const { isMobile } = useBreakpoint();
+
   // Bookmark state
   const noteUrn = `urn:uniffy:content:NOTE:${note.id}`;
   const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(noteUrn);
@@ -295,8 +298,8 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
         {/* Left: Sidebar Toggle + Breadcrumb */}
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          {/* Sidebar toggle (show when sidebar is hidden) */}
-          {!isSidebarOpen && (
+          {/* Sidebar toggle (show when sidebar is hidden, not on mobile where sidebar is a drawer) */}
+          {!isSidebarOpen && !isMobile && (
             <button
               onClick={() => dispatch(toggleSidebar())}
               className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
@@ -310,26 +313,26 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
           <CollapsibleBreadcrumb items={breadcrumb} noteVisibility={note.visibility} />
 
           {/* Save Status */}
-          <div className="flex items-center gap-1.5 ml-4 text-xs">
+          <div className="flex items-center gap-1.5 ml-2 md:ml-4 text-xs">
             {isSaving ? (
               <>
                 <ArrowsClockwise size={14} weight="bold" className="text-muted-foreground animate-spin" />
-                <span className="text-muted-foreground">{statusText}</span>
+                <span className="hidden sm:inline text-muted-foreground">{statusText}</span>
               </>
             ) : saveError ? (
               <>
                 <WarningCircle size={14} weight="fill" style={{ color: 'var(--status-error)' }} />
-                <span style={{ color: 'var(--status-error)' }}>Save failed</span>
+                <span className="hidden sm:inline" style={{ color: 'var(--status-error)' }}>Save failed</span>
               </>
             ) : hasUnsavedChanges ? (
               <>
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--status-warning)' }} />
-                <span className="text-muted-foreground">{statusText}</span>
+                <span className="hidden sm:inline text-muted-foreground">{statusText}</span>
               </>
             ) : (
               <>
                 <CheckCircle size={14} weight="fill" style={{ color: 'var(--status-success)' }} />
-                <span className="text-muted-foreground">{statusText}</span>
+                <span className="hidden sm:inline text-muted-foreground">{statusText}</span>
               </>
             )}
           </div>
@@ -337,8 +340,8 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
 
         {/* Right Actions */}
         <div className="flex items-center gap-1">
-          {/* View Mode Selector - hidden for canvas notes */}
-          {!isCanvas && <div className="flex items-center gap-0.5 mr-3 border-r border-border pr-3">
+          {/* View Mode Selector - hidden for canvas notes, hidden on mobile */}
+          {!isCanvas && <div className="hidden sm:flex items-center gap-0.5 mr-3 border-r border-border pr-3">
             {viewModes.map(({ mode, icon: Icon, label }) => (
               <button
                 key={mode}
