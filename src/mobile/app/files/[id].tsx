@@ -1,0 +1,258 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+import { DownloadSimple, DotsThree, ArrowSquareOut } from "phosphor-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { DomainHeader } from "@/components/DomainHeader";
+import { ActionSheet } from "@/components/ActionSheet";
+import { useTheme } from "@/hooks/useTheme";
+import { DOMAIN_COLORS, FILE_COLORS } from "@/constants/theme";
+import { useFile } from "@/hooks/useFiles";
+import { useDeleteFile } from "@/hooks/useFileMutations";
+import { useAuth } from "@/context/auth-context";
+
+function getFileColor(ext: string) {
+  return FILE_COLORS[ext.toLowerCase()] ?? FILE_COLORS.default;
+}
+
+export default function FileDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const T = useTheme();
+  const auth = useAuth();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const fileQuery = useFile(id);
+  const deleteFile = useDeleteFile();
+
+  if (fileQuery.isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+        <DomainHeader title="Files" color={DOMAIN_COLORS.files} icon="files" />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={DOMAIN_COLORS.files} />
+        </View>
+      </View>
+    );
+  }
+
+  const file = fileQuery.data;
+  if (!file) return null;
+
+  const fileColor = getFileColor(file.ext);
+  const uploaderName = file.ownerInfo?.name || auth.user?.fullName || "Unknown";
+
+  const DETAILS = [
+    { label: "Type", value: file.ext.toUpperCase() + " Document" },
+    { label: "Size", value: file.size },
+    { label: "MIME Type", value: file.mimeType },
+    { label: "Modified", value: file.editedAt },
+    { label: "Version", value: `v${file.version}` },
+  ];
+
+  return (
+    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+      <DomainHeader
+        title="Files"
+        color={DOMAIN_COLORS.files}
+        icon="files"
+        rightActions={
+          <>
+            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <DownloadSimple size={19} color={T.text} weight="duotone" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSheetOpen(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <DotsThree size={22} color={T.text} weight="bold" />
+            </TouchableOpacity>
+          </>
+        }
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.previewCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <View style={[styles.previewIcon, { backgroundColor: fileColor + "18" }]}>
+            <Text style={[styles.previewExt, { color: fileColor }]}>{file.ext.toUpperCase()}</Text>
+          </View>
+          <View style={styles.previewActions}>
+            <TouchableOpacity style={[styles.previewBtn, { backgroundColor: T.accent }]}>
+              <ArrowSquareOut size={14} color="#fff" weight="duotone" />
+              <Text style={styles.previewBtnText}>Open</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.previewBtn,
+                { backgroundColor: T.surfaceHover, borderColor: T.border, borderWidth: 1 },
+              ]}
+            >
+              <DownloadSimple size={14} color={T.text} weight="duotone" />
+              <Text style={[styles.previewBtnText, { color: T.text }]}>Download</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View>
+          <Text style={[styles.fileTitle, { color: T.textBright }]}>{file.filename}</Text>
+          <Text style={[styles.fileMeta, { color: T.textDim }]}>
+            {file.size} · Uploaded {file.editedAt}
+          </Text>
+        </View>
+
+        <View style={[styles.uploaderRow, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <View style={[styles.uploaderAvatar, { backgroundColor: T.accent + "22" }]}>
+            <Text style={[styles.uploaderInitial, { color: T.accent }]}>
+              {uploaderName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View>
+            <Text style={[styles.uploaderName, { color: T.textBright }]}>{uploaderName}</Text>
+            <Text style={[styles.uploaderMeta, { color: T.textDim }]}>Owner</Text>
+          </View>
+        </View>
+
+        {file.description ? (
+          <View
+            style={[styles.descriptionCard, { backgroundColor: T.surface, borderColor: T.border }]}
+          >
+            <Text style={[styles.descriptionText, { color: T.text }]}>{file.description}</Text>
+          </View>
+        ) : null}
+
+        <View style={[styles.detailsCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          {DETAILS.map((d, i) => (
+            <View
+              key={d.label}
+              style={[
+                styles.detailRow,
+                {
+                  borderBottomColor: T.border,
+                  borderBottomWidth: i < DETAILS.length - 1 ? StyleSheet.hairlineWidth : 0,
+                },
+              ]}
+            >
+              <Text style={[styles.detailLabel, { color: T.textDim }]}>{d.label}</Text>
+              <Text style={[styles.detailValue, { color: T.textBright }]}>{d.value}</Text>
+            </View>
+          ))}
+        </View>
+
+        {file.tags.length > 0 && (
+          <View style={styles.tagsSection}>
+            <Text style={[styles.sectionLabel, { color: T.textDim }]}>TAGS</Text>
+            <View style={styles.tagsRow}>
+              {file.tags.map((tag) => (
+                <View key={tag} style={[styles.tag, { backgroundColor: T.accentSoft }]}>
+                  <Text style={[styles.tagText, { color: T.accent }]}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </ScrollView>
+
+      <ActionSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={file.filename}
+        subtitle={`${file.size} · v${file.version}`}
+        icon="files"
+        iconColor={fileColor}
+        actions={[
+          { icon: "external-link", label: "Open file", onPress: () => {} },
+          { icon: "download", label: "Download", onPress: () => {} },
+          { icon: "at-sign", label: "Copy reference link", onPress: () => {} },
+          { icon: "share-2", label: "Share with team", onPress: () => {} },
+          { icon: "star", label: "Add to starred", onPress: () => {} },
+          { icon: "folder", label: "Move to folder", onPress: () => {} },
+          {
+            icon: "trash-2",
+            label: "Delete file",
+            isDanger: true,
+            onPress: () => {
+              deleteFile.mutate(file.id);
+              setSheetOpen(false);
+              router.back();
+            },
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  scrollContent: { padding: 20, gap: 20 },
+  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
+  previewCard: {
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    gap: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  previewIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewExt: { fontSize: 18, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  previewActions: { flexDirection: "row", gap: 12 },
+  previewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  previewBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  fileTitle: { fontSize: 20, fontFamily: "Inter_700Bold", lineHeight: 28 },
+  fileMeta: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4 },
+  uploaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  uploaderAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  uploaderInitial: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  uploaderName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  uploaderMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  descriptionCard: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  descriptionText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  detailsCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  detailLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  detailValue: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  tagsSection: { gap: 10 },
+  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  tag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  tagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+});

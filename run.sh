@@ -13,11 +13,13 @@ help() {
   echo -e "  ${CYAN}proto${NC}         Generate all protobuf code (backend + UI)"
   echo -e "  ${CYAN}clean${NC}         Clean generated files"
   echo -e "  ${CYAN}dev${NC}           Run both backend and frontend in development mode"
+  echo -e "  ${CYAN}mobile${NC}        Run backend + mobile app in web view"
   echo -e "  ${CYAN}backend${NC}       Run backend with hot reload"
   echo -e "  ${CYAN}ui [cmd]${NC}      Run pnpm command (default: dev)"
   echo -e "  ${CYAN}lint${NC}          Run linters"
   echo -e "  ${CYAN}lint-backend${NC}  Run backend linters"
   echo -e "  ${CYAN}lint-frontend${NC} Run frontend linters"
+  echo -e "  ${CYAN}lint-mobile${NC}   Run mobile linters and format check"
   echo -e "  ${CYAN}format${NC}        Format code"
   echo -e "  ${CYAN}test${NC}          Run tests"
   echo -e "  ${CYAN}bench${NC}         Run performance benchmarks"
@@ -35,6 +37,8 @@ install() {
   uv sync
   echo "Installing UI dependencies..."
   (cd src/ui && pnpm install)
+  echo "Installing mobile dependencies..."
+  (cd src/mobile && pnpm install)
   echo "Done!"
 }
 
@@ -63,7 +67,9 @@ proto() {
     touch "src/uniffy/gen/$pkg_name/__init__.py" 2>/dev/null || true
     touch "src/uniffy/gen/$pkg_name/v1/__init__.py" 2>/dev/null || true
   done
-  echo "Protobuf code generated for backend and UI!"
+  rm -rf src/mobile/gen
+  PATH="$(pwd)/src/mobile/node_modules/.bin:$PATH" buf generate --template buf.gen.mobile.yaml
+  echo "Protobuf code generated for backend, UI, and mobile!"
 }
 
 clean() {
@@ -83,6 +89,15 @@ dev() {
   uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ &
   uv run watchfiles --filter python "python -m uniffy.worker" src/uniffy/ &
   (cd src/ui && pnpm dev)
+}
+
+mobile() {
+  echo "Starting backend + mobile (web view)..."
+  echo "Backend:     http://0.0.0.0:8000"
+  echo "Mobile web:  http://0.0.0.0:8081"
+  trap 'kill 0' EXIT
+  uv run watchfiles --filter python "python -m uniffy.main" src/uniffy/ &
+  (cd src/mobile && npx expo start --web --port 8081)
 }
 
 backend() {
@@ -105,6 +120,10 @@ lint_backend() {
 
 lint_frontend() {
   (cd src/ui && pnpm run lint)
+}
+
+lint_mobile() {
+  (cd src/mobile && pnpm run lint && pnpm run format:check)
 }
 
 format() {
@@ -177,11 +196,13 @@ install) install ;;
 proto) proto ;;
 clean) clean ;;
 dev) dev ;;
+mobile) mobile ;;
 backend) backend ;;
 ui) ui "${2:-}" ;;
 lint) lint ;;
 lint-frontend) lint_frontend ;;
 lint-backend) lint_backend ;;
+lint-mobile) lint_mobile ;;
 format) format ;;
 test) run_test ;;
 test-frontend) run_test_frontend ;;
