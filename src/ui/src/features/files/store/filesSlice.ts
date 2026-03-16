@@ -155,6 +155,9 @@ interface FilesState {
     // Details panel state (right side panel for file info/metadata)
     isDetailsPanelOpen: boolean;
     detailsPanelTab: DetailsPanelTab;
+
+    // Sidebar open/collapsed state (shared across all files pages)
+    sidebarOpen: boolean;
 }
 
 // Load persisted view settings
@@ -197,6 +200,7 @@ const initialState: FilesState = {
     iconSize: persistedViewSettings.iconSize,
     isDetailsPanelOpen: false,
     detailsPanelTab: 'info',
+    sidebarOpen: true,
 };
 
 export const filesSlice = createSlice({
@@ -442,6 +446,11 @@ export const filesSlice = createSlice({
             state.detailsPanelTab = action.payload;
         },
 
+        // Toggle sidebar open/collapsed
+        toggleSidebar: (state) => {
+            state.sidebarOpen = !state.sidebarOpen;
+        },
+
         // Clear all files (for logout)
         clearFiles: (state) => {
             state.files = {};
@@ -599,6 +608,7 @@ export const {
     toggleDetailsPanel,
     setDetailsPanelOpen,
     setDetailsPanelTab,
+    toggleSidebar,
     clearFiles,
 } = filesSlice.actions;
 

@@ -17,7 +17,7 @@ import { UploadPanel } from '@/features/files/components/upload/UploadPanel';
 import { FileDetailsPanel } from '@/features/files/components/details';
 import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 import { SharingDialog } from '@/features/sharing';
-import { initializeFilesData, setFolderId, setDetailsPanelOpen } from '@/features/files/store/filesSlice';
+import { initializeFilesData, setFolderId, setDetailsPanelOpen, toggleSidebar } from '@/features/files/store/filesSlice';
 import { fetchFilesTree, setSelectedFolder, createFolder } from '@/features/files/store/filesTreeSlice';
 import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '@/features/files/store/selectors';
 import { openViewer } from '@/features/files/store/viewerSlice';
@@ -61,8 +61,10 @@ export function FilesPage() {
     // Viewer state - only used for deep link support
     const viewerIsOpen = useAppSelector((state) => state.fileViewer.isOpen);
 
+    // Sidebar state from Redux (shared across files pages)
+    const showSidebar = useAppSelector((state) => state.files.sidebarOpen);
+
     // Local state
-    const [showSidebar, setShowSidebar] = useState(true);
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
     // File input ref for upload
@@ -174,12 +176,12 @@ export function FilesPage() {
 
     // Toggle sidebar
     const handleToggleSidebar = useCallback(() => {
-        setShowSidebar((prev) => !prev);
-    }, []);
+        dispatch(toggleSidebar());
+    }, [dispatch]);
 
     const handleCloseSidebar = useCallback(() => {
-        setShowSidebar(false);
-    }, []);
+        if (showSidebar) dispatch(toggleSidebar());
+    }, [dispatch, showSidebar]);
 
     const handleCloseDetailPanel = useCallback(() => {
         dispatch(setDetailsPanelOpen(false));

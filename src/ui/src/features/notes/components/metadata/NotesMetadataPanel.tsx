@@ -3,6 +3,8 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { setMetadataPanelTab, setMetadataPanelOpen } from '@/features/notes/store/editorSlice';
 import type { MetadataPanelTab } from '@/features/notes/store/editorSlice';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { cn } from '@/shared/utils/cn';
+import type { Icon as IconType } from '@phosphor-icons/react';
 import {
   Link,
   Gear,
@@ -108,7 +110,7 @@ export function NotesMetadataPanel() {
     : 'Unknown';
   const ownerInitials = getInitials(ownerName);
 
-  const tabs: Array<{ id: MetadataPanelTab; label: string; icon: typeof Link; badge?: number }> = [
+  const tabs: Array<{ id: MetadataPanelTab; label: string; icon: IconType; badge?: number }> = [
     { id: 'outline', label: 'Outline', icon: ListBullets },
     { id: 'links', label: 'Links', icon: Link },
     { id: 'properties', label: 'Properties', icon: Gear },
@@ -478,38 +480,56 @@ export function NotesMetadataPanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Tabs */}
-      <div className="flex border-b border-border">
+      <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         {isMobileOrTablet && (
           <button
             onClick={() => dispatch(setMetadataPanelOpen(false))}
-            className="flex items-center justify-center px-2 py-3 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
             aria-label="Close panel"
           >
-            <X size={16} weight="bold" />
+            <X size={16} weight="bold" className="text-muted-foreground" />
           </button>
         )}
-        {tabs.map(({ id, label, icon: Icon, badge }) => (
-          <button
-            key={id}
-            onClick={() => dispatch(setMetadataPanelTab(id))}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors relative ${
-              metadataPanelTab === id
-                ? 'text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Icon size={16} weight="duotone" />
-            <span className="hidden xl:inline">{label}</span>
-            {badge != null && badge > 0 && (
-              <span className="ml-0.5 px-1.5 py-0 text-[10px] rounded-full bg-primary text-primary-foreground leading-4">
-                {badge}
+        {tabs.map(({ id, label, icon: Icon, badge }) => {
+          const isActive = metadataPanelTab === id;
+          return (
+            <button
+              key={id}
+              onClick={() => dispatch(setMetadataPanelTab(id))}
+              className={cn(
+                'group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden',
+                'hover:px-2.5',
+                isActive && 'text-foreground'
+              )}
+            >
+              <span className={cn(
+                'absolute inset-0 rounded-lg transition-all duration-500',
+                isActive ? 'bg-primary/10' : 'bg-transparent'
+              )} />
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
+              <span className={cn(
+                'relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out',
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground group-hover:text-primary'
+              )}>
+                <Icon size={18} weight={isActive ? 'fill' : 'duotone'} />
+                {badge != null && badge > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 text-[9px] rounded-full bg-primary text-primary-foreground leading-[14px] text-center">
+                    {badge}
+                  </span>
+                )}
               </span>
-            )}
-            {metadataPanelTab === id && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-        ))}
+              <span className={cn(
+                'relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out',
+                'group-hover:ml-1.5 group-hover:max-w-24',
+                isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+              )}>
+                {label}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Content */}

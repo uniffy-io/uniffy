@@ -10,17 +10,36 @@
  * - Mobile: sidebar and detail panel as drawers, content full width
  * - Tablet: sidebar inline (narrower), detail panel as drawer
  * - Desktop: all panels inline and resizable
+ *
+ * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
  */
 
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import { CaretDoubleRight } from '@phosphor-icons/react';
+import {
+  CalendarCheck,
+  CalendarDots,
+  Swatches,
+  Tag,
+} from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { LAYOUT } from '@/features/calendar/constants';
 import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Drawer } from '@/components/ui/drawer';
 import { toggleSidebar, closeDetailPanel } from '@/features/calendar/store';
+import { cn } from '@/shared/utils/cn';
+import {
+  CollapsibleSidebarRail,
+  type SidebarSection,
+} from '@/components/layout/CollapsibleSidebarRail';
+
+const CALENDAR_SECTIONS: SidebarSection[] = [
+  { id: 'quick-access', icon: CalendarCheck, label: 'Quick Access' },
+  { id: 'mini-calendar', icon: CalendarDots, label: 'Calendar' },
+  { id: 'categories', icon: Swatches, label: 'Categories' },
+  { id: 'tags', icon: Tag, label: 'Tags' },
+];
 
 interface CalendarLayoutProps {
   sidebar: ReactNode;
@@ -55,31 +74,35 @@ export function CalendarLayout({
     dispatch(closeDetailPanel());
   }, [dispatch]);
 
+  const handleExpandSidebar = useCallback(() => {
+    dispatch(toggleSidebar());
+  }, [dispatch]);
+
   const sidebarAsDrawer = isMobile;
   const detailAsDrawer = isMobileOrTablet;
   const showSidebar = !isZenMode && !isSidebarCollapsed;
+  const showCollapsedRail = !isZenMode && isSidebarCollapsed && !sidebarAsDrawer;
 
   return (
-    <div className="h-full bg-background overflow-hidden">
+    <div className="relative h-full bg-background overflow-hidden">
+      {/* Collapsed sidebar rail */}
+      {showCollapsedRail && (
+        <div className="absolute inset-y-0 left-0 z-30 w-12">
+          <CollapsibleSidebarRail
+            onExpand={handleExpandSidebar}
+            sections={CALENDAR_SECTIONS}
+          >
+            {sidebar}
+          </CollapsibleSidebarRail>
+        </div>
+      )}
+
       <Group
         orientation="horizontal"
         className="h-full"
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {/* Collapsed sidebar toggle (shown when sidebar is hidden, not on mobile) */}
-        {!showSidebar && !isMobile && (
-          <div className="flex flex-col items-center py-3 px-1 bg-card border-r border-border">
-            <button
-              onClick={() => dispatch(toggleSidebar())}
-              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-              title="Show sidebar"
-            >
-              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-            </button>
-          </div>
-        )}
-
         {/* Left Sidebar - inline on tablet+, drawer on mobile */}
         {showSidebar && !sidebarAsDrawer && (
           <>
@@ -99,7 +122,7 @@ export function CalendarLayout({
 
         {/* Main Calendar Content */}
         <Panel id="calendar-main" minSize={isMobileOrTablet ? 200 : 400}>
-          <div className="h-full overflow-hidden bg-card">
+          <div className={cn('h-full overflow-hidden bg-card', showCollapsedRail && 'ml-12')}>
             {mainContent}
           </div>
         </Panel>

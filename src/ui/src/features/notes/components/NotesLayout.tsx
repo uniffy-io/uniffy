@@ -1,10 +1,40 @@
+/**
+ * NotesLayout - Main layout for the Notes feature.
+ *
+ * Three-panel layout with sidebar, editor, and optional metadata panel.
+ * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
+ *
+ * Responsive:
+ * - Mobile: sidebar and metadata as drawers, editor full width
+ * - Tablet: sidebar inline (narrower), metadata as drawer
+ * - Desktop: all panels inline and resizable
+ */
+
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import { useAppSelector } from '@/app/hooks';
+import {
+  BookmarkSimple,
+  LockSimple,
+  UsersThree,
+  Buildings,
+} from '@phosphor-icons/react';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Drawer } from '@/components/ui/drawer';
+import { toggleSidebar } from '@/features/notes/store/editorSlice';
+import {
+  CollapsibleSidebarRail,
+  type SidebarSection,
+} from '@/components/layout/CollapsibleSidebarRail';
+
+const NOTES_SECTIONS: SidebarSection[] = [
+  { id: 'bookmarked', icon: BookmarkSimple, label: 'Bookmarks' },
+  { id: 'personal', icon: LockSimple, label: 'Personal' },
+  { id: 'shared', icon: UsersThree, label: 'Shared' },
+  { id: 'organization', icon: Buildings, label: 'Organization' },
+];
 
 interface NotesLayoutProps {
   sidebar: ReactNode;
@@ -25,6 +55,7 @@ export function NotesLayout({
   onCloseSidebar,
   onCloseMetadataPanel,
 }: NotesLayoutProps) {
+  const dispatch = useAppDispatch();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const { isMobile, isMobileOrTablet } = useBreakpoint();
   const [defaultLayout] = useState(() => loadPanelLayout('notes'));
@@ -33,19 +64,36 @@ export function NotesLayout({
     savePanelLayout('notes', layout);
   }, []);
 
+  const handleExpandSidebar = useCallback(() => {
+    dispatch(toggleSidebar());
+  }, [dispatch]);
+
   // On mobile: sidebar and metadata are both drawers, editor is full width
   // On tablet: sidebar is inline (narrower), metadata is drawer
   // On desktop: all panels inline and resizable
   const sidebarAsDrawer = isMobile;
   const metadataAsDrawer = isMobileOrTablet;
+  const showCollapsedRail = !isZenMode && !showSidebar && !sidebarAsDrawer;
 
   return (
     <div
       className={cn(
-        "bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
+        "relative bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
         isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-4rem)] delay-0"
       )}
     >
+      {/* Collapsed sidebar rail */}
+      {showCollapsedRail && (
+        <div className="absolute inset-y-0 left-0 z-30 w-12">
+          <CollapsibleSidebarRail
+            onExpand={handleExpandSidebar}
+            sections={NOTES_SECTIONS}
+          >
+            {sidebar}
+          </CollapsibleSidebarRail>
+        </div>
+      )}
+
       <Group
         orientation="horizontal"
         className="h-full w-full flex"
@@ -71,7 +119,7 @@ export function NotesLayout({
 
         {/* Main Editor Area */}
         <Panel id="notes-editor" minSize={isMobileOrTablet ? 200 : 400}>
-          <div className="h-full overflow-hidden bg-card">
+          <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
             {editor}
           </div>
         </Panel>

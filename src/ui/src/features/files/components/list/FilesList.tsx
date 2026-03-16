@@ -10,7 +10,6 @@ import {
     FolderPlus,
     List,
     SquaresFour,
-    ArrowsClockwise,
     CloudArrowUp,
     BookmarkSimple,
     CheckSquare,

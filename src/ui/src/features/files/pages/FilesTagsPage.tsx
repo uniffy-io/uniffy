@@ -13,7 +13,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { FilesLayout } from '@/features/files/components/FilesLayout';
 import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { initializeFilesData } from '@/features/files/store/filesSlice';
+import { initializeFilesData, toggleSidebar } from '@/features/files/store/filesSlice';
 import {
     Tag,
     Hash,
@@ -400,7 +400,7 @@ export function FilesTagsPage() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const isSidebarOpen = useAppSelector((state) => state.files.sidebarOpen);
     const filesCount = useAppSelector((state) => Object.keys(state.files?.files ?? {}).length);
 
     useDocumentTitle('Tags');
@@ -412,8 +412,8 @@ export function FilesTagsPage() {
     }, [dispatch, organizationId, filesCount]);
 
     const handleToggleSidebar = useCallback(() => {
-        setIsSidebarOpen((prev) => !prev);
-    }, []);
+        dispatch(toggleSidebar());
+    }, [dispatch]);
 
     return (
         <>

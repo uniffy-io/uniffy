@@ -5,7 +5,6 @@
 
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
 import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
 import { VisibilityScope } from '@/gen/common/v1/common_pb';

@@ -4,28 +4,30 @@
  * Page for managing saved file filters.
  */
 
-import { useState, useCallback } from 'react';
-import { useAppSelector } from '@/app/hooks';
+import { useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { FilesLayout } from '@/features/files/components/FilesLayout';
 import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 import { FiltersDashboard } from '@/features/files/components/filters';
+import { toggleSidebar } from '@/features/files/store/filesSlice';
 import { cn } from '@/shared/utils/cn';
 
 export function FiltersPage() {
     useDocumentTitle('Filters');
 
+    const dispatch = useAppDispatch();
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
-    const [showSidebar, setShowSidebar] = useState(true);
+    const showSidebar = useAppSelector((state) => state.files.sidebarOpen);
 
     const handleToggleSidebar = useCallback(() => {
-        setShowSidebar((prev) => !prev);
-    }, []);
+        dispatch(toggleSidebar());
+    }, [dispatch]);
 
     const handleCloseSidebar = useCallback(() => {
-        setShowSidebar(false);
-    }, []);
+        if (showSidebar) dispatch(toggleSidebar());
+    }, [dispatch, showSidebar]);
 
     return (
         <>
