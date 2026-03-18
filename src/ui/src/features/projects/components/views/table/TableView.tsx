@@ -574,14 +574,6 @@ export function TableView() {
     dispatch(moveTask({ id: active.id as string, status: activeTask.status, sortOrder: newSortOrder }));
   }, [dispatch, orderedTaskIds, filteredTasks]);
 
-  if (!project) {
-    return null;
-  }
-
-  if (filteredTasks.length === 0 && !searchQuery) {
-    return <EmptyState onCreateTask={handleAddTask} />;
-  }
-
   const toggleParentExpand = useCallback((taskId: string) => {
     setExpandedParents((prev) => {
       const next = new Set(prev);
@@ -602,6 +594,14 @@ export function TableView() {
     },
     [allTasks]
   );
+
+  if (!project) {
+    return null;
+  }
+
+  if (filteredTasks.length === 0 && !searchQuery) {
+    return <EmptyState onCreateTask={handleAddTask} />;
+  }
 
   const renderSubtaskRow = (task: Task) => (
     <TableRow
@@ -650,24 +650,6 @@ export function TableView() {
       </div>
     );
   };
-
-  const renderSortableRow = (task: Task) => (
-    <SortableTableRow
-      key={task.id}
-      task={task}
-      fields={visibleFields}
-      isSelected={selectedTaskIds.includes(task.id)}
-      editingFieldId={editingCell?.taskId === task.id ? editingCell.fieldId : null}
-      focusedFieldId={focusedCell?.taskId === task.id ? focusedCell.fieldId : null}
-      onClick={(e) => handleRowClick(task.id, e)}
-      onCheckboxClick={(e) => handleCheckboxClick(task.id, e)}
-      onStartEdit={(fieldId) => handleStartEdit(task.id, fieldId)}
-      onEndEdit={handleEndEdit}
-      onSaveField={(fieldId, value) => handleSaveField(task.id, fieldId, value)}
-      onCellClick={(fieldId) => handleCellClick(task.id, fieldId)}
-      onTitleClick={(e) => handleTitleClick(task.id, e)}
-    />
-  );
 
   // Get status and priority options for bulk editing
   const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
