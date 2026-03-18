@@ -40,6 +40,7 @@ export function CalendarPage() {
     isCreateTemplateModalOpen,
     isEditingEventOpen,
     selectedEventId,
+    eventModalPrefill,
   } = useAppSelector((state) => state.calendarUi);
 
   // Get selected event for dynamic document title
@@ -119,6 +120,13 @@ export function CalendarPage() {
       <QuickEventModal
         isOpen={isEventModalOpen}
         onClose={() => dispatch(closeEventModal())}
+        initialDate={eventModalPrefill?.startTime ? new Date(eventModalPrefill.startTime) : undefined}
+        initialStartHour={eventModalPrefill?.startTime
+          ? new Date(eventModalPrefill.startTime).getHours() + new Date(eventModalPrefill.startTime).getMinutes() / 60
+          : undefined}
+        initialEndHour={eventModalPrefill?.endTime
+          ? new Date(eventModalPrefill.endTime).getHours() + new Date(eventModalPrefill.endTime).getMinutes() / 60
+          : undefined}
       />
 
       {/* Add Category Modal */}

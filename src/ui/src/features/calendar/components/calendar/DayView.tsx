@@ -4,14 +4,13 @@
 
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { updateEventThunk } from '@/features/calendar/store';
+import { updateEventThunk, openEventModal } from '@/features/calendar/store';
 import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
 import { TimeColumn, TIME_COLUMN_TOP_PADDING } from '@/features/calendar/components/calendar/TimeColumn';
 import { DayHeader } from '@/features/calendar/components/calendar/DayHeader';
 import { GridLines } from '@/features/calendar/components/calendar/GridLines';
 import { DayCurrentTimeIndicator } from '@/features/calendar/components/calendar/CurrentTimeIndicator';
 import { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
-import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
 import { GRID, LAYOUT } from '@/features/calendar/constants';
 import { parseISO, format } from '@/features/calendar/utils';
 
@@ -22,10 +21,7 @@ export function DayView() {
   const gridRef = useRef<HTMLDivElement>(null);
   const { currentDate } = useCalendarNavigation();
   const { getPositionedEvents } = useCalendarEvents();
-  const [showQuickEventModal, setShowQuickEventModal] = useState(false);
-  const [modalStartHour, setModalStartHour] = useState(9);
-  const [modalEndHour, setModalEndHour] = useState(10);
-  
+
   // State for half-hour slot selection
   const [selectedSlot, setSelectedSlot] = useState<{ hour: number; isHalf: boolean } | null>(null);
   const [dropPreview, setDropPreview] = useState<{ hour: number; isHalf: boolean } | null>(null);
@@ -184,10 +180,27 @@ export function DayView() {
                           selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
-      // Double-click: create event with 30-minute duration
-      setModalStartHour(hour + (isHalf ? 0.5 : 0));
-      setModalEndHour(hour + (isHalf ? 1 : 0.5));
-      setShowQuickEventModal(true);
+      // Double-click: open event creation modal with prefilled date/time
+      const clickedHour = hour + (isHalf ? 0.5 : 0);
+      const startMinutes = Math.round((clickedHour % 1) * 60);
+      const endHourVal = clickedHour + 1;
+      const endMinutes = Math.round((endHourVal % 1) * 60);
+
+      const dayDate = parseISO(currentDate);
+      const startDt = new Date(dayDate);
+      startDt.setHours(Math.floor(clickedHour), startMinutes, 0, 0);
+      const endDt = new Date(dayDate);
+      endDt.setHours(Math.floor(endHourVal), endMinutes, 0, 0);
+
+      const dateStr = format(dayDate, 'yyyy-MM-dd');
+      dispatch(openEventModal({
+        mode: 'create',
+        prefill: {
+          date: dateStr,
+          startTime: startDt.toISOString(),
+          endTime: endDt.toISOString(),
+        },
+      }));
       setSelectedSlot(null);
     } else {
       // Single click: select slot
@@ -291,14 +304,6 @@ export function DayView() {
         </div>
       </div>
 
-      {/* Quick event creation modal */}
-      <QuickEventModal
-        isOpen={showQuickEventModal}
-        onClose={() => setShowQuickEventModal(false)}
-        initialDate={currentDateObj}
-        initialStartHour={modalStartHour}
-        initialEndHour={modalEndHour}
-      />
     </>
   );
 }

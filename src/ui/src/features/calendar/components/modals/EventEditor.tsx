@@ -16,6 +16,7 @@ import {
   Link as LinkIcon,
   Timer,
   Bell,
+  Warning,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEvent } from '@/features/calendar/store/calendarThunks';
@@ -32,6 +33,7 @@ import { RecurrenceEditScopeDialog } from '@/features/calendar/components/modals
 import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
+import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
 
 type EventVisibility = 'private' | 'organization';
 
@@ -98,6 +100,8 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(event.recurrence);
   const [showScopeDialog, setShowScopeDialog] = useState(false);
+
+  const conflicts = useConflictDetection(formData.startTime, formData.endTime, event.id);
 
   const categoryOptions = useMemo(
     () =>
@@ -534,6 +538,25 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 />
               </div>
             </div>
+
+            {/* Conflict warning */}
+            {conflicts.length > 0 && (
+              <div
+                className="mx-5 mb-3 p-3 rounded-lg text-sm"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--status-warning) 8%, transparent)',
+                  color: 'var(--status-warning)',
+                }}
+              >
+                <div className="flex items-center gap-2 font-medium mb-1">
+                  <Warning size={16} weight="duotone" />
+                  Scheduling conflict ({conflicts.length})
+                </div>
+                <div className="text-xs opacity-80">
+                  Overlaps with: {conflicts.map(c => c.title).join(', ')}
+                </div>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="flex gap-3 px-5 py-4 border-t border-border bg-muted/20">

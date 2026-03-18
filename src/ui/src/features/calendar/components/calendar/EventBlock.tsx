@@ -153,6 +153,9 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         backgroundColor,
         borderRadius: getBorderRadius(),
         opacity: isDeclined ? 0.35 : isPendingOrTentative ? 0.6 : 1,
+        boxShadow: event.hasConflict && !isSelected
+          ? 'inset 0 0 0 1px color-mix(in srgb, var(--status-warning) 50%, transparent)'
+          : undefined,
         ...getSelectionBorderStyle(),
       }}
     >

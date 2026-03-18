@@ -10,3 +10,4 @@ export { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
 export { WeekView } from '@/features/calendar/components/calendar/WeekView';
 export { DayView } from '@/features/calendar/components/calendar/DayView';
 export { MonthView } from '@/features/calendar/components/calendar/MonthView';
+export { AgendaView } from '@/features/calendar/components/calendar/AgendaView';

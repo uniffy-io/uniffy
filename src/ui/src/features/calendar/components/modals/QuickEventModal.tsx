@@ -12,6 +12,7 @@ import {
   Tag,
   TextAa,
   Users,
+  Warning,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
@@ -28,6 +29,7 @@ import { AttendeesSelector } from '@/features/calendar/components/modals/Attende
 import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 import { DatePicker } from '@/components/ui/date-picker';
+import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
 import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
 
 type EventVisibility = 'private' | 'organization';
@@ -103,6 +105,27 @@ export function QuickEventModal({
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
   }, []);
+
+  // Conflict detection
+  const startIso = useMemo(() => {
+    if (!startDate) return null;
+    const [y, m, d] = startDate.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setHours(Math.floor(startHour), Math.round((startHour % 1) * 60), 0, 0);
+    return dt.toISOString();
+  }, [startDate, startHour]);
+
+  const endIso = useMemo(() => {
+    if (!isMultiDay && !startDate) return null;
+    const dateStr = isMultiDay ? endDate : startDate;
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setHours(Math.floor(endHour), Math.round((endHour % 1) * 60), 0, 0);
+    return dt.toISOString();
+  }, [startDate, endDate, endHour, isMultiDay]);
+
+  const conflicts = useConflictDetection(startIso, endIso);
 
   const dateOptions = useMemo(() => generateDateOptions(), []);
 
@@ -491,6 +514,25 @@ export function QuickEventModal({
                 />
               </div>
             </div>
+
+            {/* Conflict warning */}
+            {conflicts.length > 0 && (
+              <div
+                className="mx-5 mb-3 p-3 rounded-lg text-sm"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--status-warning) 8%, transparent)',
+                  color: 'var(--status-warning)',
+                }}
+              >
+                <div className="flex items-center gap-2 font-medium mb-1">
+                  <Warning size={16} weight="duotone" />
+                  Scheduling conflict ({conflicts.length})
+                </div>
+                <div className="text-xs opacity-80">
+                  Overlaps with: {conflicts.map(c => c.title).join(', ')}
+                </div>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="flex gap-3 px-5 py-4 border-t border-border bg-muted/20">
