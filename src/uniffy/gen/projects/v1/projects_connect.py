@@ -94,6 +94,15 @@ class ProjectsService(Protocol):
     async def list_sprints(self, request: projects_dot_v1_dot_projects__pb2.ListSprintsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListSprintsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def toggle_task_watcher(self, request: projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_task_watchers(self, request: projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def bulk_check_task_watchers(self, request: projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
     def __init__(self, service: ProjectsService | AsyncGenerator[ProjectsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -359,6 +368,36 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_sprints,
+                ),
+                "/projects.v1.ProjectsService/ToggleTaskWatcher": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ToggleTaskWatcher",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.toggle_task_watcher,
+                ),
+                "/projects.v1.ProjectsService/ListTaskWatchers": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListTaskWatchers",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_task_watchers,
+                ),
+                "/projects.v1.ProjectsService/BulkCheckTaskWatchers": Endpoint.unary(
+                    method=MethodInfo(
+                        name="BulkCheckTaskWatchers",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest,
+                        output=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.bulk_check_task_watchers,
                 ),
             },
             interceptors=interceptors,
@@ -892,6 +931,66 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def toggle_task_watcher(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ToggleTaskWatcher",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest,
+                output=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_task_watchers(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListTaskWatchers",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest,
+                output=projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def bulk_check_task_watchers(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BulkCheckTaskWatchers",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest,
+                output=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: projects_dot_v1_dot_projects__pb2.CreateProjectRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ProjectResponse:
@@ -945,6 +1044,12 @@ class ProjectsServiceSync(Protocol):
     def delete_sprint(self, request: projects_dot_v1_dot_projects__pb2.DeleteSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteSprintResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_sprints(self, request: projects_dot_v1_dot_projects__pb2.ListSprintsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListSprintsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def toggle_task_watcher(self, request: projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_task_watchers(self, request: projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def bulk_check_task_watchers(self, request: projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -1211,6 +1316,36 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_sprints,
+                ),
+                "/projects.v1.ProjectsService/ToggleTaskWatcher": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ToggleTaskWatcher",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.toggle_task_watcher,
+                ),
+                "/projects.v1.ProjectsService/ListTaskWatchers": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListTaskWatchers",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_task_watchers,
+                ),
+                "/projects.v1.ProjectsService/BulkCheckTaskWatchers": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="BulkCheckTaskWatchers",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest,
+                        output=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.bulk_check_task_watchers,
                 ),
             },
             interceptors=interceptors,
@@ -1738,6 +1873,66 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.ListSprintsRequest,
                 output=projects_dot_v1_dot_projects__pb2.ListSprintsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def toggle_task_watcher(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ToggleTaskWatcher",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherRequest,
+                output=projects_dot_v1_dot_projects__pb2.ToggleTaskWatcherResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_task_watchers(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListTaskWatchers",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ListTaskWatchersRequest,
+                output=projects_dot_v1_dot_projects__pb2.ListTaskWatchersResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def bulk_check_task_watchers(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BulkCheckTaskWatchers",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersRequest,
+                output=projects_dot_v1_dot_projects__pb2.BulkCheckTaskWatchersResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

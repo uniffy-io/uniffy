@@ -234,6 +234,8 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     sprintId: proto.sprintId ?? null,
     subtaskTotal: proto.subtaskTotal,
     subtaskCompleted: proto.subtaskCompleted,
+    estimatedMinutes: proto.estimatedMinutes ?? null,
+    timeSpentMinutes: proto.timeSpentMinutes ?? null,
   };
 }
 
@@ -535,6 +537,8 @@ export const projectsApi = {
       ...(data.sprintId !== undefined ? { sprintId: data.sprintId ?? "" } : {}),
       ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
       ...(data.blockedByTaskIds !== undefined ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
+      ...(data.estimatedMinutes !== undefined ? { estimatedMinutes: data.estimatedMinutes ?? 0 } : {}),
+      ...(data.timeSpentMinutes !== undefined ? { timeSpentMinutes: data.timeSpentMinutes ?? 0 } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
@@ -838,5 +842,34 @@ export const projectsApi = {
       sprintId,
     });
     return { success: response.success };
+  },
+
+  // ===== Task Watchers =====
+
+  toggleTaskWatcher: async (taskId: string, organizationId: string) => {
+    const response = await projectsClient.toggleTaskWatcher({
+      organizationId,
+      taskId,
+    });
+    return { isWatching: response.isWatching };
+  },
+
+  listTaskWatchers: async (taskId: string, organizationId: string) => {
+    const response = await projectsClient.listTaskWatchers({
+      organizationId,
+      taskId,
+    });
+    return {
+      watcherUserIds: response.watcherUserIds,
+      watcherCount: response.watcherCount,
+    };
+  },
+
+  bulkCheckTaskWatchers: async (taskIds: string[], organizationId: string) => {
+    const response = await projectsClient.bulkCheckTaskWatchers({
+      organizationId,
+      taskIds,
+    });
+    return { watchedTasks: Object.fromEntries(Object.entries(response.watchedTasks)) };
   },
 };

@@ -30,7 +30,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, ArrowUp, ArrowDown, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash } from "@phosphor-icons/react";
+import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -110,6 +110,8 @@ export function TableView() {
 
   // Track collapsed group sections
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  // Track expanded parent tasks (for subtask rows)
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   // Track create field dialog
   const [isCreateFieldOpen, setIsCreateFieldOpen] = useState(false);
 
@@ -263,7 +265,8 @@ export function TableView() {
       }
 
       // Undo/Redo (works even in inputs)
-      if (e.key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      const key = e.key.toLowerCase();
+      if (key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         e.preventDefault();
         if (undoStack.length > 0) {
           const entry = undoStack[undoStack.length - 1];
@@ -274,7 +277,7 @@ export function TableView() {
         }
         return;
       }
-      if (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      if ((key === "z" || key === "y") && (e.ctrlKey || e.metaKey) && (e.shiftKey || key === "y")) {
         e.preventDefault();
         if (redoStack.length > 0) {
           const entry = redoStack[redoStack.length - 1];
@@ -579,6 +582,75 @@ export function TableView() {
     return <EmptyState onCreateTask={handleAddTask} />;
   }
 
+  const toggleParentExpand = useCallback((taskId: string) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  }, []);
+
+  const getSubtasksForParent = useCallback(
+    (parentId: string): Task[] => {
+      return Object.values(allTasks)
+        .filter((t) => t.parentId === parentId && !t.deletedAt)
+        .sort((a, b) => a.number - b.number);
+    },
+    [allTasks]
+  );
+
+  const renderSubtaskRow = (task: Task) => (
+    <TableRow
+      key={task.id}
+      task={task}
+      fields={visibleFields}
+      isSelected={selectedTaskIds.includes(task.id)}
+      editingFieldId={editingCell?.taskId === task.id ? editingCell.fieldId : null}
+      focusedFieldId={focusedCell?.taskId === task.id ? focusedCell.fieldId : null}
+      onClick={(e) => handleRowClick(task.id, e)}
+      onCheckboxClick={(e) => handleCheckboxClick(task.id, e)}
+      onStartEdit={(fieldId) => handleStartEdit(task.id, fieldId)}
+      onEndEdit={handleEndEdit}
+      onSaveField={(fieldId, value) => handleSaveField(task.id, fieldId, value)}
+      onCellClick={(fieldId) => handleCellClick(task.id, fieldId)}
+      onTitleClick={(e) => handleTitleClick(task.id, e)}
+      isSubtask
+    />
+  );
+
+  const renderSortableRowWithSubtasks = (task: Task) => {
+    const hasSubtasks = task.subtaskTotal > 0;
+    const isExpanded = expandedParents.has(task.id);
+    const subtasks = isExpanded ? getSubtasksForParent(task.id) : [];
+
+    return (
+      <div key={task.id}>
+        <SortableTableRow
+          task={task}
+          fields={visibleFields}
+          isSelected={selectedTaskIds.includes(task.id)}
+          editingFieldId={editingCell?.taskId === task.id ? editingCell.fieldId : null}
+          focusedFieldId={focusedCell?.taskId === task.id ? focusedCell.fieldId : null}
+          onClick={(e) => handleRowClick(task.id, e)}
+          onCheckboxClick={(e) => handleCheckboxClick(task.id, e)}
+          onStartEdit={(fieldId) => handleStartEdit(task.id, fieldId)}
+          onEndEdit={handleEndEdit}
+          onSaveField={(fieldId, value) => handleSaveField(task.id, fieldId, value)}
+          onCellClick={(fieldId) => handleCellClick(task.id, fieldId)}
+          onTitleClick={(e) => handleTitleClick(task.id, e)}
+          expandable={hasSubtasks}
+          isExpanded={isExpanded}
+          onToggleExpand={() => toggleParentExpand(task.id)}
+        />
+        {isExpanded && subtasks.map(renderSubtaskRow)}
+      </div>
+    );
+  };
+
   const renderSortableRow = (task: Task) => (
     <SortableTableRow
       key={task.id}
@@ -604,7 +676,7 @@ export function TableView() {
   const priorityOptions = priorityField?.config.options ?? [];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* Bulk Edit Toolbar */}
       {selectedTaskIds.length > 1 && (
         <BulkEditToolbar
@@ -734,6 +806,7 @@ export function TableView() {
                 />
               )}
             </div>
+
           </div>
 
           {/* Table Body */}
@@ -779,7 +852,7 @@ export function TableView() {
                     {/* Group Tasks - each group has its own sortable context */}
                     {!isCollapsed && (
                       <SortableContext items={groupTaskIds} strategy={verticalListSortingStrategy}>
-                        {group.tasks.map(renderSortableRow)}
+                        {group.tasks.map(renderSortableRowWithSubtasks)}
                       </SortableContext>
                     )}
                   </div>
@@ -788,7 +861,7 @@ export function TableView() {
             ) : (
               // Flat rendering with single SortableContext
               <SortableContext items={orderedTaskIds} strategy={verticalListSortingStrategy}>
-                {filteredTasks.map(renderSortableRow)}
+                {filteredTasks.map(renderSortableRowWithSubtasks)}
               </SortableContext>
             )}
 
@@ -829,6 +902,47 @@ export function TableView() {
         </DndContext>
         </div>
       </ScrollArea>
+
+      {/* Floating Undo/Redo pill */}
+      {(undoStack.length > 0 || redoStack.length > 0) && (
+        <div className="absolute bottom-4 right-4 flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-card shadow-lg z-10">
+          <button
+            type="button"
+            disabled={undoStack.length === 0}
+            onClick={() => {
+              if (undoStack.length > 0) {
+                const entry = undoStack[undoStack.length - 1];
+                const payload = { id: entry.taskId, ...entry.previousValues } as Partial<Task> & { id: string };
+                dispatch(optimisticUpdateTask(payload));
+                dispatch(updateTask(payload));
+                dispatch(popUndo());
+              }
+            }}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Undo (Ctrl+Z)"
+          >
+            <ArrowCounterClockwise size={16} />
+          </button>
+          <div className="w-px h-4 bg-border" />
+          <button
+            type="button"
+            disabled={redoStack.length === 0}
+            onClick={() => {
+              if (redoStack.length > 0) {
+                const entry = redoStack[redoStack.length - 1];
+                const payload = { id: entry.taskId, ...entry.newValues } as Partial<Task> & { id: string };
+                dispatch(optimisticUpdateTask(payload));
+                dispatch(updateTask(payload));
+                dispatch(popRedo());
+              }
+            }}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <ArrowClockwise size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -974,6 +1088,10 @@ interface TableRowProps {
   isDragging?: boolean;
   style?: React.CSSProperties;
   rowRef?: (node: HTMLElement | null) => void;
+  isSubtask?: boolean;
+  expandable?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 function SortableTableRow(props: Omit<TableRowProps, "dragHandleProps" | "isDragging" | "style" | "rowRef">) {
@@ -1021,6 +1139,10 @@ function TableRow({
   isDragging,
   style,
   rowRef,
+  isSubtask,
+  expandable,
+  isExpanded,
+  onToggleExpand,
 }: TableRowProps) {
   return (
     <div
@@ -1029,7 +1151,8 @@ function TableRow({
         "flex items-center border-b border-border cursor-pointer relative",
         "hover:bg-muted/30 transition-colors",
         isSelected && "bg-primary/5",
-        isDragging && "bg-muted/50"
+        isDragging && "bg-muted/50",
+        isSubtask && "bg-muted/10"
       )}
       style={{ height: LAYOUT.TABLE_ROW_HEIGHT, ...style }}
       onClick={onClick}
@@ -1039,14 +1162,19 @@ function TableRow({
         <div className="absolute left-0 w-0.5 h-full bg-primary" />
       )}
 
-      {/* Drag Handle */}
+      {/* Drag Handle / Subtask indent */}
       <div
-        className="shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+        className={cn(
+          "shrink-0 flex items-center justify-center",
+          isSubtask
+            ? "text-muted-foreground/30"
+            : "cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+        )}
         style={{ width: 28 }}
-        {...dragHandleProps}
+        {...(isSubtask ? {} : dragHandleProps)}
         onClick={(e) => e.stopPropagation()}
       >
-        <DotsSixVertical size={14} />
+        {!isSubtask && <DotsSixVertical size={14} />}
       </div>
 
       {/* Checkbox Column */}
@@ -1066,12 +1194,29 @@ function TableRow({
       {/* Title Column - single click opens detail panel */}
       <div
         className={cn(
-          "shrink-0 flex items-center px-3 border-r border-border overflow-hidden",
-          focusedFieldId === SYSTEM_FIELD_IDS.TITLE && "ring-2 ring-inset ring-primary"
+          "shrink-0 flex items-center border-r border-border overflow-hidden",
+          focusedFieldId === SYSTEM_FIELD_IDS.TITLE && "ring-2 ring-inset ring-primary",
+          isSubtask ? "pl-10 pr-3" : "px-3"
         )}
         style={{ width: 300 }}
         onClick={onTitleClick}
       >
+        {/* Expand/collapse chevron for parent tasks */}
+        {expandable && (
+          <button
+            type="button"
+            className="mr-1.5 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand?.();
+            }}
+          >
+            {isExpanded
+              ? <CaretDown size={12} />
+              : <CaretRight size={12} />
+            }
+          </button>
+        )}
         <TaskTitleCell task={task} />
       </div>
 

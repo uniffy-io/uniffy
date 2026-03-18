@@ -112,6 +112,8 @@ class Task(SQLModel, table=True):
     number: int = Field(default=0, nullable=False)
     task_type: str = Field(default="task", max_length=50, nullable=False)
     sprint_id: UUID | None = Field(default=None, foreign_key="projects_sprints.id", index=True)
+    estimated_minutes: int | None = Field(default=None, nullable=True)
+    time_spent_minutes: int | None = Field(default=None, nullable=True)
     field_values: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     outgoing_references: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     is_deleted: bool = Field(default=False, nullable=False)

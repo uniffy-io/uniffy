@@ -25,6 +25,7 @@ from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.projects.task_watcher import TaskWatcher
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.shared import ContentType, NotificationType, VisibilityScope
 from uniffy.core.search.indexer import build_content_urn
@@ -875,6 +876,8 @@ class TaskOperations(BaseContentOperations[Task]):
             "parent_id",
             "recurrence_rule",
             "sprint_id",
+            "estimated_minutes",
+            "time_spent_minutes",
         }
 
         # Track changes for activity log
@@ -969,6 +972,21 @@ class TaskOperations(BaseContentOperations[Task]):
         await self._emit_mention_notifications(
             task, user_id, old_references, task.outgoing_references
         )
+
+        # Notify watchers about significant changes
+        changes = []
+        if "status" in kwargs and kwargs["status"] != (old_assignee_ids and ""):
+            label = task.status.replace("status_", "").replace("_", " ").title()
+            changes.append(f"Status changed to \"{label}\"")
+        if "priority" in kwargs:
+            label = task.priority.replace("priority_", "").replace("_", " ").title()
+            changes.append(f"Priority changed to \"{label}\"")
+        if "assignee_ids" in kwargs:
+            changes.append("Assignees updated")
+        if changes:
+            await self._emit_watcher_notifications(
+                task, user_id, "; ".join(changes)
+            )
 
         # Propagate title change to mention labels in referencing content
         if title_changed:
@@ -1428,6 +1446,49 @@ class TaskOperations(BaseContentOperations[Task]):
             )
         )
 
+    async def _emit_watcher_notifications(
+        self,
+        task: Task,
+        actor_id: UUID,
+        change_description: str,
+    ) -> None:
+        """
+        Notify watchers about a task change.
+
+        Excludes the actor and current assignees (they get their own
+        notifications).
+
+        Parameters
+        ----------
+        task : Task
+            The changed task.
+        actor_id : UUID
+            User who made the change.
+        change_description : str
+            What changed (e.g., "status changed to Done").
+
+        """
+        watcher_ops = WatcherOperations(self.session)
+        watcher_ids = await watcher_ops.get_watcher_user_ids(task.id)
+
+        # Remove actor (don't notify the person making the change)
+        watcher_ids = [w for w in watcher_ids if w != actor_id]
+
+        if not watcher_ids:
+            return
+
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.CONTENT_EDITED,
+                organization_id=task.organization_id,
+                actor_id=actor_id,
+                title=f"Task updated: {task.title}",
+                body=change_description,
+                source_urn=build_content_urn(ContentType.TASK, task.id),
+                target_user_ids=watcher_ids,
+            )
+        )
+
     async def _log_activity(
         self,
         task_id: UUID,
@@ -1873,3 +1934,131 @@ class SprintOperations:
         for row in result:
             counts[str(row.sprint_id)] = (row.total, row.completed)
         return counts
+
+
+class WatcherOperations:
+    """
+    Task watcher operations.
+
+    Manages user subscriptions to task changes. Mirrors
+    the bookmarks domain pattern.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize watcher operations."""
+        self.session = session
+
+    async def toggle(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        task_id: UUID,
+    ) -> tuple[bool, TaskWatcher | None]:
+        """
+        Toggle watch state for a task.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User toggling watch.
+        organization_id : UUID
+            Organization ID.
+        task_id : UUID
+            Task to watch/unwatch.
+
+        Returns
+        -------
+        tuple[bool, TaskWatcher | None]
+            (is_watching, watcher_or_none).
+
+        """
+        existing = await self._get_watcher(user_id, task_id)
+        if existing:
+            await self.session.delete(existing)
+            await self.session.commit()
+            return False, None
+
+        watcher = TaskWatcher(
+            user_id=user_id,
+            organization_id=organization_id,
+            task_id=task_id,
+        )
+        self.session.add(watcher)
+        await self.session.commit()
+        await self.session.refresh(watcher)
+        return True, watcher
+
+    async def is_watching(
+        self, user_id: UUID, task_id: UUID
+    ) -> bool:
+        """Check if user is watching a task."""
+        watcher = await self._get_watcher(user_id, task_id)
+        return watcher is not None
+
+    async def get_watcher_user_ids(
+        self, task_id: UUID
+    ) -> list[UUID]:
+        """Get all user IDs watching a task."""
+        result = await self.session.execute(
+            select(TaskWatcher.user_id).where(
+                TaskWatcher.task_id == task_id
+            )
+        )
+        return [row[0] for row in result.all()]
+
+    async def get_watcher_count(self, task_id: UUID) -> int:
+        """Get count of watchers for a task."""
+        result = await self.session.execute(
+            select(func.count()).where(
+                TaskWatcher.task_id == task_id
+            )
+        )
+        return result.scalar_one()
+
+    async def bulk_check(
+        self, user_id: UUID, task_ids: list[str]
+    ) -> dict[str, bool]:
+        """
+        Check watch status for multiple tasks.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User to check for.
+        task_ids : list[str]
+            Task IDs to check.
+
+        Returns
+        -------
+        dict[str, bool]
+            Mapping of task_id to is_watching.
+
+        """
+        if not task_ids:
+            return {}
+
+        uuids = [UUID(tid) for tid in task_ids]
+        result = await self.session.execute(
+            select(TaskWatcher.task_id).where(
+                and_(
+                    TaskWatcher.user_id == user_id,
+                    TaskWatcher.task_id.in_(uuids),
+                )
+            )
+        )
+        watched = {str(row[0]) for row in result.all()}
+        return {tid: tid in watched for tid in task_ids}
+
+    async def _get_watcher(
+        self, user_id: UUID, task_id: UUID
+    ) -> TaskWatcher | None:
+        """Fetch a single watcher record."""
+        result = await self.session.execute(
+            select(TaskWatcher).where(
+                and_(
+                    TaskWatcher.user_id == user_id,
+                    TaskWatcher.task_id == task_id,
+                )
+            )
+        )
+        return result.scalar_one_or_none()

@@ -10,7 +10,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Repeat, Bell, Diamond, PencilSimple, Check, SidebarSimple } from "@phosphor-icons/react";
+import { X, Repeat, Bell, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -22,12 +22,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { MentionChipCompact } from "@/components/editor/plugins/mention";
-import { selectTasksMap, selectCurrentProject, selectTasksForProject, optimisticUpdateTask } from "../../store/projectsSlice";
-import { updateTask } from "../../store/projectsThunks";
-import { closeDetailPanel, selectTask } from "../../store/projectsUiSlice";
-import { selectSprintsForProject } from "../../store/sprintsSlice";
-import type { SelectOption, Sprint } from "../../types";
-import { SYSTEM_FIELD_IDS } from "../../types";
+import { selectTasksMap, selectCurrentProject, selectTasksForProject, optimisticUpdateTask } from "@/features/projects/store/projectsSlice";
+import { updateTask } from "@/features/projects/store/projectsThunks";
+import { closeDetailPanel, selectTask } from "@/features/projects/store/projectsUiSlice";
+import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
+import { projectsApi } from "@/features/projects/api/projectsApi";
+import { formatMinutes, parseTimeInput } from "@/features/projects/utils/timeFormatting";
+import type { SelectOption, Sprint } from "@/features/projects/types";
+import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 
 import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
 import { extractMentionsFromMarkdown, extractFallbackLabel } from "@/shared/utils/mentionUtils";
@@ -119,15 +121,18 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
             {ticketId}
           </span>
         </div>
-        {!isMobileOrTablet && (
-          <button
-            onClick={handleClose}
-            className="px-2 py-1 rounded-md text-primary bg-primary/10 transition-colors"
-            aria-label="Close panel"
-          >
-            <SidebarSimple size={16} className="transform -scale-x-100" />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          <WatchButton taskId={task.id} />
+          {!isMobileOrTablet && (
+            <button
+              onClick={handleClose}
+              className="px-2 py-1 rounded-md text-primary bg-primary/10 transition-colors"
+              aria-label="Close panel"
+            >
+              <SidebarSimple size={16} className="transform -scale-x-100" />
+            </button>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
@@ -264,7 +269,25 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
                 </div>
               )}
 
-              {/* Feature 8: Reminder (Visual Only) */}
+              {/* Time Tracking */}
+              <TimeField
+                label="Estimated"
+                minutes={task.estimatedMinutes}
+                onSave={(minutes) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, estimatedMinutes: minutes }));
+                  dispatch(updateTask({ id: task.id, estimatedMinutes: minutes }));
+                }}
+              />
+              <TimeField
+                label="Time Spent"
+                minutes={task.timeSpentMinutes}
+                onSave={(minutes) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, timeSpentMinutes: minutes }));
+                  dispatch(updateTask({ id: task.id, timeSpentMinutes: minutes }));
+                }}
+              />
+
+              {/* Reminder (Visual Only) */}
               <div className="flex items-center gap-3">
                  <span className="text-sm text-muted-foreground w-20">Remind me</span>
                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
@@ -536,4 +559,112 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
   );
 }
 
+// ===== Time Field =====
+
+interface TimeFieldProps {
+  label: string;
+  minutes: number | null;
+  onSave: (minutes: number | null) => void;
+}
+
+function TimeField({ label, minutes, onSave }: TimeFieldProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleStartEdit = () => {
+    setInputValue(minutes ? formatMinutes(minutes) : "");
+    setIsEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleSave = () => {
+    setIsEditing(false);
+    const parsed = parseTimeInput(inputValue);
+    if (parsed !== null || inputValue.trim() === "") {
+      onSave(parsed);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-muted-foreground w-20 flex items-center gap-1.5">
+        <Clock size={12} />
+        {label}
+      </span>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+            if (e.key === "Escape") setIsEditing(false);
+          }}
+          placeholder="e.g. 2h 30m"
+          className="h-6 w-24 px-2 text-xs bg-background border border-border rounded outline-none text-foreground focus:border-primary"
+        />
+      ) : (
+        <button
+          onClick={handleStartEdit}
+          className="text-xs text-foreground hover:text-primary transition-colors"
+        >
+          {minutes ? formatMinutes(minutes) : "Not set"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ===== Watch Button =====
+
+function WatchButton({ taskId }: { taskId: string }) {
+  const [isWatching, setIsWatching] = useState(false);
+  const [watcherCount, setWatcherCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const orgId = useAppSelector((state) => state.auth.currentOrganizationId);
+
+  useEffect(() => {
+    if (!orgId) return;
+    projectsApi.listTaskWatchers(taskId, orgId).then((res) => {
+      setWatcherCount(res.watcherCount);
+    });
+    projectsApi.bulkCheckTaskWatchers([taskId], orgId).then((res) => {
+      setIsWatching(res.watchedTasks[taskId] ?? false);
+    });
+  }, [taskId, orgId]);
+
+  const handleToggle = async () => {
+    if (!orgId || isLoading) return;
+    setIsLoading(true);
+    try {
+      const res = await projectsApi.toggleTaskWatcher(taskId, orgId);
+      setIsWatching(res.isWatching);
+      setWatcherCount((c) => c + (res.isWatching ? 1 : -1));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const WatchIcon = isWatching ? Eye : EyeSlash;
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={isLoading}
+      className={cn(
+        "flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors",
+        isWatching
+          ? "text-primary bg-primary/10"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+      )}
+      title={isWatching ? "Stop watching" : "Watch this task"}
+    >
+      <WatchIcon size={14} weight={isWatching ? "fill" : "regular"} />
+      {watcherCount > 0 && <span>{watcherCount}</span>}
+    </button>
+  );
+}
 

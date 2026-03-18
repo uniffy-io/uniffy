@@ -241,6 +241,10 @@ def task_to_proto(
         proto.deleted_at.CopyFrom(datetime_to_timestamp(task.deleted_at))
     if task.sprint_id:
         proto.sprint_id = str(task.sprint_id)
+    if task.estimated_minutes is not None:
+        proto.estimated_minutes = task.estimated_minutes
+    if task.time_spent_minutes is not None:
+        proto.time_spent_minutes = task.time_spent_minutes
 
     if user_permission_level:
         proto.user_permission_level = permission_level_to_proto(user_permission_level)

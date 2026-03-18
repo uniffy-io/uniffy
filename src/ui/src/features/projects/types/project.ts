@@ -107,6 +107,8 @@ export interface Task {
   sprintId: string | null;
   subtaskTotal: number;
   subtaskCompleted: number;
+  estimatedMinutes: number | null;
+  timeSpentMinutes: number | null;
 }
 
 /**
@@ -157,6 +159,8 @@ export interface CreateTaskRequest {
   sprintId?: string | null;
   parentId?: string | null;
   blockedByTaskIds?: string[];
+  estimatedMinutes?: number | null;
+  timeSpentMinutes?: number | null;
 }
 
 export interface UpdateTaskRequest {
@@ -174,6 +178,8 @@ export interface UpdateTaskRequest {
   sprintId?: string | null;
   parentId?: string | null;
   blockedByTaskIds?: string[];
+  estimatedMinutes?: number | null;
+  timeSpentMinutes?: number | null;
 }
 
 export interface MoveTaskRequest {
