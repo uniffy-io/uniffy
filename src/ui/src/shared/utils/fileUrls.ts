@@ -32,7 +32,8 @@ export function buildMediaStreamUrl(organizationId: string, fileId: string): str
 
 /** Build an avatar URL: /api/avatars/{userId}/{size} */
 export function buildAvatarUrl(userId: string, size: string): string {
-    return `/api/avatars/${userId}/${size}`;
+    // Version param busts old immutable cache entries from before ETag support
+    return `/api/avatars/${userId}/${size}?_v=2`;
 }
 
 // -- URL Patterns (for service worker and CSS attribute selectors) --

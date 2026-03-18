@@ -223,6 +223,5 @@ class RateLimitExceededError(UNIFFYError):
         self.window_seconds = window_seconds
         self.retry_after = retry_after
         super().__init__(
-            f"Rate limit exceeded for {resource}: "
-            f"max {limit} requests per {window_seconds}s"
+            f"Rate limit exceeded for {resource}: max {limit} requests per {window_seconds}s"
         )

@@ -135,3 +135,28 @@ export function formatFileSize(bytes: number): string {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
+
+/**
+ * Format a future date as remaining time: "for 3h 30m", "for 25m", "for 2d".
+ * Returns empty string if the date is in the past or not provided.
+ */
+export function formatTimeRemaining(dateStr: string | null | undefined): string {
+    if (!dateStr) return '';
+    const remaining = new Date(dateStr).getTime() - Date.now();
+    if (remaining <= 0) return '';
+
+    const mins = Math.floor(remaining / 60000);
+    const hrs = Math.floor(mins / 60);
+    const days = Math.floor(hrs / 24);
+
+    if (days > 0) {
+        const leftoverHrs = hrs % 24;
+        return leftoverHrs > 0 ? `for ${days}d ${leftoverHrs}h` : `for ${days}d`;
+    }
+    if (hrs > 0) {
+        const leftoverMins = mins % 60;
+        return leftoverMins > 0 ? `for ${hrs}h ${leftoverMins}m` : `for ${hrs}h`;
+    }
+    if (mins > 0) return `for ${mins}m`;
+    return 'for <1m';
+}

@@ -19,7 +19,11 @@ import {
 import type { UrnPreviewData } from '@/components/editor/plugins/mention/useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
+import { formatRelativeTime, formatTimeRemaining } from '@/shared/utils/dateFormatting';
+import { usePresence } from '@/features/presence/hooks/usePresence';
+import { useCustomStatus } from '@/features/presence/hooks/useCustomStatus';
+import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
+import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 
 interface MentionPreviewProps {
   preview: UrnPreviewData | null;
@@ -127,12 +131,12 @@ function formatEventTimeRange(metadata: Record<string, string>): string {
 }
 
 /** Avatar with error fallback for user mention previews */
-function PreviewUserAvatar({ userId, fallback }: { userId: string; fallback: React.ReactNode }) {
+function PreviewUserAvatar({ src, fallback }: { src: string; fallback: React.ReactNode }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <>{fallback}</>;
   return (
     <img
-      src={`/api/avatars/${userId}/md`}
+      src={src}
       alt=""
       className="w-11 h-11 rounded-xl object-cover shadow-lg ring-2 ring-background"
       onError={() => setFailed(true)}
@@ -175,6 +179,12 @@ export function MentionPreview({
   const theme = parsed ? getTypeTheme(parsed.type) : getTypeTheme(UrnType.UNKNOWN);
   const Icon = theme.icon;
   const recentlyUpdated = preview ? isRecentlyUpdated(preview.updatedAt) : false;
+
+  // Presence and custom status for user mentions
+  const isUserMention = parsed?.type === UrnType.USER && !!parsed.id;
+  const presenceStatus = usePresence(isUserMention ? parsed.id! : '');
+  const customStatus = useCustomStatus(isUserMention ? parsed.id! : '');
+  const userAvatarSrc = useAvatarUrl(isUserMention ? parsed.id! : '', 'md');
 
   return (
     // Invisible hover bridge: extends from the chip edge through the gap to the
@@ -248,20 +258,23 @@ export function MentionPreview({
             <div className="flex items-start gap-3">
               {/* Icon badge or avatar */}
               {preview.type === UrnType.USER && parsed?.id ? (
-                <PreviewUserAvatar
-                  userId={parsed.id}
-                  fallback={
-                    <div className={`
-                      flex items-center justify-center
-                      w-11 h-11 rounded-xl
-                      ${theme.iconBg}
-                      shadow-lg
-                      ring-2 ring-background
-                    `}>
-                      <Icon size={20} weight="duotone" className="text-white" />
-                    </div>
-                  }
-                />
+                <div className="relative">
+                  <PreviewUserAvatar
+                    src={userAvatarSrc}
+                    fallback={
+                      <div className={`
+                        flex items-center justify-center
+                        w-11 h-11 rounded-xl
+                        ${theme.iconBg}
+                        shadow-lg
+                        ring-2 ring-background
+                      `}>
+                        <Icon size={20} weight="duotone" className="text-white" />
+                      </div>
+                    }
+                  />
+                  <PresenceIndicator status={presenceStatus} size="md" />
+                </div>
               ) : (
               <div className={`
                 flex items-center justify-center
@@ -285,13 +298,44 @@ export function MentionPreview({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className={`text-xs font-medium ${theme.accentText}`}>
-                    {getUrnTypeLabel(preview.urn)}
-                  </span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-xs text-muted-foreground">
-                    Click to open
-                  </span>
+                  {isUserMention ? (
+                    <>
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium capitalize ${
+                        presenceStatus === 'online' ? 'text-green-600 dark:text-green-400'
+                          : presenceStatus === 'away' ? 'text-amber-600 dark:text-amber-400'
+                          : presenceStatus === 'dnd' ? 'text-red-600 dark:text-red-400'
+                          : 'text-muted-foreground'
+                      }`}>
+                        {presenceStatus === 'dnd' ? 'Do Not Disturb' : presenceStatus}
+                      </span>
+                      {customStatus && (
+                        <>
+                          <span className="text-muted-foreground/40">·</span>
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground truncate">
+                            {customStatus.emoji && <span>{customStatus.emoji}</span>}
+                            <span className="truncate">
+                              {customStatus.text}
+                              {customStatus.expiresAt && (
+                                <span className="text-muted-foreground/60">
+                                  {' '}{formatTimeRemaining(customStatus.expiresAt)}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span className={`text-xs font-medium ${theme.accentText}`}>
+                        {getUrnTypeLabel(preview.urn)}
+                      </span>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="text-xs text-muted-foreground">
+                        Click to open
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -12,6 +12,7 @@ import { useAppSelector } from '@/app/hooks';
 import { UniffyLogo } from '@/components/ui/uniffy-logo';
 import { Drawer } from '@/components/ui/drawer';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { usePresenceHeartbeat } from '@/features/presence/hooks/usePresenceHeartbeat';
 
 // Get content type configs for nav items
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
@@ -188,6 +189,9 @@ export function AppHeader() {
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const { isMobile } = useBreakpoint();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // App-wide presence heartbeat (tracks online/away state)
+  usePresenceHeartbeat();
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 

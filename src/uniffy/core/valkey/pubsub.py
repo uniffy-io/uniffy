@@ -208,6 +208,87 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
         logger.info(f"unsubscribed from {channel} ", component=LOGGER_COMPONENT)
 
 
+async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | None]:
+    """Subscribe to multiple Valkey Pub/Sub channels.
+
+    Same semantics as subscribe_user but accepts arbitrary channel names.
+    Used by the notification stream to listen to both user notifications
+    and org-wide presence changes simultaneously.
+
+    Parameters
+    ----------
+    *channels : str
+        Channel names to subscribe to.
+
+    Yields
+    ------
+    dict | None
+        Parsed payload from any subscribed channel, or None on poll timeout.
+
+    """
+    PUBSUB_ACTIVE_SUBSCRIBERS.inc()
+
+    url = ValkeyConfig.from_env().to_url()
+    subscriber = aioredis.from_url(
+        url,
+        decode_responses=True,
+        socket_connect_timeout=_SOCKET_CONNECT_TIMEOUT,
+        socket_timeout=_SOCKET_TIMEOUT,
+    )
+    channel_label = ",".join(channels)
+    pubsub = subscriber.pubsub()
+
+    try:
+        await pubsub.subscribe(*channels)
+        logger.info(f"subscribed to {channel_label}", component=LOGGER_COMPONENT)
+
+        while True:
+            # Check process-wide shutdown before each poll.
+            if _shutdown_event is not None and _shutdown_event.is_set():
+                logger.info(f"shutdown, closing {channel_label}", component=LOGGER_COMPONENT)
+                break
+
+            message = await pubsub.get_message(
+                ignore_subscribe_messages=True,
+                timeout=1.0,
+            )
+            if message is not None and message["type"] == "message":
+                try:
+                    data = json.loads(message["data"])
+                    yield data
+                except json.JSONDecodeError, TypeError:
+                    logger.warning(f"Invalid message on channels {channel_label}")
+            else:
+                # Timeout tick -- caller can use for heartbeats / cancellation
+                yield None
+    finally:
+        PUBSUB_ACTIVE_SUBSCRIBERS.dec()
+        # Hard timeout on cleanup so shutdown / Ctrl+C never hangs here.
+        try:
+            await asyncio.wait_for(
+                _close_subscriber_channels(pubsub, subscriber, channels),
+                timeout=_CLEANUP_TIMEOUT,
+            )
+        except TimeoutError, BaseException:
+            logger.warning(f"cleanup timed out for {channel_label}", component=LOGGER_COMPONENT)
+        logger.info(f"unsubscribed from {channel_label}", component=LOGGER_COMPONENT)
+
+
+async def _close_subscriber_channels(
+    pubsub: aioredis.client.PubSub,
+    subscriber: aioredis.Redis,
+    channels: tuple[str, ...],
+) -> None:
+    """Close a multi-channel subscriber's Valkey connections."""
+    for ch in channels:
+        with contextlib.suppress(BaseException):
+            await pubsub.unsubscribe(ch)
+    with contextlib.suppress(BaseException):
+        await pubsub.aclose()
+    with contextlib.suppress(BaseException):
+        await subscriber.aclose()
+
+
 async def _close_subscriber(
     pubsub: aioredis.client.PubSub,
     subscriber: aioredis.Redis,

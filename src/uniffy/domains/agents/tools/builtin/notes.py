@@ -183,8 +183,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
         result_dict["_truncated"] = True
         result_dict["_original_length"] = original_len
         result_dict["_truncation_notice"] = (
-            f"Content truncated: showing {_MAX_NOTE_CONTENT_CHARS:,} "
-            f"of {original_len:,} characters"
+            f"Content truncated: showing {_MAX_NOTE_CONTENT_CHARS:,} of {original_len:,} characters"
         )
 
     data = json.dumps(result_dict, indent=2)

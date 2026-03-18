@@ -360,13 +360,16 @@ async function handleThumbnailRequest(request: Request): Promise<Response> {
     }
 
     try {
-        // Create a new request with the auth header
+        // Copy headers but strip cache directives so the HTTP cache
+        // can work based on the server's response headers
+        const headers = new Headers(request.headers);
+        headers.delete('cache-control');
+        headers.delete('pragma');
+        headers.set('Authorization', `Bearer ${token}`);
+
         const authRequest = new Request(request.url, {
             method: request.method,
-            headers: {
-                ...Object.fromEntries(request.headers),
-                Authorization: `Bearer ${token}`,
-            },
+            headers,
             credentials: 'omit', // Don't send cookies, we use Bearer token
         });
 
@@ -395,13 +398,16 @@ async function handleFileRequest(request: Request): Promise<Response> {
     }
 
     try {
-        // Create a new request with the auth header
+        // Copy headers but strip cache directives so the HTTP cache
+        // can work based on the server's response headers (max-age, ETag)
+        const headers = new Headers(request.headers);
+        headers.delete('cache-control');
+        headers.delete('pragma');
+        headers.set('Authorization', `Bearer ${token}`);
+
         const authRequest = new Request(request.url, {
             method: request.method,
-            headers: {
-                ...Object.fromEntries(request.headers),
-                Authorization: `Bearer ${token}`,
-            },
+            headers,
             credentials: 'omit', // Don't send cookies, we use Bearer token
         });
 

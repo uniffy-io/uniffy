@@ -7,11 +7,17 @@ from uniffy.core.valkey.cache import (
     cache_set,
 )
 from uniffy.core.valkey.config import ValkeyConfig
+from uniffy.core.valkey.presence import (
+    presence_get_bulk,
+    presence_publish_change,
+    presence_set,
+)
 from uniffy.core.valkey.pubsub import (
     close_pubsub,
     init_pubsub,
     publish_notification,
     signal_pubsub_shutdown,
+    subscribe_channels,
     subscribe_user,
 )
 from uniffy.core.valkey.queue import close_queue, get_queue, init_queue
@@ -30,7 +36,11 @@ __all__ = [
     "get_queue",
     "init_pubsub",
     "init_queue",
+    "presence_get_bulk",
+    "presence_publish_change",
+    "presence_set",
     "publish_notification",
     "signal_pubsub_shutdown",
+    "subscribe_channels",
     "subscribe_user",
 ]

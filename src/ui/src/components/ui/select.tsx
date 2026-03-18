@@ -143,6 +143,7 @@ export function Select<T extends string | number = string>({
         const dropdown = (
             <div
                 ref={dropdownRef}
+                data-select-portal=""
                 style={{
                     position: 'fixed',
                     top: position.top,

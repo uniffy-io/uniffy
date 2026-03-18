@@ -3,6 +3,7 @@ import {
     SignOut,
     Moon,
     ShieldCheck,
+    Smiley,
     Sun,
     Desktop,
     UserCircle,
@@ -15,6 +16,8 @@ import { clearTree } from '@/features/notes/store/notesTreeSlice';
 import { clearNotesCache } from '@/features/notes';
 import { clearBookmarks } from '@/features/bookmarks';
 import { clearNotifications } from '@/features/notifications';
+import { clearPresence, useCustomStatus } from '@/features/presence';
+import { CustomStatusPicker } from '@/features/presence/components/CustomStatusPicker';
 import { clearSharing } from '@/features/sharing';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
@@ -35,25 +38,32 @@ export function UserMenu() {
     const { canAccessAdmin } = useAdminAccess();
     const { themeMode, setTheme, availableModes } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
+    const [showStatusPicker, setShowStatusPicker] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const currentCustomStatus = useCustomStatus(user?.id ?? '');
 
     useEffect(() => {
         if (!isOpen) return;
 
         function handleClickOutside(event: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
+            const target = event.target as Node;
+            // Ignore clicks inside the menu
+            if (menuRef.current && menuRef.current.contains(target)) return;
+            // Ignore clicks inside portal-rendered dropdowns (Select, etc.)
+            // that are logically children of this menu
+            const portalEl = (target as Element).closest?.('[data-select-portal]');
+            if (portalEl) return;
+            setIsOpen(false);
         }
 
         // Add listener on next tick to avoid the opening click from triggering close
         const timeoutId = setTimeout(() => {
-            document.addEventListener('click', handleClickOutside, true);
+            document.addEventListener('mousedown', handleClickOutside);
         }, 0);
 
         return () => {
             clearTimeout(timeoutId);
-            document.removeEventListener('click', handleClickOutside, true);
+            document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isOpen]);
 
@@ -74,6 +84,7 @@ export function UserMenu() {
         dispatch(clearTree());
         dispatch(clearBookmarks());
         dispatch(clearNotifications());
+        dispatch(clearPresence());
         dispatch(clearSharing());
         dispatch(clearAdmin());
         dispatch(clearComments());
@@ -176,6 +187,34 @@ export function UserMenu() {
                                 </p>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Custom status */}
+                    <div className="border-b border-border py-1.5 px-1.5">
+                        {showStatusPicker ? (
+                            <CustomStatusPicker
+                                onClose={() => setShowStatusPicker(false)}
+                                className="border-0 shadow-none p-0 w-full"
+                            />
+                        ) : (
+                            <button
+                                onClick={() => setShowStatusPicker(true)}
+                                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+                            >
+                                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                                {currentCustomStatus ? (
+                                    <>
+                                        <span className="shrink-0">{currentCustomStatus.emoji}</span>
+                                        <span className="truncate">{currentCustomStatus.text}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Smiley size={16} weight="duotone" className="text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+                                        <span>Set a status</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
 
                     {/* Quick actions */}

@@ -136,7 +136,7 @@ def _estimate_message_tokens(msg: AgentMessage) -> int:
     if msg.tool_args:
         try:
             chars += len(json.dumps(msg.tool_args))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             chars += 100
     if msg.tool_result:
         chars += len(msg.tool_result)

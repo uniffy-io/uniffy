@@ -218,7 +218,7 @@ export function SubjectPicker({
                                 onClick={() => handleSelect(subject)}
                                 className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors bg-primary/10"
                             >
-                                <SubjectAvatar subject={subject} size="sm" />
+                                <SubjectAvatar subject={subject} size="sm" showPresence />
                                 <div className="flex-1 min-w-0">
                                     <div className="text-foreground truncate">{subject.name}</div>
                                     {subject.type === SUBJECT_TYPE.USER && subject.email && (
@@ -247,7 +247,7 @@ export function SubjectPicker({
                                     isSelected ? 'bg-primary/10' : 'hover:bg-muted'
                                 )}
                             >
-                                <SubjectAvatar subject={subject} size="sm" />
+                                <SubjectAvatar subject={subject} size="sm" showPresence />
                                 <div className="flex-1 min-w-0">
                                     <div className="text-foreground truncate">{subject.name}</div>
                                     {subject.type === SUBJECT_TYPE.USER && subject.email && (

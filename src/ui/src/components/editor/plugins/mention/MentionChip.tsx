@@ -15,23 +15,26 @@
 import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
-import { buildFileUrl, buildMediaStreamUrl } from '@/shared/utils/fileUrls';
+import { buildFileUrl, buildMediaStreamUrl, buildAvatarUrl } from '@/shared/utils/fileUrls';
 import { MentionPreview } from '@/components/editor/plugins/mention/MentionPreview';
 import { useUrnPreview } from '@/components/editor/plugins/mention/useUrnPreview';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
+import { usePresence } from '@/features/presence/hooks/usePresence';
+import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
+import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 import type { Icon } from '@phosphor-icons/react';
 
 /**
  * Small avatar image for user mention chips.
  * Falls back to the type icon on load error.
  */
-function UserAvatar({ userId, className, fallback }: { userId: string; className: string; fallback: React.ReactNode }) {
+function UserAvatar({ src, className, fallback }: { src: string; className: string; fallback: React.ReactNode }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <>{fallback}</>;
   return (
     <img
-      src={`/api/avatars/${userId}/sm`}
+      src={src}
       alt=""
       className={className}
       onError={() => setFailed(true)}
@@ -98,6 +101,9 @@ export function MentionChip({ urn, label, selected = false, onClick, onReplaceWi
   const typeLabel = getUrnTypeLabel(urn);
   const Icon = style.icon;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const isUser = parsed.type === UrnType.USER && !!parsed.id;
+  const presenceStatus = usePresence(isUser ? parsed.id! : '');
+  const avatarSrc = useAvatarUrl(isUser ? parsed.id! : '', 'sm');
 
   // Hover preview state
   const [showPreview, setShowPreview] = useState(false);
@@ -208,10 +214,10 @@ export function MentionChip({ urn, label, selected = false, onClick, onReplaceWi
         title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
       >
         {/* Icon/avatar with gradient background */}
-        {parsed.type === UrnType.USER && parsed.id ? (
-          <span className="flex items-center justify-center shrink-0 w-7 h-7 rounded-full shadow-sm transition-transform duration-200 group-hover:scale-110 overflow-hidden">
+        {isUser ? (
+          <span className="relative flex items-center justify-center shrink-0 w-7 h-7 rounded-full shadow-sm transition-transform duration-200 group-hover:scale-110 overflow-visible">
             <UserAvatar
-              userId={parsed.id}
+              src={avatarSrc}
               className="w-7 h-7 rounded-full object-cover"
               fallback={
                 <span className={`flex items-center justify-center w-7 h-7 rounded-full ${style.iconBg}`}>
@@ -219,6 +225,7 @@ export function MentionChip({ urn, label, selected = false, onClick, onReplaceWi
                 </span>
               }
             />
+            <PresenceIndicator status={presenceStatus} size="sm" />
           </span>
         ) : (
           <span className={`flex items-center justify-center shrink-0 w-7 h-7 rounded-full ${style.iconBg} shadow-sm transition-transform duration-200 group-hover:scale-110`}>
@@ -287,7 +294,7 @@ export function MentionChipBasic({ urn, label, selected = false }: MentionChipBa
       {parsed.type === UrnType.USER && parsed.id ? (
         <span className="flex items-center justify-center shrink-0 w-7 h-7 rounded-full shadow-sm transition-transform duration-200 group-hover:scale-110 overflow-hidden">
           <UserAvatar
-            userId={parsed.id}
+            src={buildAvatarUrl(parsed.id, 'sm')}
             className="w-7 h-7 rounded-full object-cover"
             fallback={
               <span className={`flex items-center justify-center w-7 h-7 rounded-full ${style.iconBg}`}>
@@ -318,6 +325,9 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
   const style = getTypeStyle(parsed.type);
   const typeLabel = getUrnTypeLabel(urn);
   const Icon = style.icon;
+  const isUser = parsed.type === UrnType.USER && !!parsed.id;
+  const presenceStatus = usePresence(isUser ? parsed.id! : '');
+  const avatarSrc = useAvatarUrl(isUser ? parsed.id! : '', 'sm');
 
   // Hover preview state
   const [showPreview, setShowPreview] = useState(false);
@@ -389,10 +399,10 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
         onMouseLeave={handleMouseLeave}
         title={`Open ${typeLabel}: ${label}`}
       >
-        {parsed.type === UrnType.USER && parsed.id ? (
-          <span className="flex items-center justify-center shrink-0 w-4 h-4 rounded-full overflow-hidden">
+        {isUser ? (
+          <span className="relative flex items-center justify-center shrink-0 w-4 h-4 rounded-full overflow-visible">
             <UserAvatar
-              userId={parsed.id}
+              src={avatarSrc}
               className="w-4 h-4 rounded-full object-cover"
               fallback={
                 <span className={`flex items-center justify-center w-4 h-4 rounded ${style.iconBg}`}>
@@ -400,6 +410,7 @@ export function MentionChipCompact({ urn, label, selected = false, onClick }: Me
                 </span>
               }
             />
+            <PresenceIndicator status={presenceStatus} size="sm" />
           </span>
         ) : (
           <span className={`flex items-center justify-center shrink-0 w-4 h-4 rounded ${style.iconBg}`}>

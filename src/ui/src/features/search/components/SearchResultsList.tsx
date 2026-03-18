@@ -16,14 +16,16 @@ import { type UrnTypeTheme } from '@/config/theme/urnColors';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
+import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 
 /** Avatar with error fallback for user search results */
 function UserSearchAvatar({ userId, fallback }: { userId: string; fallback: React.ReactNode }) {
   const [failed, setFailed] = useState(false);
+  const avatarSrc = useAvatarUrl(userId, 'sm');
   if (failed) return <>{fallback}</>;
   return (
     <img
-      src={`/api/avatars/${userId}/sm`}
+      src={avatarSrc}
       alt=""
       className="w-8 h-8 rounded-full shrink-0 object-cover"
       onError={() => setFailed(true)}

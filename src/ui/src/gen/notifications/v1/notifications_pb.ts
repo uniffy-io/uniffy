@@ -991,6 +991,13 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
    */
   fileUpdate?: FileUpdatePayload;
 
+  /**
+   * Presence change payload (present for PRESENCE_CHANGED events)
+   *
+   * @generated from field: notifications.v1.PresenceChangedPayload presence_changed = 5;
+   */
+  presenceChanged?: PresenceChangedPayload;
+
   constructor(data?: PartialMessage<StreamNotificationEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1003,6 +1010,7 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
     { no: 2, name: "notification", kind: "message", T: Notification },
     { no: 3, name: "timestamp", kind: "message", T: Timestamp },
     { no: 4, name: "file_update", kind: "message", T: FileUpdatePayload },
+    { no: 5, name: "presence_changed", kind: "message", T: PresenceChangedPayload },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamNotificationEvent {
@@ -1053,6 +1061,13 @@ export enum StreamNotificationEvent_EventType {
    * @generated from enum value: EVENT_TYPE_FILE_UPDATED = 3;
    */
   FILE_UPDATED = 3,
+
+  /**
+   * Presence state changed for a user
+   *
+   * @generated from enum value: EVENT_TYPE_PRESENCE_CHANGED = 4;
+   */
+  PRESENCE_CHANGED = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(StreamNotificationEvent_EventType)
 proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.StreamNotificationEvent.EventType", [
@@ -1060,7 +1075,89 @@ proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.Str
   { no: 1, name: "EVENT_TYPE_NEW_NOTIFICATION" },
   { no: 2, name: "EVENT_TYPE_HEARTBEAT" },
   { no: 3, name: "EVENT_TYPE_FILE_UPDATED" },
+  { no: 4, name: "EVENT_TYPE_PRESENCE_CHANGED" },
 ]);
+
+/**
+ * Payload for presence change events
+ *
+ * @generated from message notifications.v1.PresenceChangedPayload
+ */
+export class PresenceChangedPayload extends Message<PresenceChangedPayload> {
+  /**
+   * User whose presence changed
+   *
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  /**
+   * New status: "online", "away", "dnd", "offline"
+   *
+   * @generated from field: string status = 2;
+   */
+  status = "";
+
+  /**
+   * When the user was last active
+   *
+   * @generated from field: google.protobuf.Timestamp last_active = 3;
+   */
+  lastActive?: Timestamp;
+
+  /**
+   * Custom status emoji (empty if not set)
+   *
+   * @generated from field: string status_emoji = 4;
+   */
+  statusEmoji = "";
+
+  /**
+   * Custom status text (empty if not set)
+   *
+   * @generated from field: string status_text = 5;
+   */
+  statusText = "";
+
+  /**
+   * When the custom status expires (unset if no expiry)
+   *
+   * @generated from field: google.protobuf.Timestamp status_expires_at = 6;
+   */
+  statusExpiresAt?: Timestamp;
+
+  constructor(data?: PartialMessage<PresenceChangedPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.PresenceChangedPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "last_active", kind: "message", T: Timestamp },
+    { no: 4, name: "status_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "status_text", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "status_expires_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PresenceChangedPayload {
+    return new PresenceChangedPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PresenceChangedPayload {
+    return new PresenceChangedPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PresenceChangedPayload {
+    return new PresenceChangedPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PresenceChangedPayload | PlainMessage<PresenceChangedPayload> | undefined, b: PresenceChangedPayload | PlainMessage<PresenceChangedPayload> | undefined): boolean {
+    return proto3.util.equals(PresenceChangedPayload, a, b);
+  }
+}
 
 /**
  * Request to get VAPID public key

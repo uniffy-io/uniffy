@@ -26,6 +26,7 @@ export {
 } from '@/components/subject/utils';
 
 // Components
+export { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 export { SubjectAvatar, SubjectAvatarById } from '@/components/subject/SubjectAvatar';
 export { SubjectAvatarStack } from '@/components/subject/SubjectAvatarStack';
 export { SubjectChip } from '@/components/subject/SubjectChip';
