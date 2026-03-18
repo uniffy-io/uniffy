@@ -1,6 +1,5 @@
 """Tests for agent content policy / prompt injection detection."""
 
-
 from uniffy.domains.agents.content_policy import (
     check_admin_content,
     check_user_message,

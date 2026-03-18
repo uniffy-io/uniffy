@@ -172,7 +172,8 @@ def _parse_uuid_list(values: list, field_name: str) -> tuple[list[str] | None, s
 
 
 def _apply_task_type(
-    args: dict, kwargs: dict,
+    args: dict,
+    kwargs: dict,
 ) -> tuple[dict, str | None]:
     """Validate and apply task_type if present."""
     if "task_type" not in args:
@@ -180,16 +181,16 @@ def _apply_task_type(
     task_type = args["task_type"]
     valid = ("task", "bug", "feature", "story", "epic")
     if task_type not in valid:
-        return kwargs, (
-            f"Invalid task_type: {task_type}. "
-            f"Must be one of: {', '.join(valid)}"
-        )
+        return kwargs, (f"Invalid task_type: {task_type}. Must be one of: {', '.join(valid)}")
     kwargs["task_type"] = task_type
     return kwargs, None
 
 
 def _apply_assignee_ids(
-    args: dict, kwargs: dict, *, allow_clear: bool = False,
+    args: dict,
+    kwargs: dict,
+    *,
+    allow_clear: bool = False,
 ) -> tuple[dict, str | None]:
     """Parse assignee_ids or assignee_id from args."""
     if "assignee_ids" in args:
@@ -215,7 +216,10 @@ def _apply_assignee_ids(
 
 
 def _apply_blocked_by(
-    args: dict, kwargs: dict, *, allow_clear: bool = False,
+    args: dict,
+    kwargs: dict,
+    *,
+    allow_clear: bool = False,
 ) -> tuple[dict, str | None]:
     """Parse blocked_by_task_ids from args."""
     if "blocked_by_task_ids" not in args:
@@ -238,11 +242,7 @@ def _format_task_result(prefix: str, task) -> str:
     """Format a task result string with metadata."""
     urn = f"urn:uniffy:content:TASK:{task.id}"
     parts = [f"{prefix}: [[[{task.title}|{urn}]]]"]
-    parts.append(
-        f"Type: {task.task_type} | "
-        f"Status: {task.status} | "
-        f"Priority: {task.priority}"
-    )
+    parts.append(f"Type: {task.task_type} | Status: {task.status} | Priority: {task.priority}")
     if task.assignee_ids:
         parts.append(f"Assignees: {', '.join(task.assignee_ids)}")
     if task.parent_id:
@@ -274,8 +274,12 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
     kwargs: dict = {}
 
     _TASK_STRING_FIELDS = (
-        "description", "status", "priority",
-        "due_date", "start_date", "recurrence_rule",
+        "description",
+        "status",
+        "priority",
+        "due_date",
+        "start_date",
+        "recurrence_rule",
     )
     for field in _TASK_STRING_FIELDS:
         if field in args:
@@ -346,8 +350,13 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
 
     # Simple string fields
     _UPDATE_STRING_FIELDS = (
-        "title", "description", "status", "priority",
-        "due_date", "start_date", "recurrence_rule",
+        "title",
+        "description",
+        "status",
+        "priority",
+        "due_date",
+        "start_date",
+        "recurrence_rule",
     )
     for field in _UPDATE_STRING_FIELDS:
         if field in args:
@@ -373,7 +382,8 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
             kwargs["parent_id"] = None
         else:
             parent_id, err = _parse_uuid(
-                args["parent_id"], "parent_id",
+                args["parent_id"],
+                "parent_id",
             )
             if err:
                 return ToolResult(success=False, data="", error=err)
@@ -390,7 +400,8 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
             kwargs["sprint_id"] = None
         else:
             sprint_id, err = _parse_uuid(
-                args["sprint_id"], "sprint_id",
+                args["sprint_id"],
+                "sprint_id",
             )
             if err:
                 return ToolResult(success=False, data="", error=err)
@@ -398,7 +409,8 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
 
     if not kwargs:
         return ToolResult(
-            success=False, data="",
+            success=False,
+            data="",
             error="At least one field to update is required",
         )
 
@@ -561,16 +573,12 @@ create_project = ToolDefinition(
             "visibility": {
                 "type": "string",
                 "enum": ["PRIVATE", "GROUP", "ORGANIZATION"],
-                "description": (
-                    "PRIVATE (owner only), GROUP (shared), "
-                    "ORGANIZATION (all members)."
-                ),
+                "description": ("PRIVATE (owner only), GROUP (shared), ORGANIZATION (all members)."),
             },
             "slug": {
                 "type": "string",
                 "description": (
-                    "Uppercase slug (2-5 chars, e.g. 'PROJ'). "
-                    "Auto-generated if omitted."
+                    "Uppercase slug (2-5 chars, e.g. 'PROJ'). Auto-generated if omitted."
                 ),
             },
         },
@@ -581,10 +589,7 @@ create_project = ToolDefinition(
 
 update_project = ToolDefinition(
     name="projects.update_project",
-    description=(
-        "Update a project's name, description, "
-        "icon, color, or visibility."
-    ),
+    description=("Update a project's name, description, icon, color, or visibility."),
     parameter_schema={
         "type": "object",
         "properties": {
@@ -629,8 +634,7 @@ list_projects = ToolDefinition(
 create_task = ToolDefinition(
     name="tasks.create_task",
     description=(
-        "Create a task with subtasks, dependencies, "
-        "multiple assignees, sprints, and task types."
+        "Create a task with subtasks, dependencies, multiple assignees, sprints, and task types."
     ),
     parameter_schema={
         "type": "object",
@@ -708,8 +712,7 @@ update_task = ToolDefinition(
             "status": {
                 "type": "string",
                 "description": (
-                    "e.g. 'status_todo', 'status_in_progress', "
-                    "'status_in_review', 'status_done'."
+                    "e.g. 'status_todo', 'status_in_progress', 'status_in_review', 'status_done'."
                 ),
             },
             "priority": {

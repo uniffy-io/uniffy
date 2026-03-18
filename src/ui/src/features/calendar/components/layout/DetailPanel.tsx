@@ -34,6 +34,7 @@ import { closeDetailPanel, openEditEvent } from '@/features/calendar/store';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { deleteEvent, updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 import { useCalendarEvents } from '@/features/calendar/hooks';
 import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
@@ -514,19 +515,12 @@ export function DetailPanel() {
               Are you sure you want to delete "{selectedEvent.title}"? This action cannot be undone.
             </p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 text-foreground border border-border rounded-md hover:bg-muted transition-colors"
-              >
+              <Button variant="outline" size="md" className="flex-1" onClick={() => setShowDeleteConfirm(false)}>
                 Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors font-medium"
-                style={{ backgroundColor: 'var(--status-error)' }}
-              >
+              </Button>
+              <Button variant="destructive" size="md" className="flex-1" onClick={handleDelete}>
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
         </>

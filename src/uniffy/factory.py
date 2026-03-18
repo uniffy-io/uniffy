@@ -43,6 +43,7 @@ from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
 from uniffy.domains.permissions.service import PermissionsServiceImpl
+from uniffy.domains.presence.service import PresenceServiceImpl
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
@@ -67,6 +68,7 @@ from uniffy.gen.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy.gen.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
 from uniffy.gen.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
 from uniffy.gen.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
+from uniffy.gen.presence.v1.presence_connect import PresenceServiceASGIApplication
 from uniffy.gen.projects.v1.projects_connect import ProjectsServiceASGIApplication
 from uniffy.gen.search.v1.search_connect import SearchServiceASGIApplication
 from uniffy.gen.settings.v1.settings_connect import SettingsServiceASGIApplication
@@ -314,6 +316,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         PermissionsServiceASGIApplication(
             PermissionsServiceImpl(), interceptors=[logging_interceptor]
         ),
+    )
+    dispatcher.add_service(
+        "/presence.v1.PresenceService",
+        PresenceServiceASGIApplication(PresenceServiceImpl(), interceptors=[logging_interceptor]),
     )
     dispatcher.add_service(
         "/users.v1.UsersService",

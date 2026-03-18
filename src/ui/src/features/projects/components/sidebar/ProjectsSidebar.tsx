@@ -23,6 +23,7 @@ import { openCreateProjectModal, openEditProjectModal, selectProjectScope, toggl
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { ProjectScopeFilter } from "@/features/projects/components/sidebar/ProjectScopeFilter";
 import { Progress } from "@/components/ui/progress";
+import { ProjectsListSkeleton } from "@/features/projects/components/layout/ProjectsListSkeleton";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import type { Project } from "@/features/projects/types";
 
@@ -31,6 +32,7 @@ export function ProjectsSidebar() {
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const projects = useAppSelector(selectProjects);
+  const projectsLoading = useAppSelector((state) => state.projects.loading.projects);
   const currentProjectId = useAppSelector(selectCurrentProjectId);
   const projectCompletion = useAppSelector(selectProjectCompletion);
   const projectScope = useAppSelector(selectProjectScope);
@@ -114,7 +116,9 @@ export function ProjectsSidebar() {
       {/* Project List */}
       <ScrollArea className="flex-1">
         <div className="px-2 pt-1 pb-2 space-y-0.5">
-          {filteredProjects.length === 0 ? (
+          {projectsLoading && projects.length === 0 ? (
+            <ProjectsListSkeleton />
+          ) : filteredProjects.length === 0 ? (
             <div className="px-2 py-8 text-center text-xs text-muted-foreground">
               {projects.length === 0 ? (
                 <>

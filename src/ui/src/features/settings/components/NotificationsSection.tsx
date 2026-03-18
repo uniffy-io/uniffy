@@ -3,6 +3,7 @@
  */
 
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 import { useSettings, useNotificationSettings } from '@/features/settings/hooks/useSettings';
 import { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
 import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
@@ -297,14 +298,14 @@ export function NotificationsSection() {
                     })}
                 </div>
 
-                <button
-                    type="button"
+                <Button
+                    variant="ghost"
+                    size="xs"
                     disabled={saving}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                     onClick={handleResetChannels}
                 >
                     Reset to defaults
-                </button>
+                </Button>
             </section>
 
             {/* Default Reminders */}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { useAppSelector } from '@/app/hooks';
 import { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
@@ -8,11 +8,8 @@ import { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewe
 import { CanvasEditor } from '@/features/notes/canvas/CanvasEditor';
 import { parseCanvasContent, serializeCanvas } from '@/features/notes/canvas/types';
 import type { CanvasState } from '@/features/notes/canvas/types';
-import { toggleSidebar } from '@/features/notes/store/editorSlice';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
-import { CaretDoubleRight } from '@phosphor-icons/react';
 import { useMyPermission } from '@/features/sharing';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { NodeType } from '@/gen/notes/v1/notes_pb';
 
@@ -46,7 +43,6 @@ function findHeadingBySlug(slug: string): Element | null {
 }
 
 export function NotesEditor() {
-  const dispatch = useAppDispatch();
   const location = useLocation();
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
@@ -58,8 +54,6 @@ export function NotesEditor() {
   const loadingNoteId = notesState?.loadingNoteId;
   const settings = editorState?.settings;
   const userSelectedMode = settings?.editorMode || 'crepe';
-  const isSidebarOpen = editorState?.isSidebarOpen ?? true;
-  const { isMobile } = useBreakpoint();
 
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
@@ -212,17 +206,6 @@ export function NotesEditor() {
   if (shouldShowLoading) {
     return (
       <div className="flex flex-col h-full bg-card">
-        {!isSidebarOpen && !isMobile && (
-          <div className="flex items-center px-4 py-2 border-b border-border">
-            <button
-              onClick={() => dispatch(toggleSidebar())}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-              title="Show sidebar (⌘\\)"
-            >
-              <CaretDoubleRight size={16} weight="bold" />
-            </button>
-          </div>
-        )}
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
           <p className="text-sm">Loading note...</p>
@@ -235,19 +218,6 @@ export function NotesEditor() {
   if (!currentNote) {
     return (
       <div className="flex flex-col h-full bg-card">
-        {/* Header with sidebar toggle when sidebar is hidden (not on mobile - sidebar is a drawer there) */}
-        {!isSidebarOpen && !isMobile && (
-          <div className="flex items-center px-4 py-2 border-b border-border">
-            <button
-              onClick={() => dispatch(toggleSidebar())}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-              title="Show sidebar (⌘\\)"
-            >
-              <CaretDoubleRight size={16} weight="bold" />
-            </button>
-          </div>
-        )}
-
         {/* Empty state */}
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <h3 className="text-xl font-semibold mb-2">No note selected</h3>

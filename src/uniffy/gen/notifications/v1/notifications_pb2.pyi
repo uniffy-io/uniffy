@@ -182,26 +182,46 @@ class FileUpdatePayload(_message.Message):
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class StreamNotificationEvent(_message.Message):
-    __slots__ = ("event_type", "notification", "timestamp", "file_update")
+    __slots__ = ("event_type", "notification", "timestamp", "file_update", "presence_changed")
     class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         EVENT_TYPE_UNSPECIFIED: _ClassVar[StreamNotificationEvent.EventType]
         EVENT_TYPE_NEW_NOTIFICATION: _ClassVar[StreamNotificationEvent.EventType]
         EVENT_TYPE_HEARTBEAT: _ClassVar[StreamNotificationEvent.EventType]
         EVENT_TYPE_FILE_UPDATED: _ClassVar[StreamNotificationEvent.EventType]
+        EVENT_TYPE_PRESENCE_CHANGED: _ClassVar[StreamNotificationEvent.EventType]
     EVENT_TYPE_UNSPECIFIED: StreamNotificationEvent.EventType
     EVENT_TYPE_NEW_NOTIFICATION: StreamNotificationEvent.EventType
     EVENT_TYPE_HEARTBEAT: StreamNotificationEvent.EventType
     EVENT_TYPE_FILE_UPDATED: StreamNotificationEvent.EventType
+    EVENT_TYPE_PRESENCE_CHANGED: StreamNotificationEvent.EventType
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     FILE_UPDATE_FIELD_NUMBER: _ClassVar[int]
+    PRESENCE_CHANGED_FIELD_NUMBER: _ClassVar[int]
     event_type: StreamNotificationEvent.EventType
     notification: Notification
     timestamp: _timestamp_pb2.Timestamp
     file_update: FileUpdatePayload
-    def __init__(self, event_type: _Optional[_Union[StreamNotificationEvent.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ...) -> None: ...
+    presence_changed: PresenceChangedPayload
+    def __init__(self, event_type: _Optional[_Union[StreamNotificationEvent.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ..., presence_changed: _Optional[_Union[PresenceChangedPayload, _Mapping]] = ...) -> None: ...
+
+class PresenceChangedPayload(_message.Message):
+    __slots__ = ("user_id", "status", "last_active", "status_emoji", "status_text", "status_expires_at")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    LAST_ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    STATUS_EMOJI_FIELD_NUMBER: _ClassVar[int]
+    STATUS_TEXT_FIELD_NUMBER: _ClassVar[int]
+    STATUS_EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    status: str
+    last_active: _timestamp_pb2.Timestamp
+    status_emoji: str
+    status_text: str
+    status_expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, user_id: _Optional[str] = ..., status: _Optional[str] = ..., last_active: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., status_emoji: _Optional[str] = ..., status_text: _Optional[str] = ..., status_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class GetVapidPublicKeyRequest(_message.Message):
     __slots__ = ()

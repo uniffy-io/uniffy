@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package presence.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// PresenceService provides real-time user presence and custom status management
+service PresenceService {
+  // Set the current user's presence status (heartbeat)
+  rpc SetPresence(SetPresenceRequest) returns (SetPresenceResponse) {}
+  // Bulk fetch presence for a list of users
+  rpc GetBulkPresence(GetBulkPresenceRequest) returns (GetBulkPresenceResponse) {}
+  // Set custom status (emoji + text + optional expiry)
+  rpc SetCustomStatus(SetCustomStatusRequest) returns (SetCustomStatusResponse) {}
+  // Clear custom status
+  rpc ClearCustomStatus(ClearCustomStatusRequest) returns (ClearCustomStatusResponse) {}
+}
+
+// Presence availability state
+enum PresenceStatus {
+  PRESENCE_STATUS_UNSPECIFIED = 0;
+  PRESENCE_STATUS_ONLINE = 1;
+  PRESENCE_STATUS_AWAY = 2;
+  PRESENCE_STATUS_DND = 3;
+  PRESENCE_STATUS_OFFLINE = 4;
+}
+
+// Request to set presence state (also serves as heartbeat)
+message SetPresenceRequest {
+  // Organization context
+  string organization_id = 1;
+  // Desired presence status
+  PresenceStatus status = 2;
+  // Client type: "web", "mobile", "desktop"
+  string client = 3;
+}
+
+// Response for SetPresence (empty)
+message SetPresenceResponse {}
+
+// Request to get presence for multiple users
+message GetBulkPresenceRequest {
+  // Organization context
+  string organization_id = 1;
+  // User IDs to query (max 200 per request)
+  repeated string user_ids = 2;
+}
+
+// Response with presence data for requested users
+message GetBulkPresenceResponse {
+  // Map of user_id to their presence state
+  map<string, UserPresence> presences = 1;
+}
+
+// Presence state for a single user
+message UserPresence {
+  // Availability status
+  PresenceStatus status = 1;
+  // When the user was last active
+  google.protobuf.Timestamp last_active = 2;
+  // Custom status emoji (empty if not set)
+  string status_emoji = 3;
+  // Custom status text (empty if not set)
+  string status_text = 4;
+  // When the custom status expires (unset if no expiry)
+  google.protobuf.Timestamp status_expires_at = 5;
+}
+
+// Request to set a custom status
+message SetCustomStatusRequest {
+  // Emoji unicode character or shortcode
+  string emoji = 1;
+  // Status text (e.g. "In a meeting")
+  string text = 2;
+  // Optional expiry time for auto-clear
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+// Response with updated presence after setting custom status
+message SetCustomStatusResponse {
+  // Updated presence including the new custom status
+  UserPresence presence = 1;
+}
+
+// Request to clear custom status
+message ClearCustomStatusRequest {}
+
+// Response for ClearCustomStatus (empty)
+message ClearCustomStatusResponse {}

@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.models.login.user import User
-from uniffy.core.valkey import subscribe_user
+from uniffy.core.valkey import subscribe_channels
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.notifications.converters import (
@@ -42,6 +42,7 @@ from uniffy.gen.notifications.v1.notifications_pb2 import (
     MarkAllAsReadResponse,
     MarkAsReadRequest,
     MarkAsReadResponse,
+    PresenceChangedPayload,
     RegisterPushSubscriptionRequest,
     RegisterPushSubscriptionResponse,
     StreamNotificationEvent,
@@ -477,7 +478,12 @@ class NotificationsHandlers:
         disconnect = get_disconnect_event()
 
         try:
-            async with aclosing(subscribe_user(user_id)) as subscriber:
+            async with aclosing(
+                subscribe_channels(
+                    f"notifications:{user_id}",
+                    f"presence:{request.organization_id}",
+                )
+            ) as subscriber:
                 last_send = time.monotonic()
 
                 async for payload in subscriber:
@@ -511,6 +517,30 @@ class NotificationsHandlers:
                                 file_id=payload.get("file_id", ""),
                                 organization_id=payload.get("organization_id", ""),
                             ),
+                        )
+                        last_send = now
+                        continue
+
+                    # Presence state changed (from presence:{org_id} channel)
+                    if payload.get("_type") == "presence_changed":
+                        ts = Timestamp()
+                        ts.FromDatetime(datetime.fromisoformat(payload["last_active"]))
+                        presence_payload = PresenceChangedPayload(
+                            user_id=payload.get("user_id", ""),
+                            status=payload.get("status", ""),
+                            last_active=ts,
+                        )
+                        custom = payload.get("custom_status")
+                        if custom:
+                            presence_payload.status_emoji = custom.get("emoji", "")
+                            presence_payload.status_text = custom.get("text", "")
+                            if custom.get("expires_at"):
+                                exp_ts = Timestamp()
+                                exp_ts.FromDatetime(datetime.fromisoformat(custom["expires_at"]))
+                                presence_payload.status_expires_at.CopyFrom(exp_ts)
+                        yield StreamNotificationEvent(
+                            event_type=StreamNotificationEvent.EVENT_TYPE_PRESENCE_CHANGED,
+                            presence_changed=presence_payload,
                         )
                         last_send = now
                         continue

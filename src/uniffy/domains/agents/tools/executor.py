@@ -50,10 +50,7 @@ def _sanitize_error_message(tool_name: str, exc: Exception) -> str:
                 tool=tool_name,
                 original_error=raw,
             )
-            return (
-                f"Internal error executing {tool_name}. "
-                f"The operation could not be completed."
-            )
+            return f"Internal error executing {tool_name}. The operation could not be completed."
     return f"Internal error executing {tool_name}: {raw}"
 
 
@@ -74,8 +71,7 @@ def _truncate_result(data: str) -> str:
     if len(data) <= MAX_TOOL_RESULT_CHARS:
         return data
     return (
-        data[:MAX_TOOL_RESULT_CHARS]
-        + f"\n\n[Truncated: showing {MAX_TOOL_RESULT_CHARS:,} "
+        data[:MAX_TOOL_RESULT_CHARS] + f"\n\n[Truncated: showing {MAX_TOOL_RESULT_CHARS:,} "
         f"of {len(data):,} characters]"
     )
 

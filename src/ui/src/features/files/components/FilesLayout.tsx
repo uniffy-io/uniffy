@@ -2,6 +2,8 @@
  * Files Layout Component
  *
  * Responsive three-panel layout with resizable sidebar and main content area.
+ * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
+ *
  * Mobile: sidebar and detail panel as drawers, content full width.
  * Tablet: sidebar inline (narrower), detail panel as drawer.
  * Desktop: all panels inline and resizable.
@@ -9,12 +11,28 @@
 
 import { type ReactNode, useState, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import { CaretDoubleRight } from '@phosphor-icons/react';
+import {
+    SquaresFour,
+    BookmarkSimple,
+    LockSimple,
+    Buildings,
+} from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Drawer } from '@/components/ui/drawer';
+import {
+    CollapsibleSidebarRail,
+    type SidebarSection,
+} from '@/components/layout/CollapsibleSidebarRail';
+
+const FILES_SECTIONS: SidebarSection[] = [
+    { id: 'all', icon: SquaresFour, label: 'All Files' },
+    { id: 'bookmarked', icon: BookmarkSimple, label: 'Bookmarks' },
+    { id: 'personal', icon: LockSimple, label: 'Personal' },
+    { id: 'organization', icon: Buildings, label: 'Organization' },
+];
 
 interface FilesLayoutProps {
     sidebar: ReactNode;
@@ -50,33 +68,33 @@ export function FilesLayout({
     // On desktop: all panels inline and resizable
     const sidebarAsDrawer = isMobile;
     const detailAsDrawer = isMobileOrTablet;
+    const showCollapsedRail = !isZenMode && !showSidebar && onToggleSidebar && !sidebarAsDrawer;
 
     return (
         <div
             className={cn(
-                "bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
+                "relative bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
                 isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-4rem)] delay-0"
             )}
         >
+            {/* Collapsed sidebar rail */}
+            {showCollapsedRail && (
+                <div className="absolute inset-y-0 left-0 z-30 w-12">
+                    <CollapsibleSidebarRail
+                        onExpand={onToggleSidebar}
+                        sections={FILES_SECTIONS}
+                    >
+                        {sidebar}
+                    </CollapsibleSidebarRail>
+                </div>
+            )}
+
             <Group
                 orientation="horizontal"
                 className="h-full w-full flex"
                 defaultLayout={defaultLayout}
                 onLayoutChange={handleLayoutChange}
             >
-                {/* Collapsed sidebar toggle (shown when sidebar is hidden, not on mobile) */}
-                {!showSidebar && onToggleSidebar && !isMobile && (
-                    <div className="flex flex-col items-center py-3 px-1 bg-card border-r border-border">
-                        <button
-                            onClick={onToggleSidebar}
-                            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-                            title="Show sidebar"
-                        >
-                            <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-                        </button>
-                    </div>
-                )}
-
                 {/* Left Sidebar - inline on tablet+, drawer on mobile */}
                 {showSidebar && !sidebarAsDrawer && (
                     <>
@@ -96,7 +114,7 @@ export function FilesLayout({
 
                 {/* Main Content Area */}
                 <Panel id="files-content" minSize={isMobileOrTablet ? 200 : 400}>
-                    <div className="h-full overflow-hidden bg-card">
+                    <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
                         {content}
                     </div>
                 </Panel>
@@ -122,7 +140,7 @@ export function FilesLayout({
             {sidebarAsDrawer && (
                 <Drawer
                     open={showSidebar}
-                    onClose={onCloseSidebar ?? (() => {})}
+                    onClose={onCloseSidebar ?? (() => { })}
                     side="left"
                     className="w-72"
                     ariaLabel="Files sidebar"
@@ -135,7 +153,7 @@ export function FilesLayout({
             {detailAsDrawer && (
                 <Drawer
                     open={showDetailPanel && !!detailPanel}
-                    onClose={onCloseDetailPanel ?? (() => {})}
+                    onClose={onCloseDetailPanel ?? (() => { })}
                     side="right"
                     className="w-80"
                     showClose={false}

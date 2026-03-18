@@ -60,28 +60,11 @@ export function ConfirmDialog({
 
     if (!isOpen) return null;
 
-    const variantStyles = {
-        danger: {
-            icon: { backgroundColor: 'color-mix(in srgb, var(--status-error) 10%, transparent)', color: 'var(--status-error)' },
-            buttonStyle: { backgroundColor: 'var(--status-error)', color: '#fff' },
-            buttonHoverClass: 'hover:opacity-90',
-            ringColor: 'var(--status-error)',
-        },
-        warning: {
-            icon: { backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)', color: 'var(--status-warning)' },
-            buttonStyle: { backgroundColor: 'var(--status-warning)', color: '#fff' },
-            buttonHoverClass: 'hover:opacity-90',
-            ringColor: 'var(--status-warning)',
-        },
-        default: {
-            icon: {},
-            buttonStyle: {},
-            buttonHoverClass: '',
-            ringColor: '',
-        },
+    const iconStyles = {
+        danger: { backgroundColor: 'color-mix(in srgb, var(--status-error) 10%, transparent)', color: 'var(--status-error)' },
+        warning: { backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)', color: 'var(--status-warning)' },
+        default: {},
     };
-
-    const styles = variantStyles[variant];
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -95,7 +78,7 @@ export function ConfirmDialog({
             <div className="relative bg-card w-full max-w-md mx-4 rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 fade-in duration-200">
                 {/* Header */}
                 <div className="flex items-start gap-4 p-6 pb-4">
-                    <div className={cn('p-3 rounded-full', variant === 'default' && 'bg-primary/10 text-primary')} style={styles.icon}>
+                    <div className={cn('p-3 rounded-full', variant === 'default' && 'bg-primary/10 text-primary')} style={iconStyles[variant]}>
                         <Warning size={24} weight="duotone" />
                     </div>
                     <div className="flex-1 pt-1">
@@ -123,32 +106,17 @@ export function ConfirmDialog({
                     >
                         {cancelLabel}
                     </Button>
-                    <button
+                    <Button
                         ref={confirmButtonRef}
                         type="button"
+                        variant={variant === 'danger' ? 'destructive' : variant === 'warning' ? 'warning' : 'default'}
+                        size="md"
                         onClick={onConfirm}
+                        loading={loading}
                         disabled={loading}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                            'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
-                            'disabled:opacity-50 disabled:cursor-not-allowed',
-                            styles.buttonHoverClass,
-                            variant === 'default' && 'bg-primary hover:bg-primary/90 text-primary-foreground focus:ring-primary'
-                        )}
-                        style={{
-                            ...styles.buttonStyle,
-                            ...(styles.ringColor ? { '--tw-ring-color': styles.ringColor } as React.CSSProperties : {}),
-                        }}
                     >
-                        {loading ? (
-                            <span className="flex items-center gap-2">
-                                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                Processing...
-                            </span>
-                        ) : (
-                            confirmLabel
-                        )}
-                    </button>
+                        {loading ? 'Processing...' : confirmLabel}
+                    </Button>
                 </div>
             </div>
         </div>

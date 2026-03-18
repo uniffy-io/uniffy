@@ -12,6 +12,7 @@ import { useState, useCallback } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X, FloppyDisk, File, Files, Warning } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 
 export type SaveMode = 'new' | 'version';
 export type ImageFormat = 'image/png' | 'image/jpeg';
@@ -217,30 +218,18 @@ export function SaveDialog({
 
                     {/* Footer */}
                     <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
-                        <button
-                            onClick={onClose}
-                            disabled={isSaving}
-                            className={cn(
-                                'px-4 py-2 text-sm font-medium rounded-md',
-                                'bg-muted text-muted-foreground hover:bg-muted/80',
-                                'transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-                            )}
-                        >
+                        <Button variant="secondary" size="md" onClick={onClose} disabled={isSaving}>
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            size="md"
                             onClick={handleSave}
+                            loading={isSaving}
                             disabled={isSaving || (saveMode === 'new' && !filename.trim())}
-                            className={cn(
-                                'px-4 py-2 text-sm font-medium rounded-md',
-                                'bg-primary text-primary-foreground hover:bg-primary/90',
-                                'transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
-                                'flex items-center gap-2'
-                            )}
                         >
                             <FloppyDisk size={16} />
                             {isSaving ? 'Saving...' : 'Save'}
-                        </button>
+                        </Button>
                     </div>
                 </DialogPanel>
             </div>

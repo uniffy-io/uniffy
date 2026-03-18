@@ -10,6 +10,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Camera, Trash, SpinnerGap } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { Button } from "@/components/ui/button";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -148,35 +149,24 @@ export function AvatarUpload({
                 {/* Controls */}
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
+                        <Button
+                            size="sm"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isProcessing}
-                            className={cn(
-                                "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md",
-                                "bg-primary text-primary-foreground",
-                                "hover:bg-primary/90 transition-colors",
-                                "disabled:opacity-50 disabled:cursor-not-allowed",
-                            )}
                         >
                             <Camera size={14} weight="bold" />
                             {hasImage ? "Change" : "Upload"}
-                        </button>
+                        </Button>
                         {hasImage && onDelete && (
-                            <button
-                                type="button"
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={handleDelete}
                                 disabled={isProcessing}
-                                className={cn(
-                                    "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md",
-                                    "border border-border text-muted-foreground",
-                                    "hover:text-foreground transition-colors",
-                                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                                )}
                             >
                                 <Trash size={14} weight="bold" />
                                 Remove
-                            </button>
+                            </Button>
                         )}
                     </div>
                     <p className="text-xs text-muted-foreground">

@@ -45,7 +45,7 @@ def _parse_datetime(value: str, user_timezone: str | None = None) -> datetime | 
     # Interpret as user's local time, then convert to UTC
     try:
         local_tz = ZoneInfo(user_timezone)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         # Invalid timezone name, fall back to UTC
         return dt.replace(tzinfo=UTC)
 
@@ -140,10 +140,7 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(
             success=False,
             data="",
-            error=(
-                "Invalid date format. Use ISO 8601 "
-                "(e.g. 2026-02-22T10:00:00Z or 2026-02-22)."
-            ),
+            error=("Invalid date format. Use ISO 8601 (e.g. 2026-02-22T10:00:00Z or 2026-02-22)."),
         )
 
     # Optional filters
@@ -254,13 +251,16 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     if is_all_day:
         if not start_str:
             return ToolResult(
-                success=False, data="", error="start_time (date) is required",
+                success=False,
+                data="",
+                error="start_time (date) is required",
             )
         # Parse without timezone - all-day means the calendar date, not a point in time
         start_time = _parse_datetime(start_str, None)
         if start_time is None:
             return ToolResult(
-                success=False, data="",
+                success=False,
+                data="",
                 error="Invalid date format. Use ISO 8601 (e.g. 2026-03-20).",
             )
         # Normalize to midnight UTC - the date itself is what matters
@@ -276,14 +276,16 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     else:
         if not start_str or not end_str:
             return ToolResult(
-                success=False, data="",
+                success=False,
+                data="",
                 error="start_time and end_time are required",
             )
         start_time = _parse_datetime(start_str, tz)
         end_time = _parse_datetime(end_str, tz)
         if start_time is None or end_time is None:
             return ToolResult(
-                success=False, data="",
+                success=False,
+                data="",
                 error="Invalid date format. Use ISO 8601 (e.g. 2026-02-22T10:00:00).",
             )
 
@@ -309,14 +311,14 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     raw_vis = args.get("visibility")
     if raw_vis:
         from uniffy.core.models.shared import VisibilityScope
+
         vis_upper = str(raw_vis).upper()
         if vis_upper not in _VISIBILITY_VALUES:
             return ToolResult(
                 success=False,
                 data="",
                 error=(
-                    f"Invalid visibility: {raw_vis}. "
-                    f"Must be one of: {', '.join(_VISIBILITY_VALUES)}"
+                    f"Invalid visibility: {raw_vis}. Must be one of: {', '.join(_VISIBILITY_VALUES)}"
                 ),
             )
         kwargs["visibility"] = VisibilityScope(vis_upper)
@@ -341,6 +343,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     raw_rec = args.get("recurrence_pattern")
     if raw_rec:
         from uniffy.core.models.shared import RecurrencePattern
+
         rec_upper = str(raw_rec).upper()
         if rec_upper not in _RECURRENCE_VALUES:
             return ToolResult(
@@ -407,7 +410,9 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
             parsed = _parse_datetime(args[field], tz)
             if parsed is None:
                 return ToolResult(
-                    success=False, data="", error=f"Invalid {field} format.",
+                    success=False,
+                    data="",
+                    error=f"Invalid {field} format.",
                 )
             kwargs[field] = parsed
 
@@ -428,14 +433,14 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
     raw_vis = args.get("visibility")
     if raw_vis:
         from uniffy.core.models.shared import VisibilityScope
+
         vis_upper = str(raw_vis).upper()
         if vis_upper not in _VISIBILITY_VALUES:
             return ToolResult(
                 success=False,
                 data="",
                 error=(
-                    f"Invalid visibility: {raw_vis}. "
-                    f"Must be one of: {', '.join(_VISIBILITY_VALUES)}"
+                    f"Invalid visibility: {raw_vis}. Must be one of: {', '.join(_VISIBILITY_VALUES)}"
                 ),
             )
         kwargs["visibility"] = VisibilityScope(vis_upper)
@@ -520,7 +525,9 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     raw_ids = args.get("attendee_ids", [])
     if not raw_ids or not isinstance(raw_ids, list):
         return ToolResult(
-            success=False, data="", error="attendee_ids is required (list of UUIDs)",
+            success=False,
+            data="",
+            error="attendee_ids is required (list of UUIDs)",
         )
 
     att_ids, att_err = _parse_uuid_list(raw_ids, "attendee_ids")
@@ -536,8 +543,7 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
                 success=False,
                 data="",
                 error=(
-                    f"Invalid role: {raw_role}. "
-                    f"Must be one of: {', '.join(_ATTENDEE_ROLE_VALUES)}"
+                    f"Invalid role: {raw_role}. Must be one of: {', '.join(_ATTENDEE_ROLE_VALUES)}"
                 ),
             )
         role = AttendeeRole(role_upper)
@@ -575,7 +581,9 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     raw_ids = args.get("attendee_ids", [])
     if not raw_ids or not isinstance(raw_ids, list):
         return ToolResult(
-            success=False, data="", error="attendee_ids is required (list of UUIDs)",
+            success=False,
+            data="",
+            error="attendee_ids is required (list of UUIDs)",
         )
 
     att_ids, att_err = _parse_uuid_list(raw_ids, "attendee_ids")
@@ -705,8 +713,7 @@ _REMINDERS_SCHEMA = {
     "type": "array",
     "items": {"type": "integer"},
     "description": (
-        "Reminder intervals in minutes before the event "
-        "(e.g. [15, 60] for 15min and 1hr before)."
+        "Reminder intervals in minutes before the event (e.g. [15, 60] for 15min and 1hr before)."
     ),
 }
 
@@ -724,8 +731,7 @@ _ATTENDEE_IDS_SCHEMA = {
 list_events = ToolDefinition(
     name="calendar.list_events",
     description=(
-        "List calendar events within a date range. "
-        "Optionally filter by calendar or category."
+        "List calendar events within a date range. Optionally filter by calendar or category."
     ),
     parameter_schema={
         "type": "object",
@@ -806,10 +812,7 @@ create_event = ToolDefinition(
             },
             "timezone": {
                 "type": "string",
-                "description": (
-                    "Timezone identifier (e.g. America/New_York). "
-                    "Defaults to UTC."
-                ),
+                "description": ("Timezone identifier (e.g. America/New_York). Defaults to UTC."),
             },
             "location": {
                 "type": "string",
@@ -888,10 +891,7 @@ update_event = ToolDefinition(
             "attendee_ids": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": (
-                    "New full list of attendee UUIDs. "
-                    "Replaces existing attendees."
-                ),
+                "description": ("New full list of attendee UUIDs. Replaces existing attendees."),
             },
             "recurrence_config": _RECURRENCE_CONFIG_SCHEMA,
             "is_focus_time": {
@@ -924,8 +924,7 @@ delete_event = ToolDefinition(
 add_attendees = ToolDefinition(
     name="calendar.add_attendees",
     description=(
-        "Add attendees to a calendar event. "
-        "New attendees receive an invitation notification."
+        "Add attendees to a calendar event. New attendees receive an invitation notification."
     ),
     parameter_schema={
         "type": "object",
@@ -940,8 +939,7 @@ add_attendees = ToolDefinition(
                 "type": "string",
                 "enum": list(_ATTENDEE_ROLE_VALUES),
                 "description": (
-                    "Role for the new attendees: REQUIRED or OPTIONAL. "
-                    "Defaults to REQUIRED."
+                    "Role for the new attendees: REQUIRED or OPTIONAL. Defaults to REQUIRED."
                 ),
             },
         },

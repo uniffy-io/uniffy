@@ -33,6 +33,7 @@ import { agentUsageReducer } from '@/features/agents/store/agentUsageSlice';
 import { agentCronReducer } from '@/features/agents/store/agentCronSlice';
 import { agentMemoriesReducer } from '@/features/agents/store/agentMemoriesSlice';
 import { errorToastMiddleware } from '@/app/errorToastMiddleware';
+import { presenceReducer } from '@/features/presence/store/presenceSlice';
 import { sprintsReducer } from '@/features/projects/store/sprintsSlice';
 
 /**
@@ -170,6 +171,7 @@ const rootReducer = combineReducers({
   fileViewer: viewerReducer,
   imageEditor: imageEditorReducer,
   notifications: notificationsReducer,
+  presence: presenceReducer,
   sessions: sessionsReducer,
   comments: commentsReducer,
 });

@@ -10,7 +10,6 @@ import {
     FolderPlus,
     List,
     SquaresFour,
-    ArrowsClockwise,
     CloudArrowUp,
     BookmarkSimple,
     CheckSquare,
@@ -26,6 +25,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { renderIcon } from '@/components/icon-picker';
 import { useNavigate } from 'react-router-dom';
@@ -67,6 +67,7 @@ import { FolderCard } from '@/features/files/components/list/FolderCard';
 import { FileCard } from '@/features/files/components/list/FileCard';
 import { MoveDialog } from '@/features/files/components/list/MoveDialog';
 import { ICON_SIZE_CONFIG, SORT_OPTIONS, SORT_ORDER_OPTIONS, type SortByValue, type SortOrderValue } from '@/features/files/components/list/constants';
+import { FilesListSkeleton } from '@/features/files/components/list/FilesListSkeleton';
 
 /**
  * Build breadcrumb path by walking up folder parentId chain.
@@ -701,11 +702,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const someSelected = totalSelectedCount > 0 && totalSelectedCount < totalItemCount;
 
     if (loading) {
-        return (
-            <div className="flex-1 flex items-center justify-center">
-                <ArrowsClockwise size={32} className="text-muted-foreground animate-spin" />
-            </div>
-        );
+        return <FilesListSkeleton viewMode={viewMode} />;
     }
 
     return (
@@ -1028,13 +1025,10 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             <p className="text-lg font-medium">No files yet</p>
                             <p className="text-sm mb-4">Right-click to upload files or create a folder</p>
                             {onUpload && (
-                                <button
-                                    onClick={onUpload}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                                >
-                                    <CloudArrowUp size={18} />
+                                <Button size="md" onClick={onUpload}>
+                                    <CloudArrowUp size={16} />
                                     Upload Files
-                                </button>
+                                </Button>
                             )}
                         </>
                     )}

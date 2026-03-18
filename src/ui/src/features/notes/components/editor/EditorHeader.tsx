@@ -9,7 +9,6 @@ import {
   CodeSimple,
   BookmarkSimple,
   CaretRight,
-  CaretDoubleRight,
   SidebarSimple,
   ArrowsClockwise,
   CheckCircle,
@@ -19,7 +18,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { updateNoteIcon } from '@/features/notes/store/notesThunks';
-import { setEditorMode, toggleMetadataPanel, toggleSidebar, toggleMarkdownPreview } from '@/features/notes/store/editorSlice';
+import { setEditorMode, toggleMetadataPanel, toggleMarkdownPreview } from '@/features/notes/store/editorSlice';
 import { updateNote } from '@/features/notes/store/notesSlice';
 import { useSaveStatus } from '@/features/notes/hooks/useNotesHooks';
 import { buildBreadcrumbPath, type BreadcrumbItem } from '@/features/notes/utils/notesTreeUtils';
@@ -34,7 +33,6 @@ import { useBookmarkToggle } from '@/features/bookmarks';
 import { useSharingDialog } from '@/features/sharing';
 import { cn } from '@/shared/utils/cn';
 import { formatProtoDate } from '@/shared/utils/dateFormatting';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
 
@@ -218,9 +216,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
   const editorMode = settings?.editorMode || 'crepe';
   const showMarkdownPreview = settings?.showMarkdownPreview ?? true;
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
-  const isSidebarOpen = editorState?.isSidebarOpen ?? true;
-
-  const { isMobile } = useBreakpoint();
 
   // Bookmark state
   const noteUrn = `urn:uniffy:content:NOTE:${note.id}`;
@@ -298,17 +293,6 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
         {/* Left: Sidebar Toggle + Breadcrumb */}
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          {/* Sidebar toggle (show when sidebar is hidden, not on mobile where sidebar is a drawer) */}
-          {!isSidebarOpen && !isMobile && (
-            <button
-              onClick={() => dispatch(toggleSidebar())}
-              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-              title="Show sidebar (⌘\\)"
-            >
-              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-            </button>
-          )}
-
           {/* Breadcrumb */}
           <CollapsibleBreadcrumb items={breadcrumb} noteVisibility={note.visibility} />
 

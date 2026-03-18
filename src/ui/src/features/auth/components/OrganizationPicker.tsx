@@ -12,6 +12,7 @@ import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree as clearNotesTree } from "@/features/notes/store/notesTreeSlice";
 import { clearBookmarks } from "@/features/bookmarks";
+import { clearPresence } from "@/features/presence";
 import { clearSharing } from "@/features/sharing";
 import { clearAdmin } from "@/features/admin";
 import {
@@ -178,6 +179,7 @@ export function OrganizationPicker() {
     dispatch(clearSavedFilters());
     // Clear other state
     dispatch(clearBookmarks());
+    dispatch(clearPresence());
     dispatch(clearSharing());
     dispatch(clearAdmin());
     // Clear file blob cache

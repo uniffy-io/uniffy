@@ -5,11 +5,19 @@
  * - Mobile: sidebar as drawer, detail panel as drawer
  * - Tablet: sidebar inline (narrower), detail panel as drawer
  * - Desktop: all panels inline and resizable
+ *
+ * Collapsed sidebar shows an icon rail with hover-to-expand overlay.
  */
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { Kanban, CaretDoubleRight, SidebarSimple } from "@phosphor-icons/react";
+import {
+  Kanban,
+  SidebarSimple,
+  SquaresFour,
+  LockSimple,
+  Buildings,
+} from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
@@ -39,7 +47,18 @@ import {
   closeDetailPanel,
   selectTask,
 } from "@/features/projects/store/projectsUiSlice";
-import { selectCurrentProject, selectTasksForProject } from "@/features/projects/store/projectsSlice";
+import { selectCurrentProject, selectTasksForProject, selectProjects } from "@/features/projects/store/projectsSlice";
+import { ProjectsEmptyState } from "@/features/projects/components/ProjectsEmptyState";
+import {
+  CollapsibleSidebarRail,
+  type SidebarSection,
+} from "@/components/layout/CollapsibleSidebarRail";
+
+const PROJECTS_SECTIONS: SidebarSection[] = [
+  { id: "all", icon: SquaresFour, label: "All Projects" },
+  { id: "personal", icon: LockSimple, label: "Personal" },
+  { id: "organization", icon: Buildings, label: "Organization" },
+];
 
 const EMPTY_TASKS: ReturnType<ReturnType<typeof selectTasksForProject>> = [];
 
@@ -86,6 +105,10 @@ export function ProjectsLayout() {
     savePanelLayout("projects", layout);
   }, []);
 
+  const handleExpandSidebar = useCallback(() => {
+    dispatch(toggleSidebar());
+  }, [dispatch]);
+
   // Responsive panel mode
   const sidebarAsDrawer = isMobile;
   const detailAsDrawer = isMobileOrTablet;
@@ -93,6 +116,7 @@ export function ProjectsLayout() {
   // Determine if we should show each panel
   const showSidebar = !isZenMode && isSidebarOpen;
   const showDetailPanel = !isZenMode && isDetailPanelOpen && selectedTaskId;
+  const showCollapsedRail = !isZenMode && !isSidebarOpen && !sidebarAsDrawer;
 
   const handleCloseDetailPanel = () => {
     dispatch(closeDetailPanel());
@@ -103,30 +127,29 @@ export function ProjectsLayout() {
     <>
     <div
       className={cn(
-        "flex flex-col bg-background text-foreground overflow-hidden",
+        "relative flex flex-col bg-background text-foreground overflow-hidden",
         "transition-[height] duration-300 ease-in-out",
         isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-4rem)] delay-0"
       )}
     >
+      {/* Collapsed sidebar rail */}
+      {showCollapsedRail && (
+        <div className="absolute inset-y-0 left-0 z-30 w-12">
+          <CollapsibleSidebarRail
+            onExpand={handleExpandSidebar}
+            sections={PROJECTS_SECTIONS}
+          >
+            <ProjectsSidebar />
+          </CollapsibleSidebarRail>
+        </div>
+      )}
+
       <Group
         orientation="horizontal"
         className="h-full w-full flex"
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {/* Collapsed sidebar toggle - inline in flow, not absolute */}
-        {!showSidebar && !sidebarAsDrawer && !isZenMode && (
-          <div className="flex flex-col items-center py-3 px-1 bg-card border-r border-border">
-            <button
-              onClick={() => dispatch(toggleSidebar())}
-              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors"
-              title="Show sidebar"
-            >
-              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-            </button>
-          </div>
-        )}
-
         {/* Left Sidebar - inline on tablet/desktop */}
         {showSidebar && !sidebarAsDrawer && (
           <>
@@ -151,7 +174,7 @@ export function ProjectsLayout() {
           className="flex flex-col overflow-hidden"
         >
           {currentProject ? (
-            <div className="h-full overflow-hidden bg-card flex flex-col">
+            <div className={cn("h-full overflow-hidden bg-card flex flex-col", showCollapsedRail && "ml-12")}>
               <ProjectHeader project={currentProject} taskCount={tasks.length} />
               <div className="flex-1 overflow-hidden">
                 {viewMode === "table" && <TableView />}
@@ -162,7 +185,9 @@ export function ProjectsLayout() {
               </div>
             </div>
           ) : (
-            <NoProjectSelected />
+            <div className={cn(showCollapsedRail && "ml-12")}>
+              <NoProjectSelected />
+            </div>
           )}
         </Panel>
 
@@ -227,6 +252,7 @@ function NoProjectSelected() {
   const dispatch = useAppDispatch();
   const { isMobile } = useBreakpoint();
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
+  const projects = useAppSelector(selectProjects);
 
   return (
     <div className="flex-1 flex flex-col bg-background">
@@ -243,17 +269,21 @@ function NoProjectSelected() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <div className="mb-4 flex justify-center">
-            <Kanban size={48} weight="duotone" className="text-muted-foreground" />
+      {projects.length === 0 ? (
+        <ProjectsEmptyState />
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="text-center max-w-md">
+            <div className="mb-4 flex justify-center">
+              <Kanban size={48} weight="duotone" className="text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">No Project Selected</h2>
+            <p className="text-sm text-muted-foreground">
+              Select a project from the sidebar or create a new one to get started.
+            </p>
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">No Project Selected</h2>
-          <p className="text-sm text-muted-foreground">
-            Select a project from the sidebar or create a new one to get started.
-          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }

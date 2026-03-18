@@ -27,6 +27,7 @@ import type { SerializedSession } from "@/features/agents/store/agentSessionsThu
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { AgentPicker } from "@/features/agents/components/chat/AgentPicker";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { AgentsSidebarSkeleton } from "@/features/agents/components/layout/AgentsSidebarSkeleton";
 
 function timestampToDateStr(ts?: { seconds: number; nanos: number }): string | undefined {
     if (!ts || !ts.seconds) return undefined;
@@ -157,6 +158,7 @@ export function ChatSessionSidebar() {
     const dispatch = useAppDispatch();
     const agentsMap = useAppSelector(selectAllAgents);
     const sessions = useAppSelector(selectSortedUserSessions);
+    const sessionsLoading = useAppSelector((state) => state.agentSessions.loading);
     const activeSessionId = useAppSelector(selectActiveSessionId);
 
     const handleSelectSession = useCallback(
@@ -196,7 +198,9 @@ export function ChatSessionSidebar() {
 
             {/* Session list */}
             <div className="flex-1 overflow-y-auto px-2 pb-2">
-                {sessions.length === 0 ? (
+                {sessionsLoading && sessions.length === 0 ? (
+                    <AgentsSidebarSkeleton />
+                ) : sessions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full px-4 text-center">
                         <ChatCircle size={32} className="text-muted-foreground/50 mb-2" />
                         <p className="text-sm text-muted-foreground">

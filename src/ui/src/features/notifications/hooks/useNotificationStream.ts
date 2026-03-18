@@ -13,6 +13,7 @@ import { fetchFile } from '@/features/files/store/filesSlice';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
 import { addRealtimeNotification } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
+import { updatePresenceWithCustomStatus } from '@/features/presence/store/presenceSlice';
 import { StreamNotificationEvent_EventType } from '@/gen/notifications/v1/notifications_pb';
 
 const MAX_BACKOFF_MS = 30000;
@@ -86,6 +87,32 @@ export function useNotificationStream() {
                                 }, 500));
                             }
                         }
+                        // Presence state changed
+                        if (
+                            event.eventType ===
+                                StreamNotificationEvent_EventType.PRESENCE_CHANGED &&
+                            event.presenceChanged
+                        ) {
+                            const pc = event.presenceChanged;
+                            const hasCustomStatus = !!(pc.statusEmoji || pc.statusText);
+                            dispatch(
+                                updatePresenceWithCustomStatus({
+                                    userId: pc.userId,
+                                    status: pc.status,
+                                    customStatus: hasCustomStatus
+                                        ? {
+                                              emoji: pc.statusEmoji,
+                                              text: pc.statusText,
+                                              expiresAt:
+                                                  pc.statusExpiresAt
+                                                      ?.toDate()
+                                                      .toISOString() ?? null,
+                                          }
+                                        : undefined,
+                                }),
+                            );
+                        }
+
                         // Heartbeats are silently consumed (keep-alive)
                     }
                 } catch {

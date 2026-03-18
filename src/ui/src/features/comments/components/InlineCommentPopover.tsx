@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 import { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
 import { useCommentActions } from '@/features/comments/hooks/useComments';
 import { Struct } from '@bufbuild/protobuf';
@@ -118,23 +119,17 @@ export function InlineCommentPopover({
                         Ctrl+Enter to submit
                     </span>
                     <div className="flex gap-2">
-                        <button
-                            onClick={onClose}
-                            className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
-                        >
+                        <Button variant="ghost" size="xs" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            size="xs"
                             onClick={handleSubmit}
                             disabled={!body.trim() || isSubmitting}
-                            className={cn(
-                                'px-3 py-1 text-xs rounded-md',
-                                'bg-primary text-primary-foreground',
-                                'disabled:opacity-50 disabled:cursor-not-allowed',
-                            )}
+                            loading={isSubmitting}
                         >
                             {isSubmitting ? 'Posting...' : 'Comment'}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

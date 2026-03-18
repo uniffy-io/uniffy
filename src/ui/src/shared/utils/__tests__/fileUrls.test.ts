@@ -41,7 +41,7 @@ describe('buildMediaStreamUrl', () => {
 
 describe('buildAvatarUrl', () => {
     it('builds correct avatar URL', () => {
-        expect(buildAvatarUrl(USER_ID, '128')).toBe(`/api/avatars/${USER_ID}/128`);
+        expect(buildAvatarUrl(USER_ID, '128')).toBe(`/api/avatars/${USER_ID}/128?_v=2`);
     });
 });
 

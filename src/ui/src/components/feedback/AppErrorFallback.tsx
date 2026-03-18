@@ -1,4 +1,5 @@
 import { WarningCircle, ArrowClockwise } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 
 interface AppErrorFallbackProps {
   error: Error;
@@ -13,13 +14,13 @@ export function AppErrorFallback({ error, reset }: AppErrorFallbackProps) {
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
         The application encountered an unexpected error. Please try reloading the page.
       </p>
-      <button
+      <Button
+        size="md"
         onClick={() => { reset(); window.location.reload(); }}
-        className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
       >
         <ArrowClockwise size={16} weight="bold" />
         Reload application
-      </button>
+      </Button>
       {import.meta.env.DEV && (
         <pre className="mt-6 text-xs text-muted-foreground bg-muted rounded-lg p-3 max-w-lg overflow-auto max-h-40">
           {error.message}

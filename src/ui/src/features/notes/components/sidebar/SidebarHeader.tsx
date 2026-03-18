@@ -106,7 +106,7 @@ export function SidebarHeader({
                 <CompactNavItem key={item.path} item={item} isActive={location.pathname === item.path} />
             ))}
             <div className="flex-1" />
-            {/* Hide collapse button on mobile - sidebar is a drawer there with its own close button */}
+            {/* Hide collapse button on mobile (drawer has its own close) */}
             {!isMobile && (
                 <button
                     onClick={() => dispatch(toggleSidebar())}

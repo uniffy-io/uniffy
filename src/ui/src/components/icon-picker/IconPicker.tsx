@@ -8,6 +8,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { Button } from '@/components/ui/button';
 import {
     COMMON_EMOJIS,
     getIconCategories,
@@ -227,13 +228,13 @@ export function IconPicker({
                                         }
                                     }}
                                 />
-                                <button
+                                <Button
+                                    size="sm"
                                     onClick={handleCustomEmojiSubmit}
                                     disabled={!customEmoji.trim()}
-                                    className="px-3 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     Add
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>

@@ -7,7 +7,7 @@ Auth is handled via service worker token injection.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlalchemy import select
@@ -21,12 +21,13 @@ from uniffy.domains.users.avatars import AVATAR_SIZES
 avatars_router = APIRouter(prefix="/avatars", tags=["avatars"])
 
 
-@avatars_router.get("/{user_id}/{size}")
+@avatars_router.get("/{user_id}/{size}", response_model=None)
 async def get_avatar(
     user_id: UUID,
     size: str,
     _current_user_id: Annotated[UUID, Depends(get_current_user_id)],
-) -> StreamingResponse:
+    if_none_match: Annotated[str | None, Header()] = None,
+) -> StreamingResponse | Response:
     """
     Stream user avatar image with HTTP caching support.
 
@@ -74,6 +75,21 @@ async def get_avatar(
                     detail="Avatar not available",
                 )
 
+            # Extract content hash from avatar_key for ETag
+            # Format: '{prefix}/{entity_id}/{hash}'
+            content_hash = user.avatar_key.rsplit("/", 1)[-1]
+            etag = f'"{content_hash}"'
+
+            # Return 304 if the client already has this version
+            if if_none_match and if_none_match.strip() == etag:
+                return Response(
+                    status_code=status.HTTP_304_NOT_MODIFIED,
+                    headers={
+                        "ETag": etag,
+                        "Cache-Control": "public, max-age=600, must-revalidate",
+                    },
+                )
+
             s3_key = f"{user.avatar_key}/{size}.webp"
             s3 = get_s3_client()
 
@@ -100,8 +116,9 @@ async def get_avatar(
 
             headers = {
                 "Content-Type": "image/webp",
-                # Cache for 7 days; URL changes when avatar changes (hash in S3 key)
-                "Cache-Control": "public, max-age=604800, immutable",
+                "ETag": etag,
+                # Cache for 5 minutes, then revalidate via ETag
+                "Cache-Control": "public, max-age=600, must-revalidate",
             }
 
             if content_length:

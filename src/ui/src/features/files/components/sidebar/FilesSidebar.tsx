@@ -794,7 +794,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                     );
                 })}
                 <div className="flex-1" />
-                {/* Hide collapse button on mobile - sidebar is a drawer there with its own close button */}
+                {/* Hide collapse button on mobile (drawer has its own close) */}
                 {onToggleSidebar && !isMobile && (
                     <button
                         onClick={onToggleSidebar}
