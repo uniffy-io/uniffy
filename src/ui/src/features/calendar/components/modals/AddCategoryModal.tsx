@@ -36,7 +36,7 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Populate form when editing
+  // Populate form when editing + Escape key to close
   useEffect(() => {
     if (isOpen) {
       if (editingCategoryId && categories[editingCategoryId]) {
@@ -48,8 +48,16 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
         setSelectedColor(CATEGORY_COLORS[0]);
       }
       setError(null);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, editingCategoryId, categories]);
+  }, [isOpen, editingCategoryId, categories, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -155,8 +155,16 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       setFormData(event);
       setVisibility((event.visibility as EventVisibility) || 'private');
       setIsSubmitting(false);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
     }
-  }, [event, isOpen]);
+  }, [event, isOpen, onClose]);
 
   const handleChange = (field: keyof CalendarEvent, value: unknown) => {
     setFormData((prev) => ({

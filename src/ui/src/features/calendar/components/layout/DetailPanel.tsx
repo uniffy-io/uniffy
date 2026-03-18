@@ -12,7 +12,7 @@
  * - Properties (created/modified timestamps)
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   SidebarSimple,
   BookmarkSimple,
@@ -62,6 +62,23 @@ export function DetailPanel() {
   const categories = useAppSelector((state) => state.calendar.categories);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Close panel on Escape key
+  useEffect(() => {
+    if (!selectedEvent) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showDeleteConfirm) {
+          setShowDeleteConfirm(false);
+        } else {
+          dispatch(closeDetailPanel());
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEvent, showDeleteConfirm, dispatch]);
 
   // Bookmark state - build URN for the event
   const eventUrn = selectedEvent ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}` : '';

@@ -113,7 +113,7 @@ export function QuickEventModal({
     [categories]
   );
 
-  // Reset form when modal opens
+  // Reset form when modal opens + Escape key to close
   useEffect(() => {
     if (isOpen) {
       const date = initialDate || new Date();
@@ -133,6 +133,14 @@ export function QuickEventModal({
       }
       setAttendees([]);
       pendingFileIdsRef.current = [];
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialStartHour, initialEndHour]);
