@@ -25,8 +25,10 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { getInitials } from '@/components/subject/utils';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
-import type { Attendee } from '@/features/calendar/types';
+import { DatePicker } from '@/components/ui/date-picker';
+import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
 
 type EventVisibility = 'private' | 'organization';
 
@@ -91,6 +93,7 @@ export function QuickEventModal({
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [visibility, setVisibility] = useState<EventVisibility>('private');
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
@@ -125,6 +128,7 @@ export function QuickEventModal({
       setStartHour(initialStartHour);
       setEndHour(initialEndHour);
       setVisibility('private');
+      setRecurrence(undefined);
       setIsSubmitting(false);
 
       const categoryIds = Object.keys(categories || {});
@@ -209,6 +213,7 @@ export function QuickEventModal({
         isFocusTime: selectedCategoryId === 'cat-deepwork',
         attendeeIds: attendees.map((a) => a.id),
         visibility,
+        recurrence,
       })
     );
 
@@ -396,31 +401,47 @@ export function QuickEventModal({
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-muted-foreground mb-1.5">Start</label>
-                      <TimeSelect
-                        value={startHour}
+                      <label className="block text-xs text-muted-foreground mb-1.5">Date</label>
+                      <DatePicker
+                        value={startDate}
                         onChange={(value) => {
-                          setStartHour(value);
-                          if (value >= endHour) {
-                            setEndHour(value + 0.5);
-                          }
+                          setStartDate(value);
+                          setEndDate(value);
                         }}
-                        className="w-full"
+                        placeholder="Pick a date"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs text-muted-foreground mb-1.5">End</label>
-                      <TimeSelect
-                        value={endHour}
-                        onChange={setEndHour}
-                        className="w-full"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">Start</label>
+                        <TimeSelect
+                          value={startHour}
+                          onChange={(value) => {
+                            setStartHour(value);
+                            if (value >= endHour) {
+                              setEndHour(value + 0.5);
+                            }
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">End</label>
+                        <TimeSelect
+                          value={endHour}
+                          onChange={setEndHour}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Recurrence */}
+              <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
 
               {/* Category */}
               <div className="space-y-2">

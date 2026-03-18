@@ -64,6 +64,14 @@ enum ResourceType {
   RESOURCE_TYPE_CHAT        = 3;
 }
 
+// Scope for editing or deleting recurring events
+enum RecurrenceEditScope {
+  RECURRENCE_EDIT_SCOPE_UNSPECIFIED        = 0;
+  RECURRENCE_EDIT_SCOPE_THIS_EVENT         = 1;
+  RECURRENCE_EDIT_SCOPE_ALL_EVENTS         = 2;
+  RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING = 3;
+}
+
 // Service Definition
 
 // CalendarService provides calendar and event management functionality
@@ -205,6 +213,12 @@ message CalendarEvent {
   optional google.protobuf.Timestamp deleted_at = 24;
   // Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
   repeated int32 reminders = 25;
+  // Whether this is a recurring event (has recurrence pattern other than NONE)
+  bool is_recurring = 26;
+  // If this is an override of a recurring occurrence, the master event ID
+  optional string recurrence_id = 27;
+  // For expanded instances: the specific occurrence date (YYYY-MM-DD)
+  optional string occurrence_date = 28;
 }
 
 // Event attendee
@@ -343,6 +357,10 @@ message UpdateEventRequest {
   repeated string attendee_ids = 18;
   // Updated reminder intervals in minutes before event
   repeated int32 reminders = 19;
+  // Edit scope for recurring events
+  optional RecurrenceEditScope recurrence_edit_scope = 20;
+  // For THIS_EVENT scope: the specific occurrence date being edited (YYYY-MM-DD)
+  optional string occurrence_date = 21;
 }
 
 // Request to delete an event
@@ -353,6 +371,10 @@ message DeleteEventRequest {
   string organization_id = 2;
   // Permanent delete flag (default: false for soft delete)
   bool permanent = 3;
+  // Edit scope for recurring events
+  optional RecurrenceEditScope recurrence_edit_scope = 4;
+  // For THIS_EVENT scope: the specific occurrence date being deleted (YYYY-MM-DD)
+  optional string occurrence_date = 5;
 }
 
 // Response for delete event operation

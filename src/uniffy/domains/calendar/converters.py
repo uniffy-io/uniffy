@@ -1,5 +1,7 @@
 """Proto <-> domain converters for calendar domain."""
 
+from datetime import datetime
+
 from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
@@ -38,6 +40,9 @@ from uniffy.gen.cal.v1.calendar_pb2 import (
 )
 from uniffy.gen.cal.v1.calendar_pb2 import (
     RecurrenceConfig as ProtoRecurrenceConfig,
+)
+from uniffy.gen.cal.v1.calendar_pb2 import (
+    RecurrenceEditScope as ProtoRecurrenceEditScope,
 )
 from uniffy.gen.cal.v1.calendar_pb2 import (
     RecurrencePattern as ProtoRecurrencePattern,
@@ -136,6 +141,13 @@ DAY_OF_WEEK_MAP = {
 
 DAY_OF_WEEK_FROM_PROTO = {v: k for k, v in DAY_OF_WEEK_MAP.items()}
 
+RECURRENCE_EDIT_SCOPE_FROM_PROTO = {
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_UNSPECIFIED: "all_events",
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_EVENT: "this_event",
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_ALL_EVENTS: "all_events",
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING: "this_and_following",
+}
+
 
 def visibility_from_proto(proto_visibility: ProtoVisibilityScope) -> VisibilityScope:
     """Convert proto VisibilityScope to model."""
@@ -160,6 +172,11 @@ def attendee_role_from_proto(proto_role: ProtoAttendeeRole) -> AttendeeRole:
 def resource_type_from_proto(proto_type: ProtoResourceType) -> ResourceType:
     """Convert proto ResourceType to model."""
     return RESOURCE_TYPE_FROM_PROTO.get(proto_type, ResourceType.NOTE)
+
+
+def recurrence_edit_scope_from_proto(proto_scope: ProtoRecurrenceEditScope.ValueType) -> str:
+    """Convert proto RecurrenceEditScope to string."""
+    return RECURRENCE_EDIT_SCOPE_FROM_PROTO.get(proto_scope, "all_events")
 
 
 def event_to_proto(
@@ -213,6 +230,18 @@ def event_to_proto(
         updated_at=datetime_to_timestamp(event.updated_at),
     )
 
+    # Set recurring flag
+    proto_event.is_recurring = event.recurrence_pattern != RecurrencePattern.NONE
+
+    # Set recurrence_id if this is an override instance
+    if event.recurrence_id:
+        proto_event.recurrence_id = str(event.recurrence_id)
+
+    # Set occurrence_date if present (set dynamically on expanded instances)
+    occurrence_date = getattr(event, "_occurrence_date", None)
+    if occurrence_date:
+        proto_event.occurrence_date = occurrence_date
+
     if event.reminders:
         proto_event.reminders.extend(event.reminders)
 
@@ -251,7 +280,10 @@ def event_to_proto(
         if config.get("day_of_month"):
             proto_recurrence_config.day_of_month = config["day_of_month"]
         if config.get("end_date"):
-            proto_recurrence_config.end_date.CopyFrom(datetime_to_timestamp(config["end_date"]))
+            end_dt = config["end_date"]
+            if isinstance(end_dt, str):
+                end_dt = datetime.fromisoformat(end_dt)
+            proto_recurrence_config.end_date.CopyFrom(datetime_to_timestamp(end_dt))
         if config.get("max_occurrences"):
             proto_recurrence_config.max_occurrences = config["max_occurrences"]
         proto_event.recurrence.CopyFrom(proto_recurrence_config)
@@ -346,7 +378,7 @@ def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
         config["day_of_month"] = proto_config.day_of_month
 
     if proto_config.HasField("end_date"):
-        config["end_date"] = timestamp_to_datetime(proto_config.end_date)
+        config["end_date"] = timestamp_to_datetime(proto_config.end_date).isoformat()
 
     if proto_config.HasField("max_occurrences"):
         config["max_occurrences"] = proto_config.max_occurrences

@@ -8,7 +8,7 @@ import type { PositionedEvent } from '@/features/calendar/types';
 import { hexToRgba, CATEGORY_COLORS } from '@/features/calendar/constants';
 import { formatTimeRange } from '@/features/calendar/utils';
 import { cn } from '@/shared/utils/cn';
-import { Warning, Users } from '@phosphor-icons/react';
+import { Warning, Users, ArrowsClockwise } from '@phosphor-icons/react';
 
 // Default color when category is not found
 const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
@@ -188,6 +188,15 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
                 <Users
                   size={12}
                   weight="duotone"
+                  className="text-muted-foreground flex-shrink-0"
+                />
+              </span>
+            )}
+            {(event.isRecurring || (event.recurrence && event.recurrence.pattern !== 'none')) && !event.recurrenceId && (
+              <span title="Recurring event">
+                <ArrowsClockwise
+                  size={11}
+                  weight="bold"
                   className="text-muted-foreground flex-shrink-0"
                 />
               </span>

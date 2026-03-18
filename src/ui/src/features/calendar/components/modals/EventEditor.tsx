@@ -19,7 +19,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEvent } from '@/features/calendar/store/calendarThunks';
-import type { CalendarEvent, Attendee } from '@/features/calendar/types';
+import type { CalendarEvent, Attendee, RecurrenceConfig, RecurrenceEditScope } from '@/features/calendar/types';
 import { cn } from '@/shared/utils/cn';
 import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
 import { ExpandableEditor } from '@/components/editor/ExpandableEditor';
@@ -28,6 +28,8 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { getInitials } from '@/components/subject/utils';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import { RecurrenceEditScopeDialog } from '@/features/calendar/components/modals/RecurrenceEditScopeDialog';
+import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 
@@ -94,6 +96,8 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
     (event.visibility as EventVisibility) || 'private'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(event.recurrence);
+  const [showScopeDialog, setShowScopeDialog] = useState(false);
 
   const categoryOptions = useMemo(
     () =>
@@ -154,7 +158,9 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(event);
       setVisibility((event.visibility as EventVisibility) || 'private');
+      setRecurrence(event.recurrence);
       setIsSubmitting(false);
+      setShowScopeDialog(false);
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -198,18 +204,24 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
+  const isRecurring = event.isRecurring || (event.recurrence && event.recurrence.pattern !== 'none');
 
+  const doSubmit = async (scope?: RecurrenceEditScope) => {
     setIsSubmitting(true);
+
+    // For "all_events" scope, don't send occurrence-specific times
+    // (the form shows the occurrence's times, not the master's).
+    // Also don't send occurrenceDate so backend treats it as a plain master update.
+    const isAllEventsScope = scope === 'all_events';
+    const isOccurrence = !!event.occurrenceDate;
+
     await dispatch(
       updateEvent({
         eventId: formData.id,
         title: formData.title,
         description: formData.description,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
+        startTime: (isAllEventsScope && isOccurrence) ? undefined : formData.startTime,
+        endTime: (isAllEventsScope && isOccurrence) ? undefined : formData.endTime,
         isAllDay: formData.isAllDay,
         timezone: formData.timezone,
         location: formData.location,
@@ -221,9 +233,28 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         attendeeIds: formData.attendees.map((a) => a.id),
         visibility,
         reminders: formData.reminders,
+        recurrence,
+        recurrenceEditScope: scope,
+        occurrenceDate: isAllEventsScope ? undefined : event.occurrenceDate,
       })
     );
     onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    if (isRecurring) {
+      setShowScopeDialog(true);
+    } else {
+      await doSubmit();
+    }
+  };
+
+  const handleScopeSelect = async (scope: RecurrenceEditScope) => {
+    setShowScopeDialog(false);
+    await doSubmit(scope);
   };
 
   if (!isOpen) return null;
@@ -483,6 +514,9 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 />
               </div>
 
+              {/* Recurrence */}
+              <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
+
               {/* Description */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -519,6 +553,14 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
           </form>
         </div>
       </div>
+
+      {/* Recurring Event Edit Scope Dialog */}
+      <RecurrenceEditScopeDialog
+        isOpen={showScopeDialog}
+        onClose={() => setShowScopeDialog(false)}
+        onSelect={handleScopeSelect}
+        action="edit"
+      />
     </>
   );
 }

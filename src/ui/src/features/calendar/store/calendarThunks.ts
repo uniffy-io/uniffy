@@ -30,6 +30,7 @@ import type {
     Category,
     Attendee,
     RecurrenceConfig,
+    RecurrenceEditScope,
     LinkedResource,
     RecurrencePattern,
     DayOfWeek,
@@ -40,6 +41,9 @@ import type {
     CreateTemplatePayload,
     UpdateTemplatePayload,
 } from '@/features/calendar/types';
+import {
+    RecurrenceEditScope as ProtoRecurrenceEditScope,
+} from '@/gen/cal/v1/calendar_pb';
 
 // ============================================================================
 // Helpers
@@ -155,6 +159,12 @@ const RESOURCE_TYPE_FROM_PROTO: Record<ProtoResourceType, ResourceType> = {
     [ProtoResourceType.CHAT]: 'chat',
 };
 
+const EDIT_SCOPE_TO_PROTO: Record<RecurrenceEditScope, ProtoRecurrenceEditScope> = {
+    'this_event': ProtoRecurrenceEditScope.THIS_EVENT,
+    'all_events': ProtoRecurrenceEditScope.ALL_EVENTS,
+    'this_and_following': ProtoRecurrenceEditScope.THIS_AND_FOLLOWING,
+};
+
 const VISIBILITY_TO_PROTO: Record<string, ProtoVisibilityScope> = {
     'private': ProtoVisibilityScope.PRIVATE,
     'group': ProtoVisibilityScope.GROUP,
@@ -240,6 +250,9 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     createdAt: timestampToIso(proto.createdAt),
     updatedAt: timestampToIso(proto.updatedAt),
     reminders: [...(proto.reminders || [])],
+    isRecurring: proto.isRecurring || false,
+    recurrenceId: proto.recurrenceId || undefined,
+    occurrenceDate: proto.occurrenceDate || undefined,
 });
 
 /**
@@ -348,14 +361,15 @@ export const createEvent = createAsyncThunk<
         visibility?: string;
         reminders?: number[];
     },
-    { state: RootState; rejectValue: string }
->('calendar/createEvent', async (params, { getState, rejectWithValue }) => {
+    { state: RootState; rejectValue: string; dispatch: typeof import('@/app/store').store.dispatch }
+>('calendar/createEvent', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
 
         // Build recurrence config if provided
+        const isRecurring = params.recurrence && params.recurrence.pattern !== 'none';
         let recurrenceConfig = undefined;
-        if (params.recurrence && params.recurrence.pattern !== 'none') {
+        if (isRecurring) {
             recurrenceConfig = {
                 pattern: RECURRENCE_TO_PROTO[params.recurrence.pattern],
                 interval: params.recurrence.interval || 1,
@@ -389,7 +403,21 @@ export const createEvent = createAsyncThunk<
         if (!response.event) {
             return rejectWithValue('Failed to create event');
         }
-        return eventFromProto(response.event);
+        const created = eventFromProto(response.event);
+
+        // Refetch current range to get expanded occurrences for recurring events
+        if (isRecurring) {
+            const currentDate = getState().calendarUi.currentDate;
+            const d = new Date(currentDate);
+            const start = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+            const end = new Date(d.getFullYear(), d.getMonth() + 2, 0);
+            await dispatch(fetchEventsInRange({
+                startDate: start.toISOString(),
+                endDate: end.toISOString(),
+            }));
+        }
+
+        return created;
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to create event');
     }
@@ -418,9 +446,11 @@ export const updateEvent = createAsyncThunk<
         tags?: string[];
         visibility?: string;
         reminders?: number[];
+        recurrenceEditScope?: RecurrenceEditScope;
+        occurrenceDate?: string;
     },
-    { state: RootState; rejectValue: string }
->('calendar/updateEvent', async (params, { getState, rejectWithValue }) => {
+    { state: RootState; rejectValue: string; dispatch: typeof import('@/app/store').store.dispatch }
+>('calendar/updateEvent', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
 
@@ -456,12 +486,30 @@ export const updateEvent = createAsyncThunk<
             tags: params.tags,
             visibility: params.visibility ? VISIBILITY_TO_PROTO[params.visibility] : undefined,
             reminders: params.reminders,
+            recurrenceEditScope: params.recurrenceEditScope
+                ? EDIT_SCOPE_TO_PROTO[params.recurrenceEditScope]
+                : undefined,
+            occurrenceDate: params.occurrenceDate,
         });
 
         if (!response.event) {
             return rejectWithValue('Failed to update event');
         }
-        return eventFromProto(response.event);
+        const updated = eventFromProto(response.event);
+
+        // Refetch to get updated expanded occurrences
+        if (params.recurrenceEditScope) {
+            const currentDate = getState().calendarUi.currentDate;
+            const d = new Date(currentDate);
+            const start = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+            const end = new Date(d.getFullYear(), d.getMonth() + 2, 0);
+            await dispatch(fetchEventsInRange({
+                startDate: start.toISOString(),
+                endDate: end.toISOString(),
+            }));
+        }
+
+        return updated;
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to update event');
     }
@@ -472,19 +520,36 @@ export const updateEvent = createAsyncThunk<
  */
 export const deleteEvent = createAsyncThunk<
     { eventId: string },
-    string,
-    { state: RootState; rejectValue: string }
->('calendar/deleteEvent', async (eventId, { getState, rejectWithValue }) => {
+    { eventId: string; recurrenceEditScope?: RecurrenceEditScope; occurrenceDate?: string },
+    { state: RootState; rejectValue: string; dispatch: typeof import('@/app/store').store.dispatch }
+>('calendar/deleteEvent', async (params, { getState, rejectWithValue, dispatch }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await calendarApi.deleteEvent({
-            eventId,
+            eventId: params.eventId,
             organizationId,
+            recurrenceEditScope: params.recurrenceEditScope
+                ? EDIT_SCOPE_TO_PROTO[params.recurrenceEditScope]
+                : undefined,
+            occurrenceDate: params.occurrenceDate,
         });
         if (!response.success) {
             return rejectWithValue('Failed to delete event');
         }
-        return { eventId };
+
+        // Refetch to get updated expanded occurrences
+        if (params.recurrenceEditScope) {
+            const currentDate = getState().calendarUi.currentDate;
+            const d = new Date(currentDate);
+            const start = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+            const end = new Date(d.getFullYear(), d.getMonth() + 2, 0);
+            await dispatch(fetchEventsInRange({
+                startDate: start.toISOString(),
+                endDate: end.toISOString(),
+            }));
+        }
+
+        return { eventId: params.eventId };
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete event');
     }
