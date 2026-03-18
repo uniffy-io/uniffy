@@ -105,6 +105,8 @@ export interface Task {
   number: number;
   taskType: string;
   sprintId: string | null;
+  subtaskTotal: number;
+  subtaskCompleted: number;
 }
 
 /**

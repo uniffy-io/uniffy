@@ -22,6 +22,9 @@ class NotificationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NOTIFICATION_TYPE_PERMISSION_GRANTED: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_PERMISSION_REVOKED: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_TASK_ASSIGNED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_TASK_DUE_SOON: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_TASK_OVERDUE: _ClassVar[NotificationType]
 NOTIFICATION_TYPE_UNSPECIFIED: NotificationType
 NOTIFICATION_TYPE_CONTENT_SHARED: NotificationType
 NOTIFICATION_TYPE_CONTENT_MENTIONED: NotificationType
@@ -32,6 +35,9 @@ NOTIFICATION_TYPE_CALENDAR_RESPONSE: NotificationType
 NOTIFICATION_TYPE_PERMISSION_GRANTED: NotificationType
 NOTIFICATION_TYPE_PERMISSION_REVOKED: NotificationType
 NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT: NotificationType
+NOTIFICATION_TYPE_TASK_ASSIGNED: NotificationType
+NOTIFICATION_TYPE_TASK_DUE_SOON: NotificationType
+NOTIFICATION_TYPE_TASK_OVERDUE: NotificationType
 
 class Notification(_message.Message):
     __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at", "actor_name", "actor_avatar_url")

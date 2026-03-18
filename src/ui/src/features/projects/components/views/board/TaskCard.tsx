@@ -15,10 +15,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
-import { useAppSelector } from "@/app/hooks";
 import { SubjectAvatarStack } from "@/components/subject";
-import { selectSubtasksByParentId } from "../../../store/projectsSlice";
-import type { Task, SelectOption } from "../../../types";
+import type { Task, SelectOption } from "@/features/projects/types";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { extractFallbackLabel } from "@/shared/utils/mentionUtils";
 
@@ -55,9 +53,8 @@ export function TaskCard({
     transition,
   };
 
-  // Feature 7: Subtask progress
-  const subtasks = useAppSelector(selectSubtasksByParentId(task.id));
-  const completedSubtasks = subtasks.filter(t => t.completedAt).length;
+  const taskOverdue = task.dueDate && task.status !== "status_done" && isOverdue(task.dueDate);
+  const hasUnresolvedBlockers = task.blockedByTaskIds && task.blockedByTaskIds.length > 0 && task.status !== "status_done";
 
   const ticketId = `${projectSlug}-${task.number}`;
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
@@ -73,7 +70,8 @@ export function TaskCard({
         "bg-card rounded-lg border border-border shadow-sm cursor-grab overflow-hidden",
         "hover:border-primary/50 transition-colors",
         isDragging && "opacity-50 shadow-lg",
-        isSelected && "ring-2 ring-primary"
+        isSelected && "ring-2 ring-primary",
+        hasUnresolvedBlockers && "border-l-2 border-l-yellow-500 dark:border-l-yellow-400"
       )}
       onClick={onClick}
     >
@@ -152,21 +150,45 @@ export function TaskCard({
             )}
 
             {/* Blocked Indicator */}
-            {task.blockedByTaskIds && task.blockedByTaskIds.length > 0 && (
-                <span className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px]" style={{ color: 'var(--status-warning)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }} title="Blocked">
+            {hasUnresolvedBlockers && (
+                <span
+                  className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  title={`Blocked by ${task.blockedByTaskIds.length} task(s)`}
+                >
                     <WarningCircle size={10} weight="fill" />
-                    Blocked
+                    Blocked ({task.blockedByTaskIds.length})
                 </span>
             )}
-            
-            {/* Subtasks Indicator */}
-            {subtasks.length > 0 && (
+
+            {/* Overdue Indicator */}
+            {taskOverdue && (
+                <span className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px] bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                    <WarningCircle size={10} weight="fill" />
+                    Overdue
+                </span>
+            )}
+
+            {/* Subtask Progress */}
+            {task.subtaskTotal > 0 && (
                 <span className="flex items-center text-muted-foreground bg-muted px-1.5 py-0.5 rounded gap-1 text-[10px]">
-                    <CheckCircle size={10} />
-                    {completedSubtasks}/{subtasks.length}
+                    <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+                    {task.subtaskCompleted}/{task.subtaskTotal}
                 </span>
             )}
         </div>
+
+        {/* Subtask Progress Bar */}
+        {task.subtaskTotal > 0 && (
+          <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                task.subtaskCompleted === task.subtaskTotal ? "bg-green-500" : "bg-primary"
+              )}
+              style={{ width: `${(task.subtaskCompleted / task.subtaskTotal) * 100}%` }}
+            />
+          </div>
+        )}
 
         {/* Footer with assignees */}
         {(task.assigneeIds.length > 0 || task.outgoingReferences.length > 0) && (

@@ -137,6 +137,8 @@ message Task {
   string                             task_type             = 25;
   optional string                    sprint_id             = 26;
   common.v1.PermissionLevel          user_permission_level = 27;
+  int32                              subtask_total         = 28;
+  int32                              subtask_completed     = 29;
 }
 
 message FieldDefinition {
@@ -318,6 +320,7 @@ message BulkUpdateTasksRequest {
   optional string status          = 3;
   optional string priority        = 4;
   repeated string assignee_ids    = 5;
+  optional string sprint_id       = 6;
 }
 
 message DeleteTaskRequest {

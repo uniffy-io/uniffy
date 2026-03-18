@@ -69,6 +69,14 @@ export function friendlyErrorMessage(raw: string): string | null {
     const codeMatch = lower.match(/^\[(\w+)]/);
     if (codeMatch) {
         const code = codeMatch[1];
+        // For failed_precondition, prefer the server's specific message
+        // (e.g. dependency enforcement, validation errors)
+        if (code === 'failed_precondition') {
+            let serverMsg = raw.replace(/^\[\w+]\s*/, '').trim();
+            // Strip technical prefix: "Validation error on 'field': actual message"
+            serverMsg = serverMsg.replace(/^Validation error on '\w+':\s*/i, '');
+            return serverMsg || STATUS_CODE_MESSAGES[code];
+        }
         if (STATUS_CODE_MESSAGES[code]) {
             return STATUS_CODE_MESSAGES[code];
         }

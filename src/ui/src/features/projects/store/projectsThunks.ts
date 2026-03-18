@@ -371,7 +371,7 @@ export const deleteViewThunk = createAsyncThunk<
  */
 export const bulkUpdateTasksThunk = createAsyncThunk<
   Task[],
-  { taskIds: string[]; updates: { status?: string; priority?: string; assigneeIds?: string[] } },
+  { taskIds: string[]; updates: { status?: string; priority?: string; assigneeIds?: string[]; sprintId?: string | null } },
   { rejectValue: string }
 >(
   "projects/bulkUpdateTasks",

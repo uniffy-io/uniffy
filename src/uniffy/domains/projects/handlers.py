@@ -426,6 +426,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Project not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -461,7 +463,13 @@ class ProjectsHandlers:
                     content_owner_id=task.owner_id,
                 )
 
-                return TaskResponse(task=task_to_proto(task, perm_level))
+                # Load subtask counts
+                subtask_counts = await queries.get_subtask_counts(session, [task.id])
+                st_total, st_done = subtask_counts.get(task.id, (0, 0))
+
+                return TaskResponse(
+                    task=task_to_proto(task, perm_level, st_total, st_done)
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
@@ -545,6 +553,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -582,6 +592,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -613,6 +625,13 @@ class ProjectsHandlers:
                     changes["priority"] = request.priority
                 if request.assignee_ids:
                     changes["assignee_ids"] = list(request.assignee_ids)
+                if request.HasField("sprint_id"):
+                    try:
+                        changes["sprint_id"] = (
+                            UUID(request.sprint_id) if request.sprint_id else None
+                        )
+                    except ValueError:
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
 
                 tasks = await ops.bulk_update(
                     user_id,
@@ -630,6 +649,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -775,8 +796,19 @@ class ProjectsHandlers:
 
                 total_pages = (total + page_size - 1) // page_size
 
+                # Batch-load subtask counts for all tasks
+                task_ids = [t.id for t in tasks]
+                subtask_counts = await queries.get_subtask_counts(session, task_ids)
+
+                task_protos = []
+                for t in tasks:
+                    st_total, st_done = subtask_counts.get(t.id, (0, 0))
+                    task_protos.append(
+                        task_to_proto(t, subtask_total=st_total, subtask_completed=st_done)
+                    )
+
                 return ListTasksResponse(
-                    tasks=[task_to_proto(t) for t in tasks],
+                    tasks=task_protos,
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,

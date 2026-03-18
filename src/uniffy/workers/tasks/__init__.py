@@ -11,6 +11,7 @@ from uniffy.workers.tasks.notifications import (
     send_email_digest,
 )
 from uniffy.workers.tasks.reminders import check_calendar_reminders
+from uniffy.workers.tasks.task_reminders import check_task_due_dates
 from uniffy.workers.tasks.thumbnails import (
     generate_image_thumbnail,
     generate_pdf_thumbnail,
@@ -38,6 +39,8 @@ __all__ = [
     "send_email_digest",
     # Calendar reminders
     "check_calendar_reminders",
+    # Task due date reminders
+    "check_task_due_dates",
     # Agent cron tasks
     "execute_agent_cron_tasks",
     "execute_single_agent_cron_task",

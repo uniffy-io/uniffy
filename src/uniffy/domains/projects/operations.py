@@ -19,16 +19,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
-from uniffy.core.models.shared import ContentType, VisibilityScope
+from uniffy.core.models.shared import ContentType, NotificationType, VisibilityScope
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.projects import queries
+from uniffy.domains.projects.validation import validate_field_values
 
 
 class ProjectOperations(BaseContentOperations[Project]):
@@ -728,6 +730,16 @@ class TaskOperations(BaseContentOperations[Task]):
         )
         task_number = counter_result.scalar_one()
 
+        # Validate custom field values
+        if kwargs.get("field_values"):
+            await self._validate_field_values(project_id, kwargs["field_values"])
+
+        # Validate blocked_by for circular dependencies
+        if kwargs.get("blocked_by_task_ids"):
+            # No circular check needed on create since the task doesn't exist yet
+
+            pass
+
         # Extract references from description
         description = kwargs.get("description", "")
         outgoing_references = queries.extract_urns_from_content(description) if description else []
@@ -785,6 +797,12 @@ class TaskOperations(BaseContentOperations[Task]):
         group_ids = await project_ops._get_content_group_ids(project_id)
         await self._index_for_search(task, group_ids)
 
+        # Emit notifications for assignments
+        await self._emit_assignment_notifications(task, user_id, None, task.assignee_ids)
+
+        # Emit notifications for @mentions in description
+        await self._emit_mention_notifications(task, user_id, None, task.outgoing_references)
+
         return task
 
     async def update(
@@ -817,6 +835,30 @@ class TaskOperations(BaseContentOperations[Task]):
         task = await self.get_by_id(user_id, organization_id, task_id)
         await self._require_edit(user_id, organization_id, task)
 
+        # Dependency enforcement: cannot complete task with unresolved blockers
+        if "status" in kwargs and kwargs["status"] != task.status:
+            unresolved = await self._check_blockers_resolved(task, kwargs["status"])
+            if unresolved:
+                blocker_names = [f"#{b['number']} {b['title']}" for b in unresolved[:5]]
+                suffix = f" and {len(unresolved) - 5} more" if len(unresolved) > 5 else ""
+                raise ValidationError(
+                    "status",
+                    "Cannot complete task: blocked by unresolved tasks: "
+                    f"{', '.join(blocker_names)}{suffix}",
+                )
+
+        # Circular dependency validation
+        if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:
+            await self._validate_no_circular_dependency(task_id, kwargs["blocked_by_task_ids"])
+
+        # Custom field validation
+        if kwargs.get("field_values"):
+            await self._validate_field_values(task.project_id, kwargs["field_values"])
+
+        # Snapshot for notification comparison
+        old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else None
+        old_references = list(task.outgoing_references) if task.outgoing_references else None
+
         title_changed = "title" in kwargs and kwargs["title"] != task.title
 
         # Snapshot fields that trigger mention state publishing
@@ -842,7 +884,14 @@ class TaskOperations(BaseContentOperations[Task]):
             if value is None and key not in nullable_fields:
                 continue
             old_value = getattr(task, key)
-            setattr(task, key, value)
+
+            # Merge field_values instead of replacing
+            if key == "field_values" and isinstance(value, dict):
+                merged = dict(task.field_values or {})
+                merged.update(value)
+                setattr(task, key, merged)
+            else:
+                setattr(task, key, value)
 
             # Log specific changes
             if key == "status" and old_value != value:
@@ -886,6 +935,15 @@ class TaskOperations(BaseContentOperations[Task]):
                     previous_value=str(old_value) if old_value else None,
                     new_value=str(value) if value else None,
                 )
+            elif key == "assignee_ids" and old_value != value:
+                await self._log_activity(
+                    task_id,
+                    user_id,
+                    "assigned",
+                    field_id="field_assignee",
+                    previous_value=",".join(old_value) if old_value else None,
+                    new_value=",".join(value) if value else None,
+                )
 
         # Re-extract references if description changed
         if "description" in kwargs:
@@ -901,6 +959,16 @@ class TaskOperations(BaseContentOperations[Task]):
         project_ops = ProjectOperations(self.session)
         group_ids = await project_ops._get_content_group_ids(task.project_id)
         await self._index_for_search(task, group_ids)
+
+        # Emit notifications for assignment changes
+        await self._emit_assignment_notifications(
+            task, user_id, old_assignee_ids, task.assignee_ids
+        )
+
+        # Emit notifications for new @mentions
+        await self._emit_mention_notifications(
+            task, user_id, old_references, task.outgoing_references
+        )
 
         # Propagate title change to mention labels in referencing content
         if title_changed:
@@ -1137,6 +1205,228 @@ class TaskOperations(BaseContentOperations[Task]):
         tasks = list(result.scalars().all())
 
         return tasks, total
+
+    async def _check_blockers_resolved(
+        self,
+        task: Task,
+        new_status: str,
+    ) -> list[dict[str, str]]:
+        """
+        Check if all blocking tasks are completed.
+
+        Only enforced when moving to a completion status ('status_done').
+
+        Parameters
+        ----------
+        task : Task
+            Task being updated.
+        new_status : str
+            Target status.
+
+        Returns
+        -------
+        list[dict[str, str]]
+            Unresolved blockers with id, title, and status. Empty if all resolved.
+
+        """
+        if new_status != "status_done":
+            return []
+
+        if not task.blocked_by_task_ids:
+            return []
+
+        blocker_ids = [UUID(bid) for bid in task.blocked_by_task_ids]
+        result = await self.session.execute(
+            select(Task.id, Task.title, Task.status, Task.number).where(
+                and_(
+                    Task.id.in_(blocker_ids),
+                    Task.is_deleted == False,  # noqa: E712
+                    Task.status != "status_done",
+                )
+            )
+        )
+        unresolved = result.all()
+        return [
+            {"id": str(row.id), "title": row.title, "status": row.status, "number": str(row.number)}
+            for row in unresolved
+        ]
+
+    async def _validate_no_circular_dependency(
+        self,
+        task_id: UUID,
+        blocked_by_task_ids: list[str],
+    ) -> None:
+        """
+        Validate that adding dependencies does not create a cycle.
+
+        Uses BFS traversal through blocked_by chains (max depth 20).
+
+        Parameters
+        ----------
+        task_id : UUID
+            The task being updated.
+        blocked_by_task_ids : list[str]
+            Proposed blocker task IDs.
+
+        Raises
+        ------
+        ValidationError
+            If a circular dependency would be created.
+
+        """
+        task_id_str = str(task_id)
+        if task_id_str in blocked_by_task_ids:
+            raise ValidationError("blocked_by", "A task cannot be blocked by itself")
+
+        # BFS: check if any blocker eventually depends on this task
+        visited: set[str] = set()
+        queue = list(blocked_by_task_ids)
+        depth = 0
+        max_depth = 20
+
+        while queue and depth < max_depth:
+            depth += 1
+            current_ids = [UUID(tid) for tid in queue if tid not in visited]
+            if not current_ids:
+                break
+
+            for tid_str in queue:
+                visited.add(tid_str)
+
+            result = await self.session.execute(
+                select(Task.id, Task.blocked_by_task_ids).where(
+                    and_(
+                        Task.id.in_(current_ids),
+                        Task.is_deleted == False,  # noqa: E712
+                    )
+                )
+            )
+            rows = result.all()
+
+            queue = []
+            for row in rows:
+                if row.blocked_by_task_ids:
+                    for upstream_id in row.blocked_by_task_ids:
+                        if upstream_id == task_id_str:
+                            raise ValidationError(
+                                "blocked_by",
+                                "These tasks already depend on each other. "
+                                "Adding this link would create a loop",
+                            )
+                        if upstream_id not in visited:
+                            queue.append(upstream_id)
+
+    async def _validate_field_values(
+        self,
+        project_id: UUID,
+        field_values: dict,
+    ) -> None:
+        """
+        Validate custom field values against project field definitions.
+
+        Parameters
+        ----------
+        project_id : UUID
+            Project ID.
+        field_values : dict
+            Field values to validate.
+
+        Raises
+        ------
+        ValidationError
+            If any field values are invalid.
+
+        """
+        if not field_values:
+            return
+
+        field_defs = await queries.get_fields_for_project(self.session, project_id)
+        errors = validate_field_values(field_values, field_defs)
+        if errors:
+            raise ValidationError("field_values", "; ".join(errors))
+
+    async def _emit_assignment_notifications(
+        self,
+        task: Task,
+        actor_id: UUID,
+        old_assignee_ids: list[str] | None,
+        new_assignee_ids: list[str] | None,
+    ) -> None:
+        """
+        Emit TASK_ASSIGNED notifications for newly added assignees.
+
+        Parameters
+        ----------
+        task : Task
+            The task being updated.
+        actor_id : UUID
+            User who made the change.
+        old_assignee_ids : list[str] | None
+            Previous assignee IDs.
+        new_assignee_ids : list[str] | None
+            New assignee IDs.
+
+        """
+        old_set = set(old_assignee_ids or [])
+        new_set = set(new_assignee_ids or [])
+        added = new_set - old_set
+        # Don't notify the actor
+        added.discard(str(actor_id))
+
+        if not added:
+            return
+
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.TASK_ASSIGNED,
+                organization_id=task.organization_id,
+                actor_id=actor_id,
+                title=f"Assigned you to: {task.title}",
+                source_urn=build_content_urn(ContentType.TASK, task.id),
+                target_user_ids=[UUID(uid) for uid in added],
+            )
+        )
+
+    async def _emit_mention_notifications(
+        self,
+        task: Task,
+        actor_id: UUID,
+        old_references: list[str] | None,
+        new_references: list[str] | None,
+    ) -> None:
+        """
+        Emit CONTENT_MENTIONED notifications for newly mentioned users.
+
+        Parameters
+        ----------
+        task : Task
+            The task.
+        actor_id : UUID
+            User who made the change.
+        old_references : list[str] | None
+            Previous outgoing URN references.
+        new_references : list[str] | None
+            New outgoing URN references.
+
+        """
+        old_mentioned = extract_mentioned_user_ids(old_references)
+        new_mentioned = extract_mentioned_user_ids(new_references)
+        newly_mentioned = new_mentioned - old_mentioned
+        newly_mentioned.discard(actor_id)
+
+        if not newly_mentioned:
+            return
+
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.CONTENT_MENTIONED,
+                organization_id=task.organization_id,
+                actor_id=actor_id,
+                title=f"Mentioned you in: {task.title}",
+                source_urn=build_content_urn(ContentType.TASK, task.id),
+                target_user_ids=list(newly_mentioned),
+            )
+        )
 
     async def _log_activity(
         self,

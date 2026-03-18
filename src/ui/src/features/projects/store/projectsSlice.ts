@@ -42,6 +42,8 @@ export interface ProjectsState {
   loading: LoadingState;
   /** Error states for async operations */
   errors: ErrorState;
+  /** Snapshot for reverting failed optimistic task updates */
+  _pendingTaskSnapshot?: Task;
 }
 
 const initialState: ProjectsState = {
@@ -96,8 +98,26 @@ export const projectsSlice = createSlice({
      */
     optimisticUpdateTask: (state, action: PayloadAction<Partial<Task> & { id: string }>) => {
       const { id, ...updates } = action.payload;
-      if (state.tasks[id]) {
-        state.tasks[id] = { ...state.tasks[id], ...updates };
+      const task = state.tasks[id];
+      if (task) {
+        // Snapshot BEFORE applying changes so rejected thunks can revert
+        state._pendingTaskSnapshot = { ...task };
+        // If status changed on a subtask, update parent's subtask counts
+        if (updates.status && task.parentId && state.tasks[task.parentId]) {
+          const parent = state.tasks[task.parentId];
+          const wasDone = task.status === "status_done";
+          const nowDone = updates.status === "status_done";
+          if (wasDone && !nowDone) {
+            parent.subtaskCompleted = Math.max(0, parent.subtaskCompleted - 1);
+          } else if (!wasDone && nowDone) {
+            parent.subtaskCompleted = parent.subtaskCompleted + 1;
+          }
+        }
+        // Merge fieldValues instead of replacing
+        if (updates.fieldValues) {
+          updates.fieldValues = { ...task.fieldValues, ...updates.fieldValues };
+        }
+        state.tasks[id] = { ...task, ...updates };
       }
     },
 
@@ -262,7 +282,12 @@ export const projectsSlice = createSlice({
       })
       .addCase(createTask.fulfilled, (state, action) => {
         state.loading.creating = false;
-        state.tasks[action.payload.id] = action.payload;
+        const newTask = action.payload;
+        state.tasks[newTask.id] = newTask;
+        // Update parent subtask counts if this is a subtask
+        if (newTask.parentId && state.tasks[newTask.parentId]) {
+          state.tasks[newTask.parentId].subtaskTotal += 1;
+        }
       })
       .addCase(createTask.rejected, (state, action) => {
         state.loading.creating = false;
@@ -277,19 +302,33 @@ export const projectsSlice = createSlice({
       .addCase(updateTask.fulfilled, (state, action) => {
         state.loading.updating = null;
         state.tasks[action.payload.id] = action.payload;
+        state._pendingTaskSnapshot = undefined;
       })
       .addCase(updateTask.rejected, (state, action) => {
         state.loading.updating = null;
         state.errors.general = (action.payload as string) || action.error.message || "Failed to update task";
+        // Revert optimistic update on failure
+        if (state._pendingTaskSnapshot) {
+          const snapshot = state._pendingTaskSnapshot;
+          state.tasks[snapshot.id] = snapshot;
+          state._pendingTaskSnapshot = undefined;
+        }
       });
 
     // ===== Move Task =====
     builder
       .addCase(moveTask.fulfilled, (state, action) => {
         state.tasks[action.payload.id] = action.payload;
+        state._pendingTaskSnapshot = undefined;
       })
       .addCase(moveTask.rejected, (state, action) => {
         state.errors.general = (action.payload as string) || action.error.message || "Failed to move task";
+        // Revert optimistic update on failure
+        if (state._pendingTaskSnapshot) {
+          const snapshot = state._pendingTaskSnapshot;
+          state.tasks[snapshot.id] = snapshot;
+          state._pendingTaskSnapshot = undefined;
+        }
       });
 
     // ===== Delete Task =====

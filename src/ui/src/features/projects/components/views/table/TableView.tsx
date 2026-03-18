@@ -40,7 +40,6 @@ import {
   selectCurrentProject,
   optimisticUpdateTask,
   bulkUpdateTasks,
-  addFieldDefinition,
   removeFieldDefinition,
 } from "@/features/projects/store/projectsSlice";
 import {
@@ -729,7 +728,6 @@ export function TableView() {
                 <CreateFieldDialog
                   projectId={project.id}
                   onSubmit={(field) => {
-                    dispatch(addFieldDefinition({ projectId: project.id, field }));
                     dispatch(createFieldThunk({ projectId: project.id, field: { name: field.name, type: field.type, isRequired: field.isRequired, isSystem: field.isSystem, sortOrder: field.sortOrder, config: field.config } }));
                   }}
                   onClose={() => setIsCreateFieldOpen(false)}

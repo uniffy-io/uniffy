@@ -441,6 +441,16 @@ export class Task extends Message<Task> {
    */
   userPermissionLevel = PermissionLevel.UNSPECIFIED;
 
+  /**
+   * @generated from field: int32 subtask_total = 28;
+   */
+  subtaskTotal = 0;
+
+  /**
+   * @generated from field: int32 subtask_completed = 29;
+   */
+  subtaskCompleted = 0;
+
   constructor(data?: PartialMessage<Task>) {
     super();
     proto3.util.initPartial(data, this);
@@ -476,6 +486,8 @@ export class Task extends Message<Task> {
     { no: 25, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 26, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 27, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 28, name: "subtask_total", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 29, name: "subtask_completed", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Task {
@@ -1729,6 +1741,11 @@ export class BulkUpdateTasksRequest extends Message<BulkUpdateTasksRequest> {
    */
   assigneeIds: string[] = [];
 
+  /**
+   * @generated from field: optional string sprint_id = 6;
+   */
+  sprintId?: string;
+
   constructor(data?: PartialMessage<BulkUpdateTasksRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1742,6 +1759,7 @@ export class BulkUpdateTasksRequest extends Message<BulkUpdateTasksRequest> {
     { no: 3, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "priority", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "assignee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkUpdateTasksRequest {

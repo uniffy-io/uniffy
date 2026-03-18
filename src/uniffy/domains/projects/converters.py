@@ -172,6 +172,8 @@ def project_to_proto(
 def task_to_proto(
     task: Task,
     user_permission_level: PermissionLevel | None = None,
+    subtask_total: int = 0,
+    subtask_completed: int = 0,
 ) -> ProtoTask:
     """
     Convert Task model to proto Task message.
@@ -218,6 +220,8 @@ def task_to_proto(
         created_at=datetime_to_timestamp(task.created_at),
         updated_at=datetime_to_timestamp(task.updated_at),
         urn=task.urn,
+        subtask_total=subtask_total,
+        subtask_completed=subtask_completed,
     )
 
     # Optional fields

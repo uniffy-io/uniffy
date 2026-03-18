@@ -232,6 +232,8 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     number: proto.number,
     taskType: proto.taskType || "task",
     sprintId: proto.sprintId ?? null,
+    subtaskTotal: proto.subtaskTotal,
+    subtaskCompleted: proto.subtaskCompleted,
   };
 }
 
@@ -592,7 +594,7 @@ export const projectsApi = {
    */
   bulkUpdateTasks: async (
     taskIds: string[],
-    updates: { status?: string; priority?: string; assigneeIds?: string[] },
+    updates: { status?: string; priority?: string; assigneeIds?: string[]; sprintId?: string | null },
     organizationId: string
   ): Promise<{ tasks: Task[]; updatedCount: number }> => {
     const response = await projectsClient.bulkUpdateTasks({
@@ -601,6 +603,7 @@ export const projectsApi = {
       status: updates.status,
       priority: updates.priority,
       assigneeIds: updates.assigneeIds || [],
+      sprintId: updates.sprintId ?? undefined,
     });
     return {
       tasks: response.tasks.map(protoTaskToFrontend),

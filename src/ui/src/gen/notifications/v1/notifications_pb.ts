@@ -61,6 +61,21 @@ export enum NotificationType {
    * @generated from enum value: NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT = 9;
    */
   SYSTEM_ANNOUNCEMENT = 9,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_TASK_ASSIGNED = 10;
+   */
+  TASK_ASSIGNED = 10,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_TASK_DUE_SOON = 11;
+   */
+  TASK_DUE_SOON = 11,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_TASK_OVERDUE = 12;
+   */
+  TASK_OVERDUE = 12,
 }
 // Retrieve enum metadata with: proto3.getEnumType(NotificationType)
 proto3.util.setEnumType(NotificationType, "notifications.v1.NotificationType", [
@@ -74,6 +89,9 @@ proto3.util.setEnumType(NotificationType, "notifications.v1.NotificationType", [
   { no: 7, name: "NOTIFICATION_TYPE_PERMISSION_GRANTED" },
   { no: 8, name: "NOTIFICATION_TYPE_PERMISSION_REVOKED" },
   { no: 9, name: "NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT" },
+  { no: 10, name: "NOTIFICATION_TYPE_TASK_ASSIGNED" },
+  { no: 11, name: "NOTIFICATION_TYPE_TASK_DUE_SOON" },
+  { no: 12, name: "NOTIFICATION_TYPE_TASK_OVERDUE" },
 ]);
 
 /**
