@@ -106,7 +106,7 @@ export function CalendarPage() {
       <AppHeader />
       <div className={cn(
         "bg-background transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-4rem)] delay-0"
+        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
       )}>
         <CalendarLayout
           sidebar={<LeftSidebar />}
