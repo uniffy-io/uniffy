@@ -129,7 +129,7 @@ export function AgentsLayout() {
       className={cn(
         "relative flex flex-col bg-background text-foreground overflow-hidden",
         "transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-screen delay-150" : "h-[calc(100vh-4rem)] delay-0"
+        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
       )}
     >
       {/* Collapsed icon rail with hover-to-expand overlay */}

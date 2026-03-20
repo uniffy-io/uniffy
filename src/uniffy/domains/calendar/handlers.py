@@ -1,6 +1,7 @@
 """Calendar RPC handlers - thin layer delegating to operations."""
 
 import contextlib
+from datetime import date as date_type
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -20,6 +21,7 @@ from uniffy.domains.calendar.converters import (
     category_to_proto,
     event_to_proto,
     recurrence_config_from_proto,
+    recurrence_edit_scope_from_proto,
     recurrence_from_proto,
     template_to_proto,
     visibility_from_proto,
@@ -200,8 +202,13 @@ class CalendarHandlers:
     ) -> EventResponse:
         """Update an existing event."""
         try:
-            event_id = UUID(request.event_id)
             organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        # event_id may be a synthetic ID for recurring occurrences
+        try:
+            event_id = UUID(request.event_id.split("__occurrence__")[0])
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -253,6 +260,17 @@ class CalendarHandlers:
                 if request.reminders:
                     kwargs["reminders"] = list(request.reminders)
 
+                # Recurring event edit scope
+                if request.HasField("recurrence_edit_scope"):
+                    kwargs["recurrence_edit_scope"] = recurrence_edit_scope_from_proto(
+                        request.recurrence_edit_scope
+                    )
+                if request.HasField("occurrence_date"):
+                    try:
+                        kwargs["occurrence_date"] = date_type.fromisoformat(request.occurrence_date)
+                    except ValueError:
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid occurrence_date format")
+
                 event = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -281,8 +299,16 @@ class CalendarHandlers:
     ) -> DeleteEventResponse:
         """Delete an event (soft or permanent)."""
         try:
-            event_id = UUID(request.event_id)
             organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        # event_id may be a synthetic ID for recurring occurrences
+        # (e.g., "uuid__occurrence__2026-03-25"), so parse UUID only
+        # when there's no recurrence scope
+        raw_event_id = request.event_id
+        try:
+            event_id = UUID(raw_event_id.split("__occurrence__")[0])
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -291,11 +317,25 @@ class CalendarHandlers:
         try:
             async for session in get_async_session():
                 ops = CalendarEventOperations(session)
+
+                # Parse recurring event scope
+                edit_scope = None
+                occ_date = None
+                if request.HasField("recurrence_edit_scope"):
+                    edit_scope = recurrence_edit_scope_from_proto(request.recurrence_edit_scope)
+                if request.HasField("occurrence_date"):
+                    try:
+                        occ_date = date_type.fromisoformat(request.occurrence_date)
+                    except ValueError:
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid occurrence_date format")
+
                 await ops.delete(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,
                     permanent=request.permanent,
+                    recurrence_edit_scope=edit_scope,
+                    occurrence_date=occ_date,
                 )
 
                 message = "Event permanently deleted" if request.permanent else "Event deleted"
@@ -418,10 +458,24 @@ class CalendarHandlers:
                 )
 
                 # Fetch attendees for each event
+                # Cache attendees by real event ID to avoid duplicate queries
+                # for virtual instances that share the same master event
+                attendees_cache: dict[str, list] = {}
                 proto_events = []
                 for event in events:
-                    attendees = await queries.get_event_attendees(session, event.id)
-                    proto_events.append(event_to_proto(event, attendees))
+                    event_id_str = str(event.id)
+                    # Virtual instances have synthetic IDs - use master ID for attendees
+                    if "__occurrence__" in event_id_str:
+                        real_id = UUID(event_id_str.split("__occurrence__")[0])
+                    else:
+                        real_id = event.id
+
+                    real_id_str = str(real_id)
+                    if real_id_str not in attendees_cache:
+                        attendees_cache[real_id_str] = await queries.get_event_attendees(
+                            session, real_id,
+                        )
+                    proto_events.append(event_to_proto(event, attendees_cache[real_id_str]))
 
                 return GetEventsInRangeResponse(events=proto_events)
 

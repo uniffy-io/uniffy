@@ -11,6 +11,7 @@ export type {
   MultiDayPosition,
   RecurrenceConfig,
   RecurrencePattern,
+  RecurrenceEditScope,
   DayOfWeek,
   LinkedResource,
   ResourceType,

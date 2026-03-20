@@ -266,6 +266,40 @@ proto3.util.setEnumType(ResourceType, "cal.v1.ResourceType", [
 ]);
 
 /**
+ * Scope for editing or deleting recurring events
+ *
+ * @generated from enum cal.v1.RecurrenceEditScope
+ */
+export enum RecurrenceEditScope {
+  /**
+   * @generated from enum value: RECURRENCE_EDIT_SCOPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: RECURRENCE_EDIT_SCOPE_THIS_EVENT = 1;
+   */
+  THIS_EVENT = 1,
+
+  /**
+   * @generated from enum value: RECURRENCE_EDIT_SCOPE_ALL_EVENTS = 2;
+   */
+  ALL_EVENTS = 2,
+
+  /**
+   * @generated from enum value: RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING = 3;
+   */
+  THIS_AND_FOLLOWING = 3,
+}
+// Retrieve enum metadata with: proto3.getEnumType(RecurrenceEditScope)
+proto3.util.setEnumType(RecurrenceEditScope, "cal.v1.RecurrenceEditScope", [
+  { no: 0, name: "RECURRENCE_EDIT_SCOPE_UNSPECIFIED" },
+  { no: 1, name: "RECURRENCE_EDIT_SCOPE_THIS_EVENT" },
+  { no: 2, name: "RECURRENCE_EDIT_SCOPE_ALL_EVENTS" },
+  { no: 3, name: "RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING" },
+]);
+
+/**
  * Calendar event
  *
  * @generated from message cal.v1.CalendarEvent
@@ -446,6 +480,27 @@ export class CalendarEvent extends Message<CalendarEvent> {
    */
   reminders: number[] = [];
 
+  /**
+   * Whether this is a recurring event (has recurrence pattern other than NONE)
+   *
+   * @generated from field: bool is_recurring = 26;
+   */
+  isRecurring = false;
+
+  /**
+   * If this is an override of a recurring occurrence, the master event ID
+   *
+   * @generated from field: optional string recurrence_id = 27;
+   */
+  recurrenceId?: string;
+
+  /**
+   * For expanded instances: the specific occurrence date (YYYY-MM-DD)
+   *
+   * @generated from field: optional string occurrence_date = 28;
+   */
+  occurrenceDate?: string;
+
   constructor(data?: PartialMessage<CalendarEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -479,6 +534,9 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 23, name: "updated_at", kind: "message", T: Timestamp },
     { no: 24, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 25, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 26, name: "is_recurring", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 27, name: "recurrence_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 28, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CalendarEvent {
@@ -1106,6 +1164,20 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
    */
   reminders: number[] = [];
 
+  /**
+   * Edit scope for recurring events
+   *
+   * @generated from field: optional cal.v1.RecurrenceEditScope recurrence_edit_scope = 20;
+   */
+  recurrenceEditScope?: RecurrenceEditScope;
+
+  /**
+   * For THIS_EVENT scope: the specific occurrence date being edited (YYYY-MM-DD)
+   *
+   * @generated from field: optional string occurrence_date = 21;
+   */
+  occurrenceDate?: string;
+
   constructor(data?: PartialMessage<UpdateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1133,6 +1205,8 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
     { no: 18, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 19, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 20, name: "recurrence_edit_scope", kind: "enum", T: proto3.getEnumType(RecurrenceEditScope), opt: true },
+    { no: 21, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventRequest {
@@ -1179,6 +1253,20 @@ export class DeleteEventRequest extends Message<DeleteEventRequest> {
    */
   permanent = false;
 
+  /**
+   * Edit scope for recurring events
+   *
+   * @generated from field: optional cal.v1.RecurrenceEditScope recurrence_edit_scope = 4;
+   */
+  recurrenceEditScope?: RecurrenceEditScope;
+
+  /**
+   * For THIS_EVENT scope: the specific occurrence date being deleted (YYYY-MM-DD)
+   *
+   * @generated from field: optional string occurrence_date = 5;
+   */
+  occurrenceDate?: string;
+
   constructor(data?: PartialMessage<DeleteEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1190,6 +1278,8 @@ export class DeleteEventRequest extends Message<DeleteEventRequest> {
     { no: 1, name: "event_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "permanent", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "recurrence_edit_scope", kind: "enum", T: proto3.getEnumType(RecurrenceEditScope), opt: true },
+    { no: 5, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteEventRequest {

@@ -12,7 +12,7 @@
  * - Properties (created/modified timestamps)
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   SidebarSimple,
   BookmarkSimple,
@@ -32,7 +32,9 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { closeDetailPanel, openEditEvent } from '@/features/calendar/store';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { deleteEvent, updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
+import { deleteEvent as deleteEventThunk, updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
+import { RecurrenceEditScopeDialog } from '@/features/calendar/components/modals/RecurrenceEditScopeDialog';
+import type { RecurrenceEditScope } from '@/features/calendar/types';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
 import { useCalendarEvents } from '@/features/calendar/hooks';
@@ -46,11 +48,54 @@ import {
   formatTimeRange,
   getTimezoneOffset,
 } from '@/features/calendar/utils';
+import type { RecurrenceConfig } from '@/features/calendar/types';
+import { DAY_OF_WEEK_LABELS } from '@/features/calendar/types';
 import { findConflicts } from '@/features/calendar/utils/eventPositioning';
 import { extractMentionsFromMarkdown } from '@/shared/utils/mentionUtils';
 
 // Default color when category is not found
 const DEFAULT_COLOR = CATEGORY_COLORS[0].value; // Blue
+
+/**
+ * Build a human-readable recurrence description.
+ */
+function describeRecurrence(r: RecurrenceConfig): string {
+  const interval = r.interval || 1;
+  const plural = interval > 1;
+
+  switch (r.pattern) {
+    case 'daily': {
+      const base = plural ? `Every ${interval} days` : 'Daily';
+      if (r.daysOfWeek && r.daysOfWeek.length > 0 && r.daysOfWeek.length < 7) {
+        if (r.daysOfWeek.length === 5 && !r.daysOfWeek.includes('saturday') && !r.daysOfWeek.includes('sunday')) {
+          return `${base} (weekdays)`;
+        }
+        const dayNames = r.daysOfWeek.map(d => DAY_OF_WEEK_LABELS[d]?.full || d).join(', ');
+        return `${base} on ${dayNames}`;
+      }
+      return base;
+    }
+    case 'weekly':
+    case 'biweekly': {
+      const weeks = r.pattern === 'biweekly' ? interval * 2 : interval;
+      const prefix = weeks > 1 ? `Every ${weeks} weeks` : 'Weekly';
+      if (r.daysOfWeek && r.daysOfWeek.length > 0) {
+        const dayNames = r.daysOfWeek.map(d => DAY_OF_WEEK_LABELS[d]?.full || d).join(', ');
+        return `${prefix} on ${dayNames}`;
+      }
+      return prefix;
+    }
+    case 'monthly':
+      if (r.dayOfMonth) {
+        return plural ? `Every ${interval} months on the ${r.dayOfMonth}th` : `Monthly on the ${r.dayOfMonth}th`;
+      }
+      return plural ? `Every ${interval} months` : 'Monthly';
+    case 'yearly':
+      return plural ? `Every ${interval} years` : 'Yearly';
+    default:
+      return 'Does not repeat';
+  }
+}
 
 export function DetailPanel() {
   const dispatch = useAppDispatch();
@@ -62,6 +107,26 @@ export function DetailPanel() {
   const categories = useAppSelector((state) => state.calendar.categories);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRecurrenceScopeDialog, setShowRecurrenceScopeDialog] = useState(false);
+
+  // Close panel on Escape key
+  useEffect(() => {
+    if (!selectedEvent) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showRecurrenceScopeDialog) {
+          setShowRecurrenceScopeDialog(false);
+        } else if (showDeleteConfirm) {
+          setShowDeleteConfirm(false);
+        } else {
+          dispatch(closeDetailPanel());
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEvent, showDeleteConfirm, showRecurrenceScopeDialog, dispatch]);
 
   // Bookmark state - build URN for the event
   const eventUrn = selectedEvent ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}` : '';
@@ -123,10 +188,32 @@ export function DetailPanel() {
     dispatch(closeDetailPanel());
   };
 
+  const isRecurring = selectedEvent
+    ? (selectedEvent.isRecurring || (selectedEvent.recurrence && selectedEvent.recurrence.pattern !== 'none'))
+    : false;
+
+  const handleDeleteClick = () => {
+    if (isRecurring) {
+      setShowRecurrenceScopeDialog(true);
+    } else {
+      setShowDeleteConfirm(true);
+    }
+  };
+
   const handleDelete = async () => {
-    await dispatch(deleteEvent(selectedEvent.id));
+    await dispatch(deleteEventThunk({ eventId: selectedEvent.id }));
     dispatch(closeDetailPanel());
     setShowDeleteConfirm(false);
+  };
+
+  const handleRecurrenceScopeSelect = async (scope: RecurrenceEditScope) => {
+    setShowRecurrenceScopeDialog(false);
+    await dispatch(deleteEventThunk({
+      eventId: selectedEvent.id,
+      recurrenceEditScope: scope,
+      occurrenceDate: selectedEvent.occurrenceDate,
+    }));
+    dispatch(closeDetailPanel());
   };
 
   return (
@@ -167,7 +254,7 @@ export function DetailPanel() {
             <PencilSimple size={20} weight="duotone" className="text-primary" />
           </button>
           <button
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={handleDeleteClick}
             className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
             title="Delete event"
           >
@@ -226,18 +313,33 @@ export function DetailPanel() {
               selectedEvent.recurrence.pattern !== 'none' && (
                 <div className="flex items-center gap-3 text-sm">
                   <ArrowsClockwise size={16} weight="duotone" className="text-muted-foreground" />
-                  <span className="text-foreground">
-                    {selectedEvent.recurrence.pattern === 'weekly'
-                      ? 'Every week'
-                      : selectedEvent.recurrence.pattern}
-                  </span>
-                  {selectedEvent.recurrence.endDate && (
-                    <span className="text-muted-foreground text-xs">
-                      · Ends {selectedEvent.recurrence.endDate}
+                  <div className="flex flex-col">
+                    <span className="text-foreground">
+                      {describeRecurrence(selectedEvent.recurrence)}
                     </span>
-                  )}
+                    {selectedEvent.recurrence.endDate && (
+                      <span className="text-muted-foreground text-xs">
+                        Until {new Date(selectedEvent.recurrence.endDate).toLocaleDateString()}
+                      </span>
+                    )}
+                    {selectedEvent.recurrence.maxOccurrences && (
+                      <span className="text-muted-foreground text-xs">
+                        {selectedEvent.recurrence.maxOccurrences} occurrences
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
+
+            {/* Occurrence instance info */}
+            {selectedEvent.recurrenceId && (
+              <div className="flex items-center gap-3 text-sm">
+                <ArrowsClockwise size={16} weight="duotone" className="text-muted-foreground" />
+                <span className="text-muted-foreground italic">
+                  Modified occurrence of a recurring series
+                </span>
+              </div>
+            )}
 
             {/* Location */}
             {selectedEvent.location && (
@@ -505,14 +607,14 @@ export function DetailPanel() {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal (non-recurring events) */}
       {showDeleteConfirm && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" />
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border p-4 md:p-6">
             <h3 className="text-lg font-semibold text-foreground mb-2">Delete Event?</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              Are you sure you want to delete "{selectedEvent.title}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedEvent.title}&quot;? This action cannot be undone.
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="md" className="flex-1" onClick={() => setShowDeleteConfirm(false)}>
@@ -525,6 +627,14 @@ export function DetailPanel() {
           </div>
         </>
       )}
+
+      {/* Recurring Event Delete Scope Dialog */}
+      <RecurrenceEditScopeDialog
+        isOpen={showRecurrenceScopeDialog}
+        onClose={() => setShowRecurrenceScopeDialog(false)}
+        onSelect={handleRecurrenceScopeSelect}
+        action="delete"
+      />
     </div>
   );
 }

@@ -108,7 +108,18 @@ export interface CalendarEvent {
   updatedAt: string;
   /** Reminder intervals in minutes before event */
   reminders: number[];
+  /** Whether this is a recurring event */
+  isRecurring?: boolean;
+  /** If this is an override of a recurring occurrence, the master event ID */
+  recurrenceId?: string;
+  /** For expanded instances: the specific occurrence date (YYYY-MM-DD) */
+  occurrenceDate?: string;
 }
+
+/**
+ * Scope for editing or deleting recurring events
+ */
+export type RecurrenceEditScope = 'this_event' | 'all_events' | 'this_and_following';
 
 /**
  * Event creation request (partial event data)
@@ -153,6 +164,8 @@ export interface UpdateEventRequest {
   tags?: string[];
   linkedResourceIds?: string[];
   reminders?: number[];
+  recurrenceEditScope?: RecurrenceEditScope;
+  occurrenceDate?: string;
 }
 
 /**

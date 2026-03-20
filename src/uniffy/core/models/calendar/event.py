@@ -119,6 +119,7 @@ class CalendarEvent(SQLModel, table=True):
         ),
     )
     reminders: list[int] | None = Field(default=None, sa_column=Column(JSONB))
+    recurrence_id: UUID | None = Field(default=None, foreign_key="calendar_events.id", index=True)
     recurrence_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

@@ -7,15 +7,17 @@
 
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { updateEventThunk } from '@/features/calendar/store';
+import { updateEventThunk, openEventModal } from '@/features/calendar/store';
 import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
 import { TimeColumn, TIME_COLUMN_TOP_PADDING } from '@/features/calendar/components/calendar/TimeColumn';
 import { DayHeadersRow } from '@/features/calendar/components/calendar/DayHeader';
 import { GridLines } from '@/features/calendar/components/calendar/GridLines';
 import { CurrentTimeIndicator } from '@/features/calendar/components/calendar/CurrentTimeIndicator';
 import { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
-import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
 import { GRID, LAYOUT } from '@/features/calendar/constants';
+import { positionAllDayEvents } from '@/features/calendar/utils/eventPositioning';
+import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
+import { cn } from '@/shared/utils/cn';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 export function WeekView() {
@@ -26,10 +28,6 @@ export function WeekView() {
   const gridRef = useRef<HTMLDivElement>(null);
   const { weekColumns, currentDate } = useCalendarNavigation();
   const { getPositionedEventsWeek, events } = useCalendarEvents();
-  const [showQuickEventModal, setShowQuickEventModal] = useState(false);
-  const [modalDate, setModalDate] = useState(new Date());
-  const [modalStartHour, setModalStartHour] = useState(9);
-  const [modalEndHour, setModalEndHour] = useState(10);
 
   // State for half-hour slot selection
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; hour: number; isHalf: boolean } | null>(null);
@@ -64,6 +62,20 @@ export function WeekView() {
     () => getPositionedEventsWeek(weekDates),
     [getPositionedEventsWeek, weekDates]
   );
+
+  // All-day events
+  const { visibleEvents } = useCalendarEvents();
+  const allDayPositions = useMemo(
+    () => positionAllDayEvents(visibleEvents, weekDates),
+    [visibleEvents, weekDates]
+  );
+  const allDayMaxRow = allDayPositions.length > 0
+    ? Math.max(...allDayPositions.map(p => p.row)) + 1
+    : 0;
+  const allDayRowHeight = 26;
+  const allDaySectionHeight = allDayMaxRow > 0 ? allDayMaxRow * allDayRowHeight + 6 : 0;
+  const categories = useAppSelector((state) => state.calendar.categories);
+  const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
 
   // Calculate grid height
   const hourCount = GRID.END_HOUR - GRID.START_HOUR + 1;
@@ -221,11 +233,25 @@ export function WeekView() {
                           selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
-      // Double-click: create event with 30-minute duration
-      setModalDate(dateObj);
-      setModalStartHour(hour + (isHalf ? 0.5 : 0));
-      setModalEndHour(hour + (isHalf ? 1 : 0.5));
-      setShowQuickEventModal(true);
+      // Double-click: open event creation modal with prefilled date/time
+      const clickedHour = hour + (isHalf ? 0.5 : 0);
+      const startMinutes = Math.round((clickedHour % 1) * 60);
+      const endHourVal = clickedHour + 1;
+      const endMinutes = Math.round((endHourVal % 1) * 60);
+
+      const startDt = new Date(dateObj);
+      startDt.setHours(Math.floor(clickedHour), startMinutes, 0, 0);
+      const endDt = new Date(dateObj);
+      endDt.setHours(Math.floor(endHourVal), endMinutes, 0, 0);
+
+      dispatch(openEventModal({
+        mode: 'create',
+        prefill: {
+          date: date,
+          startTime: startDt.toISOString(),
+          endTime: endDt.toISOString(),
+        },
+      }));
       setSelectedSlot(null);
     } else {
       // Single click: select slot
@@ -248,6 +274,63 @@ export function WeekView() {
           {/* Day headers */}
           <DayHeadersRow days={displayColumns} />
         </div>
+
+        {/* All-day events bar */}
+        {allDaySectionHeight > 0 && (
+          <div className="flex border-b border-border flex-shrink-0 min-w-0">
+            <div
+              className="flex-shrink-0 border-r border-border flex items-center justify-center"
+              style={{ width: LAYOUT.TIME_COLUMN_WIDTH }}
+            >
+              <span className="text-[10px] text-muted-foreground">All day</span>
+            </div>
+            <div className="flex-1 relative" style={{ height: allDaySectionHeight }}>
+              {allDayPositions
+                .filter(({ startColumn, spanColumns }) => {
+                  // Only show events that overlap with displayed columns
+                  const displayStart = weekColumns.indexOf(displayColumns[0]);
+                  const displayEnd = displayStart + displayColumns.length;
+                  return startColumn < displayEnd && startColumn + spanColumns > displayStart;
+                })
+                .map(({ event, startColumn, spanColumns, row }) => {
+                  // Adjust column positions for mobile 3-day view
+                  const displayStart = weekColumns.indexOf(displayColumns[0]);
+                  const adjustedStart = Math.max(0, startColumn - displayStart);
+                  const adjustedEnd = Math.min(columnCount, startColumn + spanColumns - displayStart);
+                  const adjustedSpan = adjustedEnd - adjustedStart;
+                  if (adjustedSpan <= 0) return null;
+
+                  const category = event.categoryId ? categories[event.categoryId] : null;
+                  const color = category?.color ?? '#3B82F6';
+                  const isSelected = selectedEventId === event.id;
+
+                  return (
+                    <button
+                      key={event.id}
+                      onClick={() => dispatch(selectEvent(event.id))}
+                      className={cn(
+                        'absolute text-left text-xs truncate px-2 py-0.5 rounded transition-colors',
+                        'hover:brightness-90',
+                        isSelected && 'ring-2 ring-primary'
+                      )}
+                      style={{
+                        left: `${(adjustedStart / columnCount) * 100}%`,
+                        width: `${(adjustedSpan / columnCount) * 100 - 0.5}%`,
+                        top: row * allDayRowHeight + 3,
+                        height: allDayRowHeight - 4,
+                        backgroundColor: `${color}20`,
+                        color: color,
+                        borderLeft: `3px solid ${color}`,
+                      }}
+                      title={event.title}
+                    >
+                      {event.title}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         {/* Scrollable grid area */}
         <div ref={scrollRef} className="flex-1 overflow-y-scroll overflow-x-auto min-w-0">
@@ -352,14 +435,6 @@ export function WeekView() {
         </div>
       </div>
 
-      {/* Quick event creation modal */}
-      <QuickEventModal
-        isOpen={showQuickEventModal}
-        onClose={() => setShowQuickEventModal(false)}
-        initialDate={modalDate}
-        initialStartHour={modalStartHour}
-        initialEndHour={modalEndHour}
-      />
     </>
   );
 }

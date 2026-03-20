@@ -1,0 +1,206 @@
+/**
+ * Recurrence Edit Scope Dialog
+ * Asks the user to choose the scope when editing or deleting a recurring event.
+ */
+
+import { useState, useEffect } from 'react';
+import { ArrowsClockwise, Calendar, CalendarX, FastForward } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/shared/utils/cn';
+import type { RecurrenceEditScope } from '@/features/calendar/types';
+
+interface RecurrenceEditScopeDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (scope: RecurrenceEditScope) => void;
+  action: 'edit' | 'delete';
+}
+
+interface ScopeOption {
+  value: RecurrenceEditScope;
+  icon: React.ElementType;
+  label: string;
+  description: string;
+}
+
+function getScopeOptions(action: 'edit' | 'delete'): ScopeOption[] {
+  const isDelete = action === 'delete';
+  return [
+    {
+      value: 'this_event',
+      icon: Calendar,
+      label: 'This event',
+      description: isDelete
+        ? 'Only cancel this occurrence'
+        : 'Only modify this occurrence',
+    },
+    {
+      value: 'all_events',
+      icon: ArrowsClockwise,
+      label: 'All events',
+      description: isDelete
+        ? 'Delete the entire series'
+        : 'Modify the entire series',
+    },
+    {
+      value: 'this_and_following',
+      icon: FastForward,
+      label: 'This and following events',
+      description: isDelete
+        ? 'Cancel from this occurrence onwards'
+        : 'Modify from this occurrence onwards',
+    },
+  ];
+}
+
+export function RecurrenceEditScopeDialog({
+  isOpen,
+  onClose,
+  onSelect,
+  action,
+}: RecurrenceEditScopeDialogProps) {
+  const [selected, setSelected] = useState<RecurrenceEditScope>('this_event');
+  const [prevOpen, setPrevOpen] = useState(false);
+
+  // Reset selection when dialog opens (render-time state adjustment)
+  if (isOpen && !prevOpen) {
+    setPrevOpen(true);
+    setSelected('this_event');
+  } else if (!isOpen && prevOpen) {
+    setPrevOpen(false);
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const isDelete = action === 'delete';
+  const options = getScopeOptions(action);
+
+  const handleConfirm = () => {
+    onSelect(selected);
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 z-40"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={cn(
+          'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50',
+          'w-[calc(100vw-2rem)] max-w-md',
+          'bg-background border border-border rounded-xl shadow-lg',
+          'animate-in zoom-in-95 fade-in duration-200',
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-2 p-4 border-b border-border">
+          {isDelete ? (
+            <CalendarX className="w-5 h-5 text-muted-foreground" weight="duotone" />
+          ) : (
+            <ArrowsClockwise className="w-5 h-5 text-muted-foreground" weight="duotone" />
+          )}
+          <h2 className="text-lg font-semibold text-foreground">
+            {isDelete ? 'Delete recurring event' : 'Edit recurring event'}
+          </h2>
+        </div>
+
+        {/* Options */}
+        <div className="p-4 space-y-2">
+          {options.map((option) => {
+            const isSelected = selected === option.value;
+            const Icon = option.icon;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSelected(option.value)}
+                className={cn(
+                  'w-full flex items-start gap-3 p-3 rounded-lg text-left cursor-pointer',
+                  'border transition-all duration-150',
+                  isSelected
+                    ? 'border-primary bg-primary/8 ring-1 ring-primary/30'
+                    : 'border-border bg-card hover:bg-muted',
+                )}
+              >
+                {/* Radio indicator */}
+                <div
+                  className={cn(
+                    'mt-0.5 flex-shrink-0 w-4 h-4 rounded-full border-2 transition-colors',
+                    isSelected
+                      ? 'border-primary bg-primary'
+                      : 'border-muted-foreground/40 bg-transparent',
+                  )}
+                >
+                  {isSelected && (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                    </div>
+                  )}
+                </div>
+
+                <Icon
+                  className={cn(
+                    'mt-0.5 flex-shrink-0 w-4 h-4',
+                    isSelected ? 'text-primary' : 'text-muted-foreground',
+                  )}
+                  weight={isSelected ? 'fill' : 'regular'}
+                />
+
+                <div className="min-w-0">
+                  <p
+                    className={cn(
+                      'text-sm font-medium',
+                      isSelected ? 'text-foreground' : 'text-foreground',
+                    )}
+                  >
+                    {option.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {option.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 p-4 border-t border-border">
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant={isDelete ? 'destructive' : 'default'}
+            size="md"
+            onClick={handleConfirm}
+          >
+            {isDelete ? 'Delete' : 'Confirm'}
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+}

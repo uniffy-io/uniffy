@@ -33,7 +33,7 @@ export interface CalendarPreferences {
 /**
  * Calendar view modes
  */
-export type ViewMode = 'day' | 'week' | 'month';
+export type ViewMode = 'day' | 'week' | 'month' | 'agenda';
 
 /**
  * Quick access filter options

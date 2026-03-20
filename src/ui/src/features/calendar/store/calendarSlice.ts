@@ -271,9 +271,12 @@ const calendarSlice = createSlice({
       })
       .addCase(fetchEventsInRange.fulfilled, (state, action) => {
         state.loading.events = false;
+        // Replace events entirely to clear stale/deleted entries
+        const newEvents: Record<string, CalendarEvent> = {};
         action.payload.forEach((event) => {
-          state.events[event.id] = event;
+          newEvents[event.id] = event;
         });
+        state.events = newEvents;
         state.visibleEventIds = action.payload.map((e) => e.id);
       })
       .addCase(fetchEventsInRange.rejected, (state, action) => {

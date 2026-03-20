@@ -1,6 +1,7 @@
 """Calendar operations extending BaseContentOperations."""
 
-from datetime import UTC, datetime, timedelta
+import copy
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +17,7 @@ from uniffy.core.events import NotificationEvent, emit_notification, extract_men
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.login.organization_member import OrganizationMember
@@ -30,6 +32,7 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
+from uniffy.domains.calendar.recurrence import expand_recurrence
 
 
 class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
@@ -467,6 +470,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         attendee_ids: list[UUID] | None = None,
         visibility: VisibilityScope | None = None,
         reminders: list[int] | None = None,
+        recurrence_edit_scope: str | None = None,
+        occurrence_date: date | None = None,
     ) -> CalendarEvent:
         """
         Update an existing event.
@@ -490,6 +495,33 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Updated event.
 
         """
+        # Dispatch to scope-specific methods for recurring events
+        if recurrence_edit_scope and occurrence_date:
+            if recurrence_edit_scope == "this_event":
+                # Parse the real master event ID from synthetic ID if needed
+                real_event_id = self._parse_master_event_id(event_id)
+                updates = self._collect_update_kwargs(
+                    title=title, description=description, start_time=start_time,
+                    end_time=end_time, is_all_day=is_all_day, timezone=timezone,
+                    location=location, meeting_url=meeting_url, category_id=category_id,
+                    is_focus_time=is_focus_time, tags=tags,
+                )
+                return await self.edit_single_occurrence(
+                    user_id, organization_id, real_event_id, occurrence_date, **updates,
+                )
+            elif recurrence_edit_scope == "this_and_following":
+                real_event_id = self._parse_master_event_id(event_id)
+                updates = self._collect_update_kwargs(
+                    title=title, description=description, start_time=start_time,
+                    end_time=end_time, is_all_day=is_all_day, timezone=timezone,
+                    location=location, meeting_url=meeting_url, category_id=category_id,
+                    is_focus_time=is_focus_time, tags=tags,
+                )
+                return await self.edit_this_and_following(
+                    user_id, organization_id, real_event_id, occurrence_date, **updates,
+                )
+            # "all_events" falls through to normal update on the master
+
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
@@ -703,6 +735,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         organization_id: UUID,
         event_id: UUID,
         permanent: bool = False,
+        recurrence_edit_scope: str | None = None,
+        occurrence_date: date | None = None,
     ) -> bool:
         """
         Delete an event (soft or permanent).
@@ -717,6 +751,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Event to delete.
         permanent : bool
             If True, permanently delete.
+        recurrence_edit_scope : str | None
+            Scope for recurring event deletion.
+        occurrence_date : date | None
+            Occurrence date for single-occurrence deletion.
 
         Returns
         -------
@@ -724,6 +762,35 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             True if deleted successfully.
 
         """
+        # Handle recurring event scoped deletion
+        if recurrence_edit_scope and occurrence_date:
+            if recurrence_edit_scope == "this_event":
+                real_event_id = self._parse_master_event_id(event_id)
+                await self.cancel_occurrence(
+                    user_id, organization_id, real_event_id, occurrence_date,
+                )
+                return True
+            elif recurrence_edit_scope == "this_and_following":
+                real_event_id = self._parse_master_event_id(event_id)
+                master = await self._fetch_by_id(real_event_id, organization_id)
+                if not master:
+                    raise NotFoundError("CalendarEvent", real_event_id)
+                await self._require_delete(user_id, organization_id, master)
+                # Truncate series to end before this occurrence
+                config = dict(master.recurrence_config or {})
+                end_dt = datetime(
+                    occurrence_date.year,
+                    occurrence_date.month,
+                    occurrence_date.day,
+                    tzinfo=master.start_time.tzinfo,
+                ) - timedelta(days=1)
+                config["end_date"] = end_dt.isoformat()
+                master.recurrence_config = config
+                master.updated_at = datetime.now(UTC)
+                await self.session.commit()
+                return True
+            # "all_events" falls through to normal delete
+
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
@@ -783,16 +850,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Events the user can access.
 
         """
-        query = select(CalendarEvent).where(
-            and_(
-                CalendarEvent.organization_id == organization_id,
-                CalendarEvent.is_deleted == False,  # noqa: E712
-                CalendarEvent.start_time < end_date,
-                CalendarEvent.end_time > start_date,
-            )
-        )
-
-        # Apply access filter (owner, org visibility, group visibility)
+        # Access filter (owner, org visibility, group visibility)
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -801,27 +859,405 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             owner_id_column=CalendarEvent.organizer_id,
             visibility_column=CalendarEvent.visibility,
         )
-
-        # Also include events where user is an attendee (including declined)
-        attendee_subquery = select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
+        attendee_subquery = select(EventAttendee.event_id).where(
+            EventAttendee.user_id == user_id,
+        )
         attendee_filter = CalendarEvent.id.in_(attendee_subquery)
+        permission_filter = or_(access_filter, attendee_filter)
 
-        # Combine: user can access OR user is attendee
-        query = query.where(or_(access_filter, attendee_filter))
-
-        # Apply optional calendar filter
+        # Base filters shared by both queries
+        base_filters = [
+            CalendarEvent.organization_id == organization_id,
+            CalendarEvent.is_deleted == False,  # noqa: E712
+            permission_filter,
+        ]
         if calendar_ids:
-            query = query.where(CalendarEvent.calendar_id.in_(calendar_ids))
-
-        # Apply optional category filter
+            base_filters.append(CalendarEvent.calendar_id.in_(calendar_ids))
         if category_ids:
-            query = query.where(CalendarEvent.category_id.in_(category_ids))
+            base_filters.append(CalendarEvent.category_id.in_(category_ids))
 
-        # Order by start time
-        query = query.order_by(CalendarEvent.start_time.asc())
-
+        # Query 1: non-recurring events (and overrides) in the date range
+        query = (
+            select(CalendarEvent)
+            .where(
+                and_(
+                    *base_filters,
+                    CalendarEvent.start_time < end_date,
+                    CalendarEvent.end_time > start_date,
+                )
+            )
+            .order_by(CalendarEvent.start_time.asc())
+        )
         result = await self.session.execute(query)
-        return list(result.scalars().all())
+        db_events = list(result.scalars().all())
+        seen_ids = {e.id for e in db_events}
+
+        # Query 2: recurring master events that started before the range
+        # but could have occurrences within it. These are events with a
+        # recurrence pattern that started before end_date (could produce
+        # occurrences in range) and are not overrides themselves.
+        recurring_query = (
+            select(CalendarEvent)
+            .where(
+                and_(
+                    *base_filters,
+                    CalendarEvent.recurrence_pattern != RecurrencePattern.NONE,
+                    CalendarEvent.recurrence_id.is_(None),
+                    CalendarEvent.start_time < end_date,
+                )
+            )
+        )
+        recurring_result = await self.session.execute(recurring_query)
+        for event in recurring_result.scalars().all():
+            if event.id not in seen_ids:
+                db_events.append(event)
+                seen_ids.add(event.id)
+
+        # Expand recurring events into virtual instances
+        return await self._expand_recurring_events(db_events, start_date, end_date)
+
+    @staticmethod
+    def _parse_master_event_id(event_id: UUID | str) -> UUID:
+        """Extract the real master event UUID from a potentially synthetic ID."""
+        event_id_str = str(event_id)
+        if "__occurrence__" in event_id_str:
+            return UUID(event_id_str.split("__occurrence__")[0])
+        return UUID(event_id_str) if isinstance(event_id, str) else event_id
+
+    @staticmethod
+    def _collect_update_kwargs(**fields: object) -> dict:
+        """Collect non-None fields into an update kwargs dict."""
+        return {k: v for k, v in fields.items() if v is not None}
+
+    async def _expand_recurring_events(
+        self,
+        events: list[CalendarEvent],
+        range_start: datetime,
+        range_end: datetime,
+    ) -> list[CalendarEvent]:
+        """
+        Expand recurring events into virtual instances within the range.
+
+        Non-recurring events and override events pass through unchanged.
+        Recurring master events generate virtual copies for each occurrence.
+        """
+        recurring_ids = [
+            e.id
+            for e in events
+            if e.recurrence_pattern != RecurrencePattern.NONE and e.recurrence_id is None
+        ]
+
+        # Batch-fetch all exceptions for recurring events in this range
+        exceptions_by_event: dict[UUID, dict[date, RecurrenceException]] = {}
+        if recurring_ids:
+            exc_result = await self.session.execute(
+                select(RecurrenceException).where(
+                    RecurrenceException.event_id.in_(recurring_ids)
+                )
+            )
+            for exc in exc_result.scalars().all():
+                exceptions_by_event.setdefault(exc.event_id, {})[exc.original_date] = exc
+
+            # Also fetch override events (real events linked to the series)
+            override_result = await self.session.execute(
+                select(CalendarEvent).where(
+                    and_(
+                        CalendarEvent.recurrence_id.in_(recurring_ids),
+                        CalendarEvent.is_deleted == False,  # noqa: E712
+                        CalendarEvent.start_time < range_end,
+                        CalendarEvent.end_time > range_start,
+                    )
+                )
+            )
+            override_events = list(override_result.scalars().all())
+        else:
+            override_events = []
+
+        result: list[CalendarEvent] = []
+
+        for event in events:
+            is_recurring_master = (
+                event.recurrence_pattern != RecurrencePattern.NONE
+                and event.recurrence_id is None
+            )
+
+            if not is_recurring_master:
+                # Non-recurring event or override event - pass through
+                result.append(event)
+                continue
+
+            # The master event itself: include it only if its original date falls in range
+            master_start = event.start_time
+            master_end = event.end_time
+            if master_start < range_end and master_end > range_start:
+                result.append(event)
+
+            # Get exceptions for this master event
+            event_exceptions = exceptions_by_event.get(event.id, {})
+            exception_dates = set(event_exceptions.keys())
+
+            # Expand into virtual instances
+            occurrences = expand_recurrence(
+                start_time=event.start_time,
+                end_time=event.end_time,
+                recurrence_pattern=event.recurrence_pattern,
+                recurrence_config=event.recurrence_config,
+                range_start=range_start,
+                range_end=range_end,
+                exception_dates=exception_dates,
+                timezone=event.timezone or "UTC",
+            )
+
+            for occ in occurrences:
+                # Create a shallow copy of the master event with modified times
+                virtual = copy.copy(event)
+                virtual.start_time = occ.start_time
+                virtual.end_time = occ.end_time
+                # Set a synthetic ID and occurrence_date for the frontend
+                synthetic_id = f"{event.id}__occurrence__{occ.occurrence_date.isoformat()}"
+                virtual.id = synthetic_id  # type: ignore[assignment]
+                virtual._occurrence_date = occ.occurrence_date.isoformat()  # type: ignore[attr-defined]
+                result.append(virtual)
+
+        # Add override events
+        result.extend(override_events)
+
+        # Sort by start_time
+        result.sort(key=lambda e: e.start_time)
+        return result
+
+    async def cancel_occurrence(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        event_id: UUID,
+        occurrence_date: date,
+    ) -> None:
+        """
+        Cancel a single occurrence of a recurring event.
+
+        Creates a RecurrenceException with is_cancelled=True.
+        """
+        event = await self._fetch_by_id(event_id, organization_id)
+        if not event:
+            raise NotFoundError("CalendarEvent", event_id)
+
+        await self._require_edit(user_id, organization_id, event)
+
+        if event.recurrence_pattern == RecurrencePattern.NONE:
+            raise NotFoundError("Not a recurring event", event_id)
+
+        exception = RecurrenceException(
+            event_id=event_id,
+            original_date=occurrence_date,
+            is_cancelled=True,
+        )
+        self.session.add(exception)
+        await self.session.commit()
+
+    async def edit_single_occurrence(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        event_id: UUID,
+        occurrence_date: date,
+        **updates: object,
+    ) -> CalendarEvent:
+        """
+        Edit a single occurrence by creating an override event.
+
+        Creates a new standalone CalendarEvent with recurrence_id pointing
+        to the master event, and a RecurrenceException linking them.
+        """
+        master = await self._fetch_by_id(event_id, organization_id)
+        if not master:
+            raise NotFoundError("CalendarEvent", event_id)
+
+        await self._require_edit(user_id, organization_id, master)
+
+        if master.recurrence_pattern == RecurrencePattern.NONE:
+            raise NotFoundError("Not a recurring event", event_id)
+
+        # Compute default start/end for this occurrence
+        duration = master.end_time - master.start_time
+        occ_start = datetime(
+            occurrence_date.year,
+            occurrence_date.month,
+            occurrence_date.day,
+            master.start_time.hour,
+            master.start_time.minute,
+            master.start_time.second,
+            tzinfo=master.start_time.tzinfo,
+        )
+        occ_end = occ_start + duration
+
+        # Create override event with master's fields, then apply updates
+        override = CalendarEvent(
+            organization_id=master.organization_id,
+            organizer_id=master.organizer_id,
+            calendar_id=master.calendar_id,
+            category_id=master.category_id,
+            title=master.title,
+            description=master.description,
+            start_time=occ_start,
+            end_time=occ_end,
+            is_all_day=master.is_all_day,
+            timezone=master.timezone,
+            location=master.location,
+            meeting_url=master.meeting_url,
+            visibility=master.visibility,
+            is_focus_time=master.is_focus_time,
+            tags=master.tags,
+            linked_resources=master.linked_resources,
+            recurrence_pattern=RecurrencePattern.NONE,
+            recurrence_id=master.id,
+            reminders=master.reminders,
+        )
+
+        # Apply provided updates
+        for field, value in updates.items():
+            if value is not None and hasattr(override, field):
+                setattr(override, field, value)
+
+        self.session.add(override)
+        await self.session.flush()
+
+        # Create exception record linking to the override
+        exception = RecurrenceException(
+            event_id=event_id,
+            original_date=occurrence_date,
+            is_cancelled=False,
+            override_event_id=override.id,
+        )
+        self.session.add(exception)
+
+        # Copy attendees from master
+        att_result = await self.session.execute(
+            select(EventAttendee).where(EventAttendee.event_id == master.id)
+        )
+        for att in att_result.scalars().all():
+            new_att = EventAttendee(
+                event_id=override.id,
+                user_id=att.user_id,
+                status=att.status,
+                role=att.role,
+                responded_at=att.responded_at,
+            )
+            self.session.add(new_att)
+
+        # Index for search
+        await self._index_for_search(model=override, group_ids=[])
+        await self.session.commit()
+
+        return override
+
+    async def edit_this_and_following(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        event_id: UUID,
+        occurrence_date: date,
+        **updates: object,
+    ) -> CalendarEvent:
+        """
+        Edit this occurrence and all following by splitting the series.
+
+        Truncates the master event's recurrence to end before occurrence_date,
+        and creates a new recurring event starting from occurrence_date.
+        """
+        master = await self._fetch_by_id(event_id, organization_id)
+        if not master:
+            raise NotFoundError("CalendarEvent", event_id)
+
+        await self._require_edit(user_id, organization_id, master)
+
+        if master.recurrence_pattern == RecurrencePattern.NONE:
+            raise NotFoundError("Not a recurring event", event_id)
+
+        # Truncate master series: set end_date to day before occurrence_date
+        config = dict(master.recurrence_config or {})
+        end_dt = datetime(
+            occurrence_date.year,
+            occurrence_date.month,
+            occurrence_date.day,
+            tzinfo=master.start_time.tzinfo,
+        ) - timedelta(days=1)
+        config["end_date"] = end_dt.isoformat()
+        master.recurrence_config = config
+        master.updated_at = datetime.now(UTC)
+
+        # Compute start/end for the new series
+        duration = master.end_time - master.start_time
+        new_start = datetime(
+            occurrence_date.year,
+            occurrence_date.month,
+            occurrence_date.day,
+            master.start_time.hour,
+            master.start_time.minute,
+            master.start_time.second,
+            tzinfo=master.start_time.tzinfo,
+        )
+        new_end = new_start + duration
+
+        # Create new recurring event
+        new_config = dict(master.recurrence_config or {})
+        # Remove the end_date we just set on the master - the new series
+        # inherits the original end_date if there was one, otherwise none
+        original_end = (master.recurrence_config or {}).get("end_date")
+        if original_end and original_end != config["end_date"]:
+            new_config["end_date"] = original_end
+        else:
+            new_config.pop("end_date", None)
+
+        new_event = CalendarEvent(
+            organization_id=master.organization_id,
+            organizer_id=master.organizer_id,
+            calendar_id=master.calendar_id,
+            category_id=master.category_id,
+            title=master.title,
+            description=master.description,
+            start_time=new_start,
+            end_time=new_end,
+            is_all_day=master.is_all_day,
+            timezone=master.timezone,
+            location=master.location,
+            meeting_url=master.meeting_url,
+            visibility=master.visibility,
+            is_focus_time=master.is_focus_time,
+            tags=master.tags,
+            linked_resources=master.linked_resources,
+            recurrence_pattern=master.recurrence_pattern,
+            recurrence_config=new_config,
+            reminders=master.reminders,
+        )
+
+        # Apply provided updates
+        for field, value in updates.items():
+            if value is not None and hasattr(new_event, field):
+                setattr(new_event, field, value)
+
+        self.session.add(new_event)
+        await self.session.flush()
+
+        # Copy attendees from master
+        att_result = await self.session.execute(
+            select(EventAttendee).where(EventAttendee.event_id == master.id)
+        )
+        for att in att_result.scalars().all():
+            new_att = EventAttendee(
+                event_id=new_event.id,
+                user_id=att.user_id,
+                status=att.status,
+                role=att.role,
+                responded_at=att.responded_at,
+            )
+            self.session.add(new_att)
+
+        # Index for search
+        await self._index_for_search(model=new_event, group_ids=[])
+        await self.session.commit()
+
+        return new_event
 
     async def list_events(
         self,

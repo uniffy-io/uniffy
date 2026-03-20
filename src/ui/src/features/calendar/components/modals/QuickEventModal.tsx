@@ -12,6 +12,7 @@ import {
   Tag,
   TextAa,
   Users,
+  Warning,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
@@ -25,8 +26,11 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { getInitials } from '@/components/subject/utils';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
-import type { Attendee } from '@/features/calendar/types';
+import { DatePicker } from '@/components/ui/date-picker';
+import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
+import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
 
 type EventVisibility = 'private' | 'organization';
 
@@ -91,6 +95,7 @@ export function QuickEventModal({
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [visibility, setVisibility] = useState<EventVisibility>('private');
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
@@ -100,6 +105,27 @@ export function QuickEventModal({
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
   }, []);
+
+  // Conflict detection
+  const startIso = useMemo(() => {
+    if (!startDate) return null;
+    const [y, m, d] = startDate.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setHours(Math.floor(startHour), Math.round((startHour % 1) * 60), 0, 0);
+    return dt.toISOString();
+  }, [startDate, startHour]);
+
+  const endIso = useMemo(() => {
+    if (!isMultiDay && !startDate) return null;
+    const dateStr = isMultiDay ? endDate : startDate;
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setHours(Math.floor(endHour), Math.round((endHour % 1) * 60), 0, 0);
+    return dt.toISOString();
+  }, [startDate, endDate, endHour, isMultiDay]);
+
+  const conflicts = useConflictDetection(startIso, endIso);
 
   const dateOptions = useMemo(() => generateDateOptions(), []);
 
@@ -113,7 +139,7 @@ export function QuickEventModal({
     [categories]
   );
 
-  // Reset form when modal opens
+  // Reset form when modal opens + Escape key to close
   useEffect(() => {
     if (isOpen) {
       const date = initialDate || new Date();
@@ -125,6 +151,7 @@ export function QuickEventModal({
       setStartHour(initialStartHour);
       setEndHour(initialEndHour);
       setVisibility('private');
+      setRecurrence(undefined);
       setIsSubmitting(false);
 
       const categoryIds = Object.keys(categories || {});
@@ -133,6 +160,14 @@ export function QuickEventModal({
       }
       setAttendees([]);
       pendingFileIdsRef.current = [];
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialStartHour, initialEndHour]);
@@ -201,6 +236,7 @@ export function QuickEventModal({
         isFocusTime: selectedCategoryId === 'cat-deepwork',
         attendeeIds: attendees.map((a) => a.id),
         visibility,
+        recurrence,
       })
     );
 
@@ -388,31 +424,47 @@ export function QuickEventModal({
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-muted-foreground mb-1.5">Start</label>
-                      <TimeSelect
-                        value={startHour}
+                      <label className="block text-xs text-muted-foreground mb-1.5">Date</label>
+                      <DatePicker
+                        value={startDate}
                         onChange={(value) => {
-                          setStartHour(value);
-                          if (value >= endHour) {
-                            setEndHour(value + 0.5);
-                          }
+                          setStartDate(value);
+                          setEndDate(value);
                         }}
-                        className="w-full"
+                        placeholder="Pick a date"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs text-muted-foreground mb-1.5">End</label>
-                      <TimeSelect
-                        value={endHour}
-                        onChange={setEndHour}
-                        className="w-full"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">Start</label>
+                        <TimeSelect
+                          value={startHour}
+                          onChange={(value) => {
+                            setStartHour(value);
+                            if (value >= endHour) {
+                              setEndHour(value + 0.5);
+                            }
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1.5">End</label>
+                        <TimeSelect
+                          value={endHour}
+                          onChange={setEndHour}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Recurrence */}
+              <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
 
               {/* Category */}
               <div className="space-y-2">
@@ -462,6 +514,25 @@ export function QuickEventModal({
                 />
               </div>
             </div>
+
+            {/* Conflict warning */}
+            {conflicts.length > 0 && (
+              <div
+                className="mx-5 mb-3 p-3 rounded-lg text-sm"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--status-warning) 8%, transparent)',
+                  color: 'var(--status-warning)',
+                }}
+              >
+                <div className="flex items-center gap-2 font-medium mb-1">
+                  <Warning size={16} weight="duotone" />
+                  Scheduling conflict ({conflicts.length})
+                </div>
+                <div className="text-xs opacity-80">
+                  Overlaps with: {conflicts.map(c => c.title).join(', ')}
+                </div>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="flex gap-3 px-5 py-4 border-t border-border bg-muted/20">

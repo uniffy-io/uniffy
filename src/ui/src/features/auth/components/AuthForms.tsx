@@ -24,7 +24,7 @@ const BRAND_ACCENT_RING = 'rgba(9, 9, 11, 0.15)';
 
 // --- Connected network canvas for the auth page ---
 
-const CONTENT_LABELS = ['Note', 'File', 'Chat', 'Calendar', 'Workflow', 'Assistant'];
+const CONTENT_LABELS = ['Note', 'File', 'Chat', 'Calendar', 'Workflow', 'Agent'];
 const MAX_LABELED = 20;
 const AMBIENT_COUNT = 26;
 const CONNECTION_DIST = 320;
@@ -770,7 +770,7 @@ export function AuthForms() {
         </div>
 
         {/* Right — Form panel */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-12 lg:px-20 relative z-[2]">
+        <div className="flex-1 flex flex-col items-center px-6 py-12 sm:px-12 lg:px-20 relative z-[2] pt-[25vh]">
           {/* Mobile logo — only shown on smaller screens */}
           <div className="lg:hidden mb-10 flex items-center gap-3">
             <UniffyLogo className="w-14 h-14" />

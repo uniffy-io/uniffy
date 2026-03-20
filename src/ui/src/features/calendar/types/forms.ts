@@ -8,7 +8,11 @@ import type { RecurrencePattern, DayOfWeek } from '@/features/calendar/types/eve
 /**
  * Event form validation schema
  */
-export const eventFormSchema = z.object({
+/**
+ * Base event form object schema (without refinements).
+ * Used by templateFormSchema which needs .omit() - not available on refined schemas.
+ */
+export const eventFormBaseSchema = z.object({
   title: z
     .string()
     .min(1, 'Title is required')
@@ -38,7 +42,9 @@ export const eventFormSchema = z.object({
   isFocusTime: z.boolean().default(false),
   tags: z.array(z.string()).optional(),
   linkedResourceIds: z.array(z.string()).optional(),
-}).refine(
+});
+
+export const eventFormSchema = eventFormBaseSchema.refine(
   (data) => {
     // Validate end time is after start time for non-all-day events
     if (!data.isAllDay && data.startTime && data.endTime) {
@@ -127,7 +133,7 @@ export const templateFormSchema = z.object({
     .min(1, 'Template name is required')
     .max(100, 'Name must be less than 100 characters'),
   description: z.string().max(500).optional(),
-  eventData: eventFormSchema.omit({ date: true, startTime: true, endTime: true }),
+  eventData: eventFormBaseSchema.omit({ date: true, startTime: true, endTime: true }),
 });
 
 export type TemplateFormData = z.infer<typeof templateFormSchema>;

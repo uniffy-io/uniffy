@@ -3,7 +3,7 @@
  * Dialog for creating a new event template
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
@@ -49,6 +49,18 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
       }
     }
   }
+
+  useEffect(() => {
+    if (isOpen) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
