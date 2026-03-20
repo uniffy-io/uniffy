@@ -89,7 +89,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter uniffy-ui...
 
       - name: Run ESLint
         run: pnpm --filter uniffy-ui lint
@@ -169,7 +169,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter uniffy-ui...
 
       - name: Run Vitest
         run: pnpm --filter uniffy-ui test:ci
