@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package bookmarks.v1;
 
+option go_package = "github.com/uniffy-io/uniffy-proto-go/bookmarks/v1;bookmarksv1";
+
 import "google/protobuf/timestamp.proto";
 
 // BookmarksService provides user-scoped bookmark management

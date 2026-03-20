@@ -5,7 +5,7 @@ package files.v1;
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
 
-option go_package = "uniffy/gen/files/v1;filesv1";
+option go_package = "github.com/uniffy-io/uniffy-proto-go/files/v1;filesv1";
 
 // SERVICE
 

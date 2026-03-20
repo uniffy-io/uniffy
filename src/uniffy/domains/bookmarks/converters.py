@@ -1,8 +1,9 @@
 """Proto <-> domain converters for bookmarks domain."""
 
+from uniffy_proto.bookmarks.v1.bookmarks_pb2 import Bookmark as ProtoBookmark
+
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.bookmarks.bookmark import Bookmark
-from uniffy.gen.bookmarks.v1.bookmarks_pb2 import Bookmark as ProtoBookmark
 
 
 def bookmark_to_proto(bookmark: Bookmark) -> ProtoBookmark:

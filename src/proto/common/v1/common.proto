@@ -4,7 +4,7 @@ package common.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "uniffy/gen/common/v1;commonv1";
+option go_package = "github.com/uniffy-io/uniffy-proto-go/common/v1;commonv1";
 
 // ENUMS - Shared across all services
 

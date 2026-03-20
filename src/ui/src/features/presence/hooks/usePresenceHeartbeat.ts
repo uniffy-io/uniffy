@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { presenceApi } from '@/features/presence/api/presenceApi';
 import { fetchBulkPresence } from '@/features/presence/store/presenceThunks';
-import { PresenceStatus } from '@/gen/presence/v1/presence_pb';
+import { PresenceStatus } from '@uniffy/proto/presence/v1/presence_pb';
 
 const HEARTBEAT_INTERVAL_MS = 60_000; // 60 seconds
 const IDLE_TIMEOUT_MS = 5 * 60_000; // 5 minutes

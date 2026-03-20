@@ -8,7 +8,7 @@ import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
 import type { RootState } from '@/app/store';
-import type { VisibilityScope } from '@/gen/common/v1/common_pb';
+import type { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Serialized filter criteria for Redux state.

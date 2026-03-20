@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { attachmentsApi } from "@/features/attachments";
-import { ContentType } from "@/gen/common/v1/common_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
 import { SubjectPicker } from "@/components/subject";

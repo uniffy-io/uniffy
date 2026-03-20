@@ -33,7 +33,7 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 
 import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
 import { extractMentionsFromMarkdown, extractFallbackLabel } from "@/shared/utils/mentionUtils";
-import { ContentType } from "@/gen/common/v1/common_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { SubtasksList } from "./SubtasksList";
 import { ActivityLog } from "./ActivityLog";

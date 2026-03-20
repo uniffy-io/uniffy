@@ -9,7 +9,7 @@
  */
 
 import type { PlainMessage } from '@bufbuild/protobuf';
-import type { CurrentUserResponse } from '@/gen/auth/v1/auth_pb';
+import type { CurrentUserResponse } from '@uniffy/proto/auth/v1/auth_pb';
 
 // Action type constants
 const AUTH_SLICE_NAME = 'auth';

@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "uniffy-proto"
+version = "0.0.0"
+description = "Generated protobuf and ConnectRPC code for Uniffy"
+requires-python = ">=3.14"
+dependencies = [
+  "protobuf>=7.34.0",
+  "connect-python>=0.7.0",
+]

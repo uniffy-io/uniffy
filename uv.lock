@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.14"
 
+[manifest]
+members = [
+    "uniffy",
+    "uniffy-proto",
+]
+
 [[package]]
 name = "aioboto3"
 version = "15.5.0"
@@ -1848,7 +1854,6 @@ dependencies = [
     { name = "asyncpg" },
     { name = "bcrypt" },
     { name = "colorama" },
-    { name = "connect-python" },
     { name = "croniter" },
     { name = "fastapi" },
     { name = "ffmpeg-python" },
@@ -1863,7 +1868,6 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pillow" },
     { name = "prometheus-client" },
-    { name = "protobuf" },
     { name = "protoc-gen-connect-python" },
     { name = "psycopg2-binary" },
     { name = "pydantic", extra = ["email"] },
@@ -1876,6 +1880,7 @@ dependencies = [
     { name = "pywebpush" },
     { name = "sqlmodel" },
     { name = "types-aiobotocore", extra = ["s3"] },
+    { name = "uniffy-proto" },
 ]
 
 [package.dev-dependencies]
@@ -1898,7 +1903,6 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "bcrypt", specifier = ">=4.2.1" },
     { name = "colorama", specifier = ">=0.4.6" },
-    { name = "connect-python", specifier = ">=0.7.0" },
     { name = "croniter", specifier = ">=6.0.0" },
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "ffmpeg-python", specifier = ">=0.2.0" },
@@ -1913,7 +1917,6 @@ requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.0" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "prometheus-client", specifier = ">=0.21.0" },
-    { name = "protobuf", specifier = ">=7.34.0" },
     { name = "protoc-gen-connect-python", specifier = ">=0.7.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.12.5" },
@@ -1926,6 +1929,7 @@ requires-dist = [
     { name = "pywebpush", specifier = ">=2.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.25" },
     { name = "types-aiobotocore", extras = ["s3"], specifier = ">=2.15.0" },
+    { name = "uniffy-proto", editable = "src/gen/python" },
 ]
 
 [package.metadata.requires-dev]
@@ -1936,6 +1940,21 @@ dev = [
     { name = "ruff", specifier = ">=0.14.13" },
     { name = "ty", specifier = ">=0.0.10" },
     { name = "watchfiles", specifier = ">=1.0.0" },
+]
+
+[[package]]
+name = "uniffy-proto"
+version = "0.0.0"
+source = { editable = "src/gen/python" }
+dependencies = [
+    { name = "connect-python" },
+    { name = "protobuf" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "connect-python", specifier = ">=0.7.0" },
+    { name = "protobuf", specifier = ">=7.34.0" },
 ]
 
 [[package]]

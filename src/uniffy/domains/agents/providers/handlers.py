@@ -6,18 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.converters.common_proto import visibility_from_proto
-from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
-from uniffy.domains.agents.providers.converters import (
-    credential_type_from_proto,
-    model_info_to_proto,
-    provider_key_to_proto,
-)
-from uniffy.domains.agents.providers.operations import ProviderOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.gen.agents.v1.providers_pb2 import (
+from uniffy_proto.agents.v1.providers_pb2 import (
     AddProviderKeyRequest,
     ListAvailableModelsRequest,
     ListAvailableModelsResponse,
@@ -31,6 +20,17 @@ from uniffy.gen.agents.v1.providers_pb2 import (
     ValidateProviderKeyRequest,
     ValidateProviderKeyResponse,
 )
+
+from uniffy.core.converters.common_proto import visibility_from_proto
+from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.db import get_async_session
+from uniffy.domains.agents.providers.converters import (
+    credential_type_from_proto,
+    model_info_to_proto,
+    provider_key_to_proto,
+)
+from uniffy.domains.agents.providers.operations import ProviderOperations
+from uniffy.domains.auth.context import get_user_id_from_context
 
 
 class ProvidersHandlers:

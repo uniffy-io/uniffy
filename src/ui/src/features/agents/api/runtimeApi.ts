@@ -1,8 +1,8 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { RuntimeService } from '@/gen/agents/v1/runtime_connect';
+import { RuntimeService } from '@uniffy/proto/agents/v1/runtime_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
-import type { ConfirmationResponse, GetUsageStatsRequest, SendMessageRequest } from '@/gen/agents/v1/runtime_pb';
+import type { ConfirmationResponse, GetUsageStatsRequest, SendMessageRequest } from '@uniffy/proto/agents/v1/runtime_pb';
 
 const client = createClient(RuntimeService, transport);
 

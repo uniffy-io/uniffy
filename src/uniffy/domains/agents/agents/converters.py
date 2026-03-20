@@ -1,10 +1,11 @@
 """Proto <-> domain converters for agents."""
 
+from uniffy_proto.agents.v1.agents_pb2 import AgentInfo
+
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.converters.common_proto import visibility_to_proto
 from uniffy.core.models.agents.agent import Agent
-from uniffy.gen.agents.v1.agents_pb2 import AgentInfo
 
 
 def agent_to_proto(agent: Agent) -> AgentInfo:

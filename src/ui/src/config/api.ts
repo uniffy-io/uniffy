@@ -14,7 +14,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import type { Interceptor } from '@connectrpc/connect';
 import { ConnectError, Code, createClient } from '@connectrpc/connect';
 import { env } from '@/config/env';
-import { AuthService } from '@/gen/auth/v1/auth_connect';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
 import { getStoreRef } from '@/app/storeRef';
 import {
   createSetCredentialsAction,
@@ -399,7 +399,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
  * ```ts
  * import { createClient } from "@connectrpc/connect";
  * import { transport } from "@/config/api";
- * import { AuthService } from "@/gen/auth/v1/auth_connect";
+ * import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
  * 
  * const client = createClient(AuthService, transport);
  * ```

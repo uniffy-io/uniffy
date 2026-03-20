@@ -66,12 +66,6 @@ function formatStatusLabel(status: string): string {
     .replace(/\b\w/, (c) => c.toUpperCase());
 }
 
-/** Check if a status represents completion - exported for use in MentionChip strikethrough */
-export function isTaskDoneStatus(status: string | undefined): boolean {
-  if (!status) return false;
-  return isCompletedStatus(status);
-}
-
 function isCompletedStatus(status: string): boolean {
   const lower = status.toLowerCase();
   return lower.includes('done') || lower.includes('complete') || lower.includes('closed');
@@ -144,7 +138,6 @@ export function TaskDueDateIndicator({ dueDate }: { dueDate: string }) {
 export function CalendarTemporalIndicator({
   startTime,
   endTime,
-  isAllDay,
 }: {
   startTime: string;
   endTime?: string;

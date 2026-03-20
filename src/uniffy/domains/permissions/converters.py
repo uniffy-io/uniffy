@@ -1,23 +1,24 @@
 """Proto <-> domain converters for permissions domain."""
 
+from uniffy_proto.common.v1.common_pb2 import (
+    ContentType as ProtoContentType,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    PermissionLevel,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    SubjectType as ProtoSubjectType,
+)
+from uniffy_proto.permissions.v1.permissions_pb2 import (
+    PermissionInfo,
+    ShareTarget,
+)
+
 from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
 from uniffy.core.models import ContentPermission, Group, User
 from uniffy.core.models.shared import ContentType as DomainContentType
 from uniffy.core.models.shared import PermissionLevel as DomainPermissionLevel
 from uniffy.core.models.shared import SubjectType as DomainSubjectType
-from uniffy.gen.common.v1.common_pb2 import (
-    ContentType as ProtoContentType,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    PermissionLevel,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    SubjectType as ProtoSubjectType,
-)
-from uniffy.gen.permissions.v1.permissions_pb2 import (
-    PermissionInfo,
-    ShareTarget,
-)
 
 # Domain ContentType to Proto ContentType mapping
 DOMAIN_CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType] = {

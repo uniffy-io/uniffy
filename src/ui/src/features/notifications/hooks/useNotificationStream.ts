@@ -15,7 +15,7 @@ import { addRealtimeNotification } from '@/features/notifications/store/notifica
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { updatePresenceWithCustomStatus } from '@/features/presence/store/presenceSlice';
 import { emitMentionStateChange } from '@/components/mention';
-import { StreamNotificationEvent_EventType } from '@/gen/notifications/v1/notifications_pb';
+import { StreamNotificationEvent_EventType } from '@uniffy/proto/notifications/v1/notifications_pb';
 
 const MAX_BACKOFF_MS = 30000;
 const INITIAL_BACKOFF_MS = 1000;

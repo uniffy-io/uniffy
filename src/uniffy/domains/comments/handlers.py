@@ -6,18 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.converters import content_type_from_proto
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.comments.converters import (
-    anchor_type_from_proto,
-    comment_to_proto,
-)
-from uniffy.domains.comments.operations import CommentOperations
-from uniffy.domains.comments.queries import aggregate_reactions
-from uniffy.gen.comments.v1.comments_pb2 import (
+from uniffy_proto.comments.v1.comments_pb2 import (
     AddReactionRequest,
     AddReactionResponse,
     CreateCommentRequest,
@@ -39,6 +28,17 @@ from uniffy.gen.comments.v1.comments_pb2 import (
     UpdateCommentRequest,
     UpdateCommentResponse,
 )
+
+from uniffy.core.converters import content_type_from_proto
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.comments.converters import (
+    anchor_type_from_proto,
+    comment_to_proto,
+)
+from uniffy.domains.comments.operations import CommentOperations
+from uniffy.domains.comments.queries import aggregate_reactions
 
 
 class CommentsHandlers:

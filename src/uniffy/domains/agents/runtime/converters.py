@@ -2,19 +2,7 @@
 
 import json
 
-from uniffy.core.models.agents.message import AgentMessage
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeConfirmationRequiredEvent,
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeMessageStoredEvent,
-    RuntimeStreamEvent,
-    RuntimeTokenEvent,
-    RuntimeToolCallEvent,
-    RuntimeToolResultEvent,
-)
-from uniffy.domains.agents.sessions.converters import message_to_proto
-from uniffy.gen.agents.v1.runtime_pb2 import (
+from uniffy_proto.agents.v1.runtime_pb2 import (
     AgentUsageInfo,
     CronTaskUsage,
     DailyUsage,
@@ -32,6 +20,19 @@ from uniffy.gen.agents.v1.runtime_pb2 import (
     StreamToolResultEvent,
     ToolUsage,
 )
+
+from uniffy.core.models.agents.message import AgentMessage
+from uniffy.domains.agents.runtime.stream_events import (
+    RuntimeConfirmationRequiredEvent,
+    RuntimeDoneEvent,
+    RuntimeErrorEvent,
+    RuntimeMessageStoredEvent,
+    RuntimeStreamEvent,
+    RuntimeTokenEvent,
+    RuntimeToolCallEvent,
+    RuntimeToolResultEvent,
+)
+from uniffy.domains.agents.sessions.converters import message_to_proto
 
 
 def send_message_response_to_proto(

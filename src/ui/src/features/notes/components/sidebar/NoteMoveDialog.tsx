@@ -20,7 +20,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/shared/utils/cn';
-import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 import { moveNote, updateNote, initializeNotesData } from '@/features/notes/store/notesSlice';
 import type { TreeNode, MoveTarget } from '@/features/notes/components/sidebar/types';
 

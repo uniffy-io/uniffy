@@ -4,7 +4,7 @@ import { cn } from '@/shared/utils/cn';
 import { CommentInput } from '@/features/comments/components/CommentInput';
 import { CommentThread } from '@/features/comments/components/CommentThread';
 import { useComments, useCommentActions, useActiveComment } from '@/features/comments/hooks/useComments';
-import { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
+import { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
 
 interface CommentsPanelProps {
     contentType: number;

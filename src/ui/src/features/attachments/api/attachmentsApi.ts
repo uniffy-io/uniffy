@@ -7,14 +7,14 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { AttachmentsService } from '@/gen/attachments/v1/attachments_connect';
+import { AttachmentsService } from '@uniffy/proto/attachments/v1/attachments_connect';
 import type {
     AttachFileRequest,
     DetachFileRequest,
     ListAttachmentsRequest,
     ListSharedAttachmentsRequest,
     GetAttachmentsFolderRequest,
-} from '@/gen/attachments/v1/attachments_pb';
+} from '@uniffy/proto/attachments/v1/attachments_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

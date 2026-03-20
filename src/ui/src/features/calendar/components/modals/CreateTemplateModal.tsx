@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 interface CreateTemplateModalProps {
   isOpen: boolean;

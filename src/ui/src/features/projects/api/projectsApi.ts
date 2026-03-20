@@ -7,13 +7,13 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { ProjectsService } from '@/gen/projects/v1/projects_connect';
-import { VisibilityScope as ProtoVisibilityScope } from '@/gen/common/v1/common_pb';
+import { ProjectsService } from '@uniffy/proto/projects/v1/projects_connect';
+import { VisibilityScope as ProtoVisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import {
   FieldType as ProtoFieldType,
   ViewType as ProtoViewType,
   ActivityAction as ProtoActivityAction,
-} from '@/gen/projects/v1/projects_pb';
+} from '@uniffy/proto/projects/v1/projects_pb';
 import type {
   Project as ProtoProject,
   Task as ProtoTask,
@@ -21,7 +21,7 @@ import type {
   ViewConfig as ProtoViewConfig,
   TaskActivity as ProtoTaskActivity,
   Sprint as ProtoSprint,
-} from '@/gen/projects/v1/projects_pb';
+} from '@uniffy/proto/projects/v1/projects_pb';
 import type {
   Project,
   Task,

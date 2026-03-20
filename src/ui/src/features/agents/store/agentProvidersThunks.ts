@@ -1,8 +1,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { providersApi } from '@/features/agents/api/providersApi';
 import type { RootState } from '@/app/store';
-import type { ProviderKeyInfo, ModelInfo } from '@/gen/agents/v1/providers_pb';
-import type { CredentialType } from '@/gen/agents/v1/providers_pb';
+import type { ProviderKeyInfo, ModelInfo } from '@uniffy/proto/agents/v1/providers_pb';
+import type { CredentialType } from '@uniffy/proto/agents/v1/providers_pb';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;

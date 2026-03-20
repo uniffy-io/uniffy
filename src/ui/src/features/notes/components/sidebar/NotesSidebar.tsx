@@ -39,7 +39,7 @@ import {
     setSelectedNode,
 } from '@/features/notes/store/notesTreeSlice';
 import type { TreeNode } from '@/features/notes/store/notesTreeSlice';
-import { VisibilityScope, NodeType } from '@/gen/notes/v1/notes_pb';
+import { VisibilityScope, NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useBookmarks } from '@/features/bookmarks';
 import { cn } from '@/shared/utils/cn';

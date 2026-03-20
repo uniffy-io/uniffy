@@ -25,7 +25,7 @@ import { clearComments } from '@/features/comments';
 import { clearMemoryAccessToken } from '@/config/api';
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { AuthService } from '@/gen/auth/v1/auth_connect';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';

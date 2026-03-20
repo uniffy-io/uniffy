@@ -9,7 +9,7 @@ import type { RootState } from '@/app/store';
 import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
 import type { SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 // MIME category mappings for filter matching
 const MIME_CATEGORY_PATTERNS: Record<string, RegExp> = {

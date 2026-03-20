@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package settings.v1;
 
+option go_package = "github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1";
+
 import "google/protobuf/timestamp.proto";
 
 // SettingsService provides user settings management functionality

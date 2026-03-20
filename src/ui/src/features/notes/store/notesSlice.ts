@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 import {
     fetchNotes,
     fetchDeletedNotes,

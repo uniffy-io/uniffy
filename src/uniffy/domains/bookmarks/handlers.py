@@ -6,12 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.bookmarks.converters import bookmark_to_proto
-from uniffy.domains.bookmarks.operations import BookmarksOperations
-from uniffy.gen.bookmarks.v1.bookmarks_pb2 import (
+from uniffy_proto.bookmarks.v1.bookmarks_pb2 import (
     BulkCheckBookmarksRequest,
     BulkCheckBookmarksResponse,
     ListBookmarksRequest,
@@ -19,6 +14,11 @@ from uniffy.gen.bookmarks.v1.bookmarks_pb2 import (
     ToggleBookmarkRequest,
     ToggleBookmarkResponse,
 )
+
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.bookmarks.converters import bookmark_to_proto
+from uniffy.domains.bookmarks.operations import BookmarksOperations
 
 
 class BookmarksHandlers:

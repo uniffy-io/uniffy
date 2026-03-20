@@ -6,6 +6,16 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from uniffy_proto.files.v1.files_pb2 import (
+    CreateSavedFilterRequest,
+    DeleteSavedFilterRequest,
+    DeleteSavedFilterResponse,
+    GetSavedFilterRequest,
+    ListSavedFiltersRequest,
+    ListSavedFiltersResponse,
+    SavedFilterResponse,
+    UpdateSavedFilterRequest,
+)
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.db import get_async_session
@@ -16,16 +26,6 @@ from uniffy.domains.files.filters.converters import (
     saved_filter_to_proto,
 )
 from uniffy.domains.files.filters.operations import SavedFilterOperations
-from uniffy.gen.files.v1.files_pb2 import (
-    CreateSavedFilterRequest,
-    DeleteSavedFilterRequest,
-    DeleteSavedFilterResponse,
-    GetSavedFilterRequest,
-    ListSavedFiltersRequest,
-    ListSavedFiltersResponse,
-    SavedFilterResponse,
-    UpdateSavedFilterRequest,
-)
 
 
 class SavedFilterHandlersMixin:

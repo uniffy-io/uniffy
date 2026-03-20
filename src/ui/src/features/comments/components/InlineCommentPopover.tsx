@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
-import { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
+import { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
 import { useCommentActions } from '@/features/comments/hooks/useComments';
 import { Struct } from '@bufbuild/protobuf';
 

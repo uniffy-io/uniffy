@@ -1,0 +1,13 @@
+{
+  "name": "@uniffy/proto",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
+  "peerDependencies": {
+    "@bufbuild/protobuf": "^1.10.0",
+    "@connectrpc/connect": "^1.7.0"
+  }
+}

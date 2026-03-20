@@ -11,7 +11,7 @@ import type {
     AppearanceSettings,
     KeyboardShortcutsSettings,
     NotificationsSettings,
-} from '@/gen/settings/v1/settings_pb';
+} from '@uniffy/proto/settings/v1/settings_pb';
 
 // ─────────────────────────────────────────────────────────────
 // Serialization helpers (convert proto objects to plain JS)

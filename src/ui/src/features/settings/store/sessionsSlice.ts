@@ -4,7 +4,7 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PlainMessage } from '@bufbuild/protobuf';
-import type { SessionInfo } from '@/gen/auth/v1/auth_pb';
+import type { SessionInfo } from '@uniffy/proto/auth/v1/auth_pb';
 import { sessionsApi } from '@/features/settings/api/sessionsApi';
 
 export interface SessionsState {

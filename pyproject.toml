@@ -13,17 +13,16 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+  "uniffy-proto",
   "aiofiles>=25.1.0",
   "alembic>=1.13.0",
   "asyncpg>=0.30.0",
   "bcrypt>=4.2.1",
   "colorama>=0.4.6",
-  "connect-python>=0.7.0",
   "fastapi>=0.128.0",
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
   "meilisearch-python-sdk>=5.5.0",
-  "protobuf>=7.34.0",
   "protoc-gen-connect-python>=0.7.0",
   "psycopg2-binary>=2.9.10",
   "pydantic[email]>=2.12.5",
@@ -72,6 +71,14 @@ dev = [
   "watchfiles>=1.0.0",
 ]
 
+[tool.uv.workspace]
+members = [
+  "src/gen/python",
+]
+
+[tool.uv.sources]
+uniffy-proto = { workspace = true }
+
 # Relax rules for test files
 [[tool.ty.overrides]]
 include = ["tests/**", "**/test_*.py"]
@@ -80,7 +87,6 @@ exclude = ["*.proto"]
 [tool.pyright]
 exclude = ["**", "./**/**"]
 reportCallIssue = false
-# analysisIgnore = ["**", "./**/**"]
 reportAny = false
 reportExplicitAny = false
 reportGeneralTypeIssues = false
@@ -142,6 +148,7 @@ exclude = [
   "**/stanza-cache",
   "**/models-cache",
   "tests/",
+  "src/gen",
 ]
 
 [tool.ruff.lint]

@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from "@/gen/auth/v1/auth_connect";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/store/authSlice";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";

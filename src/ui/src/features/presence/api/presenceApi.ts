@@ -1,12 +1,12 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { PresenceService } from '@/gen/presence/v1/presence_connect';
+import { PresenceService } from '@uniffy/proto/presence/v1/presence_connect';
 import type {
     SetPresenceRequest,
     GetBulkPresenceRequest,
     SetCustomStatusRequest,
     ClearCustomStatusRequest,
-} from '@/gen/presence/v1/presence_pb';
+} from '@uniffy/proto/presence/v1/presence_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 const presenceClient = createClient(PresenceService, transport);

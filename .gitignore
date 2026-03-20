@@ -215,3 +215,9 @@ postgres-backup.tar.gz
 ui-inspiration-for-assistants-page/
 openclaw-architecture-and-concepts-for-inspiration/
 .agents/
+node_modules/*
+node_modules/
+
+# Go
+src/unictl/unictl
+src/unictl/dist/

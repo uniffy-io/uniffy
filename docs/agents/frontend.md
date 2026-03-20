@@ -12,7 +12,6 @@ src/
 │   ├── theme/     # Theme engine (dark/light + user accent colors)
 │   └── types/     # TypeScript type declarations
 ├── features/      # Domain modules (auth, notes, files, calendar, etc.)
-├── gen/           # Generated ConnectRPC clients (DO NOT EDIT)
 ├── shared/        # Shared utilities across the app
 │   ├── hooks/     # Shared React hooks (useDocumentTitle, etc.)
 │   ├── utils/     # Utility functions (urn, navigation, cn, etc.)
@@ -27,12 +26,12 @@ src/
 - `src/components/ui/`: Shared UI primitives
 - `src/config/theme/`: Theme engine (dark/light + user accent colors)
 - `src/shared/`: Shared hooks, utils, layouts
-- `src/gen/`: Generated ConnectRPC clients (organized by service)
+**Generated Code** lives in the shared `@uniffy/proto` workspace package at `src/gen/typescript/`. Import as `@uniffy/proto/{service}/v1/{service}_pb` or `_connect`.
 
-**Generated Code Structure** (`src/gen/`):
+**Generated Code Structure** (`src/gen/typescript/`):
 
 ```
-src/gen/
+src/gen/typescript/     # @uniffy/proto workspace package
 ├── common/v1/          # Shared types (OrganizationRole, GroupRole, PaginationRequest, etc.)
 │   ├── common_pb.ts    # Message and enum types
 │   └── common_connect.ts
@@ -123,7 +122,7 @@ features/{feature}/
    ```typescript
    import { createClient } from '@connectrpc/connect';
    import { transport } from '@/config/api';
-   import { FeatureService } from '@/gen/feature/v1/feature_connect';
+   import { FeatureService } from '@uniffy/proto/feature/v1/feature_connect';
 
    const client = createClient(FeatureService, transport);
 
@@ -186,7 +185,7 @@ import { useNotesHooks } from './useNotesHooks';      // NO!
 | Shared hooks | `@/shared/hooks/useDocumentTitle` |
 | Theme system | `@/config/theme/ThemeProvider`, `@/config/theme/urnColors` |
 | UI components | `@/components/ui/button`, `@/components/ui/select` |
-| Generated types | `@/gen/common/v1/common_pb`, `@/gen/files/v1/files_pb` |
+| Generated types | `@uniffy/proto/common/v1/common_pb`, `@uniffy/proto/files/v1/files_pb` |
 | Feature APIs | `@/features/{feature}/api/{feature}Api` |
 | Feature store | `@/features/{feature}/store/{feature}Slice` |
 
@@ -711,13 +710,13 @@ const { isOrgAdmin, isSystemAdmin, canAccessAdmin } = useAdminAccess();
 
 ```typescript
 // Service clients
-import { UsersService } from '@/gen/users/v1/users_connect';
+import { UsersService } from '@uniffy/proto/users/v1/users_connect';
 
 // Types from service-specific _pb files
-import { UserProfile } from '@/gen/users/v1/users_pb';
+import { UserProfile } from '@uniffy/proto/users/v1/users_pb';
 
 // Shared types from common
-import { OrganizationRole, GroupRole } from '@/gen/common/v1/common_pb';
+import { OrganizationRole, GroupRole } from '@uniffy/proto/common/v1/common_pb';
 ```
 
 ## Service Worker for Auth-Proxied Requests

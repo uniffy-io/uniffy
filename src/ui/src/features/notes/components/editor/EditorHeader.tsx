@@ -33,8 +33,8 @@ import { useBookmarkToggle } from '@/features/bookmarks';
 import { useSharingDialog } from '@/features/sharing';
 import { cn } from '@/shared/utils/cn';
 import { formatProtoDate } from '@/shared/utils/dateFormatting';
-import { ContentType } from '@/gen/common/v1/common_pb';
-import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 
 interface EditorHeaderProps {
   note: SerializedNote;

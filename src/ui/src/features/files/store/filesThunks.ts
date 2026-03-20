@@ -8,8 +8,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import type { RootState } from '@/app/store';
-import type { File } from '@/gen/files/v1/files_pb';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import type { File } from '@uniffy/proto/files/v1/files_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 // Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {

@@ -27,11 +27,24 @@ Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar,
 ## Commands
 
 ```bash
-# Code Generation
-./run.sh proto            # Generate protobuf code (backend + frontend)
-
 # Setup
-./run.sh install          # Install all dependencies (uv + pnpm)
+./run.sh install          # Install all dependencies (uv + pnpm workspace)
+./run.sh proto            # Generate protobuf code (python, typescript, go)
+
+# Development
+./run.sh dev              # Run backend + frontend + worker (all-in-one)
+./run.sh backend          # Run backend with hot reload
+./run.sh ui [cmd]         # Run pnpm command in ui workspace (default: dev)
+./run.sh mobile [cmd]     # Run pnpm command in mobile workspace (default: start)
+./run.sh mobile-dev       # Run backend + mobile app in web view
+
+# Quality
+./run.sh lint             # Run all linters (backend + frontend)
+./run.sh lint-backend     # Run backend linter (ruff)
+./run.sh lint-frontend    # Run frontend linter (eslint)
+./run.sh lint-mobile      # Run mobile linter + format check
+./run.sh test             # Run backend tests
+./run.sh test-frontend    # Run frontend tests
 ```
 
 Migrations run automatically on startup.
@@ -41,26 +54,36 @@ Migrations run automatically on startup.
 ## Project Structure
 
 ```
-uwos/
-├── src/uniffy/           # Python backend (FastAPI + ConnectRPC)
-│   ├── core/             # Core models, auth, search, types, errors
-│   ├── domains/          # Domain modules (vertical slices)
-│   ├── db/               # Database session, migrations, seed data
-│   ├── gen/              # Generated ConnectRPC code (DO NOT EDIT)
-│   ├── workers/          # Background task workers (ARQ)
-│   └── factory.py        # App factory mounting services
-├── src/ui/               # React frontend (TypeScript + Vite)
-│   └── src/
-│       ├── app/          # Redux store, hooks, router
-│       ├── components/   # Shared UI primitives
-│       ├── config/       # API setup, theme system, error handling
-│       ├── features/     # Domain modules (auth, notes, files, etc.)
-│       ├── gen/          # Generated ConnectRPC clients (DO NOT EDIT)
-│       └── shared/       # Shared hooks, utils, layouts
-├── src/proto/            # Protocol Buffer definitions
+uniffy/
+├── src/
+│   ├── proto/            # Protocol Buffer definitions (source of truth)
+│   ├── gen/              # Generated code from proto (DO NOT EDIT)
+│   │   ├── python/       # Python package: uniffy-proto (uv workspace member)
+│   │   ├── typescript/   # TypeScript package: @uniffy/proto (pnpm workspace member)
+│   │   └── go/           # Go module: github.com/uniffy-io/uniffy-proto-go
+│   ├── uniffy/           # Python backend (FastAPI + ConnectRPC)
+│   │   ├── core/         # Core models, auth, search, types, errors
+│   │   ├── domains/      # Domain modules (vertical slices)
+│   │   ├── db/           # Database session, migrations, seed data
+│   │   ├── workers/      # Background task workers (ARQ)
+│   │   └── factory.py    # App factory mounting services
+│   ├── ui/               # React frontend (TypeScript + Vite)
+│   │   └── src/
+│   │       ├── app/      # Redux store, hooks, router
+│   │       ├── components/  # Shared UI primitives
+│   │       ├── config/   # API setup, theme system, error handling
+│   │       ├── features/ # Domain modules (auth, notes, files, etc.)
+│   │       └── shared/   # Shared hooks, utils, layouts
+│   └── mobile/           # React Native mobile app (Expo)
+├── pyproject.toml        # uv workspace root (backend + gen/python)
+├── pnpm-workspace.yaml   # pnpm workspace root (ui + mobile + gen/typescript)
+├── buf.yaml              # Protobuf lint/breaking config
+├── buf.gen.yaml          # Protobuf codegen (all languages, single pass)
 ├── docs/agents/          # Layer-specific documentation
 └── .claude/              # AI development artifacts
 ```
+
+**Workspace architecture**: Generated protobuf code lives in `src/gen/` as shared packages consumed by all projects. Python uses `uniffy-proto` via uv workspace. TypeScript uses `@uniffy/proto` via pnpm workspace. Go uses a Go module with `replace` directives for local dev.
 
 ---
 
@@ -72,7 +95,7 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 - **Frontend**: `src/ui/src/features/{feature}/` with api, store, components, pages, hooks
 - **Proto**: `src/proto/{service}/v1/{service}.proto` defines the API contract
 
-**API layer**: ConnectRPC (Protocol Buffers + Connect). All API communication uses generated clients -- never REST. Proto definitions are the source of truth.
+**API layer**: ConnectRPC (Protocol Buffers + Connect). All API communication uses generated clients -- never REST. Proto definitions are the source of truth. Generated code is imported as `from uniffy_proto.` (Python) and `@uniffy/proto/` (TypeScript).
 
 **Multi-tenancy**: All content is scoped to `organization_id`. Users are global; memberships are org-scoped.
 
@@ -191,6 +214,7 @@ Run before committing:
 | Backend domain structure | `src/uniffy/domains/` |
 | Frontend feature structure | `src/ui/src/features/` |
 | Proto definitions | `src/proto/` |
+| Generated code | `src/gen/` (python, typescript, go) |
 | Database models | `src/uniffy/core/models/` |
 | Database migrations | `src/uniffy/db/migrations/` |
 

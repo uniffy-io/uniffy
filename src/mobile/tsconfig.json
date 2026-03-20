@@ -5,7 +5,8 @@
     "strict": true,
     "paths": {
       "@/*": ["./*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@uniffy/proto/*": ["../gen/typescript/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]

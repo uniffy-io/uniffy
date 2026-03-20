@@ -4,7 +4,7 @@ import { notesApi } from "@/api/notesApi";
 import { bookmarksApi } from "@/api/bookmarksApi";
 import { noteToPlain, formatRelativeTime, stripMarkdown } from "@/lib/noteSerializer";
 import type { SerializedNote } from "@/lib/noteSerializer";
-import { VisibilityScope } from "@/gen/notes/v1/notes_pb";
+import { VisibilityScope } from "@uniffy/proto/notes/v1/notes_pb";
 
 export type NoteListItem = SerializedNote & {
   snippet: string;

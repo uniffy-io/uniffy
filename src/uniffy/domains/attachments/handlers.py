@@ -6,17 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
-from uniffy.domains.attachments.converters import (
-    attachment_to_proto,
-    content_type_from_proto,
-    content_type_to_proto,
-)
-from uniffy.domains.attachments.operations import AttachmentOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.gen.attachments.v1.attachments_pb2 import (
+from uniffy_proto.attachments.v1.attachments_pb2 import (
     AttachFileRequest,
     AttachFileResponse,
     DetachFileRequest,
@@ -30,6 +20,16 @@ from uniffy.gen.attachments.v1.attachments_pb2 import (
     SharedAttachment,
     SharedAttachmentGroup,
 )
+
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.db import get_async_session
+from uniffy.domains.attachments.converters import (
+    attachment_to_proto,
+    content_type_from_proto,
+    content_type_to_proto,
+)
+from uniffy.domains.attachments.operations import AttachmentOperations
+from uniffy.domains.auth.context import get_user_id_from_context
 
 
 class AttachmentsHandlers:

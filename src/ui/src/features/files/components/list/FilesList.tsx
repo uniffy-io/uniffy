@@ -60,7 +60,7 @@ import type { SerializedTreeNode, SerializedFolder } from '@/features/files/stor
 import { useSharingDialog, useMyPermission } from '@/features/sharing';
 import { toggleBookmark } from '@/features/bookmarks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
+import { ContentType, VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import type { FileDownloadItem } from '@/features/files/utils/archiveDownload';
 import { collectAllDownloadFiles, createFileInfoArray } from '@/features/files/utils/folderDownload';
 import { FolderCard } from '@/features/files/components/list/FolderCard';

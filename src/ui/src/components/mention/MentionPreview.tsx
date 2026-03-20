@@ -31,7 +31,6 @@ import {
   FrameCorners,
   CopySimple,
   Check,
-  Lock,
 } from '@phosphor-icons/react';
 import type { UrnPreviewData } from '@/components/editor/plugins/mention/useUrnPreview';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
@@ -170,12 +169,13 @@ export function MentionPreview({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
+  const previewUrn = preview?.urn;
   const handleCopyLink = useCallback(() => {
-    if (!preview?.urn) return;
-    navigator.clipboard.writeText(preview.urn);
+    if (!previewUrn) return;
+    navigator.clipboard.writeText(previewUrn);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [preview?.urn]);
+  }, [previewUrn]);
 
   const GAP = 8;
   const adjustedLeft = Math.min(Math.max(position.x, 8), window.innerWidth - 340);

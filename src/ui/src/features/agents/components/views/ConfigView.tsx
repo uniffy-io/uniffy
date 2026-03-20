@@ -42,8 +42,8 @@ import {
     toggleProviderKey,
 } from "@/features/agents/store/agentProvidersThunks";
 import type { SerializedProviderKey } from "@/features/agents/store/agentProvidersThunks";
-import { CredentialType } from "@/gen/agents/v1/providers_pb";
-import { ContentType, VisibilityScope } from "@/gen/common/v1/common_pb";
+import { CredentialType } from "@uniffy/proto/agents/v1/providers_pb";
+import { ContentType, VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
 import { ShareButton } from "@/features/sharing";
 
 const PROVIDER_OPTIONS = [

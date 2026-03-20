@@ -6,8 +6,8 @@ import React, {
   useReducer,
   useState,
 } from "react";
-import type { AuthResponse } from "@/gen/auth/v1/auth_pb";
-import type { CurrentUserResponse } from "@/gen/auth/v1/auth_pb";
+import type { AuthResponse } from "@uniffy/proto/auth/v1/auth_pb";
+import type { CurrentUserResponse } from "@uniffy/proto/auth/v1/auth_pb";
 import type { CurrentUser } from "@/lib/types";
 import {
   setAccessToken,

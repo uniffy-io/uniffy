@@ -7,19 +7,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.shared import NodeType, VisibilityScope
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.notes.converters import (
-    node_type_from_proto,
-    note_to_proto,
-    note_to_reference,
-    visibility_from_proto,
-)
-from uniffy.domains.notes.operations import NoteOperations
-from uniffy.gen.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb2 import (
     AutosaveNoteRequest,
     AutosaveNoteResponse,
     BacklinksResponse,
@@ -37,9 +25,21 @@ from uniffy.gen.notes.v1.notes_pb2 import (
     SearchNotesRequest,
     UpdateNoteRequest,
 )
-from uniffy.gen.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb2 import (
     VisibilityScope as ProtoVisibilityScope,
 )
+
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.shared import NodeType, VisibilityScope
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.notes.converters import (
+    node_type_from_proto,
+    note_to_proto,
+    note_to_reference,
+    visibility_from_proto,
+)
+from uniffy.domains.notes.operations import NoteOperations
 
 
 class NotesHandlers:

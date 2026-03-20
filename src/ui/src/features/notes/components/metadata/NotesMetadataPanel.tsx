@@ -19,7 +19,7 @@ import {
 } from '@phosphor-icons/react';
 import { CommentsPanel } from '@/features/comments/components/CommentsPanel';
 import { useComments } from '@/features/comments/hooks/useComments';
-import { ContentType } from '@/gen/common/v1/common_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
 import { useNavigate } from 'react-router-dom';
 

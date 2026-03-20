@@ -5,8 +5,8 @@
  * Used by the NotesGraphDashboard to visualize note connections.
  */
 
-import { NodeType } from '@/gen/notes/v1/notes_pb';
-import type { UrnMetadata } from '@/gen/search/v1/search_pb';
+import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
+import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';

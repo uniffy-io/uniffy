@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createClient } from "@connectrpc/connect";
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from "@/gen/auth/v1/auth_connect";
-import { OrganizationsService } from "@/gen/organizations/v1/organizations_connect";
-import type { MyOrganization } from "@/gen/organizations/v1/organizations_pb";
-import { OrganizationRole } from "@/gen/common/v1/common_pb";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
+import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials, logout } from "@/features/auth/store/authSlice";

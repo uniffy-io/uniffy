@@ -18,7 +18,7 @@ import {
     removeMyFilterFromQuery,
     removeProjectFilterFromQuery,
 } from '@/features/search/utils/queryParser';
-import type { SearchResultItem } from '@/gen/search/v1/search_pb';
+import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 import { cn } from '@/shared/utils/cn';
 
 interface ChatMentionPopupProps {

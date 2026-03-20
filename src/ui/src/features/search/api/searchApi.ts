@@ -5,8 +5,8 @@
  */
 
 import { createClient } from '@connectrpc/connect';
-import { SearchService } from '@/gen/search/v1/search_connect';
-import type { SearchRequest, ResolveUrnsRequest } from '@/gen/search/v1/search_pb';
+import { SearchService } from '@uniffy/proto/search/v1/search_connect';
+import type { SearchRequest, ResolveUrnsRequest } from '@uniffy/proto/search/v1/search_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import { transport } from '@/config/api';
 

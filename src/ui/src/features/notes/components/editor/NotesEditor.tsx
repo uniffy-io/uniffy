@@ -10,8 +10,8 @@ import { parseCanvasContent, serializeCanvas } from '@/features/notes/canvas/typ
 import type { CanvasState } from '@/features/notes/canvas/types';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
 import { useMyPermission } from '@/features/sharing';
-import { ContentType } from '@/gen/common/v1/common_pb';
-import { NodeType } from '@/gen/notes/v1/notes_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 
 /**
  * Convert heading text to a URL-safe slug.

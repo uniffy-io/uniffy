@@ -1,17 +1,18 @@
 """Proto converters for attachments domain."""
 
+from uniffy_proto.attachments.v1.attachments_pb2 import (
+    AttachedFileOwner as ProtoAttachedFileOwner,
+)
+from uniffy_proto.attachments.v1.attachments_pb2 import (
+    Attachment as ProtoAttachment,
+)
+from uniffy_proto.common.v1.common_pb2 import ContentType as ProtoContentType
+
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.attachments.attachment import Attachment
 from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import ContentType
-from uniffy.gen.attachments.v1.attachments_pb2 import (
-    AttachedFileOwner as ProtoAttachedFileOwner,
-)
-from uniffy.gen.attachments.v1.attachments_pb2 import (
-    Attachment as ProtoAttachment,
-)
-from uniffy.gen.common.v1.common_pb2 import ContentType as ProtoContentType
 
 # ─────────────────────────────────────────────────────────────
 # ContentType Enum Mappings

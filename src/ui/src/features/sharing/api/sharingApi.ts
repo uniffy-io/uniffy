@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { PermissionsService } from '@/gen/permissions/v1/permissions_connect';
+import { PermissionsService } from '@uniffy/proto/permissions/v1/permissions_connect';
 import type {
     GrantPermissionRequest,
     RevokePermissionRequest,
@@ -15,7 +15,7 @@ import type {
     ListContentPermissionsRequest,
     GetMyPermissionRequest,
     SearchShareTargetsRequest,
-} from '@/gen/permissions/v1/permissions_pb';
+} from '@uniffy/proto/permissions/v1/permissions_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

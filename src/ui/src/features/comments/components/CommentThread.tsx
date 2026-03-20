@@ -6,7 +6,7 @@ import { getInitials } from '@/components/subject/utils';
 import { CommentInput } from '@/features/comments/components/CommentInput';
 import { CommentReactions } from '@/features/comments/components/CommentReactions';
 import type { SerializedComment } from '@/features/comments/store/commentsSlice';
-import { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
+import { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
 import { useCommentActions, useActiveComment } from '@/features/comments/hooks/useComments';
 import { useAppSelector } from '@/app/hooks';
 

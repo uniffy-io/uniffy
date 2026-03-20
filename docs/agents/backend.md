@@ -24,7 +24,7 @@
 |   |-- __init__.py # DB package init
 |-- domains         # Domain modules, see below
 |-- factory.py      # App factory mounting services
-|-- gen             # Generated ConnectRPC code from .proto files at src/proto/
+|-- (generated code lives in src/gen/python/ as the uniffy-proto package)
 |-- main.py         # App entrypoint
 |-- observability   # Logging, tracing, metrics
 ```
@@ -46,13 +46,13 @@ domains/{feature}/
 ## Adding a New Domain
 
 1. Define proto in `src/proto/{service}/v1/{service}.proto`
-2. Run `make proto`
+2. Run `./run.sh proto`
 3. Create model in `core/models/{feature}/` if needed
 4. Create domain module in `domains/{feature}/`
 5. Mount in `factory.py`:
    ```python
    from uniffy.domains.feature.service import FeatureServiceImpl
-   from uniffy.gen.feature.v1.feature_connect import FeatureServiceASGIApplication
+   from uniffy_proto.feature.v1.feature_connect import FeatureServiceASGIApplication
 
    service = FeatureServiceImpl()
    app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))

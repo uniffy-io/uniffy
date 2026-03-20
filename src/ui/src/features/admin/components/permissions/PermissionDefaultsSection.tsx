@@ -15,7 +15,7 @@ import {
     Robot,
 } from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '@/features/admin/hooks/useAdminHooks';
-import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
+import { ContentType, VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import type { SerializedContentTypeDefaults } from '@/features/admin/store/adminSlice';
 import { Select, type SelectOption } from '@/components/ui/select';
 

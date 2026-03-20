@@ -2,6 +2,46 @@
 
 from datetime import datetime
 
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    Attendee as ProtoAttendee,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    AttendeeRole as ProtoAttendeeRole,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    AttendeeStatus as ProtoAttendeeStatus,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    CalendarEvent as ProtoCalendarEvent,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    Category as ProtoCategory,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    DayOfWeek as ProtoDayOfWeek,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    EventTemplate as ProtoEventTemplate,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    LinkedResource as ProtoLinkedResource,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    RecurrenceConfig as ProtoRecurrenceConfig,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    RecurrenceEditScope as ProtoRecurrenceEditScope,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    RecurrencePattern as ProtoRecurrencePattern,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    ResourceType as ProtoResourceType,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    VisibilityScope as ProtoVisibilityScope,
+)
+
 from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
@@ -13,45 +53,6 @@ from uniffy.core.models.shared import (
     RecurrencePattern,
     ResourceType,
     VisibilityScope,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    Attendee as ProtoAttendee,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    AttendeeRole as ProtoAttendeeRole,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    AttendeeStatus as ProtoAttendeeStatus,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    CalendarEvent as ProtoCalendarEvent,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    Category as ProtoCategory,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    DayOfWeek as ProtoDayOfWeek,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    EventTemplate as ProtoEventTemplate,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    LinkedResource as ProtoLinkedResource,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    RecurrenceConfig as ProtoRecurrenceConfig,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    RecurrenceEditScope as ProtoRecurrenceEditScope,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    RecurrencePattern as ProtoRecurrencePattern,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
-    ResourceType as ProtoResourceType,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    VisibilityScope as ProtoVisibilityScope,
 )
 
 VISIBILITY_TO_PROTO = {

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowsOut, Check, PencilSimple } from '@phosphor-icons/react';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
-import { ContentType } from '@/gen/common/v1/common_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { cn } from '@/shared/utils/cn';
 
 interface ExpandableEditorProps {

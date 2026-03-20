@@ -20,7 +20,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/shared/utils/cn';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import { moveItems } from '@/features/files/store/filesThunks';
 import { initializeFilesData } from '@/features/files/store/filesSlice';
 import { fetchFilesTree } from '@/features/files/store/filesTreeSlice';

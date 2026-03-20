@@ -3,7 +3,7 @@ import { authApi } from "@/api/authApi";
 import { useAuth } from "@/context/auth-context";
 import { formatRelativeTimeFromIso } from "@/lib/noteSerializer";
 import type { PlainMessage } from "@bufbuild/protobuf";
-import type { SessionInfo } from "@/gen/auth/v1/auth_pb";
+import type { SessionInfo } from "@uniffy/proto/auth/v1/auth_pb";
 
 export type SerializedSession = PlainMessage<SessionInfo>;
 

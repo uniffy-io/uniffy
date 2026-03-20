@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package agents.v1;
 
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
+
 import "agents/v1/sessions.proto";
 
 // RuntimeService handles message execution (send to LLM and store response).

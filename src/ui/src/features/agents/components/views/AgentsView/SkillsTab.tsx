@@ -9,7 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useMyPermission } from "@/features/sharing";
-import { ContentType } from "@/gen/common/v1/common_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import {
@@ -19,7 +19,7 @@ import {
 import { updateAgent } from "@/features/agents/store/agentsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import type { SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
-import { SkillSource } from "@/gen/agents/v1/skills_pb";
+import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 
 function SkillToggle({
     enabled,

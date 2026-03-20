@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { notesApi } from "@/api/notesApi";
 import { noteToPlain } from "@/lib/noteSerializer";
-import { NodeType } from "@/gen/notes/v1/notes_pb";
+import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 
 export interface GraphNode {
   id: string;

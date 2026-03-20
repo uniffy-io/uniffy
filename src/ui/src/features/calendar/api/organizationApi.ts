@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { OrganizationsService } from '@/gen/organizations/v1/organizations_connect';
+import { OrganizationsService } from '@uniffy/proto/organizations/v1/organizations_connect';
 
 const client = createClient(OrganizationsService, transport);
 

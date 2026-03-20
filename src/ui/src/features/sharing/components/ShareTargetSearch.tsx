@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SubjectPicker, subjectToShareTarget, type Subject } from '@/components/subject';
-import { PermissionLevel } from '@/gen/common/v1/common_pb';
+import { PermissionLevel } from '@uniffy/proto/common/v1/common_pb';
 import { PermissionLevelSelect } from '@/features/sharing/components/PermissionLevelSelect';
 import type { SerializedShareTarget } from '@/features/sharing/store/sharingSlice';
 

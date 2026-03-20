@@ -1,6 +1,6 @@
 import { createClient } from "@connectrpc/connect";
 import type { PartialMessage } from "@bufbuild/protobuf";
-import { NotesService } from "@/gen/notes/v1/notes_connect";
+import { NotesService } from "@uniffy/proto/notes/v1/notes_connect";
 import type {
   ListNotesRequest,
   GetNoteRequest,
@@ -9,7 +9,7 @@ import type {
   DeleteNoteRequest,
   AutosaveNoteRequest,
   GetBacklinksRequest,
-} from "@/gen/notes/v1/notes_pb";
+} from "@uniffy/proto/notes/v1/notes_pb";
 import { transport } from "@/lib/transport";
 
 const client = createClient(NotesService, transport);

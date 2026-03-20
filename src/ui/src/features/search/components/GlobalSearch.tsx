@@ -14,8 +14,8 @@ import { cn } from '@/shared/utils/cn';
 import { useFormattedKeybinding } from '@/features/settings';
 import { useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files';
-import { SearchResultType } from '@/gen/search/v1/search_pb';
-import type { SearchResultItem } from '@/gen/search/v1/search_pb';
+import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
+import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 
 export function GlobalSearch() {
     const navigate = useNavigate();

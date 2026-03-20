@@ -6,28 +6,8 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.converters import (
-    content_type_from_proto,
-    member_info_to_proto,
-    org_info_to_proto,
-    org_role_from_proto,
-    visibility_from_proto,
-)
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.login.organization_member import OrganizationRole
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.organizations.converters import (
-    my_organization_to_proto,
-    organization_detail_to_proto,
-    organization_overview_to_proto,
-    permission_defaults_to_proto,
-)
-from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.users.operations import UserOperations
-from uniffy.gen.common.v1.common_pb2 import MemberInfo, OrganizationInfo, PaginationResponse
-from uniffy.gen.organizations.v1.organizations_pb2 import (
+from uniffy_proto.common.v1.common_pb2 import MemberInfo, OrganizationInfo, PaginationResponse
+from uniffy_proto.organizations.v1.organizations_pb2 import (
     AddMemberRequest,
     ContentTypeDefaults,
     CreateOrganizationRequest,
@@ -51,6 +31,26 @@ from uniffy.gen.organizations.v1.organizations_pb2 import (
     UpdateOrganizationRequest,
     UpdatePermissionDefaultsRequest,
 )
+
+from uniffy.core.converters import (
+    content_type_from_proto,
+    member_info_to_proto,
+    org_info_to_proto,
+    org_role_from_proto,
+    visibility_from_proto,
+)
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.organizations.converters import (
+    my_organization_to_proto,
+    organization_detail_to_proto,
+    organization_overview_to_proto,
+    permission_defaults_to_proto,
+)
+from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.users.operations import UserOperations
 
 
 class OrganizationsHandlers:

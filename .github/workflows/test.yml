@@ -9,10 +9,40 @@ on:
 permissions:
   contents: read
   checks: write
-  # pull-requests: write # uncomment if enabling PR comments in the JUnit report action
+  pull-requests: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      proto: ${{ steps.filter.outputs.proto }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'src/uniffy/**'
+              - 'src/gen/python/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            frontend:
+              - 'src/ui/**'
+              - 'src/gen/typescript/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+            proto:
+              - 'src/proto/**'
+              - 'buf.gen.yaml'
+              - 'buf.yaml'
+
   lint-python:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -29,20 +59,17 @@ jobs:
         with:
           python-version-file: ".python-version"
 
-      - name: install dependencies
+      - name: Install dependencies
         shell: bash
         run: uv sync --all-extras --all-groups --frozen
 
-      - name: prepare reports dir
+      - name: Run python linters
         shell: bash
-        run: mkdir -p reports
-
-      - name: run python linters
-        shell: bash
-        run: |
-          uv run ruff check src/uniffy/ --exclude src/uniffy/gen
+        run: uv run ruff check src/uniffy/ --exclude src/gen
 
   lint-frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -59,17 +86,17 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
-          cache-dependency-path: src/ui/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: src/ui
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter uniffy-ui...
 
       - name: Run ESLint
-        working-directory: src/ui
-        run: pnpm lint
+        run: pnpm --filter uniffy-ui lint
 
   test-python:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -86,18 +113,17 @@ jobs:
         with:
           python-version-file: ".python-version"
 
-      - name: install dependencies
+      - name: Install dependencies
         shell: bash
         run: uv sync --frozen
 
-      - name: prepare reports dir
+      - name: Prepare reports dir
         shell: bash
         run: mkdir -p reports
 
-      - name: run tests
+      - name: Run tests
         shell: bash
         run: |
-          # Run pytest via uv producing a JUnit XML report for later analysis
           uv run pytest src/uniffy/tests/ \
             --ignore=src/uniffy/tests/benchmarks/ \
             --junitxml=reports/pytest-report.xml \
@@ -120,10 +146,10 @@ jobs:
           check_name: Pytest Results
           require_tests: true
           detailed_summary: true
-          # fail_on_failure: true # optional; the pytest step already fails the job
-          # comment: true        # enable (and add pull-requests: write above) to have a PR comment
 
   test-frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -140,15 +166,13 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
-          cache-dependency-path: src/ui/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: src/ui
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter uniffy-ui...
 
       - name: Run Vitest
-        working-directory: src/ui
-        run: pnpm test:ci
+        run: pnpm --filter uniffy-ui test:ci
 
       - name: Upload Vitest JUnit report
         if: always()
@@ -169,8 +193,11 @@ jobs:
           detailed_summary: true
 
   benchmark-python:
+    needs: changes
+    if: >
+      github.event_name == 'pull_request' &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v5
         with:

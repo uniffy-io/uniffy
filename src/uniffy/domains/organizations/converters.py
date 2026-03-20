@@ -1,5 +1,13 @@
 """Proto <-> domain converters for organizations domain."""
 
+from uniffy_proto.organizations.v1.organizations_pb2 import (
+    ContentTypeCount,
+    ContentTypeDefaults,
+    MyOrganization,
+    OrganizationDetail,
+    OrganizationOverview,
+)
+
 from uniffy.core.converters import (
     content_type_to_proto,
     datetime_to_timestamp,
@@ -10,13 +18,6 @@ from uniffy.core.converters import (
 )
 from uniffy.core.models import Organization, OrganizationPermissionDefaults
 from uniffy.core.models.login.organization_member import OrganizationMember
-from uniffy.gen.organizations.v1.organizations_pb2 import (
-    ContentTypeCount,
-    ContentTypeDefaults,
-    MyOrganization,
-    OrganizationDetail,
-    OrganizationOverview,
-)
 
 
 def my_organization_to_proto(

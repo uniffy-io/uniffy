@@ -12,34 +12,8 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
-
-from uniffy.core.auth.permissions.checker import PermissionChecker
-from uniffy.core.converters.common_proto import visibility_from_proto
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.projects.field_definition import FieldDefinition
-from uniffy.core.models.projects.view_config import ViewConfig
-from uniffy.core.types import ContentType as DomainContentType
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.projects import queries
-from uniffy.domains.projects.converters import (
-    activity_to_proto,
-    field_to_proto,
-    field_type_from_proto,
-    project_to_proto,
-    sprint_to_proto,
-    task_to_proto,
-    view_to_proto,
-    view_type_from_proto,
-)
-from uniffy.domains.projects.operations import (
-    ProjectOperations,
-    SprintOperations,
-    TaskOperations,
-    WatcherOperations,
-)
-from uniffy.gen.common.v1.common_pb2 import PaginationResponse
-from uniffy.gen.projects.v1.projects_pb2 import (
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.projects.v1.projects_pb2 import (
     BulkCheckTaskWatchersRequest,
     BulkCheckTaskWatchersResponse,
     BulkUpdateTasksRequest,
@@ -88,6 +62,32 @@ from uniffy.gen.projects.v1.projects_pb2 import (
     UpdateTaskRequest,
     UpdateViewRequest,
     ViewResponse,
+)
+
+from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.converters.common_proto import visibility_from_proto
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.types import ContentType as DomainContentType
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.projects import queries
+from uniffy.domains.projects.converters import (
+    activity_to_proto,
+    field_to_proto,
+    field_type_from_proto,
+    project_to_proto,
+    sprint_to_proto,
+    task_to_proto,
+    view_to_proto,
+    view_type_from_proto,
+)
+from uniffy.domains.projects.operations import (
+    ProjectOperations,
+    SprintOperations,
+    TaskOperations,
+    WatcherOperations,
 )
 
 

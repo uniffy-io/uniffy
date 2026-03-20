@@ -8,8 +8,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { MagnifyingGlass, Tag } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
-import { SearchResultType } from '@/gen/search/v1/search_pb';
-import type { SearchResultItem } from '@/gen/search/v1/search_pb';
+import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
+import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 import { cn } from '@/shared/utils/cn';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { type UrnTypeTheme } from '@/config/theme/urnColors';

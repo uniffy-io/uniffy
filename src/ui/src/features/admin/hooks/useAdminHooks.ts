@@ -22,7 +22,7 @@ import {
     addGroupMember,
     removeGroupMember,
 } from '@/features/admin/store/adminThunks';
-import { ContentType, VisibilityScope, OrganizationRole } from '@/gen/common/v1/common_pb';
+import { ContentType, VisibilityScope, OrganizationRole } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Hook for checking admin access permissions.

@@ -6,7 +6,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { UsersService } from '@/gen/users/v1/users_connect';
+import { UsersService } from '@uniffy/proto/users/v1/users_connect';
 
 const usersClient = createClient(UsersService, transport);
 

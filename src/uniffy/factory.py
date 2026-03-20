@@ -16,6 +16,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from loguru import logger
 from starlette.types import ASGIApp, Receive, Scope, Send
+from uniffy_proto.agents.v1.agents_connect import AgentsServiceASGIApplication
+from uniffy_proto.agents.v1.cron_connect import CronServiceASGIApplication
+from uniffy_proto.agents.v1.memories_connect import MemoriesServiceASGIApplication
+from uniffy_proto.agents.v1.prompts_connect import PromptsServiceASGIApplication
+from uniffy_proto.agents.v1.providers_connect import ProvidersServiceASGIApplication
+from uniffy_proto.agents.v1.runtime_connect import RuntimeServiceASGIApplication
+from uniffy_proto.agents.v1.sessions_connect import SessionsServiceASGIApplication
+from uniffy_proto.agents.v1.skills_connect import SkillsServiceASGIApplication
+from uniffy_proto.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
+from uniffy_proto.auth.v1.auth_connect import AuthServiceASGIApplication
+from uniffy_proto.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
+from uniffy_proto.cal.v1.calendar_connect import CalendarServiceASGIApplication
+from uniffy_proto.comments.v1.comments_connect import CommentsServiceASGIApplication
+from uniffy_proto.files.v1.files_connect import FilesServiceASGIApplication
+from uniffy_proto.groups.v1.groups_connect import GroupsServiceASGIApplication
+from uniffy_proto.notes.v1.notes_connect import NotesServiceASGIApplication
+from uniffy_proto.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
+from uniffy_proto.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
+from uniffy_proto.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
+from uniffy_proto.presence.v1.presence_connect import PresenceServiceASGIApplication
+from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplication
+from uniffy_proto.search.v1.search_connect import SearchServiceASGIApplication
+from uniffy_proto.settings.v1.settings_connect import SettingsServiceASGIApplication
+from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
@@ -49,30 +73,6 @@ from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
 from uniffy.domains.users.http_routes import avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
-from uniffy.gen.agents.v1.agents_connect import AgentsServiceASGIApplication
-from uniffy.gen.agents.v1.cron_connect import CronServiceASGIApplication
-from uniffy.gen.agents.v1.memories_connect import MemoriesServiceASGIApplication
-from uniffy.gen.agents.v1.prompts_connect import PromptsServiceASGIApplication
-from uniffy.gen.agents.v1.providers_connect import ProvidersServiceASGIApplication
-from uniffy.gen.agents.v1.runtime_connect import RuntimeServiceASGIApplication
-from uniffy.gen.agents.v1.sessions_connect import SessionsServiceASGIApplication
-from uniffy.gen.agents.v1.skills_connect import SkillsServiceASGIApplication
-from uniffy.gen.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
-from uniffy.gen.auth.v1.auth_connect import AuthServiceASGIApplication
-from uniffy.gen.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
-from uniffy.gen.cal.v1.calendar_connect import CalendarServiceASGIApplication
-from uniffy.gen.comments.v1.comments_connect import CommentsServiceASGIApplication
-from uniffy.gen.files.v1.files_connect import FilesServiceASGIApplication
-from uniffy.gen.groups.v1.groups_connect import GroupsServiceASGIApplication
-from uniffy.gen.notes.v1.notes_connect import NotesServiceASGIApplication
-from uniffy.gen.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
-from uniffy.gen.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
-from uniffy.gen.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
-from uniffy.gen.presence.v1.presence_connect import PresenceServiceASGIApplication
-from uniffy.gen.projects.v1.projects_connect import ProjectsServiceASGIApplication
-from uniffy.gen.search.v1.search_connect import SearchServiceASGIApplication
-from uniffy.gen.settings.v1.settings_connect import SettingsServiceASGIApplication
-from uniffy.gen.users.v1.users_connect import UsersServiceASGIApplication
 from uniffy.observability import ObservabilityConfig, setup_observability
 from uniffy.observability.crpc import LoggingInterceptor, http_version_var
 from uniffy.observability.fastapi.logger import setup_request_logging

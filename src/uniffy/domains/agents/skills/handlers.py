@@ -6,13 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
-from uniffy.domains.agents.skills.converters import skill_to_proto
-from uniffy.domains.agents.skills.operations import SkillOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.gen.agents.v1.skills_pb2 import (
+from uniffy_proto.agents.v1.skills_pb2 import (
     CreateSkillRequest,
     DeleteSkillRequest,
     DeleteSkillResponse,
@@ -22,7 +16,13 @@ from uniffy.gen.agents.v1.skills_pb2 import (
     SkillResponse,
     UpdateSkillRequest,
 )
-from uniffy.gen.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.db import get_async_session
+from uniffy.domains.agents.skills.converters import skill_to_proto
+from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.domains.auth.context import get_user_id_from_context
 
 
 class SkillsHandlers:

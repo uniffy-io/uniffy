@@ -10,6 +10,15 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from uniffy_proto.agents.v1.runtime_pb2 import (
+    ConfirmationResponse,
+    ConfirmationResponseAck,
+    GetUsageStatsRequest,
+    GetUsageStatsResponse,
+    SendMessageRequest,
+    SendMessageResponse,
+    StreamSendMessageEvent,
+)
 
 from uniffy.core.errors import (
     NotFoundError,
@@ -30,15 +39,6 @@ from uniffy.domains.agents.runtime.operations import FileContext, RuntimeOperati
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.gen.agents.v1.runtime_pb2 import (
-    ConfirmationResponse,
-    ConfirmationResponseAck,
-    GetUsageStatsRequest,
-    GetUsageStatsResponse,
-    SendMessageRequest,
-    SendMessageResponse,
-    StreamSendMessageEvent,
-)
 
 
 async def _load_files(

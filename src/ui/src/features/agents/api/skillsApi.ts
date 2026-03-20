@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { SkillsService } from '@/gen/agents/v1/skills_connect';
+import { SkillsService } from '@uniffy/proto/agents/v1/skills_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     CreateSkillRequest,
@@ -8,7 +8,7 @@ import type {
     ListSkillsRequest,
     UpdateSkillRequest,
     DeleteSkillRequest,
-} from '@/gen/agents/v1/skills_pb';
+} from '@uniffy/proto/agents/v1/skills_pb';
 
 const client = createClient(SkillsService, transport);
 

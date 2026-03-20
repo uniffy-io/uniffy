@@ -1,7 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import type { PartialMessage } from "@bufbuild/protobuf";
-import { SearchService } from "@/gen/search/v1/search_connect";
-import type { SearchRequest, ResolveUrnsRequest } from "@/gen/search/v1/search_pb";
+import { SearchService } from "@uniffy/proto/search/v1/search_connect";
+import type { SearchRequest, ResolveUrnsRequest } from "@uniffy/proto/search/v1/search_pb";
 import { transport } from "@/lib/transport";
 
 const client = createClient(SearchService, transport);

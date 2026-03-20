@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { CommentsService } from '@/gen/comments/v1/comments_connect';
+import { CommentsService } from '@uniffy/proto/comments/v1/comments_connect';
 import type {
     CreateCommentRequest,
     UpdateCommentRequest,
@@ -19,7 +19,7 @@ import type {
     AddReactionRequest,
     RemoveReactionRequest,
     GetCommentCountsRequest,
-} from '@/gen/comments/v1/comments_pb';
+} from '@uniffy/proto/comments/v1/comments_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

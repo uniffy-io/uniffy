@@ -31,7 +31,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import { useBookmarks } from '@/features/bookmarks';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';

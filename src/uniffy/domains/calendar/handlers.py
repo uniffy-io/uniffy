@@ -8,30 +8,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.converters.proto import timestamp_to_datetime
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.shared import RecurrencePattern, VisibilityScope
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.calendar import queries
-from uniffy.domains.calendar.converters import (
-    attendee_role_from_proto,
-    attendee_status_from_proto,
-    category_to_proto,
-    event_to_proto,
-    recurrence_config_from_proto,
-    recurrence_edit_scope_from_proto,
-    recurrence_from_proto,
-    template_to_proto,
-    visibility_from_proto,
-)
-from uniffy.domains.calendar.operations import (
-    CalendarEventOperations,
-    CategoryOperations,
-    EventTemplateOperations,
-)
-from uniffy.gen.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb2 import (
     AddAttendeesRequest,
     CategoryResponse,
     CreateCategoryRequest,
@@ -62,6 +39,29 @@ from uniffy.gen.cal.v1.calendar_pb2 import (
     UpdateCategoryRequest,
     UpdateEventRequest,
     UpdateEventTemplateRequest,
+)
+
+from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.shared import RecurrencePattern, VisibilityScope
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.calendar import queries
+from uniffy.domains.calendar.converters import (
+    attendee_role_from_proto,
+    attendee_status_from_proto,
+    category_to_proto,
+    event_to_proto,
+    recurrence_config_from_proto,
+    recurrence_edit_scope_from_proto,
+    recurrence_from_proto,
+    template_to_proto,
+    visibility_from_proto,
+)
+from uniffy.domains.calendar.operations import (
+    CalendarEventOperations,
+    CategoryOperations,
+    EventTemplateOperations,
 )
 
 

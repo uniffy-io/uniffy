@@ -2,26 +2,27 @@
 
 from typing import Any
 
-from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.models.settings.settings_profile import SettingsProfile
-from uniffy.gen.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb2 import (
     AppearanceSettings as ProtoAppearance,
 )
-from uniffy.gen.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb2 import (
     EffectiveSettings as ProtoEffectiveSettings,
 )
-from uniffy.gen.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb2 import (
     KeyboardShortcutsSettings as ProtoKeyboardShortcuts,
 )
-from uniffy.gen.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb2 import (
     NotificationChannelPreference as ProtoChannelPreference,
 )
-from uniffy.gen.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb2 import (
     NotificationsSettings as ProtoNotifications,
 )
-from uniffy.gen.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb2 import (
     SettingsProfile as ProtoSettingsProfile,
 )
+
+from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.models.settings.settings_profile import SettingsProfile
 
 
 def profile_to_proto(profile: SettingsProfile) -> ProtoSettingsProfile:

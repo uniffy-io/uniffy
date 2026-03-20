@@ -27,7 +27,7 @@ import { createAudioUploadHandler, uploadAudio } from '@/components/editor/utils
 import { audioPlugins, setAudioRecordingUploadHandler } from '@/components/editor/plugins/audio';
 import { highlightPlugins, highlightMark } from '@/components/editor/plugins/highlight';
 import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
-import type { SearchResultItem } from '@/gen/search/v1/search_pb';
+import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 import { InlineCommentPopover } from '@/features/comments/components/InlineCommentPopover';
 import { CommentThreadPopover } from '@/features/comments/components/CommentThreadPopover';
 import {
@@ -38,8 +38,8 @@ import {
 import type { CommentAnchor } from '@/features/comments/plugins/commentDecorations';
 import { useComments } from '@/features/comments/hooks/useComments';
 import { setActiveComment } from '@/features/comments/store/commentsSlice';
-import { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
-import { ContentType } from '@/gen/common/v1/common_pb';
+import { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
 // Import only common Crepe styles - frame themes set global html/body styles that break our app
 import '@milkdown/crepe/theme/common/style.css';

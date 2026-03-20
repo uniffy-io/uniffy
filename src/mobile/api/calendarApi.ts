@@ -1,6 +1,6 @@
 import { createClient } from "@connectrpc/connect";
 import type { PartialMessage } from "@bufbuild/protobuf";
-import { CalendarService } from "@/gen/cal/v1/calendar_connect";
+import { CalendarService } from "@uniffy/proto/cal/v1/calendar_connect";
 import type {
   CreateEventRequest,
   GetEventRequest,
@@ -16,7 +16,7 @@ import type {
   UpdateAttendeeStatusRequest,
   AddAttendeesRequest,
   RemoveAttendeesRequest,
-} from "@/gen/cal/v1/calendar_pb";
+} from "@uniffy/proto/cal/v1/calendar_pb";
 import { transport } from "@/lib/transport";
 
 const client = createClient(CalendarService, transport);

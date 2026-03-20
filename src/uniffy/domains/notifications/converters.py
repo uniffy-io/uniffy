@@ -1,14 +1,15 @@
 """Proto <-> domain converters for notifications domain."""
 
+from uniffy_proto.notifications.v1.notifications_pb2 import (
+    Notification as ProtoNotification,
+)
+from uniffy_proto.notifications.v1.notifications_pb2 import (
+    NotificationType as ProtoNotificationType,
+)
+
 from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
-from uniffy.gen.notifications.v1.notifications_pb2 import (
-    Notification as ProtoNotification,
-)
-from uniffy.gen.notifications.v1.notifications_pb2 import (
-    NotificationType as ProtoNotificationType,
-)
 
 # Mapping from domain NotificationType to proto NotificationType
 NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {

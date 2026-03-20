@@ -1,0 +1,15 @@
+{
+  "name": "uniffy",
+  "private": true,
+  "scripts": {
+    "ui:dev": "pnpm --filter uniffy-ui dev",
+    "ui:build": "pnpm --filter uniffy-ui build",
+    "ui:lint": "pnpm --filter uniffy-ui lint",
+    "ui:test": "pnpm --filter uniffy-ui test",
+    "mobile:start": "pnpm --filter uniffy-mobile start",
+    "mobile:lint": "pnpm --filter uniffy-mobile lint"
+  },
+  "engines": {
+    "pnpm": ">=9"
+  }
+}

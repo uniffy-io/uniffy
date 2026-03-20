@@ -5,7 +5,7 @@
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { PermissionInfo, ShareTarget } from '@/gen/permissions/v1/permissions_pb';
+import type { PermissionInfo, ShareTarget } from '@uniffy/proto/permissions/v1/permissions_pb';
 import {
     fetchContentPermissions,
     grantPermission,

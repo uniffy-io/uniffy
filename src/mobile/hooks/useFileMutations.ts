@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { filesApi } from "@/api/filesApi";
-import { VisibilityScope } from "@/gen/common/v1/common_pb";
+import { VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
 
 export function useDeleteFile() {
   const { organizationId } = useAuth();

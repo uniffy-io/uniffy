@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { searchApi } from "@/api/searchApi";
-import { SearchResultType } from "@/gen/search/v1/search_pb";
+import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import { searchResultToPlain, domainToTypeFilters } from "@/lib/searchSerializer";
 import type { SerializedSearchResult } from "@/lib/searchSerializer";
 import type { Domain } from "@/lib/types";

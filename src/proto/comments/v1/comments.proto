@@ -6,7 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 import "common/v1/common.proto";
 
-option go_package = "uniffy/gen/comments/v1;commentsv1";
+option go_package = "github.com/uniffy-io/uniffy-proto-go/comments/v1;commentsv1";
 
 // SERVICE
 

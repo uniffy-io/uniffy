@@ -13,22 +13,7 @@ from connectrpc.request import RequestContext
 from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
 from sqlalchemy import select
-
-from uniffy.core.config.push import get_vapid_config
-from uniffy.core.models.login.user import User
-from uniffy.core.valkey import subscribe_channels
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.notifications.converters import (
-    notification_to_proto,
-    notification_type_from_proto,
-)
-from uniffy.domains.notifications.middleware import get_disconnect_event
-from uniffy.domains.notifications.operations import (
-    NotificationOperations,
-    PushSubscriptionOperations,
-)
-from uniffy.gen.notifications.v1.notifications_pb2 import (
+from uniffy_proto.notifications.v1.notifications_pb2 import (
     DeleteNotificationRequest,
     DeleteNotificationResponse,
     FileUpdatePayload,
@@ -51,8 +36,23 @@ from uniffy.gen.notifications.v1.notifications_pb2 import (
     UnregisterPushSubscriptionRequest,
     UnregisterPushSubscriptionResponse,
 )
-from uniffy.gen.notifications.v1.notifications_pb2 import (
+from uniffy_proto.notifications.v1.notifications_pb2 import (
     Notification as ProtoNotification,
+)
+
+from uniffy.core.config.push import get_vapid_config
+from uniffy.core.models.login.user import User
+from uniffy.core.valkey import subscribe_channels
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.notifications.converters import (
+    notification_to_proto,
+    notification_type_from_proto,
+)
+from uniffy.domains.notifications.middleware import get_disconnect_event
+from uniffy.domains.notifications.operations import (
+    NotificationOperations,
+    PushSubscriptionOperations,
 )
 
 

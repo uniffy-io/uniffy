@@ -5,7 +5,7 @@
  * SubjectAvatar, SubjectPicker, SubjectAvatarStack, and SubjectChip.
  */
 
-import { SubjectType } from '@/gen/common/v1/common_pb';
+import { SubjectType } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Numeric subject type constants matching the proto enum.

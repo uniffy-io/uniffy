@@ -21,7 +21,7 @@ import {
     searchShareTargets,
 } from '@/features/sharing/store/sharingThunks';
 import { sharingApi } from '@/features/sharing/api/sharingApi';
-import { SubjectType, PermissionLevel, ContentType } from '@/gen/common/v1/common_pb';
+import { SubjectType, PermissionLevel, ContentType } from '@uniffy/proto/common/v1/common_pb';
 
 // Stable empty array reference to prevent unnecessary re-renders
 const EMPTY_PERMISSIONS: SerializedPermissionInfo[] = [];

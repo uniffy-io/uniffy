@@ -9,8 +9,8 @@
 import { filesApi } from '@/features/files/api/filesApi';
 import { attachmentsApi } from '@/features/attachments';
 import { buildFileUrl } from '@/shared/utils/fileUrls';
-import { ContentType } from '@/gen/common/v1/common_pb';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 // Cache for attachments folder ID per organization
 const attachmentsFolderCache = new Map<string, string>();

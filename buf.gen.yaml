@@ -1,17 +1,29 @@
 version: v2
 plugins:
-  # Python backend generation
+  # Python
   - remote: buf.build/protocolbuffers/python
-    out: src/uniffy/gen
+    out: src/gen/python/src/uniffy_proto
   - remote: buf.build/protocolbuffers/pyi
-    out: src/uniffy/gen
+    out: src/gen/python/src/uniffy_proto
   - local: .venv/bin/protoc-gen-connect-python
-    out: src/uniffy/gen
+    out: src/gen/python/src/uniffy_proto
     strategy: all
-  # TypeScript frontend generation
+
+  # TypeScript
   - local: protoc-gen-es
-    out: src/ui/src/gen
+    out: src/gen/typescript
     opt: target=ts
   - local: protoc-gen-connect-es
-    out: src/ui/src/gen
+    out: src/gen/typescript
     opt: target=ts
+
+  # Go
+  - remote: buf.build/protocolbuffers/go
+    out: src/gen/go
+    opt: module=github.com/uniffy-io/uniffy-proto-go
+  - remote: buf.build/grpc/go
+    out: src/gen/go
+    opt: module=github.com/uniffy-io/uniffy-proto-go
+  - remote: buf.build/connectrpc/go
+    out: src/gen/go
+    opt: module=github.com/uniffy-io/uniffy-proto-go

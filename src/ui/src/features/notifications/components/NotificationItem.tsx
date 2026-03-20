@@ -29,7 +29,7 @@ import { getUrnTypeTheme } from '@/config/theme/urnColors';
 import { updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
 import { markNotificationAsRead } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
-import { NotificationType } from '@/gen/notifications/v1/notifications_pb';
+import { NotificationType } from '@uniffy/proto/notifications/v1/notifications_pb';
 import type { AttendeeStatus } from '@/features/calendar/types';
 import { UrnType } from '@/shared/utils/urnTypes';
 import { getInitials } from '@/components/subject/utils';

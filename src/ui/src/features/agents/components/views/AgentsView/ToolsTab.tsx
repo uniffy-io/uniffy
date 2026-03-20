@@ -3,7 +3,7 @@ import { CaretDown, CaretRight, WarningCircle } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useMyPermission } from "@/features/sharing";
-import { ContentType } from "@/gen/common/v1/common_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { TOOL_SECTIONS } from "@/features/agents/config/toolCatalog";
 import type { ToolGroup, ToolCategorySection } from "@/features/agents/config/toolCatalog";
 import { updateAgent } from "@/features/agents/store/agentsThunks";

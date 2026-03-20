@@ -1,11 +1,12 @@
 """Proto <-> domain conversions for search."""
 
-from uniffy.domains.search.queries import SearchResult
-from uniffy.gen.search.v1.search_pb2 import (
+from uniffy_proto.search.v1.search_pb2 import (
     SearchResultItem,
     SearchResultType,
     UrnMetadata,
 )
+
+from uniffy.domains.search.queries import SearchResult
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Entity type string <-> Proto enum mapping

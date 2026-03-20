@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { Select, type SelectOption } from '@/components/ui/select';
-import { PermissionLevel } from '@/gen/common/v1/common_pb';
+import { PermissionLevel } from '@uniffy/proto/common/v1/common_pb';
 
 const ALL_PERMISSION_OPTIONS: SelectOption<number>[] = [
     { value: PermissionLevel.VIEW, label: 'Can view' },

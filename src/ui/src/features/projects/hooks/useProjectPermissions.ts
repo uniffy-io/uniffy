@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { selectCurrentProject, selectTasksMap } from '@/features/projects/store/projectsSlice';
-import { PermissionLevel } from '@/gen/common/v1/common_pb';
+import { PermissionLevel } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Resolve a permission level value, treating 0 (UNSPECIFIED) as unknown.
