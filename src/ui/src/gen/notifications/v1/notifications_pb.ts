@@ -998,6 +998,13 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
    */
   presenceChanged?: PresenceChangedPayload;
 
+  /**
+   * Mention state change payload (present for MENTION_STATE_CHANGED events)
+   *
+   * @generated from field: notifications.v1.MentionStateChangedPayload mention_state_changed = 6;
+   */
+  mentionStateChanged?: MentionStateChangedPayload;
+
   constructor(data?: PartialMessage<StreamNotificationEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1011,6 +1018,7 @@ export class StreamNotificationEvent extends Message<StreamNotificationEvent> {
     { no: 3, name: "timestamp", kind: "message", T: Timestamp },
     { no: 4, name: "file_update", kind: "message", T: FileUpdatePayload },
     { no: 5, name: "presence_changed", kind: "message", T: PresenceChangedPayload },
+    { no: 6, name: "mention_state_changed", kind: "message", T: MentionStateChangedPayload },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamNotificationEvent {
@@ -1068,6 +1076,13 @@ export enum StreamNotificationEvent_EventType {
    * @generated from enum value: EVENT_TYPE_PRESENCE_CHANGED = 4;
    */
   PRESENCE_CHANGED = 4,
+
+  /**
+   * Mention state changed for content (task status, event time, etc.)
+   *
+   * @generated from enum value: EVENT_TYPE_MENTION_STATE_CHANGED = 5;
+   */
+  MENTION_STATE_CHANGED = 5,
 }
 // Retrieve enum metadata with: proto3.getEnumType(StreamNotificationEvent_EventType)
 proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.StreamNotificationEvent.EventType", [
@@ -1076,6 +1091,7 @@ proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.Str
   { no: 2, name: "EVENT_TYPE_HEARTBEAT" },
   { no: 3, name: "EVENT_TYPE_FILE_UPDATED" },
   { no: 4, name: "EVENT_TYPE_PRESENCE_CHANGED" },
+  { no: 5, name: "EVENT_TYPE_MENTION_STATE_CHANGED" },
 ]);
 
 /**
@@ -1156,6 +1172,55 @@ export class PresenceChangedPayload extends Message<PresenceChangedPayload> {
 
   static equals(a: PresenceChangedPayload | PlainMessage<PresenceChangedPayload> | undefined, b: PresenceChangedPayload | PlainMessage<PresenceChangedPayload> | undefined): boolean {
     return proto3.util.equals(PresenceChangedPayload, a, b);
+  }
+}
+
+/**
+ * Payload for mention state change events (task status, event time, etc.)
+ *
+ * @generated from message notifications.v1.MentionStateChangedPayload
+ */
+export class MentionStateChangedPayload extends Message<MentionStateChangedPayload> {
+  /**
+   * URN of the content whose state changed
+   *
+   * @generated from field: string urn = 1;
+   */
+  urn = "";
+
+  /**
+   * Changed fields as key-value pairs (field_name -> new_value)
+   *
+   * @generated from field: map<string, string> changes = 2;
+   */
+  changes: { [key: string]: string } = {};
+
+  constructor(data?: PartialMessage<MentionStateChangedPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "notifications.v1.MentionStateChangedPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "changes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MentionStateChangedPayload {
+    return new MentionStateChangedPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MentionStateChangedPayload {
+    return new MentionStateChangedPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MentionStateChangedPayload {
+    return new MentionStateChangedPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MentionStateChangedPayload | PlainMessage<MentionStateChangedPayload> | undefined, b: MentionStateChangedPayload | PlainMessage<MentionStateChangedPayload> | undefined): boolean {
+    return proto3.util.equals(MentionStateChangedPayload, a, b);
   }
 }
 

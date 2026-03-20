@@ -7,6 +7,7 @@ from uniffy.core.valkey.cache import (
     cache_set,
 )
 from uniffy.core.valkey.config import ValkeyConfig
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.core.valkey.presence import (
     presence_get_bulk,
     presence_publish_change,
@@ -39,6 +40,7 @@ __all__ = [
     "presence_get_bulk",
     "presence_publish_change",
     "presence_set",
+    "publish_mention_state",
     "publish_notification",
     "signal_pubsub_shutdown",
     "subscribe_channels",

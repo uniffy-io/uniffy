@@ -110,6 +110,7 @@ export function useUrnPreview(): UseUrnPreviewResult {
           description: resolved.description || '',
           type: searchResultTypeToUrnType(resolved.type),
           url: resolved.url,
+          updatedAt: resolved.metadata?.['updated_at'] || undefined,
           metadata: resolved.metadata,
         };
         // Only cache successful lookups, not fallback data
@@ -181,4 +182,14 @@ export function invalidatePreviewCache(urn: string): void {
 export function invalidateNotePreviewCache(noteId: string): void {
   const urn = `urn:uniffy:content:NOTE:${noteId}`;
   previewCache.delete(urn);
+}
+
+/**
+ * Get the resolved URL for a URN from the preview cache.
+ * Returns the backend-provided URL path (which is correct for nested
+ * resources like tasks) or falls back to urnToPath.
+ */
+export function getResolvedUrl(urn: string): string | null {
+  const cached = previewCache.get(urn);
+  return cached?.url || null;
 }

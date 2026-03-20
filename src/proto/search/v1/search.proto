@@ -125,4 +125,14 @@ message UrnMetadata {
   SearchResultType    type        = 3;
   string              url         = 4;
   map<string, string> metadata    = 5;
+
+  // Live state fields for mention enrichment
+  string status             = 10;  // task status, project status
+  string due_date           = 11;  // task due date (ISO date string)
+  string assignee_name      = 12;  // task assignee display name
+  string processing_status  = 15;  // file extraction/processing status
+  int32  completed_tasks    = 16;  // project completed task count
+  int32  total_tasks        = 17;  // project total task count
+  int32  member_count       = 18;  // group/chat member count
+  string updated_by_name    = 19;  // who last modified the content
 }

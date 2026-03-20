@@ -42,6 +42,7 @@ from uniffy.gen.notifications.v1.notifications_pb2 import (
     MarkAllAsReadResponse,
     MarkAsReadRequest,
     MarkAsReadResponse,
+    MentionStateChangedPayload,
     PresenceChangedPayload,
     RegisterPushSubscriptionRequest,
     RegisterPushSubscriptionResponse,
@@ -482,6 +483,7 @@ class NotificationsHandlers:
                 subscribe_channels(
                     f"notifications:{user_id}",
                     f"presence:{request.organization_id}",
+                    f"mentions:{request.organization_id}",
                 )
             ) as subscriber:
                 last_send = time.monotonic()
@@ -541,6 +543,19 @@ class NotificationsHandlers:
                         yield StreamNotificationEvent(
                             event_type=StreamNotificationEvent.EVENT_TYPE_PRESENCE_CHANGED,
                             presence_changed=presence_payload,
+                        )
+                        last_send = now
+                        continue
+
+                    # Mention state changed (from mentions:{org_id} channel)
+                    if payload.get("_type") == "mention_state_changed":
+                        mention_payload = MentionStateChangedPayload(
+                            urn=payload.get("urn", ""),
+                            changes=payload.get("changes", {}),
+                        )
+                        yield StreamNotificationEvent(
+                            event_type=StreamNotificationEvent.EVENT_TYPE_MENTION_STATE_CHANGED,
+                            mention_state_changed=mention_payload,
                         )
                         last_send = now
                         continue

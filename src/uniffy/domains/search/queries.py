@@ -39,6 +39,16 @@ class SearchResult:
     rank_score: float
     search_score: float | None  # Meilisearch ranking score
 
+    # Live state fields for mention enrichment
+    status: str | None = None
+    due_date: str | None = None
+    assignee_name: str | None = None
+    processing_status: str | None = None
+    completed_tasks: int = 0
+    total_tasks: int = 0
+    member_count: int = 0
+    updated_by_name: str | None = None
+
     @classmethod
     def from_meilisearch_hit(cls, hit: dict[str, Any]) -> SearchResult:
         """

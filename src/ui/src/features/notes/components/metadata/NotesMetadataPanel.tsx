@@ -22,8 +22,9 @@ import { useComments } from '@/features/comments/hooks/useComments';
 import { ContentType } from '@/gen/common/v1/common_pb';
 import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
 import { useNavigate } from 'react-router-dom';
-import { getContentTypeConfig } from '@/config/theme/contentTypes';
+
 import { getInitials } from '@/components/subject/utils';
+import { MentionChipCompact } from '@/components/mention';
 
 /** Parsed mention from content */
 interface ParsedMention {
@@ -56,16 +57,6 @@ function parseMentionsFromContent(content: string): ParsedMention[] {
   return mentions;
 }
 
-/** Get icon component for URN type */
-function getTypeIcon(type: UrnType) {
-  return getContentTypeConfig(type).icon;
-}
-
-/** Get type-specific styling */
-function getTypeStyle(type: UrnType) {
-  const theme = getContentTypeConfig(type).theme;
-  return { bg: theme.badgeBg, text: theme.accentText };
-}
 
 export function NotesMetadataPanel() {
   const dispatch = useAppDispatch();
@@ -271,28 +262,14 @@ export function NotesMetadataPanel() {
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {outgoingLinks.map((link) => {
-              const Icon = getTypeIcon(link.type);
-              const style = getTypeStyle(link.type);
-              return (
-                <button
-                  key={link.urn}
-                  onClick={() => handleLinkClick(link.urn)}
-                  className={`
-                    flex items-center gap-2 px-3 py-1.5 rounded-lg
-                    border border-border hover:border-primary/50
-                    ${style.bg} hover:bg-accent/50
-                    transition-colors text-sm group
-                  `}
-                  title={`Open: ${link.label}`}
-                >
-                  <span className={`${style.text} transition-transform group-hover:scale-110`}>
-                    <Icon size={16} weight="duotone" />
-                  </span>
-                  <span className="truncate max-w-[150px]">{link.label}</span>
-                </button>
-              );
-            })}
+            {outgoingLinks.map((link) => (
+              <MentionChipCompact
+                key={link.urn}
+                urn={link.urn}
+                label={link.label}
+                onClick={() => handleLinkClick(link.urn)}
+              />
+            ))}
           </div>
         )}
       </div>

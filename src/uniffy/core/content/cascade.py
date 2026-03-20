@@ -512,6 +512,17 @@ async def _fetch_outgoing_references(
         )
         return result.scalar_one_or_none()
 
+    if content_type == ContentType.TASK:
+        from uniffy.core.models.projects.task import Task
+
+        result = await session.execute(
+            select(Task.outgoing_references).where(
+                Task.id == content_id,
+                Task.organization_id == organization_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
     return None
 
 
@@ -577,6 +588,34 @@ async def _fetch_content_owner_and_visibility(
             select(CalendarEvent.organizer_id, CalendarEvent.visibility).where(
                 CalendarEvent.id == content_id,
                 CalendarEvent.organization_id == organization_id,
+            )
+        )
+        row = result.one_or_none()
+        if row:
+            return row[0], row[1]
+        return None
+
+    if content_type == ContentType.TASK:
+        from uniffy.core.models.projects.task import Task
+
+        result = await session.execute(
+            select(Task.owner_id, Task.visibility).where(
+                Task.id == content_id,
+                Task.organization_id == organization_id,
+            )
+        )
+        row = result.one_or_none()
+        if row:
+            return row[0], row[1]
+        return None
+
+    if content_type == ContentType.PROJECT:
+        from uniffy.core.models.projects.project import Project
+
+        result = await session.execute(
+            select(Project.owner_id, Project.visibility).where(
+                Project.id == content_id,
+                Project.organization_id == organization_id,
             )
         )
         row = result.one_or_none()
@@ -661,6 +700,32 @@ async def _update_content_visibility(
                 CalendarEvent.id == content_id,
                 CalendarEvent.organization_id == organization_id,
                 CalendarEvent.organizer_id == owner_id,
+            )
+            .values(visibility=new_visibility)
+        )
+
+    elif content_type == ContentType.TASK:
+        from uniffy.core.models.projects.task import Task
+
+        await session.execute(
+            update(Task)
+            .where(
+                Task.id == content_id,
+                Task.organization_id == organization_id,
+                Task.owner_id == owner_id,
+            )
+            .values(visibility=new_visibility)
+        )
+
+    elif content_type == ContentType.PROJECT:
+        from uniffy.core.models.projects.project import Project
+
+        await session.execute(
+            update(Project)
+            .where(
+                Project.id == content_id,
+                Project.organization_id == organization_id,
+                Project.owner_id == owner_id,
             )
             .values(visibility=new_visibility)
         )

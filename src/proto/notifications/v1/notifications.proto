@@ -209,6 +209,8 @@ message StreamNotificationEvent {
     EVENT_TYPE_FILE_UPDATED = 3;
     // Presence state changed for a user
     EVENT_TYPE_PRESENCE_CHANGED = 4;
+    // Mention state changed for content (task status, event time, etc.)
+    EVENT_TYPE_MENTION_STATE_CHANGED = 5;
   }
 
   // Type of this event
@@ -221,6 +223,8 @@ message StreamNotificationEvent {
   FileUpdatePayload file_update = 4;
   // Presence change payload (present for PRESENCE_CHANGED events)
   PresenceChangedPayload presence_changed = 5;
+  // Mention state change payload (present for MENTION_STATE_CHANGED events)
+  MentionStateChangedPayload mention_state_changed = 6;
 }
 
 // Payload for presence change events
@@ -237,6 +241,14 @@ message PresenceChangedPayload {
   string status_text = 5;
   // When the custom status expires (unset if no expiry)
   google.protobuf.Timestamp status_expires_at = 6;
+}
+
+// Payload for mention state change events (task status, event time, etc.)
+message MentionStateChangedPayload {
+  // URN of the content whose state changed
+  string urn = 1;
+  // Changed fields as key-value pairs (field_name -> new_value)
+  map<string, string> changes = 2;
 }
 
 // Request to get VAPID public key
