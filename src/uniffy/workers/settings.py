@@ -33,6 +33,7 @@ from arq.cron import cron
 
 from uniffy.workers.tasks import (
     check_calendar_reminders,
+    check_task_due_dates,
     deliver_email_notification,
     deliver_push_notification,
     execute_agent_cron_tasks,
@@ -108,6 +109,7 @@ class WorkerSettings:
     cron_jobs = [
         cron(check_calendar_reminders, minute=None),  # Every minute
         cron(execute_agent_cron_tasks, minute=None),  # Every minute
+        cron(check_task_due_dates, minute=None),  # Every minute
     ]
 
     # Lifecycle hooks

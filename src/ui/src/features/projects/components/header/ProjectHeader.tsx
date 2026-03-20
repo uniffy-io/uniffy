@@ -35,7 +35,7 @@ import {
   toggleSidebar,
   selectIsSidebarOpen,
 } from "@/features/projects/store/projectsUiSlice";
-import { deleteTasks } from "@/features/projects/store/projectsThunks";
+import { deleteTasks, bulkUpdateTasksThunk } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, ViewType } from "@/features/projects/types";
@@ -45,8 +45,9 @@ import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
-import type { SelectOption } from "@/features/projects/types";
+import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
+import type { AppDispatch } from "@/app/store";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -308,27 +309,17 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           />
         )}
 
-        {/* Selection actions */}
+        {/* Bulk action toolbar */}
         {hasSelection && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-muted-foreground">
-              {selectedTaskIds.length} selected
-            </span>
-            <button
-              onClick={() => setShowDeleteTasksConfirm(true)}
-              className="p-1 rounded-md hover:bg-destructive/10 transition-colors"
-              title="Delete selected tasks"
-            >
-              <Trash size={16} weight="duotone" className="text-destructive" />
-            </button>
-            <button
-              onClick={() => dispatch(clearSelection())}
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Clear selection"
-            >
-              <X size={14} />
-            </button>
-          </div>
+          <BulkActionToolbar
+            selectedCount={selectedTaskIds.length}
+            selectedTaskIds={selectedTaskIds}
+            statusOptions={statusOptions}
+            onDeleteClick={() => setShowDeleteTasksConfirm(true)}
+            onClearSelection={() => dispatch(clearSelection())}
+            dispatch={dispatch}
+            sprints={allSprints}
+          />
         )}
       </div>
     </div>
@@ -546,6 +537,200 @@ function GroupByDropdown({ activeGroupByFieldId, onSelect, showSprintOption }: G
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ===== Bulk Action Toolbar =====
+
+interface BulkActionToolbarProps {
+  selectedCount: number;
+  selectedTaskIds: string[];
+  statusOptions: SelectOption[];
+  onDeleteClick: () => void;
+  onClearSelection: () => void;
+  dispatch: AppDispatch;
+  sprints: Sprint[];
+}
+
+function BulkActionToolbar({
+  selectedCount,
+  selectedTaskIds,
+  statusOptions,
+  onDeleteClick,
+  onClearSelection,
+  dispatch,
+  sprints,
+}: BulkActionToolbarProps) {
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleBulkUpdate = (updates: {
+    status?: string;
+    priority?: string;
+    sprintId?: string | null;
+  }) => {
+    dispatch(bulkUpdateTasksThunk({ taskIds: selectedTaskIds, updates }));
+    setOpenDropdown(null);
+  };
+
+  const handleClose = useCallback(() => setOpenDropdown(null), []);
+
+  useEffect(() => {
+    if (!openDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        handleClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openDropdown, handleClose]);
+
+  const priorityOptions: { value: string; label: string; color: string }[] = [
+    { value: "priority_urgent", label: "Urgent", color: "#ef4444" },
+    { value: "priority_high", label: "High", color: "#f97316" },
+    { value: "priority_medium", label: "Medium", color: "#eab308" },
+    { value: "priority_low", label: "Low", color: "#22c55e" },
+    { value: "priority_none", label: "None", color: "#94a3b8" },
+  ];
+
+  return (
+    <div ref={containerRef} className="flex items-center gap-1.5 text-xs">
+      <span className="text-muted-foreground whitespace-nowrap">
+        {selectedCount} selected
+      </span>
+
+      {/* Status */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() =>
+            setOpenDropdown(openDropdown === "status" ? null : "status")
+          }
+          className="flex items-center gap-1 h-7 px-2 rounded-md text-xs hover:bg-muted transition-colors text-muted-foreground"
+        >
+          Status
+          <CaretDown size={10} />
+        </button>
+        {openDropdown === "status" && (
+          <div className="absolute top-full left-0 z-50 mt-1 w-40 rounded-lg border border-border bg-card shadow-lg py-1">
+            {statusOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleBulkUpdate({ status: opt.id })}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: opt.color }}
+                />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Priority */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() =>
+            setOpenDropdown(openDropdown === "priority" ? null : "priority")
+          }
+          className="flex items-center gap-1 h-7 px-2 rounded-md text-xs hover:bg-muted transition-colors text-muted-foreground"
+        >
+          Priority
+          <CaretDown size={10} />
+        </button>
+        {openDropdown === "priority" && (
+          <div className="absolute top-full left-0 z-50 mt-1 w-40 rounded-lg border border-border bg-card shadow-lg py-1">
+            {priorityOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleBulkUpdate({ priority: opt.value })}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: opt.color }}
+                />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sprint */}
+      {sprints.length > 0 && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() =>
+              setOpenDropdown(openDropdown === "sprint" ? null : "sprint")
+            }
+            className="flex items-center gap-1 h-7 px-2 rounded-md text-xs hover:bg-muted transition-colors text-muted-foreground"
+          >
+            Sprint
+            <CaretDown size={10} />
+          </button>
+          {openDropdown === "sprint" && (
+            <div className="absolute top-full left-0 z-50 mt-1 w-48 rounded-lg border border-border bg-card shadow-lg py-1">
+              <button
+                type="button"
+                onClick={() => handleBulkUpdate({ sprintId: null })}
+                className="flex w-full items-center px-3 py-1.5 text-sm hover:bg-muted text-muted-foreground"
+              >
+                Backlog (no sprint)
+              </button>
+              {sprints
+                .filter((s) => s.status !== "closed")
+                .map((sprint) => (
+                  <button
+                    key={sprint.id}
+                    type="button"
+                    onClick={() =>
+                      handleBulkUpdate({ sprintId: sprint.id })
+                    }
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted"
+                  >
+                    <span className="truncate">{sprint.name}</span>
+                    {sprint.status === "active" && (
+                      <span className="text-[10px] text-green-600 dark:text-green-400 shrink-0">
+                        Active
+                      </span>
+                    )}
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Delete */}
+      <button
+        onClick={onDeleteClick}
+        className="p-1 rounded-md hover:bg-destructive/10 transition-colors"
+        title="Delete selected tasks"
+      >
+        <Trash size={16} weight="duotone" className="text-destructive" />
+      </button>
+
+      {/* Clear */}
+      <button
+        onClick={onClearSelection}
+        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        title="Clear selection"
+      >
+        <X size={14} />
+      </button>
     </div>
   );
 }

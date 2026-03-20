@@ -19,16 +19,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.projects.task_watcher import TaskWatcher
 from uniffy.core.models.projects.view_config import ViewConfig
-from uniffy.core.models.shared import ContentType, VisibilityScope
+from uniffy.core.models.shared import ContentType, NotificationType, VisibilityScope
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.projects import queries
+from uniffy.domains.projects.validation import validate_field_values
 
 
 class ProjectOperations(BaseContentOperations[Project]):
@@ -728,6 +731,16 @@ class TaskOperations(BaseContentOperations[Task]):
         )
         task_number = counter_result.scalar_one()
 
+        # Validate custom field values
+        if kwargs.get("field_values"):
+            await self._validate_field_values(project_id, kwargs["field_values"])
+
+        # Validate blocked_by for circular dependencies
+        if kwargs.get("blocked_by_task_ids"):
+            # No circular check needed on create since the task doesn't exist yet
+
+            pass
+
         # Extract references from description
         description = kwargs.get("description", "")
         outgoing_references = queries.extract_urns_from_content(description) if description else []
@@ -785,6 +798,12 @@ class TaskOperations(BaseContentOperations[Task]):
         group_ids = await project_ops._get_content_group_ids(project_id)
         await self._index_for_search(task, group_ids)
 
+        # Emit notifications for assignments
+        await self._emit_assignment_notifications(task, user_id, None, task.assignee_ids)
+
+        # Emit notifications for @mentions in description
+        await self._emit_mention_notifications(task, user_id, None, task.outgoing_references)
+
         return task
 
     async def update(
@@ -817,6 +836,30 @@ class TaskOperations(BaseContentOperations[Task]):
         task = await self.get_by_id(user_id, organization_id, task_id)
         await self._require_edit(user_id, organization_id, task)
 
+        # Dependency enforcement: cannot complete task with unresolved blockers
+        if "status" in kwargs and kwargs["status"] != task.status:
+            unresolved = await self._check_blockers_resolved(task, kwargs["status"])
+            if unresolved:
+                blocker_names = [f"#{b['number']} {b['title']}" for b in unresolved[:5]]
+                suffix = f" and {len(unresolved) - 5} more" if len(unresolved) > 5 else ""
+                raise ValidationError(
+                    "status",
+                    "Cannot complete task: blocked by unresolved tasks: "
+                    f"{', '.join(blocker_names)}{suffix}",
+                )
+
+        # Circular dependency validation
+        if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:
+            await self._validate_no_circular_dependency(task_id, kwargs["blocked_by_task_ids"])
+
+        # Custom field validation
+        if kwargs.get("field_values"):
+            await self._validate_field_values(task.project_id, kwargs["field_values"])
+
+        # Snapshot for notification comparison
+        old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else None
+        old_references = list(task.outgoing_references) if task.outgoing_references else None
+
         title_changed = "title" in kwargs and kwargs["title"] != task.title
 
         # Snapshot fields that trigger mention state publishing
@@ -833,6 +876,8 @@ class TaskOperations(BaseContentOperations[Task]):
             "parent_id",
             "recurrence_rule",
             "sprint_id",
+            "estimated_minutes",
+            "time_spent_minutes",
         }
 
         # Track changes for activity log
@@ -842,7 +887,14 @@ class TaskOperations(BaseContentOperations[Task]):
             if value is None and key not in nullable_fields:
                 continue
             old_value = getattr(task, key)
-            setattr(task, key, value)
+
+            # Merge field_values instead of replacing
+            if key == "field_values" and isinstance(value, dict):
+                merged = dict(task.field_values or {})
+                merged.update(value)
+                setattr(task, key, merged)
+            else:
+                setattr(task, key, value)
 
             # Log specific changes
             if key == "status" and old_value != value:
@@ -886,6 +938,15 @@ class TaskOperations(BaseContentOperations[Task]):
                     previous_value=str(old_value) if old_value else None,
                     new_value=str(value) if value else None,
                 )
+            elif key == "assignee_ids" and old_value != value:
+                await self._log_activity(
+                    task_id,
+                    user_id,
+                    "assigned",
+                    field_id="field_assignee",
+                    previous_value=",".join(old_value) if old_value else None,
+                    new_value=",".join(value) if value else None,
+                )
 
         # Re-extract references if description changed
         if "description" in kwargs:
@@ -901,6 +962,31 @@ class TaskOperations(BaseContentOperations[Task]):
         project_ops = ProjectOperations(self.session)
         group_ids = await project_ops._get_content_group_ids(task.project_id)
         await self._index_for_search(task, group_ids)
+
+        # Emit notifications for assignment changes
+        await self._emit_assignment_notifications(
+            task, user_id, old_assignee_ids, task.assignee_ids
+        )
+
+        # Emit notifications for new @mentions
+        await self._emit_mention_notifications(
+            task, user_id, old_references, task.outgoing_references
+        )
+
+        # Notify watchers about significant changes
+        changes = []
+        if "status" in kwargs and kwargs["status"] != (old_assignee_ids and ""):
+            label = task.status.replace("status_", "").replace("_", " ").title()
+            changes.append(f"Status changed to \"{label}\"")
+        if "priority" in kwargs:
+            label = task.priority.replace("priority_", "").replace("_", " ").title()
+            changes.append(f"Priority changed to \"{label}\"")
+        if "assignee_ids" in kwargs:
+            changes.append("Assignees updated")
+        if changes:
+            await self._emit_watcher_notifications(
+                task, user_id, "; ".join(changes)
+            )
 
         # Propagate title change to mention labels in referencing content
         if title_changed:
@@ -1137,6 +1223,271 @@ class TaskOperations(BaseContentOperations[Task]):
         tasks = list(result.scalars().all())
 
         return tasks, total
+
+    async def _check_blockers_resolved(
+        self,
+        task: Task,
+        new_status: str,
+    ) -> list[dict[str, str]]:
+        """
+        Check if all blocking tasks are completed.
+
+        Only enforced when moving to a completion status ('status_done').
+
+        Parameters
+        ----------
+        task : Task
+            Task being updated.
+        new_status : str
+            Target status.
+
+        Returns
+        -------
+        list[dict[str, str]]
+            Unresolved blockers with id, title, and status. Empty if all resolved.
+
+        """
+        if new_status != "status_done":
+            return []
+
+        if not task.blocked_by_task_ids:
+            return []
+
+        blocker_ids = [UUID(bid) for bid in task.blocked_by_task_ids]
+        result = await self.session.execute(
+            select(Task.id, Task.title, Task.status, Task.number).where(
+                and_(
+                    Task.id.in_(blocker_ids),
+                    Task.is_deleted == False,  # noqa: E712
+                    Task.status != "status_done",
+                )
+            )
+        )
+        unresolved = result.all()
+        return [
+            {"id": str(row.id), "title": row.title, "status": row.status, "number": str(row.number)}
+            for row in unresolved
+        ]
+
+    async def _validate_no_circular_dependency(
+        self,
+        task_id: UUID,
+        blocked_by_task_ids: list[str],
+    ) -> None:
+        """
+        Validate that adding dependencies does not create a cycle.
+
+        Uses BFS traversal through blocked_by chains (max depth 20).
+
+        Parameters
+        ----------
+        task_id : UUID
+            The task being updated.
+        blocked_by_task_ids : list[str]
+            Proposed blocker task IDs.
+
+        Raises
+        ------
+        ValidationError
+            If a circular dependency would be created.
+
+        """
+        task_id_str = str(task_id)
+        if task_id_str in blocked_by_task_ids:
+            raise ValidationError("blocked_by", "A task cannot be blocked by itself")
+
+        # BFS: check if any blocker eventually depends on this task
+        visited: set[str] = set()
+        queue = list(blocked_by_task_ids)
+        depth = 0
+        max_depth = 20
+
+        while queue and depth < max_depth:
+            depth += 1
+            current_ids = [UUID(tid) for tid in queue if tid not in visited]
+            if not current_ids:
+                break
+
+            for tid_str in queue:
+                visited.add(tid_str)
+
+            result = await self.session.execute(
+                select(Task.id, Task.blocked_by_task_ids).where(
+                    and_(
+                        Task.id.in_(current_ids),
+                        Task.is_deleted == False,  # noqa: E712
+                    )
+                )
+            )
+            rows = result.all()
+
+            queue = []
+            for row in rows:
+                if row.blocked_by_task_ids:
+                    for upstream_id in row.blocked_by_task_ids:
+                        if upstream_id == task_id_str:
+                            raise ValidationError(
+                                "blocked_by",
+                                "These tasks already depend on each other. "
+                                "Adding this link would create a loop",
+                            )
+                        if upstream_id not in visited:
+                            queue.append(upstream_id)
+
+    async def _validate_field_values(
+        self,
+        project_id: UUID,
+        field_values: dict,
+    ) -> None:
+        """
+        Validate custom field values against project field definitions.
+
+        Parameters
+        ----------
+        project_id : UUID
+            Project ID.
+        field_values : dict
+            Field values to validate.
+
+        Raises
+        ------
+        ValidationError
+            If any field values are invalid.
+
+        """
+        if not field_values:
+            return
+
+        field_defs = await queries.get_fields_for_project(self.session, project_id)
+        errors = validate_field_values(field_values, field_defs)
+        if errors:
+            raise ValidationError("field_values", "; ".join(errors))
+
+    async def _emit_assignment_notifications(
+        self,
+        task: Task,
+        actor_id: UUID,
+        old_assignee_ids: list[str] | None,
+        new_assignee_ids: list[str] | None,
+    ) -> None:
+        """
+        Emit TASK_ASSIGNED notifications for newly added assignees.
+
+        Parameters
+        ----------
+        task : Task
+            The task being updated.
+        actor_id : UUID
+            User who made the change.
+        old_assignee_ids : list[str] | None
+            Previous assignee IDs.
+        new_assignee_ids : list[str] | None
+            New assignee IDs.
+
+        """
+        old_set = set(old_assignee_ids or [])
+        new_set = set(new_assignee_ids or [])
+        added = new_set - old_set
+        # Don't notify the actor
+        added.discard(str(actor_id))
+
+        if not added:
+            return
+
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.TASK_ASSIGNED,
+                organization_id=task.organization_id,
+                actor_id=actor_id,
+                title=f"Assigned you to: {task.title}",
+                source_urn=build_content_urn(ContentType.TASK, task.id),
+                target_user_ids=[UUID(uid) for uid in added],
+            )
+        )
+
+    async def _emit_mention_notifications(
+        self,
+        task: Task,
+        actor_id: UUID,
+        old_references: list[str] | None,
+        new_references: list[str] | None,
+    ) -> None:
+        """
+        Emit CONTENT_MENTIONED notifications for newly mentioned users.
+
+        Parameters
+        ----------
+        task : Task
+            The task.
+        actor_id : UUID
+            User who made the change.
+        old_references : list[str] | None
+            Previous outgoing URN references.
+        new_references : list[str] | None
+            New outgoing URN references.
+
+        """
+        old_mentioned = extract_mentioned_user_ids(old_references)
+        new_mentioned = extract_mentioned_user_ids(new_references)
+        newly_mentioned = new_mentioned - old_mentioned
+        newly_mentioned.discard(actor_id)
+
+        if not newly_mentioned:
+            return
+
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.CONTENT_MENTIONED,
+                organization_id=task.organization_id,
+                actor_id=actor_id,
+                title=f"Mentioned you in: {task.title}",
+                source_urn=build_content_urn(ContentType.TASK, task.id),
+                target_user_ids=list(newly_mentioned),
+            )
+        )
+
+    async def _emit_watcher_notifications(
+        self,
+        task: Task,
+        actor_id: UUID,
+        change_description: str,
+    ) -> None:
+        """
+        Notify watchers about a task change.
+
+        Excludes the actor and current assignees (they get their own
+        notifications).
+
+        Parameters
+        ----------
+        task : Task
+            The changed task.
+        actor_id : UUID
+            User who made the change.
+        change_description : str
+            What changed (e.g., "status changed to Done").
+
+        """
+        watcher_ops = WatcherOperations(self.session)
+        watcher_ids = await watcher_ops.get_watcher_user_ids(task.id)
+
+        # Remove actor (don't notify the person making the change)
+        watcher_ids = [w for w in watcher_ids if w != actor_id]
+
+        if not watcher_ids:
+            return
+
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.CONTENT_EDITED,
+                organization_id=task.organization_id,
+                actor_id=actor_id,
+                title=f"Task updated: {task.title}",
+                body=change_description,
+                source_urn=build_content_urn(ContentType.TASK, task.id),
+                target_user_ids=watcher_ids,
+            )
+        )
 
     async def _log_activity(
         self,
@@ -1583,3 +1934,131 @@ class SprintOperations:
         for row in result:
             counts[str(row.sprint_id)] = (row.total, row.completed)
         return counts
+
+
+class WatcherOperations:
+    """
+    Task watcher operations.
+
+    Manages user subscriptions to task changes. Mirrors
+    the bookmarks domain pattern.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize watcher operations."""
+        self.session = session
+
+    async def toggle(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        task_id: UUID,
+    ) -> tuple[bool, TaskWatcher | None]:
+        """
+        Toggle watch state for a task.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User toggling watch.
+        organization_id : UUID
+            Organization ID.
+        task_id : UUID
+            Task to watch/unwatch.
+
+        Returns
+        -------
+        tuple[bool, TaskWatcher | None]
+            (is_watching, watcher_or_none).
+
+        """
+        existing = await self._get_watcher(user_id, task_id)
+        if existing:
+            await self.session.delete(existing)
+            await self.session.commit()
+            return False, None
+
+        watcher = TaskWatcher(
+            user_id=user_id,
+            organization_id=organization_id,
+            task_id=task_id,
+        )
+        self.session.add(watcher)
+        await self.session.commit()
+        await self.session.refresh(watcher)
+        return True, watcher
+
+    async def is_watching(
+        self, user_id: UUID, task_id: UUID
+    ) -> bool:
+        """Check if user is watching a task."""
+        watcher = await self._get_watcher(user_id, task_id)
+        return watcher is not None
+
+    async def get_watcher_user_ids(
+        self, task_id: UUID
+    ) -> list[UUID]:
+        """Get all user IDs watching a task."""
+        result = await self.session.execute(
+            select(TaskWatcher.user_id).where(
+                TaskWatcher.task_id == task_id
+            )
+        )
+        return [row[0] for row in result.all()]
+
+    async def get_watcher_count(self, task_id: UUID) -> int:
+        """Get count of watchers for a task."""
+        result = await self.session.execute(
+            select(func.count()).where(
+                TaskWatcher.task_id == task_id
+            )
+        )
+        return result.scalar_one()
+
+    async def bulk_check(
+        self, user_id: UUID, task_ids: list[str]
+    ) -> dict[str, bool]:
+        """
+        Check watch status for multiple tasks.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User to check for.
+        task_ids : list[str]
+            Task IDs to check.
+
+        Returns
+        -------
+        dict[str, bool]
+            Mapping of task_id to is_watching.
+
+        """
+        if not task_ids:
+            return {}
+
+        uuids = [UUID(tid) for tid in task_ids]
+        result = await self.session.execute(
+            select(TaskWatcher.task_id).where(
+                and_(
+                    TaskWatcher.user_id == user_id,
+                    TaskWatcher.task_id.in_(uuids),
+                )
+            )
+        )
+        watched = {str(row[0]) for row in result.all()}
+        return {tid: tid in watched for tid in task_ids}
+
+    async def _get_watcher(
+        self, user_id: UUID, task_id: UUID
+    ) -> TaskWatcher | None:
+        """Fetch a single watcher record."""
+        result = await self.session.execute(
+            select(TaskWatcher).where(
+                and_(
+                    TaskWatcher.user_id == user_id,
+                    TaskWatcher.task_id == task_id,
+                )
+            )
+        )
+        return result.scalar_one_or_none()

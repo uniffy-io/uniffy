@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CreateFieldRequest, CreateProjectRequest, CreateSprintRequest, CreateTaskRequest, CreateViewRequest, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, FieldResponse, GetProjectRequest, GetTaskRequest, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, ProjectResponse, SprintResponse, StartSprintRequest, TaskResponse, UpdateFieldRequest, UpdateProjectRequest, UpdateSprintRequest, UpdateTaskRequest, UpdateViewRequest, ViewResponse } from "./projects_pb.js";
+import { BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CreateFieldRequest, CreateProjectRequest, CreateSprintRequest, CreateTaskRequest, CreateViewRequest, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, FieldResponse, GetProjectRequest, GetTaskRequest, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTasksRequest, ListTasksResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, MoveTaskRequest, ProjectResponse, SprintResponse, StartSprintRequest, TaskResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateProjectRequest, UpdateSprintRequest, UpdateTaskRequest, UpdateViewRequest, ViewResponse } from "./projects_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -256,6 +256,35 @@ export const ProjectsService = {
       name: "ListSprints",
       I: ListSprintsRequest,
       O: ListSprintsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ----- Task Watchers -----
+     *
+     * @generated from rpc projects.v1.ProjectsService.ToggleTaskWatcher
+     */
+    toggleTaskWatcher: {
+      name: "ToggleTaskWatcher",
+      I: ToggleTaskWatcherRequest,
+      O: ToggleTaskWatcherResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc projects.v1.ProjectsService.ListTaskWatchers
+     */
+    listTaskWatchers: {
+      name: "ListTaskWatchers",
+      I: ListTaskWatchersRequest,
+      O: ListTaskWatchersResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc projects.v1.ProjectsService.BulkCheckTaskWatchers
+     */
+    bulkCheckTaskWatchers: {
+      name: "BulkCheckTaskWatchers",
+      I: BulkCheckTaskWatchersRequest,
+      O: BulkCheckTaskWatchersResponse,
       kind: MethodKind.Unary,
     },
   }

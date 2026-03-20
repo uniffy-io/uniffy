@@ -441,6 +441,26 @@ export class Task extends Message<Task> {
    */
   userPermissionLevel = PermissionLevel.UNSPECIFIED;
 
+  /**
+   * @generated from field: int32 subtask_total = 28;
+   */
+  subtaskTotal = 0;
+
+  /**
+   * @generated from field: int32 subtask_completed = 29;
+   */
+  subtaskCompleted = 0;
+
+  /**
+   * @generated from field: optional int32 estimated_minutes = 30;
+   */
+  estimatedMinutes?: number;
+
+  /**
+   * @generated from field: optional int32 time_spent_minutes = 31;
+   */
+  timeSpentMinutes?: number;
+
   constructor(data?: PartialMessage<Task>) {
     super();
     proto3.util.initPartial(data, this);
@@ -476,6 +496,10 @@ export class Task extends Message<Task> {
     { no: 25, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 26, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 27, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 28, name: "subtask_total", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 29, name: "subtask_completed", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 30, name: "estimated_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 31, name: "time_spent_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Task {
@@ -1426,6 +1450,16 @@ export class CreateTaskRequest extends Message<CreateTaskRequest> {
    */
   sprintId?: string;
 
+  /**
+   * @generated from field: optional int32 estimated_minutes = 17;
+   */
+  estimatedMinutes?: number;
+
+  /**
+   * @generated from field: optional int32 time_spent_minutes = 18;
+   */
+  timeSpentMinutes?: number;
+
   constructor(data?: PartialMessage<CreateTaskRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1450,6 +1484,8 @@ export class CreateTaskRequest extends Message<CreateTaskRequest> {
     { no: 14, name: "field_values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 15, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 16, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 17, name: "estimated_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 18, name: "time_spent_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateTaskRequest {
@@ -1601,6 +1637,16 @@ export class UpdateTaskRequest extends Message<UpdateTaskRequest> {
    */
   sprintId?: string;
 
+  /**
+   * @generated from field: optional int32 estimated_minutes = 18;
+   */
+  estimatedMinutes?: number;
+
+  /**
+   * @generated from field: optional int32 time_spent_minutes = 19;
+   */
+  timeSpentMinutes?: number;
+
   constructor(data?: PartialMessage<UpdateTaskRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1626,6 +1672,8 @@ export class UpdateTaskRequest extends Message<UpdateTaskRequest> {
     { no: 15, name: "field_values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 16, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 17, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 18, name: "estimated_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 19, name: "time_spent_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateTaskRequest {
@@ -1729,6 +1777,11 @@ export class BulkUpdateTasksRequest extends Message<BulkUpdateTasksRequest> {
    */
   assigneeIds: string[] = [];
 
+  /**
+   * @generated from field: optional string sprint_id = 6;
+   */
+  sprintId?: string;
+
   constructor(data?: PartialMessage<BulkUpdateTasksRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1742,6 +1795,7 @@ export class BulkUpdateTasksRequest extends Message<BulkUpdateTasksRequest> {
     { no: 3, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "priority", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "assignee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkUpdateTasksRequest {
@@ -3191,6 +3245,252 @@ export class ListActivitiesResponse extends Message<ListActivitiesResponse> {
 
   static equals(a: ListActivitiesResponse | PlainMessage<ListActivitiesResponse> | undefined, b: ListActivitiesResponse | PlainMessage<ListActivitiesResponse> | undefined): boolean {
     return proto3.util.equals(ListActivitiesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.ToggleTaskWatcherRequest
+ */
+export class ToggleTaskWatcherRequest extends Message<ToggleTaskWatcherRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string task_id = 2;
+   */
+  taskId = "";
+
+  constructor(data?: PartialMessage<ToggleTaskWatcherRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.ToggleTaskWatcherRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "task_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ToggleTaskWatcherRequest {
+    return new ToggleTaskWatcherRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ToggleTaskWatcherRequest {
+    return new ToggleTaskWatcherRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ToggleTaskWatcherRequest {
+    return new ToggleTaskWatcherRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ToggleTaskWatcherRequest | PlainMessage<ToggleTaskWatcherRequest> | undefined, b: ToggleTaskWatcherRequest | PlainMessage<ToggleTaskWatcherRequest> | undefined): boolean {
+    return proto3.util.equals(ToggleTaskWatcherRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.ToggleTaskWatcherResponse
+ */
+export class ToggleTaskWatcherResponse extends Message<ToggleTaskWatcherResponse> {
+  /**
+   * @generated from field: bool is_watching = 1;
+   */
+  isWatching = false;
+
+  constructor(data?: PartialMessage<ToggleTaskWatcherResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.ToggleTaskWatcherResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "is_watching", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ToggleTaskWatcherResponse {
+    return new ToggleTaskWatcherResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ToggleTaskWatcherResponse {
+    return new ToggleTaskWatcherResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ToggleTaskWatcherResponse {
+    return new ToggleTaskWatcherResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ToggleTaskWatcherResponse | PlainMessage<ToggleTaskWatcherResponse> | undefined, b: ToggleTaskWatcherResponse | PlainMessage<ToggleTaskWatcherResponse> | undefined): boolean {
+    return proto3.util.equals(ToggleTaskWatcherResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.ListTaskWatchersRequest
+ */
+export class ListTaskWatchersRequest extends Message<ListTaskWatchersRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string task_id = 2;
+   */
+  taskId = "";
+
+  constructor(data?: PartialMessage<ListTaskWatchersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.ListTaskWatchersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "task_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTaskWatchersRequest {
+    return new ListTaskWatchersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListTaskWatchersRequest {
+    return new ListTaskWatchersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListTaskWatchersRequest {
+    return new ListTaskWatchersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListTaskWatchersRequest | PlainMessage<ListTaskWatchersRequest> | undefined, b: ListTaskWatchersRequest | PlainMessage<ListTaskWatchersRequest> | undefined): boolean {
+    return proto3.util.equals(ListTaskWatchersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.ListTaskWatchersResponse
+ */
+export class ListTaskWatchersResponse extends Message<ListTaskWatchersResponse> {
+  /**
+   * @generated from field: repeated string watcher_user_ids = 1;
+   */
+  watcherUserIds: string[] = [];
+
+  /**
+   * @generated from field: int32 watcher_count = 2;
+   */
+  watcherCount = 0;
+
+  constructor(data?: PartialMessage<ListTaskWatchersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.ListTaskWatchersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "watcher_user_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "watcher_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTaskWatchersResponse {
+    return new ListTaskWatchersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListTaskWatchersResponse {
+    return new ListTaskWatchersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListTaskWatchersResponse {
+    return new ListTaskWatchersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListTaskWatchersResponse | PlainMessage<ListTaskWatchersResponse> | undefined, b: ListTaskWatchersResponse | PlainMessage<ListTaskWatchersResponse> | undefined): boolean {
+    return proto3.util.equals(ListTaskWatchersResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.BulkCheckTaskWatchersRequest
+ */
+export class BulkCheckTaskWatchersRequest extends Message<BulkCheckTaskWatchersRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: repeated string task_ids = 2;
+   */
+  taskIds: string[] = [];
+
+  constructor(data?: PartialMessage<BulkCheckTaskWatchersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.BulkCheckTaskWatchersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "task_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkCheckTaskWatchersRequest {
+    return new BulkCheckTaskWatchersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkCheckTaskWatchersRequest {
+    return new BulkCheckTaskWatchersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkCheckTaskWatchersRequest {
+    return new BulkCheckTaskWatchersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkCheckTaskWatchersRequest | PlainMessage<BulkCheckTaskWatchersRequest> | undefined, b: BulkCheckTaskWatchersRequest | PlainMessage<BulkCheckTaskWatchersRequest> | undefined): boolean {
+    return proto3.util.equals(BulkCheckTaskWatchersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.BulkCheckTaskWatchersResponse
+ */
+export class BulkCheckTaskWatchersResponse extends Message<BulkCheckTaskWatchersResponse> {
+  /**
+   * @generated from field: map<string, bool> watched_tasks = 1;
+   */
+  watchedTasks: { [key: string]: boolean } = {};
+
+  constructor(data?: PartialMessage<BulkCheckTaskWatchersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.BulkCheckTaskWatchersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "watched_tasks", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 8 /* ScalarType.BOOL */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkCheckTaskWatchersResponse {
+    return new BulkCheckTaskWatchersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkCheckTaskWatchersResponse {
+    return new BulkCheckTaskWatchersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkCheckTaskWatchersResponse {
+    return new BulkCheckTaskWatchersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkCheckTaskWatchersResponse | PlainMessage<BulkCheckTaskWatchersResponse> | undefined, b: BulkCheckTaskWatchersResponse | PlainMessage<BulkCheckTaskWatchersResponse> | undefined): boolean {
+    return proto3.util.equals(BulkCheckTaskWatchersResponse, a, b);
   }
 }
 

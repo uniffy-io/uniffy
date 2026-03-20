@@ -8,7 +8,7 @@ import re
 from collections import defaultdict
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.projects.activity import TaskActivity
@@ -137,6 +137,50 @@ async def get_views_for_projects(
         grouped[str(view.project_id)].append(view)
 
     return grouped
+
+
+async def get_subtask_counts(
+    session: AsyncSession,
+    parent_ids: list[UUID],
+) -> dict[UUID, tuple[int, int]]:
+    """
+    Batch-load subtask counts for parent tasks.
+
+    Parameters
+    ----------
+    session : AsyncSession
+        Database session.
+    parent_ids : list[UUID]
+        Parent task IDs to load counts for.
+
+    Returns
+    -------
+    dict[UUID, tuple[int, int]]
+        Mapping of parent_id to (total_count, completed_count).
+
+    """
+    if not parent_ids:
+        return {}
+
+    result = await session.execute(
+        select(
+            Task.parent_id,
+            func.count().label("total"),
+            func.count(
+                case((Task.status == "status_done", 1))
+            ).label("completed"),
+        )
+        .where(
+            and_(
+                Task.parent_id.in_(parent_ids),
+                Task.is_deleted == False,  # noqa: E712
+            )
+        )
+        .group_by(Task.parent_id)
+    )
+    rows = result.all()
+
+    return {row.parent_id: (row.total, row.completed) for row in rows}
 
 
 async def get_activities_for_task(

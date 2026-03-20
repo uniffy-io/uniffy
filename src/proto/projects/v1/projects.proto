@@ -47,6 +47,11 @@ service ProjectsService {
   rpc CompleteSprint(CompleteSprintRequest) returns (SprintResponse);
   rpc DeleteSprint(DeleteSprintRequest) returns (DeleteSprintResponse);
   rpc ListSprints(ListSprintsRequest) returns (ListSprintsResponse);
+
+  // ----- Task Watchers -----
+  rpc ToggleTaskWatcher(ToggleTaskWatcherRequest) returns (ToggleTaskWatcherResponse);
+  rpc ListTaskWatchers(ListTaskWatchersRequest) returns (ListTaskWatchersResponse);
+  rpc BulkCheckTaskWatchers(BulkCheckTaskWatchersRequest) returns (BulkCheckTaskWatchersResponse);
 }
 
 // ============================================================================
@@ -137,6 +142,10 @@ message Task {
   string                             task_type             = 25;
   optional string                    sprint_id             = 26;
   common.v1.PermissionLevel          user_permission_level = 27;
+  int32                              subtask_total         = 28;
+  int32                              subtask_completed     = 29;
+  optional int32                     estimated_minutes     = 30;
+  optional int32                     time_spent_minutes    = 31;
 }
 
 message FieldDefinition {
@@ -278,6 +287,8 @@ message CreateTaskRequest {
   map<string, string> field_values        = 14;
   optional string     task_type           = 15;
   optional string     sprint_id           = 16;
+  optional int32      estimated_minutes   = 17;
+  optional int32      time_spent_minutes  = 18;
 }
 
 message GetTaskRequest {
@@ -303,6 +314,8 @@ message UpdateTaskRequest {
   map<string, string> field_values        = 15;
   optional string     task_type           = 16;
   optional string     sprint_id           = 17;
+  optional int32      estimated_minutes   = 18;
+  optional int32      time_spent_minutes  = 19;
 }
 
 message MoveTaskRequest {
@@ -318,6 +331,7 @@ message BulkUpdateTasksRequest {
   optional string status          = 3;
   optional string priority        = 4;
   repeated string assignee_ids    = 5;
+  optional string sprint_id       = 6;
 }
 
 message DeleteTaskRequest {
@@ -510,4 +524,36 @@ message ListActivitiesRequest {
 message ListActivitiesResponse {
   repeated TaskActivity        activities = 1;
   common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// Task Watcher Requests/Responses
+// ============================================================================
+
+message ToggleTaskWatcherRequest {
+  string organization_id = 1;
+  string task_id         = 2;
+}
+
+message ToggleTaskWatcherResponse {
+  bool is_watching = 1;
+}
+
+message ListTaskWatchersRequest {
+  string organization_id = 1;
+  string task_id         = 2;
+}
+
+message ListTaskWatchersResponse {
+  repeated string watcher_user_ids = 1;
+  int32           watcher_count    = 2;
+}
+
+message BulkCheckTaskWatchersRequest {
+  string          organization_id = 1;
+  repeated string task_ids        = 2;
+}
+
+message BulkCheckTaskWatchersResponse {
+  map<string, bool> watched_tasks = 1;
 }

@@ -127,6 +127,11 @@ export function urnToPath(urn: string): string {
     return '#';
   }
 
+  // Tasks need a special route since they require project context
+  if (parsed.type === UrnType.TASK) {
+    return `/projects/task/${parsed.id}`;
+  }
+
   const route = getContentTypeRoute(parsed.type);
   return route ? `/${route}/${parsed.id}` : '#';
 }

@@ -23,6 +23,9 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.SYSTEM_ANNOUNCEMENT: (
         ProtoNotificationType.NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT
     ),
+    NotificationType.TASK_ASSIGNED: ProtoNotificationType.NOTIFICATION_TYPE_TASK_ASSIGNED,
+    NotificationType.TASK_DUE_SOON: ProtoNotificationType.NOTIFICATION_TYPE_TASK_DUE_SOON,
+    NotificationType.TASK_OVERDUE: ProtoNotificationType.NOTIFICATION_TYPE_TASK_OVERDUE,
 }
 
 # Reverse mapping

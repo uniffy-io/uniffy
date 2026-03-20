@@ -32,9 +32,16 @@ from uniffy.domains.projects.converters import (
     view_to_proto,
     view_type_from_proto,
 )
-from uniffy.domains.projects.operations import ProjectOperations, SprintOperations, TaskOperations
+from uniffy.domains.projects.operations import (
+    ProjectOperations,
+    SprintOperations,
+    TaskOperations,
+    WatcherOperations,
+)
 from uniffy.gen.common.v1.common_pb2 import PaginationResponse
 from uniffy.gen.projects.v1.projects_pb2 import (
+    BulkCheckTaskWatchersRequest,
+    BulkCheckTaskWatchersResponse,
     BulkUpdateTasksRequest,
     BulkUpdateTasksResponse,
     CompleteSprintRequest,
@@ -66,11 +73,15 @@ from uniffy.gen.projects.v1.projects_pb2 import (
     ListSprintsResponse,
     ListTasksRequest,
     ListTasksResponse,
+    ListTaskWatchersRequest,
+    ListTaskWatchersResponse,
     MoveTaskRequest,
     ProjectResponse,
     SprintResponse,
     StartSprintRequest,
     TaskResponse,
+    ToggleTaskWatcherRequest,
+    ToggleTaskWatcherResponse,
     UpdateFieldRequest,
     UpdateProjectRequest,
     UpdateSprintRequest,
@@ -400,6 +411,10 @@ class ProjectsHandlers:
                         kwargs["sprint_id"] = UUID(request.sprint_id) if request.sprint_id else None
                     except ValueError:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
+                if request.HasField("estimated_minutes"):
+                    kwargs["estimated_minutes"] = request.estimated_minutes or None
+                if request.HasField("time_spent_minutes"):
+                    kwargs["time_spent_minutes"] = request.time_spent_minutes or None
                 if request.field_values:
                     # Convert proto map to dict, decoding JSON strings
                     field_values = {}
@@ -426,6 +441,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Project not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -461,7 +478,13 @@ class ProjectsHandlers:
                     content_owner_id=task.owner_id,
                 )
 
-                return TaskResponse(task=task_to_proto(task, perm_level))
+                # Load subtask counts
+                subtask_counts = await queries.get_subtask_counts(session, [task.id])
+                st_total, st_done = subtask_counts.get(task.id, (0, 0))
+
+                return TaskResponse(
+                    task=task_to_proto(task, perm_level, st_total, st_done)
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
@@ -527,6 +550,10 @@ class ProjectsHandlers:
                         updates["sprint_id"] = UUID(request.sprint_id) if request.sprint_id else None
                     except ValueError:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
+                if request.HasField("estimated_minutes"):
+                    updates["estimated_minutes"] = request.estimated_minutes or None
+                if request.HasField("time_spent_minutes"):
+                    updates["time_spent_minutes"] = request.time_spent_minutes or None
                 if request.field_values:
                     # Convert proto map to dict, decoding JSON strings
                     field_values = {}
@@ -545,6 +572,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -582,6 +611,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -613,6 +644,13 @@ class ProjectsHandlers:
                     changes["priority"] = request.priority
                 if request.assignee_ids:
                     changes["assignee_ids"] = list(request.assignee_ids)
+                if request.HasField("sprint_id"):
+                    try:
+                        changes["sprint_id"] = (
+                            UUID(request.sprint_id) if request.sprint_id else None
+                        )
+                    except ValueError:
+                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
 
                 tasks = await ops.bulk_update(
                     user_id,
@@ -630,6 +668,8 @@ class ProjectsHandlers:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
         except PermissionDeniedError:
             raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ValidationError as e:
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
         except Exception:
@@ -775,8 +815,19 @@ class ProjectsHandlers:
 
                 total_pages = (total + page_size - 1) // page_size
 
+                # Batch-load subtask counts for all tasks
+                task_ids = [t.id for t in tasks]
+                subtask_counts = await queries.get_subtask_counts(session, task_ids)
+
+                task_protos = []
+                for t in tasks:
+                    st_total, st_done = subtask_counts.get(t.id, (0, 0))
+                    task_protos.append(
+                        task_to_proto(t, subtask_total=st_total, subtask_completed=st_done)
+                    )
+
                 return ListTasksResponse(
-                    tasks=[task_to_proto(t) for t in tasks],
+                    tasks=task_protos,
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -1473,4 +1524,132 @@ class SprintHandlers:
             raise
         except Exception:
             logger.opt(exception=True).error("Error listing sprints")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+
+class WatcherHandlers:
+    """Task watcher RPC handlers."""
+
+    async def toggle_task_watcher(
+        self,
+        request: ToggleTaskWatcherRequest,
+        ctx: RequestContext,
+    ) -> ToggleTaskWatcherResponse:
+        """Toggle watch state for a task."""
+        try:
+            organization_id = UUID(request.organization_id)
+            task_id = UUID(request.task_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                # Verify task access
+                task_ops = TaskOperations(session)
+                await task_ops.get_by_id(
+                    user_id, organization_id, task_id
+                )
+
+                ops = WatcherOperations(session)
+                is_watching, _ = await ops.toggle(
+                    user_id, organization_id, task_id
+                )
+
+                return ToggleTaskWatcherResponse(
+                    is_watching=is_watching
+                )
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Task not found")
+        except PermissionDeniedError:
+            raise ConnectError(
+                Code.PERMISSION_DENIED, "Access denied"
+            )
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error(
+                "Error toggling task watcher"
+            )
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def list_task_watchers(
+        self,
+        request: ListTaskWatchersRequest,
+        ctx: RequestContext,
+    ) -> ListTaskWatchersResponse:
+        """List watchers for a task."""
+        try:
+            organization_id = UUID(request.organization_id)
+            task_id = UUID(request.task_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                # Verify task access
+                task_ops = TaskOperations(session)
+                await task_ops.get_by_id(
+                    user_id, organization_id, task_id
+                )
+
+                ops = WatcherOperations(session)
+                watcher_ids = await ops.get_watcher_user_ids(task_id)
+                count = len(watcher_ids)
+
+                return ListTaskWatchersResponse(
+                    watcher_user_ids=[str(w) for w in watcher_ids],
+                    watcher_count=count,
+                )
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Task not found")
+        except PermissionDeniedError:
+            raise ConnectError(
+                Code.PERMISSION_DENIED, "Access denied"
+            )
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error(
+                "Error listing task watchers"
+            )
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def bulk_check_task_watchers(
+        self,
+        request: BulkCheckTaskWatchersRequest,
+        ctx: RequestContext,
+    ) -> BulkCheckTaskWatchersResponse:
+        """Check watch status for multiple tasks."""
+        try:
+            UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(
+                Code.INVALID_ARGUMENT, "Invalid organization_id"
+            )
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                ops = WatcherOperations(session)
+                result = await ops.bulk_check(
+                    user_id, list(request.task_ids)
+                )
+
+                return BulkCheckTaskWatchersResponse(
+                    watched_tasks=result
+                )
+
+        except ConnectError:
+            raise
+        except Exception:
+            logger.opt(exception=True).error(
+                "Error bulk checking task watchers"
+            )
             raise ConnectError(Code.INTERNAL, "Internal server error")
