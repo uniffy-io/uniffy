@@ -1,8 +1,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { promptsApi } from '@/features/agents/api/promptsApi';
 import type { RootState } from '@/app/store';
-import type { PromptInfo } from '@/gen/agents/v1/prompts_pb';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import type { PromptInfo } from '@uniffy/proto/agents/v1/prompts_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;

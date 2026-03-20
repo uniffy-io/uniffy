@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { skillsApi } from '@/features/agents/api/skillsApi';
 import type { RootState } from '@/app/store';
-import type { SkillInfo } from '@/gen/agents/v1/skills_pb';
+import type { SkillInfo } from '@uniffy/proto/agents/v1/skills_pb';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;

@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import type { SearchResultItem } from '@/gen/search/v1/search_pb';
+import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 
 interface UseTextareaMentionOptions {
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;

@@ -5,7 +5,6 @@
  * carries its own state shape that drives inline status indicators.
  */
 
-import type { UrnType } from '@/shared/utils/urnTypes';
 
 /** Task status - uses the project's status field IDs (e.g. "status_todo", "status_done") */
 export type TaskStatus = string;
@@ -70,10 +69,22 @@ export interface MentionChipProps extends MentionChipBaseProps {
 }
 
 /** Basic chip props (no Redux, no live state) */
-export interface MentionChipBasicProps extends MentionChipBaseProps {}
+export type MentionChipBasicProps = MentionChipBaseProps;
 
 /** Compact chip props */
 export interface MentionChipCompactProps extends MentionChipBaseProps {
   onClick?: (e?: React.MouseEvent) => void;
   liveState?: MentionLiveState | null;
+}
+
+/** Check if a task status represents completion */
+function isCompletedStatus(status: string): boolean {
+  const lower = status.toLowerCase();
+  return lower.includes('done') || lower.includes('complete') || lower.includes('closed');
+}
+
+/** Check if a status represents completion - used in MentionChip for strikethrough */
+export function isTaskDoneStatus(status: string | undefined): boolean {
+  if (!status) return false;
+  return isCompletedStatus(status);
 }

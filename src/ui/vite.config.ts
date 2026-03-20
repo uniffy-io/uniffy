@@ -24,7 +24,7 @@ function mediaStreamWorkerPlugin() {
       }
       const minifyFlag = minify ? '--minify' : '';
       execSync(
-        `npx esbuild "${workerEntry}" --bundle --outfile="${outFile}" --format=iife --platform=browser --target=es2020 --sourcemap ${minifyFlag} --alias:@=${path.resolve(__dirname, './src')}`,
+        `npx esbuild "${workerEntry}" --bundle --outfile="${outFile}" --format=iife --platform=browser --target=es2020 --sourcemap ${minifyFlag} --alias:@=${path.resolve(__dirname, './src')} --alias:@uniffy/proto=${path.resolve(__dirname, '../gen/typescript')}`,
         { stdio: 'inherit', cwd: __dirname }
       );
       console.log('[MediaStreamWorker] Built successfully');
@@ -116,6 +116,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@uniffy/proto': path.resolve(__dirname, '../gen/typescript'),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
   },
@@ -128,6 +129,15 @@ export default defineConfig({
         target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,
       },
+    },
+    fs: {
+      allow: [
+        path.resolve(__dirname, '.'),
+        path.resolve(__dirname, '../gen/typescript'),
+      ],
+    },
+    watch: {
+      followSymlinks: true,
     },
   },
   optimizeDeps: {

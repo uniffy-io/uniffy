@@ -7,8 +7,8 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { OrganizationsService } from '@/gen/organizations/v1/organizations_connect';
-import { GroupsService } from '@/gen/groups/v1/groups_connect';
+import { OrganizationsService } from '@uniffy/proto/organizations/v1/organizations_connect';
+import { GroupsService } from '@uniffy/proto/groups/v1/groups_connect';
 import type {
     GetPermissionDefaultsRequest,
     UpdatePermissionDefaultsRequest,
@@ -16,7 +16,7 @@ import type {
     ListMembersRequest,
     UpdateMemberRoleRequest,
     RemoveMemberRequest,
-} from '@/gen/organizations/v1/organizations_pb';
+} from '@uniffy/proto/organizations/v1/organizations_pb';
 import type {
     ListGroupsRequest,
     CreateGroupRequest,
@@ -25,7 +25,7 @@ import type {
     ListGroupMembersRequest,
     AddGroupMemberRequest,
     RemoveGroupMemberRequest,
-} from '@/gen/groups/v1/groups_pb';
+} from '@uniffy/proto/groups/v1/groups_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

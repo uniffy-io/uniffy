@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { SettingsService } from '@/gen/settings/v1/settings_connect';
+import { SettingsService } from '@uniffy/proto/settings/v1/settings_connect';
 import type {
     CreateProfileRequest,
     GetProfileRequest,
@@ -17,7 +17,7 @@ import type {
     GetEffectiveSettingsRequest,
     GetSettingsSchemaRequest,
     SetDefaultProfileRequest,
-} from '@/gen/settings/v1/settings_pb';
+} from '@uniffy/proto/settings/v1/settings_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

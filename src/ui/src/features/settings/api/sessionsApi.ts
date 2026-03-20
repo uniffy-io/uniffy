@@ -4,7 +4,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { AuthService } from '@/gen/auth/v1/auth_connect';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
 
 const client = createClient(AuthService, transport);
 

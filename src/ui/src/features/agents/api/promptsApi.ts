@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { PromptsService } from '@/gen/agents/v1/prompts_connect';
+import { PromptsService } from '@uniffy/proto/agents/v1/prompts_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     CreatePromptRequest,
@@ -8,7 +8,7 @@ import type {
     ListPromptsRequest,
     UpdatePromptRequest,
     DeletePromptRequest,
-} from '@/gen/agents/v1/prompts_pb';
+} from '@uniffy/proto/agents/v1/prompts_pb';
 
 const client = createClient(PromptsService, transport);
 

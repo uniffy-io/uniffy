@@ -1,7 +1,7 @@
 import { createClient } from '@connectrpc/connect';
 import type { CallOptions } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { NotificationsService } from '@/gen/notifications/v1/notifications_connect';
+import { NotificationsService } from '@uniffy/proto/notifications/v1/notifications_connect';
 import type {
     ListNotificationsRequest,
     GetUnreadCountRequest,
@@ -12,7 +12,7 @@ import type {
     UnregisterPushSubscriptionRequest,
     StreamNotificationsRequest,
     GetVapidPublicKeyRequest,
-} from '@/gen/notifications/v1/notifications_pb';
+} from '@uniffy/proto/notifications/v1/notifications_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

@@ -23,7 +23,7 @@ import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { useMyPermission } from "@/features/sharing";
-import { ContentType } from "@/gen/common/v1/common_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 function SectionHeader({
     icon: Icon,

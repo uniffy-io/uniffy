@@ -4,6 +4,40 @@ Common proto converters for shared enums and messages.
 Provides bidirectional mapping between domain enums/models and common.v1 proto types.
 """
 
+from uniffy_proto.common.v1.common_pb2 import (
+    ContentType as ProtoContentType,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    GroupInfo as ProtoGroupInfo,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    GroupMemberInfo as ProtoGroupMemberInfo,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    GroupRole as ProtoGroupRole,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    MemberInfo as ProtoMemberInfo,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    OrganizationInfo as ProtoOrgInfo,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    OrganizationRole as ProtoOrgRole,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    PermissionLevel as ProtoPermissionLevel,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    SubjectType as ProtoSubjectType,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    UserInfo as ProtoUserInfo,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    VisibilityScope as ProtoVisibilityScope,
+)
+
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.login.group import Group
@@ -17,39 +51,6 @@ from uniffy.core.models.shared import ContentType as DomainContentType
 from uniffy.core.models.shared import PermissionLevel as DomainPermissionLevel
 from uniffy.core.models.shared import SubjectType as DomainSubjectType
 from uniffy.core.models.shared import VisibilityScope as DomainVisibilityScope
-from uniffy.gen.common.v1.common_pb2 import (
-    ContentType as ProtoContentType,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    GroupInfo as ProtoGroupInfo,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    GroupMemberInfo as ProtoGroupMemberInfo,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    GroupRole as ProtoGroupRole,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    MemberInfo as ProtoMemberInfo,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    OrganizationInfo as ProtoOrgInfo,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    OrganizationRole as ProtoOrgRole,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    PermissionLevel as ProtoPermissionLevel,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    SubjectType as ProtoSubjectType,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    UserInfo as ProtoUserInfo,
-)
-from uniffy.gen.common.v1.common_pb2 import (
-    VisibilityScope as ProtoVisibilityScope,
-)
 
 # ContentType mappings
 CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {

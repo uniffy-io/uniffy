@@ -2,30 +2,31 @@
 
 import json
 
+from uniffy_proto.notes.v1.notes_pb2 import (
+    NodeType as ProtoNodeType,
+)
+from uniffy_proto.notes.v1.notes_pb2 import (
+    Note as ProtoNote,
+)
+from uniffy_proto.notes.v1.notes_pb2 import (
+    NoteIcon as ProtoNoteIcon,
+)
+from uniffy_proto.notes.v1.notes_pb2 import (
+    NoteOwner as ProtoNoteOwner,
+)
+from uniffy_proto.notes.v1.notes_pb2 import (
+    NoteReference,
+)
+from uniffy_proto.notes.v1.notes_pb2 import (
+    NoteShareTarget as ProtoNoteShareTarget,
+)
+from uniffy_proto.notes.v1.notes_pb2 import (
+    VisibilityScope as ProtoVisibilityScope,
+)
+
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType, VisibilityScope
-from uniffy.gen.notes.v1.notes_pb2 import (
-    NodeType as ProtoNodeType,
-)
-from uniffy.gen.notes.v1.notes_pb2 import (
-    Note as ProtoNote,
-)
-from uniffy.gen.notes.v1.notes_pb2 import (
-    NoteIcon as ProtoNoteIcon,
-)
-from uniffy.gen.notes.v1.notes_pb2 import (
-    NoteOwner as ProtoNoteOwner,
-)
-from uniffy.gen.notes.v1.notes_pb2 import (
-    NoteReference,
-)
-from uniffy.gen.notes.v1.notes_pb2 import (
-    NoteShareTarget as ProtoNoteShareTarget,
-)
-from uniffy.gen.notes.v1.notes_pb2 import (
-    VisibilityScope as ProtoVisibilityScope,
-)
 
 # Visibility mapping: model -> proto
 VISIBILITY_TO_PROTO = {

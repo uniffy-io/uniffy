@@ -6,6 +6,18 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from uniffy_proto.permissions.v1.permissions_pb2 import (
+    GetMyPermissionRequest,
+    GrantPermissionRequest,
+    ListContentPermissionsRequest,
+    PermissionInfo,
+    PermissionListResponse,
+    RevokePermissionRequest,
+    RevokePermissionResponse,
+    SearchShareTargetsRequest,
+    ShareTargetsResponse,
+    UpdatePermissionRequest,
+)
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.shared import PermissionLevel
@@ -21,18 +33,6 @@ from uniffy.domains.permissions.converters import (
     user_to_share_target,
 )
 from uniffy.domains.permissions.operations import PermissionsOperations
-from uniffy.gen.permissions.v1.permissions_pb2 import (
-    GetMyPermissionRequest,
-    GrantPermissionRequest,
-    ListContentPermissionsRequest,
-    PermissionInfo,
-    PermissionListResponse,
-    RevokePermissionRequest,
-    RevokePermissionResponse,
-    SearchShareTargetsRequest,
-    ShareTargetsResponse,
-    UpdatePermissionRequest,
-)
 
 
 class PermissionsHandlers:

@@ -7,6 +7,22 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from uniffy_proto.auth.v1.auth_pb2 import (
+    AuthResponse,
+    CurrentUserResponse,
+    GetCurrentUserRequest,
+    ListSessionsRequest,
+    ListSessionsResponse,
+    LoginRequest,
+    LogoutRequest,
+    LogoutResponse,
+    RefreshTokenRequest,
+    RegisterRequest,
+    RevokeOtherSessionsRequest,
+    RevokeOtherSessionsResponse,
+    RevokeSessionRequest,
+    RevokeSessionResponse,
+)
 
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import (
@@ -23,22 +39,6 @@ from uniffy.domains.auth.errors import (
 from uniffy.domains.auth.operations import AuthOperations
 from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.domains.users.operations import UserOperations
-from uniffy.gen.auth.v1.auth_pb2 import (
-    AuthResponse,
-    CurrentUserResponse,
-    GetCurrentUserRequest,
-    ListSessionsRequest,
-    ListSessionsResponse,
-    LoginRequest,
-    LogoutRequest,
-    LogoutResponse,
-    RefreshTokenRequest,
-    RegisterRequest,
-    RevokeOtherSessionsRequest,
-    RevokeOtherSessionsResponse,
-    RevokeSessionRequest,
-    RevokeSessionResponse,
-)
 
 
 class AuthHandlers:

@@ -1,10 +1,11 @@
 """Proto <-> domain converters for cron tasks."""
 
+from uniffy_proto.agents.v1.cron_pb2 import CronRunLogInfo, CronTaskInfo
+
 from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
 from uniffy.core.converters.common_proto import visibility_to_proto
 from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
-from uniffy.gen.agents.v1.cron_pb2 import CronRunLogInfo, CronTaskInfo
 
 
 def cron_task_to_proto(

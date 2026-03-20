@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Mention State Provider
  *
@@ -30,7 +31,7 @@ import {
   setMentionUrl,
 } from '@/components/mention/mentionStateEmitter';
 import type { MentionLiveState } from '@/components/mention/types';
-import type { UrnMetadata } from '@/gen/search/v1/search_pb';
+import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
 
 // Debounce interval for batch resolution (ms)
 const RESOLVE_DEBOUNCE = 200;
@@ -209,6 +210,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
   useEffect(() => {
     if (!organizationId) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when organizationId changes is valid
     setStates(new Map());
     clearMentionStates();
 

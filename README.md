@@ -8,6 +8,7 @@ A unified workspace where notes, files, chat, AI assistants, calendar, and workf
 - [Development](#development)
   - [Prerequisites](#prerequisites)
   - [Setup](#setup)
+- [Repository Structure](#repository-structure)
 - [System Architecture](#system-architecture)
 
 ## Documentation
@@ -21,11 +22,12 @@ A unified workspace where notes, files, chat, AI assistants, calendar, and workf
 
 ### Prerequisites
 
-- Python 3.13+
-- Node.js 24+ with pnpm
+- Python 3.14+
+- Node.js 24+ with pnpm (>=9)
 - Docker and Docker Compose
 - [uv](https://github.com/astral-sh/uv) (Python package manager)
 - [buf](https://buf.build/) (Protocol Buffer compiler)
+- Go 1.23+ (optional, for CLI development and proto generation)
 
 ### Setup
 
@@ -63,6 +65,33 @@ docker compose up -d
 ```
 
 - Migrations run automatically on backend startup.
+
+## Repository Structure
+
+Uniffy is a monorepo managed with [uv](https://github.com/astral-sh/uv) (Python) and [pnpm workspaces](https://pnpm.io/workspaces) (TypeScript). Protocol Buffer definitions in `src/proto/` are the single source of truth for all API contracts. A single `./run.sh proto` generates code for all three languages into shared packages.
+
+```
+uniffy/
+  src/
+    proto/              Source .proto definitions
+    gen/
+      python/           uniffy-proto    (uv workspace member)
+      typescript/       @uniffy/proto   (pnpm workspace member)
+      go/               Go module for future CLI
+    uniffy/             Python backend  (FastAPI + ConnectRPC)
+    ui/                 React web app   (Vite + Redux + Tailwind)
+    mobile/             React Native    (Expo)
+  pyproject.toml        uv workspace root
+  pnpm-workspace.yaml   pnpm workspace root
+  buf.gen.yaml          Codegen config (all languages, single pass)
+  run.sh                All project commands
+```
+
+| Package | Language | Consumed by | Resolution |
+|---------|----------|-------------|------------|
+| `uniffy-proto` | Python | backend | `uv sync` (workspace) |
+| `@uniffy/proto` | TypeScript | ui, mobile | `pnpm install` (workspace) |
+| `uniffy-proto-go` | Go | future CLI | `go mod` (replace directive) |
 
 ## System Architecture
 

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Timestamp } from "@bufbuild/protobuf";
 import { useAuth } from "@/context/auth-context";
 import { calendarApi } from "@/api/calendarApi";
-import type { VisibilityScope } from "@/gen/common/v1/common_pb";
+import type { VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
 
 function isoToTimestamp(iso: string) {
   const date = new Date(iso);

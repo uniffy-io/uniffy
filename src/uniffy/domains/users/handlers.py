@@ -6,17 +6,8 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.converters import member_info_to_proto, org_role_from_proto
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.auth.passwords import hash_password
-from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.users.converters import membership_to_proto, user_to_profile
-from uniffy.domains.users.operations import UserOperations
-from uniffy.gen.common.v1.common_pb2 import MemberInfo, PaginationResponse
-from uniffy.gen.users.v1.users_pb2 import (
+from uniffy_proto.common.v1.common_pb2 import MemberInfo, PaginationResponse
+from uniffy_proto.users.v1.users_pb2 import (
     AddUserToOrganizationRequest,
     CreateUserRequest,
     DeleteAvatarRequest,
@@ -35,6 +26,15 @@ from uniffy.gen.users.v1.users_pb2 import (
     UploadAvatarRequest,
     UserProfile,
 )
+
+from uniffy.core.converters import member_info_to_proto, org_role_from_proto
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.passwords import hash_password
+from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.users.converters import membership_to_proto, user_to_profile
+from uniffy.domains.users.operations import UserOperations
 
 
 class UsersHandlers:

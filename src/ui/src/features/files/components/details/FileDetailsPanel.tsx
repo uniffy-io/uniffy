@@ -19,7 +19,7 @@ import {
     isUserPermission,
     isGroupPermission,
 } from '@/features/sharing';
-import { ContentType, VisibilityScope } from '@/gen/common/v1/common_pb';
+import { ContentType, VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import {
     Info,
     Camera,

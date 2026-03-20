@@ -2,10 +2,11 @@
 
 from uuid import UUID
 
+from uniffy_proto.auth.v1.auth_pb2 import CurrentUserResponse, SessionInfo
+
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
-from uniffy.gen.auth.v1.auth_pb2 import CurrentUserResponse, SessionInfo
 
 
 def user_to_current_user_response(user: User) -> CurrentUserResponse:

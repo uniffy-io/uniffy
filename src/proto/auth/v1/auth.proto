@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth.v1;
 
-option go_package = "uniffy/gen/auth/v1;authv1";
+option go_package = "github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1";
 
 // AuthService - Authentication only
 

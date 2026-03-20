@@ -1,5 +1,31 @@
 """Proto <-> domain converters for files domain."""
 
+from uniffy_proto.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
+from uniffy_proto.files.v1.files_pb2 import (
+    ExtractionStatus as ProtoExtractionStatus,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    File as ProtoFile,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    FileMetadata as ProtoFileMetadata,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    FileOwner as ProtoFileOwner,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    FileVersion as ProtoFileVersion,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    Folder as ProtoFolder,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    TreeNode as ProtoTreeNode,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    UploadStatus as ProtoUploadStatus,
+)
+
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
@@ -7,31 +33,6 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.shared import VisibilityScope
-from uniffy.gen.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
-from uniffy.gen.files.v1.files_pb2 import (
-    ExtractionStatus as ProtoExtractionStatus,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    File as ProtoFile,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    FileMetadata as ProtoFileMetadata,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    FileOwner as ProtoFileOwner,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    FileVersion as ProtoFileVersion,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    Folder as ProtoFolder,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    TreeNode as ProtoTreeNode,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    UploadStatus as ProtoUploadStatus,
-)
 
 # Visibility mapping: model -> proto
 VISIBILITY_TO_PROTO = {

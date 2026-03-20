@@ -7,17 +7,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.search.converters import (
-    proto_to_entity_type,
-    search_result_to_proto,
-    search_result_to_urn_metadata,
-)
-from uniffy.domains.search.operations import SearchOperations
-from uniffy.domains.search.parser import parse_search_query
-from uniffy.gen.search.v1.search_pb2 import (
+from uniffy_proto.search.v1.search_pb2 import (
     DeleteItemRequest,
     DeleteItemResponse,
     GetReferencesRequest,
@@ -29,6 +19,16 @@ from uniffy.gen.search.v1.search_pb2 import (
     SearchRequest,
     SearchResponse,
 )
+
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.search.converters import (
+    proto_to_entity_type,
+    search_result_to_proto,
+    search_result_to_urn_metadata,
+)
+from uniffy.domains.search.operations import SearchOperations
+from uniffy.domains.search.parser import parse_search_query
 
 
 class SearchHandlers:

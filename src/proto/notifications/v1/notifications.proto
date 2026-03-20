@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package notifications.v1;
 
+option go_package = "github.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1";
+
 import "google/protobuf/timestamp.proto";
 
 // NotificationsService provides notification management and real-time streaming

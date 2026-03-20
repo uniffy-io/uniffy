@@ -1,4 +1,5 @@
 # UI Dockerfile for UNIFFY Frontend
+# NOTE: Docker context must be the repo root (not src/ui) for workspace access
 # Build stage
 FROM node:24.0-slim AS builder
 
@@ -9,30 +10,42 @@ ARG VITE_ENV=production
 RUN npm install -g pnpm
 
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
 
-# Install dependencies
+# Copy workspace config
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy package.json files for all workspace members needed by the UI build
+COPY src/gen/typescript/package.json src/gen/typescript/package.json
+COPY src/ui/package.json src/ui/package.json
+
+# Install deps (pnpm workspace)
 RUN pnpm install --frozen-lockfile
 
-COPY . .
+# Copy gen package (needed at build time for imports)
+COPY src/gen/typescript/ src/gen/typescript/
+
+# Copy UI source
+COPY src/ui/ src/ui/
 
 # Set env vars for Vite build
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_ENV=$VITE_ENV
 
-RUN pnpm build
+RUN pnpm --filter uniffy-ui build
 
 # Build service worker (minified IIFE bundle for production)
-RUN ./node_modules/.bin/esbuild src/workers/mediaStreamWorker.ts \
+RUN cd src/ui && ./node_modules/.bin/esbuild src/workers/mediaStreamWorker.ts \
     --bundle --outfile=dist/media-stream-worker.js \
     --format=iife --platform=browser \
-    --target=es2020 --minify --alias:@=./src
+    --target=es2020 --minify \
+    --alias:@=./src \
+    --alias:@uniffy/proto=../gen/typescript
 
 # Production stage - serve with nginx
 FROM nginx:alpine
 
 # Copy built assets
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/src/ui/dist /usr/share/nginx/html
 
 # Copy nginx configuration for SPA routing
 RUN echo 'map $http_user_agent $loggable { \

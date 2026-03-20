@@ -3,6 +3,8 @@
 from uuid import UUID
 
 from connectrpc.request import RequestContext
+from uniffy_proto.common.v1 import common_pb2 as common
+from uniffy_proto.groups.v1 import groups_pb2 as pb
 
 from uniffy.core.converters import (
     group_info_to_proto,
@@ -13,8 +15,6 @@ from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.groups.converters import group_with_count_to_proto
 from uniffy.domains.groups.operations import GroupOperations
-from uniffy.gen.common.v1 import common_pb2 as common
-from uniffy.gen.groups.v1 import groups_pb2 as pb
 
 
 class GroupsHandlers:

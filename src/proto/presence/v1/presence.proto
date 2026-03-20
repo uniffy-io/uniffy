@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package presence.v1;
 
+option go_package = "github.com/uniffy-io/uniffy-proto-go/presence/v1;presencev1";
+
 import "google/protobuf/timestamp.proto";
 
 // PresenceService provides real-time user presence and custom status management

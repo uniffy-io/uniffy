@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { AgentsService } from '@/gen/agents/v1/agents_connect';
+import { AgentsService } from '@uniffy/proto/agents/v1/agents_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     CreateAgentRequest,
@@ -11,7 +11,7 @@ import type {
     UploadAgentAvatarRequest,
     DeleteAgentAvatarRequest,
     PreviewSystemPromptRequest,
-} from '@/gen/agents/v1/agents_pb';
+} from '@uniffy/proto/agents/v1/agents_pb';
 
 const client = createClient(AgentsService, transport);
 

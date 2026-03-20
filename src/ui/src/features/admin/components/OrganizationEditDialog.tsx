@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { OrganizationsService } from "@/gen/organizations/v1/organizations_connect";
-import { OrganizationDetail } from "@/gen/organizations/v1/organizations_pb";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
+import { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { transport } from "@/config";

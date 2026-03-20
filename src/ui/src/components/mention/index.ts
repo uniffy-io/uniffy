@@ -14,7 +14,6 @@ export {
   NoteEditingIndicator,
   FileProcessingIndicator,
   ProjectProgressIndicator,
-  isTaskDoneStatus,
 } from '@/components/mention/LiveIndicators';
 export { MentionStateProvider } from '@/components/mention/MentionStateProvider';
 export { useMentionState } from '@/components/mention/useMentionState';
@@ -22,6 +21,7 @@ export {
   emitMentionStateChange,
   getMentionState,
 } from '@/components/mention/mentionStateEmitter';
+export { isTaskDoneStatus } from '@/components/mention/types';
 export type {
   MentionLiveState,
   MentionStateChangeEvent,

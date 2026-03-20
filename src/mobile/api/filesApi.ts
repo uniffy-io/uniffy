@@ -1,6 +1,6 @@
 import { createClient } from "@connectrpc/connect";
 import type { PartialMessage } from "@bufbuild/protobuf";
-import { FilesService } from "@/gen/files/v1/files_connect";
+import { FilesService } from "@uniffy/proto/files/v1/files_connect";
 import type {
   ListFilesRequest,
   GetFileRequest,
@@ -16,7 +16,7 @@ import type {
   InitiateUploadRequest,
   UploadChunkRequest,
   CompleteUploadRequest,
-} from "@/gen/files/v1/files_pb";
+} from "@uniffy/proto/files/v1/files_pb";
 import { transport } from "@/lib/transport";
 
 const client = createClient(FilesService, transport);

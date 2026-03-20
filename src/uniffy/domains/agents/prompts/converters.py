@@ -1,9 +1,6 @@
 """Proto <-> domain converters for prompts."""
 
-from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.converters.common_proto import visibility_to_proto
-from uniffy.core.models.agents.prompt import AgentPrompt
-from uniffy.gen.agents.v1.prompts_pb2 import (
+from uniffy_proto.agents.v1.prompts_pb2 import (
     PROMPT_SOURCE_BUNDLED,
     PROMPT_SOURCE_ORGANIZATION,
     PROMPT_SOURCE_PERSONAL,
@@ -11,6 +8,10 @@ from uniffy.gen.agents.v1.prompts_pb2 import (
     PromptInfo,
     PromptSource,
 )
+
+from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.converters.common_proto import visibility_to_proto
+from uniffy.core.models.agents.prompt import AgentPrompt
 
 # --- Prompt Source mappings ---
 

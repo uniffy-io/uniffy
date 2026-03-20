@@ -35,8 +35,8 @@ import {
     deletePrompt,
 } from "@/features/agents/store/agentPromptsThunks";
 import type { SerializedPrompt } from "@/features/agents/store/agentPromptsThunks";
-import { PromptSource } from "@/gen/agents/v1/prompts_pb";
-import { ContentType, VisibilityScope } from "@/gen/common/v1/common_pb";
+import { PromptSource } from "@uniffy/proto/agents/v1/prompts_pb";
+import { ContentType, VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
 import { ShareButton } from "@/features/sharing";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";

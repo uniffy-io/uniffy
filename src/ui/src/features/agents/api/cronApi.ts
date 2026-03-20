@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { CronService } from '@/gen/agents/v1/cron_connect';
+import { CronService } from '@uniffy/proto/agents/v1/cron_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     CreateCronTaskRequest,
@@ -10,7 +10,7 @@ import type {
     DeleteCronTaskRequest,
     ListCronRunLogsRequest,
     TriggerCronTaskRequest,
-} from '@/gen/agents/v1/cron_pb';
+} from '@uniffy/proto/agents/v1/cron_pb';
 
 const client = createClient(CronService, transport);
 

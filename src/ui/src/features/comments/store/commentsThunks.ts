@@ -12,7 +12,7 @@ import {
     setCounts,
     serializeComment,
 } from '@/features/comments/store/commentsSlice';
-import type { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
+import type { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
 import type { Struct } from '@bufbuild/protobuf';
 
 export const fetchComments = (

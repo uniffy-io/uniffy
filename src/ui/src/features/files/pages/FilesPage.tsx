@@ -25,7 +25,7 @@ import { addToQueue } from '@/features/files/store/uploadSlice';
 import { storeFile } from '@/features/files/utils/fileStore';
 import { filesApi } from '@/features/files/api/filesApi';
 import { downloadAsArchive, type FileDownloadItem } from '@/features/files/utils/archiveDownload';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 export function FilesPage() {
     useDocumentTitle('Files');

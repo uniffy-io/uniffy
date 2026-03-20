@@ -1,11 +1,11 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { BookmarksService } from '@/gen/bookmarks/v1/bookmarks_connect';
+import { BookmarksService } from '@uniffy/proto/bookmarks/v1/bookmarks_connect';
 import type {
     ToggleBookmarkRequest,
     ListBookmarksRequest,
     BulkCheckBookmarksRequest,
-} from '@/gen/bookmarks/v1/bookmarks_pb';
+} from '@uniffy/proto/bookmarks/v1/bookmarks_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

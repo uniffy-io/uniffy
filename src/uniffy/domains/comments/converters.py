@@ -1,6 +1,15 @@
 """Proto <-> domain converters for comments domain."""
 
 from google.protobuf.struct_pb2 import Struct
+from uniffy_proto.comments.v1.comments_pb2 import (
+    Comment as ProtoComment,
+)
+from uniffy_proto.comments.v1.comments_pb2 import (
+    CommentAnchorType as ProtoAnchorType,
+)
+from uniffy_proto.comments.v1.comments_pb2 import (
+    CommentReaction as ProtoCommentReaction,
+)
 
 from uniffy.core.converters import (
     CONTENT_TYPE_TO_PROTO,
@@ -8,15 +17,6 @@ from uniffy.core.converters import (
     optional_timestamp,
 )
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
-from uniffy.gen.comments.v1.comments_pb2 import (
-    Comment as ProtoComment,
-)
-from uniffy.gen.comments.v1.comments_pb2 import (
-    CommentAnchorType as ProtoAnchorType,
-)
-from uniffy.gen.comments.v1.comments_pb2 import (
-    CommentReaction as ProtoCommentReaction,
-)
 
 # Anchor type mappings
 

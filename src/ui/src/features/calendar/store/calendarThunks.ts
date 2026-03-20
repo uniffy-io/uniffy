@@ -15,15 +15,15 @@ import type {
     RecurrenceConfig as ProtoRecurrenceConfig,
     LinkedResource as ProtoLinkedResource,
     EventTemplate as ProtoEventTemplate,
-} from '@/gen/cal/v1/calendar_pb';
+} from '@uniffy/proto/cal/v1/calendar_pb';
 import {
     RecurrencePattern as ProtoRecurrencePattern,
     AttendeeStatus as ProtoAttendeeStatus,
     AttendeeRole as ProtoAttendeeRole,
     DayOfWeek as ProtoDayOfWeek,
     ResourceType as ProtoResourceType,
-} from '@/gen/cal/v1/calendar_pb';
-import { VisibilityScope as ProtoVisibilityScope } from '@/gen/common/v1/common_pb';
+} from '@uniffy/proto/cal/v1/calendar_pb';
+import { VisibilityScope as ProtoVisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import { Timestamp } from '@bufbuild/protobuf';
 import type {
     CalendarEvent,
@@ -43,7 +43,7 @@ import type {
 } from '@/features/calendar/types';
 import {
     RecurrenceEditScope as ProtoRecurrenceEditScope,
-} from '@/gen/cal/v1/calendar_pb';
+} from '@uniffy/proto/cal/v1/calendar_pb';
 
 // ============================================================================
 // Helpers

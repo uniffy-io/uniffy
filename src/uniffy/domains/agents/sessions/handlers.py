@@ -7,22 +7,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
-from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.agents.providers.operations import ProviderOperations
-from uniffy.domains.agents.runtime.model_resolver import resolve_model
-from uniffy.domains.agents.runtime.operations import _get_model_context_window
-from uniffy.domains.agents.sessions.converters import (
-    message_role_from_proto,
-    message_to_proto,
-    session_kind_from_proto,
-    session_to_proto,
-)
-from uniffy.domains.agents.sessions.operations import SessionOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.gen.agents.v1.sessions_pb2 import (
+from uniffy_proto.agents.v1.sessions_pb2 import (
     AddMessageRequest,
     ArchiveSessionRequest,
     ArchiveSessionResponse,
@@ -42,7 +27,22 @@ from uniffy.gen.agents.v1.sessions_pb2 import (
     SessionResponse,
     UpdateSessionRequest,
 )
-from uniffy.gen.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.db import get_async_session
+from uniffy.domains.agents.agents.operations import AgentOperations
+from uniffy.domains.agents.providers.operations import ProviderOperations
+from uniffy.domains.agents.runtime.model_resolver import resolve_model
+from uniffy.domains.agents.runtime.operations import _get_model_context_window
+from uniffy.domains.agents.sessions.converters import (
+    message_role_from_proto,
+    message_to_proto,
+    session_kind_from_proto,
+    session_to_proto,
+)
+from uniffy.domains.agents.sessions.operations import SessionOperations
+from uniffy.domains.auth.context import get_user_id_from_context
 
 
 class SessionsHandlers:

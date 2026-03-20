@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { FilesService } from '@/gen/files/v1/files_connect';
+import { FilesService } from '@uniffy/proto/files/v1/files_connect';
 import type {
     InitiateUploadRequest,
     GetUploadStatusRequest,
@@ -26,7 +26,7 @@ import type {
     UploadChunkRequest,
     CompleteUploadRequest,
     MoveItemsRequest,
-} from '@/gen/files/v1/files_pb';
+} from '@uniffy/proto/files/v1/files_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

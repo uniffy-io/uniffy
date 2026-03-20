@@ -17,7 +17,7 @@ import {
     clearActiveFilter,
 } from '@/features/files/store/filesSlice';
 import type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Hook for applying a saved filter to the files list.

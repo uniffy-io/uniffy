@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { NotesService } from '@/gen/notes/v1/notes_connect';
+import { NotesService } from '@uniffy/proto/notes/v1/notes_connect';
 import type {
     CreateNoteRequest,
     GetNoteRequest,
@@ -24,7 +24,7 @@ import type {
     UnshareNoteFromGroupRequest,
     GetNoteSharingRequest,
     EmptyTrashRequest,
-} from '@/gen/notes/v1/notes_pb';
+} from '@uniffy/proto/notes/v1/notes_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**

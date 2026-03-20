@@ -28,7 +28,7 @@ import {
 } from "@/features/agents/store/agentMemoriesThunks";
 import type { SerializedMemory } from "@/features/agents/store/agentMemoriesThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
-import { MemoryCategory } from "@/gen/agents/v1/memories_pb";
+import { MemoryCategory } from "@uniffy/proto/agents/v1/memories_pb";
 
 // ---------------------------------------------------------------------------
 // Constants

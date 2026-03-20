@@ -9,7 +9,7 @@ import { defaultKeymap } from '@codemirror/commands';
 import { useAppSelector } from '@/app/hooks';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
-import { ContentType } from '@/gen/common/v1/common_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 

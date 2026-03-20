@@ -10,7 +10,7 @@ import { useAppDispatch } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { addToQueue } from '@/features/files/store/uploadSlice';
 import { storeFile } from '@/features/files/utils/fileStore';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 interface UploadDropzoneProps {
     folderId?: string;

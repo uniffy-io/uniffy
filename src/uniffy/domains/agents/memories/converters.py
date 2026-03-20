@@ -1,8 +1,6 @@
 """Proto <-> domain converters for agent memories."""
 
-from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.models.agents.memory import AgentMemory
-from uniffy.gen.agents.v1.memories_pb2 import (
+from uniffy_proto.agents.v1.memories_pb2 import (
     MEMORY_CATEGORY_CONTEXT,
     MEMORY_CATEGORY_FACTS,
     MEMORY_CATEGORY_INSTRUCTIONS,
@@ -11,6 +9,9 @@ from uniffy.gen.agents.v1.memories_pb2 import (
     MemoryCategory,
     MemoryInfo,
 )
+
+from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.models.agents.memory import AgentMemory
 
 # --- Memory Category mappings ---
 

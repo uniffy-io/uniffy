@@ -5,7 +5,7 @@
  * organized by visibility scope.
  */
 
-import { NodeType, VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { NodeType, VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 import type { TreeNode, GroupTreeSection } from '@/features/notes/store/notesTreeSlice';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 

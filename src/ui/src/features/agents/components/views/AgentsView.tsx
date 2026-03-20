@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ShareButton, useMyPermission } from "@/features/sharing";
-import { ContentType, VisibilityScope } from "@/gen/common/v1/common_pb";
+import { ContentType, VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
 import {
     selectSelectedAgentId,
     selectAgentsPanel,

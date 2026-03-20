@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/preserve-manual-memoization */
 /**
  * Live Mention Chip
  *
@@ -25,7 +26,8 @@ import { useAppSelector } from '@/app/hooks';
 import { usePresence } from '@/features/presence/hooks/usePresence';
 import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
-import { LiveIndicator, isTaskDoneStatus } from '@/components/mention/LiveIndicators';
+import { LiveIndicator } from '@/components/mention/LiveIndicators';
+import { isTaskDoneStatus } from '@/components/mention/types';
 import { useMentionState } from '@/components/mention/useMentionState';
 import { cn } from '@/shared/utils/cn';
 import type { Icon } from '@phosphor-icons/react';

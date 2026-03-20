@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package notes.v1;
 
+option go_package = "github.com/uniffy-io/uniffy-proto-go/notes/v1;notesv1";
+
 import "google/protobuf/timestamp.proto";
 
 // Visibility scope for content

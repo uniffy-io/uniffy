@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Comment as ProtoComment, CommentReaction as ProtoReaction } from '@/gen/comments/v1/comments_pb';
+import type { Comment as ProtoComment, CommentReaction as ProtoReaction } from '@uniffy/proto/comments/v1/comments_pb';
 
 /**
  * Serialized comment data for Redux store.

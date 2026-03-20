@@ -11,7 +11,7 @@ import { filesApi } from '@/features/files/api/filesApi';
 import { openViewer, setFileData, setError } from '@/features/files/store/viewerSlice';
 import type { RootState, AppDispatch } from '@/app/store';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
-import type { File } from '@/gen/files/v1/files_pb';
+import type { File } from '@uniffy/proto/files/v1/files_pb';
 
 // Helper to convert proto File to serializable plain object
 // (duplicated from filesThunks to avoid circular dependency)

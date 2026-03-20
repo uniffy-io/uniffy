@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "1.10.0",
+    "@uniffy/proto": "workspace:*",
     "@codemirror/commands": "^6.10.1",
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/language": "^6.12.1",
@@ -87,6 +88,7 @@
     "esbuild": "^0.27.2",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "zod-validation-error": "^4.0.0",
     "eslint-plugin-react-refresh": "^0.4.26",
     "globals": "^16.5.0",
     "knip": "^5.83.0",

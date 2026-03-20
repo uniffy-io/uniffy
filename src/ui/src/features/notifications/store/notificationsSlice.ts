@@ -11,7 +11,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
-import type { Notification } from '@/gen/notifications/v1/notifications_pb';
+import type { Notification } from '@uniffy/proto/notifications/v1/notifications_pb';
 
 export interface SerializedNotification {
     id: string;

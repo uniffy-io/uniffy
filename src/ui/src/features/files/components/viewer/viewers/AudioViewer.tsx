@@ -35,7 +35,7 @@ import { useMediaStream } from '@/features/files/components/viewer/hooks/useMedi
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize, supportsThumbnail } from '@/features/files/components/list/utils';
 import { formatMediaTime } from '@/shared/utils/dateFormatting';
-import { ExtractionStatus } from '@/gen/files/v1/files_pb';
+import { ExtractionStatus } from '@uniffy/proto/files/v1/files_pb';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
 
 /** Files larger than this skip background waveform computation. */

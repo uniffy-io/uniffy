@@ -8,12 +8,12 @@ import { createSlice } from '@reduxjs/toolkit';
 import type {
     ContentTypeDefaults,
     OrganizationOverview,
-} from '@/gen/organizations/v1/organizations_pb';
+} from '@uniffy/proto/organizations/v1/organizations_pb';
 import type {
     MemberInfo,
     GroupInfo,
     GroupMemberInfo,
-} from '@/gen/common/v1/common_pb';
+} from '@uniffy/proto/common/v1/common_pb';
 import {
     fetchPermissionDefaults,
     updatePermissionDefaults,

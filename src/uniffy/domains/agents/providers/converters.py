@@ -1,19 +1,20 @@
 """Proto <-> domain converters for providers."""
 
-from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.converters.common_proto import visibility_to_proto
-from uniffy.core.models.agents.provider_key import ProviderKey
-from uniffy.domains.agents.providers.base import ModelInfo as DomainModelInfo
-from uniffy.gen.agents.v1.providers_pb2 import (
+from uniffy_proto.agents.v1.providers_pb2 import (
     CREDENTIAL_TYPE_API_KEY,
     CREDENTIAL_TYPE_SETUP_TOKEN,
     CREDENTIAL_TYPE_UNSPECIFIED,
     CredentialType,
     ProviderKeyInfo,
 )
-from uniffy.gen.agents.v1.providers_pb2 import (
+from uniffy_proto.agents.v1.providers_pb2 import (
     ModelInfo as ProtoModelInfo,
 )
+
+from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.converters.common_proto import visibility_to_proto
+from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.domains.agents.providers.base import ModelInfo as DomainModelInfo
 
 # Domain credential_type string <-> proto enum mappings
 

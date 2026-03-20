@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package cal.v1;
 
+option go_package = "github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1";
+
 import "google/protobuf/timestamp.proto";
 import "common/v1/common.proto";
 

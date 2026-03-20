@@ -2,20 +2,21 @@
 
 from typing import Any
 
+from uniffy_proto.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
+from uniffy_proto.files.v1.files_pb2 import (
+    FilterCriteria as ProtoFilterCriteria,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    IconValue as ProtoIconValue,
+)
+from uniffy_proto.files.v1.files_pb2 import (
+    SavedFilter as ProtoSavedFilter,
+)
+
 from uniffy.core.converters import datetime_to_timestamp, timestamp_to_datetime
 from uniffy.core.models.files.saved_filter import SavedFileFilter
 from uniffy.core.models.shared import VisibilityScope
 from uniffy.domains.files.converters import VISIBILITY_FROM_PROTO, VISIBILITY_TO_PROTO
-from uniffy.gen.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
-from uniffy.gen.files.v1.files_pb2 import (
-    FilterCriteria as ProtoFilterCriteria,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    IconValue as ProtoIconValue,
-)
-from uniffy.gen.files.v1.files_pb2 import (
-    SavedFilter as ProtoSavedFilter,
-)
 
 
 def saved_filter_to_proto(filter_model: SavedFileFilter) -> ProtoSavedFilter:

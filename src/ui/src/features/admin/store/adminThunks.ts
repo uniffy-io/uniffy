@@ -12,7 +12,7 @@ import {
     VisibilityScope,
     OrganizationRole,
     GroupRole,
-} from '@/gen/common/v1/common_pb';
+} from '@uniffy/proto/common/v1/common_pb';
 import {
     serializeContentTypeDefaults,
     serializeMemberInfo,

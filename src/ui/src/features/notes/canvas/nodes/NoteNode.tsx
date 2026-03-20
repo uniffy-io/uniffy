@@ -9,7 +9,7 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import { type NodeProps, NodeResizer, Handle, Position } from '@xyflow/react';
 import { useNavigate } from 'react-router-dom';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
-import { ContentType } from '@/gen/common/v1/common_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { fetchNote } from '@/features/notes/store/notesSlice';
 import { cn } from '@/shared/utils/cn';

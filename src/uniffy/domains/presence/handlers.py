@@ -8,6 +8,17 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
+from uniffy_proto.presence.v1.presence_pb2 import (
+    ClearCustomStatusRequest,
+    ClearCustomStatusResponse,
+    GetBulkPresenceRequest,
+    GetBulkPresenceResponse,
+    SetCustomStatusRequest,
+    SetCustomStatusResponse,
+    SetPresenceRequest,
+    SetPresenceResponse,
+    UserPresence,
+)
 
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import (
@@ -19,17 +30,6 @@ from uniffy.domains.presence.converters import (
     string_to_proto_status,
 )
 from uniffy.domains.presence.operations import PresenceOperations
-from uniffy.gen.presence.v1.presence_pb2 import (
-    ClearCustomStatusRequest,
-    ClearCustomStatusResponse,
-    GetBulkPresenceRequest,
-    GetBulkPresenceResponse,
-    SetCustomStatusRequest,
-    SetCustomStatusResponse,
-    SetPresenceRequest,
-    SetPresenceResponse,
-    UserPresence,
-)
 
 
 class PresenceHandlers:

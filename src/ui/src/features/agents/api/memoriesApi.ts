@@ -1,13 +1,13 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { MemoriesService } from '@/gen/agents/v1/memories_connect';
+import { MemoriesService } from '@uniffy/proto/agents/v1/memories_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     ListMemoriesRequest,
     CreateMemoryRequest,
     UpdateMemoryRequest,
     DeleteMemoryRequest,
-} from '@/gen/agents/v1/memories_pb';
+} from '@uniffy/proto/agents/v1/memories_pb';
 
 const client = createClient(MemoriesService, transport);
 

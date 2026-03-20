@@ -21,7 +21,7 @@ import { attachmentsApi } from '@/features/attachments';
 import { cn } from '@/shared/utils/cn';
 import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
 import { ExpandableEditor } from '@/components/editor/ExpandableEditor';
-import { ContentType } from '@/gen/common/v1/common_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { getInitials } from '@/components/subject/utils';

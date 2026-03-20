@@ -6,6 +6,21 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from uniffy_proto.settings.v1.settings_pb2 import (
+    CreateProfileRequest,
+    DeleteProfileRequest,
+    DeleteProfileResponse,
+    EffectiveSettingsResponse,
+    GetEffectiveSettingsRequest,
+    GetProfileRequest,
+    GetSettingsSchemaRequest,
+    ListProfilesRequest,
+    ListProfilesResponse,
+    ProfileResponse,
+    SetDefaultProfileRequest,
+    SettingsSchemaResponse,
+    UpdateProfileRequest,
+)
 
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.db import get_async_session
@@ -21,21 +36,6 @@ from uniffy.domains.settings.converters import (
     profile_to_proto,
 )
 from uniffy.domains.settings.operations import SettingsOperations
-from uniffy.gen.settings.v1.settings_pb2 import (
-    CreateProfileRequest,
-    DeleteProfileRequest,
-    DeleteProfileResponse,
-    EffectiveSettingsResponse,
-    GetEffectiveSettingsRequest,
-    GetProfileRequest,
-    GetSettingsSchemaRequest,
-    ListProfilesRequest,
-    ListProfilesResponse,
-    ProfileResponse,
-    SetDefaultProfileRequest,
-    SettingsSchemaResponse,
-    UpdateProfileRequest,
-)
 
 
 class SettingsHandlers:

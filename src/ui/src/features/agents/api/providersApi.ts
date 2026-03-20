@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { ProvidersService } from '@/gen/agents/v1/providers_connect';
+import { ProvidersService } from '@uniffy/proto/agents/v1/providers_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     AddProviderKeyRequest,
@@ -10,7 +10,7 @@ import type {
     ValidateProviderKeyRequest,
     ListAvailableModelsRequest,
     ListModelsForKeyRequest,
-} from '@/gen/agents/v1/providers_pb';
+} from '@uniffy/proto/agents/v1/providers_pb';
 
 const client = createClient(ProvidersService, transport);
 

@@ -14,7 +14,7 @@ import {
     Warning,
 } from '@phosphor-icons/react';
 import { useOrgMembers } from '@/features/admin/hooks/useAdminHooks';
-import { OrganizationRole } from '@/gen/common/v1/common_pb';
+import { OrganizationRole } from '@uniffy/proto/common/v1/common_pb';
 import type { SerializedMemberInfo } from '@/features/admin/store/adminSlice';
 import { useAppSelector } from '@/app/hooks';
 import { Select, type SelectOption } from '@/components/ui/select';

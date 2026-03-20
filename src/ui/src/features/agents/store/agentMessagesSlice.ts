@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import type { SerializedMessage } from '@/features/agents/store/agentMessagesThunks';
 import { fetchMessages } from '@/features/agents/store/agentMessagesThunks';
-import { MessageRole } from '@/gen/agents/v1/sessions_pb';
+import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 
 interface StreamingToolCall {
     toolCallId: string;

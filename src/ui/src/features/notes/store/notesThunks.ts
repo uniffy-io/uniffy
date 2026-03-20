@@ -8,8 +8,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { notesApi } from '@/features/notes/api/notesApi';
 import type { RootState } from '@/app/store';
-import type { Note } from '@/gen/notes/v1/notes_pb';
-import { NodeType, type VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
+import { NodeType, type VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 import { organizeNotesByVisibility, type OrganizedNotes } from '@/features/notes/utils/notesTreeUtils';
 import {
     getCachedNotes,

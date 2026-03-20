@@ -18,9 +18,9 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useMyPermission } from "@/features/sharing";
-import { ContentType } from "@/gen/common/v1/common_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { createSession } from "@/features/agents/store/agentSessionsThunks";
-import { SessionKind } from "@/gen/agents/v1/sessions_pb";
+import { SessionKind } from "@uniffy/proto/agents/v1/sessions_pb";
 import { PROMPT_BUILDER_PREFIX } from "@/features/agents/store/agentSessionsSlice";
 import {
     selectMessagesForSession,
@@ -40,7 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { selectAllPrompts } from "@/features/agents/store/agentPromptsSlice";
 import { fetchPrompts } from "@/features/agents/store/agentPromptsThunks";
-import { PromptSource } from "@/gen/agents/v1/prompts_pb";
+import { PromptSource } from "@uniffy/proto/agents/v1/prompts_pb";
 
 function formatTime(ts?: { seconds: number; nanos: number }): string {
     if (!ts) return "";

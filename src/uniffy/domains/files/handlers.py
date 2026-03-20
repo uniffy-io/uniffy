@@ -9,23 +9,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
-
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.login.user import User
-from uniffy.core.storage import get_s3_client
-from uniffy.db import get_async_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.files.converters import (
-    file_to_proto,
-    file_version_to_proto,
-    folder_to_proto,
-    tree_node_from_file,
-    tree_node_from_folder,
-    upload_to_proto_status,
-    visibility_from_proto,
-)
-from uniffy.domains.files.operations import FileOperations, FolderOperations
-from uniffy.gen.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb2 import (
     AbortUploadRequest,
     AbortUploadResponse,
     BulkDeleteRequest,
@@ -68,6 +52,22 @@ from uniffy.gen.files.v1.files_pb2 import (
     UploadChunkResponse,
     UploadChunksResponse,
 )
+
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.login.user import User
+from uniffy.core.storage import get_s3_client
+from uniffy.db import get_async_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.files.converters import (
+    file_to_proto,
+    file_version_to_proto,
+    folder_to_proto,
+    tree_node_from_file,
+    tree_node_from_folder,
+    upload_to_proto_status,
+    visibility_from_proto,
+)
+from uniffy.domains.files.operations import FileOperations, FolderOperations
 
 
 class FilesHandlers:

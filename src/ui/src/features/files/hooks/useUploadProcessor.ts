@@ -22,7 +22,7 @@ import {
 } from '@/features/files/store/uploadSlice';
 import { setFile } from '@/features/files/store/filesSlice';
 import type { UploadItem } from '@/features/files/store/uploadSlice';
-import { VisibilityScope } from '@/gen/common/v1/common_pb';
+import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Process a single file upload using Web Worker for chunking.

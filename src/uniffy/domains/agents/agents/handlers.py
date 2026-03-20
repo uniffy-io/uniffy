@@ -8,20 +8,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from uniffy.core.converters.common_proto import visibility_from_proto
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.agents.memory import AgentMemory
-from uniffy.core.types import VisibilityScope
-from uniffy.db import get_async_session
-from uniffy.domains.agents.agents.converters import agent_to_proto
-from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.agents.runtime.prompt import build_system_prompt
-from uniffy.domains.agents.skills.operations import SkillOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.users.operations import UserOperations
-from uniffy.gen.agents.v1.agents_pb2 import (
+from uniffy_proto.agents.v1.agents_pb2 import (
     AgentResponse,
     CreateAgentRequest,
     DeleteAgentAvatarRequest,
@@ -35,7 +22,20 @@ from uniffy.gen.agents.v1.agents_pb2 import (
     UpdateAgentRequest,
     UploadAgentAvatarRequest,
 )
-from uniffy.gen.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+
+from uniffy.core.converters.common_proto import visibility_from_proto
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.types import VisibilityScope
+from uniffy.db import get_async_session
+from uniffy.domains.agents.agents.converters import agent_to_proto
+from uniffy.domains.agents.agents.operations import AgentOperations
+from uniffy.domains.agents.runtime.prompt import build_system_prompt
+from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.users.operations import UserOperations
 
 
 class AgentsHandlers:

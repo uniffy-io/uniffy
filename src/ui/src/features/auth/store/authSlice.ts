@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { CurrentUserResponse } from '@/gen/auth/v1/auth_pb';
+import type { CurrentUserResponse } from '@uniffy/proto/auth/v1/auth_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 
 /**

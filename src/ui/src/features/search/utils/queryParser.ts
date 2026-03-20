@@ -15,7 +15,7 @@
  * - `my: drafts` -> { text: "drafts", filters: { myContentOnly: true } }
  */
 
-import { SearchResultType } from '@/gen/search/v1/search_pb';
+import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 
 /**
  * Parsed search query with extracted filters.

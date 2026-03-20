@@ -6,17 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.types import VisibilityScope
-from uniffy.db import get_async_session
-from uniffy.domains.agents.cron.converters import (
-    cron_run_log_to_proto,
-    cron_task_to_proto,
-)
-from uniffy.domains.agents.cron.operations import CronTaskOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.gen.agents.v1.cron_pb2 import (
+from uniffy_proto.agents.v1.cron_pb2 import (
     CreateCronTaskRequest,
     CronTaskResponse,
     DeleteCronTaskRequest,
@@ -30,7 +20,17 @@ from uniffy.gen.agents.v1.cron_pb2 import (
     TriggerCronTaskResponse,
     UpdateCronTaskRequest,
 )
-from uniffy.gen.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.types import VisibilityScope
+from uniffy.db import get_async_session
+from uniffy.domains.agents.cron.converters import (
+    cron_run_log_to_proto,
+    cron_task_to_proto,
+)
+from uniffy.domains.agents.cron.operations import CronTaskOperations
+from uniffy.domains.auth.context import get_user_id_from_context
 
 VISIBILITY_FROM_PROTO: dict[int, VisibilityScope] = {
     0: VisibilityScope.PRIVATE,

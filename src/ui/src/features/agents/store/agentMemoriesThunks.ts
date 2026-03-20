@@ -1,8 +1,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { memoriesApi } from '@/features/agents/api/memoriesApi';
 import type { RootState } from '@/app/store';
-import type { MemoryInfo } from '@/gen/agents/v1/memories_pb';
-import { MemoryCategory } from '@/gen/agents/v1/memories_pb';
+import type { MemoryInfo } from '@uniffy/proto/agents/v1/memories_pb';
+import { MemoryCategory } from '@uniffy/proto/agents/v1/memories_pb';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;

@@ -1,6 +1,6 @@
 import { createClient } from "@connectrpc/connect";
 import type { PartialMessage } from "@bufbuild/protobuf";
-import { ProjectsService } from "@/gen/projects/v1/projects_connect";
+import { ProjectsService } from "@uniffy/proto/projects/v1/projects_connect";
 import type {
   CreateProjectRequest,
   GetProjectRequest,
@@ -14,7 +14,7 @@ import type {
   ListTasksRequest,
   MoveTaskRequest,
   ListActivitiesRequest,
-} from "@/gen/projects/v1/projects_pb";
+} from "@uniffy/proto/projects/v1/projects_pb";
 import { transport } from "@/lib/transport";
 
 const client = createClient(ProjectsService, transport);

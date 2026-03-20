@@ -14,7 +14,7 @@ import {
     WarningCircle,
 } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
-import { ContentType, PermissionLevel } from '@/gen/common/v1/common_pb';
+import { ContentType, PermissionLevel } from '@uniffy/proto/common/v1/common_pb';
 import {
     useSharingDialog,
     useContentPermissions,

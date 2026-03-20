@@ -1,11 +1,12 @@
 """Proto <-> domain converters for users domain."""
 
+from uniffy_proto.users.v1.users_pb2 import UserOrganizationMembership, UserProfile
+
 from uniffy.core.converters import datetime_to_timestamp, org_info_to_proto, org_role_to_proto
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.domains.users.avatars import get_avatar_url
-from uniffy.gen.users.v1.users_pb2 import UserOrganizationMembership, UserProfile
 
 
 def user_to_profile(user: User) -> UserProfile:

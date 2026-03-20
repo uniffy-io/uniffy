@@ -1,6 +1,6 @@
 """Presence converters - proto enum to string mapping."""
 
-from uniffy.gen.presence.v1.presence_pb2 import PresenceStatus
+from uniffy_proto.presence.v1.presence_pb2 import PresenceStatus
 
 STATUS_TO_STRING: dict[int, str] = {
     PresenceStatus.PRESENCE_STATUS_ONLINE: "online",

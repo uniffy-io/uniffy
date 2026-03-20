@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { UsersService } from "@/gen/users/v1/users_connect";
-import { UserProfile } from "@/gen/users/v1/users_pb";
+import { UsersService } from "@uniffy/proto/users/v1/users_connect";
+import { UserProfile } from "@uniffy/proto/users/v1/users_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import {

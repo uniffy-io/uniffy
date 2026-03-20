@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { SessionsService } from '@/gen/agents/v1/sessions_connect';
+import { SessionsService } from '@uniffy/proto/agents/v1/sessions_connect';
 import type { PartialMessage } from '@bufbuild/protobuf';
 import type {
     CreateSessionRequest,
@@ -12,7 +12,7 @@ import type {
     ListMessagesRequest,
     GetSessionContextStatsRequest,
     CompactSessionRequest,
-} from '@/gen/agents/v1/sessions_pb';
+} from '@uniffy/proto/agents/v1/sessions_pb';
 
 const client = createClient(SessionsService, transport);
 

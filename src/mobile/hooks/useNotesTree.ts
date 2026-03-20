@@ -3,7 +3,7 @@ import { useAuth } from "@/context/auth-context";
 import { notesApi } from "@/api/notesApi";
 import { noteToPlain, formatRelativeTime, stripMarkdown } from "@/lib/noteSerializer";
 import type { SerializedNote } from "@/lib/noteSerializer";
-import { VisibilityScope, NodeType } from "@/gen/notes/v1/notes_pb";
+import { VisibilityScope, NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 
 export interface TreeNode {
   id: string;

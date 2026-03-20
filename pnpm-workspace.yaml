@@ -1,0 +1,4 @@
+packages:
+  - src/ui
+  - src/mobile
+  - src/gen/typescript

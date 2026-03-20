@@ -15,7 +15,7 @@ import {
     removeReaction,
     fetchCommentCounts,
 } from '@/features/comments/store/commentsThunks';
-import type { CommentAnchorType } from '@/gen/comments/v1/comments_pb';
+import type { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
 import type { Struct } from '@bufbuild/protobuf';
 
 /**

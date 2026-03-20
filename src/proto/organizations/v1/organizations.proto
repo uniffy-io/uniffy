@@ -5,7 +5,7 @@ package organizations.v1;
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "uniffy/gen/organizations/v1;organizationsv1";
+option go_package = "github.com/uniffy-io/uniffy-proto-go/organizations/v1;organizationsv1";
 
 // OrganizationsService - Organization CRUD, membership, and settings
 

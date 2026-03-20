@@ -2,8 +2,8 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import { runtimeApi } from '@/features/agents/api/runtimeApi';
 import type { RootState } from '@/app/store';
-import type { MessageInfo } from '@/gen/agents/v1/sessions_pb';
-import { MessageRole } from '@/gen/agents/v1/sessions_pb';
+import type { MessageInfo } from '@uniffy/proto/agents/v1/sessions_pb';
+import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 import {
     streamStarted,
     addOptimisticUserMessage,

@@ -14,8 +14,8 @@ import { useAuth } from "@/context/auth-context";
 import { authApi } from "@/api/authApi";
 import { useTheme } from "@/hooks/useTheme";
 import type { PlainMessage } from "@bufbuild/protobuf";
-import type { MyOrganization } from "@/gen/organizations/v1/organizations_pb";
-import { OrganizationRole } from "@/gen/common/v1/common_pb";
+import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 
 const ROLE_LABELS: Record<number, string> = {
   [OrganizationRole.OWNER]: "Owner",

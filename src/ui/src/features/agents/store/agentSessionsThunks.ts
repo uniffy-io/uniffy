@@ -1,8 +1,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import type { RootState } from '@/app/store';
-import type { SessionInfo } from '@/gen/agents/v1/sessions_pb';
-import { SessionKind } from '@/gen/agents/v1/sessions_pb';
+import type { SessionInfo } from '@uniffy/proto/agents/v1/sessions_pb';
+import { SessionKind } from '@uniffy/proto/agents/v1/sessions_pb';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;

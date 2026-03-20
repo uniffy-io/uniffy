@@ -15,7 +15,7 @@ import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/ag
 import { selectAllAgents } from "@/features/agents/store/agentsSlice";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
 import { fetchAgents, updateAgent } from "@/features/agents/store/agentsThunks";
-import { SkillSource } from "@/gen/agents/v1/skills_pb";
+import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 
 function getSourceLabel(source: number): string {
     switch (source) {

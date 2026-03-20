@@ -6,6 +6,30 @@ Provides bidirectional mapping between domain models and projects.v1 proto types
 
 import json
 
+from uniffy_proto.projects.v1.projects_pb2 import (
+    ActivityAction,
+    FieldType,
+    ViewType,
+)
+from uniffy_proto.projects.v1.projects_pb2 import (
+    FieldDefinition as ProtoFieldDefinition,
+)
+from uniffy_proto.projects.v1.projects_pb2 import (
+    Project as ProtoProject,
+)
+from uniffy_proto.projects.v1.projects_pb2 import (
+    Sprint as ProtoSprint,
+)
+from uniffy_proto.projects.v1.projects_pb2 import (
+    Task as ProtoTask,
+)
+from uniffy_proto.projects.v1.projects_pb2 import (
+    TaskActivity as ProtoTaskActivity,
+)
+from uniffy_proto.projects.v1.projects_pb2 import (
+    ViewConfig as ProtoViewConfig,
+)
+
 from uniffy.core.converters.common_proto import permission_level_to_proto, visibility_to_proto
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.projects.activity import TaskActivity
@@ -15,29 +39,6 @@ from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.types import PermissionLevel
-from uniffy.gen.projects.v1.projects_pb2 import (
-    ActivityAction,
-    FieldType,
-    ViewType,
-)
-from uniffy.gen.projects.v1.projects_pb2 import (
-    FieldDefinition as ProtoFieldDefinition,
-)
-from uniffy.gen.projects.v1.projects_pb2 import (
-    Project as ProtoProject,
-)
-from uniffy.gen.projects.v1.projects_pb2 import (
-    Sprint as ProtoSprint,
-)
-from uniffy.gen.projects.v1.projects_pb2 import (
-    Task as ProtoTask,
-)
-from uniffy.gen.projects.v1.projects_pb2 import (
-    TaskActivity as ProtoTaskActivity,
-)
-from uniffy.gen.projects.v1.projects_pb2 import (
-    ViewConfig as ProtoViewConfig,
-)
 
 # =============================================================================
 # ENUM MAPPINGS - Domain <-> Proto

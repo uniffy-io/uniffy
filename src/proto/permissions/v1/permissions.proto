@@ -5,7 +5,7 @@ package permissions.v1;
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "uniffy/gen/permissions/v1;permissionsv1";
+option go_package = "github.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1";
 
 // PermissionsService - Fine-grained content permission management
 

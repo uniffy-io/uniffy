@@ -7,8 +7,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import type { RootState } from '@/app/store';
-import type { TreeNode, Folder } from '@/gen/files/v1/files_pb';
-import type { VisibilityScope } from '@/gen/common/v1/common_pb';
+import type { TreeNode, Folder } from '@uniffy/proto/files/v1/files_pb';
+import type { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 // Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {

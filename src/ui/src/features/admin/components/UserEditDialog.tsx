@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from "@connectrpc/connect";
-import { UsersService } from "@/gen/users/v1/users_connect";
-import { OrganizationsService } from "@/gen/organizations/v1/organizations_connect";
-import { UserProfile, UserOrganizationMembership } from "@/gen/users/v1/users_pb";
-import { OrganizationDetail } from "@/gen/organizations/v1/organizations_pb";
-import { OrganizationRole } from "@/gen/common/v1/common_pb";
+import { UsersService } from "@uniffy/proto/users/v1/users_connect";
+import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_connect";
+import { UserProfile, UserOrganizationMembership } from "@uniffy/proto/users/v1/users_pb";
+import { OrganizationDetail } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";

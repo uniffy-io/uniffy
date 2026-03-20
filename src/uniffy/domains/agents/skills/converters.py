@@ -1,8 +1,6 @@
 """Proto <-> domain converters for skills."""
 
-from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.models.agents.skill import AgentSkill
-from uniffy.gen.agents.v1.skills_pb2 import (
+from uniffy_proto.agents.v1.skills_pb2 import (
     SKILL_SOURCE_BUNDLED,
     SKILL_SOURCE_ORGANIZATION,
     SKILL_SOURCE_PERSONAL,
@@ -10,6 +8,9 @@ from uniffy.gen.agents.v1.skills_pb2 import (
     SkillInfo,
     SkillSource,
 )
+
+from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.models.agents.skill import AgentSkill
 
 # --- Skill Source mappings ---
 

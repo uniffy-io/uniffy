@@ -2,10 +2,7 @@
 
 import json
 
-from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.session import AgentSession
-from uniffy.gen.agents.v1.sessions_pb2 import (
+from uniffy_proto.agents.v1.sessions_pb2 import (
     MESSAGE_ROLE_ASSISTANT,
     MESSAGE_ROLE_SUMMARY,
     MESSAGE_ROLE_SYSTEM,
@@ -21,6 +18,10 @@ from uniffy.gen.agents.v1.sessions_pb2 import (
     SessionInfo,
     SessionKind,
 )
+
+from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.session import AgentSession
 
 # --- Session Kind mappings ---
 

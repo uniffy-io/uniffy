@@ -1,10 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope } from '@/gen/notes/v1/notes_pb';
+import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 import { notesApi } from '@/features/notes/api/notesApi';
 import { organizeNotesByVisibility, noteToTreeNode, sortTreeNodes } from '@/features/notes/utils/notesTreeUtils';
 import type { RootState } from '@/app/store';
-import type { Note } from '@/gen/notes/v1/notes_pb';
+import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
 import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote, moveNote } from '@/features/notes/store/notesThunks';
 import type { NoteIcon } from '@/features/notes/utils/noteIconConstants';
 

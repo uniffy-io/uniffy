@@ -22,7 +22,7 @@ import {
     updateSession,
     archiveSession,
 } from "@/features/agents/store/agentSessionsThunks";
-import { SessionKind } from "@/gen/agents/v1/sessions_pb";
+import { SessionKind } from "@uniffy/proto/agents/v1/sessions_pb";
 import type { SerializedSession } from "@/features/agents/store/agentSessionsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { AgentPicker } from "@/features/agents/components/chat/AgentPicker";

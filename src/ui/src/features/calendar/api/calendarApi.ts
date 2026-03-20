@@ -7,7 +7,7 @@
 
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
-import { CalendarService } from '@/gen/cal/v1/calendar_connect';
+import { CalendarService } from '@uniffy/proto/cal/v1/calendar_connect';
 import type {
     CreateEventRequest,
     GetEventRequest,
@@ -28,7 +28,7 @@ import type {
     UpdateEventTemplateRequest,
     DeleteEventTemplateRequest,
     ListEventTemplatesRequest,
-} from '@/gen/cal/v1/calendar_pb';
+} from '@uniffy/proto/cal/v1/calendar_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
 /**
