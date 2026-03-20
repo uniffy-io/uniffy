@@ -24,6 +24,7 @@ export function TaskRedirectPage() {
     projectsApi
       .getTask(taskId, orgId)
       .then((res) => {
+        if (!res.task) return;
         navigate(`/projects/${res.task.projectId}/tasks/${res.task.id}`, {
           replace: true,
         });

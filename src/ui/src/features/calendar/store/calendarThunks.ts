@@ -367,16 +367,17 @@ export const createEvent = createAsyncThunk<
         const organizationId = getOrganizationId(getState());
 
         // Build recurrence config if provided
-        const isRecurring = params.recurrence && params.recurrence.pattern !== 'none';
+        const recurrence = params.recurrence;
+        const isRecurring = recurrence && recurrence.pattern !== 'none';
         let recurrenceConfig = undefined;
         if (isRecurring) {
             recurrenceConfig = {
-                pattern: RECURRENCE_TO_PROTO[params.recurrence.pattern],
-                interval: params.recurrence.interval || 1,
-                daysOfWeek: params.recurrence.daysOfWeek?.map(d => DAY_OF_WEEK_TO_PROTO[d]),
-                dayOfMonth: params.recurrence.dayOfMonth,
-                endDate: params.recurrence.endDate ? isoToTimestamp(params.recurrence.endDate) : undefined,
-                maxOccurrences: params.recurrence.maxOccurrences,
+                pattern: RECURRENCE_TO_PROTO[recurrence.pattern],
+                interval: recurrence.interval || 1,
+                daysOfWeek: recurrence.daysOfWeek?.map(d => DAY_OF_WEEK_TO_PROTO[d]),
+                dayOfMonth: recurrence.dayOfMonth,
+                endDate: recurrence.endDate ? isoToTimestamp(recurrence.endDate) : undefined,
+                maxOccurrences: recurrence.maxOccurrences,
             };
         }
 

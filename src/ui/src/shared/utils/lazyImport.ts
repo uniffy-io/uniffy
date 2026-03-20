@@ -16,9 +16,10 @@ export function lazyImport<
 >(
   factory: () => Promise<T>,
   name: K,
-): T[K] extends ComponentType<infer P> ? React.LazyExoticComponent<ComponentType<P>> : never {
-  return lazy(() =>
-    factory().then((module) => ({ default: module[name] as ComponentType<never> })),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ) as any;
+): React.LazyExoticComponent<ComponentType<any>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return lazy(() =>
+    factory().then((module) => ({ default: module[name] as ComponentType<any> })),
+  );
 }
