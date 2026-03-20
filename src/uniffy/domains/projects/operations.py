@@ -27,6 +27,7 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.shared import ContentType, VisibilityScope
 from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.projects import queries
 
 
@@ -666,7 +667,7 @@ class TaskOperations(BaseContentOperations[Task]):
 
     def _get_url_path(self, model: Task) -> str:
         """Get URL path for task."""
-        return f"/projects/{model.project_id}?task={model.id}"
+        return f"/projects/{model.project_id}/tasks/{model.id}"
 
     def _get_search_description(self, model: Task) -> str | None:
         """Get search description from task description."""
@@ -818,6 +819,12 @@ class TaskOperations(BaseContentOperations[Task]):
 
         title_changed = "title" in kwargs and kwargs["title"] != task.title
 
+        # Snapshot fields that trigger mention state publishing
+        old_status = task.status
+        old_due_date = task.due_date
+        old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else []
+        old_title = task.title
+
         # Fields that can be explicitly set to None (cleared)
         nullable_fields = {
             "start_date",
@@ -909,6 +916,32 @@ class TaskOperations(BaseContentOperations[Task]):
             except Exception:
                 logger.warning(
                     "Failed to propagate task rename to mentions",
+                    task_id=str(task_id),
+                    exc_info=True,
+                )
+
+        # Publish mention state changes for real-time mention updates
+        mention_changes: dict[str, str] = {}
+        if task.status != old_status:
+            mention_changes["status"] = task.status
+        if task.title != old_title:
+            mention_changes["title"] = task.title
+        if task.due_date != old_due_date:
+            mention_changes["due_date"] = task.due_date or ""
+        current_assignee_ids = list(task.assignee_ids) if task.assignee_ids else []
+        if current_assignee_ids != old_assignee_ids:
+            mention_changes["assignee_ids"] = ",".join(current_assignee_ids)
+
+        if mention_changes:
+            try:
+                await publish_mention_state(
+                    organization_id=organization_id,
+                    urn=task.urn,
+                    changes=mention_changes,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to publish task mention state change",
                     task_id=str(task_id),
                     exc_info=True,
                 )

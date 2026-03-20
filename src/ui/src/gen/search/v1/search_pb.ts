@@ -706,6 +706,64 @@ export class UrnMetadata extends Message<UrnMetadata> {
    */
   metadata: { [key: string]: string } = {};
 
+  /**
+   * Live state fields for mention enrichment
+   *
+   * task status, project status
+   *
+   * @generated from field: string status = 10;
+   */
+  status = "";
+
+  /**
+   * task due date (ISO date string)
+   *
+   * @generated from field: string due_date = 11;
+   */
+  dueDate = "";
+
+  /**
+   * task assignee display name
+   *
+   * @generated from field: string assignee_name = 12;
+   */
+  assigneeName = "";
+
+  /**
+   * file extraction/processing status
+   *
+   * @generated from field: string processing_status = 15;
+   */
+  processingStatus = "";
+
+  /**
+   * project completed task count
+   *
+   * @generated from field: int32 completed_tasks = 16;
+   */
+  completedTasks = 0;
+
+  /**
+   * project total task count
+   *
+   * @generated from field: int32 total_tasks = 17;
+   */
+  totalTasks = 0;
+
+  /**
+   * group/chat member count
+   *
+   * @generated from field: int32 member_count = 18;
+   */
+  memberCount = 0;
+
+  /**
+   * who last modified the content
+   *
+   * @generated from field: string updated_by_name = 19;
+   */
+  updatedByName = "";
+
   constructor(data?: PartialMessage<UrnMetadata>) {
     super();
     proto3.util.initPartial(data, this);
@@ -719,6 +777,14 @@ export class UrnMetadata extends Message<UrnMetadata> {
     { no: 3, name: "type", kind: "enum", T: proto3.getEnumType(SearchResultType) },
     { no: 4, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 10, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "due_date", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "assignee_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 15, name: "processing_status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 16, name: "completed_tasks", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 17, name: "total_tasks", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 18, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 19, name: "updated_by_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UrnMetadata {

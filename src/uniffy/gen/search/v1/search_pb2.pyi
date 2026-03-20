@@ -171,7 +171,7 @@ class ResolveUrnsResponse(_message.Message):
     def __init__(self, resolved: _Optional[_Mapping[str, UrnMetadata]] = ...) -> None: ...
 
 class UrnMetadata(_message.Message):
-    __slots__ = ("title", "description", "type", "url", "metadata")
+    __slots__ = ("title", "description", "type", "url", "metadata", "status", "due_date", "assignee_name", "processing_status", "completed_tasks", "total_tasks", "member_count", "updated_by_name")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -184,9 +184,25 @@ class UrnMetadata(_message.Message):
     TYPE_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    DUE_DATE_FIELD_NUMBER: _ClassVar[int]
+    ASSIGNEE_NAME_FIELD_NUMBER: _ClassVar[int]
+    PROCESSING_STATUS_FIELD_NUMBER: _ClassVar[int]
+    COMPLETED_TASKS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_TASKS_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_COUNT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_BY_NAME_FIELD_NUMBER: _ClassVar[int]
     title: str
     description: str
     type: SearchResultType
     url: str
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    status: str
+    due_date: str
+    assignee_name: str
+    processing_status: str
+    completed_tasks: int
+    total_tasks: int
+    member_count: int
+    updated_by_name: str
+    def __init__(self, title: _Optional[str] = ..., description: _Optional[str] = ..., type: _Optional[_Union[SearchResultType, str]] = ..., url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., status: _Optional[str] = ..., due_date: _Optional[str] = ..., assignee_name: _Optional[str] = ..., processing_status: _Optional[str] = ..., completed_tasks: _Optional[int] = ..., total_tasks: _Optional[int] = ..., member_count: _Optional[int] = ..., updated_by_name: _Optional[str] = ...) -> None: ...

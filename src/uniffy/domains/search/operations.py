@@ -9,10 +9,14 @@ Provides SearchOperations class that handles:
 
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import ContentAccessQuery
+from uniffy.core.models.files.file import File
+from uniffy.core.models.login.user import User
+from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.domains.search.queries import SearchResult, execute_search, get_documents_by_urns
 
@@ -298,9 +302,9 @@ class SearchOperations:
         """
         Resolve metadata for a batch of URNs.
 
-        Fetches documents from Meilisearch for the given URNs.
-        Permission filtering is implicit since documents are only
-        accessible if the user could see them in search.
+        Fetches documents from Meilisearch for the given URNs,
+        then enriches with live state from the database (task status,
+        file processing status, project task counts, etc.).
 
         Parameters
         ----------
@@ -341,7 +345,228 @@ class SearchOperations:
             if self._can_access(result, user_id, user_group_id_strs):
                 accessible[urn] = result
 
+        # Enrich with live state from the database
+        await self._enrich_live_state(accessible, organization_id)
+
         return accessible
+
+    async def _enrich_live_state(
+        self,
+        results: dict[str, SearchResult],
+        organization_id: UUID,
+    ) -> None:
+        """
+        Enrich resolved URN results with live state from the database.
+
+        Queries database tables for task status, file processing status,
+        and project task counts. Modifies results in place.
+
+        Parameters
+        ----------
+        results : dict[str, SearchResult]
+            Mapping of URN -> SearchResult to enrich.
+        organization_id : UUID
+            Organization scope.
+
+        """
+        if not results:
+            return
+
+        # Categorize URNs by type for batch queries
+        task_ids: list[UUID] = []
+        file_ids: list[UUID] = []
+        project_ids: list[UUID] = []
+
+        urn_to_id: dict[str, UUID] = {}
+
+        for urn, result in results.items():
+            try:
+                # Parse UUID from URN (format: urn:uniffy:content:TYPE:uuid)
+                parts = urn.split(":")
+                if len(parts) < 5:
+                    continue
+                content_id = UUID(parts[4])
+                urn_to_id[urn] = content_id
+
+                if result.entity_type == "task":
+                    task_ids.append(content_id)
+                elif result.entity_type == "file":
+                    file_ids.append(content_id)
+                elif result.entity_type == "project":
+                    project_ids.append(content_id)
+            except (ValueError, IndexError):
+                continue
+
+        # Enrich tasks with status, due_date, assignee
+        if task_ids:
+            await self._enrich_tasks(results, task_ids, urn_to_id)
+
+        # Enrich files with processing status
+        if file_ids:
+            await self._enrich_files(results, file_ids, urn_to_id)
+
+        # Enrich projects with completed/total task counts
+        if project_ids:
+            await self._enrich_projects(results, project_ids, urn_to_id, organization_id)
+
+    async def _enrich_tasks(
+        self,
+        results: dict[str, SearchResult],
+        task_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+    ) -> None:
+        """
+        Enrich task results with live status, due_date, and assignee name.
+
+        Parameters
+        ----------
+        results : dict[str, SearchResult]
+            Results to enrich in place.
+        task_ids : list[UUID]
+            Task IDs to query.
+        urn_to_id : dict[str, UUID]
+            Mapping of URN to content ID.
+
+        """
+        try:
+            stmt = select(
+                Task.id,
+                Task.status,
+                Task.due_date,
+                Task.assignee_ids,
+            ).where(
+                and_(
+                    Task.id.in_(task_ids),
+                    Task.is_deleted == False,  # noqa: E712
+                )
+            )
+            result = await self.session.execute(stmt)
+            task_rows = result.all()
+
+            # Collect assignee IDs for name resolution
+            all_assignee_ids: set[UUID] = set()
+            task_assignees: dict[UUID, list[str]] = {}
+            for row in task_rows:
+                if row.assignee_ids:
+                    task_assignees[row.id] = row.assignee_ids
+                    for aid in row.assignee_ids:
+                        try:
+                            all_assignee_ids.add(UUID(aid))
+                        except ValueError:
+                            continue
+
+            # Resolve assignee names
+            assignee_names: dict[str, str] = {}
+            if all_assignee_ids:
+                name_stmt = select(User.id, User.full_name, User.username).where(
+                    User.id.in_(all_assignee_ids)
+                )
+                name_result = await self.session.execute(name_stmt)
+                for name_row in name_result.all():
+                    assignee_names[str(name_row[0])] = name_row[1] or name_row[2]
+
+            # Apply enrichment to results
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in task_rows:
+                urn = id_to_urn.get(row.id)
+                if not urn or urn not in results:
+                    continue
+                sr = results[urn]
+                sr.status = row.status
+                sr.due_date = row.due_date
+                # Get first assignee name
+                aids = task_assignees.get(row.id)
+                if aids:
+                    sr.assignee_name = assignee_names.get(aids[0])
+        except Exception:
+            logger.warning("Failed to enrich task live state", exc_info=True)
+
+    async def _enrich_files(
+        self,
+        results: dict[str, SearchResult],
+        file_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+    ) -> None:
+        """
+        Enrich file results with processing status.
+
+        Parameters
+        ----------
+        results : dict[str, SearchResult]
+            Results to enrich in place.
+        file_ids : list[UUID]
+            File IDs to query.
+        urn_to_id : dict[str, UUID]
+            Mapping of URN to content ID.
+
+        """
+        try:
+            stmt = select(
+                File.id,
+                File.extraction_status,
+            ).where(
+                and_(
+                    File.id.in_(file_ids),
+                    File.is_deleted == False,  # noqa: E712
+                )
+            )
+            result = await self.session.execute(stmt)
+
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in result.all():
+                urn = id_to_urn.get(row.id)
+                if not urn or urn not in results:
+                    continue
+                results[urn].processing_status = row.extraction_status.value
+        except Exception:
+            logger.warning("Failed to enrich file live state", exc_info=True)
+
+    async def _enrich_projects(
+        self,
+        results: dict[str, SearchResult],
+        project_ids: list[UUID],
+        urn_to_id: dict[str, UUID],
+        organization_id: UUID,
+    ) -> None:
+        """
+        Enrich project results with completed/total task counts.
+
+        Parameters
+        ----------
+        results : dict[str, SearchResult]
+            Results to enrich in place.
+        project_ids : list[UUID]
+            Project IDs to query.
+        urn_to_id : dict[str, UUID]
+            Mapping of URN to content ID.
+        organization_id : UUID
+            Organization scope.
+
+        """
+        try:
+            # Count total and completed tasks per project
+            stmt = select(
+                Task.project_id,
+                func.count(Task.id).label("total"),
+                func.count(Task.completed_at).label("completed"),
+            ).where(
+                and_(
+                    Task.project_id.in_(project_ids),
+                    Task.organization_id == organization_id,
+                    Task.is_deleted == False,  # noqa: E712
+                )
+            ).group_by(Task.project_id)
+            result = await self.session.execute(stmt)
+
+            id_to_urn = {v: k for k, v in urn_to_id.items()}
+            for row in result.all():
+                urn = id_to_urn.get(row.project_id)
+                if not urn or urn not in results:
+                    continue
+                results[urn].total_tasks = row.total
+                results[urn].completed_tasks = row.completed
+        except Exception:
+            logger.warning("Failed to enrich project live state", exc_info=True)
 
     def _can_access(
         self,

@@ -28,6 +28,7 @@ from uniffy.core.models.shared import (
 )
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
 
 
@@ -495,6 +496,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_edit(user_id, organization_id, event)
 
+        # Snapshot fields for mention state change detection
+        old_title = event.title
+        old_start_time = event.start_time
+        old_end_time = event.end_time
+
         title_changed = title is not None and title != event.title
 
         # Snapshot old mentions before description update for diff
@@ -663,6 +669,30 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                         target_user_ids=list(newly_mentioned),
                     )
+                )
+
+        # Publish mention state changes for real-time mention updates
+        mention_changes: dict[str, str] = {}
+        if event.title != old_title:
+            mention_changes["title"] = event.title
+        if event.start_time != old_start_time:
+            mention_changes["start_time"] = event.start_time.isoformat()
+        if event.end_time != old_end_time:
+            mention_changes["end_time"] = event.end_time.isoformat()
+
+        if mention_changes:
+            try:
+                event_urn = build_content_urn(ContentType.CALENDAR_EVENT, event.id)
+                await publish_mention_state(
+                    organization_id=organization_id,
+                    urn=event_urn,
+                    changes=mention_changes,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to publish calendar event mention state change",
+                    event_id=str(event_id),
+                    exc_info=True,
                 )
 
         return event

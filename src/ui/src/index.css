@@ -120,6 +120,16 @@
   border-color: color-mix(in srgb, var(--status-warning) 20%, transparent);
 }
 
+/* Live Mention Chip - breathing border glow when content is freshly updated */
+@keyframes mention-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 6px 1px hsl(var(--primary) / 0.25); }
+}
+
+.mention-chip-live {
+  animation: mention-live-pulse 2.5s ease-in-out 3;
+}
+
 /* Default values (fallback) - Light theme */
 :root {
   --primary: 217 91% 50%;

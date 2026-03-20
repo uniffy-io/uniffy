@@ -7,10 +7,12 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import React from 'react';
 import { Provider } from 'react-redux';
-import { MentionChip } from '@/components/editor/plugins/mention/MentionChip';
+import { MentionChip } from '@/components/mention';
 import { getStoreRef } from '@/app/storeRef';
 import { urnToPath } from '@/shared/utils/urn';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
+import { getResolvedUrl } from '@/components/editor/plugins/mention/useUrnPreview';
+import { getMentionUrl } from '@/components/mention/mentionStateEmitter';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
 
@@ -245,7 +247,8 @@ class MentionNodeView implements NodeView {
       e.stopImmediatePropagation();
 
       const { urn } = this.node.attrs as { urn: string };
-      const path = urnToPath(urn);
+      // Prefer resolved URL from search index (handles nested routes like tasks)
+      const path = getMentionUrl(urn) || getResolvedUrl(urn) || urnToPath(urn);
 
       if (path === '#') return;
 
@@ -380,8 +383,10 @@ export const mentionView = $view(mentionNode, () => (node: Node, view: EditorVie
 export const mentionPlugins = [...mentionRemarkPlugin, mentionNode, mentionInputRule, mentionView];
 
 // Re-export components and hooks for use in other features
-export { MentionChip, MentionChipBasic, MentionChipCompact } from '@/components/editor/plugins/mention/MentionChip';
-export { MentionPreview } from '@/components/editor/plugins/mention/MentionPreview';
+// Chip components now live in shared @/components/mention/ with live state support
+export { MentionChip, MentionChipBasic, MentionChipCompact } from '@/components/mention';
+export { MentionPreview } from '@/components/mention';
 export { MentionSearch } from '@/components/editor/plugins/mention/MentionSearch';
 export { useUrnPreview, clearPreviewCache, invalidatePreviewCache, invalidateNotePreviewCache } from '@/components/editor/plugins/mention/useUrnPreview';
 export type { UrnPreviewData } from '@/components/editor/plugins/mention/useUrnPreview';
+export type { MentionLiveState, TaskStatus, FileProcessingStatus } from '@/components/mention';

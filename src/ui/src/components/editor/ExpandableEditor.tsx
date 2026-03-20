@@ -103,7 +103,7 @@ export function ExpandableEditor({
       {fullPreview ? (
         <div className="relative group">
           {hasContent ? (
-            <div className="pointer-events-none expandable-editor-preview">
+            <div className="expandable-editor-preview [&_.ProseMirror]:pointer-events-none [&_.mention-wrapper]:pointer-events-auto">
               <CrepeEditor
                 contentType={contentType}
                 contentId={contentId}
@@ -152,7 +152,7 @@ export function ExpandableEditor({
           )}
         >
           {hasContent ? (
-            <div className="max-h-[100px] overflow-hidden pointer-events-none expandable-editor-preview">
+            <div className="max-h-[100px] overflow-hidden expandable-editor-preview [&_.ProseMirror]:pointer-events-none [&_.mention-wrapper]:pointer-events-auto">
               <CrepeEditor
                 contentType={contentType}
                 contentId={contentId}

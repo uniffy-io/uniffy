@@ -14,6 +14,7 @@ import { notificationsApi } from '@/features/notifications/api/notificationsApi'
 import { addRealtimeNotification } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { updatePresenceWithCustomStatus } from '@/features/presence/store/presenceSlice';
+import { emitMentionStateChange } from '@/components/mention';
 import { StreamNotificationEvent_EventType } from '@/gen/notifications/v1/notifications_pb';
 
 const MAX_BACKOFF_MS = 30000;
@@ -111,6 +112,18 @@ export function useNotificationStream() {
                                         : undefined,
                                 }),
                             );
+                        }
+
+                        // Mention state changed (live mentions)
+                        if (
+                            event.eventType ===
+                                StreamNotificationEvent_EventType.MENTION_STATE_CHANGED &&
+                            event.mentionStateChanged
+                        ) {
+                            const mc = event.mentionStateChanged;
+                            if (mc.urn && mc.changes) {
+                                emitMentionStateChange(mc.urn, mc.changes);
+                            }
                         }
 
                         // Heartbeats are silently consumed (keep-alive)
