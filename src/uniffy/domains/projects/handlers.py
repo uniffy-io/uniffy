@@ -435,7 +435,20 @@ class ProjectsHandlers:
                     **kwargs,
                 )
 
-                return TaskResponse(task=task_to_proto(task))
+                # If subtask, load parent with updated counts
+                updated_parent_proto = None
+                if task.parent_id:
+                    parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
+                    parent_counts = await queries.get_subtask_counts(session, [parent.id])
+                    p_total, p_done = parent_counts.get(parent.id, (0, 0))
+                    updated_parent_proto = task_to_proto(
+                        parent, subtask_total=p_total, subtask_completed=p_done
+                    )
+
+                return TaskResponse(
+                    task=task_to_proto(task),
+                    updated_parent=updated_parent_proto,
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Project not found")
@@ -566,7 +579,26 @@ class ProjectsHandlers:
 
                 task = await ops.update(user_id, organization_id, task_id, **updates)
 
-                return TaskResponse(task=task_to_proto(task))
+                # Load subtask counts for the updated task itself
+                subtask_counts = await queries.get_subtask_counts(session, [task.id])
+                st_total, st_done = subtask_counts.get(task.id, (0, 0))
+
+                # If this is a subtask, load updated parent with fresh counts
+                updated_parent_proto = None
+                if task.parent_id:
+                    parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
+                    parent_counts = await queries.get_subtask_counts(session, [parent.id])
+                    p_total, p_done = parent_counts.get(parent.id, (0, 0))
+                    updated_parent_proto = task_to_proto(
+                        parent, subtask_total=p_total, subtask_completed=p_done
+                    )
+
+                return TaskResponse(
+                    task=task_to_proto(
+                        task, subtask_total=st_total, subtask_completed=st_done
+                    ),
+                    updated_parent=updated_parent_proto,
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
@@ -605,7 +637,26 @@ class ProjectsHandlers:
                     request.sort_order,
                 )
 
-                return TaskResponse(task=task_to_proto(task))
+                # Load subtask counts for the moved task
+                subtask_counts = await queries.get_subtask_counts(session, [task.id])
+                st_total, st_done = subtask_counts.get(task.id, (0, 0))
+
+                # If subtask, load parent with fresh counts
+                updated_parent_proto = None
+                if task.parent_id:
+                    parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
+                    parent_counts = await queries.get_subtask_counts(session, [parent.id])
+                    p_total, p_done = parent_counts.get(parent.id, (0, 0))
+                    updated_parent_proto = task_to_proto(
+                        parent, subtask_total=p_total, subtask_completed=p_done
+                    )
+
+                return TaskResponse(
+                    task=task_to_proto(
+                        task, subtask_total=st_total, subtask_completed=st_done
+                    ),
+                    updated_parent=updated_parent_proto,
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Task not found")

@@ -30,7 +30,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash } from "@phosphor-icons/react";
+import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, CheckCircle } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -1198,6 +1198,12 @@ function TableRow({
               : <CaretRight size={12} />
             }
           </button>
+        )}
+        {task.subtaskTotal > 0 && (
+          <span className="mr-1.5 flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
+            <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+            {task.subtaskCompleted}/{task.subtaskTotal}
+          </span>
         )}
         <TaskTitleCell task={task} />
       </div>

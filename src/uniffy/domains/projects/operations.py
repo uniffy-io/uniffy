@@ -1032,6 +1032,54 @@ class TaskOperations(BaseContentOperations[Task]):
                     exc_info=True,
                 )
 
+        # Auto-complete parent when all subtasks are done
+        if task.parent_id and task.status == "status_done" and old_status != "status_done":
+            parent_counts = await queries.get_subtask_counts(self.session, [task.parent_id])
+            p_total, p_done = parent_counts.get(task.parent_id, (0, 0))
+            if p_total > 0 and p_total == p_done:
+                parent = await self.session.get(Task, task.parent_id)
+                if parent and parent.status != "status_done" and not parent.is_deleted:
+                    old_parent_status = parent.status
+                    parent.status = "status_done"
+                    parent.completed_at = datetime.now(UTC)
+                    parent.version += 1
+                    parent.updated_at = datetime.now(UTC)
+                    await self.session.commit()
+                    await self.session.refresh(parent)
+
+                    await self._log_activity(
+                        parent.id,
+                        user_id,
+                        "status_changed",
+                        field_id="field_status",
+                        previous_value=old_parent_status,
+                        new_value="status_done",
+                    )
+
+        # Reopen parent if a subtask is uncompleted
+        elif (
+            task.parent_id
+            and old_status == "status_done"
+            and task.status != "status_done"
+        ):
+            parent = await self.session.get(Task, task.parent_id)
+            if parent and parent.status == "status_done" and not parent.is_deleted:
+                parent.status = "status_in_progress"
+                parent.completed_at = None
+                parent.version += 1
+                parent.updated_at = datetime.now(UTC)
+                await self.session.commit()
+                await self.session.refresh(parent)
+
+                await self._log_activity(
+                    parent.id,
+                    user_id,
+                    "status_changed",
+                    field_id="field_status",
+                    previous_value="status_done",
+                    new_value="status_in_progress",
+                )
+
         return task
 
     async def move(

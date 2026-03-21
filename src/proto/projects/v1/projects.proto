@@ -360,6 +360,7 @@ message ListTasksRequest {
 
 message TaskResponse {
   Task task = 1;
+  optional Task updated_parent = 2;
 }
 
 message DeleteTaskResponse {

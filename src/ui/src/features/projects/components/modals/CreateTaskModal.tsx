@@ -122,14 +122,14 @@ export function CreateTaskModal() {
       ).unwrap();
 
       // Attach any files that were uploaded during creation (deferred mode)
-      if (pendingFileIdsRef.current.length > 0 && organizationId && result.id) {
+      if (pendingFileIdsRef.current.length > 0 && organizationId && result.task.id) {
         await Promise.all(
           pendingFileIdsRef.current.map((fileId) =>
             attachmentsApi.attachFile({
               organizationId,
               sourceFileId: fileId,
               contentType: ContentType.TASK,
-              contentId: result.id,
+              contentId: result.task.id,
             }).catch((err) => {
               console.error('[CreateTaskModal] Failed to attach file:', err);
             })
