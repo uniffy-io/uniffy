@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { X, Plus, CaretDown } from "@phosphor-icons/react";
+import { TaskRecurrenceSelector } from "@/features/projects/components/detail/TaskRecurrenceSelector";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ export function CreateTaskModal() {
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskType, setTaskType] = useState("task");
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
@@ -118,6 +120,7 @@ export function CreateTaskModal() {
           startDate: startDate || null,
           dueDate: dueDate || null,
           taskType,
+          recurrenceRule: recurrenceRule || null,
         })
       ).unwrap();
 
@@ -342,6 +345,15 @@ export function CreateTaskModal() {
                 />
               </div>
             </div>
+
+            {/* Recurrence */}
+            {dueDate && (
+              <TaskRecurrenceSelector
+                value={recurrenceRule}
+                onChange={setRecurrenceRule}
+                disabled={isSubmitting}
+              />
+            )}
           </div>
 
           {/* Footer */}

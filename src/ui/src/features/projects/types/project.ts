@@ -171,6 +171,7 @@ export interface CreateTaskRequest {
   blockedByTaskIds?: string[];
   estimatedMinutes?: number | null;
   timeSpentMinutes?: number | null;
+  recurrenceRule?: string | null;
 }
 
 export interface UpdateTaskRequest {
@@ -190,6 +191,7 @@ export interface UpdateTaskRequest {
   blockedByTaskIds?: string[];
   estimatedMinutes?: number | null;
   timeSpentMinutes?: number | null;
+  recurrenceRule?: string | null;
 }
 
 export interface MoveTaskRequest {

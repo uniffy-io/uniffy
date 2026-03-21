@@ -12,7 +12,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle, WarningCircle } from "@phosphor-icons/react";
+import { CheckCircle, WarningCircle, ArrowsClockwise } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
@@ -173,6 +173,13 @@ export function TaskCard({
                 <span className="flex items-center text-muted-foreground bg-muted px-1.5 py-0.5 rounded gap-1 text-[10px]">
                     <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
                     {task.subtaskCompleted}/{task.subtaskTotal}
+                </span>
+            )}
+
+            {/* Recurrence indicator */}
+            {task.recurrenceRule && (
+                <span title="Recurring task">
+                    <ArrowsClockwise size={12} className="text-muted-foreground" />
                 </span>
             )}
         </div>

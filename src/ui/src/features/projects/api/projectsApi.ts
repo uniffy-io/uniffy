@@ -530,6 +530,7 @@ export const projectsApi = {
       ...(data.sprintId !== undefined ? { sprintId: data.sprintId ?? "" } : {}),
       ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
       ...(data.blockedByTaskIds ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
+      ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
@@ -562,6 +563,7 @@ export const projectsApi = {
       ...(data.blockedByTaskIds !== undefined ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
       ...(data.estimatedMinutes !== undefined ? { estimatedMinutes: data.estimatedMinutes ?? 0 } : {}),
       ...(data.timeSpentMinutes !== undefined ? { timeSpentMinutes: data.timeSpentMinutes ?? 0 } : {}),
+      ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),

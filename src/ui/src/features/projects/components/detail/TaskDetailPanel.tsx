@@ -10,7 +10,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Repeat, Bell, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
+import { X, Bell, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -36,6 +36,7 @@ import { extractMentionsFromMarkdown, extractFallbackLabel } from "@/shared/util
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { SubtasksList } from "./SubtasksList";
+import { TaskRecurrenceSelector } from "./TaskRecurrenceSelector";
 import { ActivityLog } from "./ActivityLog";
 import { DependenciesList } from "./DependenciesList";
 
@@ -284,13 +285,12 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
                       {formatDateFull(task.dueDate)}
                     </span>
                     
-                    {/* Feature 9: Recurrence Indicator */}
-                    {task.recurrenceRule && (
-                       <div className="flex items-center text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          <Repeat size={12} className="mr-1" />
-                          Recurring
-                       </div>
-                    )}
+                    {/* Recurrence */}
+                    <TaskRecurrenceSelector
+                      value={task.recurrenceRule}
+                      onChange={(val) => dispatch(updateTask({ id: task.id, recurrenceRule: val }))}
+                      disabled={!canEdit}
+                    />
                   </div>
                 </div>
               )}
