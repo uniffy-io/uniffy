@@ -731,9 +731,10 @@ class TaskOperations(BaseContentOperations[Task]):
         )
         task_number = counter_result.scalar_one()
 
-        # Validate custom field values
-        if kwargs.get("field_values"):
-            await self._validate_field_values(project_id, kwargs["field_values"])
+        # Validate custom field values and type-required fields
+        await self._validate_field_values(
+            project_id, kwargs.get("field_values"), task_type=task_type
+        )
 
         # Validate blocked_by for circular dependencies
         if kwargs.get("blocked_by_task_ids"):
@@ -852,9 +853,14 @@ class TaskOperations(BaseContentOperations[Task]):
         if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:
             await self._validate_no_circular_dependency(task_id, kwargs["blocked_by_task_ids"])
 
-        # Custom field validation
-        if kwargs.get("field_values"):
-            await self._validate_field_values(task.project_id, kwargs["field_values"])
+        # Custom field validation (including type-required fields)
+        if kwargs.get("field_values") or kwargs.get("task_type"):
+            effective_type = kwargs.get("task_type", task.task_type)
+            await self._validate_field_values(
+                task.project_id,
+                kwargs.get("field_values"),
+                task_type=effective_type,
+            )
 
         # Snapshot for notification comparison
         old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else None
@@ -1385,7 +1391,8 @@ class TaskOperations(BaseContentOperations[Task]):
     async def _validate_field_values(
         self,
         project_id: UUID,
-        field_values: dict,
+        field_values: dict | None,
+        task_type: str | None = None,
     ) -> None:
         """
         Validate custom field values against project field definitions.
@@ -1394,8 +1401,10 @@ class TaskOperations(BaseContentOperations[Task]):
         ----------
         project_id : UUID
             Project ID.
-        field_values : dict
+        field_values : dict | None
             Field values to validate.
+        task_type : str | None
+            Task type for type-aware required field checking.
 
         Raises
         ------
@@ -1403,11 +1412,21 @@ class TaskOperations(BaseContentOperations[Task]):
             If any field values are invalid.
 
         """
-        if not field_values:
-            return
-
         field_defs = await queries.get_fields_for_project(self.session, project_id)
-        errors = validate_field_values(field_values, field_defs)
+
+        # Load project type_field_schemas for type-aware validation
+        type_field_schemas = None
+        if task_type:
+            result = await self.session.get(Project, project_id)
+            if result:
+                type_field_schemas = result.type_field_schemas
+
+        errors = validate_field_values(
+            field_values or {},
+            field_defs,
+            task_type=task_type,
+            type_field_schemas=type_field_schemas,
+        )
         if errors:
             raise ValidationError("field_values", "; ".join(errors))
 

@@ -13,6 +13,7 @@ import {
   FieldType as ProtoFieldType,
   ViewType as ProtoViewType,
   ActivityAction as ProtoActivityAction,
+  TypeFieldSchema as ProtoTypeFieldSchema,
 } from '@uniffy/proto/projects/v1/projects_pb';
 import type {
   Project as ProtoProject,
@@ -185,6 +186,15 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     urn: proto.urn,
     userPermissionLevel: proto.userPermissionLevel,
     slug: proto.slug,
+    typeFieldSchemas: Object.fromEntries(
+      Object.entries(proto.typeFieldSchemas).map(([typeName, schema]) => [
+        typeName,
+        {
+          shownFieldIds: [...schema.shownFieldIds],
+          requiredFieldIds: [...schema.requiredFieldIds],
+        },
+      ])
+    ),
   };
 }
 
@@ -430,6 +440,17 @@ export const projectsApi = {
     data: FrontendUpdateProjectRequest,
     organizationId: string
   ): Promise<{ project: Project }> => {
+    // Convert type field schemas to proto format
+    const typeFieldSchemas: Record<string, ProtoTypeFieldSchema> = {};
+    if (data.typeFieldSchemas) {
+      for (const [typeName, schema] of Object.entries(data.typeFieldSchemas)) {
+        typeFieldSchemas[typeName] = new ProtoTypeFieldSchema({
+          shownFieldIds: schema.shownFieldIds,
+          requiredFieldIds: schema.requiredFieldIds,
+        });
+      }
+    }
+
     const response = await projectsClient.updateProject({
       organizationId,
       projectId: data.id,
@@ -438,6 +459,7 @@ export const projectsApi = {
       icon: data.icon,
       color: data.color,
       visibility: data.visibility ? frontendVisibilityToProto(data.visibility) : undefined,
+      ...(data.typeFieldSchemas ? { typeFieldSchemas } : {}),
     });
     return {
       project: protoProjectToFrontend(response.project!),

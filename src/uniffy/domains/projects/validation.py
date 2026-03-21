@@ -14,6 +14,8 @@ from uniffy.core.models.projects.field_definition import FieldDefinition
 def validate_field_values(
     field_values: dict[str, Any],
     field_definitions: list[FieldDefinition],
+    task_type: str | None = None,
+    type_field_schemas: dict[str, Any] | None = None,
 ) -> list[str]:
     """
     Validate field values against their definitions.
@@ -24,6 +26,10 @@ def validate_field_values(
         Field ID to value mapping.
     field_definitions : list[FieldDefinition]
         Field definitions for the project.
+    task_type : str | None
+        Task type for type-aware required field checking.
+    type_field_schemas : dict[str, Any] | None
+        Per-type field schemas from the project.
 
     Returns
     -------
@@ -31,25 +37,40 @@ def validate_field_values(
         List of error messages. Empty list means all valid.
 
     """
-    if not field_values:
-        return []
-
     # Build lookup by field ID
     field_map = {f.id: f for f in field_definitions}
 
     errors: list[str] = []
-    for field_id, value in field_values.items():
-        field_def = field_map.get(field_id)
-        if not field_def:
-            # Unknown field IDs are silently ignored
-            continue
 
-        if value is None or value == "":
-            continue
+    # Validate provided field values
+    if field_values:
+        for field_id, value in field_values.items():
+            field_def = field_map.get(field_id)
+            if not field_def:
+                # Unknown field IDs are silently ignored
+                continue
 
-        error = _validate_single_field(field_def, value)
-        if error:
-            errors.append(f"Field '{field_def.name}': {error}")
+            if value is None or value == "":
+                continue
+
+            error = _validate_single_field(field_def, value)
+            if error:
+                errors.append(f"Field '{field_def.name}': {error}")
+
+    # Check required fields for this task type
+    if task_type and type_field_schemas:
+        schema = type_field_schemas.get(task_type)
+        if schema:
+            required_ids = schema.get("required_field_ids", [])
+            for req_id in required_ids:
+                field_def = field_map.get(req_id)
+                if not field_def:
+                    continue
+                value = field_values.get(req_id) if field_values else None
+                if value is None or value == "" or value == []:
+                    errors.append(
+                        f"Field '{field_def.name}' is required for {task_type} tasks"
+                    )
 
     return errors
 

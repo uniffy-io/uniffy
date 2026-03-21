@@ -27,6 +27,9 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     TaskActivity as ProtoTaskActivity,
 )
 from uniffy_proto.projects.v1.projects_pb2 import (
+    TypeFieldSchema as ProtoTypeFieldSchema,
+)
+from uniffy_proto.projects.v1.projects_pb2 import (
     ViewConfig as ProtoViewConfig,
 )
 
@@ -142,6 +145,14 @@ def project_to_proto(
         Proto project message.
 
     """
+    type_schemas_proto = {}
+    if project.type_field_schemas:
+        for type_name, schema in project.type_field_schemas.items():
+            type_schemas_proto[type_name] = ProtoTypeFieldSchema(
+                shown_field_ids=schema.get("shown_field_ids", []),
+                required_field_ids=schema.get("required_field_ids", []),
+            )
+
     proto = ProtoProject(
         id=str(project.id),
         organization_id=str(project.organization_id),
@@ -159,6 +170,7 @@ def project_to_proto(
         created_at=datetime_to_timestamp(project.created_at),
         updated_at=datetime_to_timestamp(project.updated_at),
         urn=project.urn,
+        type_field_schemas=type_schemas_proto,
     )
 
     if user_permission_level:

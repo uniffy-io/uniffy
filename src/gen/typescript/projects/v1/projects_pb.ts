@@ -257,6 +257,11 @@ export class Project extends Message<Project> {
    */
   slug = "";
 
+  /**
+   * @generated from field: map<string, projects.v1.TypeFieldSchema> type_field_schemas = 19;
+   */
+  typeFieldSchemas: { [key: string]: TypeFieldSchema } = {};
+
   constructor(data?: PartialMessage<Project>) {
     super();
     proto3.util.initPartial(data, this);
@@ -283,6 +288,7 @@ export class Project extends Message<Project> {
     { no: 16, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 17, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
     { no: 18, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 19, name: "type_field_schemas", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TypeFieldSchema} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Project {
@@ -607,6 +613,49 @@ export class FieldDefinition extends Message<FieldDefinition> {
 
   static equals(a: FieldDefinition | PlainMessage<FieldDefinition> | undefined, b: FieldDefinition | PlainMessage<FieldDefinition> | undefined): boolean {
     return proto3.util.equals(FieldDefinition, a, b);
+  }
+}
+
+/**
+ * @generated from message projects.v1.TypeFieldSchema
+ */
+export class TypeFieldSchema extends Message<TypeFieldSchema> {
+  /**
+   * @generated from field: repeated string shown_field_ids = 1;
+   */
+  shownFieldIds: string[] = [];
+
+  /**
+   * @generated from field: repeated string required_field_ids = 2;
+   */
+  requiredFieldIds: string[] = [];
+
+  constructor(data?: PartialMessage<TypeFieldSchema>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "projects.v1.TypeFieldSchema";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "shown_field_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "required_field_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeFieldSchema {
+    return new TypeFieldSchema().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypeFieldSchema {
+    return new TypeFieldSchema().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypeFieldSchema {
+    return new TypeFieldSchema().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypeFieldSchema | PlainMessage<TypeFieldSchema> | undefined, b: TypeFieldSchema | PlainMessage<TypeFieldSchema> | undefined): boolean {
+    return proto3.util.equals(TypeFieldSchema, a, b);
   }
 }
 
@@ -1102,6 +1151,11 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
    */
   slug?: string;
 
+  /**
+   * @generated from field: map<string, projects.v1.TypeFieldSchema> type_field_schemas = 11;
+   */
+  typeFieldSchemas: { [key: string]: TypeFieldSchema } = {};
+
   constructor(data?: PartialMessage<UpdateProjectRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1120,6 +1174,7 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
     { no: 8, name: "member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 9, name: "default_view_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "type_field_schemas", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TypeFieldSchema} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProjectRequest {

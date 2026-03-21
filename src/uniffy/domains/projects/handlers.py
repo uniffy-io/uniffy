@@ -226,6 +226,14 @@ class ProjectsHandlers:
                     updates["default_view_id"] = request.default_view_id
                 if request.HasField("slug"):
                     updates["slug"] = request.slug
+                if request.type_field_schemas:
+                    updates["type_field_schemas"] = {
+                        type_name: {
+                            "shown_field_ids": list(schema.shown_field_ids),
+                            "required_field_ids": list(schema.required_field_ids),
+                        }
+                        for type_name, schema in request.type_field_schemas.items()
+                    }
 
                 try:
                     project = await ops.update(user_id, organization_id, project_id, **updates)
