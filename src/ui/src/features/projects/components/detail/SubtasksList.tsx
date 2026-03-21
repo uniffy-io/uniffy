@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Plus, Circle, CheckCircle } from "@phosphor-icons/react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Plus, Circle, CheckCircle, CaretRight, CaretDown } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import type { Task } from "@/features/projects/types/project";
 
 const STATUS_DONE = "status_done";
 const STATUS_TODO = "status_todo";
+const MAX_DEPTH = 5;
 
 interface SubtasksListProps {
   taskId: string;
@@ -23,42 +24,42 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
   const subtasks = useAppSelector(selectSubtasksByParentId(taskId));
-  const [isAdding, setIsAdding] = useState(false);
+  const [addingForParentId, setAddingForParentId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isAdding) {
+    if (addingForParentId) {
       inputRef.current?.focus();
     }
-  }, [isAdding]);
+  }, [addingForParentId]);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     const title = newTitle.trim();
     if (title && project) {
       dispatch(
         createTask({
           projectId: project.id,
           title,
-          parentId: taskId,
+          parentId: addingForParentId || taskId,
           status: STATUS_TODO,
         })
       );
     }
     setNewTitle("");
-    setIsAdding(false);
-  };
+    setAddingForParentId(null);
+  }, [newTitle, project, addingForParentId, taskId, dispatch]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSubmit();
     } else if (e.key === "Escape") {
       setNewTitle("");
-      setIsAdding(false);
+      setAddingForParentId(null);
     }
-  };
+  }, [handleSubmit]);
 
-  const handleToggle = (subtask: Task) => {
+  const handleToggle = useCallback((subtask: Task) => {
     const isDone = !!subtask.completedAt;
     const newStatus = isDone ? STATUS_TODO : STATUS_DONE;
     dispatch(
@@ -69,11 +70,19 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
       })
     );
     dispatch(updateTask({ id: subtask.id, status: newStatus }));
-  };
+  }, [dispatch]);
+
+  const handleCreateSubtask = useCallback((parentId: string) => {
+    setAddingForParentId(parentId);
+    setNewTitle("");
+  }, []);
 
   const completedCount = parentCompleted
     ? subtasks.length
     : subtasks.filter((t) => t.completedAt).length;
+
+  // Determine if root-level inline add is active
+  const isRootAdding = addingForParentId === taskId;
 
   return (
     <div className="space-y-2">
@@ -93,13 +102,22 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
           <SubtaskItem
             key={subtask.id}
             task={subtask}
+            depth={0}
             onToggle={handleToggle}
+            onCreateSubtask={handleCreateSubtask}
             parentCompleted={parentCompleted}
+            addingForParentId={addingForParentId}
+            newTitle={newTitle}
+            onNewTitleChange={setNewTitle}
+            onKeyDown={handleKeyDown}
+            onSubmit={handleSubmit}
+            inputRef={inputRef}
           />
         ))}
 
-        {isAdding && (
+        {isRootAdding && (
           <div className="flex items-center gap-2 py-1 px-2">
+            <span className="w-3 shrink-0" />
             <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
@@ -115,12 +133,12 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
         )}
       </div>
 
-      {!isAdding && (
+      {!addingForParentId && (
         <Button
           variant="ghost"
           size="sm"
           className="w-full justify-start text-muted-foreground h-8 px-2 hover:bg-transparent hover:text-foreground"
-          onClick={() => setIsAdding(true)}
+          onClick={() => handleCreateSubtask(taskId)}
         >
           <Plus className="mr-2 h-3.5 w-3.5" />
           Add subtask
@@ -130,39 +148,143 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
   );
 }
 
+interface SubtaskItemProps {
+  task: Task;
+  depth: number;
+  onToggle: (task: Task) => void;
+  onCreateSubtask: (parentId: string) => void;
+  parentCompleted?: boolean;
+  addingForParentId: string | null;
+  newTitle: string;
+  onNewTitleChange: (value: string) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+  onSubmit: () => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+}
+
 function SubtaskItem({
   task,
+  depth,
   onToggle,
+  onCreateSubtask,
   parentCompleted,
-}: {
-  task: Task;
-  onToggle: (task: Task) => void;
-  parentCompleted?: boolean;
-}) {
+  addingForParentId,
+  newTitle,
+  onNewTitleChange,
+  onKeyDown,
+  onSubmit,
+  inputRef,
+}: SubtaskItemProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const subtasks = useAppSelector(selectSubtasksByParentId(task.id));
+  const hasChildren = task.subtaskTotal > 0;
   const isCompleted = parentCompleted || !!task.completedAt;
+  const canExpand = hasChildren && depth < MAX_DEPTH;
+  const isAddingHere = addingForParentId === task.id;
 
   return (
-    <div className="group flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted/50">
-      <button
-        type="button"
-        className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-        onClick={() => onToggle(task)}
-        disabled={parentCompleted}
+    <div>
+      <div
+        className="group flex items-center gap-2 py-1 rounded-md hover:bg-muted/50"
+        style={{ paddingLeft: 8 + depth * 16, paddingRight: 8 }}
       >
-        {isCompleted ? (
-          <CheckCircle className="h-4 w-4 text-primary" weight="fill" />
+        {/* Expand/collapse chevron */}
+        {canExpand ? (
+          <button
+            type="button"
+            className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? <CaretDown size={12} /> : <CaretRight size={12} />}
+          </button>
         ) : (
-          <Circle className="h-4 w-4" />
+          <span className="w-4 shrink-0" />
         )}
-      </button>
-      <span
-        className={cn(
-          "text-sm flex-1 truncate",
-          isCompleted && "text-muted-foreground line-through"
+
+        {/* Completion toggle */}
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+          onClick={() => onToggle(task)}
+          disabled={parentCompleted}
+        >
+          {isCompleted ? (
+            <CheckCircle className="h-4 w-4 text-primary" weight="fill" />
+          ) : (
+            <Circle className="h-4 w-4" />
+          )}
+        </button>
+
+        <span
+          className={cn(
+            "text-sm flex-1 truncate",
+            isCompleted && "text-muted-foreground line-through"
+          )}
+        >
+          {task.title}
+        </span>
+
+        {/* Subtask count badge */}
+        {hasChildren && (
+          <span className="text-[10px] text-muted-foreground shrink-0">
+            {task.subtaskCompleted}/{task.subtaskTotal}
+          </span>
         )}
-      >
-        {task.title}
-      </span>
+
+        {/* Add child button (hover-only, hidden at max depth) */}
+        {depth < MAX_DEPTH && (
+          <button
+            type="button"
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-foreground transition-all shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateSubtask(task.id);
+            }}
+            title="Add child subtask"
+          >
+            <Plus size={12} />
+          </button>
+        )}
+      </div>
+
+      {/* Recursive children */}
+      {isExpanded && canExpand && subtasks.map((child) => (
+        <SubtaskItem
+          key={child.id}
+          task={child}
+          depth={depth + 1}
+          onToggle={onToggle}
+          onCreateSubtask={onCreateSubtask}
+          parentCompleted={parentCompleted || isCompleted}
+          addingForParentId={addingForParentId}
+          newTitle={newTitle}
+          onNewTitleChange={onNewTitleChange}
+          onKeyDown={onKeyDown}
+          onSubmit={onSubmit}
+          inputRef={inputRef}
+        />
+      ))}
+
+      {/* Inline input for adding child to this item */}
+      {isAddingHere && (
+        <div
+          className="flex items-center gap-2 py-1"
+          style={{ paddingLeft: 8 + (depth + 1) * 16, paddingRight: 8 }}
+        >
+          <span className="w-4 shrink-0" />
+          <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={newTitle}
+            onChange={(e) => onNewTitleChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            onBlur={onSubmit}
+            placeholder="Subtask title..."
+            className="flex-1 text-sm bg-transparent outline-none border-b border-primary text-foreground placeholder:text-muted-foreground pb-0.5"
+          />
+        </div>
+      )}
     </div>
   );
 }

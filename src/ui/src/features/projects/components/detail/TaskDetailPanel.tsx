@@ -10,7 +10,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Repeat, Bell, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash } from "@phosphor-icons/react";
+import { X, Repeat, Bell, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -28,7 +28,7 @@ import { closeDetailPanel, selectTask } from "@/features/projects/store/projects
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { projectsApi } from "@/features/projects/api/projectsApi";
 import { formatMinutes, parseTimeInput } from "@/features/projects/utils/timeFormatting";
-import type { SelectOption, Sprint } from "@/features/projects/types";
+import type { SelectOption, Sprint, Task } from "@/features/projects/types";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 
 import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
@@ -78,6 +78,24 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Build ancestor chain for breadcrumb navigation (must be before early return)
+  const ancestorChain = useMemo(() => {
+    if (!task?.parentId) return [];
+    const chain: Array<{ id: string; title: string; number: number }> = [];
+    const tasksMap: Record<string, Task> = {};
+    for (const t of allProjectTasks) {
+      tasksMap[t.id] = t;
+    }
+    let currentId: string | null = task.parentId;
+    while (currentId && chain.length < 5) {
+      const ancestor: Task | undefined = tasksMap[currentId];
+      if (!ancestor) break;
+      chain.unshift({ id: ancestor.id, title: ancestor.title, number: ancestor.number });
+      currentId = ancestor.parentId;
+    }
+    return chain;
+  }, [task, allProjectTasks]);
 
   if (!task) {
     return (
@@ -134,6 +152,29 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
           )}
         </div>
       </div>
+
+      {/* Parent breadcrumbs */}
+      {ancestorChain.length > 0 && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground px-4 pt-2 flex-wrap">
+          {ancestorChain.map((ancestor, i) => (
+            <span key={ancestor.id} className="flex items-center gap-1">
+              {i > 0 && <CaretRight size={10} className="text-muted-foreground/50" />}
+              <button
+                type="button"
+                className="font-mono hover:text-foreground hover:underline transition-colors truncate max-w-[150px]"
+                onClick={() => dispatch(selectTask(ancestor.id))}
+                title={ancestor.title}
+              >
+                {project?.slug}-{ancestor.number}
+              </button>
+            </span>
+          ))}
+          <CaretRight size={10} className="text-muted-foreground/50" />
+          <span className="font-mono text-foreground font-medium">
+            {ticketId}
+          </span>
+        </div>
+      )}
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
