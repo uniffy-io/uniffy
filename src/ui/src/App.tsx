@@ -51,6 +51,7 @@ const FilesTagsPage = lazyImport(() => import('@/features/files/pages/FilesTagsP
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
 const TaskRedirectPage = lazyImport(() => import('@/features/projects/pages/TaskRedirectPage'), 'TaskRedirectPage');
 const AgentsPage = lazyImport(() => import('@/features/agents/pages/AgentsPage'), 'AgentsPage');
+const ChatPage = lazyImport(() => import('@/features/chat/pages/ChatPage'), 'ChatPage');
 const UserSettingsPage = lazyImport(() => import('@/features/settings/pages/SettingsPage'), 'SettingsPage');
 
 function ThemedToaster() {
@@ -359,6 +360,43 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><ProjectsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Chat routes */}
+                        <Route
+                            path="/chat"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/chat/unreads"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/chat/threads"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/chat/:channelId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
                                 </ProtectedRoute>
                             }
                         />

@@ -1,0 +1,121 @@
+// Chat domain types - mirrors proto definitions for mock/UI usage
+
+export type ChannelType = 'PUBLIC' | 'PRIVATE' | 'DIRECT' | 'GROUP_DM';
+export type ChannelRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+export type SenderType = 'USER' | 'AGENT' | 'SYSTEM' | 'GUEST';
+export type NotificationLevel = 'ALL' | 'MENTIONS' | 'NONE';
+export type MessageDensity = 'comfortable' | 'compact';
+
+export interface ChatChannelCategory {
+  id: string;
+  organizationId: string;
+  name: string;
+  position: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatChannel {
+  id: string;
+  organizationId: string;
+  ownerId: string;
+  name: string;
+  slug: string;
+  description: string;
+  channelType: ChannelType;
+  categoryId: string | null; // FK to ChatChannelCategory, null = uncategorized
+  isEncrypted: boolean;
+  isArchived: boolean;
+  isDefault: boolean;
+  isDeleted: boolean;
+  icon: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Stats (from ChatChannelStats)
+  messageCount: number;
+  rootMessageCount: number;
+  lastMessageAt: string | null;
+  lastRootMessageAt: string | null;
+  memberCount: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  channelId: string;
+  senderId: string;
+  senderType: SenderType;
+  content: string; // markdown with [[[label|urn]]] mentions
+  rootId: string | null; // null = root message, set = thread reply
+  editedAt: string | null;
+  isDeleted: boolean;
+  isPinned: boolean;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  // Denormalized thread info (only on root messages that have replies)
+  thread?: {
+    replyCount: number;
+    lastReplyAt: string;
+    participantIds: string[];
+  };
+}
+
+export interface ChatChannelMember {
+  channelId: string;
+  userId: string;
+  role: ChannelRole;
+  notificationLevel: NotificationLevel;
+  isMuted: boolean;
+  joinedAt: string;
+}
+
+export interface ChatReaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+}
+
+export interface ChatReadCursor {
+  channelId: string;
+  userId: string;
+  lastReadMessageId: string;
+  lastReadAt: string;
+}
+
+export interface ChatThreadFollow {
+  rootMessageId: string;
+  userId: string;
+  createdAt: string;
+}
+
+export interface ChatResource {
+  id: string;
+  channelId: string;
+  urn: string;
+  contentType: string; // NOTE, FILE, TASK, CALENDAR_EVENT, PROJECT
+  firstMentionedAt: string;
+  lastMentionedAt: string;
+  mentionCount: number;
+  firstMentionedBy: string;
+}
+
+export interface ThreadInboxItem {
+  rootMessageId: string;
+  channelId: string;
+  channelName: string;
+  rootMessageContent: string;
+  rootMessageSenderId: string;
+  replyCount: number;
+  lastReplyAt: string;
+  participantIds: string[];
+  hasUnread: boolean;
+}
+
+export interface TypingUser {
+  userId: string;
+  displayName: string;
+  startedAt: number;
+}
