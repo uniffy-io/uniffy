@@ -21,7 +21,8 @@ import { selectCurrentProject } from "../../store/projectsSlice";
 import { closeCreateTaskModal } from "../../store/projectsUiSlice";
 import { createTask } from "../../store/projectsThunks";
 import { SYSTEM_FIELD_IDS } from "../../types";
-import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
+import { TASK_TYPES, getFieldsForTaskType } from "@/features/projects/utils/taskTypes";
+import type { FieldDefinition, FieldValue, SelectOption } from "@/features/projects/types";
 
 export function CreateTaskModal() {
   const dispatch = useAppDispatch();
@@ -35,6 +36,7 @@ export function CreateTaskModal() {
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null);
+  const [fieldValues, setFieldValues] = useState<Record<string, FieldValue>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskType, setTaskType] = useState("task");
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
@@ -103,9 +105,35 @@ export function CreateTaskModal() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isSubmitting, handleClose]);
 
+  // Compute visible custom fields for the selected task type
+  const typeCustomFields = useMemo((): { fields: FieldDefinition[]; requiredIds: Set<string> } => {
+    if (!project) return { fields: [], requiredIds: new Set() };
+    const { visibleFieldIds, requiredFieldIds } = getFieldsForTaskType(
+      project.fieldDefinitions,
+      taskType,
+      project.typeFieldSchemas || {},
+    );
+    const fields = project.fieldDefinitions.filter(
+      (f) => !f.isSystem && visibleFieldIds.has(f.id)
+    );
+    return { fields, requiredIds: requiredFieldIds };
+  }, [project, taskType]);
+
+  const handleFieldValueChange = useCallback((fieldId: string, value: FieldValue) => {
+    setFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !project) return;
+
+    // Build field values to send (only non-empty)
+    const submittableFieldValues: Record<string, FieldValue> = {};
+    for (const [k, v] of Object.entries(fieldValues)) {
+      if (v !== null && v !== "" && v !== undefined) {
+        submittableFieldValues[k] = v;
+      }
+    }
 
     setIsSubmitting(true);
     try {
@@ -121,6 +149,7 @@ export function CreateTaskModal() {
           dueDate: dueDate || null,
           taskType,
           recurrenceRule: recurrenceRule || null,
+          fieldValues: Object.keys(submittableFieldValues).length > 0 ? submittableFieldValues : undefined,
         })
       ).unwrap();
 
@@ -347,12 +376,64 @@ export function CreateTaskModal() {
             </div>
 
             {/* Recurrence */}
-            {dueDate && (
-              <TaskRecurrenceSelector
-                value={recurrenceRule}
-                onChange={setRecurrenceRule}
-                disabled={isSubmitting}
-              />
+            <TaskRecurrenceSelector
+              value={recurrenceRule}
+              onChange={setRecurrenceRule}
+              disabled={isSubmitting}
+            />
+
+            {/* Type-specific custom fields */}
+            {typeCustomFields.fields.length > 0 && (
+              <div className="space-y-3 pt-2 border-t border-border">
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                  Custom Fields
+                </span>
+                {typeCustomFields.fields.map((field) => {
+                  const isRequired = typeCustomFields.requiredIds.has(field.id);
+                  return (
+                    <div key={field.id}>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        {field.name}
+                        {isRequired && <span className="text-red-500 ml-0.5">*</span>}
+                      </label>
+                      {field.type === "single_select" ? (
+                        <Select
+                          value={(fieldValues[field.id] as string) ?? ""}
+                          onChange={(v) => handleFieldValueChange(field.id, v || null)}
+                          disabled={isSubmitting}
+                          options={(field.config.options as SelectOption[] | undefined)?.map((opt) => ({
+                            value: opt.id,
+                            label: opt.label,
+                          })) ?? []}
+                          placeholder={`Select ${field.name.toLowerCase()}...`}
+                          className="w-full"
+                        />
+                      ) : field.type === "number" ? (
+                        <Input
+                          type="number"
+                          value={(fieldValues[field.id] as string) ?? ""}
+                          onChange={(e) => handleFieldValueChange(field.id, e.target.value ? Number(e.target.value) : null)}
+                          disabled={isSubmitting}
+                        />
+                      ) : field.type === "date" ? (
+                        <DatePicker
+                          value={(fieldValues[field.id] as string) ?? ""}
+                          onChange={(v) => handleFieldValueChange(field.id, v || null)}
+                          disabled={isSubmitting}
+                        />
+                      ) : (
+                        <Input
+                          type="text"
+                          placeholder={field.name}
+                          value={(fieldValues[field.id] as string) ?? ""}
+                          onChange={(e) => handleFieldValueChange(field.id, e.target.value || null)}
+                          disabled={isSubmitting}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 

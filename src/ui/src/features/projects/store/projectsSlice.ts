@@ -300,10 +300,13 @@ export const projectsSlice = createSlice({
       })
       .addCase(updateTask.fulfilled, (state, action) => {
         state.loading.updating = null;
-        const { task, updatedParent } = action.payload;
+        const { task, updatedParent, spawnedTask } = action.payload;
         state.tasks[task.id] = task;
         if (updatedParent) {
           state.tasks[updatedParent.id] = updatedParent;
+        }
+        if (spawnedTask) {
+          state.tasks[spawnedTask.id] = spawnedTask;
         }
         state._pendingTaskSnapshot = undefined;
       })
@@ -321,10 +324,13 @@ export const projectsSlice = createSlice({
     // ===== Move Task =====
     builder
       .addCase(moveTask.fulfilled, (state, action) => {
-        const { task, updatedParent } = action.payload;
+        const { task, updatedParent, spawnedTask } = action.payload;
         state.tasks[task.id] = task;
         if (updatedParent) {
           state.tasks[updatedParent.id] = updatedParent;
+        }
+        if (spawnedTask) {
+          state.tasks[spawnedTask.id] = spawnedTask;
         }
         state._pendingTaskSnapshot = undefined;
       })

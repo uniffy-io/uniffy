@@ -574,12 +574,14 @@ class ListTasksRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., backlog_only: _Optional[bool] = ...) -> None: ...
 
 class TaskResponse(_message.Message):
-    __slots__ = ("task", "updated_parent")
+    __slots__ = ("task", "updated_parent", "spawned_task")
     TASK_FIELD_NUMBER: _ClassVar[int]
     UPDATED_PARENT_FIELD_NUMBER: _ClassVar[int]
+    SPAWNED_TASK_FIELD_NUMBER: _ClassVar[int]
     task: Task
     updated_parent: Task
-    def __init__(self, task: _Optional[_Union[Task, _Mapping]] = ..., updated_parent: _Optional[_Union[Task, _Mapping]] = ...) -> None: ...
+    spawned_task: Task
+    def __init__(self, task: _Optional[_Union[Task, _Mapping]] = ..., updated_parent: _Optional[_Union[Task, _Mapping]] = ..., spawned_task: _Optional[_Union[Task, _Mapping]] = ...) -> None: ...
 
 class DeleteTaskResponse(_message.Message):
     __slots__ = ("success", "message")

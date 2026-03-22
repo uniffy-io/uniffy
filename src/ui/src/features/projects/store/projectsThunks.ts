@@ -149,7 +149,7 @@ export const createTask = createAsyncThunk<{ task: Task; updatedParent?: Task },
 /**
  * Update an existing task
  */
-export const updateTask = createAsyncThunk<{ task: Task; updatedParent?: Task }, UpdateTaskRequest, { rejectValue: string }>(
+export const updateTask = createAsyncThunk<{ task: Task; updatedParent?: Task; spawnedTask?: Task }, UpdateTaskRequest, { rejectValue: string }>(
   "projects/updateTask",
   async (data, { getState, rejectWithValue }) => {
     try {
@@ -158,7 +158,7 @@ export const updateTask = createAsyncThunk<{ task: Task; updatedParent?: Task },
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.updateTask(data, orgId);
-      return { task: response.task, updatedParent: response.updatedParent };
+      return { task: response.task, updatedParent: response.updatedParent, spawnedTask: response.spawnedTask };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update task");
     }
@@ -169,7 +169,7 @@ export const updateTask = createAsyncThunk<{ task: Task; updatedParent?: Task },
  * Move a task to a different status/position
  * Used for drag-and-drop operations
  */
-export const moveTask = createAsyncThunk<{ task: Task; updatedParent?: Task }, MoveTaskRequest, { rejectValue: string }>(
+export const moveTask = createAsyncThunk<{ task: Task; updatedParent?: Task; spawnedTask?: Task }, MoveTaskRequest, { rejectValue: string }>(
   "projects/moveTask",
   async (data, { getState, rejectWithValue }) => {
     try {
@@ -178,7 +178,7 @@ export const moveTask = createAsyncThunk<{ task: Task; updatedParent?: Task }, M
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.moveTask(data, orgId);
-      return { task: response.task, updatedParent: response.updatedParent };
+      return { task: response.task, updatedParent: response.updatedParent, spawnedTask: response.spawnedTask };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to move task");
     }

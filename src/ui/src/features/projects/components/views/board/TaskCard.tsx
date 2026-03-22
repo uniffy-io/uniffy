@@ -173,6 +173,9 @@ export function TaskCard({
                 <span className="flex items-center text-muted-foreground bg-muted px-1.5 py-0.5 rounded gap-1 text-[10px]">
                     <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
                     {task.subtaskCompleted}/{task.subtaskTotal}
+                    <span className="text-muted-foreground/70">
+                      ({Math.round((task.subtaskCompleted / task.subtaskTotal) * 100)}%)
+                    </span>
                 </span>
             )}
 

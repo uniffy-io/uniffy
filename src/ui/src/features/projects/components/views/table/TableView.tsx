@@ -30,7 +30,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, CheckCircle } from "@phosphor-icons/react";
+import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, CheckCircle, ArrowBendDownRight } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -116,6 +116,32 @@ export function TableView() {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   // Track create field dialog
   const [isCreateFieldOpen, setIsCreateFieldOpen] = useState(false);
+  // Track known task IDs so we can detect newly created subtasks
+  const knownTaskIdsRef = useRef<Set<string>>(new Set());
+
+  // Auto-expand parent when a new subtask is created
+  useEffect(() => {
+    const currentIds = new Set(Object.keys(allTasks));
+    const known = knownTaskIdsRef.current;
+
+    // Find newly added tasks
+    for (const id of currentIds) {
+      if (!known.has(id)) {
+        const task = allTasks[id];
+        if (task?.parentId) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-expanding parent when new subtask is created
+          setExpandedParents((prev) => {
+            if (prev.has(task.parentId!)) return prev;
+            const next = new Set(prev);
+            next.add(task.parentId!);
+            return next;
+          });
+        }
+      }
+    }
+
+    knownTaskIdsRef.current = currentIds;
+  }, [allTasks]);
 
   // Get visible fields (system + custom, excluding title)
   const visibleFields = useMemo(() => {
@@ -1172,7 +1198,10 @@ function TableRow({
         {...(isSubtask ? {} : dragHandleProps)}
         onClick={(e) => e.stopPropagation()}
       >
-        {!isSubtask && <DotsSixVertical size={14} />}
+        {isSubtask
+          ? <ArrowBendDownRight size={12} className="text-muted-foreground/40" />
+          : <DotsSixVertical size={14} />
+        }
       </div>
 
       {/* Checkbox Column */}

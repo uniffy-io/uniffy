@@ -2589,6 +2589,7 @@ type TaskResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Task          *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
 	UpdatedParent *Task                  `protobuf:"bytes,2,opt,name=updated_parent,json=updatedParent,proto3,oneof" json:"updated_parent,omitempty"`
+	SpawnedTask   *Task                  `protobuf:"bytes,3,opt,name=spawned_task,json=spawnedTask,proto3,oneof" json:"spawned_task,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2633,6 +2634,13 @@ func (x *TaskResponse) GetTask() *Task {
 func (x *TaskResponse) GetUpdatedParent() *Task {
 	if x != nil {
 		return x.UpdatedParent
+	}
+	return nil
+}
+
+func (x *TaskResponse) GetSpawnedTask() *Task {
+	if x != nil {
+		return x.SpawnedTask
 	}
 	return nil
 }
@@ -4804,11 +4812,13 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"_parent_idB\f\n" +
 	"\n" +
 	"_sprint_idB\x0f\n" +
-	"\r_backlog_only\"\x87\x01\n" +
+	"\r_backlog_only\"\xd3\x01\n" +
 	"\fTaskResponse\x12%\n" +
 	"\x04task\x18\x01 \x01(\v2\x11.projects.v1.TaskR\x04task\x12=\n" +
-	"\x0eupdated_parent\x18\x02 \x01(\v2\x11.projects.v1.TaskH\x00R\rupdatedParent\x88\x01\x01B\x11\n" +
-	"\x0f_updated_parent\"H\n" +
+	"\x0eupdated_parent\x18\x02 \x01(\v2\x11.projects.v1.TaskH\x00R\rupdatedParent\x88\x01\x01\x129\n" +
+	"\fspawned_task\x18\x03 \x01(\v2\x11.projects.v1.TaskH\x01R\vspawnedTask\x88\x01\x01B\x11\n" +
+	"\x0f_updated_parentB\x0f\n" +
+	"\r_spawned_task\"H\n" +
 	"\x12DeleteTaskResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"T\n" +
@@ -5168,84 +5178,85 @@ var file_projects_v1_projects_proto_depIdxs = []int32{
 	68, // 34: projects.v1.ListTasksRequest.pagination:type_name -> common.v1.PaginationRequest
 	4,  // 35: projects.v1.TaskResponse.task:type_name -> projects.v1.Task
 	4,  // 36: projects.v1.TaskResponse.updated_parent:type_name -> projects.v1.Task
-	4,  // 37: projects.v1.BulkUpdateTasksResponse.tasks:type_name -> projects.v1.Task
-	4,  // 38: projects.v1.ListTasksResponse.tasks:type_name -> projects.v1.Task
-	69, // 39: projects.v1.ListTasksResponse.pagination:type_name -> common.v1.PaginationResponse
-	0,  // 40: projects.v1.CreateFieldRequest.type:type_name -> projects.v1.FieldType
-	5,  // 41: projects.v1.FieldResponse.field:type_name -> projects.v1.FieldDefinition
-	1,  // 42: projects.v1.CreateViewRequest.type:type_name -> projects.v1.ViewType
-	7,  // 43: projects.v1.ViewResponse.view:type_name -> projects.v1.ViewConfig
-	10, // 44: projects.v1.SprintResponse.sprint:type_name -> projects.v1.Sprint
-	10, // 45: projects.v1.ListSprintsResponse.sprints:type_name -> projects.v1.Sprint
-	68, // 46: projects.v1.ListActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
-	8,  // 47: projects.v1.ListActivitiesResponse.activities:type_name -> projects.v1.TaskActivity
-	69, // 48: projects.v1.ListActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
-	64, // 49: projects.v1.BulkCheckTaskWatchersResponse.watched_tasks:type_name -> projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
-	6,  // 50: projects.v1.Project.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
-	6,  // 51: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
-	11, // 52: projects.v1.ProjectsService.CreateProject:input_type -> projects.v1.CreateProjectRequest
-	12, // 53: projects.v1.ProjectsService.GetProject:input_type -> projects.v1.GetProjectRequest
-	13, // 54: projects.v1.ProjectsService.UpdateProject:input_type -> projects.v1.UpdateProjectRequest
-	14, // 55: projects.v1.ProjectsService.DeleteProject:input_type -> projects.v1.DeleteProjectRequest
-	15, // 56: projects.v1.ProjectsService.ListProjects:input_type -> projects.v1.ListProjectsRequest
-	19, // 57: projects.v1.ProjectsService.CreateTask:input_type -> projects.v1.CreateTaskRequest
-	20, // 58: projects.v1.ProjectsService.GetTask:input_type -> projects.v1.GetTaskRequest
-	21, // 59: projects.v1.ProjectsService.UpdateTask:input_type -> projects.v1.UpdateTaskRequest
-	24, // 60: projects.v1.ProjectsService.DeleteTask:input_type -> projects.v1.DeleteTaskRequest
-	26, // 61: projects.v1.ProjectsService.ListTasks:input_type -> projects.v1.ListTasksRequest
-	22, // 62: projects.v1.ProjectsService.MoveTask:input_type -> projects.v1.MoveTaskRequest
-	23, // 63: projects.v1.ProjectsService.BulkUpdateTasks:input_type -> projects.v1.BulkUpdateTasksRequest
-	25, // 64: projects.v1.ProjectsService.DeleteTasks:input_type -> projects.v1.DeleteTasksRequest
-	32, // 65: projects.v1.ProjectsService.CreateField:input_type -> projects.v1.CreateFieldRequest
-	33, // 66: projects.v1.ProjectsService.UpdateField:input_type -> projects.v1.UpdateFieldRequest
-	34, // 67: projects.v1.ProjectsService.DeleteField:input_type -> projects.v1.DeleteFieldRequest
-	37, // 68: projects.v1.ProjectsService.CreateView:input_type -> projects.v1.CreateViewRequest
-	38, // 69: projects.v1.ProjectsService.UpdateView:input_type -> projects.v1.UpdateViewRequest
-	39, // 70: projects.v1.ProjectsService.DeleteView:input_type -> projects.v1.DeleteViewRequest
-	51, // 71: projects.v1.ProjectsService.ListActivities:input_type -> projects.v1.ListActivitiesRequest
-	42, // 72: projects.v1.ProjectsService.CreateSprint:input_type -> projects.v1.CreateSprintRequest
-	43, // 73: projects.v1.ProjectsService.UpdateSprint:input_type -> projects.v1.UpdateSprintRequest
-	44, // 74: projects.v1.ProjectsService.StartSprint:input_type -> projects.v1.StartSprintRequest
-	45, // 75: projects.v1.ProjectsService.CompleteSprint:input_type -> projects.v1.CompleteSprintRequest
-	46, // 76: projects.v1.ProjectsService.DeleteSprint:input_type -> projects.v1.DeleteSprintRequest
-	47, // 77: projects.v1.ProjectsService.ListSprints:input_type -> projects.v1.ListSprintsRequest
-	53, // 78: projects.v1.ProjectsService.ToggleTaskWatcher:input_type -> projects.v1.ToggleTaskWatcherRequest
-	55, // 79: projects.v1.ProjectsService.ListTaskWatchers:input_type -> projects.v1.ListTaskWatchersRequest
-	57, // 80: projects.v1.ProjectsService.BulkCheckTaskWatchers:input_type -> projects.v1.BulkCheckTaskWatchersRequest
-	16, // 81: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.ProjectResponse
-	16, // 82: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.ProjectResponse
-	16, // 83: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.ProjectResponse
-	17, // 84: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
-	18, // 85: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
-	27, // 86: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.TaskResponse
-	27, // 87: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.TaskResponse
-	27, // 88: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.TaskResponse
-	28, // 89: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
-	31, // 90: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
-	27, // 91: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.TaskResponse
-	30, // 92: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
-	29, // 93: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
-	35, // 94: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.FieldResponse
-	35, // 95: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.FieldResponse
-	36, // 96: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
-	40, // 97: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.ViewResponse
-	40, // 98: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.ViewResponse
-	41, // 99: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
-	52, // 100: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
-	48, // 101: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.SprintResponse
-	48, // 102: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.SprintResponse
-	48, // 103: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.SprintResponse
-	48, // 104: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.SprintResponse
-	49, // 105: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
-	50, // 106: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
-	54, // 107: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
-	56, // 108: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
-	58, // 109: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
-	81, // [81:110] is the sub-list for method output_type
-	52, // [52:81] is the sub-list for method input_type
-	52, // [52:52] is the sub-list for extension type_name
-	52, // [52:52] is the sub-list for extension extendee
-	0,  // [0:52] is the sub-list for field type_name
+	4,  // 37: projects.v1.TaskResponse.spawned_task:type_name -> projects.v1.Task
+	4,  // 38: projects.v1.BulkUpdateTasksResponse.tasks:type_name -> projects.v1.Task
+	4,  // 39: projects.v1.ListTasksResponse.tasks:type_name -> projects.v1.Task
+	69, // 40: projects.v1.ListTasksResponse.pagination:type_name -> common.v1.PaginationResponse
+	0,  // 41: projects.v1.CreateFieldRequest.type:type_name -> projects.v1.FieldType
+	5,  // 42: projects.v1.FieldResponse.field:type_name -> projects.v1.FieldDefinition
+	1,  // 43: projects.v1.CreateViewRequest.type:type_name -> projects.v1.ViewType
+	7,  // 44: projects.v1.ViewResponse.view:type_name -> projects.v1.ViewConfig
+	10, // 45: projects.v1.SprintResponse.sprint:type_name -> projects.v1.Sprint
+	10, // 46: projects.v1.ListSprintsResponse.sprints:type_name -> projects.v1.Sprint
+	68, // 47: projects.v1.ListActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
+	8,  // 48: projects.v1.ListActivitiesResponse.activities:type_name -> projects.v1.TaskActivity
+	69, // 49: projects.v1.ListActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
+	64, // 50: projects.v1.BulkCheckTaskWatchersResponse.watched_tasks:type_name -> projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
+	6,  // 51: projects.v1.Project.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
+	6,  // 52: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
+	11, // 53: projects.v1.ProjectsService.CreateProject:input_type -> projects.v1.CreateProjectRequest
+	12, // 54: projects.v1.ProjectsService.GetProject:input_type -> projects.v1.GetProjectRequest
+	13, // 55: projects.v1.ProjectsService.UpdateProject:input_type -> projects.v1.UpdateProjectRequest
+	14, // 56: projects.v1.ProjectsService.DeleteProject:input_type -> projects.v1.DeleteProjectRequest
+	15, // 57: projects.v1.ProjectsService.ListProjects:input_type -> projects.v1.ListProjectsRequest
+	19, // 58: projects.v1.ProjectsService.CreateTask:input_type -> projects.v1.CreateTaskRequest
+	20, // 59: projects.v1.ProjectsService.GetTask:input_type -> projects.v1.GetTaskRequest
+	21, // 60: projects.v1.ProjectsService.UpdateTask:input_type -> projects.v1.UpdateTaskRequest
+	24, // 61: projects.v1.ProjectsService.DeleteTask:input_type -> projects.v1.DeleteTaskRequest
+	26, // 62: projects.v1.ProjectsService.ListTasks:input_type -> projects.v1.ListTasksRequest
+	22, // 63: projects.v1.ProjectsService.MoveTask:input_type -> projects.v1.MoveTaskRequest
+	23, // 64: projects.v1.ProjectsService.BulkUpdateTasks:input_type -> projects.v1.BulkUpdateTasksRequest
+	25, // 65: projects.v1.ProjectsService.DeleteTasks:input_type -> projects.v1.DeleteTasksRequest
+	32, // 66: projects.v1.ProjectsService.CreateField:input_type -> projects.v1.CreateFieldRequest
+	33, // 67: projects.v1.ProjectsService.UpdateField:input_type -> projects.v1.UpdateFieldRequest
+	34, // 68: projects.v1.ProjectsService.DeleteField:input_type -> projects.v1.DeleteFieldRequest
+	37, // 69: projects.v1.ProjectsService.CreateView:input_type -> projects.v1.CreateViewRequest
+	38, // 70: projects.v1.ProjectsService.UpdateView:input_type -> projects.v1.UpdateViewRequest
+	39, // 71: projects.v1.ProjectsService.DeleteView:input_type -> projects.v1.DeleteViewRequest
+	51, // 72: projects.v1.ProjectsService.ListActivities:input_type -> projects.v1.ListActivitiesRequest
+	42, // 73: projects.v1.ProjectsService.CreateSprint:input_type -> projects.v1.CreateSprintRequest
+	43, // 74: projects.v1.ProjectsService.UpdateSprint:input_type -> projects.v1.UpdateSprintRequest
+	44, // 75: projects.v1.ProjectsService.StartSprint:input_type -> projects.v1.StartSprintRequest
+	45, // 76: projects.v1.ProjectsService.CompleteSprint:input_type -> projects.v1.CompleteSprintRequest
+	46, // 77: projects.v1.ProjectsService.DeleteSprint:input_type -> projects.v1.DeleteSprintRequest
+	47, // 78: projects.v1.ProjectsService.ListSprints:input_type -> projects.v1.ListSprintsRequest
+	53, // 79: projects.v1.ProjectsService.ToggleTaskWatcher:input_type -> projects.v1.ToggleTaskWatcherRequest
+	55, // 80: projects.v1.ProjectsService.ListTaskWatchers:input_type -> projects.v1.ListTaskWatchersRequest
+	57, // 81: projects.v1.ProjectsService.BulkCheckTaskWatchers:input_type -> projects.v1.BulkCheckTaskWatchersRequest
+	16, // 82: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.ProjectResponse
+	16, // 83: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.ProjectResponse
+	16, // 84: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.ProjectResponse
+	17, // 85: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
+	18, // 86: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
+	27, // 87: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.TaskResponse
+	27, // 88: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.TaskResponse
+	27, // 89: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.TaskResponse
+	28, // 90: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
+	31, // 91: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
+	27, // 92: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.TaskResponse
+	30, // 93: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
+	29, // 94: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
+	35, // 95: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.FieldResponse
+	35, // 96: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.FieldResponse
+	36, // 97: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
+	40, // 98: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.ViewResponse
+	40, // 99: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.ViewResponse
+	41, // 100: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
+	52, // 101: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
+	48, // 102: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.SprintResponse
+	48, // 103: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.SprintResponse
+	48, // 104: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.SprintResponse
+	48, // 105: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.SprintResponse
+	49, // 106: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
+	50, // 107: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
+	54, // 108: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
+	56, // 109: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
+	58, // 110: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
+	82, // [82:111] is the sub-list for method output_type
+	53, // [53:82] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_projects_v1_projects_proto_init() }

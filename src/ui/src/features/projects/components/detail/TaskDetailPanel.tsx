@@ -10,14 +10,13 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Bell, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
+import { X, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateFull, isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
@@ -277,24 +276,27 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               {task.dueDate && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground w-20">Due</span>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-sm",
-                      isOverdue(task.dueDate) && "text-destructive"
-                    )}>
-                      {formatDateFull(task.dueDate)}
-                    </span>
-                    
-                    {/* Recurrence */}
-                    <TaskRecurrenceSelector
-                      value={task.recurrenceRule}
-                      onChange={(val) => dispatch(updateTask({ id: task.id, recurrenceRule: val }))}
-                      disabled={!canEdit}
-                    />
-                  </div>
+                  <span className={cn(
+                    "text-sm",
+                    isOverdue(task.dueDate) && "text-destructive"
+                  )}>
+                    {formatDateFull(task.dueDate)}
+                  </span>
                 </div>
               )}
-              
+
+              {/* Recurrence */}
+              <div className="flex items-start gap-3">
+                <span className="text-sm text-muted-foreground w-20 pt-0.5">Repeat</span>
+                <div className="flex-1">
+                  <TaskRecurrenceSelector
+                    value={task.recurrenceRule}
+                    onChange={(val) => dispatch(updateTask({ id: task.id, recurrenceRule: val }))}
+                    disabled={!canEdit}
+                  />
+                </div>
+              </div>
+
               {/* Sprint */}
               {sprints.length > 0 && (
                 <div className="flex items-center gap-3">
@@ -328,14 +330,6 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
                 }}
               />
 
-              {/* Reminder (Visual Only) */}
-              <div className="flex items-center gap-3">
-                 <span className="text-sm text-muted-foreground w-20">Remind me</span>
-                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
-                    <Bell size={12} className="mr-1" />
-                    Set reminder
-                 </Button>
-              </div>
             </div>
           </div>
           

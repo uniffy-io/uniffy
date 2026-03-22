@@ -68,8 +68,10 @@ def validate_field_values(
                     continue
                 value = field_values.get(req_id) if field_values else None
                 if value is None or value == "" or value == []:
+                    type_label = task_type.replace("_", " ").title()
                     errors.append(
-                        f"Field '{field_def.name}' is required for {task_type} tasks"
+                        f"Please fill in the '{field_def.name}' field. "
+                        f"It is required for {type_label} tasks."
                     )
 
     return errors

@@ -430,7 +430,7 @@ class ProjectsHandlers:
                         # Try to decode as JSON, fallback to string
                         try:
                             field_values[key] = json.loads(value)
-                        except json.JSONDecodeError, ValueError:
+                        except (json.JSONDecodeError, ValueError):
                             field_values[key] = value
                     kwargs["field_values"] = field_values
 
@@ -581,11 +581,13 @@ class ProjectsHandlers:
                     for key, value in request.field_values.items():
                         try:
                             field_values[key] = json.loads(value)
-                        except json.JSONDecodeError, ValueError:
+                        except (json.JSONDecodeError, ValueError):
                             field_values[key] = value
                     updates["field_values"] = field_values
 
-                task = await ops.update(user_id, organization_id, task_id, **updates)
+                task, spawned_task = await ops.update(
+                    user_id, organization_id, task_id, **updates
+                )
 
                 # Load subtask counts for the updated task itself
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
@@ -601,11 +603,17 @@ class ProjectsHandlers:
                         parent, subtask_total=p_total, subtask_completed=p_done
                     )
 
+                # If a recurring task spawned a new instance, include it
+                spawned_proto = None
+                if spawned_task:
+                    spawned_proto = task_to_proto(spawned_task)
+
                 return TaskResponse(
                     task=task_to_proto(
                         task, subtask_total=st_total, subtask_completed=st_done
                     ),
                     updated_parent=updated_parent_proto,
+                    spawned_task=spawned_proto,
                 )
 
         except NotFoundError:
@@ -637,7 +645,7 @@ class ProjectsHandlers:
         try:
             async for session in get_async_session():
                 ops = TaskOperations(session)
-                task = await ops.move(
+                task, spawned_task = await ops.move(
                     user_id,
                     organization_id,
                     task_id,
@@ -659,11 +667,16 @@ class ProjectsHandlers:
                         parent, subtask_total=p_total, subtask_completed=p_done
                     )
 
+                spawned_proto = None
+                if spawned_task:
+                    spawned_proto = task_to_proto(spawned_task)
+
                 return TaskResponse(
                     task=task_to_proto(
                         task, subtask_total=st_total, subtask_completed=st_done
                     ),
                     updated_parent=updated_parent_proto,
+                    spawned_task=spawned_proto,
                 )
 
         except NotFoundError:
@@ -794,7 +807,7 @@ class ProjectsHandlers:
                             user_id, organization_id, task_id, permanent=request.permanent
                         )
                         count += 1
-                    except NotFoundError, PermissionDeniedError:
+                    except (NotFoundError, PermissionDeniedError):
                         # Skip tasks that can't be deleted
                         continue
 

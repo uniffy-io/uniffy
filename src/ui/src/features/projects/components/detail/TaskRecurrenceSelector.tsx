@@ -1,14 +1,15 @@
 /**
  * TaskRecurrenceSelector - Recurrence configuration for tasks.
  *
- * Allows users to configure how a task repeats: pattern, interval,
- * day-of-week toggles, day-of-month, and end conditions.
+ * Compact toggle with expandable configuration panel.
  * Stores/reads structured JSON in the task's recurrenceRule field.
  */
 
 import { useState, useMemo, useCallback } from "react";
-import { ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowsClockwise, CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 
 type RecurrencePattern = "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
 type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
@@ -76,9 +77,44 @@ function getEndCondition(config: RecurrenceConfig): EndCondition {
   return "never";
 }
 
+/**
+ * Build a human-readable summary of the recurrence config.
+ */
+function describeSummary(config: RecurrenceConfig): string {
+  const pattern = config.pattern as RecurrencePattern;
+  const interval = config.interval;
+  let desc = "";
+
+  if (pattern === "daily") {
+    desc = interval === 1 ? "Every day" : `Every ${interval} days`;
+  } else if (pattern === "weekly") {
+    desc = interval === 1 ? "Every week" : `Every ${interval} weeks`;
+  } else if (pattern === "biweekly") {
+    desc = "Every 2 weeks";
+  } else if (pattern === "monthly") {
+    desc = interval === 1 ? "Every month" : `Every ${interval} months`;
+    if (config.day_of_month) desc += ` on the ${config.day_of_month}${ordinalSuffix(config.day_of_month)}`;
+  } else if (pattern === "yearly") {
+    desc = interval === 1 ? "Every year" : `Every ${interval} years`;
+  }
+
+  if ((pattern === "weekly" || pattern === "biweekly") && config.days_of_week?.length) {
+    const dayNames = config.days_of_week.map((d) => d.charAt(0) + d.slice(1).toLowerCase().slice(0, 2));
+    desc += ` on ${dayNames.join(", ")}`;
+  }
+
+  return desc;
+}
+
+function ordinalSuffix(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
 const INPUT_CLASS = cn(
-  "w-16 px-2 py-1 text-xs border border-border rounded-md bg-background text-foreground text-center",
-  "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all",
+  "w-14 px-1.5 py-0.5 text-xs border border-border rounded bg-background text-foreground text-center",
+  "focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all",
   "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
 );
 
@@ -92,6 +128,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
   const config = useMemo(() => parseConfig(value), [value]);
   const isActive = config !== null;
   const pattern = (config?.pattern as RecurrencePattern) ?? "weekly";
+  const [isOpen, setIsOpen] = useState(false);
 
   const [endCondition, setEndCondition] = useState<EndCondition>(
     () => (config ? getEndCondition(config) : "never")
@@ -104,13 +141,15 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
   const handleToggle = useCallback(() => {
     if (isActive) {
       onChange(null);
+      setIsOpen(false);
     } else {
       emitChange({
         pattern: "weekly",
         interval: 1,
         days_of_week: [getTodayDayOfWeek()],
-        occurrences_created: 0,
+        occurrences_created: 1,
       });
+      setIsOpen(true);
     }
   }, [isActive, onChange, emitChange]);
 
@@ -120,16 +159,14 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
       interval: newPattern === "biweekly" ? 2 : (config?.interval ?? 1),
       occurrences_created: config?.occurrences_created ?? 0,
     };
-
-    if (newPattern === "daily" || newPattern === "weekly" || newPattern === "biweekly") {
-      base.days_of_week = newPattern === "daily" ? undefined : [getTodayDayOfWeek()];
+    if (newPattern === "weekly" || newPattern === "biweekly") {
+      base.days_of_week = config?.days_of_week?.length ? config.days_of_week : [getTodayDayOfWeek()];
     }
     if (newPattern === "monthly") {
       base.day_of_month = config?.day_of_month ?? new Date().getDate();
     }
     if (endCondition === "after") base.max_occurrences = config?.max_occurrences ?? 10;
     if (endCondition === "on_date") base.end_date = config?.end_date;
-
     emitChange(base);
   }, [config, endCondition, emitChange]);
 
@@ -155,11 +192,9 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
   const handleEndConditionChange = useCallback((condition: EndCondition) => {
     setEndCondition(condition);
     if (!config) return;
-
     const updated = { ...config };
     delete updated.max_occurrences;
     delete updated.end_date;
-
     if (condition === "after") updated.max_occurrences = 10;
     if (condition === "on_date") {
       const d = new Date();
@@ -172,45 +207,64 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
   const showDaysOfWeek = pattern === "weekly" || pattern === "biweekly";
   const showDayOfMonth = pattern === "monthly";
 
-  return (
-    <div className="space-y-2">
-      {/* Toggle */}
+  // Not active - show simple toggle
+  if (!isActive) {
+    return (
       <button
         type="button"
         disabled={disabled}
         onClick={handleToggle}
         className={cn(
-          "flex items-center gap-1.5 text-xs px-2 py-1 rounded-md transition-colors",
-          isActive
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted",
+          "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 py-1 rounded-md transition-colors",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
-        <ArrowsClockwise size={14} weight={isActive ? "fill" : "regular"} />
-        {isActive ? "Recurring" : "Set recurrence"}
+        <ArrowsClockwise size={13} />
+        Set recurrence
       </button>
+    );
+  }
 
-      {/* Config */}
-      {isActive && config && !disabled && (
-        <div className="space-y-3 pl-1">
-          {/* Pattern */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground shrink-0">Repeat</span>
-            <select
+  // Active - show summary with expand/collapse for editing
+  return (
+    <div className="space-y-1.5">
+      {/* Summary row */}
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          className="flex items-center gap-1.5 text-xs bg-primary/10 text-primary px-2 py-1 rounded-md transition-colors hover:bg-primary/15 flex-1 min-w-0"
+        >
+          <ArrowsClockwise size={13} weight="fill" className="shrink-0" />
+          <span className="truncate">{config ? describeSummary(config) : "Recurring"}</span>
+          {!disabled && (
+            isOpen ? <CaretDown size={10} className="shrink-0 ml-auto" /> : <CaretRight size={10} className="shrink-0 ml-auto" />
+          )}
+        </button>
+        {!disabled && (
+          <button
+            type="button"
+            onClick={handleToggle}
+            className="text-[10px] text-muted-foreground hover:text-destructive transition-colors shrink-0 px-1"
+            title="Remove recurrence"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Expanded config */}
+      {isOpen && !disabled && config && (
+        <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+          {/* Pattern + Interval row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
               value={pattern}
-              onChange={(e) => handlePatternChange(e.target.value as RecurrencePattern)}
-              className="text-xs border border-border rounded-md bg-background text-foreground px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              {PATTERNS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Interval */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground shrink-0">Every</span>
+              onChange={(v) => handlePatternChange(v as RecurrencePattern)}
+              options={PATTERNS.map((p) => ({ value: p.value, label: p.label }))}
+              className="w-28"
+            />
+            <span className="text-xs text-muted-foreground">every</span>
             <input
               type="number"
               min={1}
@@ -236,7 +290,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
                       "w-7 h-7 rounded-full text-[10px] font-medium transition-colors",
                       selected
                         ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
+                        : "bg-background text-muted-foreground hover:text-foreground border border-border"
                     )}
                     title={day.label}
                   >
@@ -250,7 +304,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
           {/* Day of month */}
           {showDayOfMonth && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">On day</span>
+              <span className="text-xs text-muted-foreground">on day</span>
               <input
                 type="number"
                 min={1}
@@ -263,29 +317,29 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
           )}
 
           {/* End condition */}
-          <div className="space-y-2">
-            <span className="text-xs text-muted-foreground">Ends</span>
-            <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name="endCondition"
-                  checked={endCondition === "never"}
-                  onChange={() => handleEndConditionChange("never")}
-                  className="h-3 w-3"
-                />
-                <span className="text-foreground">Never</span>
-              </label>
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name="endCondition"
-                  checked={endCondition === "after"}
-                  onChange={() => handleEndConditionChange("after")}
-                  className="h-3 w-3"
-                />
-                <span className="text-foreground">After</span>
-                {endCondition === "after" && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Ends</span>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input
+                type="radio"
+                name="endCondition"
+                checked={endCondition === "never"}
+                onChange={() => handleEndConditionChange("never")}
+                className="h-3 w-3 accent-primary"
+              />
+              <span className="text-foreground">Never</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input
+                type="radio"
+                name="endCondition"
+                checked={endCondition === "after"}
+                onChange={() => handleEndConditionChange("after")}
+                className="h-3 w-3 accent-primary"
+              />
+              <span className="text-foreground">After</span>
+              {endCondition === "after" && (
+                <>
                   <input
                     type="number"
                     min={1}
@@ -297,31 +351,30 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
                     }}
                     className={INPUT_CLASS}
                   />
-                )}
-                {endCondition === "after" && <span className="text-muted-foreground">occurrences</span>}
-              </label>
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name="endCondition"
-                  checked={endCondition === "on_date"}
-                  onChange={() => handleEndConditionChange("on_date")}
-                  className="h-3 w-3"
+                  <span className="text-muted-foreground">total occurrences</span>
+                </>
+              )}
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input
+                type="radio"
+                name="endCondition"
+                checked={endCondition === "on_date"}
+                onChange={() => handleEndConditionChange("on_date")}
+                className="h-3 w-3 accent-primary"
+              />
+              <span className="text-foreground">On</span>
+              {endCondition === "on_date" && (
+                <DatePicker
+                  value={config.end_date ?? ""}
+                  onChange={(v) => {
+                    if (!config) return;
+                    emitChange({ ...config, end_date: v || null });
+                  }}
+                  placeholder="Pick end date"
                 />
-                <span className="text-foreground">On</span>
-                {endCondition === "on_date" && (
-                  <input
-                    type="date"
-                    value={config.end_date ?? ""}
-                    onChange={(e) => {
-                      if (!config) return;
-                      emitChange({ ...config, end_date: e.target.value || null });
-                    }}
-                    className="text-xs border border-border rounded-md bg-background text-foreground px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-                )}
-              </label>
-            </div>
+              )}
+            </label>
           </div>
         </div>
       )}

@@ -544,7 +544,7 @@ export const projectsApi = {
   updateTask: async (
     data: FrontendUpdateTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task; updatedParent?: Task }> => {
+  ): Promise<{ task: Task; updatedParent?: Task; spawnedTask?: Task }> => {
     const response = await projectsClient.updateTask({
       organizationId,
       taskId: data.id,
@@ -568,6 +568,7 @@ export const projectsApi = {
     return {
       task: protoTaskToFrontend(response.task!),
       updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
     };
   },
 
@@ -578,7 +579,7 @@ export const projectsApi = {
   moveTask: async (
     data: FrontendMoveTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task; updatedParent?: Task }> => {
+  ): Promise<{ task: Task; updatedParent?: Task; spawnedTask?: Task }> => {
     const response = await projectsClient.moveTask({
       organizationId,
       taskId: data.id,
@@ -588,6 +589,7 @@ export const projectsApi = {
     return {
       task: protoTaskToFrontend(response.task!),
       updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
     };
   },
 

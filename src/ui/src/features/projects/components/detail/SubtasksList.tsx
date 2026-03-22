@@ -3,11 +3,13 @@ import { Plus, Circle, CheckCircle, CaretRight, CaretDown } from "@phosphor-icon
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { SubjectAvatarStack } from "@/components/subject";
 import {
   selectSubtasksByParentId,
   selectCurrentProject,
   optimisticUpdateTask,
 } from "@/features/projects/store/projectsSlice";
+import { selectTask } from "@/features/projects/store/projectsUiSlice";
 import { createTask, updateTask } from "@/features/projects/store/projectsThunks";
 import type { Task } from "@/features/projects/types/project";
 
@@ -175,6 +177,7 @@ function SubtaskItem({
   onSubmit,
   inputRef,
 }: SubtaskItemProps) {
+  const dispatch = useAppDispatch();
   const [isExpanded, setIsExpanded] = useState(false);
   const subtasks = useAppSelector(selectSubtasksByParentId(task.id));
   const hasChildren = task.subtaskTotal > 0;
@@ -215,14 +218,23 @@ function SubtaskItem({
           )}
         </button>
 
-        <span
+        <button
+          type="button"
+          onClick={() => dispatch(selectTask(task.id))}
           className={cn(
-            "text-sm flex-1 truncate",
-            isCompleted && "text-muted-foreground line-through"
+            "text-sm flex-1 truncate text-left hover:underline hover:text-foreground transition-colors",
+            isCompleted ? "text-muted-foreground line-through" : "text-foreground"
           )}
         >
           {task.title}
-        </span>
+        </button>
+
+        {/* Assignee avatars */}
+        {task.assigneeIds.length > 0 && (
+          <div className="shrink-0">
+            <SubjectAvatarStack subjectIds={task.assigneeIds} maxDisplay={2} size="xs" />
+          </div>
+        )}
 
         {/* Subtask count badge */}
         {hasChildren && (

@@ -1,15 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
-  UserCircle,
   CheckCircle,
   PencilSimple,
   Clock,
   ShieldWarning,
+  PlusCircle,
+  ArrowsLeftRight,
 } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { selectActivitiesForTask } from "@/features/projects/store/projectsSlice";
 import { fetchActivities } from "@/features/projects/store/projectsThunks";
+import { SubjectAvatar } from "@/components/subject";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import type { Subject } from "@/components/subject/types";
 import type { TaskActivity, ActivityAction } from "@/features/projects/types/activity";
 
 interface ActivityLogProps {
@@ -24,9 +28,26 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
     dispatch(fetchActivities(taskId));
   }, [dispatch, taskId]);
 
-  const sorted = [...activities].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  const sorted = useMemo(
+    () => [...activities].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    ),
+    [activities]
   );
+
+  // Collect all unique actor IDs to resolve in one batch
+  const actorIds = useMemo(
+    () => [...new Set(sorted.map((a) => a.actorId))],
+    [sorted]
+  );
+  const { subjects } = useSubjectResolver(actorIds);
+  const actorMap = useMemo(() => {
+    const map: Record<string, (typeof subjects)[number]> = {};
+    for (const s of subjects) {
+      map[s.id] = s;
+    }
+    return map;
+  }, [subjects]);
 
   return (
     <div className="space-y-4 pt-4 border-t border-border">
@@ -34,14 +55,19 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
         Activity
       </h3>
 
-      <div className="space-y-4 pl-2">
+      <div className="space-y-3 pl-2">
         {sorted.length === 0 ? (
           <div className="text-sm text-muted-foreground italic">
             No recent activity
           </div>
         ) : (
           sorted.map((activity) => (
-            <ActivityItem key={activity.id} activity={activity} />
+            <ActivityItem
+              key={activity.id}
+              activity={activity}
+              actorName={actorMap[activity.actorId]?.name}
+              actorSubject={actorMap[activity.actorId]}
+            />
           ))
         )}
       </div>
@@ -51,23 +77,38 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
 
 interface ActivityItemProps {
   activity: TaskActivity;
+  actorName?: string;
+  actorSubject?: Subject;
 }
 
-function ActivityItem({ activity }: ActivityItemProps) {
+function ActivityItem({ activity, actorName, actorSubject }: ActivityItemProps) {
   const timeAgo = formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true });
 
   return (
-    <div className="flex gap-3 text-sm">
-      <div className="mt-0.5 text-muted-foreground">
-        {renderActivityIcon(activity.action)}
+    <div className="flex gap-2.5 text-sm">
+      {/* User avatar */}
+      <div className="mt-0.5 shrink-0">
+        {actorSubject ? (
+          <SubjectAvatar subject={actorSubject} size="xs" />
+        ) : (
+          <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+            <span className="text-[8px] text-muted-foreground font-medium">?</span>
+          </div>
+        )}
       </div>
-      <div className="flex-1 space-y-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground">User {activity.actorId.split("-")[1]}</span>
-          <span className="text-muted-foreground text-xs">{timeAgo}</span>
-        </div>
-        <div className="text-foreground">
-          {renderActivityContent(activity)}
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-medium text-foreground text-xs">
+            {actorName || "Unknown user"}
+          </span>
+          <span className="text-muted-foreground/60 shrink-0">
+            {renderActivityIcon(activity.action)}
+          </span>
+          <span className="text-foreground text-xs">
+            {renderActivityContent(activity)}
+          </span>
+          <span className="text-muted-foreground text-[10px] shrink-0">{timeAgo}</span>
         </div>
       </div>
     </div>
@@ -76,14 +117,16 @@ function ActivityItem({ activity }: ActivityItemProps) {
 
 function renderActivityIcon(action: ActivityAction) {
   switch (action) {
-    case "created": return <UserCircle size={16} />;
-    case "status_changed": return <CheckCircle size={16} />;
-    case "priority_changed": return <ShieldWarning size={16} />;
-    case "field_updated": return <PencilSimple size={16} />;
+    case "created": return <PlusCircle size={12} />;
+    case "status_changed": return <CheckCircle size={12} />;
+    case "priority_changed": return <ShieldWarning size={12} />;
+    case "field_updated": return <PencilSimple size={12} />;
     case "blocked_by_added":
-    case "blocked_by_removed": return <Clock size={16} />;
-    case "assigned": return <UserCircle size={16} />;
-    default: return <PencilSimple size={16} />;
+    case "blocked_by_removed": return <Clock size={12} />;
+    case "assigned": return <ArrowsLeftRight size={12} />;
+    case "type_changed": return <PencilSimple size={12} />;
+    case "sprint_changed": return <ArrowsLeftRight size={12} />;
+    default: return <PencilSimple size={12} />;
   }
 }
 
@@ -94,25 +137,33 @@ function renderActivityContent(activity: TaskActivity) {
     case "status_changed":
       return (
         <span>
-          changed status from <span className="font-medium">{formatValue(activity.previousValue)}</span> to <span className="font-medium">{formatValue(activity.newValue)}</span>
+          changed status to <span className="font-medium">{formatValue(activity.newValue)}</span>
         </span>
       );
     case "priority_changed":
       return (
         <span>
-          changed to <span className="font-medium">{formatValue(activity.newValue)}</span> priority
+          set priority to <span className="font-medium">{formatValue(activity.newValue)}</span>
         </span>
       );
     case "assigned":
-      return <span>assigned to <span className="font-medium">{formatValue(activity.newValue)}</span></span>;
+      return "updated assignees";
     case "blocked_by_added":
-      return <span>added dependency on <span className="font-medium">{formatValue(activity.newValue)}</span></span>;
+      return "added a dependency";
     case "blocked_by_removed":
-      return <span>removed dependency on <span className="font-medium">{formatValue(activity.previousValue)}</span></span>;
+      return "removed a dependency";
+    case "type_changed":
+      return (
+        <span>
+          changed type to <span className="font-medium">{formatValue(activity.newValue)}</span>
+        </span>
+      );
+    case "sprint_changed":
+      return "moved to another sprint";
     case "field_updated":
       return (
         <span>
-          updated {activity.fieldId} from <span className="font-medium">{formatValue(activity.previousValue)}</span> to <span className="font-medium">{formatValue(activity.newValue)}</span>
+          updated <span className="font-medium">{activity.fieldId?.replace("field_", "") || "a field"}</span>
         </span>
       );
     default:
@@ -122,10 +173,8 @@ function renderActivityContent(activity: TaskActivity) {
 
 function formatValue(val: unknown): string {
   if (typeof val === "string") {
-    if (val.startsWith("status_")) return val.replace("status_", "").replace("_", " ");
-    if (val.startsWith("priority_")) return val.replace("priority_", "").replace("_", " ");
-    if (val.startsWith("user-")) return `User ${val.split("-")[1]}`;
-    if (val.startsWith("task-")) return `Task ${val.split("-")[1]}`;
+    if (val.startsWith("status_")) return val.replace("status_", "").replace(/_/g, " ");
+    if (val.startsWith("priority_")) return val.replace("priority_", "").replace(/_/g, " ");
     return val;
   }
   return String(val);

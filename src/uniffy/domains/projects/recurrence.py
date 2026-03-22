@@ -86,16 +86,22 @@ def compute_next_occurrence(due_date: str, config: dict[str, Any]) -> str | None
     interval = max(1, config.get("interval", 1))
 
     end_date_str = config.get("end_date")
-    end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
+    try:
+        end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
+    except (ValueError, TypeError):
+        end_date_val = None
 
     max_occ = config.get("max_occurrences")
-    created = config.get("occurrences_created", 0)
+    created = config.get("occurrences_created", 1)
 
     # If max occurrences reached, series is over
     if max_occ and created >= max_occ:
         return None
 
-    current = date.fromisoformat(due_date)
+    try:
+        current = date.fromisoformat(due_date)
+    except (ValueError, TypeError):
+        return None
 
     # If end date already passed, no more occurrences
     if end_date_val and current >= end_date_val:

@@ -2055,6 +2055,11 @@ export class TaskResponse extends Message<TaskResponse> {
    */
   updatedParent?: Task;
 
+  /**
+   * @generated from field: optional projects.v1.Task spawned_task = 3;
+   */
+  spawnedTask?: Task;
+
   constructor(data?: PartialMessage<TaskResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2065,6 +2070,7 @@ export class TaskResponse extends Message<TaskResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "task", kind: "message", T: Task },
     { no: 2, name: "updated_parent", kind: "message", T: Task, opt: true },
+    { no: 3, name: "spawned_task", kind: "message", T: Task, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TaskResponse {

@@ -818,7 +818,7 @@ class TaskOperations(BaseContentOperations[Task]):
         organization_id: UUID,
         task_id: UUID,
         **kwargs,
-    ) -> Task:
+    ) -> tuple[Task, Task | None]:
         """
         Update task fields. Logs relevant activities.
 
@@ -861,9 +861,13 @@ class TaskOperations(BaseContentOperations[Task]):
         # Custom field validation (including type-required fields)
         if kwargs.get("field_values") or kwargs.get("task_type"):
             effective_type = kwargs.get("task_type", task.task_type)
+            # Merge existing field_values with any new ones for validation
+            merged_values = dict(task.field_values or {})
+            if kwargs.get("field_values"):
+                merged_values.update(kwargs["field_values"])
             await self._validate_field_values(
                 task.project_id,
-                kwargs.get("field_values"),
+                merged_values,
                 task_type=effective_type,
             )
 
@@ -1092,14 +1096,15 @@ class TaskOperations(BaseContentOperations[Task]):
                 )
 
         # Spawn next recurring task instance
+        spawned_task: Task | None = None
         if (
             task.recurrence_rule
             and task.status == "status_done"
             and old_status != "status_done"
         ):
-            await self._spawn_next_recurring_instance(task, organization_id)
+            spawned_task = await self._spawn_next_recurring_instance(task, organization_id)
 
-        return task
+        return task, spawned_task
 
     async def _spawn_next_recurring_instance(
         self,
@@ -1126,14 +1131,19 @@ class TaskOperations(BaseContentOperations[Task]):
         if not config:
             return None
 
+        # Verify project still exists before spawning
+        project = await self.session.get(Project, completed_task.project_id)
+        if not project or project.is_deleted:
+            return None
+
         today_str = datetime.now(UTC).strftime("%Y-%m-%d")
         base_date = completed_task.due_date or today_str
         next_date = compute_next_occurrence(base_date, config)
         if not next_date:
             return None
 
-        # Increment occurrences counter
-        config["occurrences_created"] = config.get("occurrences_created", 0) + 1
+        # Increment occurrences counter (starts at 1 - the original task is occurrence #1)
+        config["occurrences_created"] = config.get("occurrences_created", 1) + 1
         next_rule = serialize_recurrence_config(config)
 
         # Atomically increment task_counter for the new task number
@@ -1195,7 +1205,7 @@ class TaskOperations(BaseContentOperations[Task]):
         task_id: UUID,
         status: str,
         sort_order: int,
-    ) -> Task:
+    ) -> tuple[Task, Task | None]:
         """
         Move task to new status/position (board drag-and-drop).
 
@@ -1214,8 +1224,8 @@ class TaskOperations(BaseContentOperations[Task]):
 
         Returns
         -------
-        Task
-            Updated task.
+        tuple[Task, Task | None]
+            Updated task and optional spawned recurring task.
 
         """
         return await self.update(
@@ -1255,7 +1265,7 @@ class TaskOperations(BaseContentOperations[Task]):
         """
         updated = []
         for task_id in task_ids:
-            task = await self.update(user_id, organization_id, UUID(task_id), **changes)
+            task, _ = await self.update(user_id, organization_id, UUID(task_id), **changes)
             updated.append(task)
         return updated
 
