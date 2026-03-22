@@ -9,7 +9,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple } from "@phosphor-icons/react";
+import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -203,6 +203,14 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             isActive={viewMode === "graph"}
             onClick={() => handleViewChange("graph")}
           />
+          {!isMobile && (
+            <ViewTab
+              icon={<Users size={16} />}
+              label="Resources"
+              isActive={viewMode === "resources"}
+              onClick={() => handleViewChange("resources")}
+            />
+          )}
         </div>
 
         {activeSprint && !isMobile && (

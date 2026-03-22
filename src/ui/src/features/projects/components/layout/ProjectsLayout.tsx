@@ -31,6 +31,7 @@ import { BoardView } from "@/features/projects/components/views/board/BoardView"
 import { RoadmapView } from "@/features/projects/components/views/roadmap/RoadmapView";
 import { BacklogView } from "@/features/projects/components/backlog/BacklogView";
 import { DependencyGraphView } from "@/features/projects/components/views/graph/DependencyGraphView";
+import { ResourceView } from "@/features/projects/components/views/resources/ResourceView";
 import { TaskDetailPanel } from "@/features/projects/components/detail/TaskDetailPanel";
 import { CreateTaskModal } from "@/features/projects/components/modals/CreateTaskModal";
 import { CreateProjectModal } from "@/features/projects/components/modals/CreateProjectModal";
@@ -182,6 +183,7 @@ export function ProjectsLayout() {
                 {viewMode === "roadmap" && <RoadmapView />}
                 {viewMode === "backlog" && <BacklogView />}
                 {viewMode === "graph" && <DependencyGraphView />}
+                {viewMode === "resources" && <ResourceView />}
               </div>
             </div>
           ) : (
