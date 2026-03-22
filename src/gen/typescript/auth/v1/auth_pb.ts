@@ -757,3 +757,160 @@ export class RevokeOtherSessionsResponse extends Message<RevokeOtherSessionsResp
   }
 }
 
+/**
+ * Request to get cache key seed for client-side storage encryption
+ *
+ * @generated from message auth.v1.GetCacheKeySeedRequest
+ */
+export class GetCacheKeySeedRequest extends Message<GetCacheKeySeedRequest> {
+  constructor(data?: PartialMessage<GetCacheKeySeedRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.GetCacheKeySeedRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheKeySeedRequest {
+    return new GetCacheKeySeedRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheKeySeedRequest {
+    return new GetCacheKeySeedRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheKeySeedRequest {
+    return new GetCacheKeySeedRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheKeySeedRequest | PlainMessage<GetCacheKeySeedRequest> | undefined, b: GetCacheKeySeedRequest | PlainMessage<GetCacheKeySeedRequest> | undefined): boolean {
+    return proto3.util.equals(GetCacheKeySeedRequest, a, b);
+  }
+}
+
+/**
+ * Response containing the cache key seed
+ *
+ * @generated from message auth.v1.GetCacheKeySeedResponse
+ */
+export class GetCacheKeySeedResponse extends Message<GetCacheKeySeedResponse> {
+  /**
+   * 32-byte seed for deriving encryption keys
+   *
+   * @generated from field: bytes cache_key_seed = 1;
+   */
+  cacheKeySeed = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<GetCacheKeySeedResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.GetCacheKeySeedResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "cache_key_seed", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheKeySeedResponse {
+    return new GetCacheKeySeedResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheKeySeedResponse {
+    return new GetCacheKeySeedResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheKeySeedResponse {
+    return new GetCacheKeySeedResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheKeySeedResponse | PlainMessage<GetCacheKeySeedResponse> | undefined, b: GetCacheKeySeedResponse | PlainMessage<GetCacheKeySeedResponse> | undefined): boolean {
+    return proto3.util.equals(GetCacheKeySeedResponse, a, b);
+  }
+}
+
+/**
+ * Request to rotate cache key seed
+ *
+ * @generated from message auth.v1.RotateCacheKeySeedRequest
+ */
+export class RotateCacheKeySeedRequest extends Message<RotateCacheKeySeedRequest> {
+  /**
+   * Empty for self-rotation.
+   * Admin can set target_user_id to rotate another user's seed.
+   *
+   * @generated from field: optional string target_user_id = 1;
+   */
+  targetUserId?: string;
+
+  constructor(data?: PartialMessage<RotateCacheKeySeedRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RotateCacheKeySeedRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "target_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RotateCacheKeySeedRequest {
+    return new RotateCacheKeySeedRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RotateCacheKeySeedRequest {
+    return new RotateCacheKeySeedRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RotateCacheKeySeedRequest {
+    return new RotateCacheKeySeedRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RotateCacheKeySeedRequest | PlainMessage<RotateCacheKeySeedRequest> | undefined, b: RotateCacheKeySeedRequest | PlainMessage<RotateCacheKeySeedRequest> | undefined): boolean {
+    return proto3.util.equals(RotateCacheKeySeedRequest, a, b);
+  }
+}
+
+/**
+ * Response containing the new cache key seed after rotation
+ *
+ * @generated from message auth.v1.RotateCacheKeySeedResponse
+ */
+export class RotateCacheKeySeedResponse extends Message<RotateCacheKeySeedResponse> {
+  /**
+   * New 32-byte seed
+   *
+   * @generated from field: bytes new_cache_key_seed = 1;
+   */
+  newCacheKeySeed = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<RotateCacheKeySeedResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RotateCacheKeySeedResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "new_cache_key_seed", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RotateCacheKeySeedResponse {
+    return new RotateCacheKeySeedResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RotateCacheKeySeedResponse {
+    return new RotateCacheKeySeedResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RotateCacheKeySeedResponse {
+    return new RotateCacheKeySeedResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RotateCacheKeySeedResponse | PlainMessage<RotateCacheKeySeedResponse> | undefined, b: RotateCacheKeySeedResponse | PlainMessage<RotateCacheKeySeedResponse> | undefined): boolean {
+    return proto3.util.equals(RotateCacheKeySeedResponse, a, b);
+  }
+}
+

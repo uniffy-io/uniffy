@@ -23,6 +23,7 @@ import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
 import { clearComments } from '@/features/comments';
 import { clearMemoryAccessToken } from '@/config/api';
+import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
@@ -77,6 +78,8 @@ export function UserMenu() {
         }
         // Clear memory access token (security: remove from memory)
         clearMemoryAccessToken();
+        // Tear down client-side storage encryption (clears keys, notifies other tabs)
+        teardownStorageEncryption();
         // Clear all user/org-specific state
         dispatch(logout());
         dispatch(resetSettings());

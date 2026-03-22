@@ -5,7 +5,7 @@ import { AuthService } from "@uniffy/proto/auth/v1/auth_connect";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/store/authSlice";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
-import { transport, setMemoryAccessToken, friendlyErrorMessage } from "@/config";
+import { transport, setMemoryAccessToken, friendlyErrorMessage, initStorageEncryptionFromApi } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { defaultTheme } from "@/config/theme/types";
@@ -663,6 +663,11 @@ export function AuthForms() {
         organizationRole,
         sessionId,
       }));
+
+      // Initialize client-side storage encryption (non-blocking)
+      initStorageEncryptionFromApi(plainUser.id).catch((err) => {
+        console.warn('Storage encryption init failed:', err);
+      });
 
     } catch (err: unknown) {
       console.error('Error fetching user details:', err);

@@ -27,6 +27,8 @@ const (
 	AuthService_ListSessions_FullMethodName        = "/auth.v1.AuthService/ListSessions"
 	AuthService_RevokeSession_FullMethodName       = "/auth.v1.AuthService/RevokeSession"
 	AuthService_RevokeOtherSessions_FullMethodName = "/auth.v1.AuthService/RevokeOtherSessions"
+	AuthService_GetCacheKeySeed_FullMethodName     = "/auth.v1.AuthService/GetCacheKeySeed"
+	AuthService_RotateCacheKeySeed_FullMethodName  = "/auth.v1.AuthService/RotateCacheKeySeed"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -54,6 +56,10 @@ type AuthServiceClient interface {
 	RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*RevokeSessionResponse, error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(ctx context.Context, in *RevokeOtherSessionsRequest, opts ...grpc.CallOption) (*RevokeOtherSessionsResponse, error)
+	// Get the cache key seed for client-side storage encryption (called once per session)
+	GetCacheKeySeed(ctx context.Context, in *GetCacheKeySeedRequest, opts ...grpc.CallOption) (*GetCacheKeySeedResponse, error)
+	// Rotate cache key seed (invalidates all device caches)
+	RotateCacheKeySeed(ctx context.Context, in *RotateCacheKeySeedRequest, opts ...grpc.CallOption) (*RotateCacheKeySeedResponse, error)
 }
 
 type authServiceClient struct {
@@ -144,6 +150,26 @@ func (c *authServiceClient) RevokeOtherSessions(ctx context.Context, in *RevokeO
 	return out, nil
 }
 
+func (c *authServiceClient) GetCacheKeySeed(ctx context.Context, in *GetCacheKeySeedRequest, opts ...grpc.CallOption) (*GetCacheKeySeedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCacheKeySeedResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetCacheKeySeed_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) RotateCacheKeySeed(ctx context.Context, in *RotateCacheKeySeedRequest, opts ...grpc.CallOption) (*RotateCacheKeySeedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RotateCacheKeySeedResponse)
+	err := c.cc.Invoke(ctx, AuthService_RotateCacheKeySeed_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -169,6 +195,10 @@ type AuthServiceServer interface {
 	RevokeSession(context.Context, *RevokeSessionRequest) (*RevokeSessionResponse, error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *RevokeOtherSessionsRequest) (*RevokeOtherSessionsResponse, error)
+	// Get the cache key seed for client-side storage encryption (called once per session)
+	GetCacheKeySeed(context.Context, *GetCacheKeySeedRequest) (*GetCacheKeySeedResponse, error)
+	// Rotate cache key seed (invalidates all device caches)
+	RotateCacheKeySeed(context.Context, *RotateCacheKeySeedRequest) (*RotateCacheKeySeedResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -202,6 +232,12 @@ func (UnimplementedAuthServiceServer) RevokeSession(context.Context, *RevokeSess
 }
 func (UnimplementedAuthServiceServer) RevokeOtherSessions(context.Context, *RevokeOtherSessionsRequest) (*RevokeOtherSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeOtherSessions not implemented")
+}
+func (UnimplementedAuthServiceServer) GetCacheKeySeed(context.Context, *GetCacheKeySeedRequest) (*GetCacheKeySeedResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCacheKeySeed not implemented")
+}
+func (UnimplementedAuthServiceServer) RotateCacheKeySeed(context.Context, *RotateCacheKeySeedRequest) (*RotateCacheKeySeedResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateCacheKeySeed not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -368,6 +404,42 @@ func _AuthService_RevokeOtherSessions_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_GetCacheKeySeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCacheKeySeedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetCacheKeySeed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetCacheKeySeed_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetCacheKeySeed(ctx, req.(*GetCacheKeySeedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_RotateCacheKeySeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateCacheKeySeedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RotateCacheKeySeed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_RotateCacheKeySeed_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RotateCacheKeySeed(ctx, req.(*RotateCacheKeySeedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -406,6 +478,14 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeOtherSessions",
 			Handler:    _AuthService_RevokeOtherSessions_Handler,
+		},
+		{
+			MethodName: "GetCacheKeySeed",
+			Handler:    _AuthService_GetCacheKeySeed_Handler,
+		},
+		{
+			MethodName: "RotateCacheKeySeed",
+			Handler:    _AuthService_RotateCacheKeySeed_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

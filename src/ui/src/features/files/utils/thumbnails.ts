@@ -2,19 +2,29 @@
  * Client-side thumbnail generation utilities.
  *
  * Generates thumbnails for images using Canvas API and caches them in IndexedDB.
+ * Cached thumbnails are encrypted at rest using the platform-wide storage encryption.
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
+import {
+    encryptForStorage,
+    decryptFromStorage,
+    isStorageEncryptionReady,
+    registerEncryptedDatabase,
+} from '@/shared/crypto/storageEncryption';
 
 const THUMB_SIZE = 200;
 const DB_NAME = 'uniffy-thumbnails';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bumped: v2 stores encrypted ArrayBuffer values
 const STORE_NAME = 'thumbnails';
+
+// Register this database so it's cleared on seed rotation / device clear
+registerEncryptedDatabase(DB_NAME);
 
 interface ThumbnailDB {
     thumbnails: {
         key: string;
-        value: string;
+        value: ArrayBuffer;
     };
 }
 
@@ -37,25 +47,29 @@ function getDB(): Promise<IDBPDatabase<ThumbnailDB>> {
 }
 
 /**
- * Get a cached thumbnail from IndexedDB.
+ * Get a cached thumbnail from IndexedDB (decrypted).
  */
 async function getThumbnailFromCache(fileId: string): Promise<string | null> {
     try {
+        if (!isStorageEncryptionReady()) return null;
         const db = await getDB();
-        const result = await db.get(STORE_NAME, fileId);
-        return result || null;
+        const encrypted = await db.get(STORE_NAME, fileId);
+        if (!encrypted) return null;
+        return await decryptFromStorage<string>(encrypted);
     } catch {
         return null;
     }
 }
 
 /**
- * Save a thumbnail to IndexedDB cache.
+ * Save a thumbnail to IndexedDB cache (encrypted).
  */
 async function saveThumbnailToCache(fileId: string, dataUrl: string): Promise<void> {
     try {
+        if (!isStorageEncryptionReady()) return;
         const db = await getDB();
-        await db.put(STORE_NAME, dataUrl, fileId);
+        const encrypted = await encryptForStorage(dataUrl);
+        await db.put(STORE_NAME, encrypted, fileId);
     } catch {
         // Silently fail - caching is optional
     }

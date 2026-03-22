@@ -12,9 +12,14 @@ import {
     User,
     Trash,
     Warning,
+    HardDrives,
 } from '@phosphor-icons/react';
+import { createClient } from '@connectrpc/connect';
+import { toast } from 'sonner';
 import { useOrgMembers } from '@/features/admin/hooks/useAdminHooks';
 import { OrganizationRole } from '@uniffy/proto/common/v1/common_pb';
+import { AuthService } from '@uniffy/proto/auth/v1/auth_connect';
+import { transport } from '@/config/api';
 import type { SerializedMemberInfo } from '@/features/admin/store/adminSlice';
 import { useAppSelector } from '@/app/hooks';
 import { Select, type SelectOption } from '@/components/ui/select';
@@ -49,12 +54,15 @@ interface MemberRowProps {
     currentUserId: string | undefined;
     onUpdateRole: (userId: string, role: number) => Promise<void>;
     onRemove: (userId: string) => Promise<void>;
+    onInvalidateCaches: (userId: string, displayName: string) => Promise<void>;
 }
 
-function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowProps) {
+function MemberRow({ member, currentUserId, onUpdateRole, onRemove, onInvalidateCaches }: MemberRowProps) {
     const [updating, setUpdating] = useState(false);
     const [removing, setRemoving] = useState(false);
+    const [invalidatingCaches, setInvalidatingCaches] = useState(false);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+    const [showInvalidateCachesConfirm, setShowInvalidateCachesConfirm] = useState(false);
 
     const isCurrentUser = member.userId === currentUserId;
     const isOwner = member.role === OrganizationRole.OWNER;
@@ -71,6 +79,16 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
 
     const handleRemoveClick = () => {
         setShowRemoveConfirm(true);
+    };
+
+    const handleInvalidateCaches = async () => {
+        setInvalidatingCaches(true);
+        try {
+            await onInvalidateCaches(member.userId, member.displayName);
+            setShowInvalidateCachesConfirm(false);
+        } finally {
+            setInvalidatingCaches(false);
+        }
     };
 
     const handleRemoveConfirm = async () => {
@@ -162,17 +180,30 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
                 {/* Actions */}
                 <TableCell align="right">
                     {!isOwner && !isCurrentUser && (
-                        <button
-                            type="button"
-                            onClick={handleRemoveClick}
-                            disabled={removing}
-                            className="p-2 rounded-md text-muted-foreground hover-destructive
-                                opacity-0 group-hover:opacity-100 transition-all
-                                disabled:opacity-50"
-                            title="Remove from organization"
-                        >
-                            <Trash size={16} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setShowInvalidateCachesConfirm(true)}
+                                disabled={invalidatingCaches}
+                                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                                    opacity-0 group-hover:opacity-100 transition-all
+                                    disabled:opacity-50"
+                                title="Invalidate local caches"
+                            >
+                                <HardDrives size={16} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleRemoveClick}
+                                disabled={removing}
+                                className="p-2 rounded-md text-muted-foreground hover-destructive
+                                    opacity-0 group-hover:opacity-100 transition-all
+                                    disabled:opacity-50"
+                                title="Remove from organization"
+                            >
+                                <Trash size={16} />
+                            </button>
+                        </div>
                     )}
                 </TableCell>
             </TableRow>
@@ -187,6 +218,18 @@ function MemberRow({ member, currentUserId, onUpdateRole, onRemove }: MemberRowP
                 confirmLabel="Remove"
                 variant="danger"
                 loading={removing}
+            />
+
+            {/* Invalidate caches confirmation dialog */}
+            <ConfirmDialog
+                isOpen={showInvalidateCachesConfirm}
+                onClose={() => setShowInvalidateCachesConfirm(false)}
+                onConfirm={handleInvalidateCaches}
+                title="Invalidate Local Caches"
+                message={`This will invalidate all locally cached data for ${member.displayName} across all their devices. Their data will reload from the server on next login.`}
+                confirmLabel="Invalidate"
+                variant="danger"
+                loading={invalidatingCaches}
             />
         </>
     );
@@ -230,6 +273,12 @@ export function MembersSection() {
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh is stable (useCallback with [dispatch])
     }, [search, roleFilter]);
+
+    const handleInvalidateCaches = async (userId: string, displayName: string) => {
+        const client = createClient(AuthService, transport);
+        await client.rotateCacheKeySeed({ targetUserId: userId });
+        toast.success(`Local caches invalidated for ${displayName}.`);
+    };
 
     // Count by role
     const ownerCount = members.filter((m) => m.role === OrganizationRole.OWNER).length;
@@ -328,6 +377,7 @@ export function MembersSection() {
                                 currentUserId={currentUser?.id}
                                 onUpdateRole={updateRole}
                                 onRemove={remove}
+                                onInvalidateCaches={handleInvalidateCaches}
                             />
                         ))
                     )}

@@ -24,6 +24,7 @@ import {
   createLogoutAction,
 } from '@/features/auth/store/authActions';
 import { updateWorkerAuthToken, clearWorkerAuthToken } from '@/workers/registerMediaWorker';
+import { initStorageEncryption } from '@/shared/crypto/storageEncryption';
 
 // In-memory access token storage (security: not persisted to localStorage)
 let memoryAccessToken: string | null = null;
@@ -246,6 +247,22 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Fetch cache key seed and initialize client-side storage encryption.
+ * Called once per session after successful auth rehydration or login.
+ */
+async function initStorageEncryptionFromApi(userId: string): Promise<void> {
+  try {
+    const client = createClient(AuthService, transport);
+    const response = await client.getCacheKeySeed({});
+    if (response.cacheKeySeed.length > 0) {
+      await initStorageEncryption(new Uint8Array(response.cacheKeySeed), userId);
+    }
+  } catch (err) {
+    console.warn('Failed to fetch cache key seed:', err);
+  }
+}
+
+/**
  * Rehydrate authentication on app startup.
  *
  * Called after redux-persist rehydrates state. If we have a refresh token
@@ -313,6 +330,12 @@ export async function rehydrateAuth(): Promise<boolean> {
         organizationRole: state.auth?.currentOrganizationRole || persistedOrgRole || undefined,
         sessionId: state.auth?.currentSessionId || undefined,
       }));
+
+      // Initialize client-side storage encryption (non-blocking)
+      initStorageEncryptionFromApi(persistedUser.id).catch((err) => {
+        console.warn('Storage encryption init failed:', err);
+      });
+
       return true;
     } else {
       store.dispatch(createRehydrateFailedAction());
@@ -433,3 +456,9 @@ export function getAccessToken(): string | null {
  * Used by workers when they receive 401 errors.
  */
 export { refreshAccessToken };
+
+/**
+ * Initialize storage encryption after login.
+ * Exported for use by login flow.
+ */
+export { initStorageEncryptionFromApi };

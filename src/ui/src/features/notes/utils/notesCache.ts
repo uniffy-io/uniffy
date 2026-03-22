@@ -3,14 +3,27 @@
  *
  * Provides persistent caching for notes data using raw IndexedDB.
  * Used for instant initial load while revalidating from API in background.
+ *
+ * All cached note content is encrypted at rest using the platform-wide
+ * client-side storage encryption system (AES-256-GCM).
+ * See docs/specs/client-storage-encryption-spec.md for details.
  */
 
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 import type { OrganizedNotes } from '@/features/notes/utils/notesTreeUtils';
+import {
+  encryptForStorage,
+  decryptFromStorage,
+  isStorageEncryptionReady,
+  registerEncryptedDatabase,
+} from '@/shared/crypto/storageEncryption';
 
 const DB_NAME = 'uniffy-notes-cache';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bumped: v2 stores encrypted ArrayBuffer values
 const STORE_NAME = 'notes-data';
+
+// Register this database so it's cleared on seed rotation / device clear
+registerEncryptedDatabase(DB_NAME);
 
 /** Cache entry structure */
 interface NotesCacheEntry {
@@ -38,6 +51,68 @@ let dbInstance: IDBDatabase | null = null;
 let dbInitPromise: Promise<IDBDatabase> | null = null;
 
 /**
+ * Open the IndexedDB database. If the store has an in-line keyPath
+ * (leftover v1 schema that wasn't upgraded - e.g. upgrade blocked by another tab),
+ * delete the entire database and re-open so the v2 schema is created fresh.
+ */
+function openOrRecreateDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => {
+      console.error('[NotesCache] Failed to open IndexedDB:', request.error);
+      reject(request.error);
+    };
+
+    request.onblocked = () => {
+      console.warn('[NotesCache] Database upgrade blocked by another tab');
+    };
+
+    request.onsuccess = () => {
+      const db = request.result;
+
+      db.onclose = () => {
+        dbInstance = null;
+        dbInitPromise = null;
+      };
+
+      // Safety check: if the store still has a keyPath (v1 schema survived),
+      // close, delete, and re-open to force a clean v2 schema.
+      if (db.objectStoreNames.contains(STORE_NAME)) {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        if (store.keyPath !== null) {
+          db.close();
+          const deleteReq = indexedDB.deleteDatabase(DB_NAME);
+          deleteReq.onsuccess = () => {
+            dbInitPromise = null;
+            openOrRecreateDB().then(resolve, reject);
+          };
+          deleteReq.onerror = () => reject(deleteReq.error);
+          return;
+        }
+      }
+
+      dbInstance = db;
+      resolve(db);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+
+      // v2: encrypted store uses out-of-line keys with ArrayBuffer values.
+      // Delete old v1 plaintext store if upgrading.
+      if (db.objectStoreNames.contains(STORE_NAME)) {
+        db.deleteObjectStore(STORE_NAME);
+      }
+
+      // No keyPath, no indexes - values are encrypted ArrayBuffers.
+      db.createObjectStore(STORE_NAME);
+    };
+  });
+}
+
+/**
  * Initialize IndexedDB connection.
  * Returns cached connection if already open.
  */
@@ -50,96 +125,70 @@ function initDB(): Promise<IDBDatabase> {
     return dbInitPromise;
   }
 
-  dbInitPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => {
-      console.error('[NotesCache] Failed to open IndexedDB:', request.error);
-      dbInitPromise = null;
-      reject(request.error);
-    };
-
-    request.onsuccess = () => {
-      dbInstance = request.result;
-
-      // Handle connection closing unexpectedly
-      dbInstance.onclose = () => {
-        dbInstance = null;
-        dbInitPromise = null;
-      };
-
-      resolve(dbInstance);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-
-      // Create object store with organizationId as key
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'organizationId' });
-        // Index for querying by userId (for multi-user support)
-        store.createIndex('userId', 'userId', { unique: false });
-        // Index for querying by updatedAt (for cleanup)
-        store.createIndex('updatedAt', 'updatedAt', { unique: false });
-      }
-    };
-  });
+  dbInitPromise = openOrRecreateDB();
 
   return dbInitPromise;
 }
 
 /**
  * Get cached notes data for an organization.
- * Returns null if cache miss or expired.
+ * Returns null if cache miss, expired, or decryption fails.
  */
 export async function getCachedNotes(
   organizationId: string,
   userId: string
 ): Promise<{ notes: SerializedNote[]; tree: OrganizedNotes; totalCount: number; isFresh: boolean } | null> {
   try {
+    if (!isStorageEncryptionReady()) {
+      return null;
+    }
+
     const db = await initDB();
 
-    return new Promise((resolve) => {
+    const encrypted: ArrayBuffer | undefined = await new Promise((resolve) => {
       const transaction = db.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.get(organizationId);
 
-      request.onsuccess = () => {
-        const entry = request.result as NotesCacheEntry | undefined;
-
-        if (!entry) {
-          resolve(null);
-          return;
-        }
-
-        // Check if cache belongs to current user
-        if (entry.userId !== userId) {
-          resolve(null);
-          return;
-        }
-
-        const age = Date.now() - entry.updatedAt;
-
-        // Cache too old - treat as miss
-        if (age > CACHE_MAX_AGE_MS) {
-          resolve(null);
-          return;
-        }
-
-        // Return cached data with freshness indicator
-        resolve({
-          notes: entry.notes,
-          tree: entry.tree,
-          totalCount: entry.totalCount,
-          isFresh: age < CACHE_FRESH_MS,
-        });
-      };
-
+      request.onsuccess = () => resolve(request.result as ArrayBuffer | undefined);
       request.onerror = () => {
         console.error('[NotesCache] Failed to read cache:', request.error);
-        resolve(null);
+        resolve(undefined);
       };
     });
+
+    if (!encrypted) {
+      return null;
+    }
+
+    let entry: NotesCacheEntry;
+    try {
+      entry = await decryptFromStorage<NotesCacheEntry>(encrypted);
+    } catch {
+      // Decryption failed (corrupted entry or key rotated). Skip, don't nuke entire cache.
+      console.warn('[NotesCache] Decryption failed for org', organizationId);
+      return null;
+    }
+
+    // Check if cache belongs to current user
+    if (entry.userId !== userId) {
+      return null;
+    }
+
+    const age = Date.now() - entry.updatedAt;
+
+    // Cache too old - treat as miss
+    if (age > CACHE_MAX_AGE_MS) {
+      return null;
+    }
+
+    // Return cached data with freshness indicator
+    return {
+      notes: entry.notes,
+      tree: entry.tree,
+      totalCount: entry.totalCount,
+      isFresh: age < CACHE_FRESH_MS,
+    };
   } catch (error) {
     console.error('[NotesCache] Cache read error:', error);
     return null;
@@ -147,7 +196,7 @@ export async function getCachedNotes(
 }
 
 /**
- * Save notes data to cache.
+ * Save notes data to cache (encrypted).
  */
 export async function setCachedNotes(
   organizationId: string,
@@ -157,6 +206,10 @@ export async function setCachedNotes(
   totalCount: number
 ): Promise<void> {
   try {
+    if (!isStorageEncryptionReady()) {
+      return;
+    }
+
     const db = await initDB();
 
     const entry: NotesCacheEntry = {
@@ -168,10 +221,12 @@ export async function setCachedNotes(
       updatedAt: Date.now(),
     };
 
+    const encrypted = await encryptForStorage(entry);
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(entry);
+      const request = store.put(encrypted, organizationId);
 
       request.onsuccess = () => resolve();
       request.onerror = () => {
@@ -187,6 +242,7 @@ export async function setCachedNotes(
 /**
  * Update a single note in the cache.
  * Used after create/update operations.
+ * Reads, decrypts, modifies, re-encrypts, writes.
  */
 export async function updateCachedNote(
   organizationId: string,
@@ -195,39 +251,51 @@ export async function updateCachedNote(
   tree: OrganizedNotes
 ): Promise<void> {
   try {
+    if (!isStorageEncryptionReady()) {
+      return;
+    }
+
     const db = await initDB();
 
-    return new Promise((resolve) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const getRequest = store.get(organizationId);
+    const encrypted: ArrayBuffer | undefined = await new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(organizationId);
+      req.onsuccess = () => resolve(req.result as ArrayBuffer | undefined);
+      req.onerror = () => resolve(undefined);
+    });
 
-      getRequest.onsuccess = () => {
-        const entry = getRequest.result as NotesCacheEntry | undefined;
+    if (!encrypted) return;
 
-        if (!entry || entry.userId !== userId) {
-          resolve();
-          return;
-        }
+    let entry: NotesCacheEntry;
+    try {
+      entry = await decryptFromStorage<NotesCacheEntry>(encrypted);
+    } catch {
+      return;
+    }
 
-        // Update or add the note
-        const noteIndex = entry.notes.findIndex((n) => n.id === note.id);
-        if (noteIndex >= 0) {
-          entry.notes[noteIndex] = note;
-        } else {
-          entry.notes.push(note);
-          entry.totalCount++;
-        }
+    if (entry.userId !== userId) return;
 
-        // Update tree
-        entry.tree = tree;
-        entry.updatedAt = Date.now();
+    // Update or add the note
+    const noteIndex = entry.notes.findIndex((n) => n.id === note.id);
+    if (noteIndex >= 0) {
+      entry.notes[noteIndex] = note;
+    } else {
+      entry.notes.push(note);
+      entry.totalCount++;
+    }
 
-        store.put(entry);
-        resolve();
-      };
+    entry.tree = tree;
+    entry.updatedAt = Date.now();
 
-      getRequest.onerror = () => resolve();
+    const reEncrypted = await encryptForStorage(entry);
+
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put(reEncrypted, organizationId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
     });
   } catch (error) {
     console.error('[NotesCache] Cache update error:', error);
@@ -237,6 +305,7 @@ export async function updateCachedNote(
 /**
  * Remove a note from the cache.
  * Used after delete operations.
+ * Reads, decrypts, modifies, re-encrypts, writes.
  */
 export async function removeCachedNote(
   organizationId: string,
@@ -246,42 +315,52 @@ export async function removeCachedNote(
   permanent: boolean
 ): Promise<void> {
   try {
+    if (!isStorageEncryptionReady()) {
+      return;
+    }
+
     const db = await initDB();
 
-    return new Promise((resolve) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const getRequest = store.get(organizationId);
+    const encrypted: ArrayBuffer | undefined = await new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(organizationId);
+      req.onsuccess = () => resolve(req.result as ArrayBuffer | undefined);
+      req.onerror = () => resolve(undefined);
+    });
 
-      getRequest.onsuccess = () => {
-        const entry = getRequest.result as NotesCacheEntry | undefined;
+    if (!encrypted) return;
 
-        if (!entry || entry.userId !== userId) {
-          resolve();
-          return;
-        }
+    let entry: NotesCacheEntry;
+    try {
+      entry = await decryptFromStorage<NotesCacheEntry>(encrypted);
+    } catch {
+      return;
+    }
 
-        if (permanent) {
-          // Remove completely
-          entry.notes = entry.notes.filter((n) => n.id !== noteId);
-          entry.totalCount = Math.max(0, entry.totalCount - 1);
-        } else {
-          // Mark as deleted (soft delete)
-          const note = entry.notes.find((n) => n.id === noteId);
-          if (note) {
-            note.isDeleted = true;
-          }
-        }
+    if (entry.userId !== userId) return;
 
-        // Update tree
-        entry.tree = tree;
-        entry.updatedAt = Date.now();
+    if (permanent) {
+      entry.notes = entry.notes.filter((n) => n.id !== noteId);
+      entry.totalCount = Math.max(0, entry.totalCount - 1);
+    } else {
+      const note = entry.notes.find((n) => n.id === noteId);
+      if (note) {
+        note.isDeleted = true;
+      }
+    }
 
-        store.put(entry);
-        resolve();
-      };
+    entry.tree = tree;
+    entry.updatedAt = Date.now();
 
-      getRequest.onerror = () => resolve();
+    const reEncrypted = await encryptForStorage(entry);
+
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put(reEncrypted, organizationId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
     });
   } catch (error) {
     console.error('[NotesCache] Cache remove error:', error);

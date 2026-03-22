@@ -54,6 +54,12 @@ const (
 	// AuthServiceRevokeOtherSessionsProcedure is the fully-qualified name of the AuthService's
 	// RevokeOtherSessions RPC.
 	AuthServiceRevokeOtherSessionsProcedure = "/auth.v1.AuthService/RevokeOtherSessions"
+	// AuthServiceGetCacheKeySeedProcedure is the fully-qualified name of the AuthService's
+	// GetCacheKeySeed RPC.
+	AuthServiceGetCacheKeySeedProcedure = "/auth.v1.AuthService/GetCacheKeySeed"
+	// AuthServiceRotateCacheKeySeedProcedure is the fully-qualified name of the AuthService's
+	// RotateCacheKeySeed RPC.
+	AuthServiceRotateCacheKeySeedProcedure = "/auth.v1.AuthService/RotateCacheKeySeed"
 )
 
 // AuthServiceClient is a client for the auth.v1.AuthService service.
@@ -74,6 +80,10 @@ type AuthServiceClient interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error)
+	// Get the cache key seed for client-side storage encryption (called once per session)
+	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
+	// Rotate cache key seed (invalidates all device caches)
+	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the auth.v1.AuthService service. By default, it uses
@@ -135,6 +145,18 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("RevokeOtherSessions")),
 			connect.WithClientOptions(opts...),
 		),
+		getCacheKeySeed: connect.NewClient[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse](
+			httpClient,
+			baseURL+AuthServiceGetCacheKeySeedProcedure,
+			connect.WithSchema(authServiceMethods.ByName("GetCacheKeySeed")),
+			connect.WithClientOptions(opts...),
+		),
+		rotateCacheKeySeed: connect.NewClient[v1.RotateCacheKeySeedRequest, v1.RotateCacheKeySeedResponse](
+			httpClient,
+			baseURL+AuthServiceRotateCacheKeySeedProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RotateCacheKeySeed")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -148,6 +170,8 @@ type authServiceClient struct {
 	listSessions        *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
 	revokeSession       *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
 	revokeOtherSessions *connect.Client[v1.RevokeOtherSessionsRequest, v1.RevokeOtherSessionsResponse]
+	getCacheKeySeed     *connect.Client[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse]
+	rotateCacheKeySeed  *connect.Client[v1.RotateCacheKeySeedRequest, v1.RotateCacheKeySeedResponse]
 }
 
 // Register calls auth.v1.AuthService.Register.
@@ -190,6 +214,16 @@ func (c *authServiceClient) RevokeOtherSessions(ctx context.Context, req *connec
 	return c.revokeOtherSessions.CallUnary(ctx, req)
 }
 
+// GetCacheKeySeed calls auth.v1.AuthService.GetCacheKeySeed.
+func (c *authServiceClient) GetCacheKeySeed(ctx context.Context, req *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error) {
+	return c.getCacheKeySeed.CallUnary(ctx, req)
+}
+
+// RotateCacheKeySeed calls auth.v1.AuthService.RotateCacheKeySeed.
+func (c *authServiceClient) RotateCacheKeySeed(ctx context.Context, req *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error) {
+	return c.rotateCacheKeySeed.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the auth.v1.AuthService service.
 type AuthServiceHandler interface {
 	// Register a new user account
@@ -208,6 +242,10 @@ type AuthServiceHandler interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error)
+	// Get the cache key seed for client-side storage encryption (called once per session)
+	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
+	// Rotate cache key seed (invalidates all device caches)
+	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -265,6 +303,18 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("RevokeOtherSessions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceGetCacheKeySeedHandler := connect.NewUnaryHandler(
+		AuthServiceGetCacheKeySeedProcedure,
+		svc.GetCacheKeySeed,
+		connect.WithSchema(authServiceMethods.ByName("GetCacheKeySeed")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceRotateCacheKeySeedHandler := connect.NewUnaryHandler(
+		AuthServiceRotateCacheKeySeedProcedure,
+		svc.RotateCacheKeySeed,
+		connect.WithSchema(authServiceMethods.ByName("RotateCacheKeySeed")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/auth.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceRegisterProcedure:
@@ -283,6 +333,10 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRevokeSessionHandler.ServeHTTP(w, r)
 		case AuthServiceRevokeOtherSessionsProcedure:
 			authServiceRevokeOtherSessionsHandler.ServeHTTP(w, r)
+		case AuthServiceGetCacheKeySeedProcedure:
+			authServiceGetCacheKeySeedHandler.ServeHTTP(w, r)
+		case AuthServiceRotateCacheKeySeedProcedure:
+			authServiceRotateCacheKeySeedHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -322,4 +376,12 @@ func (UnimplementedAuthServiceHandler) RevokeSession(context.Context, *connect.R
 
 func (UnimplementedAuthServiceHandler) RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.RevokeOtherSessions is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.GetCacheKeySeed is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.RotateCacheKeySeed is not implemented"))
 }
