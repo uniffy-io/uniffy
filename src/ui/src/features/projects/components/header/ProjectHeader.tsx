@@ -8,7 +8,7 @@
  * - Filter bar with search, filter builder, group by
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -41,7 +41,8 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, ViewType } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
 import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
-import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
+import { updateFieldDefinition, selectProjectTimeStats } from "@/features/projects/store/projectsSlice";
+import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
@@ -63,6 +64,9 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const activeFilterConfig = useAppSelector(selectActiveFilterConfig);
   const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
+  const timeStats = useAppSelector(
+    useMemo(() => selectProjectTimeStats(project.id), [project.id])
+  );
   const { canEdit } = useProjectPermission();
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
@@ -149,6 +153,9 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           <h1 className="font-medium text-sm md:text-base text-foreground truncate">{project.name}</h1>
           <p className="text-xs text-muted-foreground">
             {taskCount} task{taskCount !== 1 ? "s" : ""}{!isMobile && <> · {project.memberIds.length} member{project.memberIds.length !== 1 ? "s" : ""}</>}
+            {timeStats.hasTimeData && !isMobile && (
+              <> · {formatMinutes(timeStats.totalSpent)} spent{timeStats.totalEstimated > 0 && <> / {formatMinutes(timeStats.totalEstimated)} est{timeStats.remaining > 0 && <> · {formatMinutes(timeStats.remaining)} left</>}</>}</>
+            )}
           </p>
         </div>
         {canEdit && (

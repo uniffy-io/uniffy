@@ -330,6 +330,38 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
                 }}
               />
 
+              {/* Time Progress Bar */}
+              {task.estimatedMinutes != null && task.estimatedMinutes > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20" />
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          !task.timeSpentMinutes ? "bg-muted"
+                          : task.timeSpentMinutes <= task.estimatedMinutes * 0.75 ? "bg-green-500"
+                          : task.timeSpentMinutes <= task.estimatedMinutes ? "bg-yellow-500"
+                          : "bg-red-500"
+                        )}
+                        style={{ width: `${Math.min(100, ((task.timeSpentMinutes ?? 0) / task.estimatedMinutes) * 100)}%` }}
+                      />
+                    </div>
+                    <span className={cn(
+                      "text-[10px] shrink-0",
+                      task.timeSpentMinutes && task.timeSpentMinutes > task.estimatedMinutes
+                        ? "text-red-500 font-medium"
+                        : "text-muted-foreground"
+                    )}>
+                      {task.timeSpentMinutes
+                        ? `${Math.round((task.timeSpentMinutes / task.estimatedMinutes) * 100)}%`
+                        : "0%"
+                      }
+                    </span>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
           
