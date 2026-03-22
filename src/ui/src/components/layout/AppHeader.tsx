@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Kanban, Cpu, List, MagnifyingGlass } from '@phosphor-icons/react';
+import { Kanban, Cpu, List, MagnifyingGlass, ChartPieSlice } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { name: 'Chat', path: '/chat', icon: chatConfig.icon },
   { name: 'Calendar', path: '/calendar', icon: calendarConfig.icon },
   { name: 'Projects', path: '/projects', icon: Kanban },
+  { name: 'Portfolio', path: '/portfolio', icon: ChartPieSlice },
   { name: 'Agents', path: '/agents', icon: Cpu },
 ];
 
