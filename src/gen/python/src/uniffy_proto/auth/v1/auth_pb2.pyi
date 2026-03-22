@@ -143,3 +143,25 @@ class RevokeOtherSessionsResponse(_message.Message):
     REVOKED_COUNT_FIELD_NUMBER: _ClassVar[int]
     revoked_count: int
     def __init__(self, revoked_count: _Optional[int] = ...) -> None: ...
+
+class GetCacheKeySeedRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetCacheKeySeedResponse(_message.Message):
+    __slots__ = ("cache_key_seed",)
+    CACHE_KEY_SEED_FIELD_NUMBER: _ClassVar[int]
+    cache_key_seed: bytes
+    def __init__(self, cache_key_seed: _Optional[bytes] = ...) -> None: ...
+
+class RotateCacheKeySeedRequest(_message.Message):
+    __slots__ = ("target_user_id",)
+    TARGET_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    target_user_id: str
+    def __init__(self, target_user_id: _Optional[str] = ...) -> None: ...
+
+class RotateCacheKeySeedResponse(_message.Message):
+    __slots__ = ("new_cache_key_seed",)
+    NEW_CACHE_KEY_SEED_FIELD_NUMBER: _ClassVar[int]
+    new_cache_key_seed: bytes
+    def __init__(self, new_cache_key_seed: _Optional[bytes] = ...) -> None: ...

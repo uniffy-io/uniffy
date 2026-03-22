@@ -1,5 +1,6 @@
 """Authentication operations - login, register, refresh token, session management."""
 
+import os
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -410,6 +411,14 @@ class AuthOperations:
             )
             .values(is_revoked=True, revoked_at=now)
         )
+
+        # Rotate cache_key_seed to invalidate all device caches
+        await self._session.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(cache_key_seed=os.urandom(32))
+        )
+
         await self._session.commit()
         revoked_count = result.rowcount  # type: ignore[union-attr]
 
@@ -418,6 +427,68 @@ class AuthOperations:
             f"kept session {current_session_id}"
         )
         return revoked_count
+
+    async def get_cache_key_seed(self, user_id: UUID) -> bytes:
+        """
+        Return the cache_key_seed for the authenticated user.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User ID.
+
+        Returns
+        -------
+        bytes
+            32-byte cache key seed.
+
+        Raises
+        ------
+        AuthenticationError
+            If user not found.
+
+        """
+        result = await self._session.execute(
+            select(User.cache_key_seed).where(User.id == user_id)
+        )
+        seed = result.scalar_one_or_none()
+        if seed is None:
+            raise AuthenticationError("User not found")
+        return seed
+
+    async def rotate_cache_key_seed(
+        self,
+        user_id: UUID,
+        target_user_id: UUID | None = None,
+    ) -> bytes:
+        """
+        Rotate cache_key_seed for a user. Generates a new 32-byte random seed.
+
+        Parameters
+        ----------
+        user_id : UUID
+            Authenticated user ID.
+        target_user_id : UUID | None
+            If set, rotate another user's seed (admin only).
+
+        Returns
+        -------
+        bytes
+            The new 32-byte cache key seed.
+
+        """
+        effective_user_id = target_user_id or user_id
+        new_seed = os.urandom(32)
+
+        await self._session.execute(
+            update(User)
+            .where(User.id == effective_user_id)
+            .values(cache_key_seed=new_seed)
+        )
+        await self._session.commit()
+
+        logger.info(f"Cache key seed rotated for user {effective_user_id}")
+        return new_seed
 
     async def logout_session(self, user_id: UUID, session_id: UUID) -> None:
         """

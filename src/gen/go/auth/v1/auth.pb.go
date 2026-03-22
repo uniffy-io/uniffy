@@ -888,6 +888,180 @@ func (x *RevokeOtherSessionsResponse) GetRevokedCount() int32 {
 	return 0
 }
 
+// Request to get cache key seed for client-side storage encryption
+type GetCacheKeySeedRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCacheKeySeedRequest) Reset() {
+	*x = GetCacheKeySeedRequest{}
+	mi := &file_auth_v1_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCacheKeySeedRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCacheKeySeedRequest) ProtoMessage() {}
+
+func (x *GetCacheKeySeedRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCacheKeySeedRequest.ProtoReflect.Descriptor instead.
+func (*GetCacheKeySeedRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{15}
+}
+
+// Response containing the cache key seed
+type GetCacheKeySeedResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CacheKeySeed  []byte                 `protobuf:"bytes,1,opt,name=cache_key_seed,json=cacheKeySeed,proto3" json:"cache_key_seed,omitempty"` // 32-byte seed for deriving encryption keys
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCacheKeySeedResponse) Reset() {
+	*x = GetCacheKeySeedResponse{}
+	mi := &file_auth_v1_auth_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCacheKeySeedResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCacheKeySeedResponse) ProtoMessage() {}
+
+func (x *GetCacheKeySeedResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCacheKeySeedResponse.ProtoReflect.Descriptor instead.
+func (*GetCacheKeySeedResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetCacheKeySeedResponse) GetCacheKeySeed() []byte {
+	if x != nil {
+		return x.CacheKeySeed
+	}
+	return nil
+}
+
+// Request to rotate cache key seed
+type RotateCacheKeySeedRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty for self-rotation.
+	// Admin can set target_user_id to rotate another user's seed.
+	TargetUserId  *string `protobuf:"bytes,1,opt,name=target_user_id,json=targetUserId,proto3,oneof" json:"target_user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateCacheKeySeedRequest) Reset() {
+	*x = RotateCacheKeySeedRequest{}
+	mi := &file_auth_v1_auth_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateCacheKeySeedRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateCacheKeySeedRequest) ProtoMessage() {}
+
+func (x *RotateCacheKeySeedRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateCacheKeySeedRequest.ProtoReflect.Descriptor instead.
+func (*RotateCacheKeySeedRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *RotateCacheKeySeedRequest) GetTargetUserId() string {
+	if x != nil && x.TargetUserId != nil {
+		return *x.TargetUserId
+	}
+	return ""
+}
+
+// Response containing the new cache key seed after rotation
+type RotateCacheKeySeedResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	NewCacheKeySeed []byte                 `protobuf:"bytes,1,opt,name=new_cache_key_seed,json=newCacheKeySeed,proto3" json:"new_cache_key_seed,omitempty"` // New 32-byte seed
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RotateCacheKeySeedResponse) Reset() {
+	*x = RotateCacheKeySeedResponse{}
+	mi := &file_auth_v1_auth_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateCacheKeySeedResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateCacheKeySeedResponse) ProtoMessage() {}
+
+func (x *RotateCacheKeySeedResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateCacheKeySeedResponse.ProtoReflect.Descriptor instead.
+func (*RotateCacheKeySeedResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *RotateCacheKeySeedResponse) GetNewCacheKeySeed() []byte {
+	if x != nil {
+		return x.NewCacheKeySeed
+	}
+	return nil
+}
+
 var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
@@ -969,7 +1143,15 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x15RevokeSessionResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"B\n" +
 	"\x1bRevokeOtherSessionsResponse\x12#\n" +
-	"\rrevoked_count\x18\x01 \x01(\x05R\frevokedCount2\xd0\x04\n" +
+	"\rrevoked_count\x18\x01 \x01(\x05R\frevokedCount\"\x18\n" +
+	"\x16GetCacheKeySeedRequest\"?\n" +
+	"\x17GetCacheKeySeedResponse\x12$\n" +
+	"\x0ecache_key_seed\x18\x01 \x01(\fR\fcacheKeySeed\"Y\n" +
+	"\x19RotateCacheKeySeedRequest\x12)\n" +
+	"\x0etarget_user_id\x18\x01 \x01(\tH\x00R\ftargetUserId\x88\x01\x01B\x11\n" +
+	"\x0f_target_user_id\"I\n" +
+	"\x1aRotateCacheKeySeedResponse\x12+\n" +
+	"\x12new_cache_key_seed\x18\x01 \x01(\fR\x0fnewCacheKeySeed2\x85\x06\n" +
 	"\vAuthService\x12;\n" +
 	"\bRegister\x12\x18.auth.v1.RegisterRequest\x1a\x15.auth.v1.AuthResponse\x125\n" +
 	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x15.auth.v1.AuthResponse\x12C\n" +
@@ -978,7 +1160,9 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x17.auth.v1.LogoutResponse\x12K\n" +
 	"\fListSessions\x12\x1c.auth.v1.ListSessionsRequest\x1a\x1d.auth.v1.ListSessionsResponse\x12N\n" +
 	"\rRevokeSession\x12\x1d.auth.v1.RevokeSessionRequest\x1a\x1e.auth.v1.RevokeSessionResponse\x12`\n" +
-	"\x13RevokeOtherSessions\x12#.auth.v1.RevokeOtherSessionsRequest\x1a$.auth.v1.RevokeOtherSessionsResponseB7Z5github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3"
+	"\x13RevokeOtherSessions\x12#.auth.v1.RevokeOtherSessionsRequest\x1a$.auth.v1.RevokeOtherSessionsResponse\x12T\n" +
+	"\x0fGetCacheKeySeed\x12\x1f.auth.v1.GetCacheKeySeedRequest\x1a .auth.v1.GetCacheKeySeedResponse\x12]\n" +
+	"\x12RotateCacheKeySeed\x12\".auth.v1.RotateCacheKeySeedRequest\x1a#.auth.v1.RotateCacheKeySeedResponseB7Z5github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3"
 
 var (
 	file_auth_v1_auth_proto_rawDescOnce sync.Once
@@ -992,7 +1176,7 @@ func file_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_auth_v1_auth_proto_rawDescData
 }
 
-var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_auth_v1_auth_proto_goTypes = []any{
 	(*RegisterRequest)(nil),             // 0: auth.v1.RegisterRequest
 	(*LoginRequest)(nil),                // 1: auth.v1.LoginRequest
@@ -1009,6 +1193,10 @@ var file_auth_v1_auth_proto_goTypes = []any{
 	(*ListSessionsResponse)(nil),        // 12: auth.v1.ListSessionsResponse
 	(*RevokeSessionResponse)(nil),       // 13: auth.v1.RevokeSessionResponse
 	(*RevokeOtherSessionsResponse)(nil), // 14: auth.v1.RevokeOtherSessionsResponse
+	(*GetCacheKeySeedRequest)(nil),      // 15: auth.v1.GetCacheKeySeedRequest
+	(*GetCacheKeySeedResponse)(nil),     // 16: auth.v1.GetCacheKeySeedResponse
+	(*RotateCacheKeySeedRequest)(nil),   // 17: auth.v1.RotateCacheKeySeedRequest
+	(*RotateCacheKeySeedResponse)(nil),  // 18: auth.v1.RotateCacheKeySeedResponse
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
 	11, // 0: auth.v1.ListSessionsResponse.sessions:type_name -> auth.v1.SessionInfo
@@ -1020,16 +1208,20 @@ var file_auth_v1_auth_proto_depIdxs = []int32{
 	5,  // 6: auth.v1.AuthService.ListSessions:input_type -> auth.v1.ListSessionsRequest
 	6,  // 7: auth.v1.AuthService.RevokeSession:input_type -> auth.v1.RevokeSessionRequest
 	7,  // 8: auth.v1.AuthService.RevokeOtherSessions:input_type -> auth.v1.RevokeOtherSessionsRequest
-	8,  // 9: auth.v1.AuthService.Register:output_type -> auth.v1.AuthResponse
-	8,  // 10: auth.v1.AuthService.Login:output_type -> auth.v1.AuthResponse
-	8,  // 11: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.AuthResponse
-	9,  // 12: auth.v1.AuthService.GetCurrentUser:output_type -> auth.v1.CurrentUserResponse
-	10, // 13: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
-	12, // 14: auth.v1.AuthService.ListSessions:output_type -> auth.v1.ListSessionsResponse
-	13, // 15: auth.v1.AuthService.RevokeSession:output_type -> auth.v1.RevokeSessionResponse
-	14, // 16: auth.v1.AuthService.RevokeOtherSessions:output_type -> auth.v1.RevokeOtherSessionsResponse
-	9,  // [9:17] is the sub-list for method output_type
-	1,  // [1:9] is the sub-list for method input_type
+	15, // 9: auth.v1.AuthService.GetCacheKeySeed:input_type -> auth.v1.GetCacheKeySeedRequest
+	17, // 10: auth.v1.AuthService.RotateCacheKeySeed:input_type -> auth.v1.RotateCacheKeySeedRequest
+	8,  // 11: auth.v1.AuthService.Register:output_type -> auth.v1.AuthResponse
+	8,  // 12: auth.v1.AuthService.Login:output_type -> auth.v1.AuthResponse
+	8,  // 13: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.AuthResponse
+	9,  // 14: auth.v1.AuthService.GetCurrentUser:output_type -> auth.v1.CurrentUserResponse
+	10, // 15: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
+	12, // 16: auth.v1.AuthService.ListSessions:output_type -> auth.v1.ListSessionsResponse
+	13, // 17: auth.v1.AuthService.RevokeSession:output_type -> auth.v1.RevokeSessionResponse
+	14, // 18: auth.v1.AuthService.RevokeOtherSessions:output_type -> auth.v1.RevokeOtherSessionsResponse
+	16, // 19: auth.v1.AuthService.GetCacheKeySeed:output_type -> auth.v1.GetCacheKeySeedResponse
+	18, // 20: auth.v1.AuthService.RotateCacheKeySeed:output_type -> auth.v1.RotateCacheKeySeedResponse
+	11, // [11:21] is the sub-list for method output_type
+	1,  // [1:11] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
@@ -1046,13 +1238,14 @@ func file_auth_v1_auth_proto_init() {
 	file_auth_v1_auth_proto_msgTypes[4].OneofWrappers = []any{}
 	file_auth_v1_auth_proto_msgTypes[8].OneofWrappers = []any{}
 	file_auth_v1_auth_proto_msgTypes[9].OneofWrappers = []any{}
+	file_auth_v1_auth_proto_msgTypes[17].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_auth_proto_rawDesc), len(file_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1,5 +1,6 @@
 """User management operations."""
 
+import os
 from uuid import UUID
 
 from sqlalchemy import delete as sql_delete
@@ -191,11 +192,13 @@ class UserOperations:
             # Increment token_version on deactivation to immediately revoke all tokens
             if was_deactivated:
                 user.token_version += 1
+                user.cache_key_seed = os.urandom(32)
         if is_system_admin is not None:
             user.is_system_admin = is_system_admin
         if hashed_password is not None:
             user.hashed_password = hashed_password
             user.token_version += 1  # Invalidate existing tokens on password change
+            user.cache_key_seed = os.urandom(32)  # Invalidate all device caches
 
         await self._session.commit()
         await self._session.refresh(user)

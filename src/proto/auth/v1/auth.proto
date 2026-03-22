@@ -34,6 +34,12 @@ service AuthService {
 
   // Revoke all sessions except the current one
   rpc RevokeOtherSessions(RevokeOtherSessionsRequest) returns (RevokeOtherSessionsResponse);
+
+  // Get the cache key seed for client-side storage encryption (called once per session)
+  rpc GetCacheKeySeed(GetCacheKeySeedRequest) returns (GetCacheKeySeedResponse);
+
+  // Rotate cache key seed (invalidates all device caches)
+  rpc RotateCacheKeySeed(RotateCacheKeySeedRequest) returns (RotateCacheKeySeedResponse);
 }
 
 // Request Messages
@@ -135,4 +141,24 @@ message RevokeSessionResponse {
 // Response after revoking other sessions
 message RevokeOtherSessionsResponse {
   int32 revoked_count = 1;
+}
+
+// Request to get cache key seed for client-side storage encryption
+message GetCacheKeySeedRequest {}
+
+// Response containing the cache key seed
+message GetCacheKeySeedResponse {
+  bytes cache_key_seed = 1;  // 32-byte seed for deriving encryption keys
+}
+
+// Request to rotate cache key seed
+message RotateCacheKeySeedRequest {
+  // Empty for self-rotation.
+  // Admin can set target_user_id to rotate another user's seed.
+  optional string target_user_id = 1;
+}
+
+// Response containing the new cache key seed after rotation
+message RotateCacheKeySeedResponse {
+  bytes new_cache_key_seed = 1;  // New 32-byte seed
 }

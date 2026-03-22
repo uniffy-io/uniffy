@@ -1,13 +1,12 @@
 /**
- * Account settings section - displays user account information,
- * avatar management, and active sessions.
+ * Account settings section - displays user account information
+ * and avatar management.
  */
 
 import { useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { updateUser } from '@/features/auth/store/authSlice';
 import { usersApi } from '@/features/settings/api/usersApi';
-import { SessionsSection } from '@/features/settings/components/SessionsSection';
 import { getInitials } from '@/components/subject/utils';
 import { AvatarUpload } from '@/components/ui/avatar-upload';
 
@@ -44,7 +43,7 @@ export function AccountSection() {
             <div>
                 <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Account</h1>
                 <p className="text-sm text-muted-foreground">
-                    View your account information and manage sessions.
+                    View your account information.
                 </p>
             </div>
 
@@ -133,8 +132,6 @@ export function AccountSection() {
                 </div>
             </section>
 
-            {/* Sessions */}
-            <SessionsSection />
         </div>
     );
 }

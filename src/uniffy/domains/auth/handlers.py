@@ -10,6 +10,8 @@ from loguru import logger
 from uniffy_proto.auth.v1.auth_pb2 import (
     AuthResponse,
     CurrentUserResponse,
+    GetCacheKeySeedRequest,
+    GetCacheKeySeedResponse,
     GetCurrentUserRequest,
     ListSessionsRequest,
     ListSessionsResponse,
@@ -22,6 +24,8 @@ from uniffy_proto.auth.v1.auth_pb2 import (
     RevokeOtherSessionsResponse,
     RevokeSessionRequest,
     RevokeSessionResponse,
+    RotateCacheKeySeedRequest,
+    RotateCacheKeySeedResponse,
 )
 
 from uniffy.db import get_async_session
@@ -276,4 +280,59 @@ class AuthHandlers:
                 return RevokeOtherSessionsResponse(revoked_count=revoked_count)
         except Exception as e:
             logger.error(f"Error revoking other sessions: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_cache_key_seed(
+        self,
+        request: GetCacheKeySeedRequest,
+        ctx: RequestContext,
+    ) -> GetCacheKeySeedResponse:
+        """Get cache key seed for client-side storage encryption."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async for session in get_async_session():
+                auth_ops = AuthOperations(session)
+                seed = await auth_ops.get_cache_key_seed(user_id)
+                return GetCacheKeySeedResponse(cache_key_seed=seed)
+        except AuthenticationError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error fetching cache key seed: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def rotate_cache_key_seed(
+        self,
+        request: RotateCacheKeySeedRequest,
+        ctx: RequestContext,
+    ) -> RotateCacheKeySeedResponse:
+        """Rotate cache key seed, invalidating all device caches."""
+        user_id = get_user_id_from_context(ctx)
+
+        target_user_id = None
+        if request.HasField("target_user_id") and request.target_user_id:
+            try:
+                target_user_id = UUID(request.target_user_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid target_user_id")
+
+            # Admin action: verify caller is system admin
+            if target_user_id != user_id:
+                try:
+                    async for session in get_async_session():
+                        user_ops = UserOperations(session)
+                        await user_ops.require_system_admin(user_id)
+                except Exception:
+                    raise ConnectError(
+                        Code.PERMISSION_DENIED,
+                        "Only system admins can rotate another user's cache key seed",
+                    )
+
+        try:
+            async for session in get_async_session():
+                auth_ops = AuthOperations(session)
+                new_seed = await auth_ops.rotate_cache_key_seed(user_id, target_user_id)
+                return RotateCacheKeySeedResponse(new_cache_key_seed=new_seed)
+        except Exception as e:
+            logger.error(f"Error rotating cache key seed: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")

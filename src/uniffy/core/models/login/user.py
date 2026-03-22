@@ -1,9 +1,10 @@
 """User model."""
 
+import os
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, LargeBinary
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -73,6 +74,11 @@ class User(SQLModel, table=True):
         default=None,
         max_length=512,
         description="S3 key prefix for avatar images (e.g., 'avatars/{user_id}/{hash}')",
+    )
+    cache_key_seed: bytes = Field(
+        default_factory=lambda: os.urandom(32),
+        sa_column=Column(LargeBinary(32), nullable=False),
+        description="32-byte random seed for client-side storage encryption key derivation.",
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

@@ -40,6 +40,12 @@ class AuthService(Protocol):
     async def revoke_other_sessions(self, request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def rotate_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
     def __init__(self, service: AuthService | AsyncGenerator[AuthService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -125,6 +131,26 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.revoke_other_sessions,
+                ),
+                "/auth.v1.AuthService/GetCacheKeySeed": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetCacheKeySeed",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest,
+                        output=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_cache_key_seed,
+                ),
+                "/auth.v1.AuthService/RotateCacheKeySeed": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RotateCacheKeySeed",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest,
+                        output=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.rotate_cache_key_seed,
                 ),
             },
             interceptors=interceptors,
@@ -298,6 +324,46 @@ class AuthServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_cache_key_seed(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCacheKeySeed",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest,
+                output=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def rotate_cache_key_seed(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RotateCacheKeySeed",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest,
+                output=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class AuthServiceSync(Protocol):
     def register(self, request: auth_dot_v1_dot_auth__pb2.RegisterRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.AuthResponse:
@@ -315,6 +381,10 @@ class AuthServiceSync(Protocol):
     def revoke_session(self, request: auth_dot_v1_dot_auth__pb2.RevokeSessionRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def revoke_other_sessions(self, request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def rotate_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -401,6 +471,26 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.revoke_other_sessions,
+                ),
+                "/auth.v1.AuthService/GetCacheKeySeed": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetCacheKeySeed",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest,
+                        output=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_cache_key_seed,
+                ),
+                "/auth.v1.AuthService/RotateCacheKeySeed": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RotateCacheKeySeed",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest,
+                        output=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.rotate_cache_key_seed,
                 ),
             },
             interceptors=interceptors,
@@ -568,6 +658,46 @@ class AuthServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
                 output=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_cache_key_seed(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCacheKeySeed",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest,
+                output=auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def rotate_cache_key_seed(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RotateCacheKeySeed",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest,
+                output=auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

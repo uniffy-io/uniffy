@@ -30,7 +30,7 @@ Voice and video calling is planned but explicitly out of scope for the MVP.
 
 ### 3.1 ChatChannel
 
-A persistent conversation container. This is the primary content entity (bookmarkable, searchable, mentionable via URN).
+A persistent conversation container. This is the primary content entity (bookmarkable, searchable, mentionable via URN). This table stores **structural metadata only** - counters and timestamps that change on every message live in `ChatChannelStats` (Section 3.1.1) to avoid row-level lock contention.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -44,25 +44,52 @@ A persistent conversation container. This is the primary content entity (bookmar
 | `visibility` | VisibilityScope | Maps to permission system |
 | `is_encrypted` | bool | E2E encryption enabled (immutable after creation) |
 | `is_archived` | bool | Archived channels are read-only |
+| `is_default` | bool | Default channels: auto-joined by new org members, cannot be left |
 | `is_deleted` | bool | Soft delete |
 | `icon` | string | Optional icon identifier |
-| `last_message_at` | timestamp | Denormalized for sort performance |
-| `message_count` | int | Denormalized total message count |
-| `member_count` | int | Denormalized member count |
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
 | `deleted_at` | timestamp | |
 
 **URN**: `urn:uniffy:content:CHAT:{channel_id}`
 
-**Visibility mapping:**
+#### 3.1.1 ChatChannelStats
 
-| Channel Type | Visibility | Access |
-|-------------|-----------|--------|
-| PUBLIC | ORGANIZATION | Any org member can view and join |
-| PRIVATE | GROUP | Only channel members |
-| DIRECT | PRIVATE | Only the two participants |
-| GROUP_DM | PRIVATE | Only participants (2-8 users, no channel semantics) |
+Separated from `ChatChannel` to isolate high-frequency counter updates. Every message send locks this row instead of the channel row, keeping structural metadata contention-free. This table is tiny (one row per channel, ~50 bytes) and fits entirely in PostgreSQL shared buffers.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `channel_id` | UUID | PK, FK to ChatChannel |
+| `message_count` | int | Total messages (root + replies) |
+| `root_message_count` | int | Root messages only (drives channel timeline count) |
+| `last_message_at` | timestamp | Most recent message (any type), used for sidebar sorting |
+| `last_root_message_at` | timestamp | Most recent root message, used for channel unread calculation |
+| `member_count` | int | Current member count |
+
+**Created automatically** when a channel is created (single INSERT). Updated on message send (counter increment) and member join/leave.
+
+**Design rationale:** In an active channel, every `SendMessage` must increment `message_count` and update `last_message_at`. If these lived on `ChatChannel`, concurrent senders would serialize on the channel row lock - which also blocks sidebar reads. By isolating counters, the lock is on a tiny, purpose-built row. Autovacuum is tuned aggressively on this table (`autovacuum_vacuum_scale_factor = 0.01`).
+
+**Sidebar query** joins both tables:
+```sql
+SELECT c.id, c.name, c.channel_type, s.last_root_message_at, s.member_count
+FROM chat_channels c
+JOIN chat_channel_stats s ON s.channel_id = c.id
+JOIN chat_channel_members cm ON cm.channel_id = c.id
+WHERE cm.user_id = :uid AND c.organization_id = :org_id AND c.is_deleted = false
+ORDER BY s.last_root_message_at DESC NULLS LAST
+```
+
+**Thread replies do NOT update `last_root_message_at`** - only root messages bump the channel in the sidebar. Thread replies update `last_message_at` (for "last activity" displays) but not the sort order. This matches Mattermost behavior and reduces contention.
+
+**Visibility mapping** (auto-derived from `channel_type`, used for search indexing only - not for permission checks, see Section 5.7):
+
+| Channel Type | Visibility (auto-set) | Search behavior |
+|-------------|----------------------|-----------------|
+| PUBLIC | ORGANIZATION | All org members can find in search |
+| PRIVATE | PRIVATE | Only members can find in search (indexed with `shared_user_ids`) |
+| DIRECT | PRIVATE | Only participants can find in search |
+| GROUP_DM | PRIVATE | Only participants can find in search |
 
 ### 3.2 ChatMessage
 
@@ -90,56 +117,115 @@ A message within a channel. Messages are children of channels. Individual messag
 - Replies are hidden from the main channel view
 - The root message displays a thread footer: reply count, participant avatars, last reply time
 
-### 3.3 ChatThread (Denormalized Cache)
+### 3.3 ChatThread
 
-Inspired by Mattermost's scaling lessons. This table caches thread metadata to avoid expensive joins/aggregations on the messages table.
+Structural metadata for threads. Created on first reply to a root message. Like channels, mutable counters live in a separate stats table to avoid lock contention.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `root_message_id` | UUID | PK, FK to ChatMessage (the root) |
 | `channel_id` | UUID | FK to ChatChannel |
-| `reply_count` | int | Cached count of replies |
-| `last_reply_at` | timestamp | Drives thread inbox sorting |
-| `participant_ids` | UUID[] | Array of user IDs who replied (for avatar display) |
-| `created_at` | timestamp | |
-| `updated_at` | timestamp | |
+| `created_at` | timestamp | When the first reply was posted |
 
-### 3.4 ChatChannelMember
+#### 3.3.1 ChatThreadStats
 
-Tracks channel membership and per-user read state.
+High-frequency counters for thread metadata, separated from `ChatThread` for the same reasons as `ChatChannelStats`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | UUID | Primary key |
-| `channel_id` | UUID | FK to ChatChannel |
-| `user_id` | UUID | FK to User |
+| `root_message_id` | UUID | PK, FK to ChatThread |
+| `reply_count` | int | Cached count of replies |
+| `last_reply_at` | timestamp | Drives thread inbox sorting |
+
+**Created automatically** when a `ChatThread` is created. Updated on every reply.
+
+#### 3.3.2 ChatThreadParticipant
+
+Tracks which users have participated in a thread. **Append-only** - rows are inserted, never updated or deleted. This eliminates the array-append contention that `participant_ids UUID[]` would cause when concurrent users reply to the same thread.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `root_message_id` | UUID | PK (composite), FK to ChatThread |
+| `user_id` | UUID | PK (composite), FK to User |
+| `created_at` | timestamp | When user first participated |
+
+**Composite primary key**: `(root_message_id, user_id)` - enforces uniqueness, no separate unique constraint needed.
+
+**Insert pattern**: `INSERT INTO chat_thread_participants (...) VALUES (...) ON CONFLICT DO NOTHING` - idempotent, no contention.
+
+**Avatar query** for thread footer:
+```sql
+SELECT user_id FROM chat_thread_participants
+WHERE root_message_id = :id
+ORDER BY created_at LIMIT 4
+```
+
+### 3.4 ChatChannelMember
+
+Tracks channel membership and notification preferences. This table stores **cold structural data only** - it changes when a user adjusts notification preferences or gets promoted, not during normal messaging. Read state (which changes on every channel view) is stored separately in `ChatReadCursor` (Section 3.4.1).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `channel_id` | UUID | PK (composite) |
+| `user_id` | UUID | PK (composite) |
 | `role` | enum | `OWNER`, `ADMIN`, `MEMBER` |
-| `last_read_message_id` | UUID (nullable) | Last message the user has seen |
-| `last_read_at` | timestamp | When user last viewed the channel |
 | `notification_level` | enum | `ALL`, `MENTIONS`, `NONE` (per-channel override) |
 | `is_muted` | bool | Muted channels don't trigger notifications |
 | `joined_at` | timestamp | |
 
-**Unique constraint**: `(channel_id, user_id)`
+**Composite primary key**: `(channel_id, user_id)` - enforces uniqueness, doubles as the membership lookup index.
 
-### 3.5 ChatThreadMember
+#### 3.4.1 ChatReadCursor
 
-Per-user thread subscription and read tracking, separate from channel-level tracking.
+Per-user, per-channel read position. This is the **highest-frequency write** in the chat system - updated every time a user views a channel or receives messages while viewing.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | UUID | Primary key |
-| `root_message_id` | UUID | FK to ChatThread |
-| `user_id` | UUID | FK to User |
-| `following` | bool | Whether user is actively following this thread |
-| `last_read_at` | timestamp | When user last viewed this thread |
-| `unread_mentions` | int | Count of unread @mentions in this thread |
+| `channel_id` | UUID | PK (composite) |
+| `user_id` | UUID | PK (composite) |
+| `last_read_message_id` | UUID | Last message the user has seen |
+| `last_read_at` | timestamp | When user last viewed the channel |
+
+**Composite primary key**: `(channel_id, user_id)`.
+
+**Valkey-first write strategy**: To avoid hammering PostgreSQL with an UPDATE on every channel view, read cursors use a two-tier storage model:
+
+1. **Hot path (Valkey)**: `MarkChannelRead` writes to Valkey key `chat:read:{user_id}:{channel_id}` with value `{message_id}:{timestamp}`. Sub-millisecond, no DB transaction.
+2. **Durable path (PostgreSQL)**: A periodic ARQ job (every 30 seconds) collects dirty cursors from Valkey and flushes them to `chat_read_cursors` in a single batch `INSERT ... ON CONFLICT (channel_id, user_id) DO UPDATE`.
+3. **Read path**: Check Valkey first (cache hit). On miss (Valkey restart, eviction), fall back to PostgreSQL and repopulate Valkey.
+
+This turns hundreds of individual PG writes per minute into one batch write every 30 seconds. The tradeoff is that a Valkey crash loses at most 30 seconds of "mark as read" state - acceptable for unread indicators.
+
+**Frontend debouncing**: The frontend debounces `MarkChannelRead` calls (5-second window while the channel is focused) to further reduce write frequency.
+
+### 3.5 ChatThreadFollow
+
+Tracks which threads a user is following. **Insert to follow, delete to unfollow** - no boolean toggle column to update. Checking if a user follows a thread is a single PK lookup.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `root_message_id` | UUID | PK (composite), FK to ChatThread |
+| `user_id` | UUID | PK (composite), FK to User |
+| `created_at` | timestamp | When user started following |
 
 **Auto-follow rules:**
 - User starts a thread (posts root message that gets a reply)
 - User replies in a thread
 - User is @mentioned in a thread
 - All DMs and group DMs are auto-followed
+
+#### 3.5.1 ChatThreadReadCursor
+
+Per-user, per-thread read position. Same Valkey-first strategy as `ChatReadCursor`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `root_message_id` | UUID | PK (composite) |
+| `user_id` | UUID | PK (composite) |
+| `last_read_at` | timestamp | When user last viewed this thread |
+| `unread_mentions` | int | Count of unread @mentions in this thread |
+
+**Valkey key**: `chat:thread_read:{user_id}:{root_message_id}` with value `{timestamp}`. Flushed to PostgreSQL in the same periodic batch job as channel read cursors.
 
 ### 3.6 ChatReaction
 
@@ -235,8 +321,8 @@ A dedicated view accessible from the sidebar showing all threads the user is **f
 
 | Level | What triggers unread | Where shown | Driven by |
 |-------|---------------------|-------------|-----------|
-| Channel | New root messages in channel | Channel list sidebar (bold + badge) | `ChatChannelMember.last_read_message_id` |
-| Thread | New replies in a followed thread | Thread footer indicator + Threads inbox | `ChatThreadMember.last_read_at` vs `ChatThread.last_reply_at` |
+| Channel | New root messages in channel | Channel list sidebar (bold + badge) | `ChatReadCursor.last_read_message_id` vs `ChatChannelStats.last_root_message_at` |
+| Thread | New replies in a followed thread | Thread footer indicator + Threads inbox | `ChatThreadReadCursor.last_read_at` vs `ChatThreadStats.last_reply_at` |
 | Mention | @mention of user anywhere | Badge count on channel + thread | Parsed from message content |
 
 ---
@@ -281,6 +367,26 @@ ChatEvent:
   - HEARTBEAT            # Keep-alive
 ```
 
+### 5.2.1 Event Payloads and Cache Invalidation
+
+Events that mutate messages carry the **full updated message** in the payload, not just the ID. This allows the frontend to update both Redux (L1) and IndexedDB (L2) caches in a single operation without a follow-up API call.
+
+| Event | Payload | Frontend cache action |
+|-------|---------|----------------------|
+| `MESSAGE_CREATED` | Full `ChatMessage` proto | Append to Redux + write to IndexedDB |
+| `MESSAGE_UPDATED` | Full `ChatMessage` proto (with updated `content`, `edited_at`) | Replace in Redux + replace in IndexedDB by message ID |
+| `MESSAGE_DELETED` | `message_id` + `deleted_at` | Set `is_deleted = true` in Redux + IndexedDB (keep row for "message was deleted" placeholder) |
+| `REACTION_ADDED` | `message_id`, `emoji`, `user_id` | Update reaction state in Redux only (reactions not cached in IndexedDB) |
+| `REACTION_REMOVED` | `message_id`, `emoji`, `user_id` | Update reaction state in Redux only |
+| `THREAD_UPDATED` | `root_message_id`, `reply_count`, `last_reply_at`, `latest_participant_id` | Update thread footer in Redux |
+| `MEMBER_JOINED` | `MemberInfo` proto | Update member list in Redux |
+| `MEMBER_LEFT` | `user_id` | Remove from member list in Redux |
+| `CHANNEL_UPDATED` | Full `ChatChannel` proto | Update channel metadata in Redux |
+| `TYPING_STARTED` | `user_id`, `display_name` | Update typing indicator state (ephemeral, not cached) |
+| `HEARTBEAT` | (empty) | Reset stream health timer |
+
+**Why full message on update:** An edit changes `content`, `edited_at`, and potentially `metadata` (link previews regenerated). Sending the full message avoids a race where the frontend fetches the old version before the DB commit completes. The stream event is published post-commit, so the payload always reflects the committed state.
+
 ### 5.3 Streaming Subscriptions
 
 A user opens a single long-lived stream per active channel. When switching channels, the previous stream is aborted and a new one is opened.
@@ -310,10 +416,383 @@ StreamUserChatEvents(request) returns (stream UserChatEvent)
 | Valkey pub/sub fan-out | Each subscriber gets a dedicated Valkey connection. For 1,000 concurrent users across 200 channels, this is ~1,200 Valkey connections - well within limits. |
 | Message throughput | Valkey pub/sub handles 500k+ msg/s. Message persistence (PostgreSQL + Meilisearch) is the bottleneck - batch indexing helps. |
 | Latency | Valkey pub/sub adds <1ms. ConnectRPC framing adds ~1ms. Total: user-to-user latency ~50-100ms including DB persistence. |
-| Reconnection | Exponential backoff with jitter (1s initial, 30s max), same as notifications stream. On reconnect, client fetches missed messages via `GetMessages(since: last_seen_id)`. |
+| Reconnection | Exponential backoff with jitter (1s initial, 30s max), same as notifications stream. On reconnect, client fetches missed messages via `GetMessages(after_id: last_received_message_id)` and merges into Redux + IndexedDB cache (see Section 5.6.7). |
 | Horizontal scaling | Valkey pub/sub works across application instances natively. No sticky sessions needed. |
 
 **Load testing recommendation:** Before launch, benchmark with simulated load (1,000 concurrent users, 50 active channels, 10 messages/second) to validate the streaming infrastructure holds under real conditions.
+
+### 5.6 Message Loading Strategy
+
+#### 5.6.1 Three-Layer Cache
+
+Chat messages are an append-only immutable log. After the edit window (~2 minutes), 99%+ of messages never change. This makes aggressive client-side caching safe and highly effective.
+
+```
+L1: Redux store        (in-memory, current session, fast)
+L2: IndexedDB          (persistent across reloads/restarts, zero network)
+L3: PostgreSQL         (source of truth, network round trip)
+```
+
+**L1 - Redux:** Holds messages for the active channel + 2-3 recently visited channels (LRU eviction). Real-time stream events push directly into L1. Evicted when the user has visited 4+ channels (oldest channel's messages are dropped from Redux).
+
+**L2 - IndexedDB:** Persistent browser storage. Survives page reloads, tab closes, and browser restarts. Eliminates API calls for previously visited channels. This is the primary cache win - a user who visits the same 5-10 channels daily almost never hits the API for message history.
+
+**L3 - PostgreSQL:** Source of truth. Only hit on first-ever visit to a channel or when scrolling past the IndexedDB cache boundary.
+
+**IndexedDB schema (split-store pattern for encryption):**
+
+Chat uses a split-store pattern to preserve IndexedDB queryability while encrypting message content at rest. Structural metadata (IDs, timestamps) lives in an unencrypted index store; user-generated content (message text, sender info, metadata) is encrypted in a separate content store. See `docs/specs/client-storage-encryption-spec.md` Section 6.5 for the full design rationale, threat model analysis, read/write paths, and performance benchmarks.
+
+```
+Object store: "message_index" (UNENCRYPTED - structural metadata only)
+  Key: message_id (UUID)
+  Value: { id, channel_id, root_id, created_at, is_deleted }
+  Indexes:
+    - [channel_id, created_at, id]   (compound, for timeline queries)
+    - [root_id, created_at, id]      (compound, for thread replies)
+
+Object store: "message_content" (ENCRYPTED - AES-256-GCM ciphertext)
+  Key: message_id (UUID)
+  Value: ArrayBuffer (encrypted full message object)
+
+Object store: "channel_sync" (UNENCRYPTED - no user content)
+  Key: channel_id
+  Value: { latest_message_id, oldest_message_id, synced_at }
+```
+
+**What stays unencrypted in the index:** `id`, `channel_id`, `root_id`, `created_at`, `is_deleted` - all system-generated UUIDs, timestamps, or boolean flags. No user content.
+
+**What is encrypted in the content store:** The full message object including `content`, `sender_id`, `sender_type`, `edited_at`, `is_pinned`, `metadata`. All user-generated or privacy-sensitive fields.
+
+**Query pattern:** All timeline queries, pagination, and jump-to-message lookups hit the index store first (fast, uses compound indexes), then batch-fetch and decrypt from the content store. Both stores are written atomically in the same IDB transaction.
+
+**Cache invalidation:** The real-time stream (Section 5.2.1) is the invalidation mechanism. `MESSAGE_UPDATED` and `MESSAGE_DELETED` events carry full payloads and update both L1 and L2 immediately. No polling or TTL-based expiration needed.
+
+**IndexedDB storage limits:**
+
+- Per-channel cap: 500 messages. Older messages fetched on scroll-up are served but not cached.
+- Age cap: Messages older than 30 days are purged from IndexedDB on app startup.
+- Total cap: If IndexedDB exceeds ~50MB, evict oldest channels by `synced_at` until under budget.
+- Eviction is silent - no user impact, the next visit to an evicted channel fetches from the API.
+
+#### 5.6.1.1 IndexedDB Encryption at Rest
+
+All cached chat message content in IndexedDB is encrypted at rest using the platform-wide client-side storage encryption system. See **`docs/specs/client-storage-encryption-spec.md`** for the full specification covering key hierarchy (DEK/KEK/cache_key_seed), backend changes, encrypt/decrypt implementation, threat model, and integration guide.
+
+**Chat-specific details:**
+
+- Chat uses the **split-store pattern** (see encryption spec Section 6.5). The `message_content` store holds `ArrayBuffer` values (AES-256-GCM ciphertext). The `message_index` store holds unencrypted structural metadata (IDs, timestamps) to preserve IndexedDB queryability for pagination and jump-to-message.
+- All content reads/writes go through `encryptForStorage()` / `decryptFromStorage()` from `@/shared/crypto/storageEncryption`. Index entries are written as plain objects.
+- Both stores are written atomically in the same IDB transaction.
+- The `channel_sync` store remains unencrypted (contains only channel IDs and message IDs, no user content).
+- If decryption fails for a single message (corrupted entry), that message is skipped and fetched from the API. The index entry remains usable for pagination (the message simply shows a placeholder or is re-fetched).
+- If the DEK cannot be unwrapped (password change, "sign out all devices"), all three chat stores (`message_index`, `message_content`, `channel_sync`) are cleared and the user starts fresh from the API.
+
+**Implementation checklist** (based on patterns established by notes and thumbnails encryption):
+
+1. **Register the database** at module scope so it's automatically cleared on seed rotation and "Clear All Devices":
+   ```typescript
+   import { registerEncryptedDatabase } from '@/shared/crypto/storageEncryption';
+   registerEncryptedDatabase('uniffy-messages');
+   ```
+
+2. **Guard all reads/writes** with `isStorageEncryptionReady()`. If encryption isn't initialized yet (brief window between page load and `GetCacheKeySeed` response), skip the IndexedDB cache and fetch from the API. The app must work without the cache.
+   ```typescript
+   import { isStorageEncryptionReady } from '@/shared/crypto/storageEncryption';
+   if (!isStorageEncryptionReady()) {
+       // Fall through to API fetch - cache is unavailable
+   }
+   ```
+
+3. **Encrypt content, not indexes.** Only `message_content` store values go through `encryptForStorage()`. The `message_index` store holds plain objects (UUIDs, timestamps, booleans). The `channel_sync` store is fully unencrypted.
+
+4. **Handle decryption failures per-message**, not per-store. If `decryptFromStorage()` throws for one message, log a warning and skip it (fetch from API). Do not clear the entire cache for a single corrupted entry.
+
+5. **Bump DB version** when adding encryption. In the `onupgradeneeded` handler, delete the old `messages` plaintext store and create the new `message_content` (no keyPath) + `message_index` (with compound indexes) stores. Add a runtime safety check for the case where the upgrade was blocked by another tab (see `notesCache.ts` `openOrRecreateDB()` pattern).
+
+#### 5.6.2 Channel Open (Initial Load)
+
+When a user opens a channel, the loading strategy depends on unread state and cache state.
+
+**Step 1 - Resolve read cursor:**
+
+Fetch `last_read_message_id` from Valkey (via the `MarkChannelRead` infrastructure). This determines where the unread separator goes.
+
+**Step 2 - Check IndexedDB cache:**
+
+```
+IndexedDB HIT (previously visited channel):
+  1. Load cached messages from IndexedDB into Redux
+  2. Fetch delta from API: after_id = latest_cached_message_id
+  3. Merge new messages into IndexedDB + Redux
+  4. Insert unread separator after last_read_message_id
+
+IndexedDB MISS (first visit):
+  -> Fall through to Step 3
+```
+
+**Step 3 - API fetch (no cache or cache miss):**
+
+| Unread count | Strategy | Rationale |
+|-------------|----------|-----------|
+| 0 (no unreads) | Fetch last 50 root messages, scroll to bottom | Standard case, show latest conversation |
+| 1-50 unreads | Fetch last 50 root messages, scroll to unread separator | All unreads fit in one page, user sees them immediately |
+| 50+ unreads | Fetch 50 messages starting after `last_read_message_id` | User picks up where they left off, reads forward naturally |
+
+For the 50+ unreads case, a "Jump to latest" floating button appears at the bottom. Clicking it discards the current loaded set and loads the last 50 (same as the 0-unread case).
+
+**Step 4 - Write to IndexedDB:**
+
+All fetched messages are written to IndexedDB + `channel_sync` is updated. Next visit to this channel will hit the cache.
+
+#### 5.6.3 Scroll Up (History)
+
+User scrolls up and reaches the top of the loaded message set. An intersection observer on a sentinel element (~200px from top) triggers the fetch.
+
+```
+1. Query message_index for entries before oldest_loaded_id
+   (range query on [channel_id, created_at, id] compound index)
+
+   HIT (enough cached index entries):
+     -> Batch-get encrypted blobs from message_content by ID
+     -> Decrypt in parallel
+     -> Prepend to Redux
+
+   MISS (scrolled past cached range):
+     -> Fetch from API: before_id = oldest_loaded_id, limit 50
+     -> Write to message_index + message_content (same transaction)
+     -> Prepend to Redux
+```
+
+**Scroll position preservation:** After prepending, the viewport must stay on the same message the user was looking at. Use the DOM element of the previously-top message as a scroll anchor.
+
+**End of history:** When the API returns fewer than 50 messages, the user has reached the beginning. Show the channel creation empty state: "This is the start of #channel-name".
+
+#### 5.6.4 Scroll Down (New Messages While Scrolled Up)
+
+When the user has scrolled up from the bottom and new messages arrive via the stream:
+
+- New messages are written to Redux and IndexedDB but **not scrolled to**
+- A floating pill appears at the bottom: "{N} new messages" with a down-arrow
+- If the user scrolls to within ~100px of the bottom naturally, auto-append and mark as read
+- If the user clicks the pill, jump to bottom and mark as read
+
+#### 5.6.5 Jump to Message (Search, Notification, Link)
+
+When the user clicks a search result, notification, or message permalink that targets a specific message:
+
+1. Check IndexedDB for the target message and surrounding context
+2. If miss: fetch 25 messages before + 25 messages after the target from the API
+3. Discard any previously loaded messages for this channel in Redux (start fresh from the target)
+4. Render the window, scroll to the target message
+5. Highlight the target message with a brief pulse animation (`bg-primary/10` fade over 2 seconds)
+6. User can scroll up or down from the target, triggering normal pagination
+
+#### 5.6.6 Thread Loading
+
+Threads are typically small (10-100 replies). Simpler strategy:
+
+- **Initial load:** Fetch the root message + last 50 replies. Most threads fit in one page.
+- **Scroll up:** Same cursor pagination as channels if the thread exceeds 50 replies.
+- **Real-time:** Thread replies arrive via the channel stream (`MESSAGE_CREATED` with `root_id` set) and are appended directly. Thread panel auto-scrolls to bottom on new replies.
+- **No IndexedDB caching for threads.** Threads are small and transient - the API fetch is cheap. Thread messages are cached in Redux while the panel is open and discarded on close.
+- **No unread separator in threads** - the panel opens scrolled to the latest reply.
+
+#### 5.6.7 Stream Reconnection and Gap Fill
+
+When the stream disconnects and reconnects (network interruption, server restart):
+
+1. On reconnect, the client sends `GetMessages(after_id: last_received_message_id)` to fetch any messages missed during the disconnect
+2. Missed messages are merged into Redux + IndexedDB
+3. If the gap is larger than 50 messages, the client falls back to a full channel reload (same as initial open)
+4. Stream events that arrive during the gap fill are deduplicated by message ID
+
+#### 5.6.8 DMs and Group DMs
+
+No difference in loading or caching strategy. A DM is a channel with `channel_type = DIRECT`. Same pagination, same IndexedDB cache, same unread handling.
+
+### 5.7 Permission Model
+
+Chat channels diverge from Uniffy's standard 3-layer permission system (VisibilityScope + ContentGroupLink + ContentPermission). In other domains (notes, files, tasks), those three layers determine who can see and edit content. In chat, **channel membership IS the permission** - the `ChatChannelMember` table replaces all three layers.
+
+`ChatChannelOperations` still extends `BaseContentOperations` for URN generation, search indexing, and CRUD scaffolding. But it overrides the permission gate to check membership instead of the standard model.
+
+#### 5.7.1 Why the Standard Model Does Not Fit
+
+| Standard model concept | Why it breaks for chat |
+|------------------------|----------------------|
+| `VisibilityScope` | A PUBLIC channel is visible to all but only members can post. Visibility != write access. The standard model treats "can see" and "can interact" as the same check. |
+| `ContentGroupLink` | Would require creating a shadow Group for every PRIVATE channel and keeping membership in sync. Adds complexity with zero user benefit. |
+| `ContentPermission` | Channel members don't need fine-grained VIEW/EDIT/ADMIN grants on individual messages. Membership role (MEMBER/ADMIN/OWNER) is the permission. |
+| `PermissionChecker` | Checks ownership, then visibility, then explicit grants. Chat needs "check membership, then check role." Different logic entirely. |
+
+#### 5.7.2 What Replaces It
+
+**Standard BaseContentOperations flow:**
+```
+get_by_id() -> _require_access() -> PermissionChecker.can_access_content()
+                                      -> check ownership
+                                      -> check VisibilityScope
+                                      -> check ContentGroupLink
+                                      -> check ContentPermission
+```
+
+**Chat override:**
+```
+get_by_id() -> _require_access() -> _check_channel_access()
+                                      -> check ChatChannelMember exists
+                                      -> OR channel_type == PUBLIC (visible to all org members)
+                                      -> OR user is org admin (moderation override)
+```
+
+No VisibilityScope check. No ContentGroupLink. No ContentPermission. The `visibility` column still exists on the `ChatChannel` model (BaseContentOperations requires it) but is auto-set from `channel_type` and never used for permission checks.
+
+#### 5.7.3 Channel Access (Who Can See/Read)
+
+```python
+async def _check_channel_access(
+    self, user_id: UUID, org_id: UUID, channel: ChatChannel
+) -> None:
+    """Override of BaseContentOperations._require_access()."""
+    # Org admins can access any channel (moderation)
+    if await self._is_org_admin(user_id, org_id):
+        return
+
+    # PUBLIC channels are visible to all org members
+    if channel.channel_type == ChannelType.PUBLIC:
+        return
+
+    # PRIVATE, DIRECT, GROUP_DM: must be a member
+    member = await self._get_membership(channel.id, user_id)
+    if not member:
+        raise PermissionDeniedError("Not a member of this channel")
+```
+
+**Key distinction:** For PUBLIC channels, any org member can **see** the channel and **read** messages. But they must **join** (becoming a MEMBER) before they can **send** messages. This is the "see vs interact" split that the standard model cannot express.
+
+#### 5.7.4 Message Sending
+
+```python
+async def _require_send(
+    self, user_id: UUID, channel: ChatChannel
+) -> ChatChannelMember:
+    """Must be a member to send. Returns membership for role checks."""
+    if channel.is_archived:
+        raise ValidationError("Channel is archived")
+
+    member = await self._get_membership(channel.id, user_id)
+    if not member:
+        raise PermissionDeniedError("Must join channel to send messages")
+    return member
+```
+
+#### 5.7.5 Message Operations
+
+Message-level permissions are checked against the sender's `ChatChannelMember.role`, not ContentPermission grants:
+
+| Operation | MEMBER | ADMIN | OWNER | Org Admin |
+|-----------|--------|-------|-------|-----------|
+| Send message | Yes | Yes | Yes | Yes (if member) |
+| Edit own message (within 2 min) | Yes | Yes | Yes | Yes |
+| Delete own message | Yes | Yes | Yes | Yes |
+| Delete any message | No | Yes | Yes | Yes |
+| Pin/unpin message | No | Yes | Yes | Yes |
+
+```python
+async def _require_message_action(
+    self, user_id: UUID, org_id: UUID, channel_id: UUID,
+    message: ChatMessage, action: str,
+) -> None:
+    member = await self._get_membership(channel_id, user_id)
+    is_org_admin = await self._is_org_admin(user_id, org_id)
+    is_elevated = member.role in (ChannelRole.ADMIN, ChannelRole.OWNER) or is_org_admin
+
+    if action == "edit":
+        if message.sender_id != user_id:
+            raise PermissionDeniedError("Can only edit own messages")
+        if message.created_at < utc_now() - timedelta(minutes=2):
+            raise ValidationError("Edit window has expired")
+
+    elif action == "delete":
+        if message.sender_id != user_id and not is_elevated:
+            raise PermissionDeniedError("Cannot delete other users' messages")
+
+    elif action in ("pin", "unpin"):
+        if not is_elevated:
+            raise PermissionDeniedError("Requires channel admin")
+```
+
+#### 5.7.6 Channel Management
+
+| Operation | MEMBER | ADMIN | OWNER | Org Admin |
+|-----------|--------|-------|-------|-----------|
+| Join PUBLIC channel (self-join) | Yes | - | - | Yes |
+| Edit channel name/description | No | Yes | Yes | Yes |
+| Add members to channel | No | Yes | Yes | Yes |
+| Remove members | No | Yes (not OWNER) | Yes | Yes |
+| Promote/demote member roles | No | No | Yes | Yes |
+| Archive channel | No | No | Yes | Yes |
+| Delete channel | No | No | Yes | Yes |
+| Configure guest access | No | Yes | Yes | Yes |
+
+#### 5.7.7 DM and Group DM Special Rules
+
+DMs and Group DMs have fixed membership with no role hierarchy:
+
+| Rule | DM (1:1) | Group DM (2-8) |
+|------|----------|---------------|
+| Membership | Fixed at creation (2 participants) | Fixed at creation (2-8 participants) |
+| Add members | No | No (create a new Group DM instead) |
+| Remove members | No | User can leave (but not remove others) |
+| Roles | None (all equal) | None (all equal) |
+| Archive/delete | No (user can hide from sidebar) | No (user can leave) |
+| Channel name | Auto-generated from participant names | Auto-generated or custom |
+| Org admin override | Can access for moderation but not modify membership | Same |
+
+#### 5.7.8 Search Indexing Without the Standard Model
+
+Meilisearch needs to know who can see each channel to scope search results. With the standard model, `BaseContentOperations` passes `visibility`, `shared_group_ids`, and `shared_user_ids` to the search indexer. Chat overrides this to derive access from membership:
+
+```python
+async def _build_search_index_data(self, channel: ChatChannel) -> dict:
+    """Override search index data to use membership instead of permission model."""
+    if channel.channel_type == ChannelType.PUBLIC:
+        # All org members can find PUBLIC channels in search
+        return {
+            "visibility": "ORGANIZATION",
+            "shared_group_ids": [],
+            "shared_user_ids": [],
+        }
+    else:
+        # PRIVATE, DIRECT, GROUP_DM: only members can find in search
+        member_ids = await self._get_all_member_ids(channel.id)
+        return {
+            "visibility": "PRIVATE",
+            "shared_group_ids": [],
+            "shared_user_ids": [str(uid) for uid in member_ids],
+        }
+```
+
+**Re-indexing on membership changes:** When members are added or removed from a PRIVATE channel, the search index must be updated to reflect the new `shared_user_ids`. `AddMembers` and `RemoveMembers` operations call `search_indexer.index()` after modifying the membership table.
+
+#### 5.7.9 What Is NOT Used for Chat
+
+| Uniffy standard | Status for chat | Replacement |
+|----------------|----------------|-------------|
+| `VisibilityScope` check in `_require_access()` | Skipped (overridden) | `_check_channel_access()` checks membership |
+| `ContentGroupLink` table | Not used | `ChatChannelMember` table |
+| `ContentPermission` table | Not used | `ChatChannelMember.role` |
+| `PermissionChecker` class | Not called | Custom permission methods on `ChatChannelOperations` |
+| `PermissionsService` RPCs (grant/revoke) | Not exposed for chat | `AddMembers`/`RemoveMembers` RPCs instead |
+| `visibility` column on model | Auto-set from `channel_type`, never checked | `channel_type` drives all access logic |
+
+#### 5.7.10 Default Channel Rules
+
+- Every org gets a `#general` channel on creation (seed data), with `channel_type = PUBLIC`
+- `#general` is a **system channel**: cannot be archived, deleted, or left by members
+- All new org members auto-join `#general` and any other channels marked as `is_default = true`
+- Org admins can mark additional channels as default in channel settings
+- Default channels cannot be left (members can mute but remain as members)
 
 ---
 
@@ -728,6 +1207,8 @@ Agent tools are **not available** for E2E encrypted channels. The tool executor 
 
 ## 10. Search Integration
 
+All chat search goes through **Meilisearch only** - no PostgreSQL full-text search. This keeps the search stack uniform across the entire app and avoids maintaining a GIN index on the high-write `chat_messages` table.
+
 ### 10.1 Search Scoping Rules
 
 Chat messages are high-volume content. To prevent them from flooding general search results, **chat messages are excluded from global search by default** and only included when explicitly requested.
@@ -736,40 +1217,206 @@ Chat messages are high-volume content. To prevent them from flooding general sea
 
 | Search context | Chat channels | Chat messages | Rationale |
 |---------------|---------------|---------------|-----------|
-| Global search from any non-chat page | Included | Excluded | Prevents message flood in general results |
-| Global search from `/chat` page | Included | Included | User is in chat context, expects chat results |
-| `chat:` prefix (e.g., `chat: deployment`) | Included | Included | Explicit filter |
+| Global search from any non-chat page | Included | **Excluded** | Prevents message flood in general results |
+| Global search from `/chat` page | Included | **Included** | User is in chat context, expects chat results |
+| `chat:` prefix (e.g., `chat: deployment`) | Included | Included | Explicit filter from any page |
 | `all:` prefix (e.g., `all: deployment`) | Included | Included | User explicitly asked for everything |
 | `in:#channel-name` filter | N/A | Included (scoped) | Scoped to a specific channel |
-| `Ctrl+F` within a channel | N/A | Included (scoped) | Direct PostgreSQL full-text query, not Meilisearch |
+| `Ctrl+F` within a channel | N/A | Included (scoped) | Meilisearch query filtered by `channel_id` |
 
-### 10.2 Channel Indexing
+**User-configurable default:** The scoping behavior ("include chat messages in global search") is a user setting, controlled via the existing settings framework. Default is OFF (excluded outside chat). Users who want chat messages everywhere can enable it.
 
-- Indexed on create/update via `BaseContentOperations` (automatic)
+Setting location: Settings > Search > "Include chat messages in global search results" toggle.
+
+Stored in `SettingsProfile` JSONB under `search.include_chat_messages_globally` (default: `false`). The frontend reads this setting and conditionally adds `CHAT_MESSAGE` to the `typeFilters` on global search requests. No backend logic needed - the setting is purely a frontend filter toggle.
+
+### 10.2 Channel Indexing (Meilisearch)
+
+- Indexed on create/update via `ChatChannelOperations` (extends `BaseContentOperations`)
 - Search fields: `name`, `description`, `slug`
 - Content type: `CHAT` (already registered as `SEARCH_RESULT_TYPE_CHAT = 3`)
+- Access control: PUBLIC channels indexed with `visibility: ORGANIZATION`, others with `shared_user_ids` from membership (see Section 5.7.8)
 
-### 10.3 Message Indexing
+### 10.3 Message Indexing (Meilisearch)
 
-- Indexed on send/edit via `ChatMessageOperations`
-- Search fields: `content` (plaintext extracted from markdown)
-- Linked to parent channel for scoped search
+- Indexed on send/edit via `ChatMessageOperations` (post-commit, see Section 16.3)
+- Content type: `CHAT_MESSAGE` (new, added to `SearchResultType` enum)
+- Search fields: `content` (plaintext extracted from markdown, URN mentions stripped to labels)
+- Filterable attributes: `channel_id`, `sender_id`, `sender_type`, `root_id`, `created_at`, `has_file`, `has_link`, `has_reaction`, `is_pinned`
+- Access control: inherits from parent channel - if user can access the channel, they can search its messages. Indexed with `channel_id` and the channel's access scope (`visibility` + `shared_user_ids`)
 - Messages in E2E channels are **NOT** indexed (server only has ciphertext)
+- Soft-deleted messages are removed from the index
 
 ### 10.4 Search Results UX
 
-- Channel results show: channel name, description snippet, member count
-- Message results show: message content snippet, sender name, channel name, timestamp
-- Clicking a message result navigates to the message in its channel (scrolls to and highlights it)
+**Channel results** (same as other content types in SpotlightSearch):
+- Icon: `Hash` or `Lock` (encrypted), themed with CHAT URN color (violet)
+- Title: channel name
+- Subtitle: description snippet + member count
+- Click: navigates to `/chat/{channelId}`
+
+**Message results** (new result type in SpotlightSearch):
+- Icon: `ChatText`, themed with CHAT URN color
+- Title: message content snippet (first 120 chars, plaintext)
+- Subtitle: sender display name + "#channel-name" + relative timestamp
+- Click: navigates to `/chat/{channelId}` and triggers jump-to-message (Section 5.6.5 - scroll to message + highlight pulse)
+- If the message is a thread reply (`root_id` present): opens the thread panel and scrolls to the message within it
 
 ### 10.5 In-Channel Search (`Ctrl+F`)
 
-A lightweight search scoped to the current channel. Uses PostgreSQL full-text search directly on `chat_messages.content` filtered by `channel_id`, bypassing Meilisearch. Supports:
-- Free-text search
-- `from:@username` filter
-- `has:file` / `has:link` / `has:reaction` filters
-- Date range with `before:` / `after:` / `on:` filters
-- Navigate between results with up/down arrows
+A search bar scoped to the current channel. Uses **Meilisearch** filtered by `channel_id`, with extended filter syntax for chat-specific queries. This replaces the in-channel `Ctrl+F` browser behavior.
+
+#### 10.5.1 Filter Syntax
+
+Extends the existing `queryParser.ts` filter system with chat-specific filters. These filters are available only when searching within a channel (the search bar component detects the chat context).
+
+| Filter | Syntax | Example | Meilisearch filter |
+|--------|--------|---------|-------------------|
+| From user | `from:@username` or `from:displayname` | `from:@john deployment` | `sender_id = {resolved_user_id}` |
+| In thread | `in:thread` | `in:thread auth bug` | `root_id IS NOT NULL` |
+| Has file | `has:file` | `has:file quarterly` | `has_file = true` |
+| Has link | `has:link` | `has:link` | `has_link = true` |
+| Has reaction | `has:reaction` | `has:reaction` | `has_reaction = true` |
+| Pinned | `is:pinned` | `is:pinned` | `is_pinned = true` |
+| Before date | `before:YYYY-MM-DD` | `before:2026-03-01` | `created_at < {timestamp}` |
+| After date | `after:YYYY-MM-DD` | `after:2026-01-01` | `created_at > {timestamp}` |
+| On date | `on:YYYY-MM-DD` | `on:2026-03-15` | `created_at` between start and end of day |
+
+Filters can be combined: `from:@john has:file after:2026-01-01 deployment guide`
+
+#### 10.5.2 Filter UI (Chat Search Bar)
+
+The in-channel search bar extends the existing SpotlightSearch patterns but is embedded in the channel header area instead of a modal overlay.
+
+**Layout:**
+```
++-----------------------------------------------------------------------+
+| [MagnifyingGlass] Search in #engineering...    [from] [has] [date] [X] |
++-----------------------------------------------------------------------+
+| [from:@john] [has:file]  "deployment"          3 of 47 results  [v][^]|
++-----------------------------------------------------------------------+
+```
+
+**Search bar (collapsed, in channel header):**
+- Triggered by `Ctrl+F` or clicking the search icon in the channel header
+- Expands inline below the channel header: `px-4 py-2 border-b border-border bg-card`
+- Input: `text-sm bg-transparent flex-1` with placeholder "Search in #{channel-name}..."
+- Close button: `X` icon, also closes on `Escape`
+
+**Filter buttons (right side of input):**
+- Quick-add buttons for common filters: `from:`, `has:`, date range
+- Each button is a small dropdown/popover:
+  - **from:** - opens a `SubjectPicker` dropdown (search org members), selecting a user inserts `from:@username` into the query
+  - **has:** - dropdown with checkboxes: File, Link, Reaction, Pinned
+  - **date:** - popover with "After", "Before", "On" date pickers using the existing date picker component
+- Buttons: `ghost` variant, size `xs`, `text-muted-foreground hover:text-foreground`
+
+**Active filters row (below input, shown when filters are active):**
+- Uses existing `FilterChip` component for each active filter (removable with X)
+- Result count: `text-xs text-muted-foreground` "3 of 47 results"
+- Navigation arrows: `CaretUp` / `CaretDown` ghost buttons to jump between results in the message list
+- Keyboard: `Enter` or `Down` to next result, `Shift+Enter` or `Up` to previous result
+
+**Result highlighting in message list:**
+- Matching messages are highlighted in the channel's message list: `bg-primary/5 border-l-2 border-primary`
+- The currently focused result has stronger highlight: `bg-primary/10`
+- Non-matching messages are dimmed: `opacity-40`
+- Scrolls to the focused result automatically
+- Highlighted search terms within message content: `bg-yellow-200/60 dark:bg-yellow-500/30 rounded-sm px-0.5`
+
+**Keyboard navigation (full flow):**
+1. `Ctrl+F` - opens search bar, focuses input
+2. Type query - results update live (debounced 150ms via Meilisearch)
+3. `Enter` - jump to first (or next) result in the message list
+4. `Shift+Enter` - jump to previous result
+5. `Escape` - close search bar, remove highlights
+6. Click a filter button - opens the filter popover, keyboard navigable with arrow keys
+7. `Tab` between filter button popovers
+
+#### 10.5.3 Global Search Integration
+
+The existing `SpotlightSearch` component (`Ctrl+K`) gains awareness of the chat context:
+
+**Query parser extensions** (in `queryParser.ts`):
+
+Add to `TYPE_KEYWORD_MAP`:
+```typescript
+'chatmessage': SearchResultType.CHAT_MESSAGE,
+'message': SearchResultType.CHAT_MESSAGE,
+'msg': SearchResultType.CHAT_MESSAGE,
+```
+
+Add to `FILTER_PREFIXES` (these work globally but are primarily useful in chat):
+```typescript
+'from:' - resolves to sender filter (chat messages only)
+'in:'   - resolves to channel filter or content type (in:thread, in:#channel-name)
+'has:'  - resolves to content filter (has:file, has:link, has:reaction)
+```
+
+**Context-aware behavior in SpotlightSearch:**
+
+```typescript
+// In SpotlightSearch component
+const location = useLocation();
+const isInChatDomain = location.pathname.startsWith('/chat');
+const { searchSettings } = useSettingsHooks();
+
+const effectiveTypeFilters = useMemo(() => {
+    const filters = parsedQuery.filters.types;
+
+    // If user explicitly typed chat: or message: prefix, always include
+    if (filters.includes(SearchResultType.CHAT_MESSAGE)) return filters;
+
+    // If in chat domain, include chat messages by default
+    if (isInChatDomain) return [...filters, SearchResultType.CHAT_MESSAGE];
+
+    // If user enabled "include chat in global search" setting
+    if (searchSettings.includeChatMessagesGlobally) {
+        return [...filters, SearchResultType.CHAT_MESSAGE];
+    }
+
+    // Default: exclude chat messages from global search
+    return filters;
+}, [parsedQuery, isInChatDomain, searchSettings]);
+```
+
+**Filter hints in SpotlightSearch:**
+
+When the search input is empty and the user is in the chat domain, show chat-specific filter hints alongside the existing ones:
+
+```typescript
+// Additional FILTER_HINTS for chat context
+{ prefix: 'from:', example: 'from:@john' },
+{ prefix: 'in:', example: 'in:#engineering' },
+{ prefix: 'has:', example: 'has:file' },
+{ prefix: 'message:', example: 'message:deployment' },
+```
+
+### 10.6 Settings Integration
+
+**Setting:** "Include chat messages in global search results"
+
+| Aspect | Value |
+|--------|-------|
+| Location | Settings > Search |
+| Setting key | `search.include_chat_messages_globally` |
+| Default | `false` |
+| Storage | `SettingsProfile` JSONB |
+| Scope | Per-user |
+
+When enabled, `SpotlightSearch` includes `CHAT_MESSAGE` in type filters on every search, regardless of which page the user is on. When disabled (default), chat messages only appear when:
+- The user is on the `/chat` page
+- The user explicitly types `chat:`, `message:`, or `msg:` prefix
+- The user types `all:` prefix
+
+**Backend:** Add to `src/uniffy/domains/settings/defaults.py`:
+```python
+DEFAULT_SEARCH_SETTINGS = {
+    "include_chat_messages_globally": False,
+}
+```
+
+**Frontend:** Add to settings UI in the existing Search preferences section (or create one if it doesn't exist). Simple toggle with description explaining the behavior.
 
 ---
 
@@ -1129,7 +1776,7 @@ The full evaluation order when deciding whether to send a chat notification:
 }
 ```
 
-**`ChatChannelMember`** - extended fields (additions to Section 3.4):
+**`ChatChannelMember`** - extended fields (additions to Section 3.4). These are notification preference fields that change rarely (cold data), so they belong on the membership row alongside `notification_level` and `is_muted`:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -1180,7 +1827,7 @@ Added to `src/uniffy/domains/settings/defaults.py`:
 | Shortcut ID | Default | Action |
 |-------------|---------|--------|
 | `chat.newMessage` | `N` | Focus compose box |
-| `chat.search` | `Ctrl+F` | Search within channel |
+| `chat.search` | `Ctrl+F` | In-channel search bar (Meilisearch, see Section 10.5) |
 | `chat.prevChannel` | `Alt+Up` | Previous channel in sidebar |
 | `chat.nextChannel` | `Alt+Down` | Next channel in sidebar |
 | `chat.toggleThread` | `T` | Open/close thread panel |
@@ -1481,7 +2128,7 @@ Click opens the thread in the RHS panel.
 - Container: `flex items-center gap-3 px-4 py-2 border-b border-border bg-card`
 - Channel icon: `Hash` or `Lock` (16px) + channel name `text-sm font-semibold text-foreground`
 - Member count: `text-xs text-muted-foreground` with `Users` icon, clickable (opens member list panel)
-- Search: `MagnifyingGlass` ghost button, opens in-channel search bar
+- Search: `MagnifyingGlass` ghost button, opens in-channel search bar (Section 10.5)
 - Pinned: `PushPin` ghost button with count badge, opens pinned messages panel
 - Settings: `GearSix` ghost button, opens channel settings modal
 - Density toggle: `Rows` / `SquareHalf` icon toggle for comfortable/compact
@@ -1757,20 +2404,135 @@ All colors use theme CSS variables - no hardcoded colors anywhere. The user's ac
 
 ## 16. Database Tables Summary
 
-| Table | Primary Key | Purpose |
-|-------|------------|---------|
-| `chat_channels` | `id` | Channel/DM containers |
-| `chat_messages` | `id` | All messages (root + replies) |
-| `chat_threads` | `root_message_id` | Denormalized thread metadata cache |
-| `chat_channel_members` | `id` | Membership + read state per channel |
-| `chat_thread_members` | `id` | Thread following + read state |
-| `chat_reactions` | `id` | Emoji reactions |
-| `chat_guest_access` | `id` | Per-channel guest access config |
-| `chat_guests` | `id` | Guest sessions |
+The chat schema separates cold structural data from hot mutable state. Counters and read cursors live in dedicated tiny tables to minimize row-level lock contention and autovacuum pressure. Read cursors use a Valkey-first write strategy with periodic PG snapshots.
+
+| Table | Primary Key | Write Pattern | Purpose |
+|-------|------------|---------------|---------|
+| `chat_channels` | `id` | Rare (rename, archive) | Channel/DM structural metadata |
+| `chat_channel_stats` | `channel_id` | Every message send | Counters: message_count, member_count, last_message_at |
+| `chat_messages` | `id` | Append-only (edits update in-place) | All messages (root + replies) |
+| `chat_threads` | `root_message_id` | Once per thread | Thread structural metadata |
+| `chat_thread_stats` | `root_message_id` | Every thread reply | Counters: reply_count, last_reply_at |
+| `chat_thread_participants` | `(root_message_id, user_id)` | Append-only INSERT | Who participated in a thread |
+| `chat_channel_members` | `(channel_id, user_id)` | Rare (preference changes) | Membership + notification preferences |
+| `chat_read_cursors` | `(channel_id, user_id)` | Batch flush from Valkey (30s) | Durable channel read position |
+| `chat_thread_follows` | `(root_message_id, user_id)` | INSERT/DELETE on follow/unfollow | Thread subscription tracking |
+| `chat_thread_read_cursors` | `(root_message_id, user_id)` | Batch flush from Valkey (30s) | Durable thread read position |
+| `chat_reactions` | `id` | INSERT/DELETE | Emoji reactions |
+| `chat_channel_resources` | `id` | UPSERT on URN mention parse | Auto-populated channel resource tracking |
+| `chat_guest_access` | `id` | Rare (admin config) | Per-channel guest access config |
+| `chat_guests` | `id` | On guest join/expiry | Guest sessions |
+
+**Autovacuum tuning** (set via migration): `chat_channel_stats`, `chat_thread_stats`, and `chat_messages` use aggressive autovacuum settings (`autovacuum_vacuum_scale_factor = 0.01`, `autovacuum_analyze_scale_factor = 0.02`) to prevent bloat on high-write tables.
+
+### 16.1 Index Strategy
+
+All indexes are defined in the migration. These are critical for performance - without them, the system degrades rapidly past 100k messages.
+
+**chat_messages:**
+
+| Index | Columns | Type | Purpose |
+|-------|---------|------|---------|
+| `ix_chat_messages_channel_timeline` | `(channel_id, created_at, id)` | B-tree | Main channel timeline query, cursor-based pagination |
+| `ix_chat_messages_channel_roots` | `(channel_id, created_at, id)` WHERE `root_id IS NULL AND is_deleted = false` | Partial B-tree | CRT: load only root messages for channel view |
+| `ix_chat_messages_thread_replies` | `(root_id, created_at, id)` WHERE `root_id IS NOT NULL` | Partial B-tree | Thread reply loading |
+| `ix_chat_messages_pinned` | `(channel_id)` WHERE `is_pinned = true AND is_deleted = false` | Partial B-tree | Pinned messages list (sparse) |
+
+**No full-text search index on PostgreSQL.** All text search goes through Meilisearch (see Section 10). This avoids the write overhead of maintaining a GIN index on the highest-write table in the system. The `(channel_id, sender_id, created_at)` index that was previously planned for `from:@user` filtering is also unnecessary since Meilisearch handles sender filtering via its `sender_id` filterable attribute.
+
+**chat_channel_members:**
+
+| Index | Columns | Type | Purpose |
+|-------|---------|------|---------|
+| PK | `(channel_id, user_id)` | B-tree (unique) | Membership lookup on every message send |
+| `ix_chat_members_user` | `(user_id)` | B-tree | "Which channels am I in?" for sidebar |
+
+**chat_read_cursors:**
+
+| Index | Columns | Type | Purpose |
+|-------|---------|------|---------|
+| PK | `(channel_id, user_id)` | B-tree (unique) | Read position lookup |
+| `ix_chat_read_cursors_user` | `(user_id)` | B-tree | Batch unread calculation across all channels |
+
+**chat_reactions:**
+
+| Index | Columns | Type | Purpose |
+|-------|---------|------|---------|
+| `ix_chat_reactions_message` | `(message_id, emoji)` | B-tree | Load reactions for visible messages |
+| `uq_chat_reactions_unique` | `(message_id, user_id, emoji)` | Unique | One reaction per emoji per user per message |
+
+**chat_thread_participants:**
+
+| Index | Columns | Type | Purpose |
+|-------|---------|------|---------|
+| PK | `(root_message_id, user_id)` | B-tree (unique) | Participant dedup on INSERT |
+
+**chat_thread_follows:**
+
+| Index | Columns | Type | Purpose |
+|-------|---------|------|---------|
+| PK | `(root_message_id, user_id)` | B-tree (unique) | Follow check |
+| `ix_chat_thread_follows_user` | `(user_id)` | B-tree | Threads inbox: "all threads I follow" |
+
+**chat_channel_resources:**
+
+| Index | Columns | Type | Purpose |
+|-------|---------|------|---------|
+| `uq_chat_resources_channel_urn` | `(channel_id, urn)` | Unique | Dedup on UPSERT |
+| `ix_chat_resources_channel_type` | `(channel_id, content_type, last_mentioned_at DESC)` | B-tree | Resource panel filtered listing |
+
+### 16.2 Message Ordering and Pagination
+
+**Ordering:** Messages are always ordered by `(created_at, id)`, never just `created_at`. Concurrent `SendMessage` calls can produce identical timestamps (PostgreSQL `timestamptz` has microsecond precision). UUIDv7 primary keys provide a time-ordered tiebreaker.
+
+**Cursor-based pagination:** `GetMessages` uses cursor-based pagination with `before_id` / `after_id` parameters referencing message UUIDs. Offset-based pagination is fundamentally broken for chat because new messages shift page boundaries.
+
+```sql
+-- Load 50 messages before cursor (scrolling up)
+SELECT * FROM chat_messages
+WHERE channel_id = :cid AND root_id IS NULL AND is_deleted = false
+  AND (created_at, id) < (SELECT created_at, id FROM chat_messages WHERE id = :before_id)
+ORDER BY created_at DESC, id DESC
+LIMIT 50
+
+-- Load 50 messages after cursor (catching up on new messages)
+SELECT * FROM chat_messages
+WHERE channel_id = :cid AND root_id IS NULL AND is_deleted = false
+  AND (created_at, id) > (SELECT created_at, id FROM chat_messages WHERE id = :after_id)
+ORDER BY created_at ASC, id ASC
+LIMIT 50
+```
+
+### 16.3 SendMessage Transaction Boundary
+
+The `SendMessage` handler splits work into two phases to minimize lock hold time:
+
+**Phase 1 - DB transaction (fast, holds locks):**
+1. INSERT into `chat_messages`
+2. UPDATE `chat_channel_stats` (increment counters)
+3. If thread reply: UPDATE `chat_thread_stats` + INSERT `chat_thread_participants` ON CONFLICT DO NOTHING
+4. COMMIT
+
+**Phase 2 - Post-commit (no locks, can fail independently):**
+1. Publish to Valkey `chat:{channel_id}` (real-time delivery)
+2. Index to Meilisearch (if not E2E encrypted)
+3. Parse URN mentions and UPSERT `chat_channel_resources`
+4. Emit notifications via `emit_notification()`
+
+If Phase 2 fails, the message is already persisted. Meilisearch indexing and resource tracking can be retried via ARQ. Notifications are best-effort. This keeps the critical path (message persistence + counter update) as short as possible.
+
+### 16.4 Channel Deletion Strategy
+
+Deleting a channel with millions of messages must not hold a long transaction lock. Channel deletion is an **async ARQ job**:
+
+1. Handler sets `chat_channels.is_deleted = true` (instant, UI hides the channel)
+2. Enqueues `delete_chat_channel` ARQ job
+3. Job deletes in batches: `DELETE FROM chat_messages WHERE channel_id = :id LIMIT 1000`, commits between batches
+4. After all messages are deleted, removes stats, members, cursors, resources, and finally the channel row
 
 ---
 
-## 16. Proto Services
+## 16b. Proto Services
 
 ### 16.1 `chat.v1.ChatService`
 
@@ -1866,17 +2628,22 @@ src/uniffy/domains/chat/
 |   |-- service.py
 |-- reactions/
 |   |-- operations.py
+|-- read_state/
+|   |-- operations.py       # Valkey read/write, PG fallback
+|   |-- flush.py             # ARQ periodic job: flush Valkey cursors to PG
 |-- __init__.py
 
 src/uniffy/core/models/chat/
-|-- channel.py
-|-- message.py
-|-- thread.py
-|-- channel_member.py
-|-- thread_member.py
-|-- reaction.py
-|-- guest_access.py
-|-- guest.py
+|-- channel.py              # ChatChannel + ChatChannelStats
+|-- message.py              # ChatMessage
+|-- thread.py               # ChatThread + ChatThreadStats + ChatThreadParticipant
+|-- channel_member.py       # ChatChannelMember
+|-- read_cursor.py          # ChatReadCursor + ChatThreadReadCursor
+|-- thread_follow.py        # ChatThreadFollow
+|-- reaction.py             # ChatReaction
+|-- channel_resource.py     # ChatChannelResource
+|-- guest_access.py         # ChatGuestAccess
+|-- guest.py                # ChatGuest
 |-- __init__.py
 ```
 
@@ -2017,6 +2784,7 @@ src/ui/src/features/chat/
 - Default: any org member can create PUBLIC and PRIVATE channels
 - Org admins can restrict channel creation to admins only (org-level setting in `OrganizationSettings`)
 - DMs and Group DMs can always be created by any member (no restriction)
+- Full permission model for all channel operations is defined in Section 5.7
 
 ### 20.2 Message Retention Policies
 
@@ -2084,6 +2852,8 @@ src/ui/src/features/chat/
 - New members auto-join all default channels on org membership creation
 - Default channels cannot be left by members (they can mute but stay as members)
 - `#general` is the landing channel when a user first opens `/chat`
+- Default channels use the `is_default` flag on `ChatChannel` (see Section 3.1)
+- Full default channel rules in Section 5.7.10
 
 ---
 

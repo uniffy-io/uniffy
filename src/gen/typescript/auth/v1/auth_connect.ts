@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AuthResponse, CurrentUserResponse, GetCurrentUserRequest, ListSessionsRequest, ListSessionsResponse, LoginRequest, LogoutRequest, LogoutResponse, RefreshTokenRequest, RegisterRequest, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse } from "./auth_pb.js";
+import { AuthResponse, CurrentUserResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, ListSessionsRequest, ListSessionsResponse, LoginRequest, LogoutRequest, LogoutResponse, RefreshTokenRequest, RegisterRequest, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -103,6 +103,28 @@ export const AuthService = {
       name: "RevokeOtherSessions",
       I: RevokeOtherSessionsRequest,
       O: RevokeOtherSessionsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get the cache key seed for client-side storage encryption (called once per session)
+     *
+     * @generated from rpc auth.v1.AuthService.GetCacheKeySeed
+     */
+    getCacheKeySeed: {
+      name: "GetCacheKeySeed",
+      I: GetCacheKeySeedRequest,
+      O: GetCacheKeySeedResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Rotate cache key seed (invalidates all device caches)
+     *
+     * @generated from rpc auth.v1.AuthService.RotateCacheKeySeed
+     */
+    rotateCacheKeySeed: {
+      name: "RotateCacheKeySeed",
+      I: RotateCacheKeySeedRequest,
+      O: RotateCacheKeySeedResponse,
       kind: MethodKind.Unary,
     },
   }
