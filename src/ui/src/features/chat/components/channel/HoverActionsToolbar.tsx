@@ -10,12 +10,12 @@ import {
   Smiley,
   Trash,
 } from '@phosphor-icons/react';
-import { useAppDispatch } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { openThreadPanel } from '@/features/chat/store/chatUiSlice';
 import { setActiveThread } from '@/features/chat/store/chatThreadsSlice';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
-import { CURRENT_USER_ID } from '@/features/chat/mock/mockMembers';
+import { pinMessage, unpinMessage, addReaction, removeMessage } from '@/features/chat/store/chatThunks';
 
 interface HoverActionsToolbarProps {
   messageId: string;
@@ -35,12 +35,13 @@ export function HoverActionsToolbar({
   onQuoteReply,
 }: HoverActionsToolbarProps) {
   const dispatch = useAppDispatch();
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
 
-  const isOwnMessage = senderId === CURRENT_USER_ID;
+  const isOwnMessage = senderId === currentUserId;
 
   // Close more menu on click outside
   useEffect(() => {
@@ -78,19 +79,21 @@ export function HoverActionsToolbar({
   }, [dispatch, messageId]);
 
   const handleTogglePin = useCallback(() => {
-    // Pin toggle will be wired to a dedicated action when the backend is ready
-    console.log('Toggle pin:', messageId, channelId, !isPinned);
-  }, [messageId, channelId, isPinned]);
+    if (isPinned) {
+      dispatch(unpinMessage({ channelId, messageId }));
+    } else {
+      dispatch(pinMessage({ channelId, messageId }));
+    }
+  }, [dispatch, channelId, messageId, isPinned]);
 
   const handleQuoteReply = useCallback(() => {
     onQuoteReply?.(content, senderId);
   }, [onQuoteReply, content, senderId]);
 
   const handleEmojiSelect = useCallback((emoji: string) => {
-    // Reaction will be wired to Redux when the reactions slice is ready
-    console.log('Add reaction:', emoji, messageId);
+    dispatch(addReaction({ channelId, messageId, emoji }));
     setShowEmojiPicker(false);
-  }, [messageId]);
+  }, [dispatch, channelId, messageId]);
 
   const handleCopyText = useCallback(() => {
     navigator.clipboard.writeText(content);
@@ -104,16 +107,14 @@ export function HoverActionsToolbar({
   }, [channelId, messageId]);
 
   const handleEdit = useCallback(() => {
-    // Edit will be wired when inline editing is implemented
-    console.log('Edit message:', messageId);
+    // TODO: Inline editing UI
     setShowMoreMenu(false);
-  }, [messageId]);
+  }, []);
 
   const handleDelete = useCallback(() => {
-    // Delete will be wired when the confirmation dialog is implemented
-    console.log('Delete message:', messageId);
+    dispatch(removeMessage({ channelId, messageId }));
     setShowMoreMenu(false);
-  }, [messageId]);
+  }, [dispatch, channelId, messageId]);
 
   const menuItemClass = cn(
     'flex items-center gap-2 px-3 py-1.5 text-sm text-foreground',

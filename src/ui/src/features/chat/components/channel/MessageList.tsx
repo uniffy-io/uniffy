@@ -15,6 +15,7 @@ import {
 import {
   selectMessagesForChannel,
   selectUnreadSeparatorForChannel,
+  selectTypingUsers,
 } from '@/features/chat/store/chatMessagesSlice';
 import {
   selectJumpToMessageId,
@@ -23,7 +24,7 @@ import {
 import { MessageItem } from '@/features/chat/components/channel/MessageItem';
 import { TypingIndicator } from '@/features/chat/components/channel/TypingIndicator';
 import { NewMessagesPill } from '@/features/chat/components/channel/NewMessagesPill';
-import type { ChatMessage } from '@/features/chat/mock/types';
+import type { ChatMessage } from '@/features/chat/types';
 
 // ---------------------------------------------------------------
 // Grouping logic
@@ -138,10 +139,6 @@ function ChannelEmptyState({ channelName, description, isPrivate }: {
 
 const SCROLL_THRESHOLD = 100;
 
-const MOCK_TYPING_USERS = [
-  { userId: 'user-004', displayName: 'Emma Davis' },
-];
-
 interface MessageListProps {
   channelId?: string;
 }
@@ -161,6 +158,19 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const unreadSeparatorId = useAppSelector((state) =>
     effectiveChannelId ? selectUnreadSeparatorForChannel(state, effectiveChannelId) : null,
   );
+  // Tick counter to force typing users selector to re-evaluate expired entries
+  const [, setTypingTick] = useState(0);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const typingUsers = useAppSelector((state) =>
+    effectiveChannelId ? selectTypingUsers(state, effectiveChannelId) : [],
+  ).filter(u => u.userId !== currentUserId);
+
+  // Auto-expire typing indicators
+  useEffect(() => {
+    if (typingUsers.length === 0) return;
+    const timer = setInterval(() => setTypingTick(t => t + 1), 2000);
+    return () => clearInterval(timer);
+  }, [typingUsers.length]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [newMessageCount, setNewMessageCount] = useState(0);
@@ -250,7 +260,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
             isPrivate={isPrivate}
           />
         </div>
-        <TypingIndicator typingUsers={[]} />
+        <TypingIndicator typingUsers={typingUsers} />
       </div>
     );
   }
@@ -286,7 +296,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
       <NewMessagesPill count={newMessageCount} onClick={scrollToBottom} />
 
       {/* Typing indicator */}
-      <TypingIndicator typingUsers={MOCK_TYPING_USERS} />
+      <TypingIndicator typingUsers={typingUsers} />
     </div>
   );
 }

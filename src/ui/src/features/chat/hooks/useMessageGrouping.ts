@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { type ChatMessage } from '@/features/chat/mock/types';
+import { type ChatMessage } from '@/features/chat/types';
 
 export interface GroupedMessage {
   message: ChatMessage;

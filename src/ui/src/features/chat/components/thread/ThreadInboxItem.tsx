@@ -7,9 +7,9 @@
 
 import { ChatText, Hash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { SubjectAvatarById } from '@/components/subject';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { type ThreadInboxItem as ThreadInboxItemType } from '@/features/chat/mock/types';
-import { getMockUser } from '@/features/chat/mock/mockMembers';
+import { type ThreadInboxItem as ThreadInboxItemType } from '@/features/chat/types';
 
 interface ThreadInboxItemProps {
   thread: ThreadInboxItemType;
@@ -17,8 +17,7 @@ interface ThreadInboxItemProps {
 }
 
 export function ThreadInboxItem({ thread, onClick }: ThreadInboxItemProps) {
-  const rootSender = getMockUser(thread.rootMessageSenderId);
-  const senderName = rootSender?.fullName ?? 'Unknown';
+  const senderName = thread.rootMessageSenderName ?? 'Unknown';
 
   // Truncate root message content for preview
   const preview = thread.rootMessageContent.length > 120
@@ -46,9 +45,8 @@ export function ThreadInboxItem({ thread, onClick }: ThreadInboxItemProps) {
 
       {/* Root message preview */}
       <div className="flex items-start gap-2 mb-1.5">
-        {/* Sender avatar */}
-        <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground shrink-0 mt-0.5">
-          {senderName.split(' ').map(w => w[0]).join('').slice(0, 2)}
+        <div className="shrink-0 mt-0.5">
+          <SubjectAvatarById userId={thread.rootMessageSenderId} displayName={senderName} size="xs" />
         </div>
         <div className="min-w-0 flex-1">
           <span className="text-xs font-semibold text-foreground">{senderName}</span>

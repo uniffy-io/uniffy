@@ -13,11 +13,8 @@ import {
   setActiveThread,
   selectActiveThreadId,
   selectActiveThreadMessages,
-  setThreadMessages,
-  appendThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
-import { getThreadMessages } from '@/features/chat/mock/mockThreads';
-import { CURRENT_USER_ID } from '@/features/chat/mock/mockMembers';
+import { fetchThreadMessages, sendMessage } from '@/features/chat/store/chatThunks';
 import { MessageItem } from '@/features/chat/components/channel/MessageItem';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
 
@@ -47,11 +44,13 @@ export function ThreadPanel() {
 
   // Load thread messages when thread opens
   useEffect(() => {
-    if (activeThreadId) {
-      const messages = getThreadMessages(activeThreadId);
-      dispatch(setThreadMessages({ rootMessageId: activeThreadId, messages }));
+    if (activeThreadId && rootMessage) {
+      dispatch(fetchThreadMessages({
+        channelId: rootMessage.channelId,
+        rootMessageId: activeThreadId,
+      }));
     }
-  }, [activeThreadId, dispatch]);
+  }, [activeThreadId, rootMessage, dispatch]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -66,22 +65,12 @@ export function ThreadPanel() {
   }, [dispatch]);
 
   const handleSend = useCallback((content: string) => {
-    if (!activeThreadId) return;
-    const newReply = {
-      id: `msg-reply-${Date.now()}`,
-      channelId: rootMessage?.channelId ?? '',
-      senderId: CURRENT_USER_ID,
-      senderType: 'USER' as const,
+    if (!activeThreadId || !rootMessage) return;
+    dispatch(sendMessage({
+      channelId: rootMessage.channelId,
       content,
       rootId: activeThreadId,
-      editedAt: null,
-      isDeleted: false,
-      isPinned: false,
-      metadata: {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    dispatch(appendThreadMessage({ rootMessageId: activeThreadId, message: newReply }));
+    }));
   }, [activeThreadId, rootMessage, dispatch]);
 
   if (!activeThreadId) {

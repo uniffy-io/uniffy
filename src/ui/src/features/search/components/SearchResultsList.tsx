@@ -38,6 +38,7 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.NOTE]: UrnType.NOTE,
   [SearchResultType.FILE]: UrnType.FILE,
   [SearchResultType.CHAT]: UrnType.CHAT,
+  [SearchResultType.CHAT_MESSAGE]: UrnType.CHAT_MESSAGE,
   [SearchResultType.USER]: UrnType.USER,
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
   [SearchResultType.PROJECT]: UrnType.PROJECT,

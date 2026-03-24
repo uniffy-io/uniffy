@@ -38,6 +38,16 @@ export interface ChatChannel {
   lastMessageAt: string | null;
   lastRootMessageAt: string | null;
   memberCount: number;
+  // Unread tracking (populated from GetUnreadCounts)
+  unreadCount?: number;
+  mentionCount?: number;
+}
+
+export interface ReactionGroupData {
+  emoji: string;
+  count: number;
+  userIds: string[];
+  currentUserReacted: boolean;
 }
 
 export interface ChatMessage {
@@ -59,6 +69,11 @@ export interface ChatMessage {
     lastReplyAt: string;
     participantIds: string[];
   };
+  // Reaction groups from API
+  reactions?: ReactionGroupData[];
+  // Denormalized sender info
+  senderName?: string;
+  senderAvatarUrl?: string;
 }
 
 export interface ChatChannelMember {
@@ -108,6 +123,7 @@ export interface ThreadInboxItem {
   channelName: string;
   rootMessageContent: string;
   rootMessageSenderId: string;
+  rootMessageSenderName?: string;
   replyCount: number;
   lastReplyAt: string;
   participantIds: string[];

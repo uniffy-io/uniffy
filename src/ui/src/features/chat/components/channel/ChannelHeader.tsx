@@ -40,7 +40,6 @@ import {
 import { activateSplit } from '@/features/chat/store/chatUiSlice';
 import { cn } from '@/shared/utils/cn';
 import { formatDateFull } from '@/shared/utils/dateFormatting';
-import { getMockUser } from '@/features/chat/mock/mockMembers';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { SplitChannelPicker } from '@/features/chat/components/channel/SplitChannelPicker';
 import { PinnedMessagesPanel } from '@/features/chat/components/channel/PinnedMessagesPanel';
@@ -110,7 +109,6 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   );
   const pinnedCount = currentChannelMessages.filter(m => m.isPinned && !m.isDeleted).length;
 
-  const ownerUser = getMockUser(activeChannel.ownerId);
   const createdDate = formatDateFull(activeChannel.createdAt);
 
   const currentChannelId = activeChannel.id;
@@ -254,11 +252,9 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
                 {activeChannel.description}
               </p>
             )}
-            {ownerUser && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Created by {ownerUser.fullName} on {createdDate}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Created on {createdDate}
+            </p>
           </div>
         </div>
       )}

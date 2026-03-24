@@ -5,14 +5,15 @@
  * Wires together ChannelHeader, MessageList, and MessageCompose.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Hash } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { ChannelHeader } from '@/features/chat/components/channel/ChannelHeader';
 import { MessageList } from '@/features/chat/components/channel/MessageList';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
-import { appendMessage } from '@/features/chat/store/chatMessagesSlice';
-import { CURRENT_USER_ID } from '@/features/chat/mock/mockMembers';
+import { sendMessage, sendTyping } from '@/features/chat/store/chatThunks';
+
+const TYPING_THROTTLE_MS = 3000;
 
 interface ChannelViewProps {
   channelId?: string;
@@ -23,6 +24,7 @@ interface ChannelViewProps {
 
 export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton, onClose }: ChannelViewProps) {
   const dispatch = useAppDispatch();
+  const lastTypingSentRef = useRef(0);
 
   // Use prop if provided, otherwise read from Redux
   const activeChannelIdFromRedux = useAppSelector((state) => state.chatChannels.activeChannelId);
@@ -35,24 +37,18 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   const handleSend = useCallback(
     (content: string) => {
       if (!activeChannel || !effectiveChannelId) return;
-      const newMessage = {
-        id: `msg-new-${Date.now()}`,
-        channelId: effectiveChannelId,
-        senderId: CURRENT_USER_ID,
-        senderType: 'USER' as const,
-        content,
-        rootId: null,
-        editedAt: null,
-        isDeleted: false,
-        isPinned: false,
-        metadata: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      dispatch(appendMessage({ channelId: effectiveChannelId, message: newMessage }));
+      dispatch(sendMessage({ channelId: effectiveChannelId, content }));
     },
     [activeChannel, effectiveChannelId, dispatch],
   );
+
+  const handleTyping = useCallback(() => {
+    if (!effectiveChannelId) return;
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) return;
+    lastTypingSentRef.current = now;
+    dispatch(sendTyping(effectiveChannelId));
+  }, [effectiveChannelId, dispatch]);
 
   if (!activeChannel) {
     return (
@@ -75,7 +71,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     <div className="flex flex-col h-full" onMouseDown={onFocus}>
       <ChannelHeader channelId={effectiveChannelId ?? undefined} showCloseButton={showCloseButton} onClose={onClose} />
       <MessageList channelId={effectiveChannelId ?? undefined} />
-      <MessageCompose channelName={channelDisplayName} onSend={handleSend} />
+      <MessageCompose channelName={channelDisplayName} onSend={handleSend} onTyping={handleTyping} />
     </div>
   );
 }

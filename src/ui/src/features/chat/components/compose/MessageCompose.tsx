@@ -27,6 +27,7 @@ interface MessageComposeProps {
   channelName: string;
   placeholder?: string;
   onSend?: (content: string) => void;
+  onTyping?: () => void;
 }
 
 const MAX_HEIGHT = 200;
@@ -129,7 +130,7 @@ function createMentionElement(label: string, urn: string): HTMLSpanElement {
   return chip;
 }
 
-export function MessageCompose({ channelName, placeholder, onSend }: MessageComposeProps) {
+export function MessageCompose({ channelName, placeholder, onSend, onTyping }: MessageComposeProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -153,6 +154,7 @@ export function MessageCompose({ channelName, placeholder, onSend }: MessageComp
   // Handle input changes
   const handleInput = useCallback(() => {
     updateState();
+    onTyping?.();
 
     if (mentionActive) return;
 
@@ -181,7 +183,7 @@ export function MessageCompose({ channelName, placeholder, onSend }: MessageComp
     mentionStartOffsetRef.current = atIndex;
     setMentionQuery(query);
     setMentionActive(true);
-  }, [updateState, mentionActive]);
+  }, [updateState, mentionActive, onTyping]);
 
   // Handle mention selection from popup
   const handleMentionSelect = useCallback((result: SearchResultItem) => {

@@ -1,16 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
 import { PushPin, Robot } from '@phosphor-icons/react';
 
-import { getMockUser, CURRENT_USER_ID, toSubject } from '@/features/chat/mock/mockMembers';
-import { getGroupedReactions } from '@/features/chat/mock/mockReactions';
-import { type ChatMessage } from '@/features/chat/mock/types';
+import { type ChatMessage } from '@/features/chat/types';
 import { HoverActionsToolbar } from '@/features/chat/components/channel/HoverActionsToolbar';
 import { MessageContent } from '@/features/chat/components/channel/MessageContent';
 import { ThreadFooter } from '@/features/chat/components/channel/ThreadFooter';
 import { ReactionBar } from '@/features/chat/components/reactions/ReactionBar';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
-import { SubjectAvatar } from '@/components/subject';
+import { SubjectAvatarById } from '@/components/subject';
 import { cn } from '@/shared/utils/cn';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { addReaction, removeReaction } from '@/features/chat/store/chatThunks';
 
 function formatMessageTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -58,71 +58,48 @@ export function MessageItem({
   isHighlighted = false,
   isSelected = false,
 }: MessageItemProps) {
-  const sender = getMockUser(message.senderId);
-  const senderName = sender?.fullName ?? 'Unknown User';
-  const senderSubject = toSubject(message.senderId);
+  const dispatch = useAppDispatch();
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const senderName = message.senderName ?? 'Unknown User';
   const hasThread = message.thread && message.thread.replyCount > 0;
   const isAgent = message.senderType === 'AGENT';
 
-  // Local reactions state (merges mock data with user-added reactions)
-  const [localReactions, setLocalReactions] = useState<Record<string, { userIds: string[] }>>({});
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const addReactionRef = useRef<HTMLDivElement>(null);
 
-  const baseReactions = getGroupedReactions(message.id);
-
-  // Merge mock reactions with locally added ones
-  const reactions = baseReactions.map(r => {
-    const local = localReactions[r.emoji];
-    if (local) {
-      const mergedUserIds = [...new Set([...r.userIds, ...local.userIds])];
-      return {
-        ...r,
-        count: mergedUserIds.length,
-        userIds: mergedUserIds,
-        hasCurrentUser: mergedUserIds.includes(CURRENT_USER_ID),
-      };
-    }
-    return r;
-  });
-
-  // Add reactions that only exist locally (not in mock data)
-  for (const [emoji, data] of Object.entries(localReactions)) {
-    if (!baseReactions.find(r => r.emoji === emoji)) {
-      reactions.push({
-        emoji,
-        count: data.userIds.length,
-        userIds: data.userIds,
-        hasCurrentUser: data.userIds.includes(CURRENT_USER_ID),
-      });
-    }
-  }
+  // Use reactions from API data
+  const reactions = (message.reactions ?? []).map(r => ({
+    emoji: r.emoji,
+    count: r.count,
+    userIds: r.userIds,
+    hasCurrentUser: r.currentUserReacted,
+  }));
 
   const handleToggleReaction = useCallback((emoji: string) => {
-    setLocalReactions(prev => {
-      const existing = prev[emoji];
-      if (existing && existing.userIds.includes(CURRENT_USER_ID)) {
-        // Remove current user
-        const filtered = existing.userIds.filter(id => id !== CURRENT_USER_ID);
-        if (filtered.length === 0) {
-          const next = { ...prev };
-          delete next[emoji];
-          return next;
-        }
-        return { ...prev, [emoji]: { userIds: filtered } };
-      }
-      // Add current user
-      return {
-        ...prev,
-        [emoji]: { userIds: [...(existing?.userIds ?? []), CURRENT_USER_ID] },
-      };
-    });
-  }, []);
+    if (!currentUserId) return;
+    const existing = reactions.find(r => r.emoji === emoji);
+    if (existing?.hasCurrentUser) {
+      dispatch(removeReaction({ channelId: message.channelId, messageId: message.id, emoji }));
+    } else {
+      dispatch(addReaction({ channelId: message.channelId, messageId: message.id, emoji }));
+    }
+  }, [currentUserId, reactions, dispatch, message.channelId, message.id]);
 
   const handleAddReaction = useCallback((emoji: string) => {
-    handleToggleReaction(emoji);
+    dispatch(addReaction({ channelId: message.channelId, messageId: message.id, emoji }));
     setShowReactionPicker(false);
-  }, [handleToggleReaction]);
+  }, [dispatch, message.channelId, message.id]);
+
+  // System message (join, leave, etc.)
+  if (message.senderType === 'SYSTEM') {
+    return (
+      <div className="flex justify-center py-2 px-4">
+        <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <MessageContent content={message.content} className="!text-xs !text-muted-foreground [&_*]:!text-xs [&_.mention-chip-compact]:!text-[10px]" />
+        </div>
+      </div>
+    );
+  }
 
   // Deleted message
   if (message.isDeleted) {
@@ -166,7 +143,7 @@ export function MessageItem({
         {/* Avatar or hover timestamp */}
         {isFirstInGroup ? (
           <div className="shrink-0 mt-0.5">
-            <SubjectAvatar subject={senderSubject} size="md" showPresence />
+            <SubjectAvatarById userId={message.senderId} displayName={senderName} size="md" showPresence />
           </div>
         ) : (
           <div className="w-8 flex-shrink-0 flex items-center justify-center">

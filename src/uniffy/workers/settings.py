@@ -41,6 +41,7 @@ from uniffy.workers.tasks import (
     extract_audio_metadata,
     extract_document_content,
     extract_image_metadata,
+    flush_chat_read_cursors,
     generate_image_thumbnail,
     generate_pdf_thumbnail,
     generate_video_thumbnail,
@@ -110,6 +111,7 @@ class WorkerSettings:
         cron(check_calendar_reminders, minute=None),  # Every minute
         cron(execute_agent_cron_tasks, minute=None),  # Every minute
         cron(check_task_due_dates, minute=None),  # Every minute
+        cron(flush_chat_read_cursors, second={0, 30}),  # Every 30 seconds
     ]
 
     # Lifecycle hooks

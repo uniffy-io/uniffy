@@ -76,6 +76,31 @@ export enum NotificationType {
    * @generated from enum value: NOTIFICATION_TYPE_TASK_OVERDUE = 12;
    */
   TASK_OVERDUE = 12,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_CHAT_MENTION = 13;
+   */
+  CHAT_MENTION = 13,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_CHAT_DM = 14;
+   */
+  CHAT_DM = 14,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE = 15;
+   */
+  CHAT_CHANNEL_INVITE = 15,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED = 16;
+   */
+  CHAT_CHANNEL_REMOVED = 16,
+
+  /**
+   * @generated from enum value: NOTIFICATION_TYPE_CHAT_THREAD_REPLY = 17;
+   */
+  CHAT_THREAD_REPLY = 17,
 }
 // Retrieve enum metadata with: proto3.getEnumType(NotificationType)
 proto3.util.setEnumType(NotificationType, "notifications.v1.NotificationType", [
@@ -92,6 +117,11 @@ proto3.util.setEnumType(NotificationType, "notifications.v1.NotificationType", [
   { no: 10, name: "NOTIFICATION_TYPE_TASK_ASSIGNED" },
   { no: 11, name: "NOTIFICATION_TYPE_TASK_DUE_SOON" },
   { no: 12, name: "NOTIFICATION_TYPE_TASK_OVERDUE" },
+  { no: 13, name: "NOTIFICATION_TYPE_CHAT_MENTION" },
+  { no: 14, name: "NOTIFICATION_TYPE_CHAT_DM" },
+  { no: 15, name: "NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE" },
+  { no: 16, name: "NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED" },
+  { no: 17, name: "NOTIFICATION_TYPE_CHAT_THREAD_REPLY" },
 ]);
 
 /**

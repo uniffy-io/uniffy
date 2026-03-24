@@ -9,8 +9,9 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Hash, Lock, MagnifyingGlass } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
+import { SubjectAvatarById } from '@/components/subject';
 import { Input } from '@/components/ui/input';
-import type { ChatChannel } from '@/features/chat/mock/types';
+import type { ChatChannel } from '@/features/chat/types';
 
 interface SplitChannelPickerProps {
   onSelect: (channelId: string) => void;
@@ -96,9 +97,7 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
       >
         {!isDm && <Icon size={14} className="text-muted-foreground shrink-0" />}
         {isDm && (
-          <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-[8px] text-muted-foreground shrink-0">
-            {channel.name.charAt(0).toUpperCase()}
-          </div>
+          <SubjectAvatarById userId={channel.ownerId} displayName={channel.name} size="xs" />
         )}
         <span className="truncate text-foreground">{channel.name}</span>
       </button>

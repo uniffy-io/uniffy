@@ -167,7 +167,7 @@ interface MessageContentProps {
 }
 
 export function MessageContent({ content, className }: MessageContentProps) {
-  const processed = preprocessMentions(content);
+  const processed = preprocessMentions(content ?? '');
 
   return (
     <div

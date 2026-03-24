@@ -112,6 +112,7 @@ class ContentType(str, Enum):
     PROVIDER_KEY = "PROVIDER_KEY"
     PROMPT = "PROMPT"
     AGENT_CRON_TASK = "AGENT_CRON_TASK"
+    CHAT = "CHAT"
 
 
 class SubjectType(str, Enum):
@@ -306,6 +307,11 @@ class NotificationType(str, Enum):
     TASK_ASSIGNED = "TASK_ASSIGNED"
     TASK_DUE_SOON = "TASK_DUE_SOON"
     TASK_OVERDUE = "TASK_OVERDUE"
+    CHAT_MENTION = "CHAT_MENTION"
+    CHAT_DM = "CHAT_DM"
+    CHAT_CHANNEL_INVITE = "CHAT_CHANNEL_INVITE"
+    CHAT_CHANNEL_REMOVED = "CHAT_CHANNEL_REMOVED"
+    CHAT_THREAD_REPLY = "CHAT_THREAD_REPLY"
 
 
 class ResourceType(str, Enum):

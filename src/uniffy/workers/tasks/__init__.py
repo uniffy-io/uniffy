@@ -1,5 +1,6 @@
 """Background task implementations."""
 
+from uniffy.domains.chat.read_state.flush import flush_chat_read_cursors
 from uniffy.workers.tasks.agent_cron import execute_agent_cron_tasks, execute_single_agent_cron_task
 from uniffy.workers.tasks.base import on_job_end, on_job_start, on_shutdown, on_startup
 from uniffy.workers.tasks.content_extraction import extract_document_content
@@ -44,4 +45,6 @@ __all__ = [
     # Agent cron tasks
     "execute_agent_cron_tasks",
     "execute_single_agent_cron_task",
+    # Chat read state flush
+    "flush_chat_read_cursors",
 ]

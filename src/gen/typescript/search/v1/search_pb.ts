@@ -59,6 +59,11 @@ export enum SearchResultType {
    * @generated from enum value: SEARCH_RESULT_TYPE_PROMPT = 9;
    */
   PROMPT = 9,
+
+  /**
+   * @generated from enum value: SEARCH_RESULT_TYPE_CHAT_MESSAGE = 10;
+   */
+  CHAT_MESSAGE = 10,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SearchResultType)
 proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
@@ -72,6 +77,7 @@ proto3.util.setEnumType(SearchResultType, "search.v1.SearchResultType", [
   { no: 7, name: "SEARCH_RESULT_TYPE_TASK" },
   { no: 8, name: "SEARCH_RESULT_TYPE_AGENT" },
   { no: 9, name: "SEARCH_RESULT_TYPE_PROMPT" },
+  { no: 10, name: "SEARCH_RESULT_TYPE_CHAT_MESSAGE" },
 ]);
 
 /**

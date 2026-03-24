@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { ChatMessage, ThreadInboxItem } from '@/features/chat/mock/types';
+import type { ChatMessage, ThreadInboxItem } from '@/features/chat/types';
 import type { RootState } from '@/app/store';
 
 interface ChatThreadsState {

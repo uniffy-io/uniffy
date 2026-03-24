@@ -3,10 +3,9 @@
  *
  * Handles routing, data initialization, and wires up the 3-panel layout.
  * Supports split-screen mode for viewing two channels side by side.
- * Uses mock data for now - will connect to backend API later.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { useShortcutHandler } from '@/features/settings';
@@ -19,24 +18,23 @@ import { ChannelView } from '@/features/chat/components/channel/ChannelView';
 import { ThreadPanel } from '@/features/chat/components/thread/ThreadPanel';
 import { ThreadsInbox } from '@/features/chat/components/thread/ThreadsInbox';
 import { UnreadsView } from '@/features/chat/components/unreads/UnreadsView';
-import { setChannels, setActiveChannel, setChannelMembers } from '@/features/chat/store/chatChannelsSlice';
-import { setMessages, setUnreadSeparator } from '@/features/chat/store/chatMessagesSlice';
-import { setFollowedThreads, setThreadsInbox } from '@/features/chat/store/chatThreadsSlice';
+import { setActiveChannel } from '@/features/chat/store/chatChannelsSlice';
 import {
   toggleSidebar,
   deactivateSplit,
   setFocusedPane,
 } from '@/features/chat/store/chatUiSlice';
 import { clearSplitChannel } from '@/features/chat/store/chatChannelsSlice';
+import { initializeChat, fetchMessages } from '@/features/chat/store/chatThunks';
+import { CreateChannelModal } from '@/features/chat/components/modals/CreateChannelModal';
+import { CreateCategoryModal } from '@/features/chat/components/modals/CreateCategoryModal';
+import { BrowseChannelsModal } from '@/features/chat/components/modals/BrowseChannelsModal';
 import '@/features/chat/styles/chat.css';
-import { MOCK_CHANNELS } from '@/features/chat/mock/mockChannels';
-import { MOCK_CHANNEL_MEMBERS } from '@/features/chat/mock/mockMembers';
-import { getMessagesForChannel } from '@/features/chat/mock/mockMessages';
-import { MOCK_THREADS_INBOX, MOCK_FOLLOWED_THREADS } from '@/features/chat/mock/mockThreads';
 
 export function ChatPage() {
   const dispatch = useAppDispatch();
   const { channelId } = useParams<{ channelId: string }>();
+  const initializedRef = useRef(false);
 
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const activeChannel = useAppSelector((state) =>
@@ -47,6 +45,9 @@ export function ChatPage() {
   const splitActive = useAppSelector((state) => state.chatUi.splitActive);
   const splitChannelId = useAppSelector((state) => state.chatChannels.splitChannelId);
   const focusedPane = useAppSelector((state) => state.chatUi.focusedPane);
+  const createChannelOpen = useAppSelector((state) => state.chatUi.createChannelModalOpen);
+  const createCategoryOpen = useAppSelector((state) => state.chatUi.createCategoryModalOpen);
+  const browseChannelsOpen = useAppSelector((state) => state.chatUi.browseChannelsModalOpen);
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const isThreadsInboxRoute = !channelId && currentPath === '/chat/threads';
   const isUnreadsRoute = !channelId && currentPath === '/chat/unreads';
@@ -66,49 +67,28 @@ export function ChatPage() {
   }, [dispatch]);
   useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
 
-  // Initialize mock data on mount
+  // Initialize chat data on mount
   useEffect(() => {
-    dispatch(setChannels(MOCK_CHANNELS));
-    dispatch(setFollowedThreads(MOCK_FOLLOWED_THREADS));
-    dispatch(setThreadsInbox(MOCK_THREADS_INBOX));
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    dispatch(initializeChat(channelId));
+  }, [dispatch, channelId]);
 
-    // Load members for all channels
-    for (const [chId, members] of Object.entries(MOCK_CHANNEL_MEMBERS)) {
-      dispatch(setChannelMembers({ channelId: chId, members }));
-    }
-  }, [dispatch]);
-
-  // Handle channel selection from URL
+  // Handle channel selection from URL changes (after initial load)
+  const prevChannelIdRef = useRef<string | undefined>(channelId);
   useEffect(() => {
-    if (channelId && channelId !== activeChannelId) {
+    if (!initializedRef.current) return;
+    if (channelId && channelId !== prevChannelIdRef.current) {
+      prevChannelIdRef.current = channelId;
       dispatch(setActiveChannel(channelId));
-    } else if (!channelId && !activeChannelId && MOCK_CHANNELS.length > 0) {
-      // Default to #general (first channel)
-      dispatch(setActiveChannel(MOCK_CHANNELS[0].id));
+      dispatch(fetchMessages({ channelId }));
     }
-  }, [channelId, activeChannelId, dispatch]);
-
-  // Load messages when active channel changes
-  useEffect(() => {
-    if (activeChannelId) {
-      const messages = getMessagesForChannel(activeChannelId);
-      dispatch(setMessages({ channelId: activeChannelId, messages }));
-
-      // Set unread separator on a message for demo purposes
-      if (messages.length > 5) {
-        dispatch(setUnreadSeparator({
-          channelId: activeChannelId,
-          messageId: messages[messages.length - 3].id,
-        }));
-      }
-    }
-  }, [activeChannelId, dispatch]);
+  }, [channelId, dispatch]);
 
   // Load messages for split channel when it changes
   useEffect(() => {
     if (splitChannelId) {
-      const messages = getMessagesForChannel(splitChannelId);
-      dispatch(setMessages({ channelId: splitChannelId, messages }));
+      dispatch(fetchMessages({ channelId: splitChannelId }));
     }
   }, [splitChannelId, dispatch]);
 
@@ -159,6 +139,9 @@ export function ChatPage() {
         splitView={splitView}
         rightPanel={rightPanel}
       />
+      {createChannelOpen && <CreateChannelModal />}
+      {createCategoryOpen && <CreateCategoryModal />}
+      {browseChannelsOpen && <BrowseChannelsModal />}
     </>
   );
 }

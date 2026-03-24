@@ -16,6 +16,24 @@ from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
+from uniffy.core.models.chat import (
+    ChannelRole,
+    ChatChannel,
+    ChatChannelCategory,
+    ChatChannelMember,
+    ChatChannelResource,
+    ChatChannelStats,
+    ChatMessage,
+    ChatNotificationLevel,
+    ChatReaction,
+    ChatReadCursor,
+    ChatThread,
+    ChatThreadFollow,
+    ChatThreadParticipant,
+    ChatThreadReadCursor,
+    ChatThreadStats,
+    SenderType,
+)
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.files.file import ExtractionStatus, File
@@ -128,4 +146,21 @@ __all__ = [
     "ResourceType",
     "SettingsProfile",
     "EventTemplate",
+    # Chat models
+    "ChatChannel",
+    "ChatChannelCategory",
+    "ChatChannelMember",
+    "ChatChannelResource",
+    "ChatChannelStats",
+    "ChatMessage",
+    "ChatReaction",
+    "ChatReadCursor",
+    "ChatThread",
+    "ChatThreadFollow",
+    "ChatThreadParticipant",
+    "ChatThreadReadCursor",
+    "ChatThreadStats",
+    "ChannelRole",
+    "ChatNotificationLevel",
+    "SenderType",
 ]

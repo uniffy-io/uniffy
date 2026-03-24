@@ -171,6 +171,21 @@ async def seed_initial_data() -> None:
             await create_default_presets(session, default_org.id, admin_user.id)
             logger.info("Seeded default file filter presets")
 
+            # 3c. Create default #general chat channel
+            from uniffy.core.models.chat.channel import ChannelType
+            from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+            chat_ops = ChatChannelOperations(session)
+            await chat_ops.create_channel(
+                user_id=admin_user.id,
+                organization_id=default_org.id,
+                name="general",
+                channel_type=ChannelType.PUBLIC,
+                description="Organization-wide discussions",
+                is_default=True,
+            )
+            logger.info("Created default #general chat channel")
+
             # 4. Create Uniffy root folder
             uniffy_folder = Note(
                 organization_id=default_org.id,

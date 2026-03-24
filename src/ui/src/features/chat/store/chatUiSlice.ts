@@ -19,6 +19,10 @@ interface ChatUiState {
   splitActive: boolean;
   focusedPane: 'left' | 'right';
   jumpToMessageId: string | null;
+  createChannelModalOpen: boolean;
+  createChannelCategoryId: string | null;
+  createCategoryModalOpen: boolean;
+  browseChannelsModalOpen: boolean;
 }
 
 const initialState: ChatUiState = {
@@ -36,6 +40,10 @@ const initialState: ChatUiState = {
   splitActive: false,
   focusedPane: 'left',
   jumpToMessageId: null,
+  createChannelModalOpen: false,
+  createChannelCategoryId: null,
+  createCategoryModalOpen: false,
+  browseChannelsModalOpen: false,
 };
 
 export const chatUiSlice = createSlice({
@@ -132,6 +140,26 @@ export const chatUiSlice = createSlice({
     clearJumpToMessage: (state) => {
       state.jumpToMessageId = null;
     },
+    openCreateChannelModal: (state, action: PayloadAction<string | null>) => {
+      state.createChannelModalOpen = true;
+      state.createChannelCategoryId = action.payload;
+    },
+    closeCreateChannelModal: (state) => {
+      state.createChannelModalOpen = false;
+      state.createChannelCategoryId = null;
+    },
+    openCreateCategoryModal: (state) => {
+      state.createCategoryModalOpen = true;
+    },
+    closeCreateCategoryModal: (state) => {
+      state.createCategoryModalOpen = false;
+    },
+    openBrowseChannelsModal: (state) => {
+      state.browseChannelsModalOpen = true;
+    },
+    closeBrowseChannelsModal: (state) => {
+      state.browseChannelsModalOpen = false;
+    },
   },
 });
 
@@ -161,6 +189,12 @@ export const {
   setFocusedPane,
   jumpToMessage,
   clearJumpToMessage,
+  openCreateChannelModal,
+  closeCreateChannelModal,
+  openCreateCategoryModal,
+  closeCreateCategoryModal,
+  openBrowseChannelsModal,
+  closeBrowseChannelsModal,
 } = chatUiSlice.actions;
 
 // -- Selectors --

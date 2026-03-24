@@ -1,9 +1,8 @@
 /**
  * UnreadsView - Dedicated page showing all unread messages grouped by channel.
  *
- * Similar to Threads Inbox but for unreads. Shows each channel with unread
- * messages as a collapsible section with message previews. Users can mark
- * individual channels or all as read.
+ * Shows each channel with unread messages as a collapsible section with
+ * message previews. Users can mark individual channels or all as read.
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -16,22 +15,13 @@ import {
   Tray,
 } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
+import { SubjectAvatarById } from '@/components/subject';
 import { setActiveChannel } from '@/features/chat/store/chatChannelsSlice';
 import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { getMockUser } from '@/features/chat/mock/mockMembers';
 import { MessageContent } from '@/features/chat/components/channel/MessageContent';
-import type { ChatChannel, ChatMessage } from '@/features/chat/mock/types';
-
-// Mock unread data - same as sidebar
-const MOCK_UNREAD_COUNTS: Record<string, number> = {
-  'ch-001': 3,
-  'ch-002': 7,
-  'ch-005': 1,
-  'ch-007': 2,
-  'ch-009': 4,
-};
+import { markChannelRead } from '@/features/chat/store/chatThunks';
+import type { ChatChannel, ChatMessage } from '@/features/chat/types';
 
 interface UnreadChannelSectionProps {
   channel: ChatChannel;
@@ -43,7 +33,7 @@ interface UnreadChannelSectionProps {
 function UnreadChannelSection({ channel, unreadCount, onNavigate, onMarkRead }: UnreadChannelSectionProps) {
   const messages = useAppSelector((state) => selectMessagesForChannel(state, channel.id));
 
-  // Get the last N unread messages (mock: just take the last `unreadCount` messages)
+  // Get the last N unread messages
   const unreadMessages = useMemo(
     () => messages.filter(m => m.rootId === null).slice(-unreadCount),
     [messages, unreadCount],
@@ -97,9 +87,7 @@ function UnreadMessageItem({ message, channelId, onNavigate }: {
   channelId: string;
   onNavigate: (channelId: string) => void;
 }) {
-  const sender = getMockUser(message.senderId);
-  const senderName = sender?.fullName ?? 'Unknown User';
-  const initials = senderName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const senderName = message.senderName ?? 'Unknown User';
 
   return (
     <button
@@ -107,8 +95,8 @@ function UnreadMessageItem({ message, channelId, onNavigate }: {
       className="w-full text-left px-4 py-2 hover:bg-muted/30 transition-colors flex items-start gap-3"
     >
       {/* Avatar */}
-      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-medium text-muted-foreground">
-        {initials}
+      <div className="shrink-0 mt-0.5">
+        <SubjectAvatarById userId={message.senderId} displayName={senderName} size="sm" />
       </div>
 
       {/* Content */}
@@ -134,7 +122,7 @@ export function UnreadsView() {
 
   const unreadChannels = useMemo(
     () => channels
-      .filter(c => (MOCK_UNREAD_COUNTS[c.id] ?? 0) > 0 && !markedRead.has(c.id))
+      .filter(c => (c.unreadCount ?? 0) > 0 && !markedRead.has(c.id))
       .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),
     [channels, markedRead],
   );
@@ -145,12 +133,21 @@ export function UnreadsView() {
   }, [dispatch, navigate]);
 
   const handleMarkRead = useCallback((channelId: string) => {
+    // Find last message to pass to API
+    const state = channels.find(c => c.id === channelId);
+    if (state) {
+      dispatch(markChannelRead({ channelId, lastReadMessageId: '' }));
+    }
     setMarkedRead(prev => new Set([...prev, channelId]));
-  }, []);
+  }, [dispatch, channels]);
 
   const handleMarkAllRead = useCallback(() => {
-    setMarkedRead(new Set(Object.keys(MOCK_UNREAD_COUNTS)));
-  }, []);
+    const ids = unreadChannels.map(c => c.id);
+    for (const channelId of ids) {
+      dispatch(markChannelRead({ channelId, lastReadMessageId: '' }));
+    }
+    setMarkedRead(prev => new Set([...prev, ...ids]));
+  }, [dispatch, unreadChannels]);
 
   return (
     <div className="flex flex-col h-full">
@@ -183,7 +180,7 @@ export function UnreadsView() {
             <UnreadChannelSection
               key={channel.id}
               channel={channel}
-              unreadCount={MOCK_UNREAD_COUNTS[channel.id] ?? 0}
+              unreadCount={channel.unreadCount ?? 0}
               onNavigate={handleNavigate}
               onMarkRead={handleMarkRead}
             />

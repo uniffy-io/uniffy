@@ -129,6 +129,8 @@ interface SubjectAvatarByIdProps {
     size?: SubjectAvatarSize;
     className?: string;
     bordered?: boolean;
+    /** Show presence indicator dot. */
+    showPresence?: boolean;
 }
 
 export function SubjectAvatarById({
@@ -137,44 +139,52 @@ export function SubjectAvatarById({
     size = 'sm',
     className,
     bordered = false,
+    showPresence = false,
 }: SubjectAvatarByIdProps) {
     const [imgFailed, setImgFailed] = useState(false);
     const sizeClass = SIZE_CLASSES[size];
     const avatarSrc = useAvatarUrl(userId, size === 'lg' ? 'md' : 'sm');
+    const presenceStatus = usePresence(showPresence ? userId : '');
 
-    if (!imgFailed) {
-        return (
-            <img
-                src={avatarSrc}
-                alt={displayName || userId}
-                className={cn(
-                    'rounded-full object-cover shrink-0',
-                    sizeClass,
-                    bordered && 'border-2 border-card',
-                    className
-                )}
-                title={displayName}
-                onError={() => setImgFailed(true)}
-            />
-        );
-    }
-
-    const initials = displayName
-        ? getInitials(displayName)
-        : userId.slice(-2).toUpperCase();
-
-    return (
+    const avatarElement = !imgFailed ? (
+        <img
+            src={avatarSrc}
+            alt={displayName || userId}
+            className={cn(
+                'rounded-full object-cover shrink-0',
+                sizeClass,
+                bordered && 'border-2 border-card',
+                !showPresence && className
+            )}
+            title={displayName}
+            onError={() => setImgFailed(true)}
+        />
+    ) : (
         <div
             className={cn(
                 'rounded-full flex items-center justify-center shrink-0 font-medium',
                 'bg-primary/15 text-primary',
                 sizeClass,
                 bordered && 'border-2 border-card',
-                className
+                !showPresence && className
             )}
             title={displayName}
         >
-            {initials}
+            {displayName ? getInitials(displayName) : userId.slice(-2).toUpperCase()}
         </div>
     );
+
+    if (showPresence) {
+        return (
+            <div className={cn('relative inline-flex shrink-0', className)}>
+                {avatarElement}
+                <PresenceIndicator
+                    status={presenceStatus}
+                    size={INDICATOR_SIZE_MAP[size]}
+                />
+            </div>
+        );
+    }
+
+    return avatarElement;
 }

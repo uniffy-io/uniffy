@@ -13,29 +13,46 @@ import { useState, useCallback, useMemo, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
-  GearSix,
   PencilSimple,
   MagnifyingGlass,
   ChatsCircle,
   Tray,
+  Compass,
   CaretDown,
   CaretRight,
   CaretDoubleLeft,
   CaretDoubleRight,
 } from '@phosphor-icons/react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Input } from '@/components/ui/input';
 import { SidebarOverlayContext } from '@/components/layout/CollapsibleSidebarRail';
-import { setActiveChannel, setSplitChannel } from '@/features/chat/store/chatChannelsSlice';
+import { setSplitChannel } from '@/features/chat/store/chatChannelsSlice';
 import {
   toggleDmSection,
   collapseSidebar,
   expandSidebar,
   selectSplitActive,
   selectFocusedPane,
+  openCreateChannelModal,
+  openCreateCategoryModal,
+  openBrowseChannelsModal,
 } from '@/features/chat/store/chatUiSlice';
-import { MOCK_CATEGORIES } from '@/features/chat/mock/mockChannels';
+import { selectCategories, setCategories } from '@/features/chat/store/chatChannelsSlice';
+import { reorderCategoriesThunk } from '@/features/chat/store/chatThunks';
 import { ChannelListItem } from '@/features/chat/components/sidebar/ChannelListItem';
 import { DirectMessageListItem } from '@/features/chat/components/sidebar/DirectMessageListItem';
 import { CategorySection } from '@/features/chat/components/sidebar/CategorySection';
@@ -48,6 +65,7 @@ export function ChatSidebar() {
   const isOverlay = useContext(SidebarOverlayContext);
 
   const channels = useAppSelector((state) => state.chatChannels.channels);
+  const categories = useAppSelector(selectCategories);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const dmSectionCollapsed = useAppSelector((state) => state.chatUi.dmSectionCollapsed);
   const splitActive = useAppSelector(selectSplitActive);
@@ -56,14 +74,16 @@ export function ChatSidebar() {
     state.chatThreads.threadsInbox.filter(t => t.hasUnread).length
   );
 
-  // Mock unread counts per channel (will come from read cursors in production)
-  const unreadCounts: Record<string, number> = useMemo(() => ({
-    'ch-001': 3,
-    'ch-002': 7,
-    'ch-005': 1,
-    'ch-007': 2,
-    'ch-009': 4,
-  }), []);
+  // Unread counts from channel data (populated by API)
+  const unreadCounts: Record<string, number> = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of channels) {
+      if (c.unreadCount && c.unreadCount > 0) {
+        counts[c.id] = c.unreadCount;
+      }
+    }
+    return counts;
+  }, [channels]);
 
   const totalUnread = useMemo(
     () => Object.values(unreadCounts).reduce((sum, n) => sum + n, 0),
@@ -93,7 +113,7 @@ export function ChatSidebar() {
 
   // Group channels by category
   const categorizedChannels = useMemo(() => {
-    const sortedCategories = [...MOCK_CATEGORIES].sort((a, b) => a.position - b.position);
+    const sortedCategories = [...categories].sort((a, b) => a.position - b.position);
 
     const groups: { categoryId: string | null; categoryName: string; channels: typeof nonDmChannels }[] = [];
 
@@ -119,21 +139,50 @@ export function ChatSidebar() {
     }
 
     return groups;
-  }, [nonDmChannels, searchQuery]);
+  }, [nonDmChannels, searchQuery, categories]);
 
   const handleChannelSelect = useCallback((channelId: string) => {
-    if (splitActive) {
-      // In split mode, replace the focused pane's channel
-      if (focusedPane === 'left') {
-        dispatch(setActiveChannel(channelId));
-      } else {
-        dispatch(setSplitChannel(channelId));
-      }
-    } else {
-      dispatch(setActiveChannel(channelId));
+    if (splitActive && focusedPane === 'right') {
+      dispatch(setSplitChannel(channelId));
+      return;
     }
+    // Navigate only - the URL effect in ChatPage handles setActiveChannel + fetchMessages
     navigate(`/chat/${channelId}`);
   }, [dispatch, navigate, splitActive, focusedPane]);
+
+  // Category drag-and-drop reordering
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const sortableCategoryIds = useMemo(
+    () => categorizedChannels.filter(g => g.categoryId !== null).map(g => g.categoryId!),
+    [categorizedChannels],
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sortableCategoryIds.indexOf(active.id as string);
+    const newIndex = sortableCategoryIds.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Optimistic reorder in store
+    const reordered = [...sortableCategoryIds];
+    reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, active.id as string);
+
+    const updatedCategories = reordered.map((id, i) => {
+      const cat = categories.find(c => c.id === id);
+      return cat ? { ...cat, position: i } : null;
+    }).filter(Boolean) as typeof categories;
+    dispatch(setCategories(updatedCategories));
+
+    // Persist to backend
+    dispatch(reorderCategoriesThunk(reordered));
+  }, [sortableCategoryIds, categories, dispatch]);
 
   const handleThreadsClick = useCallback(() => {
     navigate('/chat/threads');
@@ -144,16 +193,18 @@ export function ChatSidebar() {
       {/* Header */}
       <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
         <button
+          onClick={() => dispatch(openCreateChannelModal(null))}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          title="New message"
+          title="New channel"
         >
           <PencilSimple size={16} />
         </button>
         <button
+          onClick={() => dispatch(openCreateCategoryModal())}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          title="Chat notifications"
+          title="New category"
         >
-          <GearSix size={16} />
+          <Plus size={16} />
         </button>
         <div className="flex-1" />
         {!isMobile && (
@@ -221,24 +272,39 @@ export function ChatSidebar() {
           )}
         </button>
 
-        {/* Channel categories */}
-        {categorizedChannels.map(group => (
-          <CategorySection
-            key={group.categoryId ?? 'uncategorized'}
-            name={group.categoryName}
-            onAddChannel={() => { /* TODO: open create channel modal */ }}
-          >
-            {group.channels.map(channel => (
-              <ChannelListItem
-                key={channel.id}
-                channel={channel}
-                isActive={channel.id === activeChannelId}
-                unreadCount={unreadCounts[channel.id] ?? 0}
-                onClick={() => handleChannelSelect(channel.id)}
-              />
+        {/* Browse channels */}
+        <button
+          onClick={() => dispatch(openBrowseChannelsModal())}
+          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Compass size={16} />
+          <span className="font-medium">Browse Channels</span>
+        </button>
+
+        {/* Channel categories (drag-and-drop reorderable) */}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sortableCategoryIds} strategy={verticalListSortingStrategy}>
+            {categorizedChannels.map(group => (
+              <CategorySection
+                key={group.categoryId ?? 'uncategorized'}
+                id={group.categoryId}
+                name={group.categoryName}
+                sortable={group.categoryId !== null}
+                onAddChannel={() => dispatch(openCreateChannelModal(group.categoryId))}
+              >
+                {group.channels.map(channel => (
+                  <ChannelListItem
+                    key={channel.id}
+                    channel={channel}
+                    isActive={channel.id === activeChannelId}
+                    unreadCount={unreadCounts[channel.id] ?? 0}
+                    onClick={() => handleChannelSelect(channel.id)}
+                  />
+                ))}
+              </CategorySection>
             ))}
-          </CategorySection>
-        ))}
+          </SortableContext>
+        </DndContext>
 
         {/* Direct Messages section */}
         <div className="mt-1">

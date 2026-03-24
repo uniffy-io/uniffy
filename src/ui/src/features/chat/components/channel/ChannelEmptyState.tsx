@@ -1,6 +1,6 @@
 import { Hash, Lock } from '@phosphor-icons/react';
 
-import { type ChannelType } from '@/features/chat/mock/types';
+import { type ChannelType } from '@/features/chat/types';
 
 interface ChannelEmptyStateProps {
   channelName: string;

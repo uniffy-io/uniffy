@@ -8,7 +8,7 @@
 import { useState, useCallback } from 'react';
 import { Hash, Lock } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
-import { type ChatChannel } from '@/features/chat/mock/types';
+import { type ChatChannel } from '@/features/chat/types';
 import { ChannelContextMenu } from '@/features/chat/components/sidebar/ChannelContextMenu';
 
 interface ChannelListItemProps {

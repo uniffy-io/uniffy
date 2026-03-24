@@ -28,6 +28,8 @@ from uniffy_proto.attachments.v1.attachments_connect import AttachmentsServiceAS
 from uniffy_proto.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy_proto.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy_proto.cal.v1.calendar_connect import CalendarServiceASGIApplication
+from uniffy_proto.chat.v1.chat_connect import ChatServiceASGIApplication
+from uniffy_proto.chat.v1.chat_stream_connect import ChatStreamServiceASGIApplication
 from uniffy_proto.comments.v1.comments_connect import CommentsServiceASGIApplication
 from uniffy_proto.files.v1.files_connect import FilesServiceASGIApplication
 from uniffy_proto.groups.v1.groups_connect import GroupsServiceASGIApplication
@@ -58,6 +60,8 @@ from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
+from uniffy.domains.chat.service import ChatServiceImpl
+from uniffy.domains.chat.streaming.service import ChatStreamServiceImpl
 from uniffy.domains.comments.service import CommentsServiceImpl
 from uniffy.domains.files.http_routes import files_router, thumbnails_router
 from uniffy.domains.files.service import FilesServiceImpl
@@ -310,6 +314,18 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/bookmarks.v1.BookmarksService",
         BookmarksServiceASGIApplication(BookmarksServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/chat.v1.ChatService",
+        ChatServiceASGIApplication(ChatServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/chat.v1.ChatStreamService",
+        StreamDisconnectMiddleware(
+            ChatStreamServiceASGIApplication(
+                ChatStreamServiceImpl(), interceptors=[logging_interceptor]
+            )
+        ),
     )
     dispatcher.add_service(
         "/permissions.v1.PermissionsService",

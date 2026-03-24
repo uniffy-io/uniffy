@@ -72,6 +72,11 @@ export enum ContentType {
    * @generated from enum value: CONTENT_TYPE_PROMPT = 15;
    */
   PROMPT = 15,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_CHAT = 16;
+   */
+  CHAT = 16,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ContentType)
 proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
@@ -87,6 +92,7 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
   { no: 13, name: "CONTENT_TYPE_AGENT" },
   { no: 14, name: "CONTENT_TYPE_PROVIDER_KEY" },
   { no: 15, name: "CONTENT_TYPE_PROMPT" },
+  { no: 16, name: "CONTENT_TYPE_CHAT" },
 ]);
 
 /**

@@ -25,6 +25,11 @@ class NotificationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NOTIFICATION_TYPE_TASK_ASSIGNED: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_TASK_DUE_SOON: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_TASK_OVERDUE: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_CHAT_MENTION: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_CHAT_DM: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_CHAT_THREAD_REPLY: _ClassVar[NotificationType]
 NOTIFICATION_TYPE_UNSPECIFIED: NotificationType
 NOTIFICATION_TYPE_CONTENT_SHARED: NotificationType
 NOTIFICATION_TYPE_CONTENT_MENTIONED: NotificationType
@@ -38,6 +43,11 @@ NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT: NotificationType
 NOTIFICATION_TYPE_TASK_ASSIGNED: NotificationType
 NOTIFICATION_TYPE_TASK_DUE_SOON: NotificationType
 NOTIFICATION_TYPE_TASK_OVERDUE: NotificationType
+NOTIFICATION_TYPE_CHAT_MENTION: NotificationType
+NOTIFICATION_TYPE_CHAT_DM: NotificationType
+NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE: NotificationType
+NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED: NotificationType
+NOTIFICATION_TYPE_CHAT_THREAD_REPLY: NotificationType
 
 class Notification(_message.Message):
     __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at", "actor_name", "actor_avatar_url")

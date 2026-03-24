@@ -8,9 +8,8 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';
-import { type ChatChannel } from '@/features/chat/mock/types';
-import { toSubject } from '@/features/chat/mock/mockMembers';
-import { SubjectAvatar } from '@/components/subject';
+import { type ChatChannel } from '@/features/chat/types';
+import { SubjectAvatar, SubjectAvatarById } from '@/components/subject';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
 import { ChannelContextMenu } from '@/features/chat/components/sidebar/ChannelContextMenu';
 
@@ -31,19 +30,16 @@ export function DirectMessageListItem({
   const isGroupDm = channel.channelType === 'GROUP_DM';
   const displayName = channel.name;
 
-  // Build a Subject for the avatar
-  const subject = useMemo<Subject>(() => {
-    if (isGroupDm) {
-      return {
-        id: channel.id,
-        type: SUBJECT_TYPE.GROUP,
-        name: displayName,
-        memberCount: channel.memberCount,
-      };
-    }
-    // For 1:1 DMs, use the channel owner (the other person)
-    return toSubject(channel.ownerId);
-  }, [channel, isGroupDm, displayName]);
+  // Group DM subject (violet group avatar style)
+  const groupSubject = useMemo<Subject | null>(() => {
+    if (!isGroupDm) return null;
+    return {
+      id: channel.id,
+      type: SUBJECT_TYPE.GROUP,
+      name: displayName,
+      memberCount: channel.memberCount,
+    };
+  }, [channel.id, isGroupDm, displayName, channel.memberCount]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -69,7 +65,11 @@ export function DirectMessageListItem({
       >
         {/* Avatar with presence */}
         <div className="shrink-0">
-          <SubjectAvatar subject={subject} size="sm" showPresence={!isGroupDm} />
+          {groupSubject ? (
+            <SubjectAvatar subject={groupSubject} size="sm" />
+          ) : (
+            <SubjectAvatarById userId={channel.ownerId} displayName={displayName} size="sm" showPresence />
+          )}
         </div>
 
         <span className="truncate text-sm flex-1">

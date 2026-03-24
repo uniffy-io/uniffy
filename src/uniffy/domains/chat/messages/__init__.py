@@ -1,0 +1,1 @@
+"""Chat messages sub-domain."""

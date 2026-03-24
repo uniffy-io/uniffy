@@ -1,6 +1,5 @@
 import { Plus } from '@phosphor-icons/react';
 
-import { getMockUser } from '@/features/chat/mock/mockMembers';
 import { cn } from '@/shared/utils/cn';
 
 // Map internal emoji keys to unicode characters
@@ -27,10 +26,9 @@ function renderEmoji(key: string): string {
 }
 
 function buildTooltip(emoji: string, userIds: string[]): string {
-  const names = userIds
-    .map((id) => getMockUser(id)?.fullName ?? 'Unknown')
-    .join(', ');
-  return `${renderEmoji(emoji)} ${names}`;
+  const count = userIds.length;
+  const label = count === 1 ? '1 person' : `${count} people`;
+  return `${renderEmoji(emoji)} ${label}`;
 }
 
 interface ReactionBarProps {

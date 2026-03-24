@@ -162,6 +162,21 @@ class OrganizationOperations:
         await create_default_presets(self._session, org.id, owner_user_id)
         await self._session.commit()
 
+        # Create default #general chat channel
+        from uniffy.core.models.chat.channel import ChannelType
+        from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+        chat_ops = ChatChannelOperations(self._session)
+        await chat_ops.create_channel(
+            user_id=owner_user_id,
+            organization_id=org.id,
+            name="general",
+            channel_type=ChannelType.PUBLIC,
+            description="Organization-wide discussions",
+            is_default=True,
+        )
+        await self._session.commit()
+
         return org
 
     async def update(
@@ -614,6 +629,13 @@ class OrganizationOperations:
 
         attachment_ops = AttachmentOperations(self._session)
         await attachment_ops.get_or_create_attachments_folder(user_id, org_id)
+        await self._session.commit()
+
+        # Auto-join default chat channels (e.g., #general)
+        from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+        chat_ops = ChatChannelOperations(self._session)
+        await chat_ops.join_default_channels(user_id, org_id)
         await self._session.commit()
 
         return membership

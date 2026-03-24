@@ -10,8 +10,8 @@ import { useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { PushPin, X } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
+import { SubjectAvatarById } from '@/components/subject';
 import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
-import { getMockUser } from '@/features/chat/mock/mockMembers';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { MessageContent } from '@/features/chat/components/channel/MessageContent';
 
@@ -111,9 +111,7 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
           </div>
         ) : (
           pinnedMessages.map(message => {
-            const sender = getMockUser(message.senderId);
-            const senderName = sender?.fullName ?? 'Unknown';
-            const initials = senderName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            const senderName = message.senderName ?? 'Unknown';
 
             return (
               <div
@@ -126,9 +124,7 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
               >
                 {/* Sender info */}
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium text-muted-foreground shrink-0">
-                    {initials}
-                  </div>
+                  <SubjectAvatarById userId={message.senderId} displayName={senderName} size="xs" />
                   <span className="text-sm font-semibold text-foreground">{senderName}</span>
                   <span className="text-xs text-muted-foreground">{formatRelativeTime(message.createdAt)}</span>
                 </div>
