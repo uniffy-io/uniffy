@@ -105,6 +105,8 @@ class AuthOperations:
                 organization_id,
                 token_version=user.token_version,
                 session_id=session_record.id,
+                full_name=user.full_name,
+                avatar_key=user.avatar_key,
             )
             refresh_token = create_refresh_token(
                 user.id,
@@ -196,6 +198,8 @@ class AuthOperations:
                 user.id,
                 token_version=user.token_version,
                 session_id=session_record.id,
+                full_name=user.full_name,
+                avatar_key=user.avatar_key,
             )
             refresh_token = create_refresh_token(
                 user.id,
@@ -293,6 +297,8 @@ class AuthOperations:
                 organization_id,
                 token_version=user.token_version,
                 session_id=session_id,
+                full_name=user.full_name,
+                avatar_key=user.avatar_key,
             )
             new_refresh_token = create_refresh_token(
                 user_id,
