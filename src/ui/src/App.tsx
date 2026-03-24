@@ -10,6 +10,7 @@ import { AdminRoute } from '@/features/admin/components/AdminRoute';
 import { MainLayout } from '@/shared/layouts/MainLayout';
 import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
+import { StreamingProvider } from '@/components/streaming/StreamingProvider';
 import { FileViewerModal } from '@/features/files';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { PageLoader } from '@/components/feedback/PageLoader';
@@ -174,6 +175,8 @@ export function App() {
                     <FileViewerModal />
                     {/* Global Zen Mode handler - toggles distraction-free mode */}
                     <ZenModeHandler />
+                    {/* Global streaming connections (notifications, chat, presence) - mounts once, hooks no-op when unauthenticated */}
+                    <StreamingProvider />
                     {/* Global toast notifications */}
                     <ThemedToaster />
 

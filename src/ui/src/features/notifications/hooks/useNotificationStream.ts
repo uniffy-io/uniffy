@@ -20,9 +20,17 @@ import { StreamNotificationEvent_EventType } from '@uniffy/proto/notifications/v
 const MAX_BACKOFF_MS = 30000;
 const INITIAL_BACKOFF_MS = 1000;
 
+// Module-level singleton: ensures only one notification stream exists process-wide.
+// If a second mount happens before the first cleanup, the old connection is aborted.
+let _activeController: AbortController | null = null;
+
 /**
  * Subscribe to real-time notification events.
  * Automatically reconnects with exponential backoff on disconnection.
+ *
+ * Uses a module-level AbortController to guarantee at most one active
+ * connection, even if multiple component instances mount concurrently
+ * (e.g. during page transitions or React Strict Mode double-effects).
  */
 export function useNotificationStream() {
     const dispatch = useAppDispatch();
@@ -33,6 +41,9 @@ export function useNotificationStream() {
     useEffect(() => {
         if (!organizationId || !isAuthenticated) return;
 
+        // Abort any previously active stream from another mount
+        _activeController?.abort();
+
         let backoff = INITIAL_BACKOFF_MS;
         let mounted = true;
         const pendingFileUpdates = new Map<string, ReturnType<typeof setTimeout>>();
@@ -42,6 +53,7 @@ export function useNotificationStream() {
                 // Abort any previous stream before starting a new one
                 abortRef.current?.abort();
                 abortRef.current = new AbortController();
+                _activeController = abortRef.current;
 
                 try {
                     const stream = notificationsApi.streamNotifications(
@@ -145,6 +157,9 @@ export function useNotificationStream() {
         return () => {
             mounted = false;
             abortRef.current?.abort();
+            if (_activeController === abortRef.current) {
+                _activeController = null;
+            }
             abortRef.current = null;
             for (const timer of pendingFileUpdates.values()) {
                 clearTimeout(timer);
