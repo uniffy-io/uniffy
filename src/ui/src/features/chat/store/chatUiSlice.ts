@@ -23,6 +23,9 @@ interface ChatUiState {
   createChannelCategoryId: string | null;
   createCategoryModalOpen: boolean;
   browseChannelsModalOpen: boolean;
+  newDmModalOpen: boolean;
+  channelSettingsModalOpen: boolean;
+  channelSettingsModalTab: 'overview' | 'members';
 }
 
 const initialState: ChatUiState = {
@@ -44,6 +47,9 @@ const initialState: ChatUiState = {
   createChannelCategoryId: null,
   createCategoryModalOpen: false,
   browseChannelsModalOpen: false,
+  newDmModalOpen: false,
+  channelSettingsModalOpen: false,
+  channelSettingsModalTab: 'overview' as const,
 };
 
 export const chatUiSlice = createSlice({
@@ -160,6 +166,20 @@ export const chatUiSlice = createSlice({
     closeBrowseChannelsModal: (state) => {
       state.browseChannelsModalOpen = false;
     },
+    openNewDmModal: (state) => {
+      state.newDmModalOpen = true;
+    },
+    closeNewDmModal: (state) => {
+      state.newDmModalOpen = false;
+    },
+    openChannelSettingsModal: (state, action: PayloadAction<'overview' | 'members'>) => {
+      state.channelSettingsModalOpen = true;
+      state.channelSettingsModalTab = action.payload;
+    },
+    closeChannelSettingsModal: (state) => {
+      state.channelSettingsModalOpen = false;
+      state.channelSettingsModalTab = 'overview';
+    },
   },
 });
 
@@ -195,6 +215,10 @@ export const {
   closeCreateCategoryModal,
   openBrowseChannelsModal,
   closeBrowseChannelsModal,
+  openNewDmModal,
+  closeNewDmModal,
+  openChannelSettingsModal,
+  closeChannelSettingsModal,
 } = chatUiSlice.actions;
 
 // -- Selectors --
@@ -240,5 +264,11 @@ export const selectFocusedPane = (state: RootState): 'left' | 'right' =>
 
 export const selectJumpToMessageId = (state: RootState): string | null =>
   state.chatUi.jumpToMessageId;
+
+export const selectChannelSettingsModalOpen = (state: RootState): boolean =>
+  state.chatUi.channelSettingsModalOpen;
+
+export const selectChannelSettingsModalTab = (state: RootState): 'overview' | 'members' =>
+  state.chatUi.channelSettingsModalTab;
 
 export const chatUiReducer = chatUiSlice.reducer;

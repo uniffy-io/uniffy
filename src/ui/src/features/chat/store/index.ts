@@ -113,6 +113,10 @@ export {
   selectSplitActive,
   selectFocusedPane,
   selectJumpToMessageId,
+  openChannelSettingsModal,
+  closeChannelSettingsModal,
+  selectChannelSettingsModalOpen,
+  selectChannelSettingsModalTab,
 } from '@/features/chat/store/chatUiSlice';
 
 export {
@@ -146,4 +150,7 @@ export {
   createCategoryThunk,
   reorderCategoriesThunk,
   fetchMembers,
+  updateChannelThunk,
+  addMembersThunk,
+  removeMemberThunk,
 } from '@/features/chat/store/chatThunks';

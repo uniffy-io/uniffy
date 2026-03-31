@@ -37,7 +37,7 @@ import {
   setLoadingThread,
 } from '@/features/chat/store/chatThreadsSlice';
 import type { RootState } from '@/app/store';
-import type { ChatMessage, ChatChannel } from '@/features/chat/types';
+import type { ChatMessage, ChatChannel, ChatChannelMember } from '@/features/chat/types';
 import { ChannelType as ProtoChannelType } from '@uniffy/proto/chat/v1/chat_pb';
 
 const getOrganizationId = (state: RootState): string => {
@@ -629,6 +629,83 @@ export const fetchMembers = createAsyncThunk<
     }));
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch members');
+  }
+});
+
+export const updateChannelThunk = createAsyncThunk<
+  ChatChannel,
+  { channelId: string; name?: string; description?: string; categoryId?: string; originalCategoryId?: string },
+  { state: RootState; rejectValue: string }
+>('chat/updateChannelThunk', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.updateChannel({
+      organizationId,
+      channelId: params.channelId,
+      name: params.name,
+      description: params.description,
+    });
+    if (!response.channel) {
+      return rejectWithValue('Failed to update channel');
+    }
+    // Move category if changed
+    if (params.categoryId !== params.originalCategoryId) {
+      await chatApi.moveChannelToCategory({
+        organizationId,
+        channelId: params.channelId,
+        categoryId: params.categoryId ?? '',
+      });
+    }
+    const plain = channelToPlain(response.channel);
+    // Apply categoryId from our params since the updateChannel response may not reflect the move
+    if (params.categoryId !== params.originalCategoryId) {
+      plain.categoryId = params.categoryId ?? null;
+    }
+    dispatch(updateChannel(plain));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to update channel');
+  }
+});
+
+export const addMembersThunk = createAsyncThunk<
+  ChatChannelMember[],
+  { channelId: string; userIds: string[] },
+  { state: RootState; rejectValue: string }
+>('chat/addMembers', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.addMembers({
+      organizationId,
+      channelId: params.channelId,
+      userIds: params.userIds,
+    });
+    const members = response.members.map(memberToPlain);
+    // Refresh full member list
+    dispatch(fetchMembers(params.channelId));
+    return members;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to add members');
+  }
+});
+
+export const removeMemberThunk = createAsyncThunk<
+  { channelId: string; userId: string },
+  { channelId: string; userId: string },
+  { state: RootState; rejectValue: string }
+>('chat/removeMember', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.removeMembers({
+      organizationId,
+      channelId: params.channelId,
+      userIds: [params.userId],
+    });
+    // Refresh full member list
+    dispatch(fetchMembers(params.channelId));
+    return { channelId: params.channelId, userId: params.userId };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to remove member');
   }
 });
 

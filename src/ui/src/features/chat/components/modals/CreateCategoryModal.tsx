@@ -1,25 +1,33 @@
 /**
  * CreateCategoryModal - Modal for creating a new channel category.
  *
- * Simple form with just a category name. Categories organize channels
- * in the sidebar into collapsible groups.
+ * Polished form with accent icon, name input with character counter,
+ * and helper text. Categories organize channels in the sidebar
+ * into collapsible groups.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, FolderSimplePlus } from '@phosphor-icons/react';
+import { X, FolderSimplePlus, Rows } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { cn } from '@/shared/utils/cn';
 import { closeCreateCategoryModal } from '@/features/chat/store/chatUiSlice';
 import { createCategoryThunk } from '@/features/chat/store/chatThunks';
+
+const MAX_NAME_LENGTH = 40;
 
 export function CreateCategoryModal() {
   const dispatch = useAppDispatch();
 
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [touched, setTouched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isNameValid = name.trim().length > 0;
+  const showError = touched && !isNameValid;
 
   // Focus input on mount
   useEffect(() => {
@@ -29,12 +37,14 @@ export function CreateCategoryModal() {
 
   const handleClose = useCallback(() => {
     setName('');
+    setTouched(false);
     dispatch(closeCreateCategoryModal());
   }, [dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    setTouched(true);
+    if (!isNameValid) return;
 
     setIsSubmitting(true);
     try {
@@ -48,18 +58,15 @@ export function CreateCategoryModal() {
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-sm">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <FolderSimplePlus size={20} weight="bold" className="text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">
-            New Category
-          </h3>
-        </div>
+      <div className="flex items-center justify-between px-6 pt-6 pb-2">
+        <h2 className="text-xl font-semibold text-foreground">
+          New category
+        </h2>
         <button
           type="button"
           onClick={handleClose}
           disabled={isSubmitting}
-          className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
           <X size={20} />
         </button>
@@ -67,37 +74,70 @@ export function CreateCategoryModal() {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        <div className="p-4 md:p-6 space-y-4">
+        <div className="px-6 py-4 space-y-5">
+          {/* Illustration card */}
+          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Rows size={22} weight="bold" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">Organize your channels</p>
+              <p className="text-xs text-muted-foreground">
+                Categories group channels into collapsible sections in the sidebar.
+              </p>
+            </div>
+          </div>
+
+          {/* Category name */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
-              Category Name
+              Category name
             </label>
             <Input
               ref={inputRef}
               type="text"
-              placeholder="e.g. Engineering, Marketing"
+              placeholder="e.g. Engineering, Marketing, Design"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value.slice(0, MAX_NAME_LENGTH));
+                if (!touched) setTouched(true);
+              }}
               disabled={isSubmitting}
+              className={cn(
+                showError && 'border-red-500 focus-visible:ring-red-500',
+              )}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Categories organize channels into groups in the sidebar.
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              {showError ? (
+                <p className="text-xs text-red-500">
+                  Category name is required.
+                </p>
+              ) : (
+                <span />
+              )}
+              <p className={cn(
+                'text-xs tabular-nums',
+                name.length >= MAX_NAME_LENGTH ? 'text-red-500' : 'text-muted-foreground',
+              )}>
+                {name.length}/{MAX_NAME_LENGTH}
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={handleClose}
             disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={!name.trim() || isSubmitting} loading={isSubmitting}>
-            Create Category
+          <Button type="submit" disabled={!isNameValid || isSubmitting} loading={isSubmitting}>
+            <FolderSimplePlus size={16} className="mr-1.5" />
+            Create category
           </Button>
         </div>
       </form>

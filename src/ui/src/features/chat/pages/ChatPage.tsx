@@ -29,6 +29,8 @@ import { initializeChat, fetchMessages } from '@/features/chat/store/chatThunks'
 import { CreateChannelModal } from '@/features/chat/components/modals/CreateChannelModal';
 import { CreateCategoryModal } from '@/features/chat/components/modals/CreateCategoryModal';
 import { BrowseChannelsModal } from '@/features/chat/components/modals/BrowseChannelsModal';
+import { NewDmModal } from '@/features/chat/components/modals/NewDmModal';
+import { ChannelSettingsModal } from '@/features/chat/components/modals/ChannelSettingsModal';
 import '@/features/chat/styles/chat.css';
 
 export function ChatPage() {
@@ -48,6 +50,8 @@ export function ChatPage() {
   const createChannelOpen = useAppSelector((state) => state.chatUi.createChannelModalOpen);
   const createCategoryOpen = useAppSelector((state) => state.chatUi.createCategoryModalOpen);
   const browseChannelsOpen = useAppSelector((state) => state.chatUi.browseChannelsModalOpen);
+  const newDmOpen = useAppSelector((state) => state.chatUi.newDmModalOpen);
+  const channelSettingsOpen = useAppSelector((state) => state.chatUi.channelSettingsModalOpen);
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const isThreadsInboxRoute = !channelId && currentPath === '/chat/threads';
   const isUnreadsRoute = !channelId && currentPath === '/chat/unreads';
@@ -142,6 +146,8 @@ export function ChatPage() {
       {createChannelOpen && <CreateChannelModal />}
       {createCategoryOpen && <CreateCategoryModal />}
       {browseChannelsOpen && <BrowseChannelsModal />}
+      {newDmOpen && <NewDmModal />}
+      {channelSettingsOpen && <ChannelSettingsModal />}
     </>
   );
 }

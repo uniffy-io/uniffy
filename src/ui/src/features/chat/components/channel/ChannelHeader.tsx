@@ -6,7 +6,7 @@
  * Includes split-screen button for side-by-side channel viewing (desktop only).
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   Hash,
   Lock,
@@ -37,7 +37,7 @@ import {
   setSplitChannel,
   clearSplitChannel,
 } from '@/features/chat/store/chatChannelsSlice';
-import { activateSplit } from '@/features/chat/store/chatUiSlice';
+import { activateSplit, openChannelSettingsModal } from '@/features/chat/store/chatUiSlice';
 import { cn } from '@/shared/utils/cn';
 import { formatDateFull } from '@/shared/utils/dateFormatting';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -98,19 +98,26 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
     setShowPicker(false);
   }, [dispatch]);
 
-  if (!activeChannel) return null;
-
-  const isPrivate = activeChannel.channelType === 'PRIVATE';
-  const isDm = activeChannel.channelType === 'DIRECT' || activeChannel.channelType === 'GROUP_DM';
-  const ChannelIcon = isPrivate ? Lock : Hash;
-
+  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
   const currentChannelMessages = useAppSelector((state) =>
     activeChannel ? selectMessagesForChannel(state, activeChannel.id) : [],
   );
+
+  const isDm = activeChannel?.channelType === 'DIRECT' || activeChannel?.channelType === 'GROUP_DM';
+
+  // For DMs, strip the current user's name to show only the other participant(s)
+  const headerName = useMemo(() => {
+    if (!activeChannel || !isDm || !currentUserName) return activeChannel?.name ?? '';
+    const parts = activeChannel.name.split(', ').filter((n) => n !== currentUserName);
+    return parts.length > 0 ? parts.join(', ') : activeChannel.name;
+  }, [isDm, activeChannel, currentUserName]);
+
+  if (!activeChannel) return null;
+
+  const isPrivate = activeChannel.channelType === 'PRIVATE';
+  const ChannelIcon = isPrivate ? Lock : Hash;
   const pinnedCount = currentChannelMessages.filter(m => m.isPinned && !m.isDeleted).length;
-
   const createdDate = formatDateFull(activeChannel.createdAt);
-
   const currentChannelId = activeChannel.id;
 
   return (
@@ -126,20 +133,23 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           onClick={() => dispatch(toggleChannelHeaderExpanded())}
           className="flex items-center gap-1 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
         >
-          <span>{activeChannel.name}</span>
+          <span>{headerName}</span>
           {!isDm && (
             isExpanded ? <CaretUp size={12} /> : <CaretDown size={12} />
           )}
         </button>
 
-        {/* Member count */}
-        <button
-          type="button"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Users size={14} />
-          <span>{activeChannel.memberCount} members</span>
-        </button>
+        {/* Member count (hidden for 1:1 DMs) */}
+        {!(activeChannel.channelType === 'DIRECT') && (
+          <button
+            type="button"
+            onClick={() => dispatch(openChannelSettingsModal('members'))}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Users size={14} />
+            <span>{activeChannel.memberCount} members</span>
+          </button>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -204,13 +214,16 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             </div>
           )}
 
-          <button
-            type="button"
-            className={headerButtonClass}
-            aria-label="Channel settings"
-          >
-            <GearSix size={16} />
-          </button>
+          {activeChannel.channelType !== 'DIRECT' && activeChannel.channelType !== 'GROUP_DM' && (
+            <button
+              type="button"
+              onClick={() => dispatch(openChannelSettingsModal('overview'))}
+              className={headerButtonClass}
+              aria-label="Channel settings"
+            >
+              <GearSix size={16} />
+            </button>
+          )}
 
           {/* Close button for split pane */}
           {showCloseButton && onClose && (
