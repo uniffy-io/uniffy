@@ -115,6 +115,39 @@ class ContentType(str, Enum):
     CHAT = "CHAT"
 
 
+class DomainType(str, Enum):
+    """
+    Application domains that support domain-level admins.
+
+    A user can be granted admin status for a specific domain,
+    giving them elevated access within that domain without
+    being a full org admin.
+
+    Attributes
+    ----------
+    CHAT : str
+        Chat domain (channels, messages, categories).
+    FILES : str
+        Files domain (files, folders).
+    NOTES : str
+        Notes domain (notes, documents).
+    CALENDAR : str
+        Calendar domain (events, calendars).
+    PROJECTS : str
+        Projects domain (projects, tasks).
+    AGENTS : str
+        Agents domain (agents, skills, providers).
+
+    """
+
+    CHAT = "CHAT"
+    FILES = "FILES"
+    NOTES = "NOTES"
+    CALENDAR = "CALENDAR"
+    PROJECTS = "PROJECTS"
+    AGENTS = "AGENTS"
+
+
 class SubjectType(str, Enum):
     """
     Types of subjects that can have permissions.

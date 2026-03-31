@@ -91,9 +91,10 @@ class AuthOperations:
             # Handle organization context
             organization_id = None
             organization_role = None
+            domain_admin_domains: list[str] | None = None
             if organization_slug:
-                organization_id, organization_role = await self._verify_org_membership(
-                    user.id, organization_slug
+                organization_id, organization_role, domain_admin_domains = (
+                    await self._verify_org_membership(user.id, organization_slug)
                 )
 
             # Create session record
@@ -124,6 +125,7 @@ class AuthOperations:
                 organization_id=organization_id,
                 organization_role=organization_role,
                 session_id=session_record.id,
+                domain_admin_domains=domain_admin_domains,
             )
         except AuthenticationError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="failure").inc()
@@ -286,9 +288,10 @@ class AuthOperations:
             # Handle organization context
             organization_id = None
             organization_role = None
+            domain_admin_domains: list[str] | None = None
             if organization_slug:
-                organization_id, organization_role = await self._verify_org_membership(
-                    user_id, organization_slug
+                organization_id, organization_role, domain_admin_domains = (
+                    await self._verify_org_membership(user_id, organization_slug)
                 )
 
             # Create new tokens with current token_version, preserving session_id
@@ -315,6 +318,7 @@ class AuthOperations:
                 organization_id=organization_id,
                 organization_role=organization_role,
                 session_id=session_id,
+                domain_admin_domains=domain_admin_domains,
             )
         except TokenError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="failure").inc()
@@ -585,14 +589,14 @@ class AuthOperations:
         self,
         user_id: UUID,
         organization_slug: str,
-    ) -> tuple[UUID, str]:
+    ) -> tuple[UUID, str, list[str]]:
         """
-        Verify user is member of organization and return org ID and role.
+        Verify user is member of organization and return org ID, role, and domain admin domains.
 
         Returns
         -------
-        tuple[UUID, str]
-            Organization ID and user's role (MEMBER, ADMIN, or OWNER).
+        tuple[UUID, str, list[str]]
+            Organization ID, user's role, and list of domain admin domain values.
 
         Raises
         ------
@@ -621,4 +625,10 @@ class AuthOperations:
         if not membership or not membership.is_active:
             raise AuthenticationError("User is not a member of this organization")
 
-        return org.id, membership.role.value
+        # Fetch domain admin domains
+        from uniffy.core.auth.domain_admin import get_user_domain_admins
+
+        domain_admins = await get_user_domain_admins(self._session, user_id, org.id)
+        domain_admin_values = [d.value for d in domain_admins]
+
+        return org.id, membership.role.value, domain_admin_values

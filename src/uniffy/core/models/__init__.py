@@ -53,6 +53,7 @@ from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.permissions.content_group_link import ContentGroupLink
 from uniffy.core.models.permissions.content_permission import ContentPermission
+from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
@@ -66,6 +67,7 @@ from uniffy.core.models.shared import (
     CalendarType,
     ContentType,
     DayOfWeek,
+    DomainType,
     NotificationType,
     PermissionLevel,
     RecurrencePattern,
@@ -133,7 +135,9 @@ __all__ = [
     # Permission models
     "ContentGroupLink",
     "ContentPermission",
+    "DomainAdmin",
     "OrganizationPermissionDefaults",
+    "DomainType",
     "VisibilityScope",
     "ContentType",
     "PermissionLevel",
