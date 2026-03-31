@@ -151,6 +151,7 @@ export function OrganizationPicker() {
           organizationId: response.organizationId,
           organizationRole: response.organizationRole,
           sessionId: response.sessionId,
+          domainAdminDomains: Array.from(response.domainAdminDomains),
         }));
       }
 

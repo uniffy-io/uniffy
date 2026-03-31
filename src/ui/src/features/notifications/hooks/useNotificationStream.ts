@@ -14,6 +14,8 @@ import { notificationsApi } from '@/features/notifications/api/notificationsApi'
 import { addRealtimeNotification } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { updatePresenceWithCustomStatus } from '@/features/presence/store/presenceSlice';
+import { setDomainAdminDomains } from '@/features/auth/store/authSlice';
+import { adminApi } from '@/features/admin/api/adminApi';
 import { emitMentionStateChange } from '@/components/mention';
 import { StreamNotificationEvent_EventType } from '@uniffy/proto/notifications/v1/notifications_pb';
 
@@ -35,6 +37,7 @@ let _activeController: AbortController | null = null;
 export function useNotificationStream() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
+    const userId = useAppSelector((s) => s.auth.user?.id);
     const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
     const abortRef = useRef<AbortController | null>(null);
 
@@ -138,6 +141,23 @@ export function useNotificationStream() {
                             }
                         }
 
+                        // Permissions changed - refetch domain admin domains
+                        if (
+                            event.eventType ===
+                                StreamNotificationEvent_EventType.PERMISSIONS_CHANGED &&
+                            userId
+                        ) {
+                            try {
+                                const response = await adminApi.getUserDomainAdmins({
+                                    organizationId: organizationId!,
+                                    userId,
+                                });
+                                dispatch(setDomainAdminDomains(Array.from(response.domains)));
+                            } catch {
+                                // Non-fatal - permissions will update on next login
+                            }
+                        }
+
                         // Heartbeats are silently consumed (keep-alive)
                     }
                 } catch {
@@ -166,5 +186,5 @@ export function useNotificationStream() {
             }
             pendingFileUpdates.clear();
         };
-    }, [dispatch, organizationId, isAuthenticated]);
+    }, [dispatch, organizationId, userId, isAuthenticated]);
 }

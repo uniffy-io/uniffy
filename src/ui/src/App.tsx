@@ -36,6 +36,7 @@ const Dashboard = lazyImport(() => import('@/features/dashboard/components/Dashb
 const AdminLayout = lazyImport(() => import('@/features/admin/layouts/AdminLayout'), 'AdminLayout');
 const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'), 'MembersPage');
 const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
+const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
 const OrgSettingsPage = lazyImport(() => import('@/features/admin/pages/OrgSettingsPage'), 'OrgSettingsPage');
 const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
@@ -213,6 +214,7 @@ export function App() {
                             {/* Organization Admin Pages */}
                             <Route path="members" element={<LazyRoute><MembersPage /></LazyRoute>} />
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
+                            <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
                             <Route path="org-settings" element={<LazyRoute><OrgSettingsPage /></LazyRoute>} />
 

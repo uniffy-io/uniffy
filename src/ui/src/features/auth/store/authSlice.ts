@@ -16,6 +16,7 @@ export interface AuthState {
   refreshToken: string | null; // Persisted for session continuity
   currentOrganizationId: string | null;
   currentOrganizationRole: string | null; // MEMBER, ADMIN, or OWNER
+  domainAdminDomains: number[]; // DomainType enum values where user is domain admin
   currentSessionId: string | null; // Server-side session identifier
   isAuthenticated: boolean;
   isRehydrating: boolean; // True while refreshing token on app startup
@@ -27,6 +28,7 @@ const initialState: AuthState = {
   refreshToken: null,
   currentOrganizationId: null,
   currentOrganizationRole: null,
+  domainAdminDomains: [],
   currentSessionId: null,
   isAuthenticated: false,
   isRehydrating: false,
@@ -45,6 +47,7 @@ export const authSlice = createSlice({
         organizationId?: string;
         organizationRole?: string;
         sessionId?: string;
+        domainAdminDomains?: number[];
       }>
     ) => {
       state.user = action.payload.user;
@@ -52,6 +55,7 @@ export const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || null;
       state.currentOrganizationRole = action.payload.organizationRole || null;
+      state.domainAdminDomains = action.payload.domainAdminDomains || [];
       state.currentSessionId = action.payload.sessionId || state.currentSessionId;
       state.isAuthenticated = true;
       state.isRehydrating = false;
@@ -74,6 +78,7 @@ export const authSlice = createSlice({
         organizationId?: string;
         organizationRole?: string;
         sessionId?: string;
+        domainAdminDomains?: number[];
       }>
     ) => {
       state.user = action.payload.user;
@@ -81,6 +86,7 @@ export const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;
       state.currentOrganizationRole = action.payload.organizationRole || state.currentOrganizationRole;
+      state.domainAdminDomains = action.payload.domainAdminDomains ?? state.domainAdminDomains;
       state.currentSessionId = action.payload.sessionId || state.currentSessionId;
       state.isAuthenticated = true;
       state.isRehydrating = false;
@@ -94,6 +100,7 @@ export const authSlice = createSlice({
       state.refreshToken = null;
       state.currentOrganizationId = null;
       state.currentOrganizationRole = null;
+      state.domainAdminDomains = [];
       state.currentSessionId = null;
       state.isAuthenticated = false;
       state.isRehydrating = false;
@@ -109,12 +116,16 @@ export const authSlice = createSlice({
         state.user = { ...state.user, ...action.payload };
       }
     },
+    setDomainAdminDomains: (state, action: PayloadAction<number[]>) => {
+      state.domainAdminDomains = action.payload;
+    },
     logout: (state) => {
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
       state.currentOrganizationId = null;
       state.currentOrganizationRole = null;
+      state.domainAdminDomains = [];
       state.currentSessionId = null;
       state.isAuthenticated = false;
       state.isRehydrating = false;
@@ -122,6 +133,6 @@ export const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, startRehydrating, rehydrateComplete, rehydrateFailed, updateUser, logout } = authSlice.actions;
+export const { setCredentials, startRehydrating, rehydrateComplete, rehydrateFailed, updateUser, setDomainAdminDomains, logout } = authSlice.actions;
 
 export const authReducer = authSlice.reducer;

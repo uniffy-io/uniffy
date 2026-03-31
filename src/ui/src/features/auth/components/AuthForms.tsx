@@ -617,7 +617,7 @@ export function AuthForms() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
-  const fetchUserAndDispatch = async (accessToken: string, refreshToken: string, organizationId?: string, organizationRole?: string, sessionId?: string) => {
+  const fetchUserAndDispatch = async (accessToken: string, refreshToken: string, organizationId?: string, organizationRole?: string, sessionId?: string, domainAdminDomains?: number[]) => {
     try {
       // Store access token in memory (security: not persisted to localStorage)
       setMemoryAccessToken(accessToken);
@@ -662,6 +662,7 @@ export function AuthForms() {
         organizationId,
         organizationRole,
         sessionId,
+        domainAdminDomains,
       }));
 
       // Initialize client-side storage encryption (non-blocking)
@@ -688,7 +689,7 @@ export function AuthForms() {
         fullName: fullName || undefined,
       });
 
-      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId, response.organizationRole, response.sessionId);
+      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId, response.organizationRole, response.sessionId, Array.from(response.domainAdminDomains));
 
       // Navigation will be handled by the useEffect above
     } catch (err: unknown) {
@@ -710,7 +711,7 @@ export function AuthForms() {
         password,
       });
 
-      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId, response.organizationRole, response.sessionId);
+      await fetchUserAndDispatch(response.accessToken, response.refreshToken, response.organizationId, response.organizationRole, response.sessionId, Array.from(response.domainAdminDomains));
 
       // Navigation will be handled by the useEffect above
     } catch (err: unknown) {

@@ -12,6 +12,7 @@ import {
     VisibilityScope,
     OrganizationRole,
     GroupRole,
+    DomainType,
 } from '@uniffy/proto/common/v1/common_pb';
 import {
     serializeContentTypeDefaults,
@@ -24,6 +25,8 @@ import {
     type SerializedGroupInfo,
     type SerializedGroupMemberInfo,
     type SerializedOrgOverview,
+    serializeDomainAdminInfo,
+    type SerializedDomainAdminInfo,
 } from '@/features/admin/store/adminSlice';
 
 // Permission Defaults
@@ -312,4 +315,73 @@ export const removeGroupMember = createAsyncThunk<
     }
 
     await adminApi.removeGroupMember({ organizationId, groupId, userId });
+});
+
+// Domain Admins
+
+export const fetchDomainAdmins = createAsyncThunk<
+    { domainAdmins: SerializedDomainAdminInfo[]; totalCount: number },
+    { domainFilter?: number; page?: number; pageSize?: number },
+    { state: RootState }
+>('admin/fetchDomainAdmins', async (args, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await adminApi.listDomainAdmins({
+        organizationId,
+        domainFilter: args.domainFilter !== undefined ? args.domainFilter as DomainType : undefined,
+        pagination: {
+            page: args.page || 1,
+            pageSize: args.pageSize || 50,
+        },
+    });
+
+    return {
+        domainAdmins: response.domainAdmins.map(serializeDomainAdminInfo),
+        totalCount: response.pagination?.totalCount || 0,
+    };
+});
+
+export const grantDomainAdmin = createAsyncThunk<
+    SerializedDomainAdminInfo,
+    { userId: string; domain: number },
+    { state: RootState }
+>('admin/grantDomainAdmin', async ({ userId, domain }, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    const response = await adminApi.grantDomainAdmin({
+        organizationId,
+        userId,
+        domain: domain as DomainType,
+    });
+
+    return serializeDomainAdminInfo(response);
+});
+
+export const revokeDomainAdmin = createAsyncThunk<
+    void,
+    { userId: string; domain: number },
+    { state: RootState }
+>('admin/revokeDomainAdmin', async ({ userId, domain }, { getState }) => {
+    const { auth } = getState();
+    const organizationId = auth.currentOrganizationId;
+
+    if (!organizationId) {
+        throw new Error('No organization selected');
+    }
+
+    await adminApi.revokeDomainAdmin({
+        organizationId,
+        userId,
+        domain: domain as DomainType,
+    });
 });

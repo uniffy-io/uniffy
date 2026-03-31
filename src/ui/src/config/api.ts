@@ -99,6 +99,7 @@ function updateAuthState(
   organizationId?: string,
   organizationRole?: string,
   sessionId?: string,
+  domainAdminDomains?: number[],
 ): void {
   // Store access token in memory only (security)
   setMemoryAccessToken(accessToken);
@@ -126,6 +127,7 @@ function updateAuthState(
       organizationId: organizationId || currentOrgId || undefined,
       organizationRole: organizationRole || currentOrgRole || undefined,
       sessionId,
+      domainAdminDomains,
     }));
   }
 }
@@ -224,6 +226,7 @@ async function refreshAccessToken(): Promise<string | null> {
         response.organizationId,
         response.organizationRole,
         response.sessionId,
+        response.domainAdminDomains.length > 0 ? Array.from(response.domainAdminDomains) : undefined,
       );
 
       return response.accessToken;
