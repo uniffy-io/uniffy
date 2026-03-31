@@ -24,7 +24,9 @@ import {
   addReactionToMessage,
   removeReactionFromMessage,
 } from '@/features/chat/store/chatMessagesSlice';
-import { updateChannel, incrementUnreadCount } from '@/features/chat/store/chatChannelsSlice';
+import { updateChannel, incrementUnreadCount, addChannel } from '@/features/chat/store/chatChannelsSlice';
+import { chatApi } from '@/features/chat/api/chatApi';
+import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
 import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
 import type { AppDispatch } from '@/app/store';
 import type { UserChatEvent } from '@uniffy/proto/chat/v1/chat_stream_pb';
@@ -151,12 +153,17 @@ function usePersistentChatStream() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const channels = useAppSelector((state) => state.chatChannels.channels);
 
   // Use refs so the effect doesn't re-run on channel switch or user change
   const channelIdRef = useRef(activeChannelId);
   channelIdRef.current = activeChannelId;
   const userIdRef = useRef(currentUserId);
   userIdRef.current = currentUserId;
+  const channelIdsRef = useRef(new Set<string>());
+  channelIdsRef.current = new Set(channels.map((c) => c.id));
+  // Track in-flight fetches to avoid duplicate requests
+  const fetchingChannelsRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!organizationId) return;
@@ -189,10 +196,36 @@ function usePersistentChatStream() {
               case UserChatEventType.UNREAD_COUNT_CHANGED: {
                 if (event.payload.case === 'unreadCount' && event.payload.value) {
                   const p = event.payload.value;
-                  dispatch(incrementUnreadCount({
-                    channelId: p.channelId,
-                    mentionCount: p.mentionCount > 0 ? p.mentionCount : undefined,
-                  }));
+
+                  // If we don't know this channel (e.g. new DM), fetch and add it
+                  if (
+                    !channelIdsRef.current.has(p.channelId) &&
+                    !fetchingChannelsRef.current.has(p.channelId) &&
+                    organizationId
+                  ) {
+                    fetchingChannelsRef.current.add(p.channelId);
+                    chatApi
+                      .getChannel({ organizationId, channelId: p.channelId })
+                      .then((res) => {
+                        if (res.channel) {
+                          const plain = apiChannelToPlain(res.channel);
+                          plain.unreadCount = 1;
+                          if (p.mentionCount > 0) plain.mentionCount = p.mentionCount;
+                          dispatch(addChannel(plain));
+                        }
+                      })
+                      .catch(() => {
+                        // Non-fatal - channel will appear on next full refresh
+                      })
+                      .finally(() => {
+                        fetchingChannelsRef.current.delete(p.channelId);
+                      });
+                  } else {
+                    dispatch(incrementUnreadCount({
+                      channelId: p.channelId,
+                      mentionCount: p.mentionCount > 0 ? p.mentionCount : undefined,
+                    }));
+                  }
                 }
                 break;
               }

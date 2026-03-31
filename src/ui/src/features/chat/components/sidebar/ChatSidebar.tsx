@@ -50,12 +50,14 @@ import {
   openCreateChannelModal,
   openCreateCategoryModal,
   openBrowseChannelsModal,
+  openNewDmModal,
 } from '@/features/chat/store/chatUiSlice';
 import { selectCategories, setCategories } from '@/features/chat/store/chatChannelsSlice';
 import { reorderCategoriesThunk } from '@/features/chat/store/chatThunks';
 import { ChannelListItem } from '@/features/chat/components/sidebar/ChannelListItem';
 import { DirectMessageListItem } from '@/features/chat/components/sidebar/DirectMessageListItem';
 import { CategorySection } from '@/features/chat/components/sidebar/CategorySection';
+import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
 
 export function ChatSidebar() {
   const dispatch = useAppDispatch();
@@ -73,6 +75,7 @@ export function ChatSidebar() {
   const unreadThreadCount = useAppSelector((state) =>
     state.chatThreads.threadsInbox.filter(t => t.hasUnread).length
   );
+  const { canManageChat } = useChatPermissions();
 
   // Unread counts from channel data (populated by API)
   const unreadCounts: Record<string, number> = useMemo(() => {
@@ -192,20 +195,24 @@ export function ChatSidebar() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
-        <button
-          onClick={() => dispatch(openCreateChannelModal(null))}
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          title="New channel"
-        >
-          <PencilSimple size={16} />
-        </button>
-        <button
-          onClick={() => dispatch(openCreateCategoryModal())}
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          title="New category"
-        >
-          <Plus size={16} />
-        </button>
+        {canManageChat && (
+          <>
+            <button
+              onClick={() => dispatch(openCreateChannelModal(null))}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="New channel"
+            >
+              <PencilSimple size={16} />
+            </button>
+            <button
+              onClick={() => dispatch(openCreateCategoryModal())}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="New category"
+            >
+              <Plus size={16} />
+            </button>
+          </>
+        )}
         <div className="flex-1" />
         {!isMobile && (
           <button
@@ -290,7 +297,7 @@ export function ChatSidebar() {
                 id={group.categoryId}
                 name={group.categoryName}
                 sortable={group.categoryId !== null}
-                onAddChannel={() => dispatch(openCreateChannelModal(group.categoryId))}
+                onAddChannel={canManageChat ? () => dispatch(openCreateChannelModal(group.categoryId)) : undefined}
               >
                 {group.channels.map(channel => (
                   <ChannelListItem
@@ -321,7 +328,7 @@ export function ChatSidebar() {
               className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
               onClick={(e) => {
                 e.stopPropagation();
-                // TODO: open new DM modal
+                dispatch(openNewDmModal());
               }}
             />
           </button>

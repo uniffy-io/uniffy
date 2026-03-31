@@ -9,7 +9,7 @@
  * - Links, GFM tables
  */
 
-import { useState, useCallback, type ReactNode } from 'react';
+import { useState, useCallback, useMemo, type ReactNode } from 'react';
 import Markdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -28,6 +28,52 @@ const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
 
 function preprocessMentions(content: string): string {
   return content.replace(MENTION_RE, '[@$1]($2)');
+}
+
+// ---------------------------------------------------------------------------
+// Emoticon to emoji conversion
+// ---------------------------------------------------------------------------
+
+const EMOTICON_MAP: [RegExp, string][] = [
+  [/(?<!\w)<3(?!\w)/g, '\u2764\uFE0F'],       // <3 -> red heart
+  [/(?<!\w):'\((?!\w)/g, '\uD83D\uDE22'],      // :'( -> crying face
+  [/(?<!\w):\)(?!\w)/g, '\uD83D\uDE42'],       // :) -> slightly smiling
+  [/(?<!\w):-\)(?!\w)/g, '\uD83D\uDE42'],      // :-) -> slightly smiling
+  [/(?<!\w):\((?!\w)/g, '\uD83D\uDE41'],       // :( -> slightly frowning
+  [/(?<!\w):-\((?!\w)/g, '\uD83D\uDE41'],      // :-( -> slightly frowning
+  [/(?<!\w):D(?!\w)/g, '\uD83D\uDE04'],        // :D -> grinning
+  [/(?<!\w):-D(?!\w)/g, '\uD83D\uDE04'],       // :-D -> grinning
+  [/(?<!\w):P(?!\w)/gi, '\uD83D\uDE1B'],       // :P -> tongue out
+  [/(?<!\w):-P(?!\w)/gi, '\uD83D\uDE1B'],      // :-P -> tongue out
+  [/(?<!\w);-?\)(?!\w)/g, '\uD83D\uDE09'],     // ;) or ;-) -> winking
+  [/(?<!\w):O(?!\w)/gi, '\uD83D\uDE2E'],       // :O -> open mouth
+  [/(?<!\w):-O(?!\w)/gi, '\uD83D\uDE2E'],      // :-O -> open mouth
+  [/(?<!\w):\*(?!\w)/g, '\uD83D\uDE18'],       // :* -> kissing
+  [/(?<!\w):-\*(?!\w)/g, '\uD83D\uDE18'],      // :-* -> kissing
+  [/(?<!\w)>:\((?!\w)/g, '\uD83D\uDE20'],      // >:( -> angry
+  [/(?<!\w):\/(?!\w)/g, '\uD83D\uDE15'],       // :/ -> confused
+  [/(?<!\w):-\/(?!\w)/g, '\uD83D\uDE15'],      // :-/ -> confused
+  [/(?<!\w)\^\^(?!\w)/g, '\uD83D\uDE0A'],      // ^^ -> smiling eyes
+  [/(?<!\w)B-?\)(?!\w)/g, '\uD83D\uDE0E'],     // B) or B-) -> sunglasses
+  [/(?<!\w)O:-?\)(?!\w)/g, '\uD83D\uDE07'],    // O:) or O:-) -> angel
+  [/(?<!\w):\|(?!\w)/g, '\uD83D\uDE10'],       // :| -> neutral
+];
+
+// Only convert emoticons outside of code blocks/spans
+const CODE_BLOCK_RE = /(`{1,3}[^`]*`{1,3})/g;
+
+function convertEmoticons(text: string): string {
+  // Split on code segments to avoid converting inside them
+  const parts = text.split(CODE_BLOCK_RE);
+  return parts.map((part, i) => {
+    // Odd indices are code segments - leave them alone
+    if (i % 2 === 1) return part;
+    let result = part;
+    for (const [pattern, emoji] of EMOTICON_MAP) {
+      result = result.replace(pattern, emoji);
+    }
+    return result;
+  }).join('');
 }
 
 // ---------------------------------------------------------------------------
@@ -144,10 +190,44 @@ function InlineCode(props: any) {
   );
 }
 
+// Scale up emoji in paragraph text so they don't look tiny at text-sm
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function EmojiParagraph(props: any) {
+  const { children, ...rest } = props;
+  return <p {...rest}>{scaleEmoji(children)}</p>;
+}
+
+function scaleEmoji(node: ReactNode): ReactNode {
+  if (typeof node === 'string') {
+    // Split text into emoji and non-emoji segments
+    const parts = node.split(EMOJI_RE);
+    const matches = node.match(EMOJI_RE);
+    if (!matches) return node;
+
+    const result: ReactNode[] = [];
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i]) result.push(parts[i]);
+      if (matches[i]) {
+        result.push(
+          <span key={i} className="text-xl leading-none align-middle">
+            {matches[i]}
+          </span>
+        );
+      }
+    }
+    return result;
+  }
+  if (Array.isArray(node)) {
+    return node.map((child, i) => <span key={i}>{scaleEmoji(child)}</span>);
+  }
+  return node;
+}
+
 const markdownComponents = {
   a: MarkdownLink,
   pre: CodeBlockPre,
   code: InlineCode,
+  p: EmojiParagraph,
 };
 
 // react-markdown v10 strips non-http URLs by default.
@@ -155,6 +235,26 @@ const markdownComponents = {
 function urlTransform(url: string): string {
   if (url.startsWith('urn:uniffy:')) return url;
   return defaultUrlTransform(url);
+}
+
+// ---------------------------------------------------------------------------
+// Emoji sizing
+// ---------------------------------------------------------------------------
+
+// Matches emoji characters (including multi-codepoint sequences like flags, skin tones)
+const EMOJI_RE = /\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu;
+
+/**
+ * Detect if the message is emoji-only (1-3 emoji, no other text).
+ * Used to render emoji-only messages in jumbo size like Slack/Discord.
+ */
+function isEmojiOnly(text: string): boolean {
+  const stripped = text.replace(/\s/g, '');
+  if (!stripped) return false;
+  const emojiMatches = stripped.match(EMOJI_RE);
+  if (!emojiMatches) return false;
+  const withoutEmoji = stripped.replace(EMOJI_RE, '');
+  return withoutEmoji.length === 0 && emojiMatches.length <= 3;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,7 +267,19 @@ interface MessageContentProps {
 }
 
 export function MessageContent({ content, className }: MessageContentProps) {
-  const processed = preprocessMentions(content ?? '');
+  const withEmoticons = convertEmoticons(content ?? '');
+  const jumbo = useMemo(() => isEmojiOnly(withEmoticons), [withEmoticons]);
+
+  // Emoji-only messages: render large without markdown
+  if (jumbo) {
+    return (
+      <div className={cn('text-4xl leading-snug py-0.5', className)}>
+        {withEmoticons.trim()}
+      </div>
+    );
+  }
+
+  const processed = preprocessMentions(withEmoticons);
 
   return (
     <div

@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';
+import { useAppSelector } from '@/app/hooks';
 import { type ChatChannel } from '@/features/chat/types';
 import { SubjectAvatar, SubjectAvatarById } from '@/components/subject';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
@@ -28,18 +29,41 @@ export function DirectMessageListItem({
 }: DirectMessageListItemProps) {
   const hasUnread = unreadCount > 0;
   const isGroupDm = channel.channelType === 'GROUP_DM';
-  const displayName = channel.name;
+  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
+
+  // Strip the current user's name so each user sees the other participant(s)
+  const displayName = useMemo(() => {
+    if (!currentUserName) return channel.name;
+    const parts = channel.name.split(', ').filter((n) => n !== currentUserName);
+    return parts.length > 0 ? parts.join(', ') : channel.name;
+  }, [channel.name, currentUserName]);
+
+  // For 1:1 DMs, resolve the other person's user ID for avatar/presence.
+  // dmMemberIds has all participants; pick the one that isn't us.
+  // Fallback to ownerId for older channels without dmMemberIds.
+  const otherUserId = useMemo(() => {
+    if (isGroupDm) return '';
+    if (channel.dmMemberIds.length > 0) {
+      return channel.dmMemberIds.find((id) => id !== currentUserId) ?? channel.ownerId;
+    }
+    return channel.ownerId;
+  }, [channel.dmMemberIds, channel.ownerId, currentUserId, isGroupDm]);
 
   // Group DM subject (violet group avatar style)
   const groupSubject = useMemo<Subject | null>(() => {
     if (!isGroupDm) return null;
+    // For group DMs, also strip current user from the display name
+    const groupDisplayName = currentUserName
+      ? channel.name.split(', ').filter((n) => n !== currentUserName).join(', ')
+      : channel.name;
     return {
       id: channel.id,
       type: SUBJECT_TYPE.GROUP,
-      name: displayName,
+      name: groupDisplayName,
       memberCount: channel.memberCount,
     };
-  }, [channel.id, isGroupDm, displayName, channel.memberCount]);
+  }, [channel.id, channel.name, isGroupDm, currentUserName, channel.memberCount]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -68,7 +92,7 @@ export function DirectMessageListItem({
           {groupSubject ? (
             <SubjectAvatar subject={groupSubject} size="sm" />
           ) : (
-            <SubjectAvatarById userId={channel.ownerId} displayName={displayName} size="sm" showPresence />
+            <SubjectAvatarById userId={otherUserId} displayName={displayName} size="sm" showPresence />
           )}
         </div>
 

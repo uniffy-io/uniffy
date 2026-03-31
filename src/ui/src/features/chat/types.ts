@@ -38,6 +38,8 @@ export interface ChatChannel {
   lastMessageAt: string | null;
   lastRootMessageAt: string | null;
   memberCount: number;
+  // DM participant user IDs (populated for DIRECT and GROUP_DM)
+  dmMemberIds: string[];
   // Unread tracking (populated from GetUnreadCounts)
   unreadCount?: number;
   mentionCount?: number;

@@ -16,7 +16,10 @@ import {
   selectMessagesForChannel,
   selectUnreadSeparatorForChannel,
   selectTypingUsers,
+  selectHasMoreForChannel,
+  selectIsChannelLoading,
 } from '@/features/chat/store/chatMessagesSlice';
+import { fetchMessages } from '@/features/chat/store/chatThunks';
 import {
   selectJumpToMessageId,
   clearJumpToMessage,
@@ -164,6 +167,13 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const typingUsers = useAppSelector((state) =>
     effectiveChannelId ? selectTypingUsers(state, effectiveChannelId) : [],
   ).filter(u => u.userId !== currentUserId);
+  const hasMore = useAppSelector((state) =>
+    effectiveChannelId ? selectHasMoreForChannel(state, effectiveChannelId) : false,
+  );
+  const isLoadingMore = useAppSelector((state) =>
+    effectiveChannelId ? selectIsChannelLoading(state, effectiveChannelId) : false,
+  );
+  const loadingMoreRef = useRef(false);
 
   // Auto-expire typing indicators
   useEffect(() => {
@@ -239,12 +249,40 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   }, [jumpToMessageId, rootMessages, dispatch]);
 
   const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
     const nearBottom = checkNearBottom();
     isNearBottomRef.current = nearBottom;
     if (nearBottom) {
       setNewMessageCount(0);
     }
-  }, [checkNearBottom]);
+
+    // Load older messages when scrolled near top
+    if (
+      el.scrollTop < SCROLL_THRESHOLD &&
+      hasMore &&
+      !loadingMoreRef.current &&
+      rootMessages.length > 0 &&
+      effectiveChannelId
+    ) {
+      loadingMoreRef.current = true;
+      const oldestId = rootMessages[0].id;
+      const prevScrollHeight = el.scrollHeight;
+
+      dispatch(fetchMessages({ channelId: effectiveChannelId, beforeId: oldestId }))
+        .finally(() => {
+          // Preserve scroll position after prepending
+          requestAnimationFrame(() => {
+            if (scrollRef.current) {
+              const newScrollHeight = scrollRef.current.scrollHeight;
+              scrollRef.current.scrollTop += newScrollHeight - prevScrollHeight;
+            }
+            loadingMoreRef.current = false;
+          });
+        });
+    }
+  }, [checkNearBottom, hasMore, rootMessages, effectiveChannelId, dispatch]);
 
   if (!activeChannel) return null;
 
@@ -272,6 +310,14 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto"
       >
+        {/* Loading older messages indicator */}
+        {isLoadingMore && (
+          <div className="flex items-center justify-center py-4">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+            <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+          </div>
+        )}
+
         {/* Top spacer */}
         <div className="pt-4" />
 
