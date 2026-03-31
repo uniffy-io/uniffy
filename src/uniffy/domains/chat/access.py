@@ -27,6 +27,7 @@ class ChatAccessChecker:
         self._channel_cache: dict[UUID, ChatChannel] = {}
         self._membership_cache: dict[tuple[UUID, UUID], ChatChannelMember | None] = {}
         self._org_admin_cache: dict[tuple[UUID, UUID], bool] = {}
+        self._domain_admin_cache: dict[tuple[UUID, UUID], bool] = {}
 
     async def get_channel(
         self, channel_id: UUID, organization_id: UUID
@@ -86,6 +87,23 @@ class ChatAccessChecker:
         self._org_admin_cache[key] = is_admin
         return is_admin
 
+    async def is_chat_domain_admin(
+        self, user_id: UUID, organization_id: UUID
+    ) -> bool:
+        """Check if user is a chat domain admin. Cached per request."""
+        key = (user_id, organization_id)
+        if key in self._domain_admin_cache:
+            return self._domain_admin_cache[key]
+
+        from uniffy.core.auth.domain_admin import is_domain_admin
+        from uniffy.core.models.shared import DomainType
+
+        result = await is_domain_admin(
+            self.session, user_id, organization_id, DomainType.CHAT
+        )
+        self._domain_admin_cache[key] = result
+        return result
+
     async def check_access(
         self,
         user_id: UUID,
@@ -94,6 +112,8 @@ class ChatAccessChecker:
     ) -> None:
         """Check channel access (membership-based). Raises PermissionDeniedError."""
         if await self.is_org_admin(user_id, organization_id):
+            return
+        if await self.is_chat_domain_admin(user_id, organization_id):
             return
         if channel.channel_type == ChannelType.PUBLIC:
             return
@@ -127,6 +147,8 @@ class ChatAccessChecker:
     ) -> bool:
         """Check if user has elevated permissions (admin/owner of channel or org)."""
         if await self.is_org_admin(user_id, organization_id):
+            return True
+        if await self.is_chat_domain_admin(user_id, organization_id):
             return True
         member = await self.get_membership(channel_id, user_id)
         return bool(

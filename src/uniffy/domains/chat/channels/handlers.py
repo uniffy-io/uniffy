@@ -7,6 +7,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy import select
 from uniffy_proto.chat.v1.chat_pb2 import (
     AddMembersRequest,
     AddMembersResponse,
@@ -48,6 +49,8 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
+from uniffy.core.models.chat.channel import ChannelType
+from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChannelMemberModel
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.access import ChatAccessChecker
@@ -175,11 +178,22 @@ class ChannelHandlers:
                 membership = await access.get_membership(channel_id, user_id)
                 role = membership.role if membership else None
 
+                # Fetch DM member IDs for DM channels
+                dm_ids: list[str] | None = None
+                if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
+                    member_rows = await session.execute(
+                        select(ChatChannelMemberModel.user_id).where(
+                            ChatChannelMemberModel.channel_id == channel_id
+                        )
+                    )
+                    dm_ids = [str(r[0]) for r in member_rows.all()]
+
                 return GetChannelResponse(
                     channel=channel_to_proto(
                         channel, stats,
                         current_user_role=role,
                         is_member=membership is not None,
+                        dm_member_ids=dm_ids,
                     )
                 )
         except (NotFoundError, PermissionDeniedError) as e:
@@ -298,8 +312,34 @@ class ChannelHandlers:
                     ]
                 else:
                     rows = await ops.list_user_channels(user_id, org_id)
+
+                    # Batch-fetch member IDs for DM channels
+                    dm_channel_ids = [
+                        ch.id for ch, _, _ in rows
+                        if ch.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM)
+                    ]
+                    dm_members_map: dict[str, list[str]] = {}
+                    if dm_channel_ids:
+                        member_rows = await session.execute(
+                            select(
+                                ChatChannelMemberModel.channel_id,
+                                ChatChannelMemberModel.user_id,
+                            ).where(
+                                ChatChannelMemberModel.channel_id.in_(dm_channel_ids)
+                            )
+                        )
+                        for row in member_rows.all():
+                            cid = str(row[0])
+                            uid = str(row[1])
+                            dm_members_map.setdefault(cid, []).append(uid)
+
                     channels = [
-                        channel_to_proto(ch, stats, current_user_role=role, is_member=True)
+                        channel_to_proto(
+                            ch, stats,
+                            current_user_role=role,
+                            is_member=True,
+                            dm_member_ids=dm_members_map.get(str(ch.id)),
+                        )
                         for ch, stats, role in rows
                     ]
 

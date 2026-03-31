@@ -77,8 +77,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         content: ChatChannel,
     ) -> None:
-        """Override: channel admins/owners or org admins can edit."""
+        """Override: channel admins/owners, org admins, or chat domain admins can edit."""
         if await self.access.is_org_admin(user_id, organization_id):
+            return
+        if await self.access.is_chat_domain_admin(user_id, organization_id):
             return
         member = await self.access.get_membership(content.id, user_id)
         if not member or member.role == ChannelRole.MEMBER:
@@ -90,8 +92,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         content: ChatChannel,
     ) -> None:
-        """Override: only channel owner or org admin can delete."""
+        """Override: only channel owner, org admin, or chat domain admin can delete."""
         if await self.access.is_org_admin(user_id, organization_id):
+            return
+        if await self.access.is_chat_domain_admin(user_id, organization_id):
             return
         member = await self.access.get_membership(content.id, user_id)
         if not member or member.role != ChannelRole.OWNER:
@@ -106,7 +110,14 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         model: ChatChannel,
         group_ids: list[UUID],
     ) -> None:
-        """Override: derive Meilisearch access from membership."""
+        """Override: derive Meilisearch access from membership.
+
+        DMs and group DMs are excluded from search - they are private
+        conversations found via the sidebar, not searchable content.
+        """
+        if model.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
+            return
+
         if model.channel_type == ChannelType.PUBLIC:
             visibility = VisibilityScope.ORGANIZATION.value
             shared_user_ids = None
@@ -244,10 +255,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             if existing:
                 return existing
 
-        # Build name from participant display names
-        name = await self._build_dm_name(
-            [uid for uid in all_user_ids if uid != user_id]
-        )
+        # Build name from ALL participant display names (frontend strips current user)
+        name = await self._build_dm_name(all_user_ids)
 
         return await self.create_channel(
             user_id=user_id,

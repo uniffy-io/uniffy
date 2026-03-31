@@ -80,6 +80,7 @@ def channel_to_proto(
     stats: ChatChannelStats | None = None,
     current_user_role: ChannelRole | None = None,
     is_member: bool | None = None,
+    dm_member_ids: list[str] | None = None,
 ) -> ProtoChatChannel:
     """Convert ChatChannel + stats to proto ChatChannel."""
     proto = ProtoChatChannel(
@@ -126,6 +127,9 @@ def channel_to_proto(
         )
     if is_member is not None:
         proto.is_member = is_member
+
+    if dm_member_ids:
+        proto.dm_member_ids[:] = dm_member_ids
 
     return proto
 

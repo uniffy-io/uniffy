@@ -160,6 +160,9 @@ class ChatCategoryOperations:
     async def _require_org_admin(
         self, user_id: UUID, organization_id: UUID
     ) -> None:
-        """Verify user is org admin/owner."""
-        if not await self.access.is_org_admin(user_id, organization_id):
-            raise PermissionDeniedError("admin", "Requires org admin")
+        """Verify user is org admin/owner or chat domain admin."""
+        if await self.access.is_org_admin(user_id, organization_id):
+            return
+        if await self.access.is_chat_domain_admin(user_id, organization_id):
+            return
+        raise PermissionDeniedError("admin", "Requires org admin or chat domain admin")
