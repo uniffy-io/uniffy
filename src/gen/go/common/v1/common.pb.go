@@ -369,6 +369,68 @@ func (GroupRole) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_common_proto_rawDescGZIP(), []int{5}
 }
 
+// DomainType defines application domains that support domain-level admins.
+type DomainType int32
+
+const (
+	DomainType_DOMAIN_TYPE_UNSPECIFIED DomainType = 0
+	DomainType_DOMAIN_TYPE_CHAT        DomainType = 1
+	DomainType_DOMAIN_TYPE_FILES       DomainType = 2
+	DomainType_DOMAIN_TYPE_NOTES       DomainType = 3
+	DomainType_DOMAIN_TYPE_CALENDAR    DomainType = 4
+	DomainType_DOMAIN_TYPE_PROJECTS    DomainType = 5
+	DomainType_DOMAIN_TYPE_AGENTS      DomainType = 6
+)
+
+// Enum value maps for DomainType.
+var (
+	DomainType_name = map[int32]string{
+		0: "DOMAIN_TYPE_UNSPECIFIED",
+		1: "DOMAIN_TYPE_CHAT",
+		2: "DOMAIN_TYPE_FILES",
+		3: "DOMAIN_TYPE_NOTES",
+		4: "DOMAIN_TYPE_CALENDAR",
+		5: "DOMAIN_TYPE_PROJECTS",
+		6: "DOMAIN_TYPE_AGENTS",
+	}
+	DomainType_value = map[string]int32{
+		"DOMAIN_TYPE_UNSPECIFIED": 0,
+		"DOMAIN_TYPE_CHAT":        1,
+		"DOMAIN_TYPE_FILES":       2,
+		"DOMAIN_TYPE_NOTES":       3,
+		"DOMAIN_TYPE_CALENDAR":    4,
+		"DOMAIN_TYPE_PROJECTS":    5,
+		"DOMAIN_TYPE_AGENTS":      6,
+	}
+)
+
+func (x DomainType) Enum() *DomainType {
+	p := new(DomainType)
+	*p = x
+	return p
+}
+
+func (x DomainType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DomainType) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_common_proto_enumTypes[6].Descriptor()
+}
+
+func (DomainType) Type() protoreflect.EnumType {
+	return &file_common_v1_common_proto_enumTypes[6]
+}
+
+func (x DomainType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DomainType.Descriptor instead.
+func (DomainType) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_common_proto_rawDescGZIP(), []int{6}
+}
+
 // UserInfo represents basic user information.
 type UserInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -834,6 +896,107 @@ func (x *GroupMemberInfo) GetJoinedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// DomainAdminInfo represents a domain admin assignment.
+type DomainAdminInfo struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId          string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName     string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Email           string                 `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
+	AvatarUrl       *string                `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
+	Domain          DomainType             `protobuf:"varint,6,opt,name=domain,proto3,enum=common.v1.DomainType" json:"domain,omitempty"`
+	GrantedByUserId string                 `protobuf:"bytes,7,opt,name=granted_by_user_id,json=grantedByUserId,proto3" json:"granted_by_user_id,omitempty"`
+	GrantedAt       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=granted_at,json=grantedAt,proto3" json:"granted_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DomainAdminInfo) Reset() {
+	*x = DomainAdminInfo{}
+	mi := &file_common_v1_common_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DomainAdminInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DomainAdminInfo) ProtoMessage() {}
+
+func (x *DomainAdminInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_common_v1_common_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DomainAdminInfo.ProtoReflect.Descriptor instead.
+func (*DomainAdminInfo) Descriptor() ([]byte, []int) {
+	return file_common_v1_common_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DomainAdminInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DomainAdminInfo) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *DomainAdminInfo) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *DomainAdminInfo) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *DomainAdminInfo) GetAvatarUrl() string {
+	if x != nil && x.AvatarUrl != nil {
+		return *x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *DomainAdminInfo) GetDomain() DomainType {
+	if x != nil {
+		return x.Domain
+	}
+	return DomainType_DOMAIN_TYPE_UNSPECIFIED
+}
+
+func (x *DomainAdminInfo) GetGrantedByUserId() string {
+	if x != nil {
+		return x.GrantedByUserId
+	}
+	return ""
+}
+
+func (x *DomainAdminInfo) GetGrantedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.GrantedAt
+	}
+	return nil
+}
+
 // PaginationRequest for paginated list requests.
 type PaginationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -845,7 +1008,7 @@ type PaginationRequest struct {
 
 func (x *PaginationRequest) Reset() {
 	*x = PaginationRequest{}
-	mi := &file_common_v1_common_proto_msgTypes[5]
+	mi := &file_common_v1_common_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -857,7 +1020,7 @@ func (x *PaginationRequest) String() string {
 func (*PaginationRequest) ProtoMessage() {}
 
 func (x *PaginationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_common_v1_common_proto_msgTypes[5]
+	mi := &file_common_v1_common_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -870,7 +1033,7 @@ func (x *PaginationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PaginationRequest.ProtoReflect.Descriptor instead.
 func (*PaginationRequest) Descriptor() ([]byte, []int) {
-	return file_common_v1_common_proto_rawDescGZIP(), []int{5}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PaginationRequest) GetPage() int32 {
@@ -900,7 +1063,7 @@ type PaginationResponse struct {
 
 func (x *PaginationResponse) Reset() {
 	*x = PaginationResponse{}
-	mi := &file_common_v1_common_proto_msgTypes[6]
+	mi := &file_common_v1_common_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -912,7 +1075,7 @@ func (x *PaginationResponse) String() string {
 func (*PaginationResponse) ProtoMessage() {}
 
 func (x *PaginationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_common_v1_common_proto_msgTypes[6]
+	mi := &file_common_v1_common_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -925,7 +1088,7 @@ func (x *PaginationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PaginationResponse.ProtoReflect.Descriptor instead.
 func (*PaginationResponse) Descriptor() ([]byte, []int) {
-	return file_common_v1_common_proto_rawDescGZIP(), []int{6}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PaginationResponse) GetPage() int32 {
@@ -1020,6 +1183,18 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"avatar_url\x18\x04 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12(\n" +
 	"\x04role\x18\x05 \x01(\x0e2\x14.common.v1.GroupRoleR\x04role\x127\n" +
 	"\tjoined_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bjoinedAtB\r\n" +
+	"\v_avatar_url\"\xbd\x02\n" +
+	"\x0fDomainAdminInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x14\n" +
+	"\x05email\x18\x04 \x01(\tR\x05email\x12\"\n" +
+	"\n" +
+	"avatar_url\x18\x05 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12-\n" +
+	"\x06domain\x18\x06 \x01(\x0e2\x15.common.v1.DomainTypeR\x06domain\x12+\n" +
+	"\x12granted_by_user_id\x18\a \x01(\tR\x0fgrantedByUserId\x129\n" +
+	"\n" +
+	"granted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tgrantedAtB\r\n" +
 	"\v_avatar_url\"D\n" +
 	"\x11PaginationRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
@@ -1070,7 +1245,16 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\tGroupRole\x12\x1a\n" +
 	"\x16GROUP_ROLE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11GROUP_ROLE_MEMBER\x10\x01\x12\x14\n" +
-	"\x10GROUP_ROLE_ADMIN\x10\x02B;Z9github.com/uniffy-io/uniffy-proto-go/common/v1;commonv1b\x06proto3"
+	"\x10GROUP_ROLE_ADMIN\x10\x02*\xb9\x01\n" +
+	"\n" +
+	"DomainType\x12\x1b\n" +
+	"\x17DOMAIN_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10DOMAIN_TYPE_CHAT\x10\x01\x12\x15\n" +
+	"\x11DOMAIN_TYPE_FILES\x10\x02\x12\x15\n" +
+	"\x11DOMAIN_TYPE_NOTES\x10\x03\x12\x18\n" +
+	"\x14DOMAIN_TYPE_CALENDAR\x10\x04\x12\x18\n" +
+	"\x14DOMAIN_TYPE_PROJECTS\x10\x05\x12\x16\n" +
+	"\x12DOMAIN_TYPE_AGENTS\x10\x06B;Z9github.com/uniffy-io/uniffy-proto-go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_common_proto_rawDescOnce sync.Once
@@ -1084,8 +1268,8 @@ func file_common_v1_common_proto_rawDescGZIP() []byte {
 	return file_common_v1_common_proto_rawDescData
 }
 
-var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_common_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_common_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_common_v1_common_proto_goTypes = []any{
 	(ContentType)(0),              // 0: common.v1.ContentType
 	(SubjectType)(0),              // 1: common.v1.SubjectType
@@ -1093,30 +1277,34 @@ var file_common_v1_common_proto_goTypes = []any{
 	(VisibilityScope)(0),          // 3: common.v1.VisibilityScope
 	(OrganizationRole)(0),         // 4: common.v1.OrganizationRole
 	(GroupRole)(0),                // 5: common.v1.GroupRole
-	(*UserInfo)(nil),              // 6: common.v1.UserInfo
-	(*OrganizationInfo)(nil),      // 7: common.v1.OrganizationInfo
-	(*GroupInfo)(nil),             // 8: common.v1.GroupInfo
-	(*MemberInfo)(nil),            // 9: common.v1.MemberInfo
-	(*GroupMemberInfo)(nil),       // 10: common.v1.GroupMemberInfo
-	(*PaginationRequest)(nil),     // 11: common.v1.PaginationRequest
-	(*PaginationResponse)(nil),    // 12: common.v1.PaginationResponse
-	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(DomainType)(0),               // 6: common.v1.DomainType
+	(*UserInfo)(nil),              // 7: common.v1.UserInfo
+	(*OrganizationInfo)(nil),      // 8: common.v1.OrganizationInfo
+	(*GroupInfo)(nil),             // 9: common.v1.GroupInfo
+	(*MemberInfo)(nil),            // 10: common.v1.MemberInfo
+	(*GroupMemberInfo)(nil),       // 11: common.v1.GroupMemberInfo
+	(*DomainAdminInfo)(nil),       // 12: common.v1.DomainAdminInfo
+	(*PaginationRequest)(nil),     // 13: common.v1.PaginationRequest
+	(*PaginationResponse)(nil),    // 14: common.v1.PaginationResponse
+	(*timestamppb.Timestamp)(nil), // 15: google.protobuf.Timestamp
 }
 var file_common_v1_common_proto_depIdxs = []int32{
-	13, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
-	13, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
-	13, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	13, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	13, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	15, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
+	15, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	15, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
 	4,  // 5: common.v1.MemberInfo.role:type_name -> common.v1.OrganizationRole
-	13, // 6: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	15, // 6: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
 	5,  // 7: common.v1.GroupMemberInfo.role:type_name -> common.v1.GroupRole
-	13, // 8: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	15, // 8: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	6,  // 9: common.v1.DomainAdminInfo.domain:type_name -> common.v1.DomainType
+	15, // 10: common.v1.DomainAdminInfo.granted_at:type_name -> google.protobuf.Timestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_common_v1_common_proto_init() }
@@ -1129,13 +1317,14 @@ func file_common_v1_common_proto_init() {
 	file_common_v1_common_proto_msgTypes[2].OneofWrappers = []any{}
 	file_common_v1_common_proto_msgTypes[3].OneofWrappers = []any{}
 	file_common_v1_common_proto_msgTypes[4].OneofWrappers = []any{}
+	file_common_v1_common_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_v1_common_proto_rawDesc), len(file_common_v1_common_proto_rawDesc)),
-			NumEnums:      6,
-			NumMessages:   7,
+			NumEnums:      7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

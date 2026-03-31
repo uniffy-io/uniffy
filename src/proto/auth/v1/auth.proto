@@ -4,6 +4,8 @@ package auth.v1;
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1";
 
+import "common/v1/common.proto";
+
 // AuthService - Authentication only
 
 // AuthService handles user authentication (login, register, token refresh).
@@ -96,6 +98,7 @@ message AuthResponse {
   optional string organization_id = 5;  // If authenticated into specific org
   optional string organization_role = 6;  // User's role in the org: MEMBER, ADMIN, or OWNER
   optional string session_id = 7;  // Server-side session identifier
+  repeated common.v1.DomainType domain_admin_domains = 8;  // Domains where user is domain admin
 }
 
 // Current user info response

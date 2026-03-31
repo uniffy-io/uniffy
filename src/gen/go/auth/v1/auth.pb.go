@@ -7,6 +7,7 @@
 package authv1
 
 import (
+	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -415,16 +416,17 @@ func (*RevokeOtherSessionsRequest) Descriptor() ([]byte, []int) {
 
 // Authentication response with tokens
 type AuthResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken      string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	RefreshToken     string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	TokenType        string                 `protobuf:"bytes,3,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"` // Always "bearer"
-	UserId           string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	OrganizationId   *string                `protobuf:"bytes,5,opt,name=organization_id,json=organizationId,proto3,oneof" json:"organization_id,omitempty"`       // If authenticated into specific org
-	OrganizationRole *string                `protobuf:"bytes,6,opt,name=organization_role,json=organizationRole,proto3,oneof" json:"organization_role,omitempty"` // User's role in the org: MEMBER, ADMIN, or OWNER
-	SessionId        *string                `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`                      // Server-side session identifier
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken        string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken       string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	TokenType          string                 `protobuf:"bytes,3,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"` // Always "bearer"
+	UserId             string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	OrganizationId     *string                `protobuf:"bytes,5,opt,name=organization_id,json=organizationId,proto3,oneof" json:"organization_id,omitempty"`                                           // If authenticated into specific org
+	OrganizationRole   *string                `protobuf:"bytes,6,opt,name=organization_role,json=organizationRole,proto3,oneof" json:"organization_role,omitempty"`                                     // User's role in the org: MEMBER, ADMIN, or OWNER
+	SessionId          *string                `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`                                                          // Server-side session identifier
+	DomainAdminDomains []v1.DomainType        `protobuf:"varint,8,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"` // Domains where user is domain admin
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AuthResponse) Reset() {
@@ -504,6 +506,13 @@ func (x *AuthResponse) GetSessionId() string {
 		return *x.SessionId
 	}
 	return ""
+}
+
+func (x *AuthResponse) GetDomainAdminDomains() []v1.DomainType {
+	if x != nil {
+		return x.DomainAdminDomains
+	}
+	return nil
 }
 
 // Current user info response
@@ -1066,7 +1075,7 @@ var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\"\xd7\x01\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x16common/v1/common.proto\"\xd7\x01\n" +
 	"\x0fRegisterRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1a\n" +
@@ -1093,7 +1102,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x14RevokeSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"\x1c\n" +
-	"\x1aRevokeOtherSessionsRequest\"\xcb\x02\n" +
+	"\x1aRevokeOtherSessionsRequest\"\x94\x03\n" +
 	"\fAuthResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
@@ -1103,7 +1112,8 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n" +
 	"\x11organization_role\x18\x06 \x01(\tH\x01R\x10organizationRole\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"session_id\x18\a \x01(\tH\x02R\tsessionId\x88\x01\x01B\x12\n" +
+	"session_id\x18\a \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n" +
+	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomainsB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
 	"\v_session_id\"\x95\x03\n" +
@@ -1197,34 +1207,36 @@ var file_auth_v1_auth_proto_goTypes = []any{
 	(*GetCacheKeySeedResponse)(nil),     // 16: auth.v1.GetCacheKeySeedResponse
 	(*RotateCacheKeySeedRequest)(nil),   // 17: auth.v1.RotateCacheKeySeedRequest
 	(*RotateCacheKeySeedResponse)(nil),  // 18: auth.v1.RotateCacheKeySeedResponse
+	(v1.DomainType)(0),                  // 19: common.v1.DomainType
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
-	11, // 0: auth.v1.ListSessionsResponse.sessions:type_name -> auth.v1.SessionInfo
-	0,  // 1: auth.v1.AuthService.Register:input_type -> auth.v1.RegisterRequest
-	1,  // 2: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
-	2,  // 3: auth.v1.AuthService.RefreshToken:input_type -> auth.v1.RefreshTokenRequest
-	3,  // 4: auth.v1.AuthService.GetCurrentUser:input_type -> auth.v1.GetCurrentUserRequest
-	4,  // 5: auth.v1.AuthService.Logout:input_type -> auth.v1.LogoutRequest
-	5,  // 6: auth.v1.AuthService.ListSessions:input_type -> auth.v1.ListSessionsRequest
-	6,  // 7: auth.v1.AuthService.RevokeSession:input_type -> auth.v1.RevokeSessionRequest
-	7,  // 8: auth.v1.AuthService.RevokeOtherSessions:input_type -> auth.v1.RevokeOtherSessionsRequest
-	15, // 9: auth.v1.AuthService.GetCacheKeySeed:input_type -> auth.v1.GetCacheKeySeedRequest
-	17, // 10: auth.v1.AuthService.RotateCacheKeySeed:input_type -> auth.v1.RotateCacheKeySeedRequest
-	8,  // 11: auth.v1.AuthService.Register:output_type -> auth.v1.AuthResponse
-	8,  // 12: auth.v1.AuthService.Login:output_type -> auth.v1.AuthResponse
-	8,  // 13: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.AuthResponse
-	9,  // 14: auth.v1.AuthService.GetCurrentUser:output_type -> auth.v1.CurrentUserResponse
-	10, // 15: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
-	12, // 16: auth.v1.AuthService.ListSessions:output_type -> auth.v1.ListSessionsResponse
-	13, // 17: auth.v1.AuthService.RevokeSession:output_type -> auth.v1.RevokeSessionResponse
-	14, // 18: auth.v1.AuthService.RevokeOtherSessions:output_type -> auth.v1.RevokeOtherSessionsResponse
-	16, // 19: auth.v1.AuthService.GetCacheKeySeed:output_type -> auth.v1.GetCacheKeySeedResponse
-	18, // 20: auth.v1.AuthService.RotateCacheKeySeed:output_type -> auth.v1.RotateCacheKeySeedResponse
-	11, // [11:21] is the sub-list for method output_type
-	1,  // [1:11] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	19, // 0: auth.v1.AuthResponse.domain_admin_domains:type_name -> common.v1.DomainType
+	11, // 1: auth.v1.ListSessionsResponse.sessions:type_name -> auth.v1.SessionInfo
+	0,  // 2: auth.v1.AuthService.Register:input_type -> auth.v1.RegisterRequest
+	1,  // 3: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
+	2,  // 4: auth.v1.AuthService.RefreshToken:input_type -> auth.v1.RefreshTokenRequest
+	3,  // 5: auth.v1.AuthService.GetCurrentUser:input_type -> auth.v1.GetCurrentUserRequest
+	4,  // 6: auth.v1.AuthService.Logout:input_type -> auth.v1.LogoutRequest
+	5,  // 7: auth.v1.AuthService.ListSessions:input_type -> auth.v1.ListSessionsRequest
+	6,  // 8: auth.v1.AuthService.RevokeSession:input_type -> auth.v1.RevokeSessionRequest
+	7,  // 9: auth.v1.AuthService.RevokeOtherSessions:input_type -> auth.v1.RevokeOtherSessionsRequest
+	15, // 10: auth.v1.AuthService.GetCacheKeySeed:input_type -> auth.v1.GetCacheKeySeedRequest
+	17, // 11: auth.v1.AuthService.RotateCacheKeySeed:input_type -> auth.v1.RotateCacheKeySeedRequest
+	8,  // 12: auth.v1.AuthService.Register:output_type -> auth.v1.AuthResponse
+	8,  // 13: auth.v1.AuthService.Login:output_type -> auth.v1.AuthResponse
+	8,  // 14: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.AuthResponse
+	9,  // 15: auth.v1.AuthService.GetCurrentUser:output_type -> auth.v1.CurrentUserResponse
+	10, // 16: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
+	12, // 17: auth.v1.AuthService.ListSessions:output_type -> auth.v1.ListSessionsResponse
+	13, // 18: auth.v1.AuthService.RevokeSession:output_type -> auth.v1.RevokeSessionResponse
+	14, // 19: auth.v1.AuthService.RevokeOtherSessions:output_type -> auth.v1.RevokeOtherSessionsResponse
+	16, // 20: auth.v1.AuthService.GetCacheKeySeed:output_type -> auth.v1.GetCacheKeySeedResponse
+	18, // 21: auth.v1.AuthService.RotateCacheKeySeed:output_type -> auth.v1.RotateCacheKeySeedResponse
+	12, // [12:22] is the sub-list for method output_type
+	2,  // [2:12] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_auth_v1_auth_proto_init() }

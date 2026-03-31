@@ -121,6 +121,8 @@ message ChatChannel {
   // User-specific context (populated per-request)
   optional ChannelRole current_user_role = 30;
   optional bool is_member = 31;
+  // DM participant user IDs (populated for DIRECT and GROUP_DM channels)
+  repeated string dm_member_ids = 32;
 }
 
 // ThreadInfo holds thread metadata embedded in root messages.

@@ -1131,6 +1131,13 @@ export enum StreamNotificationEvent_EventType {
    * @generated from enum value: EVENT_TYPE_MENTION_STATE_CHANGED = 5;
    */
   MENTION_STATE_CHANGED = 5,
+
+  /**
+   * User's permissions changed (domain admin granted/revoked) - triggers refetch
+   *
+   * @generated from enum value: EVENT_TYPE_PERMISSIONS_CHANGED = 6;
+   */
+  PERMISSIONS_CHANGED = 6,
 }
 // Retrieve enum metadata with: proto3.getEnumType(StreamNotificationEvent_EventType)
 proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.StreamNotificationEvent.EventType", [
@@ -1140,6 +1147,7 @@ proto3.util.setEnumType(StreamNotificationEvent_EventType, "notifications.v1.Str
   { no: 3, name: "EVENT_TYPE_FILE_UPDATED" },
   { no: 4, name: "EVENT_TYPE_PRESENCE_CHANGED" },
   { no: 5, name: "EVENT_TYPE_MENTION_STATE_CHANGED" },
+  { no: 6, name: "EVENT_TYPE_PERMISSIONS_CHANGED" },
 ]);
 
 /**

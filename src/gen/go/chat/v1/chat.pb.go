@@ -262,8 +262,10 @@ type ChatChannel struct {
 	// User-specific context (populated per-request)
 	CurrentUserRole *ChannelRole `protobuf:"varint,30,opt,name=current_user_role,json=currentUserRole,proto3,enum=chat.v1.ChannelRole,oneof" json:"current_user_role,omitempty"`
 	IsMember        *bool        `protobuf:"varint,31,opt,name=is_member,json=isMember,proto3,oneof" json:"is_member,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// DM participant user IDs (populated for DIRECT and GROUP_DM channels)
+	DmMemberIds   []string `protobuf:"bytes,32,rep,name=dm_member_ids,json=dmMemberIds,proto3" json:"dm_member_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChatChannel) Reset() {
@@ -441,6 +443,13 @@ func (x *ChatChannel) GetIsMember() bool {
 		return *x.IsMember
 	}
 	return false
+}
+
+func (x *ChatChannel) GetDmMemberIds() []string {
+	if x != nil {
+		return x.DmMemberIds
+	}
+	return nil
 }
 
 // ThreadInfo holds thread metadata embedded in root messages.
@@ -5147,7 +5156,7 @@ var File_chat_v1_chat_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9b\a\n" +
+	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbf\a\n" +
 	"\vChatChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -5175,7 +5184,8 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x0flast_message_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\rlastMessageAt\x12K\n" +
 	"\x14last_root_message_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\x11lastRootMessageAt\x12E\n" +
 	"\x11current_user_role\x18\x1e \x01(\x0e2\x14.chat.v1.ChannelRoleH\x01R\x0fcurrentUserRole\x88\x01\x01\x12 \n" +
-	"\tis_member\x18\x1f \x01(\bH\x02R\bisMember\x88\x01\x01B\x0e\n" +
+	"\tis_member\x18\x1f \x01(\bH\x02R\bisMember\x88\x01\x01\x12\"\n" +
+	"\rdm_member_ids\x18  \x03(\tR\vdmMemberIdsB\x0e\n" +
 	"\f_category_idB\x14\n" +
 	"\x12_current_user_roleB\f\n" +
 	"\n" +

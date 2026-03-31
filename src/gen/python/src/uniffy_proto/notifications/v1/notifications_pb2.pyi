@@ -207,12 +207,14 @@ class StreamNotificationEvent(_message.Message):
         EVENT_TYPE_FILE_UPDATED: _ClassVar[StreamNotificationEvent.EventType]
         EVENT_TYPE_PRESENCE_CHANGED: _ClassVar[StreamNotificationEvent.EventType]
         EVENT_TYPE_MENTION_STATE_CHANGED: _ClassVar[StreamNotificationEvent.EventType]
+        EVENT_TYPE_PERMISSIONS_CHANGED: _ClassVar[StreamNotificationEvent.EventType]
     EVENT_TYPE_UNSPECIFIED: StreamNotificationEvent.EventType
     EVENT_TYPE_NEW_NOTIFICATION: StreamNotificationEvent.EventType
     EVENT_TYPE_HEARTBEAT: StreamNotificationEvent.EventType
     EVENT_TYPE_FILE_UPDATED: StreamNotificationEvent.EventType
     EVENT_TYPE_PRESENCE_CHANGED: StreamNotificationEvent.EventType
     EVENT_TYPE_MENTION_STATE_CHANGED: StreamNotificationEvent.EventType
+    EVENT_TYPE_PERMISSIONS_CHANGED: StreamNotificationEvent.EventType
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]

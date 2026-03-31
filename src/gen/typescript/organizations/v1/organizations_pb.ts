@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { ContentType, MemberInfo, OrganizationInfo, OrganizationRole, PaginationRequest, PaginationResponse, VisibilityScope } from "../../common/v1/common_pb.js";
+import { ContentType, DomainAdminInfo, DomainType, MemberInfo, OrganizationInfo, OrganizationRole, PaginationRequest, PaginationResponse, VisibilityScope } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from message organizations.v1.ListMyOrganizationsRequest
@@ -1126,6 +1126,313 @@ export class ContentTypeDefaults extends Message<ContentTypeDefaults> {
 
   static equals(a: ContentTypeDefaults | PlainMessage<ContentTypeDefaults> | undefined, b: ContentTypeDefaults | PlainMessage<ContentTypeDefaults> | undefined): boolean {
     return proto3.util.equals(ContentTypeDefaults, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.GrantDomainAdminRequest
+ */
+export class GrantDomainAdminRequest extends Message<GrantDomainAdminRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: common.v1.DomainType domain = 3;
+   */
+  domain = DomainType.UNSPECIFIED;
+
+  constructor(data?: PartialMessage<GrantDomainAdminRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.GrantDomainAdminRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "domain", kind: "enum", T: proto3.getEnumType(DomainType) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GrantDomainAdminRequest {
+    return new GrantDomainAdminRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GrantDomainAdminRequest {
+    return new GrantDomainAdminRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GrantDomainAdminRequest {
+    return new GrantDomainAdminRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GrantDomainAdminRequest | PlainMessage<GrantDomainAdminRequest> | undefined, b: GrantDomainAdminRequest | PlainMessage<GrantDomainAdminRequest> | undefined): boolean {
+    return proto3.util.equals(GrantDomainAdminRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.RevokeDomainAdminRequest
+ */
+export class RevokeDomainAdminRequest extends Message<RevokeDomainAdminRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: common.v1.DomainType domain = 3;
+   */
+  domain = DomainType.UNSPECIFIED;
+
+  constructor(data?: PartialMessage<RevokeDomainAdminRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.RevokeDomainAdminRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "domain", kind: "enum", T: proto3.getEnumType(DomainType) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokeDomainAdminRequest {
+    return new RevokeDomainAdminRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokeDomainAdminRequest {
+    return new RevokeDomainAdminRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokeDomainAdminRequest {
+    return new RevokeDomainAdminRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokeDomainAdminRequest | PlainMessage<RevokeDomainAdminRequest> | undefined, b: RevokeDomainAdminRequest | PlainMessage<RevokeDomainAdminRequest> | undefined): boolean {
+    return proto3.util.equals(RevokeDomainAdminRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.RevokeDomainAdminResponse
+ */
+export class RevokeDomainAdminResponse extends Message<RevokeDomainAdminResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  constructor(data?: PartialMessage<RevokeDomainAdminResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.RevokeDomainAdminResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokeDomainAdminResponse {
+    return new RevokeDomainAdminResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokeDomainAdminResponse {
+    return new RevokeDomainAdminResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokeDomainAdminResponse {
+    return new RevokeDomainAdminResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RevokeDomainAdminResponse | PlainMessage<RevokeDomainAdminResponse> | undefined, b: RevokeDomainAdminResponse | PlainMessage<RevokeDomainAdminResponse> | undefined): boolean {
+    return proto3.util.equals(RevokeDomainAdminResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.ListDomainAdminsRequest
+ */
+export class ListDomainAdminsRequest extends Message<ListDomainAdminsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: optional common.v1.DomainType domain_filter = 2;
+   */
+  domainFilter?: DomainType;
+
+  /**
+   * @generated from field: optional common.v1.PaginationRequest pagination = 3;
+   */
+  pagination?: PaginationRequest;
+
+  constructor(data?: PartialMessage<ListDomainAdminsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.ListDomainAdminsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "domain_filter", kind: "enum", T: proto3.getEnumType(DomainType), opt: true },
+    { no: 3, name: "pagination", kind: "message", T: PaginationRequest, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListDomainAdminsRequest {
+    return new ListDomainAdminsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListDomainAdminsRequest {
+    return new ListDomainAdminsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListDomainAdminsRequest {
+    return new ListDomainAdminsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListDomainAdminsRequest | PlainMessage<ListDomainAdminsRequest> | undefined, b: ListDomainAdminsRequest | PlainMessage<ListDomainAdminsRequest> | undefined): boolean {
+    return proto3.util.equals(ListDomainAdminsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.ListDomainAdminsResponse
+ */
+export class ListDomainAdminsResponse extends Message<ListDomainAdminsResponse> {
+  /**
+   * @generated from field: repeated common.v1.DomainAdminInfo domain_admins = 1;
+   */
+  domainAdmins: DomainAdminInfo[] = [];
+
+  /**
+   * @generated from field: optional common.v1.PaginationResponse pagination = 2;
+   */
+  pagination?: PaginationResponse;
+
+  constructor(data?: PartialMessage<ListDomainAdminsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.ListDomainAdminsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "domain_admins", kind: "message", T: DomainAdminInfo, repeated: true },
+    { no: 2, name: "pagination", kind: "message", T: PaginationResponse, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListDomainAdminsResponse {
+    return new ListDomainAdminsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListDomainAdminsResponse {
+    return new ListDomainAdminsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListDomainAdminsResponse {
+    return new ListDomainAdminsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListDomainAdminsResponse | PlainMessage<ListDomainAdminsResponse> | undefined, b: ListDomainAdminsResponse | PlainMessage<ListDomainAdminsResponse> | undefined): boolean {
+    return proto3.util.equals(ListDomainAdminsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.GetUserDomainAdminsRequest
+ */
+export class GetUserDomainAdminsRequest extends Message<GetUserDomainAdminsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  constructor(data?: PartialMessage<GetUserDomainAdminsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.GetUserDomainAdminsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserDomainAdminsRequest {
+    return new GetUserDomainAdminsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserDomainAdminsRequest {
+    return new GetUserDomainAdminsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserDomainAdminsRequest {
+    return new GetUserDomainAdminsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserDomainAdminsRequest | PlainMessage<GetUserDomainAdminsRequest> | undefined, b: GetUserDomainAdminsRequest | PlainMessage<GetUserDomainAdminsRequest> | undefined): boolean {
+    return proto3.util.equals(GetUserDomainAdminsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message organizations.v1.GetUserDomainAdminsResponse
+ */
+export class GetUserDomainAdminsResponse extends Message<GetUserDomainAdminsResponse> {
+  /**
+   * @generated from field: repeated common.v1.DomainType domains = 1;
+   */
+  domains: DomainType[] = [];
+
+  constructor(data?: PartialMessage<GetUserDomainAdminsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "organizations.v1.GetUserDomainAdminsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "domains", kind: "enum", T: proto3.getEnumType(DomainType), repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserDomainAdminsResponse {
+    return new GetUserDomainAdminsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserDomainAdminsResponse {
+    return new GetUserDomainAdminsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserDomainAdminsResponse {
+    return new GetUserDomainAdminsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserDomainAdminsResponse | PlainMessage<GetUserDomainAdminsResponse> | undefined, b: GetUserDomainAdminsResponse | PlainMessage<GetUserDomainAdminsResponse> | undefined): boolean {
+    return proto3.util.equals(GetUserDomainAdminsResponse, a, b);
   }
 }
 

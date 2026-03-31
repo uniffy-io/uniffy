@@ -231,3 +231,61 @@ class ContentTypeDefaults(_message.Message):
     members_can_share: bool
     updated_at: _timestamp_pb2.Timestamp
     def __init__(self, content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., default_visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., members_can_view: _Optional[bool] = ..., members_can_edit: _Optional[bool] = ..., members_can_delete: _Optional[bool] = ..., members_can_share: _Optional[bool] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GrantDomainAdminRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id", "domain")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    domain: _common_pb2.DomainType
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., domain: _Optional[_Union[_common_pb2.DomainType, str]] = ...) -> None: ...
+
+class RevokeDomainAdminRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id", "domain")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    domain: _common_pb2.DomainType
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., domain: _Optional[_Union[_common_pb2.DomainType, str]] = ...) -> None: ...
+
+class RevokeDomainAdminResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class ListDomainAdminsRequest(_message.Message):
+    __slots__ = ("organization_id", "domain_filter", "pagination")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FILTER_FIELD_NUMBER: _ClassVar[int]
+    PAGINATION_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    domain_filter: _common_pb2.DomainType
+    pagination: _common_pb2.PaginationRequest
+    def __init__(self, organization_id: _Optional[str] = ..., domain_filter: _Optional[_Union[_common_pb2.DomainType, str]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ...) -> None: ...
+
+class ListDomainAdminsResponse(_message.Message):
+    __slots__ = ("domain_admins", "pagination")
+    DOMAIN_ADMINS_FIELD_NUMBER: _ClassVar[int]
+    PAGINATION_FIELD_NUMBER: _ClassVar[int]
+    domain_admins: _containers.RepeatedCompositeFieldContainer[_common_pb2.DomainAdminInfo]
+    pagination: _common_pb2.PaginationResponse
+    def __init__(self, domain_admins: _Optional[_Iterable[_Union[_common_pb2.DomainAdminInfo, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
+
+class GetUserDomainAdminsRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class GetUserDomainAdminsResponse(_message.Message):
+    __slots__ = ("domains",)
+    DOMAINS_FIELD_NUMBER: _ClassVar[int]
+    domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
+    def __init__(self, domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...

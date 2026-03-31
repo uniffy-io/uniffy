@@ -59,6 +59,16 @@ class GroupRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     GROUP_ROLE_UNSPECIFIED: _ClassVar[GroupRole]
     GROUP_ROLE_MEMBER: _ClassVar[GroupRole]
     GROUP_ROLE_ADMIN: _ClassVar[GroupRole]
+
+class DomainType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    DOMAIN_TYPE_UNSPECIFIED: _ClassVar[DomainType]
+    DOMAIN_TYPE_CHAT: _ClassVar[DomainType]
+    DOMAIN_TYPE_FILES: _ClassVar[DomainType]
+    DOMAIN_TYPE_NOTES: _ClassVar[DomainType]
+    DOMAIN_TYPE_CALENDAR: _ClassVar[DomainType]
+    DOMAIN_TYPE_PROJECTS: _ClassVar[DomainType]
+    DOMAIN_TYPE_AGENTS: _ClassVar[DomainType]
 CONTENT_TYPE_UNSPECIFIED: ContentType
 CONTENT_TYPE_NOTE: ContentType
 CONTENT_TYPE_FILE: ContentType
@@ -92,6 +102,13 @@ ORGANIZATION_ROLE_OWNER: OrganizationRole
 GROUP_ROLE_UNSPECIFIED: GroupRole
 GROUP_ROLE_MEMBER: GroupRole
 GROUP_ROLE_ADMIN: GroupRole
+DOMAIN_TYPE_UNSPECIFIED: DomainType
+DOMAIN_TYPE_CHAT: DomainType
+DOMAIN_TYPE_FILES: DomainType
+DOMAIN_TYPE_NOTES: DomainType
+DOMAIN_TYPE_CALENDAR: DomainType
+DOMAIN_TYPE_PROJECTS: DomainType
+DOMAIN_TYPE_AGENTS: DomainType
 
 class UserInfo(_message.Message):
     __slots__ = ("id", "email", "full_name", "username", "avatar_url", "created_at")
@@ -182,6 +199,26 @@ class GroupMemberInfo(_message.Message):
     role: GroupRole
     joined_at: _timestamp_pb2.Timestamp
     def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ..., email: _Optional[str] = ..., avatar_url: _Optional[str] = ..., role: _Optional[_Union[GroupRole, str]] = ..., joined_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class DomainAdminInfo(_message.Message):
+    __slots__ = ("id", "user_id", "display_name", "email", "avatar_url", "domain", "granted_by_user_id", "granted_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    GRANTED_BY_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    GRANTED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    user_id: str
+    display_name: str
+    email: str
+    avatar_url: str
+    domain: DomainType
+    granted_by_user_id: str
+    granted_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., user_id: _Optional[str] = ..., display_name: _Optional[str] = ..., email: _Optional[str] = ..., avatar_url: _Optional[str] = ..., domain: _Optional[_Union[DomainType, str]] = ..., granted_by_user_id: _Optional[str] = ..., granted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class PaginationRequest(_message.Message):
     __slots__ = ("page", "page_size")

@@ -221,6 +221,8 @@ message StreamNotificationEvent {
     EVENT_TYPE_PRESENCE_CHANGED = 4;
     // Mention state changed for content (task status, event time, etc.)
     EVENT_TYPE_MENTION_STATE_CHANGED = 5;
+    // User's permissions changed (domain admin granted/revoked) - triggers refetch
+    EVENT_TYPE_PERMISSIONS_CHANGED = 6;
   }
 
   // Type of this event

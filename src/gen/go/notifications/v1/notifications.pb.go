@@ -132,6 +132,8 @@ const (
 	StreamNotificationEvent_EVENT_TYPE_PRESENCE_CHANGED StreamNotificationEvent_EventType = 4
 	// Mention state changed for content (task status, event time, etc.)
 	StreamNotificationEvent_EVENT_TYPE_MENTION_STATE_CHANGED StreamNotificationEvent_EventType = 5
+	// User's permissions changed (domain admin granted/revoked) - triggers refetch
+	StreamNotificationEvent_EVENT_TYPE_PERMISSIONS_CHANGED StreamNotificationEvent_EventType = 6
 )
 
 // Enum value maps for StreamNotificationEvent_EventType.
@@ -143,6 +145,7 @@ var (
 		3: "EVENT_TYPE_FILE_UPDATED",
 		4: "EVENT_TYPE_PRESENCE_CHANGED",
 		5: "EVENT_TYPE_MENTION_STATE_CHANGED",
+		6: "EVENT_TYPE_PERMISSIONS_CHANGED",
 	}
 	StreamNotificationEvent_EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED":           0,
@@ -151,6 +154,7 @@ var (
 		"EVENT_TYPE_FILE_UPDATED":          3,
 		"EVENT_TYPE_PRESENCE_CHANGED":      4,
 		"EVENT_TYPE_MENTION_STATE_CHANGED": 5,
+		"EVENT_TYPE_PERMISSIONS_CHANGED":   6,
 	}
 )
 
@@ -1561,7 +1565,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"U\n" +
 	"\x11FileUpdatePayload\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb1\x05\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xd5\x05\n" +
 	"\x17StreamNotificationEvent\x12R\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e23.notifications.v1.StreamNotificationEvent.EventTypeR\teventType\x12B\n" +
@@ -1570,14 +1574,15 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\vfile_update\x18\x04 \x01(\v2#.notifications.v1.FileUpdatePayloadR\n" +
 	"fileUpdate\x12S\n" +
 	"\x10presence_changed\x18\x05 \x01(\v2(.notifications.v1.PresenceChangedPayloadR\x0fpresenceChanged\x12`\n" +
-	"\x15mention_state_changed\x18\x06 \x01(\v2,.notifications.v1.MentionStateChangedPayloadR\x13mentionStateChanged\"\xc6\x01\n" +
+	"\x15mention_state_changed\x18\x06 \x01(\v2,.notifications.v1.MentionStateChangedPayloadR\x13mentionStateChanged\"\xea\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bEVENT_TYPE_NEW_NOTIFICATION\x10\x01\x12\x18\n" +
 	"\x14EVENT_TYPE_HEARTBEAT\x10\x02\x12\x1b\n" +
 	"\x17EVENT_TYPE_FILE_UPDATED\x10\x03\x12\x1f\n" +
 	"\x1bEVENT_TYPE_PRESENCE_CHANGED\x10\x04\x12$\n" +
-	" EVENT_TYPE_MENTION_STATE_CHANGED\x10\x05\"\x92\x02\n" +
+	" EVENT_TYPE_MENTION_STATE_CHANGED\x10\x05\x12\"\n" +
+	"\x1eEVENT_TYPE_PERMISSIONS_CHANGED\x10\x06\"\x92\x02\n" +
 	"\x16PresenceChangedPayload\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12;\n" +

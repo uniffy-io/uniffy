@@ -261,6 +261,13 @@ export class ChatChannel extends Message<ChatChannel> {
    */
   isMember?: boolean;
 
+  /**
+   * DM participant user IDs (populated for DIRECT and GROUP_DM channels)
+   *
+   * @generated from field: repeated string dm_member_ids = 32;
+   */
+  dmMemberIds: string[] = [];
+
   constructor(data?: PartialMessage<ChatChannel>) {
     super();
     proto3.util.initPartial(data, this);
@@ -290,6 +297,7 @@ export class ChatChannel extends Message<ChatChannel> {
     { no: 24, name: "last_root_message_at", kind: "message", T: Timestamp },
     { no: 30, name: "current_user_role", kind: "enum", T: proto3.getEnumType(ChannelRole), opt: true },
     { no: 31, name: "is_member", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 32, name: "dm_member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatChannel {
