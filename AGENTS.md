@@ -99,7 +99,9 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 
 **Multi-tenancy**: All content is scoped to `organization_id`. Users are global; memberships are org-scoped.
 
-**Permission system**: Three layers -- VisibilityScope (PRIVATE/GROUP/ORGANIZATION), ContentGroupLink, and ContentPermission (VIEW/EDIT/ADMIN/OWNER).
+**Permission system**: Three layers -- VisibilityScope (PRIVATE/GROUP/ORGANIZATION), ContentGroupLink, and ContentPermission (VIEW/EDIT/ADMIN/OWNER). For content that uses membership-based access (e.g., chat channels), domains override `BaseContentOperations` with custom access checkers.
+
+**Domain admin system**: Users can be granted admin status for specific domains (chat, files, calendar, etc.) without being full org admins. Stored in a shared `DomainAdmin` table with unique constraint on `(organization_id, user_id, domain)`. Access check order: org ADMIN/OWNER > domain admin > regular member. See backend.md "Domain Admin System" section for details.
 
 **Background tasks**: ARQ workers with Valkey for async job processing (file processing, indexing, etc.).
 
