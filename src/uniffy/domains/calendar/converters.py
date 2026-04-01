@@ -183,6 +183,11 @@ def recurrence_edit_scope_from_proto(proto_scope: ProtoRecurrenceEditScope.Value
 def event_to_proto(
     event: CalendarEvent,
     attendees: list[tuple[EventAttendee, dict]] | None = None,
+    room_id: str | None = None,
+    room_name: str | None = None,
+    room_location: str | None = None,
+    room_capacity: int = 0,
+    room_amenities: list[str] | None = None,
 ) -> ProtoCalendarEvent:
     """
     Convert CalendarEvent model to proto CalendarEvent.
@@ -193,6 +198,16 @@ def event_to_proto(
         Event model instance.
     attendees : list[tuple[EventAttendee, dict]] | None
         List of (EventAttendee, user_info) tuples for attendee details.
+    room_id : str | None
+        Optional booked room ID.
+    room_name : str | None
+        Optional booked room name.
+    room_location : str | None
+        Optional booked room location.
+    room_capacity : int
+        Optional room capacity.
+    room_amenities : list[str] | None
+        Optional room amenities list.
 
     Returns
     -------
@@ -311,6 +326,18 @@ def event_to_proto(
             if user_info.get("timezone"):
                 proto_attendee.timezone = user_info["timezone"]
             proto_event.attendees.append(proto_attendee)
+
+    # Add room booking info
+    if room_id:
+        proto_event.room_id = room_id
+    if room_name:
+        proto_event.room_name = room_name
+    if room_location:
+        proto_event.room_location = room_location
+    if room_capacity:
+        proto_event.room_capacity = room_capacity
+    if room_amenities:
+        proto_event.room_amenities.extend(room_amenities)
 
     return proto_event
 

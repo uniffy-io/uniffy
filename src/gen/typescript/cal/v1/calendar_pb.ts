@@ -501,6 +501,33 @@ export class CalendarEvent extends Message<CalendarEvent> {
    */
   occurrenceDate?: string;
 
+  /**
+   * Room booking fields (read-only, populated by handler)
+   *
+   * @generated from field: optional string room_id = 29;
+   */
+  roomId?: string;
+
+  /**
+   * @generated from field: optional string room_name = 30;
+   */
+  roomName?: string;
+
+  /**
+   * @generated from field: optional string room_location = 31;
+   */
+  roomLocation?: string;
+
+  /**
+   * @generated from field: optional int32 room_capacity = 32;
+   */
+  roomCapacity?: number;
+
+  /**
+   * @generated from field: repeated string room_amenities = 33;
+   */
+  roomAmenities: string[] = [];
+
   constructor(data?: PartialMessage<CalendarEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -537,6 +564,11 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 26, name: "is_recurring", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 27, name: "recurrence_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 28, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 29, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 30, name: "room_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 31, name: "room_location", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 32, name: "room_capacity", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 33, name: "room_amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CalendarEvent {
@@ -931,6 +963,13 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
    */
   reminders: number[] = [];
 
+  /**
+   * Optional room ID to book alongside the event
+   *
+   * @generated from field: optional string room_id = 19;
+   */
+  roomId?: string;
+
   constructor(data?: PartialMessage<CreateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -957,6 +996,7 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
     { no: 18, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 19, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventRequest {
@@ -1178,6 +1218,13 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
    */
   occurrenceDate?: string;
 
+  /**
+   * Optional room ID to book/change for this event
+   *
+   * @generated from field: optional string room_id = 22;
+   */
+  roomId?: string;
+
   constructor(data?: PartialMessage<UpdateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1207,6 +1254,7 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 19, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
     { no: 20, name: "recurrence_edit_scope", kind: "enum", T: proto3.getEnumType(RecurrenceEditScope), opt: true },
     { no: 21, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 22, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventRequest {

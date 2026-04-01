@@ -262,6 +262,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         visibility: VisibilityScope = VisibilityScope.PRIVATE,
         group_ids: list[UUID] | None = None,
         reminders: list[int] | None = None,
+        room_id: UUID | None = None,
     ) -> CalendarEvent:
         """
         Create a new calendar event.
@@ -308,6 +309,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             Who can access this event.
         group_ids : list[UUID] | None
             Groups to share with (for GROUP visibility).
+        room_id : UUID | None
+            Optional room to book for this event.
 
         Returns
         -------
@@ -446,6 +449,21 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
             )
 
+        # Book room if requested
+        if room_id:
+            from uniffy.domains.rooms.operations import BookingOperations
+
+            booking_ops = BookingOperations(self.session)
+            await booking_ops.create_booking(
+                user_id=user_id,
+                organization_id=organization_id,
+                room_id=room_id,
+                start_time=start_time,
+                end_time=end_time,
+                title=title,
+                event_id=event.id,
+            )
+
         return event
 
     async def update(
@@ -472,6 +490,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         reminders: list[int] | None = None,
         recurrence_edit_scope: str | None = None,
         occurrence_date: date | None = None,
+        room_id: str | None = None,
     ) -> CalendarEvent:
         """
         Update an existing event.
@@ -727,6 +746,28 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     exc_info=True,
                 )
 
+        # Handle room booking changes
+        if room_id is not None:
+            from uniffy.domains.rooms.operations import BookingOperations
+
+            booking_ops = BookingOperations(self.session)
+            # Cancel any existing booking for this event
+            await booking_ops.cancel_booking_for_event(event_id)
+            # Create new booking if room_id is not empty
+            if room_id:
+                room_uuid = UUID(room_id) if isinstance(room_id, str) else room_id
+                final_start = start_time or event.start_time
+                final_end = end_time or event.end_time
+                await booking_ops.create_booking(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    room_id=room_uuid,
+                    start_time=final_start,
+                    end_time=final_end,
+                    title=event.title,
+                    event_id=event_id,
+                )
+
         return event
 
     async def delete(
@@ -799,6 +840,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         # Delete all reminder rows for this event
         await self.session.execute(delete(EventReminder).where(EventReminder.event_id == event_id))
+
+        # Cancel any room booking linked to this event
+        from uniffy.domains.rooms.operations import BookingOperations
+
+        booking_ops = BookingOperations(self.session)
+        await booking_ops.cancel_booking_for_event(event_id)
 
         if permanent:
             await queries.permanent_delete_event(self.session, event)
