@@ -9,7 +9,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users } from "@phosphor-icons/react";
+import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -34,6 +34,8 @@ import {
   openCreateTaskModal,
   toggleSidebar,
   selectIsSidebarOpen,
+  setDetailViewMode,
+  selectDetailViewMode,
 } from "@/features/projects/store/projectsUiSlice";
 import { deleteTasks, bulkUpdateTasksThunk } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
@@ -64,6 +66,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const activeFilterConfig = useAppSelector(selectActiveFilterConfig);
   const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
+  const detailViewMode = useAppSelector(selectDetailViewMode);
   const timeStats = useAppSelector(
     useMemo(() => selectProjectTimeStats(project.id), [project.id])
   );
@@ -168,6 +171,32 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             {!isMobile && "New Task"}
           </button>
         )}
+
+        {/* Detail view mode toggle */}
+        <div className="hidden md:flex items-center gap-0.5 border border-border rounded-md p-0.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => dispatch(setDetailViewMode("sidebar"))}
+            className={cn(
+              "p-1 rounded transition-colors",
+              detailViewMode === "sidebar" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+            title="Sidebar panel"
+          >
+            <SidebarSimple size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => dispatch(setDetailViewMode("modal"))}
+            className={cn(
+              "p-1 rounded transition-colors",
+              detailViewMode === "modal" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+            title="Modal view"
+          >
+            <FrameCorners size={14} />
+          </button>
+        </div>
       </div>
 
       {/* View Tabs + Filter Bar */}

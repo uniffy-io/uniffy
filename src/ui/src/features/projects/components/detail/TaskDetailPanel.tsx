@@ -41,9 +41,10 @@ import { DependenciesList } from "./DependenciesList";
 
 interface TaskDetailPanelProps {
   taskId: string;
+  variant?: "sidebar" | "modal";
 }
 
-export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
+export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanelProps) {
   const dispatch = useAppDispatch();
   const { isMobileOrTablet } = useBreakpoint();
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
@@ -177,7 +178,11 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
       )}
 
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
+        <div className={cn("p-4", variant === "modal" ? "flex gap-6 items-start" : "space-y-6")}>
+
+        {/* Left column (or single column in sidebar mode) */}
+        <div className={cn(variant === "modal" ? "flex-1 min-w-0 space-y-6" : "space-y-6")}>
+
           {/* Task Title (editable when permitted) */}
           <EditableTitle
             title={task.title}
@@ -192,7 +197,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
           {statusOption && (
             <div className="flex items-center justify-between">
               <StatusBadge option={statusOption} />
-              
+
               {/* Feature 15: Milestone Badge */}
               {task.isMilestone && (
                  <Badge variant="secondary" className="gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
@@ -202,6 +207,53 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               )}
             </div>
           )}
+
+          {/* Description (in modal mode, shown in left column before fields) */}
+          {variant === "modal" && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</h3>
+              <ExpandableEditor
+                contentType={ContentType.TASK}
+                contentId={task.id}
+                value={task.description}
+                onChange={(newDesc) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                  dispatch(updateTask({ id: task.id, description: newDesc }));
+                }}
+                placeholder="Click to add a description... (type @ to mention)"
+                label="Description"
+                enableUpload
+                fullPreview
+                readonly={!canEdit}
+              />
+            </div>
+          )}
+
+          {/* References (in modal mode, in left column) */}
+          {variant === "modal" && task.outgoingReferences.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
+              <div className="flex flex-wrap gap-2">
+                {task.outgoingReferences.map((urn) => {
+                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
+                  return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Comments + Activity (in modal mode, in left column) */}
+          {variant === "modal" && (
+            <div className="max-h-64 overflow-y-auto rounded-md border border-border">
+              <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
+            </div>
+          )}
+          {variant === "modal" && <ActivityLog taskId={task.id} />}
+
+          </div>{/* end left column */}
+
+          {/* Right column (or continues in single column for sidebar) */}
+          <div className={cn(variant === "modal" ? "w-72 shrink-0 space-y-6" : "space-y-6")}>
 
           {/* Fields Section */}
           <div className="space-y-4">
@@ -228,8 +280,8 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               )}
 
               {/* Type */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground w-20 shrink-0">Type</span>
+              <div className="flex items-start gap-2">
+                <span className="text-sm text-muted-foreground w-20 shrink-0 pt-1">Type</span>
                 <div className="flex flex-wrap gap-1.5">
                   {TASK_TYPES.map((type) => {
                     const TIcon = type.icon;
@@ -375,53 +427,51 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
           {/* Feature 7: Subtasks */}
           <SubtasksList taskId={task.id} parentCompleted={!!task.completedAt} />
 
-          {/* Description Section */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Description
-            </h3>
-            <ExpandableEditor
-              contentType={ContentType.TASK}
-              contentId={task.id}
-              value={task.description}
-              onChange={(newDesc) => {
-                dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                dispatch(updateTask({ id: task.id, description: newDesc }));
-              }}
-              placeholder="Click to add a description... (type @ to mention)"
-              label="Description"
-              enableUpload
-              fullPreview
-              readonly={!canEdit}
-            />
-          </div>
+          </div>{/* end right column (or contents for sidebar) */}
 
-          {/* References Section */}
-          {task.outgoingReferences.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                References
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {task.outgoingReferences.map((urn) => {
-                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
-                  return (
-                    <MentionChipCompact
-                      key={urn}
-                      urn={urn}
-                      label={mention?.label || extractFallbackLabel(urn)}
-                    />
-                  );
-                })}
+          {/* The following sections are shown in sidebar mode only - in modal mode they're in the left column */}
+          {variant === "sidebar" && (
+            <>
+              {/* Description Section */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</h3>
+                <ExpandableEditor
+                  contentType={ContentType.TASK}
+                  contentId={task.id}
+                  value={task.description}
+                  onChange={(newDesc) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                    dispatch(updateTask({ id: task.id, description: newDesc }));
+                  }}
+                  placeholder="Click to add a description... (type @ to mention)"
+                  label="Description"
+                  enableUpload
+                  fullPreview
+                  readonly={!canEdit}
+                />
               </div>
-            </div>
-          )}
-          
-          {/* Comments (shared domain) */}
-          <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
 
-          {/* Activity Log (field changes, status updates, etc.) */}
-          <ActivityLog taskId={task.id} />
+              {/* References Section */}
+              {task.outgoingReferences.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {task.outgoingReferences.map((urn) => {
+                      const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
+                      return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Comments */}
+              <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
+
+              {/* Activity Log */}
+              <ActivityLog taskId={task.id} />
+            </>
+          )}
+
         </div>
       </ScrollArea>
     </div>

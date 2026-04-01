@@ -32,6 +32,7 @@ import { RoadmapView } from "@/features/projects/components/views/roadmap/Roadma
 import { BacklogView } from "@/features/projects/components/backlog/BacklogView";
 import { DependencyGraphView } from "@/features/projects/components/views/graph/DependencyGraphView";
 import { ResourceView } from "@/features/projects/components/views/resources/ResourceView";
+import { TaskDetailModal } from "@/features/projects/components/detail/TaskDetailModal";
 import { TaskDetailPanel } from "@/features/projects/components/detail/TaskDetailPanel";
 import { CreateTaskModal } from "@/features/projects/components/modals/CreateTaskModal";
 import { CreateProjectModal } from "@/features/projects/components/modals/CreateProjectModal";
@@ -41,6 +42,7 @@ import { fetchMembers } from "@/features/admin";
 import {
   selectEditProjectId,
   selectIsDetailPanelOpen,
+  selectDetailViewMode,
   selectIsSidebarOpen,
   selectSelectedTaskId,
   selectViewMode,
@@ -112,7 +114,9 @@ export function ProjectsLayout() {
 
   // Responsive panel mode
   const sidebarAsDrawer = isMobile;
-  const detailAsDrawer = isMobileOrTablet;
+  const detailViewMode = useAppSelector(selectDetailViewMode);
+  // Use modal for mobile/tablet always, or when user prefers modal on desktop
+  const useModalForDetail = isMobileOrTablet || detailViewMode === "modal";
 
   // Determine if we should show each panel
   const showSidebar = !isZenMode && isSidebarOpen;
@@ -193,8 +197,8 @@ export function ProjectsLayout() {
           )}
         </Panel>
 
-        {/* Right Detail Panel - inline on desktop only */}
-        {showDetailPanel && !detailAsDrawer && (
+        {/* Right Detail Panel - inline sidebar on desktop only when sidebar mode */}
+        {showDetailPanel && !useModalForDetail && (
           <>
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
 
@@ -225,18 +229,9 @@ export function ProjectsLayout() {
       </Drawer>
     )}
 
-    {/* Detail panel drawer (mobile + tablet) */}
-    {detailAsDrawer && (
-      <Drawer
-        open={!!showDetailPanel}
-        onClose={handleCloseDetailPanel}
-        side="right"
-        className="w-80"
-        showClose={false}
-        ariaLabel="Task details"
-      >
-        {selectedTaskId && <TaskDetailPanel taskId={selectedTaskId} />}
-      </Drawer>
+    {/* Detail modal (modal mode on desktop, or always on mobile/tablet) */}
+    {showDetailPanel && useModalForDetail && selectedTaskId && (
+      <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseDetailPanel} />
     )}
 
     {/* Modals */}
