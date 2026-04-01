@@ -112,6 +112,7 @@ class ContentType(str, Enum):
     PROVIDER_KEY = "PROVIDER_KEY"
     PROMPT = "PROMPT"
     AGENT_CRON_TASK = "AGENT_CRON_TASK"
+    ROOM = "ROOM"
 
 
 class SubjectType(str, Enum):
@@ -306,6 +307,30 @@ class NotificationType(str, Enum):
     TASK_ASSIGNED = "TASK_ASSIGNED"
     TASK_DUE_SOON = "TASK_DUE_SOON"
     TASK_OVERDUE = "TASK_OVERDUE"
+
+
+class RoomType(str, Enum):
+    """Types of bookable rooms and resources."""
+
+    MEETING_ROOM = "MEETING_ROOM"
+    CONFERENCE_ROOM = "CONFERENCE_ROOM"
+    OFFICE = "OFFICE"
+    OTHER = "OTHER"
+
+
+class RoomStatus(str, Enum):
+    """Operational status of a room or resource."""
+
+    ACTIVE = "ACTIVE"
+    MAINTENANCE = "MAINTENANCE"
+    RETIRED = "RETIRED"
+
+
+class BookingStatus(str, Enum):
+    """Status of a room booking."""
+
+    CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
 
 
 class ResourceType(str, Enum):

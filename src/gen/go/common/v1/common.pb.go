@@ -39,6 +39,7 @@ const (
 	ContentType_CONTENT_TYPE_AGENT          ContentType = 13
 	ContentType_CONTENT_TYPE_PROVIDER_KEY   ContentType = 14
 	ContentType_CONTENT_TYPE_PROMPT         ContentType = 15
+	ContentType_CONTENT_TYPE_ROOM           ContentType = 16
 )
 
 // Enum value maps for ContentType.
@@ -56,6 +57,7 @@ var (
 		13: "CONTENT_TYPE_AGENT",
 		14: "CONTENT_TYPE_PROVIDER_KEY",
 		15: "CONTENT_TYPE_PROMPT",
+		16: "CONTENT_TYPE_ROOM",
 	}
 	ContentType_value = map[string]int32{
 		"CONTENT_TYPE_UNSPECIFIED":    0,
@@ -70,6 +72,7 @@ var (
 		"CONTENT_TYPE_AGENT":          13,
 		"CONTENT_TYPE_PROVIDER_KEY":   14,
 		"CONTENT_TYPE_PROMPT":         15,
+		"CONTENT_TYPE_ROOM":           16,
 	}
 )
 
@@ -1027,7 +1030,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\vtotal_count\x18\x03 \x01(\x05R\n" +
 	"totalCount\x12\x1f\n" +
 	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
-	"totalPages*\xca\x02\n" +
+	"totalPages*\xe1\x02\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CONTENT_TYPE_NOTE\x10\x01\x12\x15\n" +
@@ -1041,7 +1044,8 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x11CONTENT_TYPE_TASK\x10\f\x12\x16\n" +
 	"\x12CONTENT_TYPE_AGENT\x10\r\x12\x1d\n" +
 	"\x19CONTENT_TYPE_PROVIDER_KEY\x10\x0e\x12\x17\n" +
-	"\x13CONTENT_TYPE_PROMPT\x10\x0f*y\n" +
+	"\x13CONTENT_TYPE_PROMPT\x10\x0f\x12\x15\n" +
+	"\x11CONTENT_TYPE_ROOM\x10\x10*y\n" +
 	"\vSubjectType\x12\x1c\n" +
 	"\x18SUBJECT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_TYPE_USER\x10\x01\x12\x16\n" +

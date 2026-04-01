@@ -19,6 +19,7 @@ import {
   CheckSquare,
   Brain,
   Notebook,
+  Door,
   Question,
 } from '@phosphor-icons/react';
 import { UrnType } from '@/shared/utils/urnTypes';
@@ -128,6 +129,15 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: 'agents/prompts',
     theme: getUrnTypeTheme(UrnType.PROMPT),
     hexColor: getUrnTypeHexColor(UrnType.PROMPT),
+  },
+  [UrnType.ROOM]: {
+    type: UrnType.ROOM,
+    icon: Door,
+    label: 'Room',
+    labelPlural: 'Rooms',
+    route: 'rooms',
+    theme: getUrnTypeTheme(UrnType.ROOM),
+    hexColor: getUrnTypeHexColor(UrnType.ROOM),
   },
   [UrnType.UNKNOWN]: {
     type: UrnType.UNKNOWN,

@@ -23,6 +23,7 @@ enum ContentType {
   CONTENT_TYPE_AGENT = 13;
   CONTENT_TYPE_PROVIDER_KEY = 14;
   CONTENT_TYPE_PROMPT = 15;
+  CONTENT_TYPE_ROOM = 16;
 }
 
 // SubjectType defines who can be granted permissions.
