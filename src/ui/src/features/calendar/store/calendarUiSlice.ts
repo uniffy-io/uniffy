@@ -36,6 +36,7 @@ interface CalendarUiState {
   isDetailPanelOpen: boolean;
   detailPanelWidth: number;
   activeDetailTab: DetailPanelTab;
+  detailViewMode: 'sidebar' | 'modal';
 
   // Event modal state
   isEventModalOpen: boolean;
@@ -96,6 +97,7 @@ const initialState: CalendarUiState = {
   isDetailPanelOpen: false,
   detailPanelWidth: LAYOUT.DETAIL_PANEL_WIDTH,
   activeDetailTab: 'outline',
+  detailViewMode: 'sidebar',
   isEventModalOpen: false,
   eventModalMode: 'create',
   eventModalPrefill: null,
@@ -172,6 +174,10 @@ const calendarUiSlice = createSlice({
     closeDetailPanel: (state) => {
       state.isDetailPanelOpen = false;
       state.selectedEventId = null;
+    },
+
+    setDetailViewMode: (state, action: PayloadAction<'sidebar' | 'modal'>) => {
+      state.detailViewMode = action.payload;
     },
 
     setDetailPanelWidth: (state, action: PayloadAction<number>) => {
@@ -367,6 +373,7 @@ export const {
   toggleDetailPanel,
   openDetailPanel,
   closeDetailPanel,
+  setDetailViewMode,
   setDetailPanelWidth,
   setActiveDetailTab,
   openEventModal,
