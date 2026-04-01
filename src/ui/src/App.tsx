@@ -48,6 +48,7 @@ const CalendarPage = lazyImport(() => import('@/features/calendar/pages/Calendar
 const FilesPage = lazyImport(() => import('@/features/files/pages/FilesPage'), 'FilesPage');
 const FiltersPage = lazyImport(() => import('@/features/files/pages/FiltersPage'), 'FiltersPage');
 const FilesTagsPage = lazyImport(() => import('@/features/files/pages/FilesTagsPage'), 'FilesTagsPage');
+const RoomsAdminPage = lazyImport(() => import('@/features/rooms/pages/RoomsPage'), 'RoomsPage');
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
 const PortfolioPage = lazyImport(() => import('@/features/projects/pages/PortfolioPage'), 'PortfolioPage');
 const TaskRedirectPage = lazyImport(() => import('@/features/projects/pages/TaskRedirectPage'), 'TaskRedirectPage');
@@ -212,6 +213,7 @@ export function App() {
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
                             <Route path="org-settings" element={<LazyRoute><OrgSettingsPage /></LazyRoute>} />
+                            <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />
 
                             {/* Server Admin Pages */}
                             <Route path="organizations" element={<LazyRoute><OrganizationsPage /></LazyRoute>} />

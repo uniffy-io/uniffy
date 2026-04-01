@@ -17,6 +17,7 @@ import {
     UsersThree,
     ShieldCheck,
     Gear,
+    Door,
     Buildings,
     HardDrives,
 } from '@phosphor-icons/react';
@@ -32,6 +33,7 @@ const orgNavItems: NavItem[] = [
     { name: 'Groups', path: '/admin/groups', icon: UsersThree },
     { name: 'Permissions', path: '/admin/permissions', icon: ShieldCheck },
     { name: 'Organization', path: '/admin/org-settings', icon: Gear },
+    { name: 'Rooms', path: '/admin/rooms', icon: Door },
 ];
 
 const serverNavItems: NavItem[] = [

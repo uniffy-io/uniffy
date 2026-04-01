@@ -35,6 +35,7 @@ import { agentMemoriesReducer } from '@/features/agents/store/agentMemoriesSlice
 import { errorToastMiddleware } from '@/app/errorToastMiddleware';
 import { presenceReducer } from '@/features/presence/store/presenceSlice';
 import { sprintsReducer } from '@/features/projects/store/sprintsSlice';
+import { roomsReducer } from '@/features/rooms/store/roomsSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -163,6 +164,7 @@ const rootReducer = combineReducers({
   agentCron: agentCronReducer,
   agentMemories: agentMemoriesReducer,
   sprints: sprintsReducer,
+  rooms: roomsReducer,
   zenMode: zenModeReducer,
   files: filesReducer,
   filesTree: filesTreeReducer,
