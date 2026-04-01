@@ -310,9 +310,9 @@ class BaseContentOperations[TModel](ABC):
             await self._create_group_links(model.id, group_ids, user_id, organization_id)
             await self.session.commit()
 
-        # Index for search
-        await self._index_for_search(model, group_ids or [])
-        await self.session.commit()
+        # Index for search (HTTP call to Meilisearch, no DB commit needed)
+        # Skip shared_user_ids query on create - content was just created, no shares yet
+        await self._index_for_search(model, group_ids or [], skip_shared_users=True)
 
         return model
 
@@ -363,10 +363,9 @@ class BaseContentOperations[TModel](ABC):
         await self.session.commit()
         await self.session.refresh(content)
 
-        # Re-index
+        # Re-index (HTTP call to Meilisearch, no DB commit needed)
         group_ids = await self._get_content_group_ids(content_id)
         await self._index_for_search(content, group_ids)
-        await self.session.commit()
 
         return content
 
@@ -410,9 +409,8 @@ class BaseContentOperations[TModel](ABC):
 
         await self.session.commit()
 
-        # Remove from search index
+        # Remove from search index (HTTP call to Meilisearch, no DB commit needed)
         await self.search_indexer.remove(build_content_urn(self.content_type, content_id))
-        await self.session.commit()
 
     async def _require_access(
         self,
@@ -476,9 +474,18 @@ class BaseContentOperations[TModel](ABC):
         self,
         model: TModel,
         group_ids: list[UUID],
+        skip_shared_users: bool = False,
     ) -> None:
-        """Index content for unified search."""
-        shared_user_ids = await self._get_shared_user_ids(model.id)
+        """Index content for unified search.
+
+        Parameters
+        ----------
+        skip_shared_users : bool
+            If True, skip the shared_user_ids query (e.g., on create when
+            no permissions exist yet). Saves one DB round-trip.
+
+        """
+        shared_user_ids = [] if skip_shared_users else await self._get_shared_user_ids(model.id)
         await self.search_indexer.index(
             urn=build_content_urn(self.content_type, model.id),
             organization_id=model.organization_id,

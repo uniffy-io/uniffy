@@ -9,6 +9,7 @@ export const UrnType = {
   NOTE: 'note',
   FILE: 'file',
   CHAT: 'chat',
+  CHAT_MESSAGE: 'chat_message',
   USER: 'user',
   CALENDAR_EVENT: 'calendar_event',
   PROJECT: 'project',

@@ -2745,6 +2745,7 @@ src/ui/src/features/chat/
 - Live content previews in mention chips - see `docs/specs/live-mentions-spec.md`
 - Channel resource panel (auto-populated from message URN references)
 - Smart quick actions from messages (create task, event, note, reminder from any message)
+- Channel categories (admin-configurable sidebar sections for organizing channels)
 
 ### Post-MVP (v2)
 
@@ -2857,7 +2858,251 @@ src/ui/src/features/chat/
 
 ---
 
-## 21. Future Considerations
+## 21. New DM / Group DM Modal
+
+### 21.1 Overview
+
+The sidebar "+" button next to "Direct Messages" opens a modal for starting a new direct message or group DM conversation.
+
+### 21.2 Modal Design
+
+```
++------------------------------------------+
+| New Message                         [X]  |
++------------------------------------------+
+| To: [SubjectPicker - search members]     |
+|     [SubjectChip: Jane] [SubjectChip: .] |
++------------------------------------------+
+| (shows when 3+ people selected)          |
+| Group name (optional):                   |
+| [                                     ]  |
++------------------------------------------+
+|                    [Cancel]  [Start Chat] |
++------------------------------------------+
+```
+
+### 21.3 Behavior
+
+- **SubjectPicker**: searches org members, supports multi-select
+- **1 user selected**: creates a DIRECT channel (or navigates to existing DM)
+- **2-8 users selected**: creates a GROUP_DM channel
+- **8+ users selected**: show inline warning "Group DMs support up to 8 participants. Create a channel instead." with a "Create Channel" link
+- **Group name**: optional field, appears when 3+ participants are selected. If empty, auto-generates name from participant display names (e.g., "Jane, John, and Alex")
+- **Deduplication**: if a DM already exists between the same participants, navigate to it instead of creating a duplicate
+- **Modal styling**: standard Uniffy modal (`bg-card rounded-xl shadow-2xl border border-border`), `w-[calc(100vw-2rem)] max-w-md`
+
+### 21.4 Frontend Component
+
+```
+src/ui/src/features/chat/components/modals/NewDirectMessageModal.tsx
+```
+
+---
+
+## 22. Browse Channels View
+
+### 22.1 Overview
+
+A view for discovering and joining PUBLIC channels the user is not yet a member of. Accessible from the sidebar via a "Browse Channels" link below the Channels section.
+
+### 22.2 UI Design
+
+```
++-----------------------------------------------------------------------+
+| Browse Channels                                          [X close]    |
++-----------------------------------------------------------------------+
+| [MagnifyingGlass] Search channels...                                  |
++-----------------------------------------------------------------------+
+| # general           The main communication channel      12 members    |
+|                                                         [Joined]      |
+| # engineering        Engineering team discussions        8 members    |
+|                                                         [Joined]      |
+| # design             Design system and UI work           5 members    |
+|                                                         [Join]        |
+| # announcements      Company-wide announcements          45 members   |
+|                                                         [Join]        |
++-----------------------------------------------------------------------+
+```
+
+### 22.3 Behavior
+
+- Lists all PUBLIC channels in the organization
+- Search filters by channel name and description
+- Shows: hash icon, channel name, description (truncated), member count
+- "Joined" badge (muted) for channels the user is already a member of
+- "Join" button (primary) for channels the user can join
+- Clicking a joined channel navigates to it
+- Clicking "Join" sends a JoinChannel request, then navigates to the channel
+- Sorted by member count DESC (most popular first)
+
+### 22.4 Responsive
+
+- Desktop/tablet: renders as the main content area (replaces channel view)
+- Mobile: full-screen view
+
+### 22.5 Frontend Component
+
+```
+src/ui/src/features/chat/components/sidebar/BrowseChannelsView.tsx
+```
+
+---
+
+## 23. Emoji Picker
+
+### 23.1 Overview
+
+The emoji picker is used in three contexts: compose box toolbar, reaction add button on messages, and hover actions toolbar. It uses the `emoji-mart` library for a production-grade picker with search, categories, skin tones, and frequently used tracking.
+
+### 23.2 Integration Points
+
+| Trigger | Context | Behavior |
+|---------|---------|----------|
+| Compose toolbar `Smiley` button | Message composition | Inserts emoji at cursor position in textarea |
+| Hover toolbar `Smiley` button | Add reaction to message | Calls `addReaction(messageId, emoji)` |
+| Reaction bar `[+]` button | Add reaction to message | Same as hover toolbar |
+
+### 23.3 Rendering
+
+- Rendered as a `Popover` anchored to the trigger button
+- Uses `emoji-mart` `Picker` component with theme-aware styling
+- Light/dark theme via `theme` prop synced with Uniffy's `resolvedTheme`
+- Custom CSS to match Uniffy's `bg-card`, `border-border`, `text-foreground` tokens
+- `perLine={8}`, `maxFrequentRows={2}`
+
+### 23.4 Frontend Component
+
+```
+src/ui/src/features/chat/components/compose/EmojiPicker.tsx
+```
+
+Wraps `emoji-mart` Picker in a Popover with theme integration.
+
+---
+
+## 24. Channel Categories
+
+### 24.1 Overview
+
+Channel categories are admin-configurable sections in the chat sidebar that organize channels into logical groups. Think Slack's sidebar sections or Discord's channel categories. Categories provide visual hierarchy and let teams organize channels by project, department, topic, or any custom grouping.
+
+### 24.2 Data Model
+
+#### ChatChannelCategory
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | Org scope |
+| `name` | string | Display name (e.g., "Engineering", "Marketing", "Project Alpha") |
+| `position` | int | Sort order within the sidebar (lower = higher) |
+| `is_collapsed` | bool | Default collapsed state (user-overridable) |
+| `created_by` | UUID | FK to User (admin who created it) |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
+
+**Channel-to-category mapping:** Add `category_id` (nullable UUID, FK to ChatChannelCategory) to the `ChatChannel` model. Channels with `category_id = NULL` appear in an "Uncategorized" section at the bottom (or at the top if no categories exist - behaves like today's flat list).
+
+**User-level collapse state:** Add `collapsed_categories` (string[], list of category IDs) to `ChatChannelMember` or `SettingsProfile` JSONB. Each user can independently collapse/expand categories without affecting others.
+
+### 24.3 Permission Model
+
+| Action | Who can do it |
+|--------|---------------|
+| Create category | Org admin, org owner |
+| Rename category | Org admin, org owner |
+| Delete category | Org admin, org owner (channels move to uncategorized) |
+| Reorder categories | Org admin, org owner |
+| Move channel to category | Channel admin, channel owner, org admin |
+| Collapse/expand category | Any member (per-user preference) |
+
+### 24.4 UI Design
+
+**Sidebar structure with categories:**
+
+```
++----------------------------------+
+| [compose] [gear]    [collapse]   |
++----------------------------------+
+| Search channels...               |
++----------------------------------+
+| Threads                    [3]   |
++----------------------------------+
+| v Engineering              [+]   |  <- Category header (collapsible)
+|   # backend                      |
+|   # frontend                     |
+|   # infrastructure          [2]  |
++----------------------------------+
+| v Design                   [+]   |  <- Category header
+|   # design-system                |
+|   # brand                        |
++----------------------------------+
+| v General                  [+]   |  <- Category header
+|   # general                 [1]  |
+|   # random                       |
++----------------------------------+
+| v Uncategorized            [+]   |  <- Auto-generated for uncategorized channels
+|   # secret-project               |
++----------------------------------+
+| v Direct Messages          [+]   |
+|   [ava] Sarah Miller        [1]  |
+|   [ava] James Wilson             |
++----------------------------------+
+```
+
+**Category header styling:**
+- Container: `flex items-center justify-between w-full px-3 py-1.5 group cursor-pointer`
+- Collapse chevron: `CaretDown` / `CaretRight` size 10, `text-muted-foreground`
+- Name: `text-xs uppercase font-medium tracking-wider text-muted-foreground`
+- "+" button: `opacity-0 group-hover:opacity-100` for adding channels or creating new channel in category
+- Drag handle: `GripVertical` icon, `opacity-0 group-hover:opacity-100`, for reordering (admin only)
+
+**Category management:**
+- Right-click category header (or "..." button on hover) opens context menu:
+  - Rename category
+  - Delete category (confirmation: "Channels will be moved to Uncategorized")
+  - Move up / Move down
+- "Create Category" button at the bottom of the channels list (admin only)
+- Drag-and-drop channels between categories (admin/channel owner)
+- Drag-and-drop to reorder categories (admin)
+
+**Collapse behavior:**
+- Click category header to toggle collapse
+- Collapsed state saved per-user
+- When collapsed, channels inside are hidden but unread badges still bubble up to the category header
+- Category header shows aggregate unread count when collapsed: sum of unread counts from all channels inside
+
+### 24.5 Backend
+
+**Proto updates:**
+```
+rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse)
+rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse)
+rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse)
+rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse)
+rpc ReorderCategories(ReorderCategoriesRequest) returns (ReorderCategoriesResponse)
+rpc MoveChannelToCategory(MoveChannelToCategoryRequest) returns (MoveChannelToCategoryResponse)
+```
+
+**Migration:** Add `category_id` column to `chat_channels`, create `chat_channel_categories` table.
+
+### 24.6 Frontend Components
+
+```
+src/ui/src/features/chat/components/sidebar/
+|-- CategorySection.tsx           # Collapsible category with channel list
+|-- CategoryHeader.tsx            # Category header with name, chevron, actions
+|-- CategoryContextMenu.tsx       # Right-click menu for rename/delete/reorder
+|-- CreateCategoryModal.tsx       # Modal for creating a new category
+```
+
+### 24.7 DMs and Categories
+
+Direct Messages are **never** placed in categories. They always appear in their own "Direct Messages" section at the bottom of the sidebar. Categories only apply to PUBLIC and PRIVATE channels.
+
+---
+
+## 25. Future Considerations
 
 Items explicitly identified during design that are out of scope but should inform architectural decisions:
 

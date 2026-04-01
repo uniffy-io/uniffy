@@ -6,7 +6,12 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.common.v1.common_pb2 import MemberInfo, OrganizationInfo, PaginationResponse
+from uniffy_proto.common.v1.common_pb2 import (
+    DomainAdminInfo,
+    MemberInfo,
+    OrganizationInfo,
+    PaginationResponse,
+)
 from uniffy_proto.organizations.v1.organizations_pb2 import (
     AddMemberRequest,
     ContentTypeDefaults,
@@ -16,6 +21,11 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     GetOrganizationOverviewRequest,
     GetOrganizationRequest,
     GetPermissionDefaultsRequest,
+    GetUserDomainAdminsRequest,
+    GetUserDomainAdminsResponse,
+    GrantDomainAdminRequest,
+    ListDomainAdminsRequest,
+    ListDomainAdminsResponse,
     ListMembersRequest,
     ListMembersResponse,
     ListMyOrganizationsRequest,
@@ -27,6 +37,8 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     PermissionDefaultsResponse,
     RemoveMemberRequest,
     RemoveMemberResponse,
+    RevokeDomainAdminRequest,
+    RevokeDomainAdminResponse,
     UpdateMemberRoleRequest,
     UpdateOrganizationRequest,
     UpdatePermissionDefaultsRequest,
@@ -34,6 +46,9 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
 
 from uniffy.core.converters import (
     content_type_from_proto,
+    domain_admin_info_to_proto,
+    domain_type_from_proto,
+    domain_type_to_proto,
     member_info_to_proto,
     org_info_to_proto,
     org_role_from_proto,
@@ -50,7 +65,6 @@ from uniffy.domains.organizations.converters import (
     permission_defaults_to_proto,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.users.operations import UserOperations
 
 
 class OrganizationsHandlers:
@@ -97,7 +111,9 @@ class OrganizationsHandlers:
 
         try:
             async for session in get_async_session():
-                user_ops = UserOperations(session)
+                from uniffy.domains.users.operations import UserOperations as _UserOps
+
+                user_ops = _UserOps(session)
                 await user_ops.require_system_admin(user_id)
 
                 ops = OrganizationOperations(session)
@@ -154,7 +170,9 @@ class OrganizationsHandlers:
                 ops = OrganizationOperations(session)
 
                 # Verify user has access (is member or system admin)
-                user_ops = UserOperations(session)
+                from uniffy.domains.users.operations import UserOperations as _UserOps
+
+                user_ops = _UserOps(session)
                 user = await user_ops.get_by_id(user_id)
                 if not user.is_system_admin:
                     membership = await ops.get_membership(user_id, org_id)
@@ -190,7 +208,9 @@ class OrganizationsHandlers:
 
         try:
             async for session in get_async_session():
-                user_ops = UserOperations(session)
+                from uniffy.domains.users.operations import UserOperations as _UserOps
+
+                user_ops = _UserOps(session)
                 await user_ops.require_system_admin(user_id)
 
                 ops = OrganizationOperations(session)
@@ -238,7 +258,9 @@ class OrganizationsHandlers:
                 ops = OrganizationOperations(session)
 
                 # Verify user is org admin or system admin
-                user_ops = UserOperations(session)
+                from uniffy.domains.users.operations import UserOperations as _UserOps
+
+                user_ops = _UserOps(session)
                 user = await user_ops.get_by_id(user_id)
                 if not user.is_system_admin:
                     await ops.require_org_admin(user_id, org_id)
@@ -274,7 +296,9 @@ class OrganizationsHandlers:
 
         try:
             async for session in get_async_session():
-                user_ops = UserOperations(session)
+                from uniffy.domains.users.operations import UserOperations as _UserOps
+
+                user_ops = _UserOps(session)
                 await user_ops.require_system_admin(user_id)
 
                 ops = OrganizationOperations(session)
@@ -415,7 +439,9 @@ class OrganizationsHandlers:
                     role = OrganizationRole.MEMBER
 
                 # Get target user
-                user_ops = UserOperations(session)
+                from uniffy.domains.users.operations import UserOperations as _UserOps
+
+                user_ops = _UserOps(session)
                 target_user = await user_ops.get_by_id(target_user_id)
 
                 membership = await ops.add_member(target_user_id, org_id, role)
@@ -585,4 +611,172 @@ class OrganizationsHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.error(f"Error updating permission defaults: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    # ─────────────────────────────────────────────────────────────
+    # Domain Admin Management (Org Admin)
+    # ─────────────────────────────────────────────────────────────
+
+    async def grant_domain_admin(
+        self,
+        request: GrantDomainAdminRequest,
+        ctx: RequestContext,
+    ) -> DomainAdminInfo:
+        """Grant domain admin to a user (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+            target_user_id = UUID(request.user_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
+
+        domain = domain_type_from_proto(request.domain)
+        if domain is None:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid domain")
+
+        try:
+            async for session in get_async_session():
+                ops = OrganizationOperations(session)
+                da, target_user = await ops.grant_domain_admin(
+                    admin_user_id=user_id,
+                    org_id=org_id,
+                    target_user_id=target_user_id,
+                    domain=domain,
+                )
+                return domain_admin_info_to_proto(da, target_user)
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error granting domain admin: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def revoke_domain_admin(
+        self,
+        request: RevokeDomainAdminRequest,
+        ctx: RequestContext,
+    ) -> RevokeDomainAdminResponse:
+        """Revoke domain admin from a user (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+            target_user_id = UUID(request.user_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
+
+        domain = domain_type_from_proto(request.domain)
+        if domain is None:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid domain")
+
+        try:
+            async for session in get_async_session():
+                ops = OrganizationOperations(session)
+                await ops.revoke_domain_admin(
+                    admin_user_id=user_id,
+                    org_id=org_id,
+                    target_user_id=target_user_id,
+                    domain=domain,
+                )
+                return RevokeDomainAdminResponse(success=True)
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error revoking domain admin: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def list_domain_admins(
+        self,
+        request: ListDomainAdminsRequest,
+        ctx: RequestContext,
+    ) -> ListDomainAdminsResponse:
+        """List domain admins for the organization (org admin only)."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        try:
+            async for session in get_async_session():
+                ops = OrganizationOperations(session)
+                await ops.require_org_admin(user_id, org_id)
+
+                domain_filter = None
+                if request.HasField("domain_filter"):
+                    domain_filter = domain_type_from_proto(request.domain_filter)
+
+                page = 1
+                page_size = 50
+                if request.HasField("pagination"):
+                    page = request.pagination.page if request.pagination.page > 0 else 1
+                    page_size = (
+                        request.pagination.page_size if request.pagination.page_size > 0 else 50
+                    )
+
+                items, total = await ops.list_domain_admins(
+                    org_id=org_id,
+                    domain_filter=domain_filter,
+                    page=page,
+                    page_size=page_size,
+                )
+
+                total_pages = (total + page_size - 1) // page_size
+
+                return ListDomainAdminsResponse(
+                    domain_admins=[
+                        domain_admin_info_to_proto(da, user) for da, user in items
+                    ],
+                    pagination=PaginationResponse(
+                        page=page,
+                        page_size=page_size,
+                        total_count=total,
+                        total_pages=total_pages,
+                    ),
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except Exception as e:
+            logger.error(f"Error listing domain admins: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_user_domain_admins(
+        self,
+        request: GetUserDomainAdminsRequest,
+        ctx: RequestContext,
+    ) -> GetUserDomainAdminsResponse:
+        """Get domains where a user is domain admin."""
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            org_id = UUID(request.organization_id)
+            target_user_id = UUID(request.user_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
+
+        try:
+            async for session in get_async_session():
+                ops = OrganizationOperations(session)
+
+                # Any org member can check their own; org admin can check anyone
+                if user_id != target_user_id:
+                    await ops.require_org_admin(user_id, org_id)
+                else:
+                    await ops.require_org_member(user_id, org_id)
+
+                domains = await ops.get_user_domain_admins(org_id, target_user_id)
+                return GetUserDomainAdminsResponse(
+                    domains=[domain_type_to_proto(d) for d in domains],
+                )
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except Exception as e:
+            logger.error(f"Error getting user domain admins: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")

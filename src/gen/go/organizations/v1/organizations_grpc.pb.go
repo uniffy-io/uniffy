@@ -33,6 +33,10 @@ const (
 	OrganizationsService_RemoveMember_FullMethodName             = "/organizations.v1.OrganizationsService/RemoveMember"
 	OrganizationsService_GetPermissionDefaults_FullMethodName    = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
 	OrganizationsService_UpdatePermissionDefaults_FullMethodName = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
+	OrganizationsService_GrantDomainAdmin_FullMethodName         = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
+	OrganizationsService_RevokeDomainAdmin_FullMethodName        = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
+	OrganizationsService_ListDomainAdmins_FullMethodName         = "/organizations.v1.OrganizationsService/ListDomainAdmins"
+	OrganizationsService_GetUserDomainAdmins_FullMethodName      = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
 )
 
 // OrganizationsServiceClient is the client API for OrganizationsService service.
@@ -57,6 +61,11 @@ type OrganizationsServiceClient interface {
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(ctx context.Context, in *GetPermissionDefaultsRequest, opts ...grpc.CallOption) (*PermissionDefaultsResponse, error)
 	UpdatePermissionDefaults(ctx context.Context, in *UpdatePermissionDefaultsRequest, opts ...grpc.CallOption) (*ContentTypeDefaults, error)
+	// Domain Admin management (Org Admin)
+	GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*v1.DomainAdminInfo, error)
+	RevokeDomainAdmin(ctx context.Context, in *RevokeDomainAdminRequest, opts ...grpc.CallOption) (*RevokeDomainAdminResponse, error)
+	ListDomainAdmins(ctx context.Context, in *ListDomainAdminsRequest, opts ...grpc.CallOption) (*ListDomainAdminsResponse, error)
+	GetUserDomainAdmins(ctx context.Context, in *GetUserDomainAdminsRequest, opts ...grpc.CallOption) (*GetUserDomainAdminsResponse, error)
 }
 
 type organizationsServiceClient struct {
@@ -197,6 +206,46 @@ func (c *organizationsServiceClient) UpdatePermissionDefaults(ctx context.Contex
 	return out, nil
 }
 
+func (c *organizationsServiceClient) GrantDomainAdmin(ctx context.Context, in *GrantDomainAdminRequest, opts ...grpc.CallOption) (*v1.DomainAdminInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DomainAdminInfo)
+	err := c.cc.Invoke(ctx, OrganizationsService_GrantDomainAdmin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) RevokeDomainAdmin(ctx context.Context, in *RevokeDomainAdminRequest, opts ...grpc.CallOption) (*RevokeDomainAdminResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeDomainAdminResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_RevokeDomainAdmin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) ListDomainAdmins(ctx context.Context, in *ListDomainAdminsRequest, opts ...grpc.CallOption) (*ListDomainAdminsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDomainAdminsResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_ListDomainAdmins_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) GetUserDomainAdmins(ctx context.Context, in *GetUserDomainAdminsRequest, opts ...grpc.CallOption) (*GetUserDomainAdminsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserDomainAdminsResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_GetUserDomainAdmins_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrganizationsServiceServer is the server API for OrganizationsService service.
 // All implementations must embed UnimplementedOrganizationsServiceServer
 // for forward compatibility.
@@ -219,6 +268,11 @@ type OrganizationsServiceServer interface {
 	// Permission defaults (Org Admin)
 	GetPermissionDefaults(context.Context, *GetPermissionDefaultsRequest) (*PermissionDefaultsResponse, error)
 	UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*ContentTypeDefaults, error)
+	// Domain Admin management (Org Admin)
+	GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*v1.DomainAdminInfo, error)
+	RevokeDomainAdmin(context.Context, *RevokeDomainAdminRequest) (*RevokeDomainAdminResponse, error)
+	ListDomainAdmins(context.Context, *ListDomainAdminsRequest) (*ListDomainAdminsResponse, error)
+	GetUserDomainAdmins(context.Context, *GetUserDomainAdminsRequest) (*GetUserDomainAdminsResponse, error)
 	mustEmbedUnimplementedOrganizationsServiceServer()
 }
 
@@ -267,6 +321,18 @@ func (UnimplementedOrganizationsServiceServer) GetPermissionDefaults(context.Con
 }
 func (UnimplementedOrganizationsServiceServer) UpdatePermissionDefaults(context.Context, *UpdatePermissionDefaultsRequest) (*ContentTypeDefaults, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdatePermissionDefaults not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) GrantDomainAdmin(context.Context, *GrantDomainAdminRequest) (*v1.DomainAdminInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantDomainAdmin not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) RevokeDomainAdmin(context.Context, *RevokeDomainAdminRequest) (*RevokeDomainAdminResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeDomainAdmin not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) ListDomainAdmins(context.Context, *ListDomainAdminsRequest) (*ListDomainAdminsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDomainAdmins not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) GetUserDomainAdmins(context.Context, *GetUserDomainAdminsRequest) (*GetUserDomainAdminsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserDomainAdmins not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) mustEmbedUnimplementedOrganizationsServiceServer() {}
 func (UnimplementedOrganizationsServiceServer) testEmbeddedByValue()                              {}
@@ -523,6 +589,78 @@ func _OrganizationsService_UpdatePermissionDefaults_Handler(srv interface{}, ctx
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrganizationsService_GrantDomainAdmin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantDomainAdminRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).GrantDomainAdmin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_GrantDomainAdmin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).GrantDomainAdmin(ctx, req.(*GrantDomainAdminRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_RevokeDomainAdmin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeDomainAdminRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).RevokeDomainAdmin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_RevokeDomainAdmin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).RevokeDomainAdmin(ctx, req.(*RevokeDomainAdminRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_ListDomainAdmins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDomainAdminsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).ListDomainAdmins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_ListDomainAdmins_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).ListDomainAdmins(ctx, req.(*ListDomainAdminsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_GetUserDomainAdmins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserDomainAdminsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).GetUserDomainAdmins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_GetUserDomainAdmins_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).GetUserDomainAdmins(ctx, req.(*GetUserDomainAdminsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrganizationsService_ServiceDesc is the grpc.ServiceDesc for OrganizationsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -581,6 +719,22 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePermissionDefaults",
 			Handler:    _OrganizationsService_UpdatePermissionDefaults_Handler,
+		},
+		{
+			MethodName: "GrantDomainAdmin",
+			Handler:    _OrganizationsService_GrantDomainAdmin_Handler,
+		},
+		{
+			MethodName: "RevokeDomainAdmin",
+			Handler:    _OrganizationsService_RevokeDomainAdmin_Handler,
+		},
+		{
+			MethodName: "ListDomainAdmins",
+			Handler:    _OrganizationsService_ListDomainAdmins_Handler,
+		},
+		{
+			MethodName: "GetUserDomainAdmins",
+			Handler:    _OrganizationsService_GetUserDomainAdmins_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

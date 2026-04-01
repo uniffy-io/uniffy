@@ -1,0 +1,1 @@
+"""Chat threads sub-domain."""

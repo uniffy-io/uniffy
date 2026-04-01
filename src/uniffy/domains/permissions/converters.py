@@ -32,6 +32,7 @@ DOMAIN_CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType] = {
     DomainContentType.AGENT: ProtoContentType.CONTENT_TYPE_AGENT,
     DomainContentType.PROVIDER_KEY: ProtoContentType.CONTENT_TYPE_PROVIDER_KEY,
     DomainContentType.PROMPT: ProtoContentType.CONTENT_TYPE_PROMPT,
+    DomainContentType.CHAT: ProtoContentType.CONTENT_TYPE_CHAT,
     DomainContentType.ROOM: ProtoContentType.CONTENT_TYPE_ROOM,
 }
 

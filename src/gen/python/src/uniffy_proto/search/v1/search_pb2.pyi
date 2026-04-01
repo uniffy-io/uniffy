@@ -20,6 +20,7 @@ class SearchResultType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEARCH_RESULT_TYPE_TASK: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_AGENT: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_PROMPT: _ClassVar[SearchResultType]
+    SEARCH_RESULT_TYPE_CHAT_MESSAGE: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_ROOM: _ClassVar[SearchResultType]
 SEARCH_RESULT_TYPE_UNSPECIFIED: SearchResultType
 SEARCH_RESULT_TYPE_NOTE: SearchResultType
@@ -31,6 +32,7 @@ SEARCH_RESULT_TYPE_PROJECT: SearchResultType
 SEARCH_RESULT_TYPE_TASK: SearchResultType
 SEARCH_RESULT_TYPE_AGENT: SearchResultType
 SEARCH_RESULT_TYPE_PROMPT: SearchResultType
+SEARCH_RESULT_TYPE_CHAT_MESSAGE: SearchResultType
 SEARCH_RESULT_TYPE_ROOM: SearchResultType
 
 class SearchRequest(_message.Message):

@@ -16,6 +16,24 @@ from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
+from uniffy.core.models.chat import (
+    ChannelRole,
+    ChatChannel,
+    ChatChannelCategory,
+    ChatChannelMember,
+    ChatChannelResource,
+    ChatChannelStats,
+    ChatMessage,
+    ChatNotificationLevel,
+    ChatReaction,
+    ChatReadCursor,
+    ChatThread,
+    ChatThreadFollow,
+    ChatThreadParticipant,
+    ChatThreadReadCursor,
+    ChatThreadStats,
+    SenderType,
+)
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.files.file import ExtractionStatus, File
@@ -35,6 +53,7 @@ from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.permissions.content_group_link import ContentGroupLink
 from uniffy.core.models.permissions.content_permission import ContentPermission
+from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
@@ -48,6 +67,7 @@ from uniffy.core.models.shared import (
     CalendarType,
     ContentType,
     DayOfWeek,
+    DomainType,
     NotificationType,
     PermissionLevel,
     RecurrencePattern,
@@ -115,7 +135,9 @@ __all__ = [
     # Permission models
     "ContentGroupLink",
     "ContentPermission",
+    "DomainAdmin",
     "OrganizationPermissionDefaults",
+    "DomainType",
     "VisibilityScope",
     "ContentType",
     "PermissionLevel",
@@ -128,4 +150,21 @@ __all__ = [
     "ResourceType",
     "SettingsProfile",
     "EventTemplate",
+    # Chat models
+    "ChatChannel",
+    "ChatChannelCategory",
+    "ChatChannelMember",
+    "ChatChannelResource",
+    "ChatChannelStats",
+    "ChatMessage",
+    "ChatReaction",
+    "ChatReadCursor",
+    "ChatThread",
+    "ChatThreadFollow",
+    "ChatThreadParticipant",
+    "ChatThreadReadCursor",
+    "ChatThreadStats",
+    "ChannelRole",
+    "ChatNotificationLevel",
+    "SenderType",
 ]

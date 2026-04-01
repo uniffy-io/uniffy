@@ -70,6 +70,16 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "canvas.zoomOut": "Ctrl+-",
     "canvas.undo": "Ctrl+Z",
     "canvas.redo": "Ctrl+Shift+Z",
+    # Chat actions
+    "chat.newMessage": "N",
+    "chat.search": "Ctrl+F",
+    "chat.prevChannel": "Alt+ArrowUp",
+    "chat.nextChannel": "Alt+ArrowDown",
+    "chat.toggleThread": "T",
+    "chat.markRead": "Escape",
+    "chat.editLast": "ArrowUp",
+    "chat.replyThread": "R",
+    "chat.emojiPicker": "Ctrl+Shift+E",
 }
 
 
@@ -116,6 +126,12 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[str, dict[str, bool]] = {
     "COMMENT_REPLY": {"in_app": True, "browser": True, "email": True},
     "COMMENT_MENTIONED": {"in_app": True, "browser": True, "email": True},
     "COMMENT_RESOLVED": {"in_app": True, "browser": False, "email": False},
+    # Chat notifications
+    "CHAT_MENTION": {"in_app": True, "browser": True, "email": False},
+    "CHAT_DM": {"in_app": True, "browser": True, "email": False},
+    "CHAT_CHANNEL_INVITE": {"in_app": True, "browser": False, "email": False},
+    "CHAT_CHANNEL_REMOVED": {"in_app": True, "browser": False, "email": False},
+    "CHAT_THREAD_REPLY": {"in_app": True, "browser": False, "email": False},
 }
 
 

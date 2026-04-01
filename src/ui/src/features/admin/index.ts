@@ -25,6 +25,8 @@ export {
     getVisibilityScopeLabel,
     getOrgRoleLabel,
     isOrgAdmin,
+    useDomainAdmins,
+    getDomainTypeLabel,
 } from '@/features/admin/hooks/useAdminHooks';
 
 // Store - Slice & Actions
@@ -37,6 +39,7 @@ export {
     serializeGroupInfo,
     serializeGroupMemberInfo,
     serializeOrgOverview,
+    serializeDomainAdminInfo,
 } from '@/features/admin/store/adminSlice';
 export type {
     AdminState,
@@ -45,6 +48,7 @@ export type {
     SerializedGroupInfo,
     SerializedGroupMemberInfo,
     SerializedOrgOverview,
+    SerializedDomainAdminInfo,
 } from '@/features/admin/store/adminSlice';
 
 // Store - Thunks
@@ -62,4 +66,7 @@ export {
     fetchGroupMembers,
     addGroupMember,
     removeGroupMember,
+    fetchDomainAdmins,
+    grantDomainAdmin,
+    revokeDomainAdmin,
 } from '@/features/admin/store/adminThunks';

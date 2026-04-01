@@ -56,6 +56,18 @@ class OrganizationsService(Protocol):
     async def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def revoke_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_domain_admins(self, request: organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_user_domain_admins(self, request: organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsService]):
     def __init__(self, service: OrganizationsService | AsyncGenerator[OrganizationsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -191,6 +203,46 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_permission_defaults,
+                ),
+                "/organizations.v1.OrganizationsService/GrantDomainAdmin": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GrantDomainAdmin",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
+                        output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.grant_domain_admin,
+                ),
+                "/organizations.v1.OrganizationsService/RevokeDomainAdmin": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RevokeDomainAdmin",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.revoke_domain_admin,
+                ),
+                "/organizations.v1.OrganizationsService/ListDomainAdmins": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListDomainAdmins",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_domain_admins,
+                ),
+                "/organizations.v1.OrganizationsService/GetUserDomainAdmins": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetUserDomainAdmins",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_user_domain_admins,
                 ),
             },
             interceptors=interceptors,
@@ -464,6 +516,86 @@ class OrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def grant_domain_admin(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantDomainAdmin",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
+                output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def revoke_domain_admin(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeDomainAdmin",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_domain_admins(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListDomainAdmins",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_user_domain_admins(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetUserDomainAdmins",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class OrganizationsServiceSync(Protocol):
     def list_my_organizations(self, request: organizations_dot_v1_dot_organizations__pb2.ListMyOrganizationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListMyOrganizationsResponse:
@@ -491,6 +623,14 @@ class OrganizationsServiceSync(Protocol):
     def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.PermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def revoke_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_domain_admins(self, request: organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_user_domain_admins(self, request: organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -627,6 +767,46 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_permission_defaults,
+                ),
+                "/organizations.v1.OrganizationsService/GrantDomainAdmin": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GrantDomainAdmin",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
+                        output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.grant_domain_admin,
+                ),
+                "/organizations.v1.OrganizationsService/RevokeDomainAdmin": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RevokeDomainAdmin",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.revoke_domain_admin,
+                ),
+                "/organizations.v1.OrganizationsService/ListDomainAdmins": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListDomainAdmins",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_domain_admins,
+                ),
+                "/organizations.v1.OrganizationsService/GetUserDomainAdmins": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetUserDomainAdmins",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest,
+                        output=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_user_domain_admins,
                 ),
             },
             interceptors=interceptors,
@@ -894,6 +1074,86 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest,
                 output=organizations_dot_v1_dot_organizations__pb2.ContentTypeDefaults,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def grant_domain_admin(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> common_dot_v1_dot_common__pb2.DomainAdminInfo:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantDomainAdmin",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
+                output=common_dot_v1_dot_common__pb2.DomainAdminInfo,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def revoke_domain_admin(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeDomainAdmin",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.RevokeDomainAdminResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_domain_admins(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListDomainAdmins",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.ListDomainAdminsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_user_domain_admins(
+        self,
+        request: organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetUserDomainAdmins",
+                service_name="organizations.v1.OrganizationsService",
+                input=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsRequest,
+                output=organizations_dot_v1_dot_organizations__pb2.GetUserDomainAdminsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

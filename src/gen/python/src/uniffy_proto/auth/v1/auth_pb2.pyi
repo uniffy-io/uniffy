@@ -1,3 +1,4 @@
+from common.v1 import common_pb2 as _common_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -63,7 +64,7 @@ class RevokeOtherSessionsRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class AuthResponse(_message.Message):
-    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id")
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -71,6 +72,7 @@ class AuthResponse(_message.Message):
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
     access_token: str
     refresh_token: str
     token_type: str
@@ -78,7 +80,8 @@ class AuthResponse(_message.Message):
     organization_id: str
     organization_role: str
     session_id: str
-    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ...) -> None: ...
+    domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
+    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
 
 class CurrentUserResponse(_message.Message):
     __slots__ = ("id", "email", "username", "full_name", "is_active", "is_system_admin", "email_verified", "accent_color", "font_family", "avatar_url")

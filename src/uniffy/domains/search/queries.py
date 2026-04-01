@@ -156,9 +156,14 @@ async def execute_search(
 async def get_documents_by_urns(
     urns: list[str],
     organization_id: UUID,
+    user_id: UUID | None = None,
+    user_group_ids: list[UUID] | None = None,
 ) -> dict[str, SearchResult]:
     """
-    Fetch documents by URNs from Meilisearch.
+    Fetch documents by URNs from Meilisearch with optional permission filtering.
+
+    When user_id is provided, uses Meilisearch search with permission filters
+    instead of raw get_documents, so only accessible documents are returned.
 
     Parameters
     ----------
@@ -166,17 +171,52 @@ async def get_documents_by_urns(
         List of URNs to fetch.
     organization_id : UUID
         Organization ID.
+    user_id : UUID | None
+        If provided, filter results by this user's permissions.
+    user_group_ids : list[UUID] | None
+        Groups the user belongs to (for GROUP visibility).
 
     Returns
     -------
     dict[str, SearchResult]
-        Mapping of URN to SearchResult.
+        Mapping of URN to SearchResult (only accessible items).
 
     """
     if not urns:
         return {}
 
     client = get_meilisearch_client()
-    docs = await client.get_documents_by_urns(urns, organization_id)
 
+    if user_id is not None:
+        # Use get_documents with permission filtering + URN filter
+        # Chunk URNs to avoid filter expression limits (max ~50 per query)
+        all_results: dict[str, SearchResult] = {}
+        chunk_size = 50
+        perm_filter = client._build_permission_filter(
+            organization_id=organization_id,
+            user_id=user_id,
+            user_group_ids=user_group_ids,
+        )
+        index = client.client.index(client.config.index_name)
+
+        for i in range(0, len(urns), chunk_size):
+            chunk = urns[i : i + chunk_size]
+            urn_filter = " OR ".join(f'urn = "{urn}"' for urn in chunk)
+            combined_filter = f"({urn_filter}) AND ({perm_filter})"
+
+            try:
+                docs = await index.get_documents(
+                    filter=combined_filter,
+                    limit=len(chunk),
+                )
+                for doc in docs.results:
+                    if "urn" in doc:
+                        all_results[doc["urn"]] = SearchResult.from_meilisearch_hit(doc)
+            except Exception:
+                pass
+
+        return all_results
+
+    # No permission filtering - raw fetch
+    docs = await client.get_documents_by_urns(urns, organization_id)
     return {urn: SearchResult.from_meilisearch_hit(doc) for urn, doc in docs.items()}

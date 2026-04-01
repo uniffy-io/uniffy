@@ -219,12 +219,87 @@ JWT-based authentication with access/refresh token pattern. Users authenticate g
 
 ## Permission System
 
-Three-layer system:
+Three-layer system for content permissions:
 1. **VisibilityScope**: PRIVATE, GROUP, ORGANIZATION
 2. **ContentGroupLink**: Links content to groups
 3. **ContentPermission**: Fine-grained grants (VIEW, EDIT, ADMIN, OWNER)
 
 Use `PermissionChecker` or `BaseContentOperations` (handles it automatically).
+
+Some domains (e.g., chat) override the 3-layer system with membership-based access. In these cases the domain implements its own access checker (e.g., `ChatAccessChecker`) while still respecting org-level and domain-level admin overrides.
+
+## Domain Admin System
+
+The domain admin system provides per-domain elevated access without granting full org admin. A user can be a regular org member but an admin for one or more specific domains.
+
+**Model: `DomainAdmin`** (shared table, used by all domains):
+
+```python
+class DomainAdmin(SQLModel, table=True):
+    __tablename__ = "domain_admins"
+
+    id: UUID
+    organization_id: UUID       # FK -> organizations
+    user_id: UUID               # FK -> users
+    domain: str                 # "chat", "files", "calendar", "projects", "agents"
+    granted_by_user_id: UUID    # FK -> users (audit trail)
+    created_at: datetime
+
+    # unique constraint on (organization_id, user_id, domain)
+```
+
+**Access check order** (highest priority first):
+
+| Priority | Check | Result |
+|----------|-------|--------|
+| 1 | User is org ADMIN/OWNER | Full access to everything |
+| 2 | User has `DomainAdmin` row for this domain | Elevated access within the domain |
+| 3 | Regular member | Standard member permissions |
+
+**What domain admin grants** (varies per domain):
+
+| Domain | Domain admin can | Regular member can |
+|--------|------------------|--------------------|
+| Chat | Create/delete any channel, manage categories, moderate messages across all channels, add/remove members anywhere | Send messages, react, join public channels, manage own channels where they are OWNER/ADMIN |
+| Files | (Future) Manage shared folders, storage quotas | Upload/manage own files |
+| Calendar | (Future) Manage shared calendars, org-wide events | Manage own events |
+| Projects | (Future) Manage all projects, assign across teams | Manage projects they own or have access to |
+| Agents | (Future) Manage all agents, provider keys | Use agents they have access to |
+
+**Checking domain admin in operations:**
+
+```python
+from uniffy.core.auth.domain_admin import is_domain_admin
+
+# In a domain's access checker or operations class:
+if await is_domain_admin(session, user_id, organization_id, "chat"):
+    # grant elevated access
+    ...
+```
+
+**Key rules:**
+- Domain admin is binary: you either are one or you are not. No sub-levels (no moderator, no RBAC)
+- Only org ADMIN/OWNER can grant/revoke domain admin status
+- Domain admin does NOT grant access to other domains or org-level settings
+- The `DomainAdmin` table lives in `src/uniffy/core/models/domain_admin.py` (shared, not inside any domain)
+- Domain admin checks should be integrated into each domain's existing access checker, not into `BaseContentOperations`
+
+**Key files:**
+
+| File | Purpose |
+|------|---------|
+| `src/uniffy/core/models/domain_admin.py` | DomainAdmin model |
+| `src/uniffy/core/auth/domain_admin.py` | `is_domain_admin()` helper |
+| `src/proto/organizations/v1/organizations.proto` | RPC for granting/revoking domain admin (org admin operations) |
+| `src/uniffy/domains/organizations/operations.py` | Domain admin grant/revoke business logic |
+
+**Admin UI surfaces:**
+
+| Page | What it shows |
+|------|---------------|
+| `/admin/members` | Domain admin badges per member, click to edit via dialog |
+| `/admin/domain-admins` | All assignments grouped by domain, assign/remove |
+| `UserEditDialog` (system admin) | Domain admin assignments per org |
 
 ## Bookmarks System (Backend)
 

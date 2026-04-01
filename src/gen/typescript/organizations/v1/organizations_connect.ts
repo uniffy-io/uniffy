@@ -3,9 +3,9 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddMemberRequest, ContentTypeDefaults, CreateOrganizationRequest, DeleteOrganizationRequest, DeleteOrganizationResponse, GetOrganizationOverviewRequest, GetOrganizationRequest, GetPermissionDefaultsRequest, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, ListOrganizationsRequest, ListOrganizationsResponse, OrganizationDetail, OrganizationOverview, PermissionDefaultsResponse, RemoveMemberRequest, RemoveMemberResponse, UpdateMemberRoleRequest, UpdateOrganizationRequest, UpdatePermissionDefaultsRequest } from "./organizations_pb.js";
+import { AddMemberRequest, ContentTypeDefaults, CreateOrganizationRequest, DeleteOrganizationRequest, DeleteOrganizationResponse, GetOrganizationOverviewRequest, GetOrganizationRequest, GetPermissionDefaultsRequest, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, ListDomainAdminsRequest, ListDomainAdminsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, ListOrganizationsRequest, ListOrganizationsResponse, OrganizationDetail, OrganizationOverview, PermissionDefaultsResponse, RemoveMemberRequest, RemoveMemberResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, UpdateMemberRoleRequest, UpdateOrganizationRequest, UpdatePermissionDefaultsRequest } from "./organizations_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import { MemberInfo, OrganizationInfo } from "../../common/v1/common_pb.js";
+import { DomainAdminInfo, MemberInfo, OrganizationInfo } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from service organizations.v1.OrganizationsService
@@ -138,6 +138,44 @@ export const OrganizationsService = {
       name: "UpdatePermissionDefaults",
       I: UpdatePermissionDefaultsRequest,
       O: ContentTypeDefaults,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Domain Admin management (Org Admin)
+     *
+     * @generated from rpc organizations.v1.OrganizationsService.GrantDomainAdmin
+     */
+    grantDomainAdmin: {
+      name: "GrantDomainAdmin",
+      I: GrantDomainAdminRequest,
+      O: DomainAdminInfo,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc organizations.v1.OrganizationsService.RevokeDomainAdmin
+     */
+    revokeDomainAdmin: {
+      name: "RevokeDomainAdmin",
+      I: RevokeDomainAdminRequest,
+      O: RevokeDomainAdminResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc organizations.v1.OrganizationsService.ListDomainAdmins
+     */
+    listDomainAdmins: {
+      name: "ListDomainAdmins",
+      I: ListDomainAdminsRequest,
+      O: ListDomainAdminsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc organizations.v1.OrganizationsService.GetUserDomainAdmins
+     */
+    getUserDomainAdmins: {
+      name: "GetUserDomainAdmins",
+      I: GetUserDomainAdminsRequest,
+      O: GetUserDomainAdminsResponse,
       kind: MethodKind.Unary,
     },
   }

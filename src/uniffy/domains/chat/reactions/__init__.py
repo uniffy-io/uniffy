@@ -1,0 +1,1 @@
+"""Chat reactions sub-domain."""

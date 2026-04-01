@@ -15,8 +15,8 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
-from uniffy.core.models.shared import ContentType, VisibilityScope
-from uniffy.domains.users.search import UserSearchIndexer
+from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.models.shared import ContentType, DomainType, VisibilityScope
 
 _CONTENT_TYPE_DEFAULT_VISIBILITY: dict[ContentType, VisibilityScope] = {
     ContentType.AGENT: VisibilityScope.ORGANIZATION,
@@ -42,6 +42,9 @@ class OrganizationOperations:
 
         """
         self._session = session
+
+        from uniffy.domains.users.search import UserSearchIndexer
+
         self._user_indexer = UserSearchIndexer(session)
 
     # ─────────────────────────────────────────────────────────────
@@ -162,6 +165,21 @@ class OrganizationOperations:
         await create_default_presets(self._session, org.id, owner_user_id)
         await self._session.commit()
 
+        # Create default #general chat channel
+        from uniffy.core.models.chat.channel import ChannelType
+        from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+        chat_ops = ChatChannelOperations(self._session)
+        await chat_ops.create_channel(
+            user_id=owner_user_id,
+            organization_id=org.id,
+            name="general",
+            channel_type=ChannelType.PUBLIC,
+            description="Organization-wide discussions",
+            is_default=True,
+        )
+        await self._session.commit()
+
         return org
 
     async def update(
@@ -243,6 +261,11 @@ class OrganizationOperations:
 
         # Delete groups
         await self._session.execute(sql_delete(Group).where(Group.organization_id == org_id))
+
+        # Delete domain admin assignments
+        await self._session.execute(
+            sql_delete(DomainAdmin).where(DomainAdmin.organization_id == org_id)
+        )
 
         # Delete permission defaults
         await self._session.execute(
@@ -616,6 +639,13 @@ class OrganizationOperations:
         await attachment_ops.get_or_create_attachments_folder(user_id, org_id)
         await self._session.commit()
 
+        # Auto-join default chat channels (e.g., #general)
+        from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+        chat_ops = ChatChannelOperations(self._session)
+        await chat_ops.join_default_channels(user_id, org_id)
+        await self._session.commit()
+
         return membership
 
     async def update_member_role(
@@ -707,6 +737,14 @@ class OrganizationOperations:
         # Cannot remove OWNER
         if membership.role == OrganizationRole.OWNER:
             raise PermissionDeniedError("Cannot remove organization owner")
+
+        # Remove domain admin assignments
+        await self._session.execute(
+            sql_delete(DomainAdmin).where(
+                DomainAdmin.user_id == target_user_id,
+                DomainAdmin.organization_id == org_id,
+            )
+        )
 
         await self._session.delete(membership)
         await self._session.commit()
@@ -826,3 +864,210 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(defaults)
         return defaults
+
+    # ─────────────────────────────────────────────────────────────
+    # Domain Admin Management
+    # ─────────────────────────────────────────────────────────────
+
+    async def grant_domain_admin(
+        self,
+        admin_user_id: UUID,
+        org_id: UUID,
+        target_user_id: UUID,
+        domain: DomainType,
+    ) -> tuple[DomainAdmin, User]:
+        """
+        Grant domain admin to a user. Requires org admin.
+
+        Idempotent: returns existing assignment if already granted.
+
+        Parameters
+        ----------
+        admin_user_id : UUID
+            Org admin performing the grant.
+        org_id : UUID
+            Organization ID.
+        target_user_id : UUID
+            User to grant domain admin to.
+        domain : DomainType
+            Domain to grant admin for.
+
+        Returns
+        -------
+        tuple[DomainAdmin, User]
+            Domain admin assignment and user.
+
+        """
+        await self.require_org_admin(admin_user_id, org_id)
+        await self.require_org_member(target_user_id, org_id)
+
+        # Check if already exists (idempotent)
+        result = await self._session.execute(
+            select(DomainAdmin).where(
+                DomainAdmin.user_id == target_user_id,
+                DomainAdmin.organization_id == org_id,
+                DomainAdmin.domain == domain,
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing:
+            user_result = await self._session.execute(
+                select(User).where(User.id == target_user_id)
+            )
+            user = user_result.scalar_one()
+            return existing, user
+
+        da = DomainAdmin(
+            user_id=target_user_id,
+            organization_id=org_id,
+            domain=domain,
+            granted_by=admin_user_id,
+        )
+        self._session.add(da)
+        await self._session.commit()
+        await self._session.refresh(da)
+
+        # Notify target user to refresh permissions
+        from uniffy.core.valkey.pubsub import publish_notification
+
+        await publish_notification(
+            target_user_id, {"_type": "permissions_changed"}
+        )
+
+        user_result = await self._session.execute(
+            select(User).where(User.id == target_user_id)
+        )
+        user = user_result.scalar_one()
+        return da, user
+
+    async def revoke_domain_admin(
+        self,
+        admin_user_id: UUID,
+        org_id: UUID,
+        target_user_id: UUID,
+        domain: DomainType,
+    ) -> bool:
+        """
+        Revoke domain admin from a user. Requires org admin.
+
+        Parameters
+        ----------
+        admin_user_id : UUID
+            Org admin performing the revocation.
+        org_id : UUID
+            Organization ID.
+        target_user_id : UUID
+            User to revoke domain admin from.
+        domain : DomainType
+            Domain to revoke admin for.
+
+        Returns
+        -------
+        bool
+            True if revoked.
+
+        Raises
+        ------
+        NotFoundError
+            If user does not have domain admin for this domain.
+
+        """
+        await self.require_org_admin(admin_user_id, org_id)
+
+        result = await self._session.execute(
+            select(DomainAdmin).where(
+                DomainAdmin.user_id == target_user_id,
+                DomainAdmin.organization_id == org_id,
+                DomainAdmin.domain == domain,
+            )
+        )
+        da = result.scalar_one_or_none()
+        if not da:
+            raise NotFoundError("DomainAdmin", f"{target_user_id}:{domain.value}")
+
+        await self._session.delete(da)
+        await self._session.commit()
+
+        # Notify target user to refresh permissions
+        from uniffy.core.valkey.pubsub import publish_notification
+
+        await publish_notification(
+            target_user_id, {"_type": "permissions_changed"}
+        )
+
+        return True
+
+    async def list_domain_admins(
+        self,
+        org_id: UUID,
+        domain_filter: DomainType | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[tuple[DomainAdmin, User]], int]:
+        """
+        List domain admins for an organization.
+
+        Parameters
+        ----------
+        org_id : UUID
+            Organization ID.
+        domain_filter : DomainType | None
+            Optional filter by domain.
+        page : int
+            Page number.
+        page_size : int
+            Page size.
+
+        Returns
+        -------
+        tuple[list[tuple[DomainAdmin, User]], int]
+            (domain admins with users, total count).
+
+        """
+        base_query = (
+            select(DomainAdmin, User)
+            .join(User, User.id == DomainAdmin.user_id)
+            .where(DomainAdmin.organization_id == org_id)
+        )
+
+        if domain_filter:
+            base_query = base_query.where(DomainAdmin.domain == domain_filter)
+
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total = (await self._session.execute(count_query)).scalar() or 0
+
+        query = base_query.order_by(DomainAdmin.granted_at.desc())
+        query = query.offset((page - 1) * page_size).limit(page_size)
+
+        result = await self._session.execute(query)
+        items = [(row[0], row[1]) for row in result.all()]
+        return items, total
+
+    async def get_user_domain_admins(
+        self,
+        org_id: UUID,
+        target_user_id: UUID,
+    ) -> list[DomainType]:
+        """
+        Get all domains where a user is domain admin.
+
+        Parameters
+        ----------
+        org_id : UUID
+            Organization ID.
+        target_user_id : UUID
+            User to check.
+
+        Returns
+        -------
+        list[DomainType]
+            List of domains where user is admin.
+
+        """
+        result = await self._session.execute(
+            select(DomainAdmin.domain).where(
+                DomainAdmin.user_id == target_user_id,
+                DomainAdmin.organization_id == org_id,
+            )
+        )
+        return [row[0] for row in result.all()]

@@ -328,22 +328,15 @@ class SearchOperations:
         # Limit to max 100 URNs
         urns = urns[:100]
 
-        # Fetch documents from Meilisearch
-        docs = await get_documents_by_urns(urns, organization_id)
-
-        # Filter by permissions
-        # Get user's group memberships
+        # Fetch documents from Meilisearch with permission filtering
+        # Uses Meilisearch filter expressions instead of Python-side checking
         user_group_ids = await self.access_query.get_user_group_ids(
             user_id=user_id,
             organization_id=organization_id,
         )
-        user_group_id_strs = {str(gid) for gid in user_group_ids}
-
-        accessible: dict[str, SearchResult] = {}
-        for urn, result in docs.items():
-            # Check permission
-            if self._can_access(result, user_id, user_group_id_strs):
-                accessible[urn] = result
+        accessible = await get_documents_by_urns(
+            urns, organization_id, user_id, user_group_ids,
+        )
 
         # Enrich with live state from the database
         await self._enrich_live_state(accessible, organization_id)
@@ -568,45 +561,3 @@ class SearchOperations:
         except Exception:
             logger.warning("Failed to enrich project live state", exc_info=True)
 
-    def _can_access(
-        self,
-        result: SearchResult,
-        user_id: UUID,
-        user_group_ids: set[str],
-    ) -> bool:
-        """
-        Check if user can access this search result.
-
-        Parameters
-        ----------
-        result : SearchResult
-            The search result to check.
-        user_id : UUID
-            User ID.
-        user_group_ids : set[str]
-            Set of group ID strings the user belongs to.
-
-        Returns
-        -------
-        bool
-            True if user can access.
-
-        """
-        # Organization visibility - everyone can see
-        if result.visibility == "ORGANIZATION":
-            return True
-
-        # Owner can always see
-        if result.owner_id == user_id:
-            return True
-
-        # GROUP visibility requires group membership
-        # Note: This simplified check assumes shared_group_ids would be
-        # populated in the search result. For full implementation,
-        # we'd need to fetch this from the source document.
-        if result.visibility == "GROUP":
-            # If we had shared_group_ids, we'd check overlap here
-            # For now, allow if user owns it (already checked above)
-            pass
-
-        return False

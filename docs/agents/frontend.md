@@ -689,6 +689,7 @@ const handleLogout = () => {
 /admin                    # Unified admin panel
 ├── /admin/members        # Org members (org admin)
 ├── /admin/groups         # Groups/teams (org admin)
+├── /admin/domain-admins  # Domain admin assignments (org admin)
 ├── /admin/permissions    # Permission defaults (org admin)
 ├── /admin/org-settings   # Org config (org admin)
 ├── /admin/organizations  # All orgs (system admin only)
@@ -705,6 +706,44 @@ import { useAdminAccess } from '@/features/admin';
 
 const { isOrgAdmin, isSystemAdmin, canAccessAdmin } = useAdminAccess();
 ```
+
+## Domain Admin UI
+
+Users can be granted admin status for specific domains (chat, files, etc.) without being full org admins. This is managed from two places in the admin panel.
+
+**Members page (`/admin/members`)** - Enhanced member table:
+- New "Domain Roles" column shows colored badges for each domain admin assignment (e.g., "Chat Admin")
+- Clicking the badges or a `+` button opens a **Domain Roles Dialog** for that user
+- The dialog lists all domains with a toggle or simple on/off control per domain
+- Org ADMIN/OWNER users show a muted note: "Org admins have full access to all domains"
+
+**Domain Admins page (`/admin/domain-admins`)** - Dedicated management page:
+- Horizontal domain tabs: All | Chat | Files | Calendar | Projects | Agents
+- "All" tab groups assignments by domain, each domain as a card with a table of assigned users
+- Domain-specific tabs show a filtered table with search and assign/remove actions
+- Assign dialog: SubjectPicker (single user) + domain selector (pre-filled if opened from a tab)
+- Remove confirmation via `ConfirmDialog`
+
+**UserEditDialog (system admin)** - Domain roles section:
+- Below the Organizations section in the right column
+- Lists all domains with toggle per domain, scoped to the selected org
+
+**Badge colors per domain** (use URN type color associations):
+- Chat: `bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400`
+- Files: `bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400`
+- Calendar: `bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400`
+- Projects: `bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400`
+- Agents: `bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400`
+
+**Key files:**
+
+| File | Purpose |
+|------|---------|
+| `src/ui/src/features/admin/pages/DomainAdminsPage.tsx` | Domain admins management page |
+| `src/ui/src/features/admin/components/members/MembersSection.tsx` | Enhanced with domain roles column |
+| `src/ui/src/features/admin/components/domain-admins/` | Domain admin components (table, assign dialog, badges) |
+| `src/ui/src/features/admin/store/adminSlice.ts` | State for domain admin assignments |
+| `src/ui/src/features/admin/store/adminThunks.ts` | Thunks for grant/revoke/list domain admins |
 
 ## Frontend Import Pattern
 

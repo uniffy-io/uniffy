@@ -1,0 +1,1 @@
+"""Chat channels sub-domain."""

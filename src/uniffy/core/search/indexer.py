@@ -107,6 +107,57 @@ class SearchIndexer:
             metadata=metadata,
         )
 
+    async def batch_index(
+        self,
+        items: list[dict],
+    ) -> None:
+        """
+        Batch-index multiple documents in a single Meilisearch call.
+
+        Each item must be a dict with keys: urn, organization_id, title,
+        entity_type, url_path, visibility, owner_id, and optionally
+        keywords, description, shared_group_ids, shared_user_ids, tags,
+        rank_score, metadata.
+
+        Parameters
+        ----------
+        items : list[dict]
+            List of document dicts to index.
+
+        """
+        if not items:
+            return
+
+        from uniffy.core.search.meilisearch import build_document_id, get_meilisearch_client
+
+        documents = []
+        for item in items:
+            org_id = item["organization_id"]
+            urn = item["urn"]
+            from datetime import UTC, datetime
+
+            documents.append({
+                "id": build_document_id(urn, org_id),
+                "urn": urn,
+                "organization_id": str(org_id),
+                "title": item.get("title", ""),
+                "content": item.get("keywords", ""),
+                "description": item.get("description", ""),
+                "entity_type": item.get("entity_type", ""),
+                "url_path": item.get("url_path", ""),
+                "visibility": item.get("visibility", "PRIVATE"),
+                "owner_id": str(item.get("owner_id", "")),
+                "shared_group_ids": [str(gid) for gid in (item.get("shared_group_ids") or [])],
+                "shared_user_ids": [str(uid) for uid in (item.get("shared_user_ids") or [])],
+                "tags": item.get("tags") or [],
+                "rank_score": item.get("rank_score", 1.0),
+                "metadata": item.get("metadata") or {},
+                "updated_at": int(datetime.now(UTC).timestamp()),
+            })
+
+        client = get_meilisearch_client()
+        await client.batch_index_documents(documents)
+
     async def update_sharing(
         self,
         urn: str,

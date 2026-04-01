@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package chat.v1;
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
+
+import "google/protobuf/timestamp.proto";
+import "chat/v1/chat.proto";
+
+// ChatStreamService provides real-time event streaming for chat.
+// Wrapped in StreamDisconnectMiddleware for graceful cleanup.
+service ChatStreamService {
+  // Unified chat stream - user-level events + channel-level events for the active channel.
+  // Opens a single persistent connection per user. Channel events are fanned out
+  // server-side to each member's Valkey channel, so no reconnection is needed
+  // when switching channels - the frontend filters by channel_id.
+  rpc StreamUserChatEvents(StreamUserChatEventsRequest) returns (stream UserChatEvent) {}
+}
+
+enum ChatEventType {
+  CHAT_EVENT_TYPE_UNSPECIFIED = 0;
+  CHAT_EVENT_TYPE_MESSAGE_CREATED = 1;
+  CHAT_EVENT_TYPE_MESSAGE_UPDATED = 2;
+  CHAT_EVENT_TYPE_MESSAGE_DELETED = 3;
+  CHAT_EVENT_TYPE_REACTION_ADDED = 4;
+  CHAT_EVENT_TYPE_REACTION_REMOVED = 5;
+  CHAT_EVENT_TYPE_TYPING_STARTED = 6;
+  CHAT_EVENT_TYPE_TYPING_STOPPED = 7;
+  CHAT_EVENT_TYPE_MEMBER_JOINED = 8;
+  CHAT_EVENT_TYPE_MEMBER_LEFT = 9;
+  CHAT_EVENT_TYPE_CHANNEL_UPDATED = 10;
+  CHAT_EVENT_TYPE_THREAD_UPDATED = 11;
+  CHAT_EVENT_TYPE_HEARTBEAT = 12;
+}
+
+// ChatEvent is a single channel-level event delivered through the unified stream.
+message ChatEvent {
+  ChatEventType event_type = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  // Channel this event belongs to. Used by the frontend to filter events
+  // for the active channel (since all channel events arrive on one stream).
+  string channel_id = 3;
+
+  oneof payload {
+    // MESSAGE_CREATED, MESSAGE_UPDATED: full message
+    ChatMessage message = 10;
+    // MESSAGE_DELETED
+    MessageDeletedPayload message_deleted = 11;
+    // REACTION_ADDED, REACTION_REMOVED
+    ReactionPayload reaction = 12;
+    // TYPING_STARTED, TYPING_STOPPED
+    TypingPayload typing = 13;
+    // MEMBER_JOINED, MEMBER_LEFT
+    MemberPayload member = 14;
+    // CHANNEL_UPDATED
+    ChatChannel channel_updated = 15;
+    // THREAD_UPDATED
+    ThreadUpdatedPayload thread_updated = 16;
+    // HEARTBEAT (no payload needed)
+  }
+}
+
+message MessageDeletedPayload {
+  string message_id = 1;
+  google.protobuf.Timestamp deleted_at = 2;
+}
+
+message ReactionPayload {
+  string message_id = 1;
+  string emoji = 2;
+  string user_id = 3;
+  string display_name = 4;
+}
+
+message TypingPayload {
+  string user_id = 1;
+  string display_name = 2;
+}
+
+message MemberPayload {
+  string user_id = 1;
+  string display_name = 2;
+  optional string avatar_url = 3;
+  ChannelRole role = 4;
+}
+
+message ThreadUpdatedPayload {
+  string root_message_id = 1;
+  int32 reply_count = 2;
+  google.protobuf.Timestamp last_reply_at = 3;
+  string latest_participant_id = 4;
+}
+
+// USER-LEVEL EVENT STREAMING
+
+message StreamUserChatEventsRequest {
+  string organization_id = 1;
+}
+
+enum UserChatEventType {
+  USER_CHAT_EVENT_TYPE_UNSPECIFIED = 0;
+  USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED = 1;
+  USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY = 2;
+  USER_CHAT_EVENT_TYPE_MENTION_RECEIVED = 3;
+  USER_CHAT_EVENT_TYPE_HEARTBEAT = 4;
+  // Wraps a channel-level ChatEvent (messages, typing, reactions, etc.)
+  USER_CHAT_EVENT_TYPE_CHANNEL_EVENT = 5;
+}
+
+message UserChatEvent {
+  UserChatEventType event_type = 1;
+  google.protobuf.Timestamp timestamp = 2;
+
+  oneof payload {
+    UnreadCountPayload unread_count = 10;
+    ThreadActivityPayload thread_activity = 11;
+    MentionReceivedPayload mention_received = 12;
+    // Channel-level event forwarded through the unified stream
+    ChatEvent channel_event = 13;
+  }
+}
+
+message UnreadCountPayload {
+  string channel_id = 1;
+  int32 unread_count = 2;
+  int32 mention_count = 3;
+}
+
+message ThreadActivityPayload {
+  string root_message_id = 1;
+  string channel_id = 2;
+  string channel_name = 3;
+  int32 reply_count = 4;
+  google.protobuf.Timestamp last_reply_at = 5;
+}
+
+message MentionReceivedPayload {
+  string channel_id = 1;
+  string channel_name = 2;
+  string message_id = 3;
+  string sender_id = 4;
+  string sender_name = 5;
+  // First 200 chars of message content (plaintext)
+  string preview = 6;
+}

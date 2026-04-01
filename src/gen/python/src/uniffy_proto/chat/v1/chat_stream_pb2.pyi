@@ -1,0 +1,193 @@
+import datetime
+
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from chat.v1 import chat_pb2 as _chat_pb2
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+
+DESCRIPTOR: _descriptor.FileDescriptor
+
+class ChatEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    CHAT_EVENT_TYPE_UNSPECIFIED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_MESSAGE_CREATED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_MESSAGE_UPDATED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_MESSAGE_DELETED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_REACTION_ADDED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_REACTION_REMOVED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_TYPING_STARTED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_TYPING_STOPPED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_MEMBER_JOINED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_MEMBER_LEFT: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_CHANNEL_UPDATED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_THREAD_UPDATED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_HEARTBEAT: _ClassVar[ChatEventType]
+
+class UserChatEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    USER_CHAT_EVENT_TYPE_UNSPECIFIED: _ClassVar[UserChatEventType]
+    USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED: _ClassVar[UserChatEventType]
+    USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY: _ClassVar[UserChatEventType]
+    USER_CHAT_EVENT_TYPE_MENTION_RECEIVED: _ClassVar[UserChatEventType]
+    USER_CHAT_EVENT_TYPE_HEARTBEAT: _ClassVar[UserChatEventType]
+    USER_CHAT_EVENT_TYPE_CHANNEL_EVENT: _ClassVar[UserChatEventType]
+CHAT_EVENT_TYPE_UNSPECIFIED: ChatEventType
+CHAT_EVENT_TYPE_MESSAGE_CREATED: ChatEventType
+CHAT_EVENT_TYPE_MESSAGE_UPDATED: ChatEventType
+CHAT_EVENT_TYPE_MESSAGE_DELETED: ChatEventType
+CHAT_EVENT_TYPE_REACTION_ADDED: ChatEventType
+CHAT_EVENT_TYPE_REACTION_REMOVED: ChatEventType
+CHAT_EVENT_TYPE_TYPING_STARTED: ChatEventType
+CHAT_EVENT_TYPE_TYPING_STOPPED: ChatEventType
+CHAT_EVENT_TYPE_MEMBER_JOINED: ChatEventType
+CHAT_EVENT_TYPE_MEMBER_LEFT: ChatEventType
+CHAT_EVENT_TYPE_CHANNEL_UPDATED: ChatEventType
+CHAT_EVENT_TYPE_THREAD_UPDATED: ChatEventType
+CHAT_EVENT_TYPE_HEARTBEAT: ChatEventType
+USER_CHAT_EVENT_TYPE_UNSPECIFIED: UserChatEventType
+USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED: UserChatEventType
+USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY: UserChatEventType
+USER_CHAT_EVENT_TYPE_MENTION_RECEIVED: UserChatEventType
+USER_CHAT_EVENT_TYPE_HEARTBEAT: UserChatEventType
+USER_CHAT_EVENT_TYPE_CHANNEL_EVENT: UserChatEventType
+
+class ChatEvent(_message.Message):
+    __slots__ = ("event_type", "timestamp", "channel_id", "message", "message_deleted", "reaction", "typing", "member", "channel_updated", "thread_updated")
+    EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_DELETED_FIELD_NUMBER: _ClassVar[int]
+    REACTION_FIELD_NUMBER: _ClassVar[int]
+    TYPING_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_UPDATED_FIELD_NUMBER: _ClassVar[int]
+    THREAD_UPDATED_FIELD_NUMBER: _ClassVar[int]
+    event_type: ChatEventType
+    timestamp: _timestamp_pb2.Timestamp
+    channel_id: str
+    message: _chat_pb2.ChatMessage
+    message_deleted: MessageDeletedPayload
+    reaction: ReactionPayload
+    typing: TypingPayload
+    member: MemberPayload
+    channel_updated: _chat_pb2.ChatChannel
+    thread_updated: ThreadUpdatedPayload
+    def __init__(self, event_type: _Optional[_Union[ChatEventType, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., channel_id: _Optional[str] = ..., message: _Optional[_Union[_chat_pb2.ChatMessage, _Mapping]] = ..., message_deleted: _Optional[_Union[MessageDeletedPayload, _Mapping]] = ..., reaction: _Optional[_Union[ReactionPayload, _Mapping]] = ..., typing: _Optional[_Union[TypingPayload, _Mapping]] = ..., member: _Optional[_Union[MemberPayload, _Mapping]] = ..., channel_updated: _Optional[_Union[_chat_pb2.ChatChannel, _Mapping]] = ..., thread_updated: _Optional[_Union[ThreadUpdatedPayload, _Mapping]] = ...) -> None: ...
+
+class MessageDeletedPayload(_message.Message):
+    __slots__ = ("message_id", "deleted_at")
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    DELETED_AT_FIELD_NUMBER: _ClassVar[int]
+    message_id: str
+    deleted_at: _timestamp_pb2.Timestamp
+    def __init__(self, message_id: _Optional[str] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ReactionPayload(_message.Message):
+    __slots__ = ("message_id", "emoji", "user_id", "display_name")
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    EMOJI_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    message_id: str
+    emoji: str
+    user_id: str
+    display_name: str
+    def __init__(self, message_id: _Optional[str] = ..., emoji: _Optional[str] = ..., user_id: _Optional[str] = ..., display_name: _Optional[str] = ...) -> None: ...
+
+class TypingPayload(_message.Message):
+    __slots__ = ("user_id", "display_name")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    display_name: str
+    def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ...) -> None: ...
+
+class MemberPayload(_message.Message):
+    __slots__ = ("user_id", "display_name", "avatar_url", "role")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
+    ROLE_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    display_name: str
+    avatar_url: str
+    role: _chat_pb2.ChannelRole
+    def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ..., avatar_url: _Optional[str] = ..., role: _Optional[_Union[_chat_pb2.ChannelRole, str]] = ...) -> None: ...
+
+class ThreadUpdatedPayload(_message.Message):
+    __slots__ = ("root_message_id", "reply_count", "last_reply_at", "latest_participant_id")
+    ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    REPLY_COUNT_FIELD_NUMBER: _ClassVar[int]
+    LAST_REPLY_AT_FIELD_NUMBER: _ClassVar[int]
+    LATEST_PARTICIPANT_ID_FIELD_NUMBER: _ClassVar[int]
+    root_message_id: str
+    reply_count: int
+    last_reply_at: _timestamp_pb2.Timestamp
+    latest_participant_id: str
+    def __init__(self, root_message_id: _Optional[str] = ..., reply_count: _Optional[int] = ..., last_reply_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., latest_participant_id: _Optional[str] = ...) -> None: ...
+
+class StreamUserChatEventsRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class UserChatEvent(_message.Message):
+    __slots__ = ("event_type", "timestamp", "unread_count", "thread_activity", "mention_received", "channel_event")
+    EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
+    THREAD_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
+    MENTION_RECEIVED_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_EVENT_FIELD_NUMBER: _ClassVar[int]
+    event_type: UserChatEventType
+    timestamp: _timestamp_pb2.Timestamp
+    unread_count: UnreadCountPayload
+    thread_activity: ThreadActivityPayload
+    mention_received: MentionReceivedPayload
+    channel_event: ChatEvent
+    def __init__(self, event_type: _Optional[_Union[UserChatEventType, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., unread_count: _Optional[_Union[UnreadCountPayload, _Mapping]] = ..., thread_activity: _Optional[_Union[ThreadActivityPayload, _Mapping]] = ..., mention_received: _Optional[_Union[MentionReceivedPayload, _Mapping]] = ..., channel_event: _Optional[_Union[ChatEvent, _Mapping]] = ...) -> None: ...
+
+class UnreadCountPayload(_message.Message):
+    __slots__ = ("channel_id", "unread_count", "mention_count")
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
+    MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
+    channel_id: str
+    unread_count: int
+    mention_count: int
+    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ...) -> None: ...
+
+class ThreadActivityPayload(_message.Message):
+    __slots__ = ("root_message_id", "channel_id", "channel_name", "reply_count", "last_reply_at")
+    ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_NAME_FIELD_NUMBER: _ClassVar[int]
+    REPLY_COUNT_FIELD_NUMBER: _ClassVar[int]
+    LAST_REPLY_AT_FIELD_NUMBER: _ClassVar[int]
+    root_message_id: str
+    channel_id: str
+    channel_name: str
+    reply_count: int
+    last_reply_at: _timestamp_pb2.Timestamp
+    def __init__(self, root_message_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., channel_name: _Optional[str] = ..., reply_count: _Optional[int] = ..., last_reply_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class MentionReceivedPayload(_message.Message):
+    __slots__ = ("channel_id", "channel_name", "message_id", "sender_id", "sender_name", "preview")
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_NAME_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SENDER_ID_FIELD_NUMBER: _ClassVar[int]
+    SENDER_NAME_FIELD_NUMBER: _ClassVar[int]
+    PREVIEW_FIELD_NUMBER: _ClassVar[int]
+    channel_id: str
+    channel_name: str
+    message_id: str
+    sender_id: str
+    sender_name: str
+    preview: str
+    def __init__(self, channel_id: _Optional[str] = ..., channel_name: _Optional[str] = ..., message_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_name: _Optional[str] = ..., preview: _Optional[str] = ...) -> None: ...
