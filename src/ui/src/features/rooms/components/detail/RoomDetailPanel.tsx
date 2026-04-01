@@ -50,15 +50,15 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
   useEffect(() => {
     if (!organizationId || !roomId) return;
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
 
     dispatch(fetchBookings({
       organizationId,
       roomId,
-      startDate: startOfDay.toISOString(),
+      startDate: now.toISOString(),
       endDate: endOfWeek.toISOString(),
     }));
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     dispatch(checkAvailability({
       organizationId,
       roomId,
@@ -67,11 +67,14 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
     }));
   }, [dispatch, organizationId, roomId]);
 
-  // Filter bookings for this room only
+  // Filter bookings for this room: only confirmed and not yet ended
   const roomBookings = useMemo(
-    () => allBookings
-      .filter((b) => b.roomId === roomId && b.status === 'confirmed')
-      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+    () => {
+      const now = new Date();
+      return allBookings
+        .filter((b) => b.roomId === roomId && b.status === 'confirmed' && new Date(b.endTime) > now)
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    },
     [allBookings, roomId],
   );
 
