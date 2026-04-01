@@ -1,7 +1,7 @@
 """Add rooms and bookings tables.
 
-Revision ID: 038
-Revises: 037
+Revision ID: 041
+Revises: 040
 """
 
 import sqlalchemy as sa
@@ -9,8 +9,8 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSONB
 
-revision = "038"
-down_revision = "037"
+revision = "041"
+down_revision = "040"
 branch_labels = None
 depends_on = None
 

@@ -1,15 +1,15 @@
 """Add type_field_schemas to projects.
 
-Revision ID: 037
-Revises: 036
+Revision ID: 040
+Revises: 039
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
-revision = "037"
-down_revision = "036"
+revision = "040"
+down_revision = "039"
 branch_labels = None
 depends_on = None
 
