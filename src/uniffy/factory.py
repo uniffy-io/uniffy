@@ -37,6 +37,7 @@ from uniffy_proto.organizations.v1.organizations_connect import OrganizationsSer
 from uniffy_proto.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
 from uniffy_proto.presence.v1.presence_connect import PresenceServiceASGIApplication
 from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplication
+from uniffy_proto.rooms.v1.rooms_connect import RoomsServiceASGIApplication
 from uniffy_proto.search.v1.search_connect import SearchServiceASGIApplication
 from uniffy_proto.settings.v1.settings_connect import SettingsServiceASGIApplication
 from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
@@ -69,6 +70,7 @@ from uniffy.domains.organizations.service import OrganizationsServiceImpl
 from uniffy.domains.permissions.service import PermissionsServiceImpl
 from uniffy.domains.presence.service import PresenceServiceImpl
 from uniffy.domains.projects.service import ProjectsServiceImpl
+from uniffy.domains.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
 from uniffy.domains.users.http_routes import avatars_router
@@ -364,6 +366,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/projects.v1.ProjectsService",
         ProjectsServiceASGIApplication(ProjectsServiceImpl(), interceptors=[logging_interceptor]),
+    )
+    dispatcher.add_service(
+        "/rooms.v1.RoomsService",
+        RoomsServiceASGIApplication(RoomsServiceImpl(), interceptors=[logging_interceptor]),
     )
     dispatcher.add_service(
         "/agents.v1.ProvidersService",
