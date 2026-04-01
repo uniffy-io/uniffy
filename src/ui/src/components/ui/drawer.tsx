@@ -5,7 +5,7 @@
  * Supports left (sidebars) and right (detail panels) sides with backdrop.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 
@@ -60,12 +60,6 @@ export function Drawer({
         };
     }, [open]);
 
-    const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    }, [onClose]);
-
     if (!open) return null;
 
     const isLeft = side === 'left';
@@ -73,7 +67,6 @@ export function Drawer({
     return (
         <div
             className="fixed inset-0 z-50 flex"
-            onClick={handleBackdropClick}
             role="dialog"
             aria-modal="true"
             aria-label={ariaLabel}
@@ -84,6 +77,7 @@ export function Drawer({
                     'fixed inset-0 bg-black/40 transition-opacity duration-300',
                     open ? 'opacity-100' : 'opacity-0'
                 )}
+                onClick={onClose}
             />
 
             {/* Drawer panel */}
