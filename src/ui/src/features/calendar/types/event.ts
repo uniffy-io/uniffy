@@ -114,6 +114,16 @@ export interface CalendarEvent {
   recurrenceId?: string;
   /** For expanded instances: the specific occurrence date (YYYY-MM-DD) */
   occurrenceDate?: string;
+  /** Booked room ID (populated from room booking) */
+  roomId?: string;
+  /** Booked room name (read-only, populated from room booking) */
+  roomName?: string;
+  /** Booked room location (read-only, populated from room booking) */
+  roomLocation?: string;
+  /** Booked room capacity (read-only, populated from room booking) */
+  roomCapacity?: number;
+  /** Booked room amenities (read-only, populated from room booking) */
+  roomAmenities?: string[];
 }
 
 /**
