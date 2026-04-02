@@ -6,7 +6,7 @@
  * in the channel. Renders via portal to avoid overflow issues.
  */
 
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PushPin, X } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
@@ -32,9 +32,11 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
   );
 
   // Position below the anchor
-  const position = useMemo(() => {
+  const [position, setPosition] = useState({ top: 100, left: 100 });
+
+  useEffect(() => {
     const anchor = anchorRef.current;
-    if (!anchor) return { top: 100, left: 100 };
+    if (!anchor) return;
 
     const rect = anchor.getBoundingClientRect();
     const panelWidth = 380;
@@ -46,7 +48,7 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
     }
     if (left < 16) left = 16;
 
-    return { top: rect.bottom + 6, left };
+    setPosition({ top: rect.bottom + 6, left });
   }, [anchorRef]);
 
   // Click outside to close

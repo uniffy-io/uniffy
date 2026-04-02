@@ -233,7 +233,9 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             )
             org = result.scalar_one_or_none()
             if not org:
-                logger.error(f"Organization with slug '{org_slug}' not found. Run normal seed first.")
+                logger.error(
+                    f"Organization with slug '{org_slug}' not found. Run normal seed first."
+                )
                 return
 
             result = await session.execute(

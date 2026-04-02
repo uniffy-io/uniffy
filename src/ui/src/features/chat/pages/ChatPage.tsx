@@ -38,7 +38,6 @@ export function ChatPage() {
   const { channelId } = useParams<{ channelId: string }>();
   const initializedRef = useRef(false);
 
-  const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const activeChannel = useAppSelector((state) =>
     state.chatChannels.channels.find(c => c.id === state.chatChannels.activeChannelId)
   );

@@ -20,7 +20,6 @@ import {
   Archive,
   UserMinus,
   MagnifyingGlass,
-  Check,
   CalendarBlank,
   Info,
 } from '@phosphor-icons/react';
