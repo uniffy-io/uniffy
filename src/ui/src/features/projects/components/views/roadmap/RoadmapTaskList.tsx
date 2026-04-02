@@ -181,6 +181,14 @@ function RoadmapTaskRow({
         {task.title}
       </span>
 
+      {/* Subtask progress */}
+      {task.subtaskTotal > 0 && (
+        <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
+          <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+          {task.subtaskCompleted}/{task.subtaskTotal}
+        </span>
+      )}
+
       {/* No dates indicator */}
       {!hasDates && (
         <span className="text-xs text-muted-foreground italic">No dates</span>

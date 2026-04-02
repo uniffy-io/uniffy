@@ -23,6 +23,7 @@ import {
   MagnifyingGlassPlus,
   ArrowsIn,
   CalendarBlank,
+  Lightning,
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -40,6 +41,8 @@ import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice"
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, Sprint } from "@/features/projects/types";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { computeCriticalPath } from "@/features/projects/utils/criticalPath";
+import type { CriticalPathResult } from "@/features/projects/utils/criticalPath";
 
 // ============================================================================
 // Constants
@@ -100,6 +103,7 @@ interface GraphLayout {
   groups: SprintGroup[];
   canvasWidth: number;
   canvasHeight: number;
+  criticalPath: CriticalPathResult;
 }
 
 interface ViewTransform {
@@ -255,6 +259,16 @@ function buildGraphLayout(
     stateMap.set(t.id, computeNodeState(t, blockerSet, tasksMap));
   }
 
+  // Compute critical path
+  const completedIds = new Set(
+    rootTasks.filter((t) => t.completedAt).map((t) => t.id)
+  );
+  const critPath = computeCriticalPath(
+    rootTasks.map((t) => t.id),
+    allEdges,
+    completedIds,
+  );
+
   // No sprints: flat layout
   if (sprints.length === 0) {
     const result = layoutTaskGroup(
@@ -271,6 +285,7 @@ function buildGraphLayout(
       groups: [],
       canvasWidth: result.width + MARGIN * 2,
       canvasHeight: result.height + MARGIN * 2,
+      criticalPath: critPath,
     };
   }
 
@@ -350,6 +365,7 @@ function buildGraphLayout(
     groups,
     canvasWidth: currentX - GROUP_GAP + MARGIN,
     canvasHeight: Math.max(maxCanvasHeight, MARGIN * 2),
+    criticalPath: critPath,
   };
 }
 
@@ -387,6 +403,9 @@ export function DependencyGraphView() {
     () => buildGraphLayout(tasks, sprints),
     [tasks, sprints]
   );
+
+  // Critical path toggle
+  const [showCriticalPath, setShowCriticalPath] = useState(false);
 
   // Pan/zoom state
   const [transform, setTransform] = useState<ViewTransform>({
@@ -570,12 +589,16 @@ export function DependencyGraphView() {
     );
   }
 
-  const { nodes, edges, groups, canvasWidth, canvasHeight } = layout;
+  const { nodes, edges, groups, canvasWidth, canvasHeight, criticalPath } = layout;
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-muted/30">
       {/* Legend bar */}
-      <LegendBar />
+      <LegendBar
+        showCriticalPath={showCriticalPath}
+        onToggleCriticalPath={() => setShowCriticalPath(!showCriticalPath)}
+        criticalPathLength={criticalPath.pathLength}
+      />
 
       {/* Canvas area */}
       <div
@@ -639,6 +662,20 @@ export function DependencyGraphView() {
                   opacity="0.65"
                 />
               </marker>
+              <marker
+                id="dg-arrow-critical"
+                markerWidth="10"
+                markerHeight="8"
+                refX="9"
+                refY="4"
+                orient="auto"
+              >
+                <polygon
+                  points="0 0, 10 4, 0 8"
+                  fill="hsl(var(--primary))"
+                  opacity="1"
+                />
+              </marker>
             </defs>
 
             {edges.map((edge) => {
@@ -652,11 +689,11 @@ export function DependencyGraphView() {
               const ey = toNode.y + NODE_H / 2;
               const absDx = Math.abs(ex - sx);
               const absDy = Math.abs(ey - sy);
-              const color = edge.satisfied ? "#22c55e" : "#ef4444";
-              const opacity = edge.satisfied ? 0.5 : 0.8;
-              const markerId = edge.satisfied
-                ? "dg-arrow-done"
-                : "dg-arrow-active";
+              const edgeKey = `${edge.fromId}->${edge.toId}`;
+              const isOnCritPath = showCriticalPath && criticalPath.pathEdges.has(edgeKey);
+              const color = isOnCritPath ? "hsl(var(--primary))" : (edge.satisfied ? "#22c55e" : "#ef4444");
+              const opacity = isOnCritPath ? 1 : (edge.satisfied ? 0.5 : 0.8);
+              const markerId = isOnCritPath ? "dg-arrow-critical" : (edge.satisfied ? "dg-arrow-done" : "dg-arrow-active");
 
               // Control point offset accounts for both horizontal and vertical
               // distance so cross-group edges (large dy, small dx) still curve
@@ -680,8 +717,8 @@ export function DependencyGraphView() {
                   d={`M ${sx} ${sy} C ${cp1x} ${sy}, ${cp2x} ${cp2y}, ${ex} ${ey}`}
                   fill="none"
                   stroke={color}
-                  strokeWidth={1.5}
-                  strokeDasharray={edge.satisfied ? "5 3" : undefined}
+                  strokeWidth={isOnCritPath ? 3 : 1.5}
+                  strokeDasharray={isOnCritPath ? undefined : (edge.satisfied ? "5 3" : undefined)}
                   opacity={opacity}
                   markerEnd={`url(#${markerId})`}
                 />
@@ -700,6 +737,8 @@ export function DependencyGraphView() {
                 statusColor={status?.color}
                 statusLabel={status?.label}
                 isSelected={node.id === selectedTaskId}
+                isOnCriticalPath={showCriticalPath && criticalPath.pathNodeIds.has(node.id)}
+                downstreamCount={criticalPath.downstreamCounts.get(node.id) ?? 0}
                 onClick={handleNodeClick}
               />
             );
@@ -756,6 +795,8 @@ interface GraphNodeProps {
   statusColor?: string;
   statusLabel?: string;
   isSelected: boolean;
+  isOnCriticalPath: boolean;
+  downstreamCount: number;
   onClick: (id: string) => void;
 }
 
@@ -765,6 +806,8 @@ function GraphNode({
   statusColor,
   statusLabel,
   isSelected,
+  isOnCriticalPath,
+  downstreamCount,
   onClick,
 }: GraphNodeProps) {
   const badge = STATE_BADGE[node.state];
@@ -781,18 +824,26 @@ function GraphNode({
       className={cn(
         "absolute border rounded-lg cursor-pointer transition-colors select-none",
         STATE_CLASSES[node.state],
-        isSelected &&
-          "ring-2 ring-primary ring-offset-1 ring-offset-background"
+        isOnCriticalPath
+          ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
+          : isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background"
       )}
       style={{
         left: node.x,
         top: node.y,
         width: NODE_W,
         height: NODE_H,
+        overflow: "visible",
       }}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={() => onClick(node.id)}
     >
+      {/* Critical path downstream impact badge */}
+      {isOnCriticalPath && downstreamCount > 0 && (
+        <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-5 h-5 flex items-center justify-center z-10">
+          {downstreamCount}
+        </span>
+      )}
       <div className="flex flex-col justify-between h-full p-2.5 overflow-hidden">
         {/* Top row: type icon + number + badge */}
         <div className="flex items-center justify-between gap-1.5">
@@ -958,7 +1009,15 @@ function ZoomControls({ scale, onZoomIn, onZoomOut, onFit }: ZoomControlsProps) 
 // Legend bar
 // ============================================================================
 
-function LegendBar() {
+function LegendBar({
+  showCriticalPath,
+  onToggleCriticalPath,
+  criticalPathLength,
+}: {
+  showCriticalPath: boolean;
+  onToggleCriticalPath: () => void;
+  criticalPathLength: number;
+}) {
   return (
     <div className="px-4 py-2.5 flex items-center gap-6 border-b border-border shrink-0 bg-card">
       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -975,6 +1034,25 @@ function LegendBar() {
         <EdgeLegendItem color="#ef4444" dashed={false} label="Pending dep" />
         <EdgeLegendItem color="#22c55e" dashed label="Resolved dep" />
       </div>
+      <div className="h-4 w-px bg-border" />
+      <button
+        type="button"
+        onClick={onToggleCriticalPath}
+        className={cn(
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+          showCriticalPath
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <Lightning size={12} weight={showCriticalPath ? "fill" : "regular"} />
+        Critical Path
+        {showCriticalPath && criticalPathLength > 0 && (
+          <span className="bg-primary-foreground/20 px-1.5 py-0.5 rounded text-[10px]">
+            {criticalPathLength} tasks
+          </span>
+        )}
+      </button>
     </div>
   );
 }

@@ -36,6 +36,7 @@ const (
 	SearchResultType_SEARCH_RESULT_TYPE_AGENT          SearchResultType = 8
 	SearchResultType_SEARCH_RESULT_TYPE_PROMPT         SearchResultType = 9
 	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE   SearchResultType = 10
+	SearchResultType_SEARCH_RESULT_TYPE_ROOM           SearchResultType = 11
 )
 
 // Enum value maps for SearchResultType.
@@ -52,6 +53,7 @@ var (
 		8:  "SEARCH_RESULT_TYPE_AGENT",
 		9:  "SEARCH_RESULT_TYPE_PROMPT",
 		10: "SEARCH_RESULT_TYPE_CHAT_MESSAGE",
+		11: "SEARCH_RESULT_TYPE_ROOM",
 	}
 	SearchResultType_value = map[string]int32{
 		"SEARCH_RESULT_TYPE_UNSPECIFIED":    0,
@@ -65,6 +67,7 @@ var (
 		"SEARCH_RESULT_TYPE_AGENT":          8,
 		"SEARCH_RESULT_TYPE_PROMPT":         9,
 		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":   10,
+		"SEARCH_RESULT_TYPE_ROOM":           11,
 	}
 )
 
@@ -1024,7 +1027,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x0fupdated_by_name\x18\x13 \x01(\tR\rupdatedByName\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf0\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x8d\x03\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1037,7 +1040,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x18SEARCH_RESULT_TYPE_AGENT\x10\b\x12\x1d\n" +
 	"\x19SEARCH_RESULT_TYPE_PROMPT\x10\t\x12#\n" +
 	"\x1fSEARCH_RESULT_TYPE_CHAT_MESSAGE\x10\n" +
-	"2\x8d\x03\n" +
+	"\x12\x1b\n" +
+	"\x17SEARCH_RESULT_TYPE_ROOM\x10\v2\x8d\x03\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12H\n" +
 	"\tIndexItem\x12\x1b.search.v1.IndexItemRequest\x1a\x1c.search.v1.IndexItemResponse\"\x00\x12K\n" +

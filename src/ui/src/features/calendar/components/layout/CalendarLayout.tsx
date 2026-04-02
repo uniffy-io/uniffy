@@ -28,6 +28,7 @@ import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Drawer } from '@/components/ui/drawer';
 import { toggleSidebar, closeDetailPanel } from '@/features/calendar/store';
+import { EventDetailModal } from '@/features/calendar/components/modals/EventDetailModal';
 import { cn } from '@/shared/utils/cn';
 import {
   CollapsibleSidebarRail,
@@ -53,7 +54,7 @@ export function CalendarLayout({
   detailPanel,
 }: CalendarLayoutProps) {
   const dispatch = useAppDispatch();
-  const { isSidebarCollapsed, isDetailPanelOpen } = useAppSelector(
+  const { isSidebarCollapsed, isDetailPanelOpen, detailViewMode } = useAppSelector(
     (state) => state.calendarUi
   );
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
@@ -80,6 +81,8 @@ export function CalendarLayout({
 
   const sidebarAsDrawer = isMobile;
   const detailAsDrawer = isMobileOrTablet;
+  // On desktop, use modal when user prefers it; on mobile/tablet always use drawer
+  const useModalForDetail = !isMobileOrTablet && detailViewMode === 'modal';
   const showSidebar = !isZenMode && !isSidebarCollapsed;
   const showCollapsedRail = !isZenMode && isSidebarCollapsed && !sidebarAsDrawer;
 
@@ -127,8 +130,8 @@ export function CalendarLayout({
           </div>
         </Panel>
 
-        {/* Right Detail Panel - inline on desktop, drawer on tablet/mobile */}
-        {!isZenMode && isDetailPanelOpen && detailPanel && !detailAsDrawer && (
+        {/* Right Detail Panel - inline on desktop (sidebar mode only) */}
+        {!isZenMode && isDetailPanelOpen && detailPanel && !detailAsDrawer && !useModalForDetail && (
           <>
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
             <Panel
@@ -171,6 +174,11 @@ export function CalendarLayout({
         >
           {detailPanel}
         </Drawer>
+      )}
+
+      {/* Desktop detail modal (modal mode) */}
+      {!isZenMode && isDetailPanelOpen && useModalForDetail && (
+        <EventDetailModal />
       )}
     </div>
   );

@@ -35,6 +35,7 @@ import { agentMemoriesReducer } from '@/features/agents/store/agentMemoriesSlice
 import { errorToastMiddleware } from '@/app/errorToastMiddleware';
 import { presenceReducer } from '@/features/presence/store/presenceSlice';
 import { sprintsReducer } from '@/features/projects/store/sprintsSlice';
+import { roomsReducer } from '@/features/rooms/store/roomsSlice';
 import { chatChannelsReducer } from '@/features/chat/store/chatChannelsSlice';
 import { chatMessagesReducer } from '@/features/chat/store/chatMessagesSlice';
 import { chatThreadsReducer } from '@/features/chat/store/chatThreadsSlice';
@@ -167,6 +168,7 @@ const rootReducer = combineReducers({
   agentCron: agentCronReducer,
   agentMemories: agentMemoriesReducer,
   sprints: sprintsReducer,
+  rooms: roomsReducer,
   zenMode: zenModeReducer,
   files: filesReducer,
   filesTree: filesTreeReducer,

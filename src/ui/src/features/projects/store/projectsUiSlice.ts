@@ -109,6 +109,13 @@ export const projectsUiSlice = createSlice({
     },
 
     /**
+     * Set detail view mode (sidebar panel or centered modal)
+     */
+    setDetailViewMode: (state, action: PayloadAction<"sidebar" | "modal">) => {
+      state.detailViewMode = action.payload;
+    },
+
+    /**
      * Set detail panel width
      */
     setDetailPanelWidth: (state, action: PayloadAction<number>) => {
@@ -414,6 +421,7 @@ export const {
   openDetailPanel,
   closeDetailPanel,
   toggleDetailPanel,
+  setDetailViewMode,
   setDetailPanelWidth,
   toggleSidebar,
   setSidebarWidth,
@@ -460,6 +468,7 @@ export const selectSelectedTaskId = (state: RootState) => state.projectsUi.selec
 export const selectSelectedTaskIds = (state: RootState) => state.projectsUi.selectedTaskIds;
 export const selectIsMultiSelectMode = (state: RootState) => state.projectsUi.isMultiSelectMode;
 export const selectIsDetailPanelOpen = (state: RootState) => state.projectsUi.isDetailPanelOpen;
+export const selectDetailViewMode = (state: RootState) => state.projectsUi.detailViewMode;
 export const selectIsSidebarOpen = (state: RootState) => state.projectsUi.isSidebarOpen;
 export const selectDragState = (state: RootState) => state.projectsUi.dragState;
 export const selectProjectScope = (state: RootState) => state.projectsUi.projectScope;

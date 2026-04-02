@@ -221,6 +221,12 @@ message CalendarEvent {
   optional string recurrence_id = 27;
   // For expanded instances: the specific occurrence date (YYYY-MM-DD)
   optional string occurrence_date = 28;
+  // Room booking fields (read-only, populated by handler)
+  optional string room_id = 29;
+  optional string room_name = 30;
+  optional string room_location = 31;
+  optional int32 room_capacity = 32;
+  repeated string room_amenities = 33;
 }
 
 // Event attendee
@@ -309,6 +315,8 @@ message CreateEventRequest {
   optional common.v1.VisibilityScope visibility = 17;
   // Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
   repeated int32 reminders = 18;
+  // Optional room ID to book alongside the event
+  optional string room_id = 19;
 }
 
 // Request to get an event
@@ -363,6 +371,8 @@ message UpdateEventRequest {
   optional RecurrenceEditScope recurrence_edit_scope = 20;
   // For THIS_EVENT scope: the specific occurrence date being edited (YYYY-MM-DD)
   optional string occurrence_date = 21;
+  // Optional room ID to book/change for this event
+  optional string room_id = 22;
 }
 
 // Request to delete an event

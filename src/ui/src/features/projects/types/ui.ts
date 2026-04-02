@@ -75,6 +75,7 @@ export interface ProjectsUiState {
   isSidebarOpen: boolean;
   detailPanelWidth: number;
   sidebarWidth: number;
+  detailViewMode: "sidebar" | "modal";
 
   // Modal state
   isCreateProjectModalOpen: boolean;
@@ -136,6 +137,7 @@ export const initialProjectsUiState: ProjectsUiState = {
   isSidebarOpen: true,
   detailPanelWidth: 400,
   sidebarWidth: 280,
+  detailViewMode: "sidebar",
 
   isCreateProjectModalOpen: false,
   editProjectId: null,

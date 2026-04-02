@@ -30,7 +30,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash } from "@phosphor-icons/react";
+import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, CheckCircle, ArrowBendDownRight } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -83,6 +83,8 @@ import { useProjectPermission } from "@/features/projects/hooks/useProjectPermis
 import { getTaskTypeConfig, TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 
+const MAX_SUBTASK_DEPTH = 5;
+
 // ===== Grouping Types =====
 
 interface TaskGroup {
@@ -114,6 +116,32 @@ export function TableView() {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   // Track create field dialog
   const [isCreateFieldOpen, setIsCreateFieldOpen] = useState(false);
+  // Track known task IDs so we can detect newly created subtasks
+  const knownTaskIdsRef = useRef<Set<string>>(new Set());
+
+  // Auto-expand parent when a new subtask is created
+  useEffect(() => {
+    const currentIds = new Set(Object.keys(allTasks));
+    const known = knownTaskIdsRef.current;
+
+    // Find newly added tasks
+    for (const id of currentIds) {
+      if (!known.has(id)) {
+        const task = allTasks[id];
+        if (task?.parentId) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-expanding parent when new subtask is created
+          setExpandedParents((prev) => {
+            if (prev.has(task.parentId!)) return prev;
+            const next = new Set(prev);
+            next.add(task.parentId!);
+            return next;
+          });
+        }
+      }
+    }
+
+    knownTaskIdsRef.current = currentIds;
+  }, [allTasks]);
 
   // Get visible fields (system + custom, excluding title)
   const visibleFields = useMemo(() => {
@@ -603,24 +631,36 @@ export function TableView() {
     return <EmptyState onCreateTask={handleAddTask} />;
   }
 
-  const renderSubtaskRow = (task: Task) => (
-    <TableRow
-      key={task.id}
-      task={task}
-      fields={visibleFields}
-      isSelected={selectedTaskIds.includes(task.id)}
-      editingFieldId={editingCell?.taskId === task.id ? editingCell.fieldId : null}
-      focusedFieldId={focusedCell?.taskId === task.id ? focusedCell.fieldId : null}
-      onClick={(e) => handleRowClick(task.id, e)}
-      onCheckboxClick={(e) => handleCheckboxClick(task.id, e)}
-      onStartEdit={(fieldId) => handleStartEdit(task.id, fieldId)}
-      onEndEdit={handleEndEdit}
-      onSaveField={(fieldId, value) => handleSaveField(task.id, fieldId, value)}
-      onCellClick={(fieldId) => handleCellClick(task.id, fieldId)}
-      onTitleClick={(e) => handleTitleClick(task.id, e)}
-      isSubtask
-    />
-  );
+  const renderSubtaskRow = (task: Task, depth: number = 1): React.ReactNode => {
+    const hasChildren = task.subtaskTotal > 0 && depth < MAX_SUBTASK_DEPTH;
+    const isExp = expandedParents.has(task.id);
+    const childSubtasks = isExp ? getSubtasksForParent(task.id) : [];
+
+    return (
+      <div key={task.id}>
+        <TableRow
+          task={task}
+          fields={visibleFields}
+          isSelected={selectedTaskIds.includes(task.id)}
+          editingFieldId={editingCell?.taskId === task.id ? editingCell.fieldId : null}
+          focusedFieldId={focusedCell?.taskId === task.id ? focusedCell.fieldId : null}
+          onClick={(e) => handleRowClick(task.id, e)}
+          onCheckboxClick={(e) => handleCheckboxClick(task.id, e)}
+          onStartEdit={(fieldId) => handleStartEdit(task.id, fieldId)}
+          onEndEdit={handleEndEdit}
+          onSaveField={(fieldId, value) => handleSaveField(task.id, fieldId, value)}
+          onCellClick={(fieldId) => handleCellClick(task.id, fieldId)}
+          onTitleClick={(e) => handleTitleClick(task.id, e)}
+          isSubtask
+          subtaskDepth={depth}
+          expandable={hasChildren}
+          isExpanded={isExp}
+          onToggleExpand={() => toggleParentExpand(task.id)}
+        />
+        {isExp && childSubtasks.map((child) => renderSubtaskRow(child, depth + 1))}
+      </div>
+    );
+  };
 
   const renderSortableRowWithSubtasks = (task: Task) => {
     const hasSubtasks = task.subtaskTotal > 0;
@@ -646,7 +686,7 @@ export function TableView() {
           isExpanded={isExpanded}
           onToggleExpand={() => toggleParentExpand(task.id)}
         />
-        {isExpanded && subtasks.map(renderSubtaskRow)}
+        {isExpanded && subtasks.map((child) => renderSubtaskRow(child, 1))}
       </div>
     );
   };
@@ -1071,6 +1111,7 @@ interface TableRowProps {
   style?: React.CSSProperties;
   rowRef?: (node: HTMLElement | null) => void;
   isSubtask?: boolean;
+  subtaskDepth?: number;
   expandable?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
@@ -1122,6 +1163,7 @@ function TableRow({
   style,
   rowRef,
   isSubtask,
+  subtaskDepth,
   expandable,
   isExpanded,
   onToggleExpand,
@@ -1156,7 +1198,10 @@ function TableRow({
         {...(isSubtask ? {} : dragHandleProps)}
         onClick={(e) => e.stopPropagation()}
       >
-        {!isSubtask && <DotsSixVertical size={14} />}
+        {isSubtask
+          ? <ArrowBendDownRight size={12} className="text-muted-foreground/40" />
+          : <DotsSixVertical size={14} />
+        }
       </div>
 
       {/* Checkbox Column */}
@@ -1178,9 +1223,9 @@ function TableRow({
         className={cn(
           "shrink-0 flex items-center border-r border-border overflow-hidden",
           focusedFieldId === SYSTEM_FIELD_IDS.TITLE && "ring-2 ring-inset ring-primary",
-          isSubtask ? "pl-10 pr-3" : "px-3"
+          !isSubtask && "px-3"
         )}
-        style={{ width: 300 }}
+        style={{ width: 300, ...(isSubtask ? { paddingLeft: 24 + (subtaskDepth ?? 1) * 16, paddingRight: 12 } : {}) }}
         onClick={onTitleClick}
       >
         {/* Expand/collapse chevron for parent tasks */}
@@ -1198,6 +1243,12 @@ function TableRow({
               : <CaretRight size={12} />
             }
           </button>
+        )}
+        {task.subtaskTotal > 0 && (
+          <span className="mr-1.5 flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
+            <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+            {task.subtaskCompleted}/{task.subtaskTotal}
+          </span>
         )}
         <TaskTitleCell task={task} />
       </div>

@@ -3,7 +3,7 @@ import { SYSTEM_FIELD_IDS } from "./fields";
 /**
  * Available view types
  */
-export type ViewType = "table" | "board" | "roadmap" | "backlog" | "graph";
+export type ViewType = "table" | "board" | "roadmap" | "backlog" | "graph" | "resources";
 
 /**
  * Sort direction

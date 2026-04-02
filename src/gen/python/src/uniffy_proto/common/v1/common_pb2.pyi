@@ -24,6 +24,7 @@ class ContentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONTENT_TYPE_PROVIDER_KEY: _ClassVar[ContentType]
     CONTENT_TYPE_PROMPT: _ClassVar[ContentType]
     CONTENT_TYPE_CHAT: _ClassVar[ContentType]
+    CONTENT_TYPE_ROOM: _ClassVar[ContentType]
 
 class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -82,6 +83,7 @@ CONTENT_TYPE_AGENT: ContentType
 CONTENT_TYPE_PROVIDER_KEY: ContentType
 CONTENT_TYPE_PROMPT: ContentType
 CONTENT_TYPE_CHAT: ContentType
+CONTENT_TYPE_ROOM: ContentType
 SUBJECT_TYPE_UNSPECIFIED: SubjectType
 SUBJECT_TYPE_USER: SubjectType
 SUBJECT_TYPE_GROUP: SubjectType

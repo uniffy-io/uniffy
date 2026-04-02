@@ -113,6 +113,7 @@ class ContentType(str, Enum):
     PROMPT = "PROMPT"
     AGENT_CRON_TASK = "AGENT_CRON_TASK"
     CHAT = "CHAT"
+    ROOM = "ROOM"
 
 
 class DomainType(str, Enum):
@@ -345,6 +346,30 @@ class NotificationType(str, Enum):
     CHAT_CHANNEL_INVITE = "CHAT_CHANNEL_INVITE"
     CHAT_CHANNEL_REMOVED = "CHAT_CHANNEL_REMOVED"
     CHAT_THREAD_REPLY = "CHAT_THREAD_REPLY"
+
+
+class RoomType(str, Enum):
+    """Types of bookable rooms and resources."""
+
+    MEETING_ROOM = "MEETING_ROOM"
+    CONFERENCE_ROOM = "CONFERENCE_ROOM"
+    OFFICE = "OFFICE"
+    OTHER = "OTHER"
+
+
+class RoomStatus(str, Enum):
+    """Operational status of a room or resource."""
+
+    ACTIVE = "ACTIVE"
+    MAINTENANCE = "MAINTENANCE"
+    RETIRED = "RETIRED"
+
+
+class BookingStatus(str, Enum):
+    """Status of a room booking."""
+
+    CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
 
 
 class ResourceType(str, Enum):

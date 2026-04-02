@@ -25,6 +25,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.TASK]: '#14b8a6',           // teal-500
   [UrnType.AGENT]: '#06b6d4',          // cyan-500
   [UrnType.PROMPT]: '#a855f7',         // purple-500
+  [UrnType.ROOM]: '#0ea5e9',           // sky-500
   [UrnType.UNKNOWN]: '#6b7280',        // gray-500
 };
 
@@ -120,6 +121,14 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: 'border-purple-500/20',
     shadow: 'shadow-purple-500/50',
   },
+  [UrnType.ROOM]: {
+    gradient: 'from-sky-500/10 via-sky-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-sky-500 to-sky-600',
+    accentText: 'text-sky-600 dark:text-sky-400',
+    badgeBg: 'bg-sky-500/10',
+    border: 'border-sky-500/20',
+    shadow: 'shadow-sky-500/50',
+  },
   [UrnType.UNKNOWN]: {
     gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',
     iconBg: 'bg-gradient-to-br from-gray-400 to-gray-500',
@@ -165,4 +174,5 @@ export const URN_TYPE_LEGEND: Array<{
   { type: UrnType.TASK, label: 'Tasks', hexColor: URN_TYPE_HEX_COLORS[UrnType.TASK], tailwindBg: 'bg-teal-500' },
   { type: UrnType.AGENT, label: 'Agents', hexColor: URN_TYPE_HEX_COLORS[UrnType.AGENT], tailwindBg: 'bg-cyan-500' },
   { type: UrnType.PROMPT, label: 'Prompts', hexColor: URN_TYPE_HEX_COLORS[UrnType.PROMPT], tailwindBg: 'bg-purple-500' },
+  { type: UrnType.ROOM, label: 'Rooms', hexColor: URN_TYPE_HEX_COLORS[UrnType.ROOM], tailwindBg: 'bg-sky-500' },
 ];

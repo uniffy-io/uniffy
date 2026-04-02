@@ -15,7 +15,8 @@ import { closeEditProjectModal, selectEditProjectId } from "@/features/projects/
 import { selectProjects } from "@/features/projects/store/projectsSlice";
 import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
-import type { VisibilityScope } from "@/features/projects/types/project";
+import type { VisibilityScope, TypeFieldSchema } from "@/features/projects/types/project";
+import { TypeFieldSchemasSection } from "@/features/projects/components/settings/TypeFieldSchemasSection";
 
 const ICON_OPTIONS: ProjectIconName[] = [
   "kanban",
@@ -40,6 +41,7 @@ export function EditProjectModal() {
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
   const [visibility, setVisibility] = useState<VisibilityScope>("PRIVATE");
+  const [typeFieldSchemas, setTypeFieldSchemas] = useState<Record<string, TypeFieldSchema>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +52,7 @@ export function EditProjectModal() {
       setDescription(project.description || "");
       setIcon((project.icon || "kanban") as ProjectIconName);
       setVisibility(project.visibility);
+      setTypeFieldSchemas(project.typeFieldSchemas || {});
     }
   }, [project]);
 
@@ -80,6 +83,7 @@ export function EditProjectModal() {
           description: description.trim(),
           icon,
           visibility,
+          typeFieldSchemas,
         })
       ).unwrap();
       handleClose();
@@ -201,6 +205,13 @@ export function EditProjectModal() {
                 ))}
               </div>
             </div>
+
+            {/* Type Field Schemas */}
+            <TypeFieldSchemasSection
+              fieldDefinitions={project.fieldDefinitions}
+              typeFieldSchemas={typeFieldSchemas}
+              onChange={setTypeFieldSchemas}
+            />
           </div>
 
           {/* Footer */}

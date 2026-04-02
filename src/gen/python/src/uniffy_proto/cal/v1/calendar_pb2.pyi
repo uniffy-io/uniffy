@@ -107,7 +107,7 @@ RECURRENCE_EDIT_SCOPE_ALL_EVENTS: RecurrenceEditScope
 RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING: RecurrenceEditScope
 
 class CalendarEvent(_message.Message):
-    __slots__ = ("id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendees", "organizer_id", "recurrence", "is_focus_time", "tags", "linked_resources", "visibility", "is_deleted", "outgoing_references", "created_at", "updated_at", "deleted_at", "reminders", "is_recurring", "recurrence_id", "occurrence_date")
+    __slots__ = ("id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendees", "organizer_id", "recurrence", "is_focus_time", "tags", "linked_resources", "visibility", "is_deleted", "outgoing_references", "created_at", "updated_at", "deleted_at", "reminders", "is_recurring", "recurrence_id", "occurrence_date", "room_id", "room_name", "room_location", "room_capacity", "room_amenities")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
@@ -136,6 +136,11 @@ class CalendarEvent(_message.Message):
     IS_RECURRING_FIELD_NUMBER: _ClassVar[int]
     RECURRENCE_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRENCE_DATE_FIELD_NUMBER: _ClassVar[int]
+    ROOM_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOM_NAME_FIELD_NUMBER: _ClassVar[int]
+    ROOM_LOCATION_FIELD_NUMBER: _ClassVar[int]
+    ROOM_CAPACITY_FIELD_NUMBER: _ClassVar[int]
+    ROOM_AMENITIES_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     title: str
@@ -164,7 +169,12 @@ class CalendarEvent(_message.Message):
     is_recurring: bool
     recurrence_id: str
     occurrence_date: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reminders: _Optional[_Iterable[int]] = ..., is_recurring: _Optional[bool] = ..., recurrence_id: _Optional[str] = ..., occurrence_date: _Optional[str] = ...) -> None: ...
+    room_id: str
+    room_name: str
+    room_location: str
+    room_capacity: int
+    room_amenities: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reminders: _Optional[_Iterable[int]] = ..., is_recurring: _Optional[bool] = ..., recurrence_id: _Optional[str] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ..., room_name: _Optional[str] = ..., room_location: _Optional[str] = ..., room_capacity: _Optional[int] = ..., room_amenities: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Attendee(_message.Message):
     __slots__ = ("id", "name", "email", "avatar_url", "initials", "status", "role", "timezone")
@@ -215,7 +225,7 @@ class LinkedResource(_message.Message):
     def __init__(self, id: _Optional[str] = ..., type: _Optional[_Union[ResourceType, str]] = ..., name: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
 
 class CreateEventRequest(_message.Message):
-    __slots__ = ("organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendee_ids", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "visibility", "reminders")
+    __slots__ = ("organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendee_ids", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "visibility", "reminders", "room_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -234,6 +244,7 @@ class CreateEventRequest(_message.Message):
     LINKED_RESOURCE_URNS_FIELD_NUMBER: _ClassVar[int]
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     REMINDERS_FIELD_NUMBER: _ClassVar[int]
+    ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     title: str
     description: str
@@ -252,7 +263,8 @@ class CreateEventRequest(_message.Message):
     linked_resource_urns: _containers.RepeatedScalarFieldContainer[str]
     visibility: _common_pb2.VisibilityScope
     reminders: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., reminders: _Optional[_Iterable[int]] = ...) -> None: ...
+    room_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., reminders: _Optional[_Iterable[int]] = ..., room_id: _Optional[str] = ...) -> None: ...
 
 class GetEventRequest(_message.Message):
     __slots__ = ("event_id", "organization_id")
@@ -263,7 +275,7 @@ class GetEventRequest(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UpdateEventRequest(_message.Message):
-    __slots__ = ("event_id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "visibility", "attendee_ids", "reminders", "recurrence_edit_scope", "occurrence_date")
+    __slots__ = ("event_id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "recurrence", "is_focus_time", "tags", "linked_resource_urns", "visibility", "attendee_ids", "reminders", "recurrence_edit_scope", "occurrence_date", "room_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
@@ -285,6 +297,7 @@ class UpdateEventRequest(_message.Message):
     REMINDERS_FIELD_NUMBER: _ClassVar[int]
     RECURRENCE_EDIT_SCOPE_FIELD_NUMBER: _ClassVar[int]
     OCCURRENCE_DATE_FIELD_NUMBER: _ClassVar[int]
+    ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     organization_id: str
     title: str
@@ -306,7 +319,8 @@ class UpdateEventRequest(_message.Message):
     reminders: _containers.RepeatedScalarFieldContainer[int]
     recurrence_edit_scope: RecurrenceEditScope
     occurrence_date: str
-    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., reminders: _Optional[_Iterable[int]] = ..., recurrence_edit_scope: _Optional[_Union[RecurrenceEditScope, str]] = ..., occurrence_date: _Optional[str] = ...) -> None: ...
+    room_id: str
+    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., tags: _Optional[_Iterable[str]] = ..., linked_resource_urns: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., attendee_ids: _Optional[_Iterable[str]] = ..., reminders: _Optional[_Iterable[int]] = ..., recurrence_edit_scope: _Optional[_Union[RecurrenceEditScope, str]] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ...) -> None: ...
 
 class DeleteEventRequest(_message.Message):
     __slots__ = ("event_id", "organization_id", "permanent", "recurrence_edit_scope", "occurrence_date")

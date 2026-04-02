@@ -9,6 +9,7 @@ import {
   LockSimple,
   Buildings,
   Clock,
+  Door,
   Tag,
   TextAa,
   Users,
@@ -26,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { getInitials } from '@/components/subject/utils';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import { RoomPicker } from '@/features/rooms/components/shared/RoomPicker';
 import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -96,6 +98,7 @@ export function QuickEventModal({
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [visibility, setVisibility] = useState<EventVisibility>('private');
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
@@ -237,6 +240,7 @@ export function QuickEventModal({
         attendeeIds: attendees.map((a) => a.id),
         visibility,
         recurrence,
+        roomId: selectedRoomId || undefined,
       })
     );
 
@@ -345,6 +349,23 @@ export function QuickEventModal({
                   onRemove={handleAttendeeRemove}
                 />
               </div>
+
+              {/* Room */}
+              {organizationId && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Door size={16} weight="duotone" className="text-muted-foreground" />
+                    <span>Room</span>
+                  </div>
+                  <RoomPicker
+                    selectedRoomId={selectedRoomId}
+                    onSelect={setSelectedRoomId}
+                    organizationId={organizationId}
+                    startTime={startIso || undefined}
+                    endTime={endIso || undefined}
+                  />
+                </div>
+              )}
 
               {/* Date & Time */}
               <div className="space-y-3">

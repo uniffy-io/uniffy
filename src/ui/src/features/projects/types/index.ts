@@ -5,6 +5,7 @@ export type {
   Sprint,
   ProjectSummary,
   VisibilityScope,
+  TypeFieldSchema,
   CreateProjectRequest,
   UpdateProjectRequest,
   CreateTaskRequest,

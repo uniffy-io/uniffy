@@ -1,6 +1,7 @@
 """Project model for the projects feature."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Enum
@@ -80,6 +81,7 @@ class Project(SQLModel, table=True):
     task_counter: int = Field(default=0, nullable=False)
     default_view_id: str | None = Field(default=None, max_length=100)
     member_ids: list[str] | None = Field(default=None, sa_column=Column(JSONB))
+    type_field_schemas: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     is_deleted: bool = Field(default=False, nullable=False)
     version: int = Field(default=1, nullable=False)
     created_at: datetime = Field(

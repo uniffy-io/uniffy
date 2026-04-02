@@ -130,7 +130,7 @@ export const deleteProject = createAsyncThunk<void, string, { rejectValue: strin
 /**
  * Create a new task
  */
-export const createTask = createAsyncThunk<Task, CreateTaskRequest, { rejectValue: string }>(
+export const createTask = createAsyncThunk<{ task: Task; updatedParent?: Task }, CreateTaskRequest, { rejectValue: string }>(
   "projects/createTask",
   async (data, { getState, rejectWithValue }) => {
     try {
@@ -139,7 +139,7 @@ export const createTask = createAsyncThunk<Task, CreateTaskRequest, { rejectValu
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.createTask(data, orgId);
-      return response.task;
+      return { task: response.task, updatedParent: response.updatedParent };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to create task");
     }
@@ -149,7 +149,7 @@ export const createTask = createAsyncThunk<Task, CreateTaskRequest, { rejectValu
 /**
  * Update an existing task
  */
-export const updateTask = createAsyncThunk<Task, UpdateTaskRequest, { rejectValue: string }>(
+export const updateTask = createAsyncThunk<{ task: Task; updatedParent?: Task; spawnedTask?: Task }, UpdateTaskRequest, { rejectValue: string }>(
   "projects/updateTask",
   async (data, { getState, rejectWithValue }) => {
     try {
@@ -158,7 +158,7 @@ export const updateTask = createAsyncThunk<Task, UpdateTaskRequest, { rejectValu
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.updateTask(data, orgId);
-      return response.task;
+      return { task: response.task, updatedParent: response.updatedParent, spawnedTask: response.spawnedTask };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update task");
     }
@@ -169,7 +169,7 @@ export const updateTask = createAsyncThunk<Task, UpdateTaskRequest, { rejectValu
  * Move a task to a different status/position
  * Used for drag-and-drop operations
  */
-export const moveTask = createAsyncThunk<Task, MoveTaskRequest, { rejectValue: string }>(
+export const moveTask = createAsyncThunk<{ task: Task; updatedParent?: Task; spawnedTask?: Task }, MoveTaskRequest, { rejectValue: string }>(
   "projects/moveTask",
   async (data, { getState, rejectWithValue }) => {
     try {
@@ -178,7 +178,7 @@ export const moveTask = createAsyncThunk<Task, MoveTaskRequest, { rejectValue: s
       if (!orgId) return rejectWithValue("No organization selected");
 
       const response = await projectsApi.moveTask(data, orgId);
-      return response.task;
+      return { task: response.task, updatedParent: response.updatedParent, spawnedTask: response.spawnedTask };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to move task");
     }

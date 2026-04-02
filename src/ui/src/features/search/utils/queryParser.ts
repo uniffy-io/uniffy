@@ -73,6 +73,8 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'agents': SearchResultType.AGENT,
     'prompt': SearchResultType.PROMPT,
     'prompts': SearchResultType.PROMPT,
+    'room': SearchResultType.ROOM,
+    'rooms': SearchResultType.ROOM,
 };
 
 /**
@@ -86,6 +88,7 @@ const FILTER_PREFIXES = [
     'project', 'projects', 'task', 'tasks',
     'agent', 'agents',
     'prompt', 'prompts',
+    'room', 'rooms',
     // Metadata filters
     'tag',
     // Ownership filters

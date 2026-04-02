@@ -9,6 +9,7 @@ import {
   LockSimple,
   Buildings,
   Clock,
+  Door,
   Tag,
   TextAa,
   Users,
@@ -29,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { getInitials } from '@/components/subject/utils';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
+import { RoomPicker } from '@/features/rooms/components/shared/RoomPicker';
 import { RecurrenceEditScopeDialog } from '@/features/calendar/components/modals/RecurrenceEditScopeDialog';
 import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
@@ -92,6 +94,7 @@ interface EventEditorProps {
 export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const dispatch = useAppDispatch();
   const categories = useAppSelector((state) => state.calendar.categories);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const [formData, setFormData] = useState(event);
   const [visibility, setVisibility] = useState<EventVisibility>(
@@ -99,6 +102,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(event.recurrence);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(event.roomId || null);
   const [showScopeDialog, setShowScopeDialog] = useState(false);
 
   const conflicts = useConflictDetection(formData.startTime, formData.endTime, event.id);
@@ -240,6 +244,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         recurrence,
         recurrenceEditScope: scope,
         occurrenceDate: isAllEventsScope ? undefined : event.occurrenceDate,
+        roomId: selectedRoomId !== event.roomId ? (selectedRoomId || '') : undefined,
       })
     );
     onClose();
@@ -341,6 +346,23 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                   onRemove={handleAttendeeRemove}
                 />
               </div>
+
+              {/* Room */}
+              {organizationId && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Door size={16} weight="duotone" className="text-muted-foreground" />
+                    <span>Room</span>
+                  </div>
+                  <RoomPicker
+                    selectedRoomId={selectedRoomId}
+                    onSelect={setSelectedRoomId}
+                    organizationId={organizationId}
+                    startTime={formData.startTime}
+                    endTime={formData.endTime}
+                  />
+                </div>
+              )}
 
               {/* Date & Time */}
               <div className="space-y-3">

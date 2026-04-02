@@ -13,6 +13,7 @@ import {
   FieldType as ProtoFieldType,
   ViewType as ProtoViewType,
   ActivityAction as ProtoActivityAction,
+  TypeFieldSchema as ProtoTypeFieldSchema,
 } from '@uniffy/proto/projects/v1/projects_pb';
 import type {
   Project as ProtoProject,
@@ -185,6 +186,15 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     urn: proto.urn,
     userPermissionLevel: proto.userPermissionLevel,
     slug: proto.slug,
+    typeFieldSchemas: Object.fromEntries(
+      Object.entries(proto.typeFieldSchemas).map(([typeName, schema]) => [
+        typeName,
+        {
+          shownFieldIds: [...schema.shownFieldIds],
+          requiredFieldIds: [...schema.requiredFieldIds],
+        },
+      ])
+    ),
   };
 }
 
@@ -430,6 +440,17 @@ export const projectsApi = {
     data: FrontendUpdateProjectRequest,
     organizationId: string
   ): Promise<{ project: Project }> => {
+    // Convert type field schemas to proto format
+    const typeFieldSchemas: Record<string, ProtoTypeFieldSchema> = {};
+    if (data.typeFieldSchemas) {
+      for (const [typeName, schema] of Object.entries(data.typeFieldSchemas)) {
+        typeFieldSchemas[typeName] = new ProtoTypeFieldSchema({
+          shownFieldIds: schema.shownFieldIds,
+          requiredFieldIds: schema.requiredFieldIds,
+        });
+      }
+    }
+
     const response = await projectsClient.updateProject({
       organizationId,
       projectId: data.id,
@@ -438,6 +459,7 @@ export const projectsApi = {
       icon: data.icon,
       color: data.color,
       visibility: data.visibility ? frontendVisibilityToProto(data.visibility) : undefined,
+      ...(data.typeFieldSchemas ? { typeFieldSchemas } : {}),
     });
     return {
       project: protoProjectToFrontend(response.project!),
@@ -492,7 +514,7 @@ export const projectsApi = {
   createTask: async (
     data: FrontendCreateTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task }> => {
+  ): Promise<{ task: Task; updatedParent?: Task }> => {
     const response = await projectsClient.createTask({
       organizationId,
       projectId: data.projectId,
@@ -508,9 +530,11 @@ export const projectsApi = {
       ...(data.sprintId !== undefined ? { sprintId: data.sprintId ?? "" } : {}),
       ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
       ...(data.blockedByTaskIds ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
+      ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
+      updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
     };
   },
 
@@ -520,7 +544,7 @@ export const projectsApi = {
   updateTask: async (
     data: FrontendUpdateTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task }> => {
+  ): Promise<{ task: Task; updatedParent?: Task; spawnedTask?: Task }> => {
     const response = await projectsClient.updateTask({
       organizationId,
       taskId: data.id,
@@ -539,9 +563,12 @@ export const projectsApi = {
       ...(data.blockedByTaskIds !== undefined ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
       ...(data.estimatedMinutes !== undefined ? { estimatedMinutes: data.estimatedMinutes ?? 0 } : {}),
       ...(data.timeSpentMinutes !== undefined ? { timeSpentMinutes: data.timeSpentMinutes ?? 0 } : {}),
+      ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
+      updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
     };
   },
 
@@ -552,7 +579,7 @@ export const projectsApi = {
   moveTask: async (
     data: FrontendMoveTaskRequest,
     organizationId: string
-  ): Promise<{ task: Task }> => {
+  ): Promise<{ task: Task; updatedParent?: Task; spawnedTask?: Task }> => {
     const response = await projectsClient.moveTask({
       organizationId,
       taskId: data.id,
@@ -561,6 +588,8 @@ export const projectsApi = {
     });
     return {
       task: protoTaskToFrontend(response.task!),
+      updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
     };
   },
 
