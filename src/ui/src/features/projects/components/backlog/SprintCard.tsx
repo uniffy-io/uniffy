@@ -8,6 +8,7 @@ import {
   deleteSprint,
 } from "@/features/projects/store/sprintsThunks";
 import { SprintCompletionDialog } from "@/features/projects/components/modals/SprintCompletionDialog";
+import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { BacklogTaskRow } from "@/features/projects/components/backlog/BacklogTaskRow";
 import type { Sprint, Task } from "@/features/projects/types";
 
@@ -29,6 +30,8 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
   const completedCount = tasks.filter((t) => t.status === "status_done").length;
   const totalCount = tasks.length;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const sprintEstimated = tasks.reduce((sum, t) => sum + (t.estimatedMinutes ?? 0), 0);
+  const sprintSpent = tasks.reduce((sum, t) => sum + (t.timeSpentMinutes ?? 0), 0);
 
   const dateRange =
     sprint.startDate && sprint.endDate
@@ -91,6 +94,12 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
         <span className="text-xs text-muted-foreground shrink-0">
           {completedCount}/{totalCount} ({progressPct}%)
         </span>
+
+        {sprintEstimated > 0 && (
+          <span className="text-xs text-muted-foreground shrink-0">
+            {formatMinutes(sprintSpent)} / {formatMinutes(sprintEstimated)}
+          </span>
+        )}
 
         <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium shrink-0", statusColor)}>
           {sprint.status}

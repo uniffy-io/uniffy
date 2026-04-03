@@ -10,6 +10,7 @@ import { AdminRoute } from '@/features/admin/components/AdminRoute';
 import { MainLayout } from '@/shared/layouts/MainLayout';
 import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
+import { StreamingProvider } from '@/components/streaming/StreamingProvider';
 import { FileViewerModal } from '@/features/files';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { PageLoader } from '@/components/feedback/PageLoader';
@@ -35,6 +36,7 @@ const Dashboard = lazyImport(() => import('@/features/dashboard/components/Dashb
 const AdminLayout = lazyImport(() => import('@/features/admin/layouts/AdminLayout'), 'AdminLayout');
 const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'), 'MembersPage');
 const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
+const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
 const OrgSettingsPage = lazyImport(() => import('@/features/admin/pages/OrgSettingsPage'), 'OrgSettingsPage');
 const OrganizationsPage = lazyImport(() => import('@/features/admin/pages/OrganizationsPage'), 'OrganizationsPage');
@@ -48,9 +50,12 @@ const CalendarPage = lazyImport(() => import('@/features/calendar/pages/Calendar
 const FilesPage = lazyImport(() => import('@/features/files/pages/FilesPage'), 'FilesPage');
 const FiltersPage = lazyImport(() => import('@/features/files/pages/FiltersPage'), 'FiltersPage');
 const FilesTagsPage = lazyImport(() => import('@/features/files/pages/FilesTagsPage'), 'FilesTagsPage');
+const RoomsAdminPage = lazyImport(() => import('@/features/rooms/pages/RoomsPage'), 'RoomsPage');
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
+const PortfolioPage = lazyImport(() => import('@/features/projects/pages/PortfolioPage'), 'PortfolioPage');
 const TaskRedirectPage = lazyImport(() => import('@/features/projects/pages/TaskRedirectPage'), 'TaskRedirectPage');
 const AgentsPage = lazyImport(() => import('@/features/agents/pages/AgentsPage'), 'AgentsPage');
+const ChatPage = lazyImport(() => import('@/features/chat/pages/ChatPage'), 'ChatPage');
 const UserSettingsPage = lazyImport(() => import('@/features/settings/pages/SettingsPage'), 'SettingsPage');
 
 function ThemedToaster() {
@@ -173,6 +178,8 @@ export function App() {
                     <FileViewerModal />
                     {/* Global Zen Mode handler - toggles distraction-free mode */}
                     <ZenModeHandler />
+                    {/* Global streaming connections (notifications, chat, presence) - mounts once, hooks no-op when unauthenticated */}
+                    <StreamingProvider />
                     {/* Global toast notifications */}
                     <ThemedToaster />
 
@@ -209,8 +216,10 @@ export function App() {
                             {/* Organization Admin Pages */}
                             <Route path="members" element={<LazyRoute><MembersPage /></LazyRoute>} />
                             <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
+                            <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
                             <Route path="org-settings" element={<LazyRoute><OrgSettingsPage /></LazyRoute>} />
+                            <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />
 
                             {/* Server Admin Pages */}
                             <Route path="organizations" element={<LazyRoute><OrganizationsPage /></LazyRoute>} />
@@ -326,6 +335,18 @@ export function App() {
                             }
                         />
 
+                        {/* Portfolio */}
+                        <Route
+                            path="/portfolio"
+                            element={
+                                <ProtectedRoute>
+                                    <MainLayout>
+                                        <LazyRoute><PortfolioPage /></LazyRoute>
+                                    </MainLayout>
+                                </ProtectedRoute>
+                            }
+                        />
+
                         {/* Projects routes */}
                         <Route
                             path="/projects/task/:taskId"
@@ -359,6 +380,43 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><ProjectsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Chat routes */}
+                        <Route
+                            path="/chat"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/chat/unreads"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/chat/threads"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/chat/:channelId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><ChatPage /></LazyRoute>
                                 </ProtectedRoute>
                             }
                         />

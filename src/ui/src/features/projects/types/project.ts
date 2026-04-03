@@ -48,6 +48,14 @@ export interface StartSprintRequest {
 export type VisibilityScope = "PRIVATE" | "GROUP" | "ORGANIZATION" | "PUBLIC";
 
 /**
+ * Per-type field schema defining which fields are shown and required
+ */
+export interface TypeFieldSchema {
+  shownFieldIds: string[];
+  requiredFieldIds: string[];
+}
+
+/**
  * A project is a container for tasks with custom field definitions
  */
 export interface Project {
@@ -69,6 +77,7 @@ export interface Project {
   urn: string;
   userPermissionLevel: number;
   slug: string;
+  typeFieldSchemas: Record<string, TypeFieldSchema>;
 }
 
 /**
@@ -143,6 +152,7 @@ export interface UpdateProjectRequest {
   color?: string;
   visibility?: VisibilityScope;
   slug?: string;
+  typeFieldSchemas?: Record<string, TypeFieldSchema>;
 }
 
 export interface CreateTaskRequest {
@@ -161,6 +171,7 @@ export interface CreateTaskRequest {
   blockedByTaskIds?: string[];
   estimatedMinutes?: number | null;
   timeSpentMinutes?: number | null;
+  recurrenceRule?: string | null;
 }
 
 export interface UpdateTaskRequest {
@@ -180,6 +191,7 @@ export interface UpdateTaskRequest {
   blockedByTaskIds?: string[];
   estimatedMinutes?: number | null;
   timeSpentMinutes?: number | null;
+  recurrenceRule?: string | null;
 }
 
 export interface MoveTaskRequest {

@@ -253,6 +253,11 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     isRecurring: proto.isRecurring || false,
     recurrenceId: proto.recurrenceId || undefined,
     occurrenceDate: proto.occurrenceDate || undefined,
+    roomId: proto.roomId || undefined,
+    roomName: proto.roomName || undefined,
+    roomLocation: proto.roomLocation || undefined,
+    roomCapacity: proto.roomCapacity || undefined,
+    roomAmenities: proto.roomAmenities?.length ? [...proto.roomAmenities] : undefined,
 });
 
 /**
@@ -360,6 +365,7 @@ export const createEvent = createAsyncThunk<
         tags?: string[];
         visibility?: string;
         reminders?: number[];
+        roomId?: string;
     },
     { state: RootState; rejectValue: string; dispatch: typeof import('@/app/store').store.dispatch }
 >('calendar/createEvent', async (params, { getState, rejectWithValue, dispatch }) => {
@@ -399,6 +405,7 @@ export const createEvent = createAsyncThunk<
             tags: params.tags || [],
             visibility: VISIBILITY_TO_PROTO[params.visibility || 'private'] || ProtoVisibilityScope.PRIVATE,
             reminders: params.reminders || [],
+            roomId: params.roomId || undefined,
         });
 
         if (!response.event) {
@@ -449,6 +456,7 @@ export const updateEvent = createAsyncThunk<
         reminders?: number[];
         recurrenceEditScope?: RecurrenceEditScope;
         occurrenceDate?: string;
+        roomId?: string;
     },
     { state: RootState; rejectValue: string; dispatch: typeof import('@/app/store').store.dispatch }
 >('calendar/updateEvent', async (params, { getState, rejectWithValue, dispatch }) => {
@@ -491,6 +499,7 @@ export const updateEvent = createAsyncThunk<
                 ? EDIT_SCOPE_TO_PROTO[params.recurrenceEditScope]
                 : undefined,
             occurrenceDate: params.occurrenceDate,
+            roomId: params.roomId,
         });
 
         if (!response.event) {

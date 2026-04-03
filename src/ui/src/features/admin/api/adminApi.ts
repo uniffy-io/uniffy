@@ -16,6 +16,10 @@ import type {
     ListMembersRequest,
     UpdateMemberRoleRequest,
     RemoveMemberRequest,
+    GrantDomainAdminRequest,
+    RevokeDomainAdminRequest,
+    ListDomainAdminsRequest,
+    GetUserDomainAdminsRequest,
 } from '@uniffy/proto/organizations/v1/organizations_pb';
 import type {
     ListGroupsRequest,
@@ -94,6 +98,23 @@ export const adminApi = {
 
     removeGroupMember: async (request: PartialMessage<RemoveGroupMemberRequest>) => {
         return groupsClient.removeGroupMember(request);
+    },
+
+    // Domain Admins (from organizations service)
+    grantDomainAdmin: async (request: PartialMessage<GrantDomainAdminRequest>) => {
+        return organizationsClient.grantDomainAdmin(request);
+    },
+
+    revokeDomainAdmin: async (request: PartialMessage<RevokeDomainAdminRequest>) => {
+        return organizationsClient.revokeDomainAdmin(request);
+    },
+
+    listDomainAdmins: async (request: PartialMessage<ListDomainAdminsRequest>) => {
+        return organizationsClient.listDomainAdmins(request);
+    },
+
+    getUserDomainAdmins: async (request: PartialMessage<GetUserDomainAdminsRequest>) => {
+        return organizationsClient.getUserDomainAdmins(request);
     },
 };
 

@@ -17,7 +17,7 @@ const CREATABLE_FIELDS: { type: FieldType; label: string; icon: React.ReactNode 
 
 const DEFAULT_OPTION_COLORS = [
   "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#f97316",
+  "#ec4899", "#06b6d4", "#f97316", "#6b7280", "#14b8a6",
 ];
 
 interface CreateFieldDialogProps {
@@ -68,6 +68,15 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
     const updated = [...options];
     updated[idx] = { ...updated[idx], label };
     setOptions(updated);
+  };
+
+  const [colorPickerIdx, setColorPickerIdx] = useState<number | null>(null);
+
+  const handleOptionColorChange = (idx: number, color: string) => {
+    const updated = [...options];
+    updated[idx] = { ...updated[idx], color };
+    setOptions(updated);
+    setColorPickerIdx(null);
   };
 
   const handleSubmit = () => {
@@ -160,11 +169,15 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
           <span className="text-xs text-muted-foreground mb-1.5 block">Options</span>
           <div className="space-y-1">
             {options.map((opt, idx) => (
-              <div key={opt.id} className="flex items-center gap-1">
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: opt.color }}
-                />
+              <div key={opt.id} className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="w-5 h-5 rounded-full shrink-0 border border-border cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                    style={{ backgroundColor: opt.color }}
+                    onClick={() => setColorPickerIdx(colorPickerIdx === idx ? null : idx)}
+                    title="Pick color"
+                  />
                 <input
                   type="text"
                   placeholder={`Option ${idx + 1}`}
@@ -179,6 +192,23 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
                 >
                   <Trash size={12} />
                 </button>
+                </div>
+                {colorPickerIdx === idx && (
+                  <div className="flex flex-wrap gap-1 pl-6 pb-1">
+                    {DEFAULT_OPTION_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        className={cn(
+                          "w-4 h-4 rounded-full border transition-all",
+                          opt.color === c ? "border-foreground ring-1 ring-foreground" : "border-border hover:scale-110"
+                        )}
+                        style={{ backgroundColor: c }}
+                        onClick={() => handleOptionColorChange(idx, c)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <Button

@@ -114,6 +114,7 @@ message Project {
   string                             urn                   = 16;
   common.v1.PermissionLevel          user_permission_level = 17;
   string                             slug                  = 18;
+  map<string, TypeFieldSchema>       type_field_schemas    = 19;
 }
 
 message Task {
@@ -161,6 +162,11 @@ message FieldDefinition {
   string                    config_json = 8;
   google.protobuf.Timestamp created_at  = 9;
   google.protobuf.Timestamp updated_at  = 10;
+}
+
+message TypeFieldSchema {
+  repeated string shown_field_ids    = 1;
+  repeated string required_field_ids = 2;
 }
 
 message ViewConfig {
@@ -229,16 +235,17 @@ message GetProjectRequest {
 }
 
 message UpdateProjectRequest {
-  string                             organization_id = 1;
-  string                             project_id      = 2;
-  optional string                    name            = 3;
-  optional string                    description     = 4;
-  optional string                    icon            = 5;
-  optional string                    color           = 6;
-  optional common.v1.VisibilityScope visibility      = 7;
-  repeated string                    member_ids      = 8;
-  optional string                    default_view_id = 9;
-  optional string                    slug            = 10;
+  string                             organization_id    = 1;
+  string                             project_id         = 2;
+  optional string                    name               = 3;
+  optional string                    description        = 4;
+  optional string                    icon               = 5;
+  optional string                    color              = 6;
+  optional common.v1.VisibilityScope visibility         = 7;
+  repeated string                    member_ids         = 8;
+  optional string                    default_view_id    = 9;
+  optional string                    slug               = 10;
+  map<string, TypeFieldSchema>       type_field_schemas  = 11;
 }
 
 message DeleteProjectRequest {
@@ -360,6 +367,8 @@ message ListTasksRequest {
 
 message TaskResponse {
   Task task = 1;
+  optional Task updated_parent = 2;
+  optional Task spawned_task   = 3;
 }
 
 message DeleteTaskResponse {

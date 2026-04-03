@@ -282,11 +282,10 @@ export const projectsSlice = createSlice({
       })
       .addCase(createTask.fulfilled, (state, action) => {
         state.loading.creating = false;
-        const newTask = action.payload;
-        state.tasks[newTask.id] = newTask;
-        // Update parent subtask counts if this is a subtask
-        if (newTask.parentId && state.tasks[newTask.parentId]) {
-          state.tasks[newTask.parentId].subtaskTotal += 1;
+        const { task, updatedParent } = action.payload;
+        state.tasks[task.id] = task;
+        if (updatedParent) {
+          state.tasks[updatedParent.id] = updatedParent;
         }
       })
       .addCase(createTask.rejected, (state, action) => {
@@ -301,7 +300,14 @@ export const projectsSlice = createSlice({
       })
       .addCase(updateTask.fulfilled, (state, action) => {
         state.loading.updating = null;
-        state.tasks[action.payload.id] = action.payload;
+        const { task, updatedParent, spawnedTask } = action.payload;
+        state.tasks[task.id] = task;
+        if (updatedParent) {
+          state.tasks[updatedParent.id] = updatedParent;
+        }
+        if (spawnedTask) {
+          state.tasks[spawnedTask.id] = spawnedTask;
+        }
         state._pendingTaskSnapshot = undefined;
       })
       .addCase(updateTask.rejected, (state, action) => {
@@ -318,7 +324,14 @@ export const projectsSlice = createSlice({
     // ===== Move Task =====
     builder
       .addCase(moveTask.fulfilled, (state, action) => {
-        state.tasks[action.payload.id] = action.payload;
+        const { task, updatedParent, spawnedTask } = action.payload;
+        state.tasks[task.id] = task;
+        if (updatedParent) {
+          state.tasks[updatedParent.id] = updatedParent;
+        }
+        if (spawnedTask) {
+          state.tasks[spawnedTask.id] = spawnedTask;
+        }
         state._pendingTaskSnapshot = undefined;
       })
       .addCase(moveTask.rejected, (state, action) => {
@@ -338,7 +351,17 @@ export const projectsSlice = createSlice({
       })
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.loading.deleting = null;
-        delete state.tasks[action.meta.arg];
+        const taskId = action.meta.arg;
+        const task = state.tasks[taskId];
+        // Update parent counts before removing
+        if (task?.parentId && state.tasks[task.parentId]) {
+          const parent = state.tasks[task.parentId];
+          parent.subtaskTotal = Math.max(0, parent.subtaskTotal - 1);
+          if (task.status === "status_done") {
+            parent.subtaskCompleted = Math.max(0, parent.subtaskCompleted - 1);
+          }
+        }
+        delete state.tasks[taskId];
       })
       .addCase(deleteTask.rejected, (state, action) => {
         state.loading.deleting = null;
@@ -353,6 +376,14 @@ export const projectsSlice = createSlice({
       .addCase(deleteTasks.fulfilled, (state, action) => {
         state.loading.deleting = null;
         action.payload.forEach((taskId) => {
+          const task = state.tasks[taskId];
+          if (task?.parentId && state.tasks[task.parentId]) {
+            const parent = state.tasks[task.parentId];
+            parent.subtaskTotal = Math.max(0, parent.subtaskTotal - 1);
+            if (task.status === "status_done") {
+              parent.subtaskCompleted = Math.max(0, parent.subtaskCompleted - 1);
+            }
+          }
           delete state.tasks[taskId];
         });
       })
@@ -532,6 +563,26 @@ export const selectTasksByStatus = (projectId: string) => createSelector(
       },
       {} as Record<string, Task[]>
     );
+  }
+);
+
+export const selectProjectTimeStats = (projectId: string) => createSelector(
+  [selectTasksForProject(projectId)],
+  (tasks) => {
+    let totalEstimated = 0;
+    let totalSpent = 0;
+
+    for (const task of tasks) {
+      if (task.estimatedMinutes) totalEstimated += task.estimatedMinutes;
+      if (task.timeSpentMinutes) totalSpent += task.timeSpentMinutes;
+    }
+
+    return {
+      totalEstimated,
+      totalSpent,
+      remaining: Math.max(0, totalEstimated - totalSpent),
+      hasTimeData: totalEstimated > 0 || totalSpent > 0,
+    };
   }
 );
 

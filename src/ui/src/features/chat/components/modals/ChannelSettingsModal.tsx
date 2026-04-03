@@ -1,0 +1,624 @@
+/**
+ * ChannelSettingsModal - Modal for editing channel settings and managing members.
+ *
+ * Two tabs: Overview (edit name, description, category, channel type card)
+ * and Members (search-to-add with chips, member list with role badges).
+ * Danger zone for archive/delete at the bottom.
+ * Permission-gated: only channel OWNER/ADMIN, org admin, or chat domain admin can edit.
+ */
+
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  X,
+  GlobeSimple,
+  Lock,
+  UserPlus,
+  Crown,
+  ShieldStar,
+  Trash,
+  Archive,
+  UserMinus,
+  MagnifyingGlass,
+  CalendarBlank,
+  Info,
+} from '@phosphor-icons/react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
+import { Select } from '@/components/ui/select';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SubjectAvatarById } from '@/components/subject/SubjectAvatar';
+import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
+import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
+import { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';
+import { cn } from '@/shared/utils/cn';
+import { selectActiveChannel, selectChannelMembers, selectCategories } from '@/features/chat/store/chatChannelsSlice';
+import { closeChannelSettingsModal, selectChannelSettingsModalTab } from '@/features/chat/store/chatUiSlice';
+import {
+  updateChannelThunk,
+  addMembersThunk,
+  removeMemberThunk,
+  fetchMembers,
+  deleteChannel,
+  archiveChannel,
+} from '@/features/chat/store/chatThunks';
+import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
+import { formatDateFull } from '@/shared/utils/dateFormatting';
+import type { ChatChannelMember } from '@/features/chat/types';
+
+type SettingsTab = 'overview' | 'members';
+
+const ROLE_BADGE_STYLES: Record<string, string> = {
+  OWNER: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  ADMIN: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  MEMBER: 'bg-muted text-muted-foreground',
+};
+
+const ROLE_ICONS: Record<string, typeof Crown | null> = {
+  OWNER: Crown,
+  ADMIN: ShieldStar,
+  MEMBER: null,
+};
+
+const MAX_NAME_LENGTH = 50;
+
+export function ChannelSettingsModal() {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const activeChannel = useAppSelector(selectActiveChannel);
+  const initialTab = useAppSelector(selectChannelSettingsModalTab);
+  const categories = useAppSelector(selectCategories);
+  const currentUserId = useAppSelector((s) => s.auth.user?.id);
+  const { canManageChat } = useChatPermissions();
+
+  const channelId = activeChannel?.id ?? '';
+  const members = useAppSelector((s) => selectChannelMembers(s, channelId));
+
+  // Local tab state initialized from Redux
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+
+  // Form state for overview
+  const [name, setName] = useState(activeChannel?.name ?? '');
+  const [description, setDescription] = useState(activeChannel?.description ?? '');
+  const [categoryId, setCategoryId] = useState<string | undefined>(activeChannel?.categoryId ?? undefined);
+
+  // Action states
+  const [isSaving, setIsSaving] = useState(false);
+  const [addMemberQuery, setAddMemberQuery] = useState('');
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [isAddingMembers, setIsAddingMembers] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<ChatChannelMember | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+
+  const addInputRef = useRef<HTMLInputElement>(null);
+
+  // Resolve member user IDs to Subject objects for display names
+  const memberUserIds = useMemo(() => members.map((m) => m.userId), [members]);
+  const { subjects: memberSubjects } = useSubjectResolver(memberUserIds);
+  const memberSubjectMap = useMemo(() => {
+    const map: Record<string, { name: string; email?: string }> = {};
+    for (const s of memberSubjects) {
+      map[s.id] = { name: s.name, email: s.email };
+    }
+    return map;
+  }, [memberSubjects]);
+
+  // Determine edit permission
+  const currentUserMember = useMemo(
+    () => members.find((m) => m.userId === currentUserId),
+    [members, currentUserId],
+  );
+  const currentUserRole = currentUserMember?.role;
+  const canEdit = canManageChat || currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+
+  // Dirty detection for overview form
+  const isDirty = useMemo(() => {
+    if (!activeChannel) return false;
+    return (
+      name !== activeChannel.name ||
+      description !== (activeChannel.description ?? '') ||
+      (categoryId ?? '') !== (activeChannel.categoryId ?? '')
+    );
+  }, [name, description, categoryId, activeChannel]);
+
+  // Fetch members on mount
+  useEffect(() => {
+    if (channelId) {
+      dispatch(fetchMembers(channelId));
+    }
+  }, [dispatch, channelId]);
+
+  const handleClose = useCallback(() => {
+    dispatch(closeChannelSettingsModal());
+  }, [dispatch]);
+
+  const existingMemberIds = useMemo(() => members.map((m) => m.userId), [members]);
+
+  // Sort members: OWNER first, then ADMIN, then MEMBER
+  const sortedMembers = useMemo(() => {
+    const roleOrder: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
+    return [...members].sort(
+      (a, b) => (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3),
+    );
+  }, [members]);
+
+  const categoryOptions = useMemo(() => [
+    { value: '', label: 'No category' },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
+  ], [categories]);
+
+  const isChannelPublic = activeChannel?.channelType === 'PUBLIC';
+
+  // Subject search for adding members
+  const { results: searchResults, loading: searchLoading, search } = useSubjectSearch({
+    subjectTypes: 'users',
+    excludeIds: existingMemberIds,
+  });
+
+  useEffect(() => {
+    search(addMemberQuery);
+  }, [addMemberQuery, search]);
+
+  // Don't render for DM channels
+  if (!activeChannel || activeChannel.channelType === 'DIRECT' || activeChannel.channelType === 'GROUP_DM') {
+    return null;
+  }
+
+  const handleSave = async () => {
+    if (!isDirty || !canEdit) return;
+    setIsSaving(true);
+    try {
+      await dispatch(
+        updateChannelThunk({
+          channelId,
+          name: name.trim(),
+          description: description.trim(),
+          categoryId: categoryId || undefined,
+          originalCategoryId: activeChannel.categoryId ?? undefined,
+        }),
+      ).unwrap();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddMember = async (userId: string) => {
+    setIsAddingMembers(true);
+    try {
+      await dispatch(addMembersThunk({ channelId, userIds: [userId] })).unwrap();
+      setAddMemberQuery('');
+      addInputRef.current?.focus();
+    } finally {
+      setIsAddingMembers(false);
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
+    setRemovingMemberId(memberToRemove.userId);
+    try {
+      await dispatch(
+        removeMemberThunk({ channelId, userId: memberToRemove.userId }),
+      ).unwrap();
+      setShowRemoveConfirm(false);
+      setMemberToRemove(null);
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteChannel(channelId)).unwrap();
+      handleClose();
+      navigate('/chat');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    setIsArchiving(true);
+    try {
+      await dispatch(archiveChannel(channelId)).unwrap();
+      handleClose();
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  return (
+    <>
+      <Modal onClose={handleClose} closeDisabled={isSaving || isDeleting} maxWidth="max-w-lg">
+        <div className="flex flex-col" style={{ maxHeight: '75vh' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
+            <h2 className="text-xl font-semibold text-foreground">
+              Channel settings
+            </h2>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSaving || isDeleting}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Channel identity card */}
+          <div className="mx-6 mt-2 mb-4 shrink-0">
+            <div className={cn(
+              'flex items-center gap-3 rounded-lg border p-3.5',
+              isChannelPublic
+                ? 'border-primary/30 bg-primary/5'
+                : 'border-border bg-muted/30',
+            )}>
+              <div className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                isChannelPublic
+                  ? 'bg-primary/15 text-primary'
+                  : 'bg-muted text-muted-foreground',
+              )}>
+                {isChannelPublic
+                  ? <GlobeSimple size={22} weight="bold" />
+                  : <Lock size={22} weight="bold" />
+                }
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {activeChannel.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isChannelPublic ? 'Public channel' : 'Private channel'}
+                  {' '}&middot;{' '}{members.length} {members.length === 1 ? 'member' : 'members'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tab bar */}
+          <div className="flex gap-1 px-6 shrink-0">
+            {(['overview', 'members'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                  activeTab === tab
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                )}
+              >
+                {tab === 'overview' ? 'Overview' : `Members (${members.length})`}
+              </button>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="border-b border-border mt-2 shrink-0" />
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {activeTab === 'overview' ? (
+              <div className="px-6 py-5 space-y-5">
+                {/* Channel name */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Channel name
+                  </label>
+                  <Input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value.slice(0, MAX_NAME_LENGTH))}
+                    disabled={!canEdit || isSaving}
+                    placeholder="Enter a name for your channel"
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <span />
+                    {canEdit && (
+                      <p className={cn(
+                        'text-xs tabular-nums',
+                        name.length >= MAX_NAME_LENGTH ? 'text-red-500' : 'text-muted-foreground',
+                      )}>
+                        {name.length}/{MAX_NAME_LENGTH}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Channel Purpose
+                    <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    disabled={!canEdit || isSaving}
+                    rows={3}
+                    placeholder="What is this channel about?"
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none disabled:opacity-50"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This will be displayed when browsing for channels.
+                  </p>
+                </div>
+
+                {/* Category */}
+                {categories.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Category
+                      <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                    </label>
+                    <Select
+                      value={categoryId ?? ''}
+                      onChange={(v) => setCategoryId(v || undefined)}
+                      options={categoryOptions}
+                      size="md"
+                      disabled={!canEdit || isSaving}
+                    />
+                  </div>
+                )}
+
+                {/* Info row: created date */}
+                {activeChannel.createdAt && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                    <CalendarBlank size={14} />
+                    <span>Created {formatDateFull(activeChannel.createdAt)}</span>
+                  </div>
+                )}
+
+                {/* Danger zone */}
+                {canEdit && (
+                  <div className="mt-2 pt-4 border-t border-border">
+                    <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 p-4">
+                      <p className="text-sm font-medium text-foreground mb-3">Danger zone</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowArchiveConfirm(true)}
+                          disabled={isArchiving || isDeleting}
+                        >
+                          <Archive size={14} className="mr-1.5" />
+                          Archive
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setShowDeleteConfirm(true)}
+                          disabled={isArchiving || isDeleting}
+                        >
+                          <Trash size={14} className="mr-1.5" />
+                          Delete channel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {/* Add member search */}
+                {canEdit && (
+                  <div className="px-6 pt-4 pb-3">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
+                      <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
+                      <input
+                        ref={addInputRef}
+                        type="text"
+                        value={addMemberQuery}
+                        onChange={(e) => {
+                          setAddMemberQuery(e.target.value);
+                          if (!showAddMember) setShowAddMember(true);
+                        }}
+                        onFocus={() => setShowAddMember(true)}
+                        placeholder="Search people to add..."
+                        disabled={isAddingMembers}
+                        className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                      />
+                    </div>
+
+                    {/* Search results dropdown */}
+                    {showAddMember && addMemberQuery.length >= 2 && (
+                      <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[200px] overflow-y-auto">
+                        {searchLoading && searchResults.length === 0 ? (
+                          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                            Searching...
+                          </div>
+                        ) : searchResults.length === 0 ? (
+                          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                            No users found
+                          </div>
+                        ) : (
+                          <div className="py-1">
+                            {searchResults.map((subject) => (
+                              <button
+                                key={subject.id}
+                                type="button"
+                                onClick={() => handleAddMember(subject.id)}
+                                disabled={isAddingMembers}
+                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
+                              >
+                                <SubjectAvatar subject={subject} size="sm" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">
+                                    {subject.name}
+                                  </p>
+                                  {subject.email && (
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {subject.email}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                                  <UserPlus size={12} weight="bold" />
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Member list */}
+                <div className="px-3 pb-4">
+                  {sortedMembers.length === 0 ? (
+                    <div className="flex flex-col items-center py-8 text-muted-foreground">
+                      <Info size={32} className="mb-2 opacity-50" />
+                      <p className="text-sm">No members found</p>
+                    </div>
+                  ) : (
+                    sortedMembers.map((member) => {
+                      const subject = memberSubjectMap[member.userId];
+                      const displayName = subject?.name ?? member.userId.slice(-6);
+                      const RoleIcon = ROLE_ICONS[member.role];
+                      const isOwner = member.role === 'OWNER';
+                      const isSelf = member.userId === currentUserId;
+                      const isRemoving = removingMemberId === member.userId;
+
+                      return (
+                        <div
+                          key={member.userId}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 group transition-colors"
+                        >
+                          <SubjectAvatarById
+                            userId={member.userId}
+                            displayName={displayName}
+                            size="md"
+                            showPresence
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium text-foreground truncate">
+                                {displayName}
+                              </span>
+                              {isSelf && (
+                                <span className="text-xs text-muted-foreground shrink-0">(you)</span>
+                              )}
+                            </div>
+                            {subject?.email && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {subject.email}
+                              </p>
+                            )}
+                          </div>
+                          {/* Role badge */}
+                          <span className={cn(
+                            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0',
+                            ROLE_BADGE_STYLES[member.role],
+                          )}>
+                            {RoleIcon && <RoleIcon size={11} weight="fill" />}
+                            {member.role}
+                          </span>
+                          {/* Remove button */}
+                          {canEdit && !isOwner && !isSelf && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMemberToRemove(member);
+                                setShowRemoveConfirm(true);
+                              }}
+                              disabled={isRemoving}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors md:opacity-0 md:group-hover:opacity-100 disabled:opacity-50"
+                              aria-label={`Remove ${displayName}`}
+                            >
+                              <UserMinus size={14} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          {activeTab === 'overview' && canEdit && isDirty && (
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border shrink-0">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setName(activeChannel.name);
+                  setDescription(activeChannel.description ?? '');
+                  setCategoryId(activeChannel.categoryId ?? undefined);
+                }}
+                disabled={isSaving}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={!isDirty || isSaving}
+                loading={isSaving}
+              >
+                Save changes
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete channel"
+        message={`Are you sure you want to permanently delete #${activeChannel.name}? All messages and data will be lost. This action cannot be undone.`}
+        confirmLabel="Delete channel"
+        variant="danger"
+        loading={isDeleting}
+      />
+
+      {/* Archive confirmation */}
+      <ConfirmDialog
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        onConfirm={handleArchive}
+        title="Archive channel"
+        message={`Are you sure you want to archive #${activeChannel.name}? Members will no longer be able to send messages. The channel can be restored later.`}
+        confirmLabel="Archive channel"
+        variant="warning"
+        loading={isArchiving}
+      />
+
+      {/* Remove member confirmation */}
+      <ConfirmDialog
+        isOpen={showRemoveConfirm}
+        onClose={() => {
+          setShowRemoveConfirm(false);
+          setMemberToRemove(null);
+        }}
+        onConfirm={handleRemoveMember}
+        title="Remove member"
+        message={memberToRemove
+          ? `Remove ${memberSubjectMap[memberToRemove.userId]?.name ?? 'this user'} from #${activeChannel.name}?`
+          : ''}
+        confirmLabel="Remove"
+        variant="danger"
+        loading={removingMemberId !== null}
+      />
+    </>
+  );
+}

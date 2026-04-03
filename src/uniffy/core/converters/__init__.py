@@ -8,6 +8,8 @@ and domain types.
 from uniffy.core.converters.common_proto import (
     CONTENT_TYPE_FROM_PROTO,
     CONTENT_TYPE_TO_PROTO,
+    DOMAIN_TYPE_FROM_PROTO,
+    DOMAIN_TYPE_TO_PROTO,
     GROUP_ROLE_FROM_PROTO,
     GROUP_ROLE_TO_PROTO,
     ORG_ROLE_FROM_PROTO,
@@ -20,6 +22,9 @@ from uniffy.core.converters.common_proto import (
     VISIBILITY_TO_PROTO,
     content_type_from_proto,
     content_type_to_proto,
+    domain_admin_info_to_proto,
+    domain_type_from_proto,
+    domain_type_to_proto,
     group_info_to_proto,
     group_member_info_to_proto,
     group_role_from_proto,
@@ -52,6 +57,8 @@ __all__ = [
     # Enum mappings
     "CONTENT_TYPE_TO_PROTO",
     "CONTENT_TYPE_FROM_PROTO",
+    "DOMAIN_TYPE_TO_PROTO",
+    "DOMAIN_TYPE_FROM_PROTO",
     "SUBJECT_TYPE_TO_PROTO",
     "SUBJECT_TYPE_FROM_PROTO",
     "PERMISSION_LEVEL_TO_PROTO",
@@ -65,6 +72,8 @@ __all__ = [
     # Enum converter functions
     "content_type_to_proto",
     "content_type_from_proto",
+    "domain_type_to_proto",
+    "domain_type_from_proto",
     "subject_type_to_proto",
     "subject_type_from_proto",
     "permission_level_to_proto",
@@ -76,6 +85,7 @@ __all__ = [
     "group_role_to_proto",
     "group_role_from_proto",
     # Message converter functions
+    "domain_admin_info_to_proto",
     "user_info_to_proto",
     "org_info_to_proto",
     "group_info_to_proto",

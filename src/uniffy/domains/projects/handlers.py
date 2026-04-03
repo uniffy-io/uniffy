@@ -226,6 +226,14 @@ class ProjectsHandlers:
                     updates["default_view_id"] = request.default_view_id
                 if request.HasField("slug"):
                     updates["slug"] = request.slug
+                if request.type_field_schemas:
+                    updates["type_field_schemas"] = {
+                        type_name: {
+                            "shown_field_ids": list(schema.shown_field_ids),
+                            "required_field_ids": list(schema.required_field_ids),
+                        }
+                        for type_name, schema in request.type_field_schemas.items()
+                    }
 
                 try:
                     project = await ops.update(user_id, organization_id, project_id, **updates)
@@ -422,7 +430,7 @@ class ProjectsHandlers:
                         # Try to decode as JSON, fallback to string
                         try:
                             field_values[key] = json.loads(value)
-                        except json.JSONDecodeError, ValueError:
+                        except (json.JSONDecodeError, ValueError):
                             field_values[key] = value
                     kwargs["field_values"] = field_values
 
@@ -435,7 +443,20 @@ class ProjectsHandlers:
                     **kwargs,
                 )
 
-                return TaskResponse(task=task_to_proto(task))
+                # If subtask, load parent with updated counts
+                updated_parent_proto = None
+                if task.parent_id:
+                    parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
+                    parent_counts = await queries.get_subtask_counts(session, [parent.id])
+                    p_total, p_done = parent_counts.get(parent.id, (0, 0))
+                    updated_parent_proto = task_to_proto(
+                        parent, subtask_total=p_total, subtask_completed=p_done
+                    )
+
+                return TaskResponse(
+                    task=task_to_proto(task),
+                    updated_parent=updated_parent_proto,
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Project not found")
@@ -560,13 +581,40 @@ class ProjectsHandlers:
                     for key, value in request.field_values.items():
                         try:
                             field_values[key] = json.loads(value)
-                        except json.JSONDecodeError, ValueError:
+                        except (json.JSONDecodeError, ValueError):
                             field_values[key] = value
                     updates["field_values"] = field_values
 
-                task = await ops.update(user_id, organization_id, task_id, **updates)
+                task, spawned_task = await ops.update(
+                    user_id, organization_id, task_id, **updates
+                )
 
-                return TaskResponse(task=task_to_proto(task))
+                # Load subtask counts for the updated task itself
+                subtask_counts = await queries.get_subtask_counts(session, [task.id])
+                st_total, st_done = subtask_counts.get(task.id, (0, 0))
+
+                # If this is a subtask, load updated parent with fresh counts
+                updated_parent_proto = None
+                if task.parent_id:
+                    parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
+                    parent_counts = await queries.get_subtask_counts(session, [parent.id])
+                    p_total, p_done = parent_counts.get(parent.id, (0, 0))
+                    updated_parent_proto = task_to_proto(
+                        parent, subtask_total=p_total, subtask_completed=p_done
+                    )
+
+                # If a recurring task spawned a new instance, include it
+                spawned_proto = None
+                if spawned_task:
+                    spawned_proto = task_to_proto(spawned_task)
+
+                return TaskResponse(
+                    task=task_to_proto(
+                        task, subtask_total=st_total, subtask_completed=st_done
+                    ),
+                    updated_parent=updated_parent_proto,
+                    spawned_task=spawned_proto,
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
@@ -597,7 +645,7 @@ class ProjectsHandlers:
         try:
             async for session in get_async_session():
                 ops = TaskOperations(session)
-                task = await ops.move(
+                task, spawned_task = await ops.move(
                     user_id,
                     organization_id,
                     task_id,
@@ -605,7 +653,31 @@ class ProjectsHandlers:
                     request.sort_order,
                 )
 
-                return TaskResponse(task=task_to_proto(task))
+                # Load subtask counts for the moved task
+                subtask_counts = await queries.get_subtask_counts(session, [task.id])
+                st_total, st_done = subtask_counts.get(task.id, (0, 0))
+
+                # If subtask, load parent with fresh counts
+                updated_parent_proto = None
+                if task.parent_id:
+                    parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
+                    parent_counts = await queries.get_subtask_counts(session, [parent.id])
+                    p_total, p_done = parent_counts.get(parent.id, (0, 0))
+                    updated_parent_proto = task_to_proto(
+                        parent, subtask_total=p_total, subtask_completed=p_done
+                    )
+
+                spawned_proto = None
+                if spawned_task:
+                    spawned_proto = task_to_proto(spawned_task)
+
+                return TaskResponse(
+                    task=task_to_proto(
+                        task, subtask_total=st_total, subtask_completed=st_done
+                    ),
+                    updated_parent=updated_parent_proto,
+                    spawned_task=spawned_proto,
+                )
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Task not found")
@@ -735,7 +807,7 @@ class ProjectsHandlers:
                             user_id, organization_id, task_id, permanent=request.permanent
                         )
                         count += 1
-                    except NotFoundError, PermissionDeniedError:
+                    except (NotFoundError, PermissionDeniedError):
                         # Skip tasks that can't be deleted
                         continue
 

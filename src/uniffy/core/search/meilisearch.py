@@ -82,6 +82,7 @@ INDEX_SETTINGS = MeilisearchSettings(
         "shared_group_ids",
         "shared_user_ids",
         "tags",
+        "updated_at",  # Time-bounded searches (e.g., "modified this week")
     ],
     # Fields available for sorting
     sortable_attributes=[
@@ -339,6 +340,37 @@ class MeilisearchClient:
             f"Meilisearch: index_document type={entity_type}",
             ms=f"{elapsed_ms:.1f}",
             urn=urn,
+        )
+
+    async def batch_index_documents(
+        self,
+        documents: list[dict[str, Any]],
+    ) -> None:
+        """
+        Index multiple documents in a single Meilisearch call.
+
+        Each document dict must contain all required fields (id, urn,
+        organization_id, title, entity_type, etc.). Use build_document_id()
+        to generate the id field.
+
+        Parameters
+        ----------
+        documents : list[dict]
+            List of document dicts ready for Meilisearch.
+
+        """
+        if not documents:
+            return
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        await index.add_documents(documents)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="index").inc(len(documents))
+        SEARCH_OPERATION_DURATION.labels(operation="index").observe(elapsed_ms / 1000)
+        logger.info(
+            f"Meilisearch: batch_index count={len(documents)}",
+            ms=f"{elapsed_ms:.1f}",
         )
 
     async def delete_document(
@@ -653,20 +685,26 @@ class MeilisearchClient:
 
         start = time.perf_counter()
         index = self.client.index(self.config.index_name)
-
-        # Build filter to match any of the URNs within the organization
-        # URN is stored as a field in the document
-        urn_filters = " OR ".join(f'urn = "{urn}"' for urn in urns)
         org_filter = f'organization_id = "{organization_id}"'
-        combined_filter = f"({urn_filters}) AND {org_filter}"
+
+        # Chunk URNs to avoid filter expression complexity limits
+        result: dict[str, dict[str, Any]] = {}
+        chunk_size = 50
 
         try:
-            # Use get_documents with filter parameter (requires Meilisearch >= 1.2.0)
-            docs = await index.get_documents(
-                filter=combined_filter,
-                limit=len(urns),
-            )
-            result = {doc["urn"]: doc for doc in docs.results if "urn" in doc}
+            for i in range(0, len(urns), chunk_size):
+                chunk = urns[i : i + chunk_size]
+                urn_filters = " OR ".join(f'urn = "{urn}"' for urn in chunk)
+                combined_filter = f"({urn_filters}) AND {org_filter}"
+
+                docs = await index.get_documents(
+                    filter=combined_filter,
+                    limit=len(chunk),
+                )
+                for doc in docs.results:
+                    if "urn" in doc:
+                        result[doc["urn"]] = doc
+
             elapsed_ms = (time.perf_counter() - start) * 1000
             SEARCH_OPERATIONS_TOTAL.labels(operation="get_batch").inc()
             SEARCH_OPERATION_DURATION.labels(operation="get_batch").observe(elapsed_ms / 1000)

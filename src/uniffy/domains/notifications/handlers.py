@@ -547,6 +547,14 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
+                    # Permissions changed (domain admin granted/revoked)
+                    if payload.get("_type") == "permissions_changed":
+                        yield StreamNotificationEvent(
+                            event_type=StreamNotificationEvent.EVENT_TYPE_PERMISSIONS_CHANGED,
+                        )
+                        last_send = now
+                        continue
+
                     # Mention state changed (from mentions:{org_id} channel)
                     if payload.get("_type") == "mention_state_changed":
                         mention_payload = MentionStateChangedPayload(

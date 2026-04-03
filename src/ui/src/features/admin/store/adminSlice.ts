@@ -13,6 +13,7 @@ import type {
     MemberInfo,
     GroupInfo,
     GroupMemberInfo,
+    DomainAdminInfo,
 } from '@uniffy/proto/common/v1/common_pb';
 import {
     fetchPermissionDefaults,
@@ -28,6 +29,9 @@ import {
     fetchGroupMembers,
     addGroupMember,
     removeGroupMember,
+    fetchDomainAdmins,
+    grantDomainAdmin,
+    revokeDomainAdmin,
 } from '@/features/admin/store/adminThunks';
 
 /**
@@ -147,6 +151,33 @@ export function serializeGroupMemberInfo(m: GroupMemberInfo): SerializedGroupMem
     };
 }
 
+/**
+ * Serialized domain admin info.
+ */
+export interface SerializedDomainAdminInfo {
+    id: string;
+    userId: string;
+    displayName: string;
+    email: string;
+    avatarUrl: string;
+    domain: number;
+    grantedByUserId: string;
+    grantedAt: { seconds: number; nanos: number } | null;
+}
+
+export function serializeDomainAdminInfo(d: DomainAdminInfo): SerializedDomainAdminInfo {
+    return {
+        id: d.id,
+        userId: d.userId,
+        displayName: d.displayName,
+        email: d.email,
+        avatarUrl: d.avatarUrl || '',
+        domain: d.domain,
+        grantedByUserId: d.grantedByUserId,
+        grantedAt: d.grantedAt ? { seconds: Number(d.grantedAt.seconds), nanos: d.grantedAt.nanos } : null,
+    };
+}
+
 export function serializeOrgOverview(o: OrganizationOverview): SerializedOrgOverview {
     const contentCounts: Record<string, number> = {};
     // Convert array of ContentTypeCount to Record<string, number>
@@ -189,6 +220,12 @@ export interface AdminState {
     groupMembers: Record<string, SerializedGroupMemberInfo[]>;
     groupMembersLoading: Record<string, boolean>;
 
+    // Domain admins
+    domainAdmins: SerializedDomainAdminInfo[];
+    domainAdminsLoading: boolean;
+    domainAdminsFetched: boolean;
+    domainAdminsTotalCount: number;
+
     // General error
     error: string | null;
 }
@@ -209,6 +246,10 @@ const initialState: AdminState = {
     groupsTotalCount: 0,
     groupMembers: {},
     groupMembersLoading: {},
+    domainAdmins: [],
+    domainAdminsLoading: false,
+    domainAdminsFetched: false,
+    domainAdminsTotalCount: 0,
     error: null,
 };
 
@@ -354,6 +395,35 @@ const adminSlice = createSlice({
             if (group && group.memberCount > 0) {
                 group.memberCount -= 1;
             }
+        });
+
+        // Domain admins
+        builder.addCase(fetchDomainAdmins.pending, (state) => {
+            state.domainAdminsLoading = true;
+        });
+        builder.addCase(fetchDomainAdmins.fulfilled, (state, action) => {
+            state.domainAdminsLoading = false;
+            state.domainAdminsFetched = true;
+            state.domainAdmins = action.payload.domainAdmins;
+            state.domainAdminsTotalCount = action.payload.totalCount;
+        });
+        builder.addCase(fetchDomainAdmins.rejected, (state, action) => {
+            state.domainAdminsLoading = false;
+            state.domainAdminsFetched = true;
+            state.error = action.error.message || 'Failed to fetch domain admins';
+        });
+
+        builder.addCase(grantDomainAdmin.fulfilled, (state, action) => {
+            state.domainAdmins.push(action.payload);
+            state.domainAdminsTotalCount += 1;
+        });
+
+        builder.addCase(revokeDomainAdmin.fulfilled, (state, action) => {
+            const { userId, domain } = action.meta.arg;
+            state.domainAdmins = state.domainAdmins.filter(
+                (da) => !(da.userId === userId && da.domain === domain)
+            );
+            state.domainAdminsTotalCount = Math.max(0, state.domainAdminsTotalCount - 1);
         });
     },
 });

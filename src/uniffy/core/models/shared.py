@@ -112,6 +112,41 @@ class ContentType(str, Enum):
     PROVIDER_KEY = "PROVIDER_KEY"
     PROMPT = "PROMPT"
     AGENT_CRON_TASK = "AGENT_CRON_TASK"
+    CHAT = "CHAT"
+    ROOM = "ROOM"
+
+
+class DomainType(str, Enum):
+    """
+    Application domains that support domain-level admins.
+
+    A user can be granted admin status for a specific domain,
+    giving them elevated access within that domain without
+    being a full org admin.
+
+    Attributes
+    ----------
+    CHAT : str
+        Chat domain (channels, messages, categories).
+    FILES : str
+        Files domain (files, folders).
+    NOTES : str
+        Notes domain (notes, documents).
+    CALENDAR : str
+        Calendar domain (events, calendars).
+    PROJECTS : str
+        Projects domain (projects, tasks).
+    AGENTS : str
+        Agents domain (agents, skills, providers).
+
+    """
+
+    CHAT = "CHAT"
+    FILES = "FILES"
+    NOTES = "NOTES"
+    CALENDAR = "CALENDAR"
+    PROJECTS = "PROJECTS"
+    AGENTS = "AGENTS"
 
 
 class SubjectType(str, Enum):
@@ -306,6 +341,35 @@ class NotificationType(str, Enum):
     TASK_ASSIGNED = "TASK_ASSIGNED"
     TASK_DUE_SOON = "TASK_DUE_SOON"
     TASK_OVERDUE = "TASK_OVERDUE"
+    CHAT_MENTION = "CHAT_MENTION"
+    CHAT_DM = "CHAT_DM"
+    CHAT_CHANNEL_INVITE = "CHAT_CHANNEL_INVITE"
+    CHAT_CHANNEL_REMOVED = "CHAT_CHANNEL_REMOVED"
+    CHAT_THREAD_REPLY = "CHAT_THREAD_REPLY"
+
+
+class RoomType(str, Enum):
+    """Types of bookable rooms and resources."""
+
+    MEETING_ROOM = "MEETING_ROOM"
+    CONFERENCE_ROOM = "CONFERENCE_ROOM"
+    OFFICE = "OFFICE"
+    OTHER = "OTHER"
+
+
+class RoomStatus(str, Enum):
+    """Operational status of a room or resource."""
+
+    ACTIVE = "ACTIVE"
+    MAINTENANCE = "MAINTENANCE"
+    RETIRED = "RETIRED"
+
+
+class BookingStatus(str, Enum):
+    """Status of a room booking."""
+
+    CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
 
 
 class ResourceType(str, Enum):

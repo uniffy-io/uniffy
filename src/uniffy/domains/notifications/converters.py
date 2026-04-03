@@ -27,6 +27,17 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.TASK_ASSIGNED: ProtoNotificationType.NOTIFICATION_TYPE_TASK_ASSIGNED,
     NotificationType.TASK_DUE_SOON: ProtoNotificationType.NOTIFICATION_TYPE_TASK_DUE_SOON,
     NotificationType.TASK_OVERDUE: ProtoNotificationType.NOTIFICATION_TYPE_TASK_OVERDUE,
+    NotificationType.CHAT_MENTION: ProtoNotificationType.NOTIFICATION_TYPE_CHAT_MENTION,
+    NotificationType.CHAT_DM: ProtoNotificationType.NOTIFICATION_TYPE_CHAT_DM,
+    NotificationType.CHAT_CHANNEL_INVITE: (
+        ProtoNotificationType.NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE
+    ),
+    NotificationType.CHAT_CHANNEL_REMOVED: (
+        ProtoNotificationType.NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED
+    ),
+    NotificationType.CHAT_THREAD_REPLY: (
+        ProtoNotificationType.NOTIFICATION_TYPE_CHAT_THREAD_REPLY
+    ),
 }
 
 # Reverse mapping

@@ -26,19 +26,24 @@ const (
 type NotificationType int32
 
 const (
-	NotificationType_NOTIFICATION_TYPE_UNSPECIFIED         NotificationType = 0
-	NotificationType_NOTIFICATION_TYPE_CONTENT_SHARED      NotificationType = 1
-	NotificationType_NOTIFICATION_TYPE_CONTENT_MENTIONED   NotificationType = 2
-	NotificationType_NOTIFICATION_TYPE_CONTENT_EDITED      NotificationType = 3
-	NotificationType_NOTIFICATION_TYPE_CALENDAR_REMINDER   NotificationType = 4
-	NotificationType_NOTIFICATION_TYPE_CALENDAR_INVITE     NotificationType = 5
-	NotificationType_NOTIFICATION_TYPE_CALENDAR_RESPONSE   NotificationType = 6
-	NotificationType_NOTIFICATION_TYPE_PERMISSION_GRANTED  NotificationType = 7
-	NotificationType_NOTIFICATION_TYPE_PERMISSION_REVOKED  NotificationType = 8
-	NotificationType_NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT NotificationType = 9
-	NotificationType_NOTIFICATION_TYPE_TASK_ASSIGNED       NotificationType = 10
-	NotificationType_NOTIFICATION_TYPE_TASK_DUE_SOON       NotificationType = 11
-	NotificationType_NOTIFICATION_TYPE_TASK_OVERDUE        NotificationType = 12
+	NotificationType_NOTIFICATION_TYPE_UNSPECIFIED          NotificationType = 0
+	NotificationType_NOTIFICATION_TYPE_CONTENT_SHARED       NotificationType = 1
+	NotificationType_NOTIFICATION_TYPE_CONTENT_MENTIONED    NotificationType = 2
+	NotificationType_NOTIFICATION_TYPE_CONTENT_EDITED       NotificationType = 3
+	NotificationType_NOTIFICATION_TYPE_CALENDAR_REMINDER    NotificationType = 4
+	NotificationType_NOTIFICATION_TYPE_CALENDAR_INVITE      NotificationType = 5
+	NotificationType_NOTIFICATION_TYPE_CALENDAR_RESPONSE    NotificationType = 6
+	NotificationType_NOTIFICATION_TYPE_PERMISSION_GRANTED   NotificationType = 7
+	NotificationType_NOTIFICATION_TYPE_PERMISSION_REVOKED   NotificationType = 8
+	NotificationType_NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT  NotificationType = 9
+	NotificationType_NOTIFICATION_TYPE_TASK_ASSIGNED        NotificationType = 10
+	NotificationType_NOTIFICATION_TYPE_TASK_DUE_SOON        NotificationType = 11
+	NotificationType_NOTIFICATION_TYPE_TASK_OVERDUE         NotificationType = 12
+	NotificationType_NOTIFICATION_TYPE_CHAT_MENTION         NotificationType = 13
+	NotificationType_NOTIFICATION_TYPE_CHAT_DM              NotificationType = 14
+	NotificationType_NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE  NotificationType = 15
+	NotificationType_NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED NotificationType = 16
+	NotificationType_NOTIFICATION_TYPE_CHAT_THREAD_REPLY    NotificationType = 17
 )
 
 // Enum value maps for NotificationType.
@@ -57,21 +62,31 @@ var (
 		10: "NOTIFICATION_TYPE_TASK_ASSIGNED",
 		11: "NOTIFICATION_TYPE_TASK_DUE_SOON",
 		12: "NOTIFICATION_TYPE_TASK_OVERDUE",
+		13: "NOTIFICATION_TYPE_CHAT_MENTION",
+		14: "NOTIFICATION_TYPE_CHAT_DM",
+		15: "NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE",
+		16: "NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED",
+		17: "NOTIFICATION_TYPE_CHAT_THREAD_REPLY",
 	}
 	NotificationType_value = map[string]int32{
-		"NOTIFICATION_TYPE_UNSPECIFIED":         0,
-		"NOTIFICATION_TYPE_CONTENT_SHARED":      1,
-		"NOTIFICATION_TYPE_CONTENT_MENTIONED":   2,
-		"NOTIFICATION_TYPE_CONTENT_EDITED":      3,
-		"NOTIFICATION_TYPE_CALENDAR_REMINDER":   4,
-		"NOTIFICATION_TYPE_CALENDAR_INVITE":     5,
-		"NOTIFICATION_TYPE_CALENDAR_RESPONSE":   6,
-		"NOTIFICATION_TYPE_PERMISSION_GRANTED":  7,
-		"NOTIFICATION_TYPE_PERMISSION_REVOKED":  8,
-		"NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT": 9,
-		"NOTIFICATION_TYPE_TASK_ASSIGNED":       10,
-		"NOTIFICATION_TYPE_TASK_DUE_SOON":       11,
-		"NOTIFICATION_TYPE_TASK_OVERDUE":        12,
+		"NOTIFICATION_TYPE_UNSPECIFIED":          0,
+		"NOTIFICATION_TYPE_CONTENT_SHARED":       1,
+		"NOTIFICATION_TYPE_CONTENT_MENTIONED":    2,
+		"NOTIFICATION_TYPE_CONTENT_EDITED":       3,
+		"NOTIFICATION_TYPE_CALENDAR_REMINDER":    4,
+		"NOTIFICATION_TYPE_CALENDAR_INVITE":      5,
+		"NOTIFICATION_TYPE_CALENDAR_RESPONSE":    6,
+		"NOTIFICATION_TYPE_PERMISSION_GRANTED":   7,
+		"NOTIFICATION_TYPE_PERMISSION_REVOKED":   8,
+		"NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT":  9,
+		"NOTIFICATION_TYPE_TASK_ASSIGNED":        10,
+		"NOTIFICATION_TYPE_TASK_DUE_SOON":        11,
+		"NOTIFICATION_TYPE_TASK_OVERDUE":         12,
+		"NOTIFICATION_TYPE_CHAT_MENTION":         13,
+		"NOTIFICATION_TYPE_CHAT_DM":              14,
+		"NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE":  15,
+		"NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED": 16,
+		"NOTIFICATION_TYPE_CHAT_THREAD_REPLY":    17,
 	}
 )
 
@@ -117,6 +132,8 @@ const (
 	StreamNotificationEvent_EVENT_TYPE_PRESENCE_CHANGED StreamNotificationEvent_EventType = 4
 	// Mention state changed for content (task status, event time, etc.)
 	StreamNotificationEvent_EVENT_TYPE_MENTION_STATE_CHANGED StreamNotificationEvent_EventType = 5
+	// User's permissions changed (domain admin granted/revoked) - triggers refetch
+	StreamNotificationEvent_EVENT_TYPE_PERMISSIONS_CHANGED StreamNotificationEvent_EventType = 6
 )
 
 // Enum value maps for StreamNotificationEvent_EventType.
@@ -128,6 +145,7 @@ var (
 		3: "EVENT_TYPE_FILE_UPDATED",
 		4: "EVENT_TYPE_PRESENCE_CHANGED",
 		5: "EVENT_TYPE_MENTION_STATE_CHANGED",
+		6: "EVENT_TYPE_PERMISSIONS_CHANGED",
 	}
 	StreamNotificationEvent_EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED":           0,
@@ -136,6 +154,7 @@ var (
 		"EVENT_TYPE_FILE_UPDATED":          3,
 		"EVENT_TYPE_PRESENCE_CHANGED":      4,
 		"EVENT_TYPE_MENTION_STATE_CHANGED": 5,
+		"EVENT_TYPE_PERMISSIONS_CHANGED":   6,
 	}
 )
 
@@ -1546,7 +1565,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"U\n" +
 	"\x11FileUpdatePayload\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb1\x05\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xd5\x05\n" +
 	"\x17StreamNotificationEvent\x12R\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e23.notifications.v1.StreamNotificationEvent.EventTypeR\teventType\x12B\n" +
@@ -1555,14 +1574,15 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\vfile_update\x18\x04 \x01(\v2#.notifications.v1.FileUpdatePayloadR\n" +
 	"fileUpdate\x12S\n" +
 	"\x10presence_changed\x18\x05 \x01(\v2(.notifications.v1.PresenceChangedPayloadR\x0fpresenceChanged\x12`\n" +
-	"\x15mention_state_changed\x18\x06 \x01(\v2,.notifications.v1.MentionStateChangedPayloadR\x13mentionStateChanged\"\xc6\x01\n" +
+	"\x15mention_state_changed\x18\x06 \x01(\v2,.notifications.v1.MentionStateChangedPayloadR\x13mentionStateChanged\"\xea\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bEVENT_TYPE_NEW_NOTIFICATION\x10\x01\x12\x18\n" +
 	"\x14EVENT_TYPE_HEARTBEAT\x10\x02\x12\x1b\n" +
 	"\x17EVENT_TYPE_FILE_UPDATED\x10\x03\x12\x1f\n" +
 	"\x1bEVENT_TYPE_PRESENCE_CHANGED\x10\x04\x12$\n" +
-	" EVENT_TYPE_MENTION_STATE_CHANGED\x10\x05\"\x92\x02\n" +
+	" EVENT_TYPE_MENTION_STATE_CHANGED\x10\x05\x12\"\n" +
+	"\x1eEVENT_TYPE_PERMISSIONS_CHANGED\x10\x06\"\x92\x02\n" +
 	"\x16PresenceChangedPayload\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12;\n" +
@@ -1581,7 +1601,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x18GetVapidPublicKeyRequest\":\n" +
 	"\x19GetVapidPublicKeyResponse\x12\x1d\n" +
 	"\n" +
-	"public_key\x18\x01 \x01(\tR\tpublicKey*\x90\x04\n" +
+	"public_key\x18\x01 \x01(\tR\tpublicKey*\xd3\x05\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" NOTIFICATION_TYPE_CONTENT_SHARED\x10\x01\x12'\n" +
@@ -1596,7 +1616,12 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x1fNOTIFICATION_TYPE_TASK_ASSIGNED\x10\n" +
 	"\x12#\n" +
 	"\x1fNOTIFICATION_TYPE_TASK_DUE_SOON\x10\v\x12\"\n" +
-	"\x1eNOTIFICATION_TYPE_TASK_OVERDUE\x10\f2\x95\b\n" +
+	"\x1eNOTIFICATION_TYPE_TASK_OVERDUE\x10\f\x12\"\n" +
+	"\x1eNOTIFICATION_TYPE_CHAT_MENTION\x10\r\x12\x1d\n" +
+	"\x19NOTIFICATION_TYPE_CHAT_DM\x10\x0e\x12)\n" +
+	"%NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE\x10\x0f\x12*\n" +
+	"&NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED\x10\x10\x12'\n" +
+	"#NOTIFICATION_TYPE_CHAT_THREAD_REPLY\x10\x112\x95\b\n" +
 	"\x14NotificationsService\x12n\n" +
 	"\x11ListNotifications\x12*.notifications.v1.ListNotificationsRequest\x1a+.notifications.v1.ListNotificationsResponse\"\x00\x12e\n" +
 	"\x0eGetUnreadCount\x12'.notifications.v1.GetUnreadCountRequest\x1a(.notifications.v1.GetUnreadCountResponse\"\x00\x12Y\n" +

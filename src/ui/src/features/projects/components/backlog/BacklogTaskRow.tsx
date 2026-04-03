@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, CalendarBlank } from "@phosphor-icons/react";
+import { ArrowRight, CalendarBlank, CheckCircle, ArrowsClockwise } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -227,6 +227,21 @@ export function BacklogTaskRow({
           >
             {statusOption.label}
           </span>
+        </span>
+      )}
+
+      {/* Subtask progress */}
+      {task.subtaskTotal > 0 && (
+        <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+          <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+          {task.subtaskCompleted}/{task.subtaskTotal}
+        </span>
+      )}
+
+      {/* Recurrence indicator */}
+      {task.recurrenceRule && (
+        <span className="shrink-0" title="Recurring task">
+          <ArrowsClockwise size={12} className="text-muted-foreground" />
         </span>
       )}
 

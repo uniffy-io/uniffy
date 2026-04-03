@@ -125,6 +125,7 @@ class ContentType(str, Enum):
     PROVIDER_KEY = "PROVIDER_KEY"
     PROMPT = "PROMPT"
     AGENT_CRON_TASK = "AGENT_CRON_TASK"
+    CHAT = "CHAT"
 
 
 class SubjectType(str, Enum):

@@ -58,6 +58,8 @@ def create_access_token(
     organization_id: UUID | None = None,
     token_version: int | None = None,
     session_id: UUID | None = None,
+    full_name: str | None = None,
+    avatar_key: str | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
     """
@@ -73,6 +75,11 @@ def create_access_token(
         User's current token version for revocation support.
     session_id : UUID | None
         Optional session ID for per-session tracking.
+    full_name : str | None
+        User's display name. Embedded in the token so handlers can
+        identify the sender without a DB query.
+    avatar_key : str | None
+        User's avatar storage key. Embedded for the same reason.
     expires_delta : timedelta | None
         Token expiration time. Defaults to JWT_ACCESS_TOKEN_EXPIRE_MINUTES env var
         or 15 minutes if not set.
@@ -102,6 +109,12 @@ def create_access_token(
 
     if session_id is not None:
         payload["sid"] = str(session_id)
+
+    if full_name:
+        payload["name"] = full_name
+
+    if avatar_key:
+        payload["avk"] = avatar_key
 
     secret_key = get_secret_key()
     token = jwt.encode(payload, secret_key, algorithm="HS256")

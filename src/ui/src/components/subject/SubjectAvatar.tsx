@@ -5,9 +5,13 @@
  * Groups: violet initials circle derived from group name.
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { cn } from '@/shared/utils/cn';
 import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
+
+// Module-level cache of avatar URLs that returned 404.
+// Prevents repeated network requests for users without avatars.
+const _failedAvatars = new Set<string>();
 import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 import { SUBJECT_TYPE, type Subject, type SubjectAvatarSize } from '@/components/subject/types';
 import { getInitials } from '@/components/subject/utils';
@@ -44,13 +48,17 @@ export function SubjectAvatar({
     bordered = false,
     showPresence = false,
 }: SubjectAvatarProps) {
-    const [imgFailed, setImgFailed] = useState(false);
     const sizeClass = SIZE_CLASSES[size];
     const resolvedAvatarUrl = useAvatarUrl(
         subject.type === SUBJECT_TYPE.USER ? subject.id : '',
         size === 'lg' ? 'md' : 'sm',
     );
     const avatarSrc = subject.avatarUrl || resolvedAvatarUrl;
+    const [imgFailed, setImgFailed] = useState(() => !!avatarSrc && _failedAvatars.has(avatarSrc));
+    const handleImgError = useCallback(() => {
+        if (avatarSrc) _failedAvatars.add(avatarSrc);
+        setImgFailed(true);
+    }, [avatarSrc]);
     const presenceStatus = usePresence(
         showPresence && subject.type === SUBJECT_TYPE.USER ? subject.id : '',
     );
@@ -76,7 +84,7 @@ export function SubjectAvatar({
     }
 
     // User avatar element (photo or initials fallback)
-    const avatarElement = !imgFailed ? (
+    const avatarElement = avatarSrc && !imgFailed ? (
         <img
             src={avatarSrc}
             alt={subject.name}
@@ -87,7 +95,7 @@ export function SubjectAvatar({
                 !shouldShowPresence && className
             )}
             title={subject.name}
-            onError={() => setImgFailed(true)}
+            onError={handleImgError}
         />
     ) : (
         <div
@@ -129,6 +137,8 @@ interface SubjectAvatarByIdProps {
     size?: SubjectAvatarSize;
     className?: string;
     bordered?: boolean;
+    /** Show presence indicator dot. */
+    showPresence?: boolean;
 }
 
 export function SubjectAvatarById({
@@ -137,44 +147,56 @@ export function SubjectAvatarById({
     size = 'sm',
     className,
     bordered = false,
+    showPresence = false,
 }: SubjectAvatarByIdProps) {
-    const [imgFailed, setImgFailed] = useState(false);
     const sizeClass = SIZE_CLASSES[size];
     const avatarSrc = useAvatarUrl(userId, size === 'lg' ? 'md' : 'sm');
+    const [imgFailed, setImgFailed] = useState(() => !!avatarSrc && _failedAvatars.has(avatarSrc));
+    const handleImgError = useCallback(() => {
+        if (avatarSrc) _failedAvatars.add(avatarSrc);
+        setImgFailed(true);
+    }, [avatarSrc]);
+    const presenceStatus = usePresence(showPresence ? userId : '');
 
-    if (!imgFailed) {
-        return (
-            <img
-                src={avatarSrc}
-                alt={displayName || userId}
-                className={cn(
-                    'rounded-full object-cover shrink-0',
-                    sizeClass,
-                    bordered && 'border-2 border-card',
-                    className
-                )}
-                title={displayName}
-                onError={() => setImgFailed(true)}
-            />
-        );
-    }
-
-    const initials = displayName
-        ? getInitials(displayName)
-        : userId.slice(-2).toUpperCase();
-
-    return (
+    const avatarElement = avatarSrc && !imgFailed ? (
+        <img
+            src={avatarSrc}
+            alt={displayName || userId}
+            className={cn(
+                'rounded-full object-cover shrink-0',
+                sizeClass,
+                bordered && 'border-2 border-card',
+                !showPresence && className
+            )}
+            title={displayName}
+            onError={handleImgError}
+        />
+    ) : (
         <div
             className={cn(
                 'rounded-full flex items-center justify-center shrink-0 font-medium',
                 'bg-primary/15 text-primary',
                 sizeClass,
                 bordered && 'border-2 border-card',
-                className
+                !showPresence && className
             )}
             title={displayName}
         >
-            {initials}
+            {displayName ? getInitials(displayName) : userId.slice(-2).toUpperCase()}
         </div>
     );
+
+    if (showPresence) {
+        return (
+            <div className={cn('relative inline-flex shrink-0', className)}>
+                {avatarElement}
+                <PresenceIndicator
+                    status={presenceStatus}
+                    size={INDICATOR_SIZE_MAP[size]}
+                />
+            </div>
+        );
+    }
+
+    return avatarElement;
 }

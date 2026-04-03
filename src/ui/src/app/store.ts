@@ -35,6 +35,11 @@ import { agentMemoriesReducer } from '@/features/agents/store/agentMemoriesSlice
 import { errorToastMiddleware } from '@/app/errorToastMiddleware';
 import { presenceReducer } from '@/features/presence/store/presenceSlice';
 import { sprintsReducer } from '@/features/projects/store/sprintsSlice';
+import { roomsReducer } from '@/features/rooms/store/roomsSlice';
+import { chatChannelsReducer } from '@/features/chat/store/chatChannelsSlice';
+import { chatMessagesReducer } from '@/features/chat/store/chatMessagesSlice';
+import { chatThreadsReducer } from '@/features/chat/store/chatThreadsSlice';
+import { chatUiReducer } from '@/features/chat/store/chatUiSlice';
 
 /**
  * Security transform: Remove access token from persistence.
@@ -163,6 +168,7 @@ const rootReducer = combineReducers({
   agentCron: agentCronReducer,
   agentMemories: agentMemoriesReducer,
   sprints: sprintsReducer,
+  rooms: roomsReducer,
   zenMode: zenModeReducer,
   files: filesReducer,
   filesTree: filesTreeReducer,
@@ -174,6 +180,10 @@ const rootReducer = combineReducers({
   presence: presenceReducer,
   sessions: sessionsReducer,
   comments: commentsReducer,
+  chatChannels: chatChannelsReducer,
+  chatMessages: chatMessagesReducer,
+  chatThreads: chatThreadsReducer,
+  chatUi: chatUiReducer,
 });
 
 // Migrations to handle state shape changes across versions
@@ -228,7 +238,7 @@ const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
   version: 3, // Bumped to trigger security migration (access token removal)
   storage,
-  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi'],
+  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi', 'chatUi'],
   transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform, agentsUiTransform],
   migrate: createMigrate(migrations, { debug: false }),
 };

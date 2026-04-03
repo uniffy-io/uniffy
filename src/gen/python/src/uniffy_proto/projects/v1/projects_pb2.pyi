@@ -65,7 +65,14 @@ ACTIVITY_ACTION_TYPE_CHANGED: ActivityAction
 ACTIVITY_ACTION_SPRINT_CHANGED: ActivityAction
 
 class Project(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "visibility", "field_definitions", "views", "default_view_id", "member_ids", "created_at", "updated_at", "deleted_at", "urn", "user_permission_level", "slug")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "visibility", "field_definitions", "views", "default_view_id", "member_ids", "created_at", "updated_at", "deleted_at", "urn", "user_permission_level", "slug", "type_field_schemas")
+    class TypeFieldSchemasEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: TypeFieldSchema
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[TypeFieldSchema, _Mapping]] = ...) -> None: ...
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -84,6 +91,7 @@ class Project(_message.Message):
     URN_FIELD_NUMBER: _ClassVar[int]
     USER_PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_SCHEMAS_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -102,7 +110,8 @@ class Project(_message.Message):
     urn: str
     user_permission_level: _common_pb2.PermissionLevel
     slug: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., slug: _Optional[str] = ...) -> None: ...
+    type_field_schemas: _containers.MessageMap[str, TypeFieldSchema]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ...) -> None: ...
 
 class Task(_message.Message):
     __slots__ = ("id", "project_id", "organization_id", "owner_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "completed_at", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values", "outgoing_references", "created_at", "updated_at", "deleted_at", "urn", "number", "task_type", "sprint_id", "user_permission_level", "subtask_total", "subtask_completed", "estimated_minutes", "time_spent_minutes")
@@ -200,6 +209,14 @@ class FieldDefinition(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., type: _Optional[_Union[FieldType, str]] = ..., is_required: _Optional[bool] = ..., is_system: _Optional[bool] = ..., sort_order: _Optional[int] = ..., config_json: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class TypeFieldSchema(_message.Message):
+    __slots__ = ("shown_field_ids", "required_field_ids")
+    SHOWN_FIELD_IDS_FIELD_NUMBER: _ClassVar[int]
+    REQUIRED_FIELD_IDS_FIELD_NUMBER: _ClassVar[int]
+    shown_field_ids: _containers.RepeatedScalarFieldContainer[str]
+    required_field_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, shown_field_ids: _Optional[_Iterable[str]] = ..., required_field_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ViewConfig(_message.Message):
     __slots__ = ("id", "project_id", "name", "type", "is_default", "config_json", "created_at", "updated_at")
@@ -310,7 +327,14 @@ class GetProjectRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class UpdateProjectRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "name", "description", "icon", "color", "visibility", "member_ids", "default_view_id", "slug")
+    __slots__ = ("organization_id", "project_id", "name", "description", "icon", "color", "visibility", "member_ids", "default_view_id", "slug", "type_field_schemas")
+    class TypeFieldSchemasEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: TypeFieldSchema
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[TypeFieldSchema, _Mapping]] = ...) -> None: ...
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -321,6 +345,7 @@ class UpdateProjectRequest(_message.Message):
     MEMBER_IDS_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_VIEW_ID_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_SCHEMAS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     name: str
@@ -331,7 +356,8 @@ class UpdateProjectRequest(_message.Message):
     member_ids: _containers.RepeatedScalarFieldContainer[str]
     default_view_id: str
     slug: str
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., member_ids: _Optional[_Iterable[str]] = ..., default_view_id: _Optional[str] = ..., slug: _Optional[str] = ...) -> None: ...
+    type_field_schemas: _containers.MessageMap[str, TypeFieldSchema]
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., member_ids: _Optional[_Iterable[str]] = ..., default_view_id: _Optional[str] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ...) -> None: ...
 
 class DeleteProjectRequest(_message.Message):
     __slots__ = ("organization_id", "project_id", "permanent")
@@ -548,10 +574,14 @@ class ListTasksRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., backlog_only: _Optional[bool] = ...) -> None: ...
 
 class TaskResponse(_message.Message):
-    __slots__ = ("task",)
+    __slots__ = ("task", "updated_parent", "spawned_task")
     TASK_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_PARENT_FIELD_NUMBER: _ClassVar[int]
+    SPAWNED_TASK_FIELD_NUMBER: _ClassVar[int]
     task: Task
-    def __init__(self, task: _Optional[_Union[Task, _Mapping]] = ...) -> None: ...
+    updated_parent: Task
+    spawned_task: Task
+    def __init__(self, task: _Optional[_Union[Task, _Mapping]] = ..., updated_parent: _Optional[_Union[Task, _Mapping]] = ..., spawned_task: _Optional[_Union[Task, _Mapping]] = ...) -> None: ...
 
 class DeleteTaskResponse(_message.Message):
     __slots__ = ("success", "message")

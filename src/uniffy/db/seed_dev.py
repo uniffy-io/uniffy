@@ -81,6 +81,15 @@ async def seed_development_data(
     await session.flush()
     logger.info("Added test users to organization")
 
+    # Join test users to default chat channels (e.g., #general)
+    from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+    chat_ops = ChatChannelOperations(session)
+    for user in test_users:
+        await chat_ops.join_default_channels(user.id, default_org.id)
+    await session.flush()
+    logger.info("Joined test users to default chat channels")
+
     # Create 2 groups
     logger.info("Creating 2 test groups...")
 

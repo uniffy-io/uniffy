@@ -31,6 +31,11 @@ from uniffy.core.models.shared import ContentType, NotificationType, VisibilityS
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.projects import queries
+from uniffy.domains.projects.recurrence import (
+    compute_next_occurrence,
+    parse_recurrence_config,
+    serialize_recurrence_config,
+)
 from uniffy.domains.projects.validation import validate_field_values
 
 
@@ -731,9 +736,10 @@ class TaskOperations(BaseContentOperations[Task]):
         )
         task_number = counter_result.scalar_one()
 
-        # Validate custom field values
-        if kwargs.get("field_values"):
-            await self._validate_field_values(project_id, kwargs["field_values"])
+        # Validate custom field values and type-required fields
+        await self._validate_field_values(
+            project_id, kwargs.get("field_values"), task_type=task_type
+        )
 
         # Validate blocked_by for circular dependencies
         if kwargs.get("blocked_by_task_ids"):
@@ -812,7 +818,7 @@ class TaskOperations(BaseContentOperations[Task]):
         organization_id: UUID,
         task_id: UUID,
         **kwargs,
-    ) -> Task:
+    ) -> tuple[Task, Task | None]:
         """
         Update task fields. Logs relevant activities.
 
@@ -852,9 +858,18 @@ class TaskOperations(BaseContentOperations[Task]):
         if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:
             await self._validate_no_circular_dependency(task_id, kwargs["blocked_by_task_ids"])
 
-        # Custom field validation
-        if kwargs.get("field_values"):
-            await self._validate_field_values(task.project_id, kwargs["field_values"])
+        # Custom field validation (including type-required fields)
+        if kwargs.get("field_values") or kwargs.get("task_type"):
+            effective_type = kwargs.get("task_type", task.task_type)
+            # Merge existing field_values with any new ones for validation
+            merged_values = dict(task.field_values or {})
+            if kwargs.get("field_values"):
+                merged_values.update(kwargs["field_values"])
+            await self._validate_field_values(
+                task.project_id,
+                merged_values,
+                task_type=effective_type,
+            )
 
         # Snapshot for notification comparison
         old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else None
@@ -1032,7 +1047,156 @@ class TaskOperations(BaseContentOperations[Task]):
                     exc_info=True,
                 )
 
-        return task
+        # Auto-complete parent when all subtasks are done
+        if task.parent_id and task.status == "status_done" and old_status != "status_done":
+            parent_counts = await queries.get_subtask_counts(self.session, [task.parent_id])
+            p_total, p_done = parent_counts.get(task.parent_id, (0, 0))
+            if p_total > 0 and p_total == p_done:
+                parent = await self.session.get(Task, task.parent_id)
+                if parent and parent.status != "status_done" and not parent.is_deleted:
+                    old_parent_status = parent.status
+                    parent.status = "status_done"
+                    parent.completed_at = datetime.now(UTC)
+                    parent.version += 1
+                    parent.updated_at = datetime.now(UTC)
+                    await self.session.commit()
+                    await self.session.refresh(parent)
+
+                    await self._log_activity(
+                        parent.id,
+                        user_id,
+                        "status_changed",
+                        field_id="field_status",
+                        previous_value=old_parent_status,
+                        new_value="status_done",
+                    )
+
+        # Reopen parent if a subtask is uncompleted
+        elif (
+            task.parent_id
+            and old_status == "status_done"
+            and task.status != "status_done"
+        ):
+            parent = await self.session.get(Task, task.parent_id)
+            if parent and parent.status == "status_done" and not parent.is_deleted:
+                parent.status = "status_in_progress"
+                parent.completed_at = None
+                parent.version += 1
+                parent.updated_at = datetime.now(UTC)
+                await self.session.commit()
+                await self.session.refresh(parent)
+
+                await self._log_activity(
+                    parent.id,
+                    user_id,
+                    "status_changed",
+                    field_id="field_status",
+                    previous_value="status_done",
+                    new_value="status_in_progress",
+                )
+
+        # Spawn next recurring task instance
+        spawned_task: Task | None = None
+        if (
+            task.recurrence_rule
+            and task.status == "status_done"
+            and old_status != "status_done"
+        ):
+            spawned_task = await self._spawn_next_recurring_instance(task, organization_id)
+
+        return task, spawned_task
+
+    async def _spawn_next_recurring_instance(
+        self,
+        completed_task: Task,
+        organization_id: UUID,
+    ) -> Task | None:
+        """
+        Spawn the next instance of a recurring task after completion.
+
+        Parameters
+        ----------
+        completed_task : Task
+            The task that was just completed.
+        organization_id : UUID
+            Organization ID.
+
+        Returns
+        -------
+        Task | None
+            The newly created task, or None if the series has ended.
+
+        """
+        config = parse_recurrence_config(completed_task.recurrence_rule)
+        if not config:
+            return None
+
+        # Verify project still exists before spawning
+        project = await self.session.get(Project, completed_task.project_id)
+        if not project or project.is_deleted:
+            return None
+
+        today_str = datetime.now(UTC).strftime("%Y-%m-%d")
+        base_date = completed_task.due_date or today_str
+        next_date = compute_next_occurrence(base_date, config)
+        if not next_date:
+            return None
+
+        # Increment occurrences counter (starts at 1 - the original task is occurrence #1)
+        config["occurrences_created"] = config.get("occurrences_created", 1) + 1
+        next_rule = serialize_recurrence_config(config)
+
+        # Atomically increment task_counter for the new task number
+        counter_result = await self.session.execute(
+            text(
+                "UPDATE projects_projects "
+                "SET task_counter = task_counter + 1 "
+                "WHERE id = :project_id "
+                "RETURNING task_counter"
+            ),
+            {"project_id": str(completed_task.project_id)},
+        )
+        task_number = counter_result.scalar_one()
+
+        next_task = Task(
+            project_id=completed_task.project_id,
+            organization_id=completed_task.organization_id,
+            owner_id=completed_task.owner_id,
+            visibility=completed_task.visibility,
+            title=completed_task.title,
+            description=completed_task.description or "",
+            status="status_todo",
+            priority=completed_task.priority,
+            assignee_ids=list(completed_task.assignee_ids) if completed_task.assignee_ids else None,
+            due_date=next_date,
+            task_type=completed_task.task_type,
+            recurrence_rule=next_rule,
+            number=task_number,
+            sort_order=completed_task.sort_order,
+        )
+
+        self.session.add(next_task)
+        await self.session.flush()
+        await self.session.refresh(next_task)
+
+        await self._log_activity(next_task.id, completed_task.owner_id, "created")
+
+        await self.session.commit()
+        await self.session.refresh(next_task)
+
+        # Index for search
+        project_ops = ProjectOperations(self.session)
+        group_ids = await project_ops._get_content_group_ids(next_task.project_id)
+        await self._index_for_search(next_task, group_ids)
+
+        logger.info(
+            "Spawned next recurring task instance",
+            completed_task_id=str(completed_task.id),
+            new_task_id=str(next_task.id),
+            next_due_date=next_date,
+        )
+
+        return next_task
 
     async def move(
         self,
@@ -1041,7 +1205,7 @@ class TaskOperations(BaseContentOperations[Task]):
         task_id: UUID,
         status: str,
         sort_order: int,
-    ) -> Task:
+    ) -> tuple[Task, Task | None]:
         """
         Move task to new status/position (board drag-and-drop).
 
@@ -1060,8 +1224,8 @@ class TaskOperations(BaseContentOperations[Task]):
 
         Returns
         -------
-        Task
-            Updated task.
+        tuple[Task, Task | None]
+            Updated task and optional spawned recurring task.
 
         """
         return await self.update(
@@ -1101,7 +1265,7 @@ class TaskOperations(BaseContentOperations[Task]):
         """
         updated = []
         for task_id in task_ids:
-            task = await self.update(user_id, organization_id, UUID(task_id), **changes)
+            task, _ = await self.update(user_id, organization_id, UUID(task_id), **changes)
             updated.append(task)
         return updated
 
@@ -1337,7 +1501,8 @@ class TaskOperations(BaseContentOperations[Task]):
     async def _validate_field_values(
         self,
         project_id: UUID,
-        field_values: dict,
+        field_values: dict | None,
+        task_type: str | None = None,
     ) -> None:
         """
         Validate custom field values against project field definitions.
@@ -1346,8 +1511,10 @@ class TaskOperations(BaseContentOperations[Task]):
         ----------
         project_id : UUID
             Project ID.
-        field_values : dict
+        field_values : dict | None
             Field values to validate.
+        task_type : str | None
+            Task type for type-aware required field checking.
 
         Raises
         ------
@@ -1355,11 +1522,21 @@ class TaskOperations(BaseContentOperations[Task]):
             If any field values are invalid.
 
         """
-        if not field_values:
-            return
-
         field_defs = await queries.get_fields_for_project(self.session, project_id)
-        errors = validate_field_values(field_values, field_defs)
+
+        # Load project type_field_schemas for type-aware validation
+        type_field_schemas = None
+        if task_type:
+            result = await self.session.get(Project, project_id)
+            if result:
+                type_field_schemas = result.type_field_schemas
+
+        errors = validate_field_values(
+            field_values or {},
+            field_defs,
+            task_type=task_type,
+            type_field_schemas=type_field_schemas,
+        )
         if errors:
             raise ValidationError("field_values", "; ".join(errors))
 

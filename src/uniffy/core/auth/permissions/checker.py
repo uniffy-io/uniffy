@@ -91,6 +91,10 @@ class PermissionChecker:
         if await self._is_org_admin(user_id, organization_id):
             return True
 
+        # Domain admin has full access within their domain
+        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
+            return True
+
         # Check if user is in the organization
         if not await self._is_user_in_organization(user_id, organization_id):
             return False
@@ -154,6 +158,10 @@ class PermissionChecker:
 
         # Org OWNER/ADMIN always have full access to all org content
         if await self._is_org_admin(user_id, organization_id):
+            return True
+
+        # Domain admin has full access within their domain
+        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
             return True
 
         # Check if user can access first
@@ -224,6 +232,10 @@ class PermissionChecker:
         if await self._is_org_admin(user_id, organization_id):
             return True
 
+        # Domain admin has full access within their domain
+        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
+            return True
+
         # For org-wide content, check org permission defaults
         if content_visibility == VisibilityScope.ORGANIZATION:
             defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
@@ -278,6 +290,10 @@ class PermissionChecker:
         if await self._is_org_admin(user_id, organization_id):
             return True
 
+        # Domain admin has full access within their domain
+        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
+            return True
+
         # For org-wide content, check org permission defaults
         if content_visibility == VisibilityScope.ORGANIZATION:
             defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
@@ -329,6 +345,10 @@ class PermissionChecker:
         if await self._is_org_admin(user_id, organization_id):
             return True
 
+        # Domain admin has full access within their domain
+        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
+            return True
+
         # Check for explicit move permission
         permission = await self._get_user_permission(
             user_id, content_type, content_id, organization_id
@@ -372,6 +392,10 @@ class PermissionChecker:
 
         # Org OWNER/ADMIN have ADMIN level on all content
         if await self._is_org_admin(user_id, organization_id):
+            return PermissionLevel.ADMIN
+
+        # Domain admin has ADMIN level within their domain
+        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
             return PermissionLevel.ADMIN
 
         # Check for explicit permission
@@ -720,3 +744,31 @@ class PermissionChecker:
         """Check if user is an organization OWNER or ADMIN."""
         role = await self._get_user_org_role(user_id, organization_id)
         return role in (OrganizationRole.OWNER, OrganizationRole.ADMIN)
+
+    async def _is_domain_admin_for_content(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+    ) -> bool:
+        """Check if user is a domain admin for the domain matching this content type."""
+        from uniffy.core.auth.domain_admin import is_domain_admin
+        from uniffy.core.models.shared import DomainType
+
+        domain_map: dict[ContentType, DomainType] = {
+            ContentType.NOTE: DomainType.NOTES,
+            ContentType.FILE: DomainType.FILES,
+            ContentType.CALENDAR_EVENT: DomainType.CALENDAR,
+            ContentType.CHAT_MESSAGE: DomainType.CHAT,
+            ContentType.CHAT: DomainType.CHAT,
+            ContentType.PROJECT: DomainType.PROJECTS,
+            ContentType.TASK: DomainType.PROJECTS,
+            ContentType.AGENT: DomainType.AGENTS,
+            ContentType.PROVIDER_KEY: DomainType.AGENTS,
+            ContentType.PROMPT: DomainType.AGENTS,
+            ContentType.AGENT_CRON_TASK: DomainType.AGENTS,
+        }
+        domain = domain_map.get(content_type)
+        if domain is None:
+            return False
+        return await is_domain_admin(self.session, user_id, organization_id, domain)

@@ -58,6 +58,7 @@ export {
   toggleDetailPanel,
   openDetailPanel,
   closeDetailPanel,
+  setDetailViewMode,
   setDetailPanelWidth,
   setActiveDetailTab,
   openEventModal,

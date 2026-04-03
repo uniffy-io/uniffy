@@ -32,6 +32,12 @@ service OrganizationsService {
   // Permission defaults (Org Admin)
   rpc GetPermissionDefaults(GetPermissionDefaultsRequest) returns (PermissionDefaultsResponse);
   rpc UpdatePermissionDefaults(UpdatePermissionDefaultsRequest) returns (ContentTypeDefaults);
+
+  // Domain Admin management (Org Admin)
+  rpc GrantDomainAdmin(GrantDomainAdminRequest) returns (common.v1.DomainAdminInfo);
+  rpc RevokeDomainAdmin(RevokeDomainAdminRequest) returns (RevokeDomainAdminResponse);
+  rpc ListDomainAdmins(ListDomainAdminsRequest) returns (ListDomainAdminsResponse);
+  rpc GetUserDomainAdmins(GetUserDomainAdminsRequest) returns (GetUserDomainAdminsResponse);
 }
 
 // User's Organizations Messages
@@ -176,4 +182,42 @@ message ContentTypeDefaults {
   bool members_can_delete = 5;
   bool members_can_share = 6;
   google.protobuf.Timestamp updated_at = 7;
+}
+
+// Domain Admin Messages (Org Admin)
+
+message GrantDomainAdminRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  common.v1.DomainType domain = 3;
+}
+
+message RevokeDomainAdminRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  common.v1.DomainType domain = 3;
+}
+
+message RevokeDomainAdminResponse {
+  bool success = 1;
+}
+
+message ListDomainAdminsRequest {
+  string organization_id = 1;
+  optional common.v1.DomainType domain_filter = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+}
+
+message ListDomainAdminsResponse {
+  repeated common.v1.DomainAdminInfo domain_admins = 1;
+  optional common.v1.PaginationResponse pagination = 2;
+}
+
+message GetUserDomainAdminsRequest {
+  string organization_id = 1;
+  string user_id = 2;
+}
+
+message GetUserDomainAdminsResponse {
+  repeated common.v1.DomainType domains = 1;
 }

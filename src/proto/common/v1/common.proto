@@ -23,6 +23,8 @@ enum ContentType {
   CONTENT_TYPE_AGENT = 13;
   CONTENT_TYPE_PROVIDER_KEY = 14;
   CONTENT_TYPE_PROMPT = 15;
+  CONTENT_TYPE_CHAT = 16;
+  CONTENT_TYPE_ROOM = 17;
 }
 
 // SubjectType defines who can be granted permissions.
@@ -64,6 +66,17 @@ enum GroupRole {
   GROUP_ROLE_UNSPECIFIED = 0;
   GROUP_ROLE_MEMBER = 1;
   GROUP_ROLE_ADMIN = 2;
+}
+
+// DomainType defines application domains that support domain-level admins.
+enum DomainType {
+  DOMAIN_TYPE_UNSPECIFIED = 0;
+  DOMAIN_TYPE_CHAT = 1;
+  DOMAIN_TYPE_FILES = 2;
+  DOMAIN_TYPE_NOTES = 3;
+  DOMAIN_TYPE_CALENDAR = 4;
+  DOMAIN_TYPE_PROJECTS = 5;
+  DOMAIN_TYPE_AGENTS = 6;
 }
 
 // MESSAGES - Common data structures
@@ -121,6 +134,18 @@ message GroupMemberInfo {
   optional string avatar_url = 4;
   GroupRole role = 5;
   google.protobuf.Timestamp joined_at = 6;
+}
+
+// DomainAdminInfo represents a domain admin assignment.
+message DomainAdminInfo {
+  string id = 1;
+  string user_id = 2;
+  string display_name = 3;
+  string email = 4;
+  optional string avatar_url = 5;
+  DomainType domain = 6;
+  string granted_by_user_id = 7;
+  google.protobuf.Timestamp granted_at = 8;
 }
 
 // PAGINATION - Common pagination structures

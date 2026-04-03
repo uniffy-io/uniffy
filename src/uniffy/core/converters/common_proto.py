@@ -8,6 +8,12 @@ from uniffy_proto.common.v1.common_pb2 import (
     ContentType as ProtoContentType,
 )
 from uniffy_proto.common.v1.common_pb2 import (
+    DomainAdminInfo as ProtoDomainAdminInfo,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    DomainType as ProtoDomainType,
+)
+from uniffy_proto.common.v1.common_pb2 import (
     GroupInfo as ProtoGroupInfo,
 )
 from uniffy_proto.common.v1.common_pb2 import (
@@ -47,7 +53,9 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.organization_member import OrganizationRole as DomainOrgRole
 from uniffy.core.models.login.user import User
+from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.shared import ContentType as DomainContentType
+from uniffy.core.models.shared import DomainType as DomainDomainType
 from uniffy.core.models.shared import PermissionLevel as DomainPermissionLevel
 from uniffy.core.models.shared import SubjectType as DomainSubjectType
 from uniffy.core.models.shared import VisibilityScope as DomainVisibilityScope
@@ -64,6 +72,8 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.AGENT: ProtoContentType.CONTENT_TYPE_AGENT,
     DomainContentType.PROVIDER_KEY: ProtoContentType.CONTENT_TYPE_PROVIDER_KEY,
     DomainContentType.PROMPT: ProtoContentType.CONTENT_TYPE_PROMPT,
+    DomainContentType.CHAT: ProtoContentType.CONTENT_TYPE_CHAT,
+    DomainContentType.ROOM: ProtoContentType.CONTENT_TYPE_ROOM,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType.ValueType, DomainContentType] = {
@@ -125,6 +135,20 @@ GROUP_ROLE_FROM_PROTO: dict[ProtoGroupRole.ValueType, DomainGroupRole] = {
     v: k for k, v in GROUP_ROLE_TO_PROTO.items()
 }
 
+# DomainType mappings
+DOMAIN_TYPE_TO_PROTO: dict[DomainDomainType, ProtoDomainType.ValueType] = {
+    DomainDomainType.CHAT: ProtoDomainType.DOMAIN_TYPE_CHAT,
+    DomainDomainType.FILES: ProtoDomainType.DOMAIN_TYPE_FILES,
+    DomainDomainType.NOTES: ProtoDomainType.DOMAIN_TYPE_NOTES,
+    DomainDomainType.CALENDAR: ProtoDomainType.DOMAIN_TYPE_CALENDAR,
+    DomainDomainType.PROJECTS: ProtoDomainType.DOMAIN_TYPE_PROJECTS,
+    DomainDomainType.AGENTS: ProtoDomainType.DOMAIN_TYPE_AGENTS,
+}
+
+DOMAIN_TYPE_FROM_PROTO: dict[ProtoDomainType.ValueType, DomainDomainType] = {
+    v: k for k, v in DOMAIN_TYPE_TO_PROTO.items()
+}
+
 
 def content_type_to_proto(ct: DomainContentType) -> ProtoContentType.ValueType:
     """Convert domain ContentType to proto."""
@@ -184,6 +208,48 @@ def group_role_to_proto(role: DomainGroupRole) -> ProtoGroupRole.ValueType:
 def group_role_from_proto(role: ProtoGroupRole.ValueType) -> DomainGroupRole | None:
     """Convert proto GroupRole to domain."""
     return GROUP_ROLE_FROM_PROTO.get(role)
+
+
+def domain_type_to_proto(dt: DomainDomainType) -> ProtoDomainType.ValueType:
+    """Convert domain DomainType to proto."""
+    return DOMAIN_TYPE_TO_PROTO.get(dt, ProtoDomainType.DOMAIN_TYPE_UNSPECIFIED)
+
+
+def domain_type_from_proto(dt: ProtoDomainType.ValueType) -> DomainDomainType | None:
+    """Convert proto DomainType to domain."""
+    return DOMAIN_TYPE_FROM_PROTO.get(dt)
+
+
+def domain_admin_info_to_proto(
+    da: DomainAdmin,
+    user: User,
+) -> ProtoDomainAdminInfo:
+    """
+    Convert DomainAdmin and User to common.v1.DomainAdminInfo proto.
+
+    Parameters
+    ----------
+    da : DomainAdmin
+        Domain admin model instance.
+    user : User
+        User model instance.
+
+    Returns
+    -------
+    ProtoDomainAdminInfo
+        Common domain admin info proto message.
+
+    """
+    return ProtoDomainAdminInfo(
+        id=str(da.id),
+        user_id=str(da.user_id),
+        display_name=user.full_name or user.username,
+        email=user.email,
+        avatar_url=get_avatar_url(user.id, user.avatar_key),
+        domain=domain_type_to_proto(da.domain),
+        granted_by_user_id=str(da.granted_by),
+        granted_at=datetime_to_timestamp(da.granted_at),
+    )
 
 
 def timestamp_to_proto(dt):

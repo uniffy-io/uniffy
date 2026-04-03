@@ -1,0 +1,614 @@
+syntax = "proto3";
+
+package chat.v1;
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
+
+import "google/protobuf/timestamp.proto";
+
+// ChatService provides channel, message, thread, reaction, and category management.
+service ChatService {
+  // Channel CRUD
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse) {}
+  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse) {}
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse) {}
+  rpc ArchiveChannel(ArchiveChannelRequest) returns (ArchiveChannelResponse) {}
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse) {}
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse) {}
+
+  // Membership
+  rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse) {}
+  rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse) {}
+  rpc AddMembers(AddMembersRequest) returns (AddMembersResponse) {}
+  rpc RemoveMembers(RemoveMembersRequest) returns (RemoveMembersResponse) {}
+  rpc GetMembers(GetMembersRequest) returns (GetMembersResponse) {}
+
+  // Messages
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse) {}
+  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse) {}
+  rpc UpdateMessage(UpdateMessageRequest) returns (UpdateMessageResponse) {}
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {}
+  rpc PinMessage(PinMessageRequest) returns (PinMessageResponse) {}
+  rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse) {}
+  rpc GetPinnedMessages(GetPinnedMessagesRequest) returns (GetPinnedMessagesResponse) {}
+
+  // Threads
+  rpc GetThread(GetThreadRequest) returns (GetThreadResponse) {}
+  rpc GetThreadMessages(GetThreadMessagesRequest) returns (GetThreadMessagesResponse) {}
+  rpc GetThreadsInbox(GetThreadsInboxRequest) returns (GetThreadsInboxResponse) {}
+  rpc FollowThread(FollowThreadRequest) returns (FollowThreadResponse) {}
+  rpc UnfollowThread(UnfollowThreadRequest) returns (UnfollowThreadResponse) {}
+
+  // Reactions
+  rpc AddReaction(AddReactionRequest) returns (AddReactionResponse) {}
+  rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse) {}
+
+  // Typing and read state
+  rpc SetTyping(SetTypingRequest) returns (SetTypingResponse) {}
+  rpc MarkChannelRead(MarkChannelReadRequest) returns (MarkChannelReadResponse) {}
+  rpc MarkThreadRead(MarkThreadReadRequest) returns (MarkThreadReadResponse) {}
+  rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse) {}
+
+  // Channel resources
+  rpc GetChannelResources(GetChannelResourcesRequest) returns (GetChannelResourcesResponse) {}
+
+  // Categories
+  rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse) {}
+  rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse) {}
+  rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse) {}
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse) {}
+  rpc ReorderCategories(ReorderCategoriesRequest) returns (ReorderCategoriesResponse) {}
+  rpc MoveChannelToCategory(MoveChannelToCategoryRequest) returns (MoveChannelToCategoryResponse) {}
+}
+
+// ENUMS
+
+enum ChannelType {
+  CHANNEL_TYPE_UNSPECIFIED = 0;
+  CHANNEL_TYPE_PUBLIC = 1;
+  CHANNEL_TYPE_PRIVATE = 2;
+  CHANNEL_TYPE_DIRECT = 3;
+  CHANNEL_TYPE_GROUP_DM = 4;
+}
+
+enum ChannelRole {
+  CHANNEL_ROLE_UNSPECIFIED = 0;
+  CHANNEL_ROLE_MEMBER = 1;
+  CHANNEL_ROLE_ADMIN = 2;
+  CHANNEL_ROLE_OWNER = 3;
+}
+
+enum SenderType {
+  SENDER_TYPE_UNSPECIFIED = 0;
+  SENDER_TYPE_USER = 1;
+  SENDER_TYPE_AGENT = 2;
+  SENDER_TYPE_SYSTEM = 3;
+  SENDER_TYPE_GUEST = 4;
+}
+
+enum ChatNotificationLevel {
+  CHAT_NOTIFICATION_LEVEL_UNSPECIFIED = 0;
+  CHAT_NOTIFICATION_LEVEL_ALL = 1;
+  CHAT_NOTIFICATION_LEVEL_MENTIONS = 2;
+  CHAT_NOTIFICATION_LEVEL_NONE = 3;
+}
+
+// MESSAGES
+
+// ChatChannel represents a channel with embedded stats.
+message ChatChannel {
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string slug = 5;
+  string description = 6;
+  ChannelType channel_type = 7;
+  bool is_encrypted = 8;
+  bool is_archived = 9;
+  bool is_default = 10;
+  string icon = 11;
+  optional string category_id = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  // Embedded stats (from chat_channel_stats)
+  int32 message_count = 20;
+  int32 root_message_count = 21;
+  int32 member_count = 22;
+  google.protobuf.Timestamp last_message_at = 23;
+  google.protobuf.Timestamp last_root_message_at = 24;
+  // User-specific context (populated per-request)
+  optional ChannelRole current_user_role = 30;
+  optional bool is_member = 31;
+  // DM participant user IDs (populated for DIRECT and GROUP_DM channels)
+  repeated string dm_member_ids = 32;
+}
+
+// ThreadInfo holds thread metadata embedded in root messages.
+message ThreadInfo {
+  int32 reply_count = 1;
+  google.protobuf.Timestamp last_reply_at = 2;
+  repeated string participant_ids = 3;
+  bool has_unread = 4;
+}
+
+// ChatMessage represents a message in a channel.
+message ChatMessage {
+  string id = 1;
+  string channel_id = 2;
+  string sender_id = 3;
+  SenderType sender_type = 4;
+  string content = 5;
+  optional string root_id = 6;
+  optional google.protobuf.Timestamp edited_at = 7;
+  bool is_deleted = 8;
+  bool is_pinned = 9;
+  map<string, string> metadata = 10;
+  google.protobuf.Timestamp created_at = 11;
+  // Populated for root messages that have replies
+  optional ThreadInfo thread = 20;
+  // Reactions on this message
+  repeated ReactionGroup reactions = 21;
+  // Sender info (denormalized for display)
+  optional string sender_name = 22;
+  optional string sender_avatar_url = 23;
+}
+
+// ReactionGroup represents a unique emoji with its reactors.
+message ReactionGroup {
+  string emoji = 1;
+  int32 count = 2;
+  repeated string user_ids = 3;
+  bool current_user_reacted = 4;
+}
+
+// ChatChannelMember represents a user's membership in a channel.
+message ChatChannelMember {
+  string channel_id = 1;
+  string user_id = 2;
+  ChannelRole role = 3;
+  ChatNotificationLevel notification_level = 4;
+  bool is_muted = 5;
+  google.protobuf.Timestamp joined_at = 6;
+  // Denormalized user info
+  optional string display_name = 10;
+  optional string email = 11;
+  optional string avatar_url = 12;
+}
+
+// ChatChannelCategory represents a sidebar category for organizing channels.
+message ChatChannelCategory {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  int32 position = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// ThreadInboxItem represents a thread in the threads inbox view.
+message ThreadInboxItem {
+  string root_message_id = 1;
+  string channel_id = 2;
+  string channel_name = 3;
+  ChatMessage root_message = 4;
+  int32 reply_count = 5;
+  google.protobuf.Timestamp last_reply_at = 6;
+  repeated string participant_ids = 7;
+  bool has_unread = 8;
+  // Preview of the latest reply
+  optional ChatMessage latest_reply = 9;
+}
+
+// ChatResource represents an auto-tracked content reference in a channel.
+message ChatResource {
+  string id = 1;
+  string channel_id = 2;
+  string urn = 3;
+  string content_type = 4;
+  google.protobuf.Timestamp first_mentioned_at = 5;
+  google.protobuf.Timestamp last_mentioned_at = 6;
+  int32 mention_count = 7;
+  string first_mentioned_by = 8;
+  // Resolved metadata for display
+  optional string title = 10;
+  optional string description = 11;
+}
+
+// TypingUser represents a user currently typing.
+message TypingUser {
+  string user_id = 1;
+  string display_name = 2;
+}
+
+// CHANNEL REQUESTS/RESPONSES
+
+message CreateChannelRequest {
+  string organization_id = 1;
+  string name = 2;
+  ChannelType channel_type = 3;
+  optional string description = 4;
+  optional string icon = 5;
+  optional bool is_default = 6;
+  optional string category_id = 7;
+  // For DM/GROUP_DM: user IDs to include
+  repeated string member_ids = 10;
+}
+
+message CreateChannelResponse {
+  ChatChannel channel = 1;
+}
+
+message GetChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message GetChannelResponse {
+  ChatChannel channel = 1;
+}
+
+message UpdateChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional string icon = 5;
+  optional bool is_default = 6;
+}
+
+message UpdateChannelResponse {
+  ChatChannel channel = 1;
+}
+
+message ArchiveChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message ArchiveChannelResponse {}
+
+message DeleteChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message DeleteChannelResponse {}
+
+message ListChannelsRequest {
+  string organization_id = 1;
+  // If true, list all public channels (for browse). If false, list user's channels (for sidebar).
+  bool browse_public = 2;
+}
+
+message ListChannelsResponse {
+  repeated ChatChannel channels = 1;
+}
+
+// MEMBERSHIP REQUESTS/RESPONSES
+
+message JoinChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message JoinChannelResponse {
+  ChatChannel channel = 1;
+}
+
+message LeaveChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message LeaveChannelResponse {}
+
+message AddMembersRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  repeated string user_ids = 3;
+}
+
+message AddMembersResponse {
+  repeated ChatChannelMember members = 1;
+}
+
+message RemoveMembersRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  repeated string user_ids = 3;
+}
+
+message RemoveMembersResponse {}
+
+message GetMembersRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message GetMembersResponse {
+  repeated ChatChannelMember members = 1;
+}
+
+// MESSAGE REQUESTS/RESPONSES
+
+message SendMessageRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string content = 3;
+  // Set for thread replies; omit for root messages
+  optional string root_id = 4;
+  // Optional metadata (e.g., via_agent info)
+  map<string, string> metadata = 5;
+}
+
+message SendMessageResponse {
+  ChatMessage message = 1;
+}
+
+message GetMessagesRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Cursor-based pagination
+  optional string before_id = 3;
+  optional string after_id = 4;
+  int32 limit = 5;
+  // If true, only return root messages (no thread replies)
+  bool root_only = 6;
+}
+
+message GetMessagesResponse {
+  repeated ChatMessage messages = 1;
+  bool has_more = 2;
+}
+
+message GetMessageRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+}
+
+message GetMessageResponse {
+  ChatMessage message = 1;
+}
+
+message UpdateMessageRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+  string content = 4;
+}
+
+message UpdateMessageResponse {
+  ChatMessage message = 1;
+}
+
+message DeleteMessageRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+}
+
+message DeleteMessageResponse {}
+
+message PinMessageRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+}
+
+message PinMessageResponse {
+  ChatMessage message = 1;
+}
+
+message UnpinMessageRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+}
+
+message UnpinMessageResponse {
+  ChatMessage message = 1;
+}
+
+message GetPinnedMessagesRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message GetPinnedMessagesResponse {
+  repeated ChatMessage messages = 1;
+}
+
+// THREAD REQUESTS/RESPONSES
+
+message GetThreadRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string root_message_id = 3;
+}
+
+message GetThreadResponse {
+  ChatMessage root_message = 1;
+  int32 reply_count = 2;
+  google.protobuf.Timestamp last_reply_at = 3;
+  repeated string participant_ids = 4;
+  bool is_following = 5;
+}
+
+message GetThreadMessagesRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string root_message_id = 3;
+  optional string before_id = 4;
+  optional string after_id = 5;
+  int32 limit = 6;
+}
+
+message GetThreadMessagesResponse {
+  repeated ChatMessage messages = 1;
+  bool has_more = 2;
+}
+
+message GetThreadsInboxRequest {
+  string organization_id = 1;
+  // If true, only return threads with unread replies
+  bool unread_only = 2;
+  int32 limit = 3;
+  optional string cursor = 4;
+}
+
+message GetThreadsInboxResponse {
+  repeated ThreadInboxItem threads = 1;
+  bool has_more = 2;
+  optional string next_cursor = 3;
+}
+
+message FollowThreadRequest {
+  string organization_id = 1;
+  string root_message_id = 2;
+}
+
+message FollowThreadResponse {}
+
+message UnfollowThreadRequest {
+  string organization_id = 1;
+  string root_message_id = 2;
+}
+
+message UnfollowThreadResponse {}
+
+// REACTION REQUESTS/RESPONSES
+
+message AddReactionRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+  string emoji = 4;
+}
+
+message AddReactionResponse {
+  ReactionGroup reaction = 1;
+}
+
+message RemoveReactionRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+  string emoji = 4;
+}
+
+message RemoveReactionResponse {}
+
+// TYPING AND READ STATE
+
+message SetTypingRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message SetTypingResponse {}
+
+message MarkChannelReadRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string last_read_message_id = 3;
+}
+
+message MarkChannelReadResponse {}
+
+message MarkThreadReadRequest {
+  string organization_id = 1;
+  string root_message_id = 2;
+}
+
+message MarkThreadReadResponse {}
+
+message GetUnreadCountsRequest {
+  string organization_id = 1;
+}
+
+message GetUnreadCountsResponse {
+  repeated ChannelUnreadCount channels = 1;
+}
+
+message ChannelUnreadCount {
+  string channel_id = 1;
+  int32 unread_count = 2;
+  int32 mention_count = 3;
+  optional string last_read_message_id = 4;
+}
+
+// CHANNEL RESOURCES
+
+message GetChannelResourcesRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Optional filter by content type (e.g., "NOTE", "FILE")
+  optional string content_type_filter = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message GetChannelResourcesResponse {
+  repeated ChatResource resources = 1;
+  int32 total_count = 2;
+}
+
+// CATEGORY REQUESTS/RESPONSES
+
+message CreateCategoryRequest {
+  string organization_id = 1;
+  string name = 2;
+}
+
+message CreateCategoryResponse {
+  ChatChannelCategory category = 1;
+}
+
+message UpdateCategoryRequest {
+  string organization_id = 1;
+  string category_id = 2;
+  optional string name = 3;
+}
+
+message UpdateCategoryResponse {
+  ChatChannelCategory category = 1;
+}
+
+message DeleteCategoryRequest {
+  string organization_id = 1;
+  string category_id = 2;
+}
+
+message DeleteCategoryResponse {}
+
+message ListCategoriesRequest {
+  string organization_id = 1;
+}
+
+message ListCategoriesResponse {
+  repeated ChatChannelCategory categories = 1;
+}
+
+message ReorderCategoriesRequest {
+  string organization_id = 1;
+  // Ordered list of category IDs in the desired position
+  repeated string category_ids = 2;
+}
+
+message ReorderCategoriesResponse {
+  repeated ChatChannelCategory categories = 1;
+}
+
+message MoveChannelToCategoryRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Set to empty string or omit to move to uncategorized
+  optional string category_id = 3;
+}
+
+message MoveChannelToCategoryResponse {
+  ChatChannel channel = 1;
+}

@@ -51,6 +51,11 @@ enum NotificationType {
   NOTIFICATION_TYPE_TASK_ASSIGNED = 10;
   NOTIFICATION_TYPE_TASK_DUE_SOON = 11;
   NOTIFICATION_TYPE_TASK_OVERDUE = 12;
+  NOTIFICATION_TYPE_CHAT_MENTION = 13;
+  NOTIFICATION_TYPE_CHAT_DM = 14;
+  NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE = 15;
+  NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED = 16;
+  NOTIFICATION_TYPE_CHAT_THREAD_REPLY = 17;
 }
 
 // Notification model
@@ -216,6 +221,8 @@ message StreamNotificationEvent {
     EVENT_TYPE_PRESENCE_CHANGED = 4;
     // Mention state changed for content (task status, event time, etc.)
     EVENT_TYPE_MENTION_STATE_CHANGED = 5;
+    // User's permissions changed (domain admin granted/revoked) - triggers refetch
+    EVENT_TYPE_PERMISSIONS_CHANGED = 6;
   }
 
   // Type of this event

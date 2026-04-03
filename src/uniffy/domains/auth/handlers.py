@@ -28,6 +28,8 @@ from uniffy_proto.auth.v1.auth_pb2 import (
     RotateCacheKeySeedResponse,
 )
 
+from uniffy.core.converters import domain_type_to_proto
+from uniffy.core.models.shared import DomainType
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import (
     get_session_id_from_context,
@@ -42,7 +44,18 @@ from uniffy.domains.auth.errors import (
 )
 from uniffy.domains.auth.operations import AuthOperations
 from uniffy.domains.auth.tokens import decode_access_token
-from uniffy.domains.users.operations import UserOperations
+from uniffy.domains.auth.types import AuthResult
+
+
+def _domain_admins_to_proto(result: AuthResult) -> list[int]:
+    """Convert AuthResult domain_admin_domains to proto enum values."""
+    if not result.domain_admin_domains:
+        return []
+    values = []
+    for d in result.domain_admin_domains:
+        with contextlib.suppress(ValueError):
+            values.append(domain_type_to_proto(DomainType(d)))
+    return values
 
 
 class AuthHandlers:
@@ -75,6 +88,7 @@ class AuthHandlers:
                     organization_id=str(result.organization_id) if result.organization_id else "",
                     organization_role=result.organization_role or "",
                     session_id=str(result.session_id) if result.session_id else "",
+                    domain_admin_domains=_domain_admins_to_proto(result),
                 )
         except RegistrationError as e:
             logger.warning(f"Registration failed: {e}")
@@ -111,6 +125,7 @@ class AuthHandlers:
                     organization_id=str(result.organization_id) if result.organization_id else "",
                     organization_role=result.organization_role or "",
                     session_id=str(result.session_id) if result.session_id else "",
+                    domain_admin_domains=_domain_admins_to_proto(result),
                 )
         except AuthenticationError as e:
             logger.warning(f"Login failed: {e}")
@@ -143,6 +158,7 @@ class AuthHandlers:
                     organization_id=str(result.organization_id) if result.organization_id else "",
                     organization_role=result.organization_role or "",
                     session_id=str(result.session_id) if result.session_id else "",
+                    domain_admin_domains=_domain_admins_to_proto(result),
                 )
         except TokenError as e:
             logger.warning(f"Token refresh failed: {e}")
@@ -161,6 +177,8 @@ class AuthHandlers:
 
         try:
             async for session in get_async_session():
+                from uniffy.domains.users.operations import UserOperations
+
                 user_ops = UserOperations(session)
                 user = await user_ops.get_by_id(user_id)
                 return user_to_proto(user)
@@ -320,6 +338,8 @@ class AuthHandlers:
             if target_user_id != user_id:
                 try:
                     async for session in get_async_session():
+                        from uniffy.domains.users.operations import UserOperations
+
                         user_ops = UserOperations(session)
                         await user_ops.require_system_admin(user_id)
                 except Exception:

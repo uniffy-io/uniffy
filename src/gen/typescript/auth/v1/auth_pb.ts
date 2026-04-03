@@ -5,6 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
+import { DomainType } from "../../common/v1/common_pb.js";
 
 /**
  * Request to register a new user
@@ -401,6 +402,13 @@ export class AuthResponse extends Message<AuthResponse> {
    */
   sessionId?: string;
 
+  /**
+   * Domains where user is domain admin
+   *
+   * @generated from field: repeated common.v1.DomainType domain_admin_domains = 8;
+   */
+  domainAdminDomains: DomainType[] = [];
+
   constructor(data?: PartialMessage<AuthResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -416,6 +424,7 @@ export class AuthResponse extends Message<AuthResponse> {
     { no: 5, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "organization_role", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "domain_admin_domains", kind: "enum", T: proto3.getEnumType(DomainType), repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuthResponse {

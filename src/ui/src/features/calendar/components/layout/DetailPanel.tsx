@@ -22,6 +22,8 @@ import {
   Clock,
   ArrowsClockwise,
   MapPin,
+  Door,
+  Users,
   Check,
   X,
   Question,
@@ -354,6 +356,42 @@ export function DetailPanel() {
               </div>
             )}
 
+            {/* Room */}
+            {selectedEvent.roomName && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Door size={16} weight="duotone" className="text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">{selectedEvent.roomName}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground pl-6">
+                  {selectedEvent.roomLocation && (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} />
+                      {selectedEvent.roomLocation}
+                    </span>
+                  )}
+                  {selectedEvent.roomCapacity && selectedEvent.roomCapacity > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Users size={12} />
+                      {selectedEvent.roomCapacity} {selectedEvent.roomCapacity === 1 ? 'person' : 'people'}
+                    </span>
+                  )}
+                </div>
+                {selectedEvent.roomAmenities && selectedEvent.roomAmenities.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pl-6">
+                    {selectedEvent.roomAmenities.map((amenity) => (
+                      <span
+                        key={amenity}
+                        className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                      >
+                        {amenity}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Tags inline */}
             {selectedEvent.tags.length > 0 && (
               <div className="flex items-center gap-2 pt-1">
@@ -548,8 +586,8 @@ export function DetailPanel() {
           )}
         </div>
 
-        {/* Description Section - Takes most of the space with large min-height */}
-        <div className="min-h-[50vh] px-5 py-4 border-b border-border">
+        {/* Description Section */}
+        <div className={cn('px-5 py-4 border-b border-border', selectedEvent.description && 'min-h-48')}>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Description
           </h3>
@@ -561,7 +599,6 @@ export function DetailPanel() {
               readonly
               enableUpload={false}
               compact
-              minHeight="calc(50vh - 60px)"
               className="border-none bg-transparent"
             />
           ) : (

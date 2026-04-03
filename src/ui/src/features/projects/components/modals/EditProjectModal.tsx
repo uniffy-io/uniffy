@@ -10,11 +10,13 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { closeEditProjectModal, selectEditProjectId } from "@/features/projects/store/projectsUiSlice";
 import { selectProjects } from "@/features/projects/store/projectsSlice";
 import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
-import type { VisibilityScope } from "@/features/projects/types/project";
+import type { VisibilityScope, TypeFieldSchema } from "@/features/projects/types/project";
+import { TypeFieldSchemasSection } from "@/features/projects/components/settings/TypeFieldSchemasSection";
 
 const ICON_OPTIONS: ProjectIconName[] = [
   "kanban",
@@ -39,6 +41,7 @@ export function EditProjectModal() {
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
   const [visibility, setVisibility] = useState<VisibilityScope>("PRIVATE");
+  const [typeFieldSchemas, setTypeFieldSchemas] = useState<Record<string, TypeFieldSchema>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +52,7 @@ export function EditProjectModal() {
       setDescription(project.description || "");
       setIcon((project.icon || "kanban") as ProjectIconName);
       setVisibility(project.visibility);
+      setTypeFieldSchemas(project.typeFieldSchemas || {});
     }
   }, [project]);
 
@@ -63,17 +67,6 @@ export function EditProjectModal() {
   const handleClose = useCallback(() => {
     dispatch(closeEditProjectModal());
   }, [dispatch]);
-
-  // Close on escape
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !isSubmitting) {
-        handleClose();
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isSubmitting, handleClose]);
 
   if (!project || !editProjectId) return null;
 
@@ -90,6 +83,7 @@ export function EditProjectModal() {
           description: description.trim(),
           icon,
           visibility,
+          typeFieldSchemas,
         })
       ).unwrap();
       handleClose();
@@ -99,31 +93,24 @@ export function EditProjectModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => !isSubmitting && handleClose()}
-      />
-
-      {/* Dialog */}
-      <div className="relative bg-card w-full max-w-lg mx-4 rounded-xl shadow-2xl border border-border overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <PencilSimple size={20} weight="bold" className="text-primary" />
-            <h3 className="text-lg font-semibold text-foreground">
-              Edit Project
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={() => !isSubmitting && handleClose()}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X size={20} />
-          </button>
+    <Modal onClose={handleClose} closeDisabled={isSubmitting}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <PencilSimple size={20} weight="bold" className="text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">
+            Edit Project
+          </h3>
         </div>
+        <button
+          type="button"
+          onClick={handleClose}
+          disabled={isSubmitting}
+          className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          <X size={20} />
+        </button>
+      </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
@@ -218,6 +205,13 @@ export function EditProjectModal() {
                 ))}
               </div>
             </div>
+
+            {/* Type Field Schemas */}
+            <TypeFieldSchemasSection
+              fieldDefinitions={project.fieldDefinitions}
+              typeFieldSchemas={typeFieldSchemas}
+              onChange={setTypeFieldSchemas}
+            />
           </div>
 
           {/* Footer */}
@@ -235,7 +229,6 @@ export function EditProjectModal() {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

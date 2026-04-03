@@ -21,8 +21,11 @@ import {
     fetchGroupMembers,
     addGroupMember,
     removeGroupMember,
+    fetchDomainAdmins,
+    grantDomainAdmin,
+    revokeDomainAdmin,
 } from '@/features/admin/store/adminThunks';
-import { ContentType, VisibilityScope, OrganizationRole } from '@uniffy/proto/common/v1/common_pb';
+import { ContentType, VisibilityScope, OrganizationRole, DomainType } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Hook for checking admin access permissions.
@@ -323,4 +326,59 @@ export function getOrgRoleLabel(role: number): string {
  */
 export function isOrgAdmin(role: number): boolean {
     return role === OrganizationRole.OWNER || role === OrganizationRole.ADMIN;
+}
+
+/**
+ * Hook for managing domain admins.
+ */
+export function useDomainAdmins() {
+    const dispatch = useAppDispatch();
+    const domainAdmins = useAppSelector((state) => state.admin.domainAdmins);
+    const loading = useAppSelector((state) => state.admin.domainAdminsLoading);
+    const totalCount = useAppSelector((state) => state.admin.domainAdminsTotalCount);
+
+    const refresh = useCallback(
+        (options?: { domainFilter?: number; page?: number; pageSize?: number }) => {
+            dispatch(fetchDomainAdmins(options || {}));
+        },
+        [dispatch],
+    );
+
+    const grant = useCallback(
+        async (userId: string, domain: number) => {
+            await dispatch(grantDomainAdmin({ userId, domain })).unwrap();
+        },
+        [dispatch],
+    );
+
+    const revoke = useCallback(
+        async (userId: string, domain: number) => {
+            await dispatch(revokeDomainAdmin({ userId, domain })).unwrap();
+        },
+        [dispatch],
+    );
+
+    return { domainAdmins, loading, totalCount, refresh, grant, revoke };
+}
+
+/**
+ * Get human-readable label for a domain type.
+ */
+export function getDomainTypeLabel(domain: number): string {
+    switch (domain) {
+        case DomainType.CHAT:
+            return 'Chat';
+        case DomainType.FILES:
+            return 'Files';
+        case DomainType.NOTES:
+            return 'Notes';
+        case DomainType.CALENDAR:
+            return 'Calendar';
+        case DomainType.PROJECTS:
+            return 'Projects';
+        case DomainType.AGENTS:
+            return 'Agents';
+        default:
+            return 'Unknown';
+    }
 }

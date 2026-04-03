@@ -54,3 +54,30 @@ export const TASK_TYPE_MAP = new Map(
 export function getTaskTypeConfig(value: string): TaskTypeConfig {
   return TASK_TYPE_MAP.get(value) ?? TASK_TYPES[0];
 }
+
+/**
+ * Determine which custom fields are visible and required for a given task type.
+ * System fields are excluded - they are always visible.
+ * If no schema exists for the type, all custom fields are shown with none required.
+ */
+export function getFieldsForTaskType(
+  fields: Array<{ id: string; isSystem: boolean }>,
+  taskType: string,
+  typeFieldSchemas: Record<string, { shownFieldIds: string[]; requiredFieldIds: string[] }>,
+): { visibleFieldIds: Set<string>; requiredFieldIds: Set<string> } {
+  const schema = typeFieldSchemas[taskType];
+  const customFields = fields.filter((f) => !f.isSystem);
+
+  if (!schema || schema.shownFieldIds.length === 0) {
+    // No schema = show all custom fields, none required
+    return {
+      visibleFieldIds: new Set(customFields.map((f) => f.id)),
+      requiredFieldIds: new Set<string>(),
+    };
+  }
+
+  return {
+    visibleFieldIds: new Set(schema.shownFieldIds),
+    requiredFieldIds: new Set(schema.requiredFieldIds),
+  };
+}

@@ -8,6 +8,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.cal.v1.calendar_pb2 import (
     AddAttendeesRequest,
     CategoryResponse,
@@ -67,6 +68,30 @@ from uniffy.domains.calendar.operations import (
 
 class CalendarHandlers:
     """Calendar RPC handlers."""
+
+    @staticmethod
+    async def _get_event_room_info(session: AsyncSession, event_id: UUID) -> dict:
+        """Fetch room booking info for an event, returning kwargs for event_to_proto."""
+        from uniffy.domains.rooms.operations import BookingOperations
+
+        booking_ops = BookingOperations(session)
+        booking = await booking_ops.get_booking_for_event(event_id)
+        if not booking:
+            return {}
+
+        from sqlalchemy import select
+
+        from uniffy.core.models.rooms.room import Room
+
+        result = await session.execute(select(Room).where(Room.id == booking.room_id))
+        room = result.scalar_one_or_none()
+        return {
+            "room_id": str(booking.room_id),
+            "room_name": room.name if room else "",
+            "room_location": room.location if room else "",
+            "room_capacity": room.capacity if room else 0,
+            "room_amenities": list(room.amenities) if room and room.amenities else [],
+        }
 
     # ─────────────────────────────────────────────────────────────
     # Event Operations
@@ -130,6 +155,11 @@ class CalendarHandlers:
                         for urn in request.linked_resource_urns
                     ]
 
+                # Parse optional room_id
+                room_id = None
+                if request.HasField("room_id") and request.room_id:
+                    room_id = UUID(request.room_id)
+
                 event = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -151,11 +181,15 @@ class CalendarHandlers:
                     linked_resources=linked_resources,
                     visibility=visibility,
                     reminders=list(request.reminders) if request.reminders else None,
+                    room_id=room_id,
                 )
 
                 # Fetch attendees for response
                 attendees = await queries.get_event_attendees(session, event.id)
-                return EventResponse(event=event_to_proto(event, attendees))
+
+                # Fetch room booking info if present
+                room_info = await self._get_event_room_info(session, event.id)
+                return EventResponse(event=event_to_proto(event, attendees, **room_info))
 
         except ConnectError:
             raise
@@ -183,7 +217,8 @@ class CalendarHandlers:
                 event, attendees = await ops.get_event_with_attendees(
                     user_id, organization_id, event_id
                 )
-                return EventResponse(event=event_to_proto(event, attendees))
+                room_info = await self._get_event_room_info(session, event_id)
+                return EventResponse(event=event_to_proto(event, attendees, **room_info))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Event not found")
@@ -271,6 +306,10 @@ class CalendarHandlers:
                     except ValueError:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid occurrence_date format")
 
+                # Room booking
+                if request.HasField("room_id"):
+                    kwargs["room_id"] = request.room_id  # empty string = remove room
+
                 event = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -280,7 +319,8 @@ class CalendarHandlers:
 
                 # Fetch attendees for response
                 attendees = await queries.get_event_attendees(session, event.id)
-                return EventResponse(event=event_to_proto(event, attendees))
+                room_info = await self._get_event_room_info(session, event.id)
+                return EventResponse(event=event_to_proto(event, attendees, **room_info))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Event not found")
@@ -403,11 +443,12 @@ class CalendarHandlers:
                 page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
 
-                # Fetch attendees for each event
+                # Fetch attendees and room info for each event
                 proto_events = []
                 for event in events:
                     attendees = await queries.get_event_attendees(session, event.id)
-                    proto_events.append(event_to_proto(event, attendees))
+                    room_info = await self._get_event_room_info(session, event.id)
+                    proto_events.append(event_to_proto(event, attendees, **room_info))
 
                 return ListEventsResponse(
                     events=proto_events,
@@ -457,14 +498,15 @@ class CalendarHandlers:
                     category_ids=category_ids,
                 )
 
-                # Fetch attendees for each event
-                # Cache attendees by real event ID to avoid duplicate queries
+                # Fetch attendees and room info for each event
+                # Cache by real event ID to avoid duplicate queries
                 # for virtual instances that share the same master event
                 attendees_cache: dict[str, list] = {}
+                room_info_cache: dict[str, dict] = {}
                 proto_events = []
                 for event in events:
                     event_id_str = str(event.id)
-                    # Virtual instances have synthetic IDs - use master ID for attendees
+                    # Virtual instances have synthetic IDs - use master ID
                     if "__occurrence__" in event_id_str:
                         real_id = UUID(event_id_str.split("__occurrence__")[0])
                     else:
@@ -475,7 +517,17 @@ class CalendarHandlers:
                         attendees_cache[real_id_str] = await queries.get_event_attendees(
                             session, real_id,
                         )
-                    proto_events.append(event_to_proto(event, attendees_cache[real_id_str]))
+                    if real_id_str not in room_info_cache:
+                        room_info_cache[real_id_str] = await self._get_event_room_info(
+                            session, real_id,
+                        )
+                    proto_events.append(
+                        event_to_proto(
+                            event,
+                            attendees_cache[real_id_str],
+                            **room_info_cache[real_id_str],
+                        )
+                    )
 
                 return GetEventsInRangeResponse(events=proto_events)
 

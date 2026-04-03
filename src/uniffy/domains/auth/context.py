@@ -54,6 +54,27 @@ def get_user_id_from_context(ctx: RequestContext) -> UUID:
         raise ConnectError(Code.UNAUTHENTICATED, f"Invalid or expired token: {e}")
 
 
+def get_sender_info_from_context(ctx: RequestContext) -> tuple[str, str]:
+    """Extract sender display name and avatar key from JWT claims.
+
+    Returns (full_name, avatar_key). Falls back to empty strings if
+    the claims are absent (e.g. tokens issued before this change).
+    """
+    headers = ctx.request_headers()
+    auth_header = headers.get("authorization", "")
+
+    if not auth_header.startswith("Bearer "):
+        return ("", "")
+
+    token = auth_header[7:]
+
+    try:
+        payload = decode_access_token(token)
+        return (payload.get("name", ""), payload.get("avk", ""))
+    except Exception:
+        return ("", "")
+
+
 def get_organization_id_from_context(ctx: RequestContext) -> UUID | None:
     """
     Extract organization ID from request context if present.

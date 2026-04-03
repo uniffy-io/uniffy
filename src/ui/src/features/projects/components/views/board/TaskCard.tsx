@@ -12,8 +12,9 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle, WarningCircle } from "@phosphor-icons/react";
+import { CheckCircle, WarningCircle, ArrowsClockwise, Clock } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
 import type { Task, SelectOption } from "@/features/projects/types";
@@ -173,6 +174,30 @@ export function TaskCard({
                 <span className="flex items-center text-muted-foreground bg-muted px-1.5 py-0.5 rounded gap-1 text-[10px]">
                     <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
                     {task.subtaskCompleted}/{task.subtaskTotal}
+                    <span className="text-muted-foreground/70">
+                      ({Math.round((task.subtaskCompleted / task.subtaskTotal) * 100)}%)
+                    </span>
+                </span>
+            )}
+
+            {/* Time tracking */}
+            {(task.estimatedMinutes || task.timeSpentMinutes) && (
+                <span className={cn(
+                    "flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px]",
+                    task.estimatedMinutes && task.timeSpentMinutes && task.timeSpentMinutes > task.estimatedMinutes
+                        ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        : "text-muted-foreground bg-muted"
+                )}>
+                    <Clock size={10} />
+                    {task.timeSpentMinutes ? formatMinutes(task.timeSpentMinutes) : "0m"}
+                    {task.estimatedMinutes ? ` / ${formatMinutes(task.estimatedMinutes)}` : ""}
+                </span>
+            )}
+
+            {/* Recurrence indicator */}
+            {task.recurrenceRule && (
+                <span title="Recurring task">
+                    <ArrowsClockwise size={12} className="text-muted-foreground" />
                 </span>
             )}
         </div>

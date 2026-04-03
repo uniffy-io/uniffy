@@ -212,6 +212,95 @@ def extract_all_outgoing_references_from_canvas(
     return list(urns)
 
 
+def extract_urns_with_types(content: str) -> list[tuple[str, ContentType]]:
+    """Extract (urn, content_type) pairs from markdown content.
+
+    Parses [[[label|urn:uniffy:content:TYPE:uuid]]] mentions and returns
+    each URN with its resolved ContentType. Unknown types are skipped.
+
+    Parameters
+    ----------
+    content : str
+        Markdown content to parse.
+
+    Returns
+    -------
+    list[tuple[str, ContentType]]
+        List of (urn_string, content_type) pairs.
+
+    """
+    if not content:
+        return []
+
+    results: list[tuple[str, ContentType]] = []
+    seen: set[str] = set()
+    for match in MENTION_PATTERN.finditer(content):
+        urn = match.group(2)
+        if not urn or not urn.startswith(_URN_PREFIX) or urn in seen:
+            continue
+        seen.add(urn)
+        parsed = parse_urn(urn)
+        if parsed:
+            results.append((urn, parsed[0]))
+    return results
+
+
+def extract_mentioned_user_ids_from_content(content: str) -> set[UUID]:
+    """Extract user UUIDs from [[[label|urn:uniffy:content:USER:uuid]]] mentions.
+
+    Convenience function that combines mention parsing with USER type
+    filtering. Use this when you need mentioned user IDs directly from
+    markdown content (e.g., chat notifications) rather than from a
+    pre-computed outgoing_references list.
+
+    Parameters
+    ----------
+    content : str
+        Markdown content to parse.
+
+    Returns
+    -------
+    set[UUID]
+        Set of mentioned user IDs.
+
+    """
+    if not content:
+        return set()
+
+    user_prefix = f"{_URN_PREFIX}USER:"
+    result: set[UUID] = set()
+    for match in MENTION_PATTERN.finditer(content):
+        urn = match.group(2)
+        if urn and urn.startswith(user_prefix):
+            try:
+                result.add(UUID(urn[len(user_prefix):]))
+            except ValueError:
+                continue
+    return result
+
+
+def strip_mentions_to_labels(content: str) -> str:
+    """Replace all [[[label|urn]]] mentions with just the label text.
+
+    Useful for producing plaintext from markdown content for search
+    indexing or notification previews.
+
+    Parameters
+    ----------
+    content : str
+        Markdown content with URN mentions.
+
+    Returns
+    -------
+    str
+        Content with mentions replaced by their label text.
+
+    """
+    if not content:
+        return ""
+    return MENTION_PATTERN.sub(lambda m: m.group(1), content)
+
+
 def replace_mention_label(content: str, target_urn: str, new_label: str) -> str:
     """Replace the label in all mentions of a specific URN.
 

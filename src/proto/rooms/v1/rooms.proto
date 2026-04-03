@@ -1,0 +1,265 @@
+syntax = "proto3";
+
+package rooms.v1;
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/rooms/v1;roomsv1";
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+// Type of bookable room or resource
+enum RoomType {
+  ROOM_TYPE_UNSPECIFIED     = 0;
+  ROOM_TYPE_MEETING_ROOM   = 1;
+  ROOM_TYPE_CONFERENCE_ROOM = 2;
+  ROOM_TYPE_OFFICE         = 3;
+  ROOM_TYPE_OTHER          = 4;
+}
+
+// Operational status of a room
+enum RoomStatus {
+  ROOM_STATUS_UNSPECIFIED = 0;
+  ROOM_STATUS_ACTIVE      = 1;
+  ROOM_STATUS_MAINTENANCE = 2;
+  ROOM_STATUS_RETIRED     = 3;
+}
+
+// Status of a booking
+enum BookingStatus {
+  BOOKING_STATUS_UNSPECIFIED = 0;
+  BOOKING_STATUS_CONFIRMED   = 1;
+  BOOKING_STATUS_CANCELLED   = 2;
+}
+
+// ============================================================================
+// Service Definition
+// ============================================================================
+
+service RoomsService {
+  // ----- Room CRUD -----
+  rpc CreateRoom(CreateRoomRequest) returns (RoomResponse);
+  rpc GetRoom(GetRoomRequest) returns (RoomResponse);
+  rpc UpdateRoom(UpdateRoomRequest) returns (RoomResponse);
+  rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
+  rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
+
+  // ----- Booking CRUD -----
+  rpc CreateBooking(CreateBookingRequest) returns (BookingResponse);
+  rpc GetBooking(GetBookingRequest) returns (BookingResponse);
+  rpc CancelBooking(CancelBookingRequest) returns (BookingResponse);
+  rpc ListBookings(ListBookingsRequest) returns (ListBookingsResponse);
+
+  // ----- Availability -----
+  rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
+  rpc FindAvailableRooms(FindAvailableRoomsRequest) returns (FindAvailableRoomsResponse);
+}
+
+// ============================================================================
+// Core Messages
+// ============================================================================
+
+// A bookable room or resource
+message Room {
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string description = 5;
+  RoomType room_type = 6;
+  RoomStatus status = 7;
+  int32 capacity = 8;
+  string floor = 9;
+  string building = 10;
+  string location = 11;
+  repeated string amenities = 12;
+  optional string image_file_id = 13;
+  common.v1.VisibilityScope visibility = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+// A booking record linking a room to a time slot
+message RoomBooking {
+  string id = 1;
+  string room_id = 2;
+  string organization_id = 3;
+  string user_id = 4;
+  optional string event_id = 5;
+  string title = 6;
+  google.protobuf.Timestamp start_time = 7;
+  google.protobuf.Timestamp end_time = 8;
+  BookingStatus status = 9;
+  string notes = 10;
+  // Denormalized fields for display
+  string booker_name = 11;
+  string room_name = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// A time slot in an availability grid
+message TimeSlot {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  bool is_available = 3;
+  optional string booking_id = 4;
+  string event_title = 5;
+  string booker_name = 6;
+}
+
+// ============================================================================
+// Room Requests/Responses
+// ============================================================================
+
+message CreateRoomRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string description = 3;
+  RoomType room_type = 4;
+  int32 capacity = 5;
+  optional string floor = 6;
+  optional string building = 7;
+  optional string location = 8;
+  repeated string amenities = 9;
+  optional string image_file_id = 10;
+  optional common.v1.VisibilityScope visibility = 11;
+  repeated string group_ids = 12;
+}
+
+message GetRoomRequest {
+  string room_id = 1;
+  string organization_id = 2;
+}
+
+message UpdateRoomRequest {
+  string room_id = 1;
+  string organization_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional RoomType room_type = 5;
+  optional RoomStatus status = 6;
+  optional int32 capacity = 7;
+  optional string floor = 8;
+  optional string building = 9;
+  optional string location = 10;
+  repeated string amenities = 11;
+  optional string image_file_id = 12;
+  optional common.v1.VisibilityScope visibility = 13;
+  // Whether amenities list should replace existing (true) or be ignored if empty (false)
+  bool replace_amenities = 14;
+}
+
+message DeleteRoomRequest {
+  string room_id = 1;
+  string organization_id = 2;
+  bool permanent = 3;
+}
+
+message DeleteRoomResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RoomResponse {
+  Room room = 1;
+}
+
+message ListRoomsRequest {
+  string organization_id = 1;
+  optional RoomType room_type = 2;
+  optional RoomStatus status = 3;
+  optional int32 min_capacity = 4;
+  repeated string amenities = 5;
+  optional string building = 6;
+  optional string floor = 7;
+  optional string search_query = 8;
+  int32 page = 9;
+  int32 page_size = 10;
+}
+
+message ListRoomsResponse {
+  repeated Room rooms = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+// ============================================================================
+// Booking Requests/Responses
+// ============================================================================
+
+message CreateBookingRequest {
+  string organization_id = 1;
+  string room_id = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+  optional string title = 5;
+  optional string notes = 6;
+  optional string event_id = 7;
+}
+
+message GetBookingRequest {
+  string booking_id = 1;
+  string organization_id = 2;
+}
+
+message CancelBookingRequest {
+  string booking_id = 1;
+  string organization_id = 2;
+}
+
+message BookingResponse {
+  RoomBooking booking = 1;
+}
+
+message ListBookingsRequest {
+  string organization_id = 1;
+  optional string room_id = 2;
+  optional string user_id = 3;
+  optional google.protobuf.Timestamp start_date = 4;
+  optional google.protobuf.Timestamp end_date = 5;
+  optional BookingStatus status = 6;
+  int32 page = 7;
+  int32 page_size = 8;
+}
+
+message ListBookingsResponse {
+  repeated RoomBooking bookings = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+// ============================================================================
+// Availability Requests/Responses
+// ============================================================================
+
+message CheckAvailabilityRequest {
+  string organization_id = 1;
+  string room_id = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+}
+
+message CheckAvailabilityResponse {
+  repeated TimeSlot slots = 1;
+}
+
+message FindAvailableRoomsRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  optional int32 min_capacity = 4;
+  repeated string amenities = 5;
+  optional RoomType room_type = 6;
+}
+
+message FindAvailableRoomsResponse {
+  repeated Room rooms = 1;
+}

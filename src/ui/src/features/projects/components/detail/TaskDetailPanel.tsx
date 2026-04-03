@@ -10,14 +10,13 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Repeat, Bell, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash } from "@phosphor-icons/react";
+import { X, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateFull, isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
@@ -28,7 +27,7 @@ import { closeDetailPanel, selectTask } from "@/features/projects/store/projects
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { projectsApi } from "@/features/projects/api/projectsApi";
 import { formatMinutes, parseTimeInput } from "@/features/projects/utils/timeFormatting";
-import type { SelectOption, Sprint } from "@/features/projects/types";
+import type { SelectOption, Sprint, Task } from "@/features/projects/types";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 
 import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
@@ -36,14 +35,16 @@ import { extractMentionsFromMarkdown, extractFallbackLabel } from "@/shared/util
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { SubtasksList } from "./SubtasksList";
+import { TaskRecurrenceSelector } from "./TaskRecurrenceSelector";
 import { ActivityLog } from "./ActivityLog";
 import { DependenciesList } from "./DependenciesList";
 
 interface TaskDetailPanelProps {
   taskId: string;
+  variant?: "sidebar" | "modal";
 }
 
-export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
+export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanelProps) {
   const dispatch = useAppDispatch();
   const { isMobileOrTablet } = useBreakpoint();
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
@@ -78,6 +79,24 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Build ancestor chain for breadcrumb navigation (must be before early return)
+  const ancestorChain = useMemo(() => {
+    if (!task?.parentId) return [];
+    const chain: Array<{ id: string; title: string; number: number }> = [];
+    const tasksMap: Record<string, Task> = {};
+    for (const t of allProjectTasks) {
+      tasksMap[t.id] = t;
+    }
+    let currentId: string | null = task.parentId;
+    while (currentId && chain.length < 5) {
+      const ancestor: Task | undefined = tasksMap[currentId];
+      if (!ancestor) break;
+      chain.unshift({ id: ancestor.id, title: ancestor.title, number: ancestor.number });
+      currentId = ancestor.parentId;
+    }
+    return chain;
+  }, [task, allProjectTasks]);
 
   if (!task) {
     return (
@@ -135,8 +154,35 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
         </div>
       </div>
 
+      {/* Parent breadcrumbs */}
+      {ancestorChain.length > 0 && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground px-4 pt-2 flex-wrap">
+          {ancestorChain.map((ancestor, i) => (
+            <span key={ancestor.id} className="flex items-center gap-1">
+              {i > 0 && <CaretRight size={10} className="text-muted-foreground/50" />}
+              <button
+                type="button"
+                className="font-mono hover:text-foreground hover:underline transition-colors truncate max-w-[150px]"
+                onClick={() => dispatch(selectTask(ancestor.id))}
+                title={ancestor.title}
+              >
+                {project?.slug}-{ancestor.number}
+              </button>
+            </span>
+          ))}
+          <CaretRight size={10} className="text-muted-foreground/50" />
+          <span className="font-mono text-foreground font-medium">
+            {ticketId}
+          </span>
+        </div>
+      )}
+
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
+        <div className={cn("p-4", variant === "modal" ? "flex gap-6 items-start" : "space-y-6")}>
+
+        {/* Left column (or single column in sidebar mode) */}
+        <div className={cn(variant === "modal" ? "flex-1 min-w-0 space-y-6" : "space-y-6")}>
+
           {/* Task Title (editable when permitted) */}
           <EditableTitle
             title={task.title}
@@ -151,7 +197,7 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
           {statusOption && (
             <div className="flex items-center justify-between">
               <StatusBadge option={statusOption} />
-              
+
               {/* Feature 15: Milestone Badge */}
               {task.isMilestone && (
                  <Badge variant="secondary" className="gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
@@ -161,6 +207,53 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               )}
             </div>
           )}
+
+          {/* Description (in modal mode, shown in left column before fields) */}
+          {variant === "modal" && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</h3>
+              <ExpandableEditor
+                contentType={ContentType.TASK}
+                contentId={task.id}
+                value={task.description}
+                onChange={(newDesc) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                  dispatch(updateTask({ id: task.id, description: newDesc }));
+                }}
+                placeholder="Click to add a description... (type @ to mention)"
+                label="Description"
+                enableUpload
+                fullPreview
+                readonly={!canEdit}
+              />
+            </div>
+          )}
+
+          {/* References (in modal mode, in left column) */}
+          {variant === "modal" && task.outgoingReferences.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
+              <div className="flex flex-wrap gap-2">
+                {task.outgoingReferences.map((urn) => {
+                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
+                  return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Comments + Activity (in modal mode, in left column) */}
+          {variant === "modal" && (
+            <div className="max-h-64 overflow-y-auto rounded-md border border-border">
+              <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
+            </div>
+          )}
+          {variant === "modal" && <ActivityLog taskId={task.id} />}
+
+          </div>{/* end left column */}
+
+          {/* Right column (or continues in single column for sidebar) */}
+          <div className={cn(variant === "modal" ? "w-72 shrink-0 space-y-6" : "space-y-6")}>
 
           {/* Fields Section */}
           <div className="space-y-4">
@@ -187,8 +280,8 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               )}
 
               {/* Type */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground w-20 shrink-0">Type</span>
+              <div className="flex items-start gap-2">
+                <span className="text-sm text-muted-foreground w-20 shrink-0 pt-1">Type</span>
                 <div className="flex flex-wrap gap-1.5">
                   {TASK_TYPES.map((type) => {
                     const TIcon = type.icon;
@@ -235,25 +328,27 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
               {task.dueDate && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground w-20">Due</span>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-sm",
-                      isOverdue(task.dueDate) && "text-destructive"
-                    )}>
-                      {formatDateFull(task.dueDate)}
-                    </span>
-                    
-                    {/* Feature 9: Recurrence Indicator */}
-                    {task.recurrenceRule && (
-                       <div className="flex items-center text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          <Repeat size={12} className="mr-1" />
-                          Recurring
-                       </div>
-                    )}
-                  </div>
+                  <span className={cn(
+                    "text-sm",
+                    isOverdue(task.dueDate) && "text-destructive"
+                  )}>
+                    {formatDateFull(task.dueDate)}
+                  </span>
                 </div>
               )}
-              
+
+              {/* Recurrence */}
+              <div className="flex items-start gap-3">
+                <span className="text-sm text-muted-foreground w-20 pt-0.5">Repeat</span>
+                <div className="flex-1">
+                  <TaskRecurrenceSelector
+                    value={task.recurrenceRule}
+                    onChange={(val) => dispatch(updateTask({ id: task.id, recurrenceRule: val }))}
+                    disabled={!canEdit}
+                  />
+                </div>
+              </div>
+
               {/* Sprint */}
               {sprints.length > 0 && (
                 <div className="flex items-center gap-3">
@@ -287,14 +382,38 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
                 }}
               />
 
-              {/* Reminder (Visual Only) */}
-              <div className="flex items-center gap-3">
-                 <span className="text-sm text-muted-foreground w-20">Remind me</span>
-                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
-                    <Bell size={12} className="mr-1" />
-                    Set reminder
-                 </Button>
-              </div>
+              {/* Time Progress Bar */}
+              {task.estimatedMinutes != null && task.estimatedMinutes > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20" />
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          !task.timeSpentMinutes ? "bg-muted"
+                          : task.timeSpentMinutes <= task.estimatedMinutes * 0.75 ? "bg-green-500"
+                          : task.timeSpentMinutes <= task.estimatedMinutes ? "bg-yellow-500"
+                          : "bg-red-500"
+                        )}
+                        style={{ width: `${Math.min(100, ((task.timeSpentMinutes ?? 0) / task.estimatedMinutes) * 100)}%` }}
+                      />
+                    </div>
+                    <span className={cn(
+                      "text-[10px] shrink-0",
+                      task.timeSpentMinutes && task.timeSpentMinutes > task.estimatedMinutes
+                        ? "text-red-500 font-medium"
+                        : "text-muted-foreground"
+                    )}>
+                      {task.timeSpentMinutes
+                        ? `${Math.round((task.timeSpentMinutes / task.estimatedMinutes) * 100)}%`
+                        : "0%"
+                      }
+                    </span>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
           
@@ -308,53 +427,51 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
           {/* Feature 7: Subtasks */}
           <SubtasksList taskId={task.id} parentCompleted={!!task.completedAt} />
 
-          {/* Description Section */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Description
-            </h3>
-            <ExpandableEditor
-              contentType={ContentType.TASK}
-              contentId={task.id}
-              value={task.description}
-              onChange={(newDesc) => {
-                dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                dispatch(updateTask({ id: task.id, description: newDesc }));
-              }}
-              placeholder="Click to add a description... (type @ to mention)"
-              label="Description"
-              enableUpload
-              fullPreview
-              readonly={!canEdit}
-            />
-          </div>
+          </div>{/* end right column (or contents for sidebar) */}
 
-          {/* References Section */}
-          {task.outgoingReferences.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                References
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {task.outgoingReferences.map((urn) => {
-                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
-                  return (
-                    <MentionChipCompact
-                      key={urn}
-                      urn={urn}
-                      label={mention?.label || extractFallbackLabel(urn)}
-                    />
-                  );
-                })}
+          {/* The following sections are shown in sidebar mode only - in modal mode they're in the left column */}
+          {variant === "sidebar" && (
+            <>
+              {/* Description Section */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</h3>
+                <ExpandableEditor
+                  contentType={ContentType.TASK}
+                  contentId={task.id}
+                  value={task.description}
+                  onChange={(newDesc) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                    dispatch(updateTask({ id: task.id, description: newDesc }));
+                  }}
+                  placeholder="Click to add a description... (type @ to mention)"
+                  label="Description"
+                  enableUpload
+                  fullPreview
+                  readonly={!canEdit}
+                />
               </div>
-            </div>
-          )}
-          
-          {/* Comments (shared domain) */}
-          <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
 
-          {/* Activity Log (field changes, status updates, etc.) */}
-          <ActivityLog taskId={task.id} />
+              {/* References Section */}
+              {task.outgoingReferences.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {task.outgoingReferences.map((urn) => {
+                      const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
+                      return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Comments */}
+              <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
+
+              {/* Activity Log */}
+              <ActivityLog taskId={task.id} />
+            </>
+          )}
+
         </div>
       </ScrollArea>
     </div>

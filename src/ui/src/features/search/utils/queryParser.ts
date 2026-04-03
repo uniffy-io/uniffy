@@ -62,6 +62,9 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'events': SearchResultType.CALENDAR_EVENT,
     'chat': SearchResultType.CHAT,
     'chats': SearchResultType.CHAT,
+    'chatmessage': SearchResultType.CHAT_MESSAGE,
+    'message': SearchResultType.CHAT_MESSAGE,
+    'msg': SearchResultType.CHAT_MESSAGE,
     'project': SearchResultType.PROJECT,
     'projects': SearchResultType.PROJECT,
     'task': SearchResultType.TASK,
@@ -70,6 +73,8 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'agents': SearchResultType.AGENT,
     'prompt': SearchResultType.PROMPT,
     'prompts': SearchResultType.PROMPT,
+    'room': SearchResultType.ROOM,
+    'rooms': SearchResultType.ROOM,
 };
 
 /**
@@ -79,9 +84,11 @@ const FILTER_PREFIXES = [
     // Type filters
     'note', 'notes', 'file', 'files', 'user', 'users',
     'calendar', 'event', 'events', 'chat', 'chats',
+    'chatmessage', 'message', 'msg',
     'project', 'projects', 'task', 'tasks',
     'agent', 'agents',
     'prompt', 'prompts',
+    'room', 'rooms',
     // Metadata filters
     'tag',
     // Ownership filters

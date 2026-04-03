@@ -14,24 +14,38 @@ import { notificationsApi } from '@/features/notifications/api/notificationsApi'
 import { addRealtimeNotification } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { updatePresenceWithCustomStatus } from '@/features/presence/store/presenceSlice';
+import { setDomainAdminDomains } from '@/features/auth/store/authSlice';
+import { adminApi } from '@/features/admin/api/adminApi';
 import { emitMentionStateChange } from '@/components/mention';
 import { StreamNotificationEvent_EventType } from '@uniffy/proto/notifications/v1/notifications_pb';
 
 const MAX_BACKOFF_MS = 30000;
 const INITIAL_BACKOFF_MS = 1000;
 
+// Module-level singleton: ensures only one notification stream exists process-wide.
+// If a second mount happens before the first cleanup, the old connection is aborted.
+let _activeController: AbortController | null = null;
+
 /**
  * Subscribe to real-time notification events.
  * Automatically reconnects with exponential backoff on disconnection.
+ *
+ * Uses a module-level AbortController to guarantee at most one active
+ * connection, even if multiple component instances mount concurrently
+ * (e.g. during page transitions or React Strict Mode double-effects).
  */
 export function useNotificationStream() {
     const dispatch = useAppDispatch();
     const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
+    const userId = useAppSelector((s) => s.auth.user?.id);
     const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
     const abortRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         if (!organizationId || !isAuthenticated) return;
+
+        // Abort any previously active stream from another mount
+        _activeController?.abort();
 
         let backoff = INITIAL_BACKOFF_MS;
         let mounted = true;
@@ -42,6 +56,7 @@ export function useNotificationStream() {
                 // Abort any previous stream before starting a new one
                 abortRef.current?.abort();
                 abortRef.current = new AbortController();
+                _activeController = abortRef.current;
 
                 try {
                     const stream = notificationsApi.streamNotifications(
@@ -126,6 +141,23 @@ export function useNotificationStream() {
                             }
                         }
 
+                        // Permissions changed - refetch domain admin domains
+                        if (
+                            event.eventType ===
+                                StreamNotificationEvent_EventType.PERMISSIONS_CHANGED &&
+                            userId
+                        ) {
+                            try {
+                                const response = await adminApi.getUserDomainAdmins({
+                                    organizationId: organizationId!,
+                                    userId,
+                                });
+                                dispatch(setDomainAdminDomains(Array.from(response.domains)));
+                            } catch {
+                                // Non-fatal - permissions will update on next login
+                            }
+                        }
+
                         // Heartbeats are silently consumed (keep-alive)
                     }
                 } catch {
@@ -145,11 +177,14 @@ export function useNotificationStream() {
         return () => {
             mounted = false;
             abortRef.current?.abort();
+            if (_activeController === abortRef.current) {
+                _activeController = null;
+            }
             abortRef.current = null;
             for (const timer of pendingFileUpdates.values()) {
                 clearTimeout(timer);
             }
             pendingFileUpdates.clear();
         };
-    }, [dispatch, organizationId, isAuthenticated]);
+    }, [dispatch, organizationId, userId, isAuthenticated]);
 }

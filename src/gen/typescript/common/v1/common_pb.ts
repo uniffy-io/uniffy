@@ -72,6 +72,16 @@ export enum ContentType {
    * @generated from enum value: CONTENT_TYPE_PROMPT = 15;
    */
   PROMPT = 15,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_CHAT = 16;
+   */
+  CHAT = 16,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_ROOM = 17;
+   */
+  ROOM = 17,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ContentType)
 proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
@@ -87,6 +97,8 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
   { no: 13, name: "CONTENT_TYPE_AGENT" },
   { no: 14, name: "CONTENT_TYPE_PROVIDER_KEY" },
   { no: 15, name: "CONTENT_TYPE_PROMPT" },
+  { no: 16, name: "CONTENT_TYPE_CHAT" },
+  { no: 17, name: "CONTENT_TYPE_ROOM" },
 ]);
 
 /**
@@ -258,6 +270,58 @@ proto3.util.setEnumType(GroupRole, "common.v1.GroupRole", [
   { no: 0, name: "GROUP_ROLE_UNSPECIFIED" },
   { no: 1, name: "GROUP_ROLE_MEMBER" },
   { no: 2, name: "GROUP_ROLE_ADMIN" },
+]);
+
+/**
+ * DomainType defines application domains that support domain-level admins.
+ *
+ * @generated from enum common.v1.DomainType
+ */
+export enum DomainType {
+  /**
+   * @generated from enum value: DOMAIN_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: DOMAIN_TYPE_CHAT = 1;
+   */
+  CHAT = 1,
+
+  /**
+   * @generated from enum value: DOMAIN_TYPE_FILES = 2;
+   */
+  FILES = 2,
+
+  /**
+   * @generated from enum value: DOMAIN_TYPE_NOTES = 3;
+   */
+  NOTES = 3,
+
+  /**
+   * @generated from enum value: DOMAIN_TYPE_CALENDAR = 4;
+   */
+  CALENDAR = 4,
+
+  /**
+   * @generated from enum value: DOMAIN_TYPE_PROJECTS = 5;
+   */
+  PROJECTS = 5,
+
+  /**
+   * @generated from enum value: DOMAIN_TYPE_AGENTS = 6;
+   */
+  AGENTS = 6,
+}
+// Retrieve enum metadata with: proto3.getEnumType(DomainType)
+proto3.util.setEnumType(DomainType, "common.v1.DomainType", [
+  { no: 0, name: "DOMAIN_TYPE_UNSPECIFIED" },
+  { no: 1, name: "DOMAIN_TYPE_CHAT" },
+  { no: 2, name: "DOMAIN_TYPE_FILES" },
+  { no: 3, name: "DOMAIN_TYPE_NOTES" },
+  { no: 4, name: "DOMAIN_TYPE_CALENDAR" },
+  { no: 5, name: "DOMAIN_TYPE_PROJECTS" },
+  { no: 6, name: "DOMAIN_TYPE_AGENTS" },
 ]);
 
 /**
@@ -632,6 +696,87 @@ export class GroupMemberInfo extends Message<GroupMemberInfo> {
 
   static equals(a: GroupMemberInfo | PlainMessage<GroupMemberInfo> | undefined, b: GroupMemberInfo | PlainMessage<GroupMemberInfo> | undefined): boolean {
     return proto3.util.equals(GroupMemberInfo, a, b);
+  }
+}
+
+/**
+ * DomainAdminInfo represents a domain admin assignment.
+ *
+ * @generated from message common.v1.DomainAdminInfo
+ */
+export class DomainAdminInfo extends Message<DomainAdminInfo> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: string display_name = 3;
+   */
+  displayName = "";
+
+  /**
+   * @generated from field: string email = 4;
+   */
+  email = "";
+
+  /**
+   * @generated from field: optional string avatar_url = 5;
+   */
+  avatarUrl?: string;
+
+  /**
+   * @generated from field: common.v1.DomainType domain = 6;
+   */
+  domain = DomainType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string granted_by_user_id = 7;
+   */
+  grantedByUserId = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp granted_at = 8;
+   */
+  grantedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<DomainAdminInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "common.v1.DomainAdminInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "domain", kind: "enum", T: proto3.getEnumType(DomainType) },
+    { no: 7, name: "granted_by_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "granted_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DomainAdminInfo {
+    return new DomainAdminInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DomainAdminInfo {
+    return new DomainAdminInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DomainAdminInfo {
+    return new DomainAdminInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DomainAdminInfo | PlainMessage<DomainAdminInfo> | undefined, b: DomainAdminInfo | PlainMessage<DomainAdminInfo> | undefined): boolean {
+    return proto3.util.equals(DomainAdminInfo, a, b);
   }
 }
 

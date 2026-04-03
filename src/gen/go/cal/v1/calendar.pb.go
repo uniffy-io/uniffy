@@ -480,8 +480,14 @@ type CalendarEvent struct {
 	RecurrenceId *string `protobuf:"bytes,27,opt,name=recurrence_id,json=recurrenceId,proto3,oneof" json:"recurrence_id,omitempty"`
 	// For expanded instances: the specific occurrence date (YYYY-MM-DD)
 	OccurrenceDate *string `protobuf:"bytes,28,opt,name=occurrence_date,json=occurrenceDate,proto3,oneof" json:"occurrence_date,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Room booking fields (read-only, populated by handler)
+	RoomId        *string  `protobuf:"bytes,29,opt,name=room_id,json=roomId,proto3,oneof" json:"room_id,omitempty"`
+	RoomName      *string  `protobuf:"bytes,30,opt,name=room_name,json=roomName,proto3,oneof" json:"room_name,omitempty"`
+	RoomLocation  *string  `protobuf:"bytes,31,opt,name=room_location,json=roomLocation,proto3,oneof" json:"room_location,omitempty"`
+	RoomCapacity  *int32   `protobuf:"varint,32,opt,name=room_capacity,json=roomCapacity,proto3,oneof" json:"room_capacity,omitempty"`
+	RoomAmenities []string `protobuf:"bytes,33,rep,name=room_amenities,json=roomAmenities,proto3" json:"room_amenities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CalendarEvent) Reset() {
@@ -708,6 +714,41 @@ func (x *CalendarEvent) GetOccurrenceDate() string {
 		return *x.OccurrenceDate
 	}
 	return ""
+}
+
+func (x *CalendarEvent) GetRoomId() string {
+	if x != nil && x.RoomId != nil {
+		return *x.RoomId
+	}
+	return ""
+}
+
+func (x *CalendarEvent) GetRoomName() string {
+	if x != nil && x.RoomName != nil {
+		return *x.RoomName
+	}
+	return ""
+}
+
+func (x *CalendarEvent) GetRoomLocation() string {
+	if x != nil && x.RoomLocation != nil {
+		return *x.RoomLocation
+	}
+	return ""
+}
+
+func (x *CalendarEvent) GetRoomCapacity() int32 {
+	if x != nil && x.RoomCapacity != nil {
+		return *x.RoomCapacity
+	}
+	return 0
+}
+
+func (x *CalendarEvent) GetRoomAmenities() []string {
+	if x != nil {
+		return x.RoomAmenities
+	}
+	return nil
 }
 
 // Event attendee
@@ -1021,7 +1062,9 @@ type CreateEventRequest struct {
 	// Visibility scope (defaults to PRIVATE)
 	Visibility *v1.VisibilityScope `protobuf:"varint,17,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
 	// Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
-	Reminders     []int32 `protobuf:"varint,18,rep,packed,name=reminders,proto3" json:"reminders,omitempty"`
+	Reminders []int32 `protobuf:"varint,18,rep,packed,name=reminders,proto3" json:"reminders,omitempty"`
+	// Optional room ID to book alongside the event
+	RoomId        *string `protobuf:"bytes,19,opt,name=room_id,json=roomId,proto3,oneof" json:"room_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1182,6 +1225,13 @@ func (x *CreateEventRequest) GetReminders() []int32 {
 	return nil
 }
 
+func (x *CreateEventRequest) GetRoomId() string {
+	if x != nil && x.RoomId != nil {
+		return *x.RoomId
+	}
+	return ""
+}
+
 // Request to get an event
 type GetEventRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1282,8 +1332,10 @@ type UpdateEventRequest struct {
 	RecurrenceEditScope *RecurrenceEditScope `protobuf:"varint,20,opt,name=recurrence_edit_scope,json=recurrenceEditScope,proto3,enum=cal.v1.RecurrenceEditScope,oneof" json:"recurrence_edit_scope,omitempty"`
 	// For THIS_EVENT scope: the specific occurrence date being edited (YYYY-MM-DD)
 	OccurrenceDate *string `protobuf:"bytes,21,opt,name=occurrence_date,json=occurrenceDate,proto3,oneof" json:"occurrence_date,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Optional room ID to book/change for this event
+	RoomId        *string `protobuf:"bytes,22,opt,name=room_id,json=roomId,proto3,oneof" json:"room_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateEventRequest) Reset() {
@@ -1459,6 +1511,13 @@ func (x *UpdateEventRequest) GetRecurrenceEditScope() RecurrenceEditScope {
 func (x *UpdateEventRequest) GetOccurrenceDate() string {
 	if x != nil && x.OccurrenceDate != nil {
 		return *x.OccurrenceDate
+	}
+	return ""
+}
+
+func (x *UpdateEventRequest) GetRoomId() string {
+	if x != nil && x.RoomId != nil {
+		return *x.RoomId
 	}
 	return ""
 }
@@ -4105,7 +4164,7 @@ var File_cal_v1_calendar_proto protoreflect.FileDescriptor
 
 const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
-	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xec\t\n" +
+	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xe5\v\n" +
 	"\rCalendarEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n" +
@@ -4148,12 +4207,23 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\treminders\x18\x19 \x03(\x05R\treminders\x12!\n" +
 	"\fis_recurring\x18\x1a \x01(\bR\visRecurring\x12(\n" +
 	"\rrecurrence_id\x18\x1b \x01(\tH\x03R\frecurrenceId\x88\x01\x01\x12,\n" +
-	"\x0foccurrence_date\x18\x1c \x01(\tH\x04R\x0eoccurrenceDate\x88\x01\x01B\x0e\n" +
+	"\x0foccurrence_date\x18\x1c \x01(\tH\x04R\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n" +
+	"\aroom_id\x18\x1d \x01(\tH\x05R\x06roomId\x88\x01\x01\x12 \n" +
+	"\troom_name\x18\x1e \x01(\tH\x06R\broomName\x88\x01\x01\x12(\n" +
+	"\rroom_location\x18\x1f \x01(\tH\aR\froomLocation\x88\x01\x01\x12(\n" +
+	"\rroom_capacity\x18  \x01(\x05H\bR\froomCapacity\x88\x01\x01\x12%\n" +
+	"\x0eroom_amenities\x18! \x03(\tR\rroomAmenitiesB\x0e\n" +
 	"\f_meeting_urlB\r\n" +
 	"\v_recurrenceB\r\n" +
 	"\v_deleted_atB\x10\n" +
 	"\x0e_recurrence_idB\x12\n" +
-	"\x10_occurrence_date\"\x9b\x02\n" +
+	"\x10_occurrence_dateB\n" +
+	"\n" +
+	"\b_room_idB\f\n" +
+	"\n" +
+	"_room_nameB\x10\n" +
+	"\x0e_room_locationB\x10\n" +
+	"\x0e_room_capacity\"\x9b\x02\n" +
 	"\bAttendee\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -4183,7 +4253,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n" +
 	"\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n" +
-	"\x04_url\"\xcc\x06\n" +
+	"\x04_url\"\xf6\x06\n" +
 	"\x12CreateEventRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -4212,17 +4282,20 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"visibility\x18\x11 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x06R\n" +
 	"visibility\x88\x01\x01\x12\x1c\n" +
-	"\treminders\x18\x12 \x03(\x05R\tremindersB\x0e\n" +
+	"\treminders\x18\x12 \x03(\x05R\treminders\x12\x1c\n" +
+	"\aroom_id\x18\x13 \x01(\tH\aR\x06roomId\x88\x01\x01B\x0e\n" +
 	"\f_descriptionB\v\n" +
 	"\t_timezoneB\v\n" +
 	"\t_locationB\x0e\n" +
 	"\f_meeting_urlB\x0e\n" +
 	"\f_category_idB\r\n" +
 	"\v_recurrenceB\r\n" +
-	"\v_visibility\"U\n" +
+	"\v_visibilityB\n" +
+	"\n" +
+	"\b_room_id\"U\n" +
 	"\x0fGetEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x8e\t\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb8\t\n" +
 	"\x12UpdateEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -4255,7 +4328,8 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\fattendee_ids\x18\x12 \x03(\tR\vattendeeIds\x12\x1c\n" +
 	"\treminders\x18\x13 \x03(\x05R\treminders\x12T\n" +
 	"\x15recurrence_edit_scope\x18\x14 \x01(\x0e2\x1b.cal.v1.RecurrenceEditScopeH\rR\x13recurrenceEditScope\x88\x01\x01\x12,\n" +
-	"\x0foccurrence_date\x18\x15 \x01(\tH\x0eR\x0eoccurrenceDate\x88\x01\x01B\b\n" +
+	"\x0foccurrence_date\x18\x15 \x01(\tH\x0eR\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n" +
+	"\aroom_id\x18\x16 \x01(\tH\x0fR\x06roomId\x88\x01\x01B\b\n" +
 	"\x06_titleB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_start_timeB\v\n" +
@@ -4270,7 +4344,9 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x0e_is_focus_timeB\r\n" +
 	"\v_visibilityB\x18\n" +
 	"\x16_recurrence_edit_scopeB\x12\n" +
-	"\x10_occurrence_date\"\xa8\x02\n" +
+	"\x10_occurrence_dateB\n" +
+	"\n" +
+	"\b_room_id\"\xa8\x02\n" +
 	"\x12DeleteEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1c\n" +
