@@ -7,6 +7,7 @@ from alembic import command
 from alembic.config import Config
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 from sqlalchemy.sql import text
 
 # Global engine and session maker
@@ -116,13 +117,36 @@ async def init_db(*, skip_migrations: bool = False) -> None:
     database_url = get_database_url()
     logger.info(f"Connecting to database: {database_url.split('@')[1]}")  # Log without password
 
-    # Create async engine
+    # Pool sizing (configurable via environment)
+    pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
+    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+    pool_recycle_seconds = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+    pool_timeout_seconds = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+
+    # Per-connection timeouts and keepalive (asyncpg connect_args)
+    statement_timeout_ms = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))
+    command_timeout_seconds = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
+
     _engine = create_async_engine(
         database_url,
         echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+        poolclass=AsyncAdaptedQueuePool,
         pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
+        pool_size=pool_size,
+        max_overflow=max_overflow,
+        pool_recycle=pool_recycle_seconds,
+        pool_timeout=pool_timeout_seconds,
+        connect_args={
+            # asyncpg connection-level timeout for each SQL statement
+            "command_timeout": command_timeout_seconds,
+            # TCP keepalive to detect dead connections through firewalls/LBs
+            "server_settings": {
+                "statement_timeout": str(statement_timeout_ms),
+                "tcp_keepalives_idle": "60",
+                "tcp_keepalives_interval": "10",
+                "tcp_keepalives_count": "3",
+            },
+        },
     )
 
     # Expose pool stats to Prometheus gauges

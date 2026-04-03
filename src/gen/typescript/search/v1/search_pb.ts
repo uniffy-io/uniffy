@@ -132,6 +132,13 @@ export class SearchRequest extends Message<SearchRequest> {
    */
   ownerFilter = "";
 
+  /**
+   * Types to exclude from results (e.g., exclude chat_message when not in chat domain)
+   *
+   * @generated from field: repeated search.v1.SearchResultType exclude_types = 9;
+   */
+  excludeTypes: SearchResultType[] = [];
+
   constructor(data?: PartialMessage<SearchRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -148,6 +155,7 @@ export class SearchRequest extends Message<SearchRequest> {
     { no: 6, name: "project_filters", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "my_content_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "owner_filter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "exclude_types", kind: "enum", T: proto3.getEnumType(SearchResultType), repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchRequest {

@@ -375,6 +375,57 @@ export class ThreadInfo extends Message<ThreadInfo> {
 }
 
 /**
+ * ReplyContext holds a snapshot of the quoted message for inline replies.
+ *
+ * @generated from message chat.v1.ReplyContext
+ */
+export class ReplyContext extends Message<ReplyContext> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string sender_name = 2;
+   */
+  senderName = "";
+
+  /**
+   * @generated from field: string content_preview = 3;
+   */
+  contentPreview = "";
+
+  constructor(data?: PartialMessage<ReplyContext>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ReplyContext";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sender_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content_preview", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReplyContext {
+    return new ReplyContext().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ReplyContext {
+    return new ReplyContext().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ReplyContext {
+    return new ReplyContext().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ReplyContext | PlainMessage<ReplyContext> | undefined, b: ReplyContext | PlainMessage<ReplyContext> | undefined): boolean {
+    return proto3.util.equals(ReplyContext, a, b);
+  }
+}
+
+/**
  * ChatMessage represents a message in a channel.
  *
  * @generated from message chat.v1.ChatMessage
@@ -436,6 +487,13 @@ export class ChatMessage extends Message<ChatMessage> {
   createdAt?: Timestamp;
 
   /**
+   * Inline quote reply reference
+   *
+   * @generated from field: optional string reply_to_id = 12;
+   */
+  replyToId?: string;
+
+  /**
    * Populated for root messages that have replies
    *
    * @generated from field: optional chat.v1.ThreadInfo thread = 20;
@@ -461,6 +519,13 @@ export class ChatMessage extends Message<ChatMessage> {
    */
   senderAvatarUrl?: string;
 
+  /**
+   * Snapshot of the quoted message (populated when reply_to_id is set)
+   *
+   * @generated from field: optional chat.v1.ReplyContext reply_context = 24;
+   */
+  replyContext?: ReplyContext;
+
   constructor(data?: PartialMessage<ChatMessage>) {
     super();
     proto3.util.initPartial(data, this);
@@ -480,10 +545,12 @@ export class ChatMessage extends Message<ChatMessage> {
     { no: 9, name: "is_pinned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 11, name: "created_at", kind: "message", T: Timestamp },
+    { no: 12, name: "reply_to_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 20, name: "thread", kind: "message", T: ThreadInfo, opt: true },
     { no: 21, name: "reactions", kind: "message", T: ReactionGroup, repeated: true },
     { no: 22, name: "sender_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 23, name: "sender_avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 24, name: "reply_context", kind: "message", T: ReplyContext, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatMessage {
@@ -1912,6 +1979,13 @@ export class SendMessageRequest extends Message<SendMessageRequest> {
    */
   metadata: { [key: string]: string } = {};
 
+  /**
+   * Set when quoting/replying to a specific message
+   *
+   * @generated from field: optional string reply_to_id = 6;
+   */
+  replyToId?: string;
+
   constructor(data?: PartialMessage<SendMessageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1925,6 +1999,7 @@ export class SendMessageRequest extends Message<SendMessageRequest> {
     { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "root_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 6, name: "reply_to_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SendMessageRequest {

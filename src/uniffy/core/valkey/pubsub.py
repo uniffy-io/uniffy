@@ -5,6 +5,12 @@ and cannot be used for regular commands. This module manages dedicated
 publisher and subscriber connections.
 
 Channel naming: notifications:{user_id}
+
+Connection resilience:
+- Publisher auto-reconnects on transient failures via retry_on_error
+- Subscriber connections use the same retry config
+- All connections have socket-level timeouts to prevent indefinite hangs
+- TCP keepalive detects dead connections through firewalls/load balancers
 """
 
 import asyncio
@@ -16,6 +22,8 @@ from uuid import UUID
 
 import redis.asyncio as aioredis
 from loguru import logger
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.observability.metrics import PUBSUB_ACTIVE_SUBSCRIBERS
@@ -28,6 +36,12 @@ _SOCKET_TIMEOUT = 5
 # Hard ceiling for cleanup during shutdown / generator close.
 _CLEANUP_TIMEOUT = 3.0
 
+# Errors that trigger automatic retry (connection lost, read timeout).
+_RETRY_ERRORS = [RedisConnectionError, RedisTimeoutError, OSError, ConnectionResetError]
+
+# Number of retries for automatic reconnect on transient errors.
+_RETRY_COUNT = 3
+
 # Global publisher connection (initialized per-process)
 _publisher: aioredis.Redis | None = None
 
@@ -37,6 +51,21 @@ _publisher: aioredis.Redis | None = None
 _shutdown_event: asyncio.Event | None = None
 
 LOGGER_COMPONENT = "pubsub"
+
+
+def _build_client(url: str) -> aioredis.Redis:
+    """Create a Valkey client with resilient connection settings."""
+    return aioredis.from_url(
+        url,
+        decode_responses=True,
+        socket_connect_timeout=_SOCKET_CONNECT_TIMEOUT,
+        socket_timeout=_SOCKET_TIMEOUT,
+        socket_keepalive=True,
+        socket_keepalive_options={},
+        retry_on_error=_RETRY_ERRORS,
+        retry_on_timeout=True,
+        health_check_interval=30,
+    )
 
 
 async def init_pubsub() -> None:
@@ -51,12 +80,7 @@ async def init_pubsub() -> None:
     _shutdown_event = asyncio.Event()
 
     url = ValkeyConfig.from_env().to_url()
-    _publisher = aioredis.from_url(
-        url,
-        decode_responses=True,
-        socket_connect_timeout=_SOCKET_CONNECT_TIMEOUT,
-        socket_timeout=_SOCKET_TIMEOUT,
-    )
+    _publisher = _build_client(url)
 
     # Verify connection
     await _publisher.ping()
@@ -111,9 +135,44 @@ def _channel_name(user_id: UUID) -> str:
     return f"notifications:{user_id}"
 
 
+async def _ensure_publisher() -> aioredis.Redis | None:
+    """Return the publisher, attempting to reconnect if it was lost."""
+    global _publisher
+
+    if _publisher is None:
+        return None
+
+    try:
+        await _publisher.ping()
+        return _publisher
+    except Exception:
+        logger.warning(
+            "Publisher connection lost, attempting reconnect...",
+            component=LOGGER_COMPONENT,
+        )
+
+    # Reconnect attempt
+    try:
+        with contextlib.suppress(BaseException):
+            await asyncio.wait_for(_publisher.aclose(), timeout=_CLEANUP_TIMEOUT)
+
+        url = ValkeyConfig.from_env().to_url()
+        _publisher = _build_client(url)
+        await _publisher.ping()
+        logger.info("Publisher reconnected successfully", component=LOGGER_COMPONENT)
+        return _publisher
+    except Exception as e:
+        logger.error(f"Publisher reconnect failed: {e}", component=LOGGER_COMPONENT)
+        _publisher = None
+        return None
+
+
 async def publish_notification(user_id: UUID, payload: dict[str, Any]) -> None:
     """
     Publish a notification to a user's Pub/Sub channel.
+
+    Automatically attempts to reconnect the publisher if the connection
+    was lost due to network issues.
 
     Parameters
     ----------
@@ -123,14 +182,15 @@ async def publish_notification(user_id: UUID, payload: dict[str, Any]) -> None:
         Notification payload to publish (will be JSON-serialized).
 
     """
-    if _publisher is None:
-        logger.warning("publisher not initialized, skipping publish")
+    publisher = await _ensure_publisher()
+    if publisher is None:
+        logger.warning("publisher not available, skipping publish")
         return
 
     channel = _channel_name(user_id)
     message = json.dumps(payload)
     try:
-        await _publisher.publish(channel, message)
+        await publisher.publish(channel, message)
         logger.debug(f"published notification to {channel}", component=LOGGER_COMPONENT)
     except Exception:
         logger.warning(f"Failed to publish to channel {channel}", component=LOGGER_COMPONENT)
@@ -163,12 +223,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
     PUBSUB_ACTIVE_SUBSCRIBERS.inc()
 
     url = ValkeyConfig.from_env().to_url()
-    subscriber = aioredis.from_url(
-        url,
-        decode_responses=True,
-        socket_connect_timeout=_SOCKET_CONNECT_TIMEOUT,
-        socket_timeout=_SOCKET_TIMEOUT,
-    )
+    subscriber = _build_client(url)
     channel = _channel_name(user_id)
     pubsub = subscriber.pubsub()
 
@@ -229,12 +284,7 @@ async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | 
     PUBSUB_ACTIVE_SUBSCRIBERS.inc()
 
     url = ValkeyConfig.from_env().to_url()
-    subscriber = aioredis.from_url(
-        url,
-        decode_responses=True,
-        socket_connect_timeout=_SOCKET_CONNECT_TIMEOUT,
-        socket_timeout=_SOCKET_TIMEOUT,
-    )
+    subscriber = _build_client(url)
     channel_label = ",".join(channels)
     pubsub = subscriber.pubsub()
 

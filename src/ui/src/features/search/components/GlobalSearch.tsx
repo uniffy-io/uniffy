@@ -5,8 +5,8 @@
  * Expands on focus to become the central interaction point.
  */
 
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { useSearch } from '@/features/search/hooks/useSearch';
 import { SearchResultsList } from '@/features/search/components/SearchResultsList';
@@ -20,12 +20,20 @@ import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 export function GlobalSearch() {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const { query, setQuery, results, isLoading, clearResults } = useSearch();
+    // Exclude chat messages from search results when not in the chat domain
+    const isInChatDomain = location.pathname.startsWith('/chat');
+    const searchOptions = useMemo(() => {
+        if (isInChatDomain) return undefined;
+        return { excludeTypes: [SearchResultType.CHAT_MESSAGE] };
+    }, [isInChatDomain]);
+
+    const { query, setQuery, results, isLoading, clearResults } = useSearch(searchOptions);
     const searchShortcut = useFormattedKeybinding('nav.search');
 
     // Close dropdown when clicking outside

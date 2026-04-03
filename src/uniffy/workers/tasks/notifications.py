@@ -66,6 +66,37 @@ async def process_notification_event(
             NOTIFICATION_EVENTS_TOTAL.labels(status="skipped").inc()
             return {"status": "skipped", "reason": "no_recipients"}
 
+        # Resolve actor name once, used by both push and in-app realtime
+        actor_name = ""
+        if event.actor_id:
+            result = await session.execute(
+                select(User.full_name, User.username).where(User.id == event.actor_id)
+            )
+            row = result.first()
+            if row:
+                actor_name = row[0] or row[1]
+
+        # Build push event with actor-prefixed title for browser notifications.
+        # In-app notifications render the actor name separately in the UI,
+        # but browser push needs it baked into the title string.
+        if actor_name and event.title:
+            push_title = f"{actor_name} {event.title[0].lower()}{event.title[1:]}"
+        else:
+            push_title = event.title
+
+        push_event = NotificationEvent(
+            notification_type=event.notification_type,
+            organization_id=event.organization_id,
+            actor_id=event.actor_id,
+            title=push_title,
+            body=event.body,
+            source_urn=event.source_urn,
+            target_user_ids=event.target_user_ids,
+            content_type=event.content_type,
+            content_id=event.content_id,
+            metadata=event.metadata,
+        )
+
         in_app_adapter = DELIVERY_ADAPTERS.get("in_app")
         pending_notifications: list[Notification] = []
 
@@ -78,13 +109,13 @@ async def process_notification_event(
                 pending_notifications.append(notification)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="in_app").inc()
 
-            # Browser push: delegate to adapter
+            # Browser push: use actor-prefixed title
             if "browser" in channels:
                 push_adapter = DELIVERY_ADAPTERS.get("browser")
                 if isinstance(push_adapter, PushAdapter):
-                    await push_adapter.deliver_with_session(session, user_id, event)
+                    await push_adapter.deliver_with_session(session, user_id, push_event)
                 elif push_adapter:
-                    await push_adapter.deliver(user_id, event)
+                    await push_adapter.deliver(user_id, push_event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="browser").inc()
 
             # Email: delegate to adapter
@@ -96,15 +127,6 @@ async def process_notification_event(
 
         if pending_notifications:
             await session.commit()
-
-        actor_name = ""
-        if event.actor_id:
-            result = await session.execute(
-                select(User.full_name, User.username).where(User.id == event.actor_id)
-            )
-            row = result.first()
-            if row:
-                actor_name = row[0] or row[1]
 
         if isinstance(in_app_adapter, InAppAdapter):
             for notification in pending_notifications:

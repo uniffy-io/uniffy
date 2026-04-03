@@ -70,6 +70,13 @@ class MessageHandlers:
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid root_id")
 
+        reply_to_id = None
+        if request.HasField("reply_to_id"):
+            try:
+                reply_to_id = UUID(request.reply_to_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid reply_to_id")
+
         metadata = dict(request.metadata) if request.metadata else None
 
         try:
@@ -82,6 +89,7 @@ class MessageHandlers:
                     channel_id=channel_id,
                     content=request.content,
                     root_id=root_id,
+                    reply_to_id=reply_to_id,
                     message_metadata=metadata,
                     sender_name=jwt_name,
                     sender_avatar=jwt_avatar,
@@ -365,6 +373,31 @@ class MessageHandlers:
             for row in u_result.all():
                 sender_map[row[0]] = (row[1] or "Unknown", row[2])
 
+        # Batch fetch reply contexts
+        reply_to_ids = [m.reply_to_id for m in messages if m.reply_to_id]
+        reply_context_map: dict[UUID, tuple[str, str, str]] = {}
+        if reply_to_ids:
+            from uniffy.core.models.chat.message import ChatMessage as ChatMessageModel
+
+            rto_result = await session.execute(
+                select(ChatMessageModel.id, ChatMessageModel.sender_id, ChatMessageModel.content)
+                .where(ChatMessageModel.id.in_(reply_to_ids))
+            )
+            rto_data = {row[0]: (row[1], row[2]) for row in rto_result.all()}
+            # Resolve sender names for quoted messages (reuse already-fetched senders)
+            missing_sender_ids = [
+                sid for sid, _ in rto_data.values() if sid not in sender_map
+            ]
+            if missing_sender_ids:
+                extra_result = await session.execute(
+                    select(User.id, User.full_name).where(User.id.in_(missing_sender_ids))
+                )
+                for row in extra_result.all():
+                    sender_map[row[0]] = (row[1] or "Unknown", None)
+            for rid, (sid, content) in rto_data.items():
+                s_name = sender_map.get(sid, ("Unknown", None))[0]
+                reply_context_map[rid] = (str(rid), s_name, content[:150])
+
         # Batch fetch reactions
         from uniffy_proto.chat.v1.chat_pb2 import ReactionGroup as ProtoReactionGroup
 
@@ -393,6 +426,9 @@ class MessageHandlers:
                     for r in msg_reactions
                 ]
 
+            # Reply context
+            rc = reply_context_map.get(msg.reply_to_id) if msg.reply_to_id else None
+
             proto_messages.append(
                 message_to_proto(
                     msg,
@@ -401,6 +437,9 @@ class MessageHandlers:
                     sender_name=sender[0],
                     sender_avatar_url=sender[1],
                     reactions=proto_reactions,
+                    reply_context_id=rc[0] if rc else None,
+                    reply_context_sender_name=rc[1] if rc else None,
+                    reply_context_content_preview=rc[2] if rc else None,
                 )
             )
 

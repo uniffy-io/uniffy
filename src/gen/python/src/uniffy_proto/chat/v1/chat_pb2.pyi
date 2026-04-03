@@ -118,8 +118,18 @@ class ThreadInfo(_message.Message):
     has_unread: bool
     def __init__(self, reply_count: _Optional[int] = ..., last_reply_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., participant_ids: _Optional[_Iterable[str]] = ..., has_unread: _Optional[bool] = ...) -> None: ...
 
+class ReplyContext(_message.Message):
+    __slots__ = ("id", "sender_name", "content_preview")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SENDER_NAME_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_PREVIEW_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    sender_name: str
+    content_preview: str
+    def __init__(self, id: _Optional[str] = ..., sender_name: _Optional[str] = ..., content_preview: _Optional[str] = ...) -> None: ...
+
 class ChatMessage(_message.Message):
-    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "thread", "reactions", "sender_name", "sender_avatar_url")
+    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "reply_to_id", "thread", "reactions", "sender_name", "sender_avatar_url", "reply_context")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -138,10 +148,12 @@ class ChatMessage(_message.Message):
     IS_PINNED_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    REPLY_TO_ID_FIELD_NUMBER: _ClassVar[int]
     THREAD_FIELD_NUMBER: _ClassVar[int]
     REACTIONS_FIELD_NUMBER: _ClassVar[int]
     SENDER_NAME_FIELD_NUMBER: _ClassVar[int]
     SENDER_AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
+    REPLY_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     id: str
     channel_id: str
     sender_id: str
@@ -153,11 +165,13 @@ class ChatMessage(_message.Message):
     is_pinned: bool
     metadata: _containers.ScalarMap[str, str]
     created_at: _timestamp_pb2.Timestamp
+    reply_to_id: str
     thread: ThreadInfo
     reactions: _containers.RepeatedCompositeFieldContainer[ReactionGroup]
     sender_name: str
     sender_avatar_url: str
-    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ...) -> None: ...
+    reply_context: ReplyContext
+    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reply_to_id: _Optional[str] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ..., reply_context: _Optional[_Union[ReplyContext, _Mapping]] = ...) -> None: ...
 
 class ReactionGroup(_message.Message):
     __slots__ = ("emoji", "count", "user_ids", "current_user_reacted")
@@ -434,7 +448,7 @@ class GetMembersResponse(_message.Message):
     def __init__(self, members: _Optional[_Iterable[_Union[ChatChannelMember, _Mapping]]] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "content", "root_id", "metadata")
+    __slots__ = ("organization_id", "channel_id", "content", "root_id", "metadata", "reply_to_id")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -447,12 +461,14 @@ class SendMessageRequest(_message.Message):
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     ROOT_ID_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    REPLY_TO_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     content: str
     root_id: str
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    reply_to_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., reply_to_id: _Optional[str] = ...) -> None: ...
 
 class SendMessageResponse(_message.Message):
     __slots__ = ("message",)

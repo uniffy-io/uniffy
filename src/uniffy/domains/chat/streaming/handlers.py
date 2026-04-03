@@ -194,6 +194,17 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
     )
     if payload.get("root_id"):
         msg.root_id = payload["root_id"]
+    if payload.get("reply_to_id"):
+        msg.reply_to_id = payload["reply_to_id"]
+    if payload.get("reply_context"):
+        from uniffy_proto.chat.v1.chat_pb2 import ReplyContext as ProtoReplyContext
+
+        rc = payload["reply_context"]
+        msg.reply_context.CopyFrom(ProtoReplyContext(
+            id=rc.get("id", ""),
+            sender_name=rc.get("sender_name", ""),
+            content_preview=rc.get("content_preview", ""),
+        ))
     if payload.get("sender_name"):
         msg.sender_name = payload["sender_name"]
     if payload.get("sender_avatar_url"):

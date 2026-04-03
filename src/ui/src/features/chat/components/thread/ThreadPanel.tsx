@@ -8,7 +8,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { X, ArrowSquareOut } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { closeThreadPanel } from '@/features/chat/store/chatUiSlice';
+import { closeThreadPanel, selectReplyToMessage, clearReplyToMessage } from '@/features/chat/store/chatUiSlice';
 import {
   setActiveThread,
   selectActiveThreadId,
@@ -64,14 +64,22 @@ export function ThreadPanel() {
     dispatch(setActiveThread(null));
   }, [dispatch]);
 
+  const replyToMessage = useAppSelector(selectReplyToMessage);
+
   const handleSend = useCallback((content: string) => {
     if (!activeThreadId || !rootMessage) return;
     dispatch(sendMessage({
       channelId: rootMessage.channelId,
       content,
       rootId: activeThreadId,
+      replyToId: replyToMessage?.id,
     }));
-  }, [activeThreadId, rootMessage, dispatch]);
+    dispatch(clearReplyToMessage());
+  }, [activeThreadId, rootMessage, replyToMessage, dispatch]);
+
+  const handleCancelReply = useCallback(() => {
+    dispatch(clearReplyToMessage());
+  }, [dispatch]);
 
   if (!activeThreadId) {
     return null;
@@ -165,6 +173,8 @@ export function ThreadPanel() {
         channelName=""
         placeholder="Reply..."
         onSend={handleSend}
+        replyTo={replyToMessage}
+        onCancelReply={handleCancelReply}
       />
     </div>
   );

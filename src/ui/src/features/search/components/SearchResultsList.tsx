@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlass, Tag } from '@phosphor-icons/react';
+import { MagnifyingGlass, Tag, Hash, ChatCircle } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
@@ -328,6 +328,19 @@ export function SearchResultsList({
                           {theme.label}
                         </span>
                       </div>
+                      {/* Conversation context for chat messages */}
+                      {result.type === SearchResultType.CHAT_MESSAGE && result.metadata['channel_name'] && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {result.metadata['channel_type'] === 'PUBLIC' || result.metadata['channel_type'] === 'PRIVATE' ? (
+                            <Hash size={11} weight="bold" className="text-violet-400 shrink-0" />
+                          ) : (
+                            <ChatCircle size={11} weight="fill" className="text-violet-400 shrink-0" />
+                          )}
+                          <span className="text-xs text-violet-400 font-medium truncate">
+                            {result.metadata['channel_name']}
+                          </span>
+                        </div>
+                      )}
                       {/* Tags */}
                       {result.tags && result.tags.length > 0 && (
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">

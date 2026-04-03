@@ -12,6 +12,7 @@ import { ChannelHeader } from '@/features/chat/components/channel/ChannelHeader'
 import { MessageList } from '@/features/chat/components/channel/MessageList';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
 import { sendMessage, sendTyping } from '@/features/chat/store/chatThunks';
+import { selectReplyToMessage, clearReplyToMessage } from '@/features/chat/store/chatUiSlice';
 
 const TYPING_THROTTLE_MS = 3000;
 
@@ -33,14 +34,24 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   const activeChannel = useAppSelector((state) =>
     state.chatChannels.channels.find((c) => c.id === effectiveChannelId),
   );
+  const replyToMessage = useAppSelector(selectReplyToMessage);
 
   const handleSend = useCallback(
     (content: string) => {
       if (!activeChannel || !effectiveChannelId) return;
-      dispatch(sendMessage({ channelId: effectiveChannelId, content }));
+      dispatch(sendMessage({
+        channelId: effectiveChannelId,
+        content,
+        replyToId: replyToMessage?.id,
+      }));
+      dispatch(clearReplyToMessage());
     },
-    [activeChannel, effectiveChannelId, dispatch],
+    [activeChannel, effectiveChannelId, replyToMessage, dispatch],
   );
+
+  const handleCancelReply = useCallback(() => {
+    dispatch(clearReplyToMessage());
+  }, [dispatch]);
 
   const handleTyping = useCallback(() => {
     if (!effectiveChannelId) return;
@@ -71,7 +82,13 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     <div className="flex flex-col h-full" onMouseDown={onFocus}>
       <ChannelHeader channelId={effectiveChannelId ?? undefined} showCloseButton={showCloseButton} onClose={onClose} />
       <MessageList channelId={effectiveChannelId ?? undefined} />
-      <MessageCompose channelName={channelDisplayName} onSend={handleSend} onTyping={handleTyping} />
+      <MessageCompose
+        channelName={channelDisplayName}
+        onSend={handleSend}
+        onTyping={handleTyping}
+        replyTo={replyToMessage}
+        onCancelReply={handleCancelReply}
+      />
     </div>
   );
 }

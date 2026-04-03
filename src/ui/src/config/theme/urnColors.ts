@@ -26,6 +26,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.AGENT]: '#06b6d4',          // cyan-500
   [UrnType.PROMPT]: '#a855f7',         // purple-500
   [UrnType.ROOM]: '#0ea5e9',           // sky-500
+  [UrnType.CHAT_MESSAGE]: '#8b5cf6',   // violet-500 (same as chat)
   [UrnType.UNKNOWN]: '#6b7280',        // gray-500
 };
 
@@ -128,6 +129,14 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     badgeBg: 'bg-sky-500/10',
     border: 'border-sky-500/20',
     shadow: 'shadow-sky-500/50',
+  },
+  [UrnType.CHAT_MESSAGE]: {
+    gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
+    accentText: 'text-violet-600 dark:text-violet-400',
+    badgeBg: 'bg-violet-500/10',
+    border: 'border-violet-500/20',
+    shadow: 'shadow-violet-500/50',
   },
   [UrnType.UNKNOWN]: {
     gradient: 'from-gray-500/10 via-gray-500/5 to-transparent',

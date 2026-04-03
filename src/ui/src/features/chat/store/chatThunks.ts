@@ -35,6 +35,8 @@ import {
   followThread as followThreadAction,
   unfollowThread as unfollowThreadAction,
   setLoadingThread,
+  addReactionToThreadMessage,
+  removeReactionFromThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
 import type { RootState } from '@/app/store';
 import type { ChatMessage, ChatChannel, ChatChannelMember } from '@/features/chat/types';
@@ -223,7 +225,7 @@ export const fetchMessages = createAsyncThunk<
 
 export const sendMessage = createAsyncThunk<
   ChatMessage,
-  { channelId: string; content: string; rootId?: string },
+  { channelId: string; content: string; rootId?: string; replyToId?: string },
   { state: RootState; rejectValue: string }
 >('chat/sendMessage', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
@@ -233,6 +235,7 @@ export const sendMessage = createAsyncThunk<
       channelId: params.channelId,
       content: params.content,
       rootId: params.rootId,
+      replyToId: params.replyToId,
     });
     if (!response.message) {
       return rejectWithValue('Failed to send message');
@@ -360,9 +363,17 @@ export const addReaction = createAsyncThunk<
     const organizationId = getOrganizationId(state);
     const currentUserId = state.auth.user?.id ?? '';
 
-    // Optimistic update
+    // Optimistic update - channel messages
     dispatch(addReactionToMessage({
       channelId: params.channelId,
+      messageId: params.messageId,
+      emoji: params.emoji,
+      userId: currentUserId,
+      currentUserId,
+    }));
+
+    // Optimistic update - thread messages
+    dispatch(addReactionToThreadMessage({
       messageId: params.messageId,
       emoji: params.emoji,
       userId: currentUserId,
@@ -390,9 +401,17 @@ export const removeReaction = createAsyncThunk<
     const organizationId = getOrganizationId(state);
     const currentUserId = state.auth.user?.id ?? '';
 
-    // Optimistic update
+    // Optimistic update - channel messages
     dispatch(removeReactionFromMessage({
       channelId: params.channelId,
+      messageId: params.messageId,
+      emoji: params.emoji,
+      userId: currentUserId,
+      currentUserId,
+    }));
+
+    // Optimistic update - thread messages
+    dispatch(removeReactionFromThreadMessage({
       messageId: params.messageId,
       emoji: params.emoji,
       userId: currentUserId,

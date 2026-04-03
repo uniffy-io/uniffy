@@ -21,7 +21,7 @@ from uniffy.core.valkey.pubsub import (
     subscribe_channels,
     subscribe_user,
 )
-from uniffy.core.valkey.queue import close_queue, get_queue, init_queue
+from uniffy.core.valkey.queue import close_queue, get_queue, get_queue_safe, init_queue
 from uniffy.core.valkey.rate_limit import check_agent_rate_limits, check_rate_limit
 
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     "close_pubsub",
     "close_queue",
     "get_queue",
+    "get_queue_safe",
     "init_pubsub",
     "init_queue",
     "presence_get_bulk",

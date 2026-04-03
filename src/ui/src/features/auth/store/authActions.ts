@@ -31,6 +31,7 @@ export interface SetCredentialsPayload {
   organizationId?: string;
   organizationRole?: string;
   sessionId?: string;
+  domainAdminDomains?: number[];
 }
 
 export interface RehydrateCompletePayload {

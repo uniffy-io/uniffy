@@ -52,6 +52,12 @@ export interface ReactionGroupData {
   currentUserReacted: boolean;
 }
 
+export interface ReplyContext {
+  id: string;
+  senderName: string;
+  contentPreview: string;
+}
+
 export interface ChatMessage {
   id: string;
   channelId: string;
@@ -59,6 +65,8 @@ export interface ChatMessage {
   senderType: SenderType;
   content: string; // markdown with [[[label|urn]]] mentions
   rootId: string | null; // null = root message, set = thread reply
+  replyToId: string | null; // inline quote reply reference
+  replyContext?: ReplyContext; // snapshot of the quoted message
   editedAt: string | null;
   isDeleted: boolean;
   isPinned: boolean;

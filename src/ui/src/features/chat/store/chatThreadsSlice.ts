@@ -63,6 +63,62 @@ export const chatThreadsSlice = createSlice({
     clearThreadMessages: (state, action: PayloadAction<string>) => {
       delete state.threadMessages[action.payload];
     },
+    addReactionToThreadMessage: (
+      state,
+      action: PayloadAction<{
+        messageId: string;
+        emoji: string;
+        userId: string;
+        currentUserId: string;
+      }>,
+    ) => {
+      const { messageId, emoji, userId, currentUserId } = action.payload;
+      for (const messages of Object.values(state.threadMessages)) {
+        const msg = messages.find(m => m.id === messageId);
+        if (!msg) continue;
+        if (!msg.reactions) msg.reactions = [];
+        const group = msg.reactions.find(r => r.emoji === emoji);
+        if (group) {
+          if (!group.userIds.includes(userId)) {
+            group.count += 1;
+            group.userIds.push(userId);
+          }
+          if (userId === currentUserId) group.currentUserReacted = true;
+        } else {
+          msg.reactions.push({
+            emoji,
+            count: 1,
+            userIds: [userId],
+            currentUserReacted: userId === currentUserId,
+          });
+        }
+        return;
+      }
+    },
+    removeReactionFromThreadMessage: (
+      state,
+      action: PayloadAction<{
+        messageId: string;
+        emoji: string;
+        userId: string;
+        currentUserId: string;
+      }>,
+    ) => {
+      const { messageId, emoji, userId, currentUserId } = action.payload;
+      for (const messages of Object.values(state.threadMessages)) {
+        const msg = messages.find(m => m.id === messageId);
+        if (!msg?.reactions) continue;
+        const group = msg.reactions.find(r => r.emoji === emoji);
+        if (!group) continue;
+        group.count = Math.max(0, group.count - 1);
+        group.userIds = group.userIds.filter(id => id !== userId);
+        if (userId === currentUserId) group.currentUserReacted = false;
+        if (group.count === 0) {
+          msg.reactions = msg.reactions.filter(r => r.emoji !== emoji);
+        }
+        return;
+      }
+    },
   },
 });
 
@@ -76,6 +132,8 @@ export const {
   setThreadsInbox,
   setLoadingThread,
   clearThreadMessages,
+  addReactionToThreadMessage,
+  removeReactionFromThreadMessage,
 } = chatThreadsSlice.actions;
 
 // -- Selectors --

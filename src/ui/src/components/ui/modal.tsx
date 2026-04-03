@@ -29,7 +29,7 @@ export function Modal({
   className,
 }: ModalProps) {
   const [phase, setPhase] = useState<'entering' | 'open' | 'exiting'>('entering');
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Transition from entering -> open after mount
   useEffect(() => {

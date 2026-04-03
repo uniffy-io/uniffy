@@ -133,6 +133,13 @@ message ThreadInfo {
   bool has_unread = 4;
 }
 
+// ReplyContext holds a snapshot of the quoted message for inline replies.
+message ReplyContext {
+  string id = 1;
+  string sender_name = 2;
+  string content_preview = 3;
+}
+
 // ChatMessage represents a message in a channel.
 message ChatMessage {
   string id = 1;
@@ -146,6 +153,8 @@ message ChatMessage {
   bool is_pinned = 9;
   map<string, string> metadata = 10;
   google.protobuf.Timestamp created_at = 11;
+  // Inline quote reply reference
+  optional string reply_to_id = 12;
   // Populated for root messages that have replies
   optional ThreadInfo thread = 20;
   // Reactions on this message
@@ -153,6 +162,8 @@ message ChatMessage {
   // Sender info (denormalized for display)
   optional string sender_name = 22;
   optional string sender_avatar_url = 23;
+  // Snapshot of the quoted message (populated when reply_to_id is set)
+  optional ReplyContext reply_context = 24;
 }
 
 // ReactionGroup represents a unique emoji with its reactors.
@@ -341,6 +352,8 @@ message SendMessageRequest {
   optional string root_id = 4;
   // Optional metadata (e.g., via_agent info)
   map<string, string> metadata = 5;
+  // Set when quoting/replying to a specific message
+  optional string reply_to_id = 6;
 }
 
 message SendMessageResponse {
