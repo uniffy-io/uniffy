@@ -9,6 +9,9 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     ReactionGroup as ProtoReactionGroup,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
+    ReplyContext as ProtoReplyContext,
+)
+from uniffy_proto.chat.v1.chat_pb2 import (
     SenderType as ProtoSenderType,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
@@ -35,6 +38,9 @@ def message_to_proto(
     reactions: list[ProtoReactionGroup] | None = None,
     sender_name: str | None = None,
     sender_avatar_url: str | None = None,
+    reply_context_id: str | None = None,
+    reply_context_sender_name: str | None = None,
+    reply_context_content_preview: str | None = None,
 ) -> ProtoChatMessage:
     """Convert ChatMessage to proto, optionally embedding thread info and reactions."""
     proto = ProtoChatMessage(
@@ -51,6 +57,14 @@ def message_to_proto(
 
     if message.root_id:
         proto.root_id = str(message.root_id)
+    if message.reply_to_id:
+        proto.reply_to_id = str(message.reply_to_id)
+    if reply_context_id:
+        proto.reply_context.CopyFrom(ProtoReplyContext(
+            id=reply_context_id,
+            sender_name=reply_context_sender_name or "",
+            content_preview=reply_context_content_preview or "",
+        ))
     if message.edited_at:
         proto.edited_at.CopyFrom(datetime_to_timestamp(message.edited_at))
     if message.message_metadata:

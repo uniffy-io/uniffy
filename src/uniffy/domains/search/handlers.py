@@ -107,6 +107,14 @@ class SearchHandlers:
             with contextlib.suppress(ValueError):
                 owner_filter = UUID(request.owner_filter)
 
+        # Build exclude type filters
+        exclude_type_filters: list[str] = []
+        if request.exclude_types:
+            for et in request.exclude_types:
+                entity_type = proto_to_entity_type(et)
+                if entity_type and entity_type not in exclude_type_filters:
+                    exclude_type_filters.append(entity_type)
+
         # Set limit with bounds
         limit = min(max(request.limit or 20, 1), 100)
 
@@ -118,6 +126,7 @@ class SearchHandlers:
                     organization_id=organization_id,
                     query_text=query_text,
                     type_filters=type_filters if type_filters else None,
+                    exclude_type_filters=exclude_type_filters if exclude_type_filters else None,
                     tag_filters=tag_filters if tag_filters else None,
                     my_content_only=my_content_only,
                     owner_filter=owner_filter,

@@ -200,6 +200,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
     from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
     from uniffy.core.models.chat.message import ChatMessage, SenderType
     from uniffy.core.models.chat.reaction import ChatReaction
+    from uniffy.core.search.meilisearch import close_meilisearch, init_meilisearch
     from uniffy.core.types import generate_id
     from uniffy.db.session import close_db, get_async_session, init_db
 
@@ -217,6 +218,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
         return
 
     await init_db()
+    await init_meilisearch()
 
     try:
         async for session in get_async_session():
@@ -311,10 +313,18 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             time_step = timedelta(days=30) / config.message_count
 
             root_message_ids: list[UUID] = []
+            search_docs: list[dict] = []
             batch_size = 500
             total_root = 0
             total_replies = 0
             total_reactions = 0
+
+            # Determine visibility for search index
+            is_public = channel.channel_type == ChannelType.PUBLIC
+            search_visibility = "ORGANIZATION" if is_public else "PRIVATE"
+            member_id_strs = (
+                None if is_public else [u.id for u in users]
+            )
 
             for i in range(config.message_count):
                 sender = random.choice(users)
@@ -342,6 +352,25 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                     updated_at=msg_time,
                 )
                 session.add(msg)
+
+                # Collect search document for indexing
+                search_docs.append({
+                    "urn": f"urn:uniffy:content:CHAT_MESSAGE:{msg.id}",
+                    "organization_id": org.id,
+                    "title": content[:120],
+                    "entity_type": "chat_message",
+                    "url_path": f"/chat/{channel.id}",
+                    "visibility": search_visibility,
+                    "owner_id": sender.id,
+                    "keywords": content,
+                    "shared_user_ids": member_id_strs,
+                    "metadata": {
+                        "channel_id": str(channel.id),
+                        "channel_name": channel.name,
+                        "channel_type": channel.channel_type.value,
+                        "sender_id": str(sender.id),
+                    },
+                })
 
                 if root_id:
                     total_replies += 1
@@ -390,6 +419,21 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
 
             await session.commit()
 
+            # Index all messages to Meilisearch in batches
+            logger.info("Indexing messages to Meilisearch...")
+            index_batch_size = 500
+            from uniffy.core.search.indexer import SearchIndexer
+
+            indexer = SearchIndexer()
+            for batch_start in range(0, len(search_docs), index_batch_size):
+                batch = search_docs[batch_start : batch_start + index_batch_size]
+                await indexer.batch_index(batch)
+                logger.info(
+                    f"  Indexed {min(batch_start + index_batch_size, len(search_docs))}"
+                    f"/{len(search_docs)} messages..."
+                )
+            logger.info(f"Search indexing complete: {len(search_docs)} documents")
+
             logger.info("=" * 50)
             logger.info("CHAT STRESS SEED COMPLETE")
             logger.info("=" * 50)
@@ -401,6 +445,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             logger.info(f"Reactions: {total_reactions}")
             logger.info(f"Members: {len(users)}")
     finally:
+        await close_meilisearch()
         await close_db()
 
 

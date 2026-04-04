@@ -44,6 +44,7 @@ class ChatMessageOperations:
         channel_id: UUID,
         content: str,
         root_id: UUID | None = None,
+        reply_to_id: UUID | None = None,
         message_metadata: dict | None = None,
         sender_type: SenderType = SenderType.USER,
         sender_name: str = "",
@@ -76,6 +77,13 @@ class ChatMessageOperations:
                     "root_id", "Cannot reply to a reply (flat threads only)"
                 )
 
+        # Validate reply_to_id if provided (inline quote reply)
+        reply_to_msg: ChatMessage | None = None
+        if reply_to_id:
+            reply_to_msg = await self._get_message_by_id(reply_to_id)
+            if not reply_to_msg or reply_to_msg.channel_id != channel_id:
+                raise NotFoundError("message", reply_to_id)
+
         # Phase 1: DB transaction
         now = datetime.now(UTC)
         message = ChatMessage(
@@ -84,6 +92,7 @@ class ChatMessageOperations:
             sender_type=sender_type,
             content=content,
             root_id=root_id,
+            reply_to_id=reply_to_id,
             message_metadata=message_metadata,
             created_at=now,
             updated_at=now,
@@ -120,10 +129,25 @@ class ChatMessageOperations:
         await self.session.commit()
         await self.session.refresh(message)
 
+        # Resolve reply context for streaming (before post-commit)
+        reply_context: dict[str, str] | None = None
+        if reply_to_msg:
+            from uniffy.core.models.login.user import User
+
+            u_result = await self.session.execute(
+                select(User.full_name).where(User.id == reply_to_msg.sender_id)
+            )
+            reply_sender = u_result.scalar_one_or_none() or "Unknown"
+            reply_context = {
+                "id": str(reply_to_id),
+                "sender_name": reply_sender,
+                "content_preview": reply_to_msg.content[:150],
+            }
+
         # Phase 2: Post-commit (non-fatal, best-effort)
         await self._post_commit_send(
             message, channel, user_id, root_id, now,
-            sender_name, sender_avatar,
+            sender_name, sender_avatar, reply_context,
         )
 
         return message, sender_name, sender_avatar
@@ -137,6 +161,7 @@ class ChatMessageOperations:
         now: datetime,
         sender_name: str,
         sender_avatar: str,
+        reply_context: dict[str, str] | None = None,
     ) -> None:
         """Post-commit actions: publish (sync), then background tasks.
 
@@ -151,7 +176,7 @@ class ChatMessageOperations:
         # 1. Fan out to member user channels (synchronous - essential for real-time)
         await self._publish_send_event(
             message, channel, user_id, root_id, now,
-            sender_name, sender_avatar, member_ids,
+            sender_name, sender_avatar, member_ids, reply_context,
         )
 
         # 2-4. Background: index, resources, notifications
@@ -217,6 +242,7 @@ class ChatMessageOperations:
         sender_name: str,
         sender_avatar: str,
         member_ids: list[UUID],
+        reply_context: dict[str, str] | None = None,
     ) -> None:
         """Fan out MESSAGE_CREATED and THREAD_UPDATED to all channel members."""
         try:
@@ -243,6 +269,8 @@ class ChatMessageOperations:
                     created_at=now,
                     sender_name=sender_name,
                     sender_avatar_url=sender_avatar,
+                    reply_to_id=message.reply_to_id,
+                    reply_context=reply_context,
                 ),
             )
 
@@ -326,6 +354,7 @@ class ChatMessageOperations:
                 metadata={
                     "channel_id": str(channel.id),
                     "channel_name": channel.name,
+                    "channel_type": channel.channel_type.value,
                     "sender_id": str(message.sender_id),
                 },
             )

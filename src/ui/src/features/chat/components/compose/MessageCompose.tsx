@@ -15,6 +15,8 @@ import {
   Code,
   TextB,
   PaperPlaneRight,
+  ArrowBendUpLeft,
+  X,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { ChatMentionPopup } from '@/features/agents/components/chat/ChatMentionPopup';
@@ -28,6 +30,12 @@ interface MessageComposeProps {
   placeholder?: string;
   onSend?: (content: string) => void;
   onTyping?: () => void;
+  replyTo?: {
+    id: string;
+    senderName: string;
+    contentPreview: string;
+  } | null;
+  onCancelReply?: () => void;
 }
 
 const MAX_HEIGHT = 200;
@@ -130,7 +138,7 @@ function createMentionElement(label: string, urn: string): HTMLSpanElement {
   return chip;
 }
 
-export function MessageCompose({ channelName, placeholder, onSend, onTyping }: MessageComposeProps) {
+export function MessageCompose({ channelName, placeholder, onSend, onTyping, replyTo, onCancelReply }: MessageComposeProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -140,6 +148,13 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping }: M
   const [mentionQuery, setMentionQuery] = useState('');
   const mentionStartNodeRef = useRef<Node | null>(null);
   const mentionStartOffsetRef = useRef(0);
+
+  // Auto-focus editor when replying to a message
+  useEffect(() => {
+    if (replyTo) {
+      editorRef.current?.focus();
+    }
+  }, [replyTo]);
 
   const displayPlaceholder = placeholder ?? `Type a message to ${channelName}...`;
 
@@ -268,10 +283,16 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping }: M
       return;
     }
 
-    // Escape closes mention popup
-    if (mentionActive && e.key === 'Escape') {
-      handleMentionClose();
-      return;
+    // Escape closes mention popup, or clears reply preview
+    if (e.key === 'Escape') {
+      if (mentionActive) {
+        handleMentionClose();
+        return;
+      }
+      if (replyTo) {
+        onCancelReply?.();
+        return;
+      }
     }
 
     // Enter sends, Shift+Enter inserts newline
@@ -306,7 +327,7 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping }: M
         updateState();
       }
     }
-  }, [mentionActive, handleSend, handleMentionClose, updateState]);
+  }, [mentionActive, handleSend, handleMentionClose, updateState, replyTo, onCancelReply]);
 
   // Trigger mention from toolbar @ button
   const handleAtButtonClick = useCallback(() => {
@@ -442,6 +463,25 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping }: M
   return (
     <>
       <div className="mx-4 mb-4 border border-border rounded-xl bg-muted/30 focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all">
+        {/* Reply preview banner */}
+        {replyTo && (
+          <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border/50 bg-muted/40 rounded-t-xl">
+            <div className="flex items-center gap-2 min-w-0 text-xs">
+              <ArrowBendUpLeft size={14} className="shrink-0 text-primary" />
+              <span className="text-muted-foreground shrink-0">Replying to</span>
+              <span className="font-semibold text-foreground truncate">{replyTo.senderName}</span>
+              <span className="text-muted-foreground/60 truncate hidden sm:inline">{replyTo.contentPreview}</span>
+            </div>
+            <button
+              type="button"
+              className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              onClick={onCancelReply}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Character count warning */}
         {charCount >= CHAR_WARN_THRESHOLD && (
           <div className="flex justify-end px-4 pt-1">

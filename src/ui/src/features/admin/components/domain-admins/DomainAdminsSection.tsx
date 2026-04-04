@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { useDomainAdmins, getDomainTypeLabel } from '@/features/admin/hooks/useAdminHooks';
 import { DomainType } from '@uniffy/proto/common/v1/common_pb';
 import type { SerializedDomainAdminInfo } from '@/features/admin/store/adminSlice';
-import { SubjectAvatar } from '@/components/subject';
+import { SubjectAvatar, SUBJECT_TYPE } from '@/components/subject';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -90,7 +90,7 @@ function DomainAdminRow({ admin, onRevoke }: DomainAdminRowProps) {
                             id: admin.userId,
                             name: admin.displayName,
                             email: admin.email,
-                            type: 'user',
+                            type: SUBJECT_TYPE.USER,
                             ...(admin.avatarUrl ? { avatarUrl: admin.avatarUrl } : {}),
                         }}
                         size="sm"

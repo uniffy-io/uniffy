@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { PushPin, Robot } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, PushPin, Robot } from '@phosphor-icons/react';
 
 import { type ChatMessage } from '@/features/chat/types';
 import { HoverActionsToolbar } from '@/features/chat/components/channel/HoverActionsToolbar';
@@ -11,6 +11,8 @@ import { SubjectAvatarById } from '@/components/subject';
 import { cn } from '@/shared/utils/cn';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { addReaction, removeReaction } from '@/features/chat/store/chatThunks';
+import { setReplyToMessage, jumpToMessage } from '@/features/chat/store/chatUiSlice';
+import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 
 function formatMessageTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -90,6 +92,15 @@ export function MessageItem({
     setShowReactionPicker(false);
   }, [dispatch, message.channelId, message.id]);
 
+  const handleQuoteReply = useCallback(() => {
+    dispatch(setReplyToMessage({
+      id: message.id,
+      channelId: message.channelId,
+      senderName,
+      contentPreview: stripMarkdown(message.content).slice(0, 150),
+    }));
+  }, [dispatch, message.id, message.channelId, senderName, message.content]);
+
   // System message (join, leave, etc.)
   if (message.senderType === 'SYSTEM') {
     return (
@@ -137,6 +148,7 @@ export function MessageItem({
         senderId={message.senderId}
         isPinned={message.isPinned}
         content={message.content}
+        onQuoteReply={handleQuoteReply}
       />
 
       <div className="flex items-start gap-3">
@@ -179,6 +191,19 @@ export function MessageItem({
                 <PushPin size={12} className="text-muted-foreground" />
               )}
             </div>
+          )}
+
+          {/* Inline reply preview */}
+          {message.replyContext && (
+            <button
+              type="button"
+              className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              onClick={() => dispatch(jumpToMessage(message.replyContext!.id))}
+            >
+              <ArrowBendUpLeft size={12} className="shrink-0 text-primary/60" />
+              <span className="font-semibold text-foreground/70">{message.replyContext.senderName}</span>
+              <span className="truncate max-w-[300px] opacity-70">{message.replyContext.contentPreview}</span>
+            </button>
           )}
 
           {/* Message text */}

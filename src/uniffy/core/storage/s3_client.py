@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 import aioboto3
+from botocore.config import Config as BotocoreConfig
 from loguru import logger
 from types_aiobotocore_s3.client import S3Client as S3ClientType
 
@@ -39,6 +40,10 @@ class S3Config:
     region: str = "us-east-1"
     use_ssl: bool = False
 
+    connect_timeout: int = 10
+    read_timeout: int = 30
+    max_retries: int = 3
+
     @classmethod
     def from_env(cls) -> S3Config:
         """Load S3 configuration from environment variables."""
@@ -49,6 +54,9 @@ class S3Config:
             bucket_name=os.getenv("S3_BUCKET_NAME", "uniffy-files"),
             region=os.getenv("S3_REGION", "us-east-1"),
             use_ssl=os.getenv("S3_USE_SSL", "false").lower() == "true",
+            connect_timeout=int(os.getenv("S3_CONNECT_TIMEOUT", "10")),
+            read_timeout=int(os.getenv("S3_READ_TIMEOUT", "30")),
+            max_retries=int(os.getenv("S3_MAX_RETRIES", "3")),
         )
 
 
@@ -80,10 +88,18 @@ class S3Client:
         """Initialize S3 client with configuration."""
         self.config = config or S3Config.from_env()
         self._session = aioboto3.Session()
+        self._botocore_config = BotocoreConfig(
+            connect_timeout=self.config.connect_timeout,
+            read_timeout=self.config.read_timeout,
+            retries={
+                "max_attempts": self.config.max_retries,
+                "mode": "adaptive",
+            },
+        )
 
     @asynccontextmanager
     async def _get_client(self) -> AsyncIterator[S3ClientType]:
-        """Get an S3 client from the session."""
+        """Get an S3 client from the session with retry and timeout config."""
         async with self._session.client(
             "s3",
             endpoint_url=self.config.endpoint_url,
@@ -91,6 +107,7 @@ class S3Client:
             aws_secret_access_key=self.config.secret_key,
             region_name=self.config.region,
             use_ssl=self.config.use_ssl,
+            config=self._botocore_config,
         ) as client:
             yield client
 

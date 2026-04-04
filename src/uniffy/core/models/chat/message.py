@@ -72,6 +72,7 @@ class ChatMessage(SQLModel, table=True):
     )
     content: str = Field(default="", nullable=False)
     root_id: UUID | None = Field(default=None, index=True)
+    reply_to_id: UUID | None = Field(default=None, index=True)
     edited_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     is_deleted: bool = Field(default=False, nullable=False)
     is_pinned: bool = Field(default=False, nullable=False)

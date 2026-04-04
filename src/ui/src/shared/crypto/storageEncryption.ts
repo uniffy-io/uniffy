@@ -31,7 +31,7 @@ type EncryptionMessage =
 // --- Key derivation ---
 
 async function deriveKEK(cacheKeySeed: Uint8Array, userId: string): Promise<CryptoKey> {
-  const keyMaterial = await crypto.subtle.importKey('raw', cacheKeySeed, 'HKDF', false, [
+  const keyMaterial = await crypto.subtle.importKey('raw', cacheKeySeed as BufferSource, 'HKDF', false, [
     'deriveKey',
   ]);
   return crypto.subtle.deriveKey(
@@ -92,7 +92,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 }
 
 function uint8ArrayToBase64(arr: Uint8Array): string {
-  return arrayBufferToBase64(arr.buffer);
+  return arrayBufferToBase64(arr.buffer as ArrayBuffer);
 }
 
 function base64ToUint8Array(base64: string): Uint8Array {

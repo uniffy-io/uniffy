@@ -26,6 +26,12 @@ interface ChatUiState {
   newDmModalOpen: boolean;
   channelSettingsModalOpen: boolean;
   channelSettingsModalTab: 'overview' | 'members';
+  replyToMessage: {
+    id: string;
+    channelId: string;
+    senderName: string;
+    contentPreview: string;
+  } | null;
 }
 
 const initialState: ChatUiState = {
@@ -50,6 +56,7 @@ const initialState: ChatUiState = {
   newDmModalOpen: false,
   channelSettingsModalOpen: false,
   channelSettingsModalTab: 'overview' as const,
+  replyToMessage: null,
 };
 
 export const chatUiSlice = createSlice({
@@ -180,6 +187,17 @@ export const chatUiSlice = createSlice({
       state.channelSettingsModalOpen = false;
       state.channelSettingsModalTab = 'overview';
     },
+    setReplyToMessage: (state, action: PayloadAction<{
+      id: string;
+      channelId: string;
+      senderName: string;
+      contentPreview: string;
+    }>) => {
+      state.replyToMessage = action.payload;
+    },
+    clearReplyToMessage: (state) => {
+      state.replyToMessage = null;
+    },
   },
 });
 
@@ -219,6 +237,8 @@ export const {
   closeNewDmModal,
   openChannelSettingsModal,
   closeChannelSettingsModal,
+  setReplyToMessage,
+  clearReplyToMessage,
 } = chatUiSlice.actions;
 
 // -- Selectors --
@@ -270,5 +290,8 @@ export const selectChannelSettingsModalOpen = (state: RootState): boolean =>
 
 export const selectChannelSettingsModalTab = (state: RootState): 'overview' | 'members' =>
   state.chatUi.channelSettingsModalTab;
+
+export const selectReplyToMessage = (state: RootState) =>
+  state.chatUi.replyToMessage;
 
 export const chatUiReducer = chatUiSlice.reducer;

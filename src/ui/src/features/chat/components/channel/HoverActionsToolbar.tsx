@@ -23,7 +23,7 @@ interface HoverActionsToolbarProps {
   senderId: string;
   isPinned: boolean;
   content: string;
-  onQuoteReply?: (content: string, senderName: string) => void;
+  onQuoteReply?: () => void;
 }
 
 export function HoverActionsToolbar({
@@ -87,8 +87,8 @@ export function HoverActionsToolbar({
   }, [dispatch, channelId, messageId, isPinned]);
 
   const handleQuoteReply = useCallback(() => {
-    onQuoteReply?.(content, senderId);
-  }, [onQuoteReply, content, senderId]);
+    onQuoteReply?.();
+  }, [onQuoteReply]);
 
   const handleEmojiSelect = useCallback((emoji: string) => {
     dispatch(addReaction({ channelId, messageId, emoji }));

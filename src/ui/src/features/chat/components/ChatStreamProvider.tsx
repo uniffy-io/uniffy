@@ -24,6 +24,10 @@ import {
   addReactionToMessage,
   removeReactionFromMessage,
 } from '@/features/chat/store/chatMessagesSlice';
+import {
+  addReactionToThreadMessage,
+  removeReactionFromThreadMessage,
+} from '@/features/chat/store/chatThreadsSlice';
 import { updateChannel, incrementUnreadCount, addChannel } from '@/features/chat/store/chatChannelsSlice';
 import { chatApi } from '@/features/chat/api/chatApi';
 import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
@@ -119,11 +123,18 @@ function handleChannelEvent(
     }
     case ChatEventType.REACTION_ADDED: {
       if (ce.payload.case === 'reaction' && ce.payload.value) {
+        const { messageId, emoji, userId } = ce.payload.value;
         dispatch(addReactionToMessage({
           channelId: activeChannelId,
-          messageId: ce.payload.value.messageId,
-          emoji: ce.payload.value.emoji,
-          userId: ce.payload.value.userId,
+          messageId,
+          emoji,
+          userId,
+          currentUserId,
+        }));
+        dispatch(addReactionToThreadMessage({
+          messageId,
+          emoji,
+          userId,
           currentUserId,
         }));
       }
@@ -131,11 +142,18 @@ function handleChannelEvent(
     }
     case ChatEventType.REACTION_REMOVED: {
       if (ce.payload.case === 'reaction' && ce.payload.value) {
+        const { messageId, emoji, userId } = ce.payload.value;
         dispatch(removeReactionFromMessage({
           channelId: activeChannelId,
-          messageId: ce.payload.value.messageId,
-          emoji: ce.payload.value.emoji,
-          userId: ce.payload.value.userId,
+          messageId,
+          emoji,
+          userId,
+          currentUserId,
+        }));
+        dispatch(removeReactionFromThreadMessage({
+          messageId,
+          emoji,
+          userId,
           currentUserId,
         }));
       }

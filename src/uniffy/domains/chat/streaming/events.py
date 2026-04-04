@@ -40,6 +40,8 @@ def build_message_payload(
     is_pinned: bool = False,
     edited_at: datetime | None = None,
     metadata: dict | None = None,
+    reply_to_id: UUID | None = None,
+    reply_context: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build a full message payload for MESSAGE_CREATED/UPDATED events."""
     payload: dict[str, Any] = {
@@ -58,6 +60,10 @@ def build_message_payload(
         payload["edited_at"] = edited_at.isoformat()
     if metadata:
         payload["metadata"] = metadata
+    if reply_to_id:
+        payload["reply_to_id"] = str(reply_to_id)
+    if reply_context:
+        payload["reply_context"] = reply_context
     return payload
 
 

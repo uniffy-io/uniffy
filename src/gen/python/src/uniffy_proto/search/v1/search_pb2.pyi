@@ -36,7 +36,7 @@ SEARCH_RESULT_TYPE_CHAT_MESSAGE: SearchResultType
 SEARCH_RESULT_TYPE_ROOM: SearchResultType
 
 class SearchRequest(_message.Message):
-    __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter")
+    __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter", "exclude_types")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TYPE_FILTERS_FIELD_NUMBER: _ClassVar[int]
@@ -45,6 +45,7 @@ class SearchRequest(_message.Message):
     PROJECT_FILTERS_FIELD_NUMBER: _ClassVar[int]
     MY_CONTENT_ONLY_FIELD_NUMBER: _ClassVar[int]
     OWNER_FILTER_FIELD_NUMBER: _ClassVar[int]
+    EXCLUDE_TYPES_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     query: str
     type_filters: _containers.RepeatedScalarFieldContainer[SearchResultType]
@@ -53,7 +54,8 @@ class SearchRequest(_message.Message):
     project_filters: _containers.RepeatedScalarFieldContainer[str]
     my_content_only: bool
     owner_filter: str
-    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ...) -> None: ...
+    exclude_types: _containers.RepeatedScalarFieldContainer[SearchResultType]
+    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ..., exclude_types: _Optional[_Iterable[_Union[SearchResultType, str]]] = ...) -> None: ...
 
 class SearchResponse(_message.Message):
     __slots__ = ("items",)

@@ -40,6 +40,7 @@ class MeilisearchConfig:
     url: str
     master_key: str
     index_name: str = UNIFFY_INDEX_NAME
+    timeout: int = 30
 
     @classmethod
     def from_env(cls) -> MeilisearchConfig:
@@ -54,12 +55,15 @@ class MeilisearchConfig:
             Master API key for authentication (default: uniffy-dev-master-key)
         MEILISEARCH_INDEX_NAME : str
             Index name (default: uniffy)
+        MEILISEARCH_TIMEOUT : int
+            HTTP request timeout in seconds (default: 30)
 
         """
         return cls(
             url=os.getenv("MEILISEARCH_URL", "http://localhost:7700"),
             master_key=os.getenv("MEILISEARCH_MASTER_KEY", "uniffy-dev-master-key"),
             index_name=os.getenv("MEILISEARCH_INDEX_NAME", UNIFFY_INDEX_NAME),
+            timeout=int(os.getenv("MEILISEARCH_TIMEOUT", "30")),
         )
 
 
@@ -199,7 +203,11 @@ class MeilisearchClient:
 
     async def __aenter__(self) -> MeilisearchClient:
         """Async context manager entry."""
-        self._client = AsyncClient(self.config.url, self.config.master_key)
+        self._client = AsyncClient(
+            self.config.url,
+            self.config.master_key,
+            timeout=self.config.timeout,
+        )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -425,6 +433,7 @@ class MeilisearchClient:
         user_id: UUID,
         user_group_ids: list[UUID] | None = None,
         type_filters: list[str] | None = None,
+        exclude_type_filters: list[str] | None = None,
         tag_filters: list[str] | None = None,
         my_content_only: bool = False,
         owner_filter: UUID | None = None,
@@ -478,6 +487,13 @@ class MeilisearchClient:
         if type_filters:
             type_filter = " OR ".join(f'entity_type = "{t}"' for t in type_filters)
             filters = f"({filters}) AND ({type_filter})"
+
+        # Add type exclusion filters
+        if exclude_type_filters:
+            exclude_filter = " AND ".join(
+                f'entity_type != "{t}"' for t in exclude_type_filters
+            )
+            filters = f"({filters}) AND ({exclude_filter})"
 
         # Add tag filters (AND - all tags must match)
         if tag_filters:
@@ -774,7 +790,11 @@ async def init_meilisearch() -> MeilisearchClient:
 
     config = MeilisearchConfig.from_env()
     _meilisearch_client = MeilisearchClient(config)
-    _meilisearch_client._client = AsyncClient(config.url, config.master_key)
+    _meilisearch_client._client = AsyncClient(
+        config.url,
+        config.master_key,
+        timeout=config.timeout,
+    )
 
     # Ensure index exists with correct settings
     await _meilisearch_client.ensure_index()

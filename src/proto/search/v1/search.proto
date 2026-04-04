@@ -50,6 +50,9 @@ message SearchRequest {
   repeated string project_filters = 6;
   bool            my_content_only = 7;
   string          owner_filter    = 8;
+
+  // Types to exclude from results (e.g., exclude chat_message when not in chat domain)
+  repeated SearchResultType exclude_types = 9;
 }
 
 message SearchResponse {

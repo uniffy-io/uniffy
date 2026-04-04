@@ -100,6 +100,12 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
     senderType: SENDER_TYPE_MAP[proto.senderType] ?? 'USER',
     content: proto.content,
     rootId: proto.rootId ?? null,
+    replyToId: proto.replyToId ?? null,
+    replyContext: proto.replyContext ? {
+      id: proto.replyContext.id,
+      senderName: proto.replyContext.senderName,
+      contentPreview: proto.replyContext.contentPreview,
+    } : undefined,
     editedAt: timestampToIso(proto.editedAt),
     isDeleted: proto.isDeleted,
     isPinned: proto.isPinned,

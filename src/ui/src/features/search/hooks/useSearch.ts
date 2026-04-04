@@ -24,6 +24,8 @@ const DEBOUNCE_DELAY_MS = 150;
 interface UseSearchOptions {
     /** Explicit type filters (merged with parsed filters from query) */
     typeFilters?: SearchResultType[];
+    /** Types to exclude from results (ignored when explicit type filters are set) */
+    excludeTypes?: SearchResultType[];
     /** Maximum results to return */
     limit?: number;
 }
@@ -106,10 +108,16 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
                 }
             }
 
+            // Only apply exclude filters when no explicit type filters are active
+            const excludeTypes = (typeFilters.length === 0 && options?.excludeTypes)
+                ? options.excludeTypes
+                : [];
+
             const response = await searchApi.search({
                 organizationId,
                 query: searchText, // Send only the text portion, filters are explicit
                 typeFilters: typeFilters.length > 0 ? typeFilters : [],
+                excludeTypes: excludeTypes.length > 0 ? excludeTypes : [],
                 tagFilters: filters.tags.length > 0 ? filters.tags : [],
                 projectFilters: filters.projects.length > 0 ? filters.projects : [],
                 myContentOnly: filters.myContentOnly,
@@ -128,7 +136,7 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
         } finally {
             setIsLoading(false);
         }
-    }, [organizationId, options?.typeFilters, options?.limit]);
+    }, [organizationId, options?.typeFilters, options?.excludeTypes, options?.limit]);
 
     // Debounced search
     useEffect(() => {

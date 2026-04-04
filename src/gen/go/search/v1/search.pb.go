@@ -109,8 +109,10 @@ type SearchRequest struct {
 	ProjectFilters []string `protobuf:"bytes,6,rep,name=project_filters,json=projectFilters,proto3" json:"project_filters,omitempty"`
 	MyContentOnly  bool     `protobuf:"varint,7,opt,name=my_content_only,json=myContentOnly,proto3" json:"my_content_only,omitempty"`
 	OwnerFilter    string   `protobuf:"bytes,8,opt,name=owner_filter,json=ownerFilter,proto3" json:"owner_filter,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Types to exclude from results (e.g., exclude chat_message when not in chat domain)
+	ExcludeTypes  []SearchResultType `protobuf:"varint,9,rep,packed,name=exclude_types,json=excludeTypes,proto3,enum=search.v1.SearchResultType" json:"exclude_types,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchRequest) Reset() {
@@ -197,6 +199,13 @@ func (x *SearchRequest) GetOwnerFilter() string {
 		return x.OwnerFilter
 	}
 	return ""
+}
+
+func (x *SearchRequest) GetExcludeTypes() []SearchResultType {
+	if x != nil {
+		return x.ExcludeTypes
+	}
+	return nil
 }
 
 type SearchResponse struct {
@@ -948,7 +957,7 @@ var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x16search/v1/search.proto\x12\tsearch.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb9\x02\n" +
+	"\x16search/v1/search.proto\x12\tsearch.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfb\x02\n" +
 	"\rSearchRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12>\n" +
@@ -958,7 +967,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"tagFilters\x12'\n" +
 	"\x0fproject_filters\x18\x06 \x03(\tR\x0eprojectFilters\x12&\n" +
 	"\x0fmy_content_only\x18\a \x01(\bR\rmyContentOnly\x12!\n" +
-	"\fowner_filter\x18\b \x01(\tR\vownerFilter\"C\n" +
+	"\fowner_filter\x18\b \x01(\tR\vownerFilter\x12@\n" +
+	"\rexclude_types\x18\t \x03(\x0e2\x1b.search.v1.SearchResultTypeR\fexcludeTypes\"C\n" +
 	"\x0eSearchResponse\x121\n" +
 	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\"\xcd\x02\n" +
 	"\x10SearchResultItem\x12\x10\n" +
@@ -1085,32 +1095,33 @@ var file_search_v1_search_proto_goTypes = []any{
 }
 var file_search_v1_search_proto_depIdxs = []int32{
 	0,  // 0: search.v1.SearchRequest.type_filters:type_name -> search.v1.SearchResultType
-	3,  // 1: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
-	0,  // 2: search.v1.SearchResultItem.type:type_name -> search.v1.SearchResultType
-	13, // 3: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
-	0,  // 4: search.v1.IndexItemRequest.type:type_name -> search.v1.SearchResultType
-	14, // 5: search.v1.IndexItemRequest.metadata:type_name -> search.v1.IndexItemRequest.MetadataEntry
-	0,  // 6: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
-	3,  // 7: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
-	15, // 8: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
-	0,  // 9: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
-	16, // 10: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
-	12, // 11: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
-	1,  // 12: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
-	4,  // 13: search.v1.SearchService.IndexItem:input_type -> search.v1.IndexItemRequest
-	6,  // 14: search.v1.SearchService.DeleteItem:input_type -> search.v1.DeleteItemRequest
-	8,  // 15: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
-	10, // 16: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
-	2,  // 17: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
-	5,  // 18: search.v1.SearchService.IndexItem:output_type -> search.v1.IndexItemResponse
-	7,  // 19: search.v1.SearchService.DeleteItem:output_type -> search.v1.DeleteItemResponse
-	9,  // 20: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
-	11, // 21: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
-	17, // [17:22] is the sub-list for method output_type
-	12, // [12:17] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	0,  // 1: search.v1.SearchRequest.exclude_types:type_name -> search.v1.SearchResultType
+	3,  // 2: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
+	0,  // 3: search.v1.SearchResultItem.type:type_name -> search.v1.SearchResultType
+	13, // 4: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
+	0,  // 5: search.v1.IndexItemRequest.type:type_name -> search.v1.SearchResultType
+	14, // 6: search.v1.IndexItemRequest.metadata:type_name -> search.v1.IndexItemRequest.MetadataEntry
+	0,  // 7: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
+	3,  // 8: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
+	15, // 9: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
+	0,  // 10: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
+	16, // 11: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
+	12, // 12: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
+	1,  // 13: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
+	4,  // 14: search.v1.SearchService.IndexItem:input_type -> search.v1.IndexItemRequest
+	6,  // 15: search.v1.SearchService.DeleteItem:input_type -> search.v1.DeleteItemRequest
+	8,  // 16: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
+	10, // 17: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
+	2,  // 18: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
+	5,  // 19: search.v1.SearchService.IndexItem:output_type -> search.v1.IndexItemResponse
+	7,  // 20: search.v1.SearchService.DeleteItem:output_type -> search.v1.DeleteItemResponse
+	9,  // 21: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
+	11, // 22: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
+	18, // [18:23] is the sub-list for method output_type
+	13, // [13:18] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_search_v1_search_proto_init() }

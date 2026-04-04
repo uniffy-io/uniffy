@@ -132,8 +132,8 @@ const roomFromProto = (proto: ProtoRoom): Room => ({
   building: proto.building,
   location: proto.location,
   amenities: [...proto.amenities],
-  imageFileId: proto.imageFileId || undefined,
-  visibility: VISIBILITY_FROM_PROTO[proto.visibility] || 'private',
+  imageFileId: proto.imageFileId || null,
+  visibility: (VISIBILITY_FROM_PROTO[proto.visibility] || 'private') as 'private' | 'organization',
   createdAt: timestampToIso(proto.createdAt),
   updatedAt: timestampToIso(proto.updatedAt),
 });
@@ -146,7 +146,7 @@ const bookingFromProto = (proto: ProtoRoomBooking): RoomBooking => ({
   roomId: proto.roomId,
   organizationId: proto.organizationId,
   userId: proto.userId,
-  eventId: proto.eventId || undefined,
+  eventId: proto.eventId || null,
   title: proto.title,
   startTime: timestampToIso(proto.startTime),
   endTime: timestampToIso(proto.endTime),
@@ -165,7 +165,7 @@ const timeSlotFromProto = (proto: ProtoTimeSlot): TimeSlot => ({
   startTime: timestampToIso(proto.startTime),
   endTime: timestampToIso(proto.endTime),
   isAvailable: proto.isAvailable,
-  bookingId: proto.bookingId || undefined,
+  bookingId: proto.bookingId || null,
   eventTitle: proto.eventTitle,
   bookerName: proto.bookerName,
 });
