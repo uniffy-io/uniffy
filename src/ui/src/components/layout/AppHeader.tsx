@@ -5,6 +5,7 @@ import type { Icon } from '@phosphor-icons/react';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { GlobalSearch } from '@/features/search';
 import { NotificationBell } from '@/features/notifications';
+import { CalendarQuickView } from '@/features/calendar';
 import { cn } from '@/shared/utils/cn';
 import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
@@ -48,14 +49,6 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
         isActive && "text-foreground"
       )}
     >
-      {/* Active indicator */}
-      <span
-        className={cn(
-          "absolute inset-0 rounded-lg transition-all duration-500",
-          isActive ? "bg-primary/10" : "bg-transparent"
-        )}
-      />
-
       {/* Hover underline effect */}
       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
 
@@ -63,8 +56,8 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
       <span className={cn(
         "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
         isActive
-          ? "bg-primary"
-          : "text-muted-foreground group-hover:text-primary"
+          ? "border-2 border-primary/30"
+          : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary"
       )}>
         <UniffyLogo
           className="w-5 h-5 transition-all duration-500"
@@ -112,8 +105,8 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
       <span className={cn(
         "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
         isActive
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground group-hover:text-primary"
+          ? "border border-primary/30 bg-primary/10 text-primary"
+          : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary"
       )}>
         <Icon size={20} weight={isActive ? "fill" : "duotone"} />
       </span>
@@ -238,11 +231,12 @@ export function AppHeader() {
           </div>
 
           {/* Right: Search (mobile) + Notifications + User */}
-          <div className="flex items-center gap-0.5 z-20">
+          <div className="flex items-center gap-2 z-20">
             {/* Mobile search icon - opens spotlight instead */}
             {isMobile && (
               <MobileSearchButton />
             )}
+            <CalendarQuickView />
             <NotificationBell />
             <UserMenu />
           </div>
@@ -269,7 +263,7 @@ function MobileSearchButton() {
   return (
     <button
       onClick={handleClick}
-      className="relative p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors sm:hidden"
+      className="flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-primary hover:border-border transition-colors sm:hidden"
       aria-label="Search"
     >
       <MagnifyingGlass size={20} weight="duotone" />

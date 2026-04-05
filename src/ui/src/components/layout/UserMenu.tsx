@@ -114,50 +114,30 @@ export function UserMenu() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "group relative flex items-center justify-center py-1.5 px-1.5 rounded-lg",
-                    "transition-all duration-500 ease-out overflow-hidden",
-                    "focus:outline-none"
+                    "flex items-center justify-center w-8 h-8 rounded-full overflow-hidden",
+                    "border border-border transition-all duration-150",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isOpen
+                        ? "border-primary/30"
+                        : "hover:border-border"
                 )}
             >
-                {/* Hover/Active background */}
-                <span
-                    className={cn(
-                        "absolute inset-0 rounded-lg transition-all duration-500",
-                        isOpen ? "bg-primary/10" : "bg-transparent"
-                    )}
-                />
-
-                {/* Hover underline effect - matching nav items */}
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
-
-                {/* Avatar container - matching nav item icon style */}
-                <span className={cn(
-                    "relative z-10 flex items-center justify-center w-7 h-7 rounded-md overflow-hidden",
-                    "transition-all duration-500 ease-out",
-                    !user.avatarUrl && (isOpen
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground group-hover:text-primary")
-                )}>
-                    {user.avatarUrl ? (
-                        <img
-                            src={user.avatarUrl}
-                            alt=""
-                            className="w-full h-full object-cover rounded-md"
-                        />
-                    ) : (
-                        <span className={cn(
-                            "flex items-center justify-center w-full h-full rounded-md text-[11px] font-bold tracking-tight",
-                            "transition-all duration-300",
-                            isOpen
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted/80 text-foreground group-hover:bg-primary/20 group-hover:text-primary"
-                        )}>
-                            {user.fullName
-                                ? getInitials(user.fullName)
-                                : (user.username || '??').slice(0, 2).toUpperCase()}
-                        </span>
-                    )}
-                </span>
+                {user.avatarUrl ? (
+                    <img
+                        src={user.avatarUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <span className={cn(
+                        "flex items-center justify-center w-full h-full text-[10px] font-bold tracking-tight",
+                        "bg-primary text-primary-foreground"
+                    )}>
+                        {user.fullName
+                            ? getInitials(user.fullName)
+                            : (user.username || '??').slice(0, 2).toUpperCase()}
+                    </span>
+                )}
             </button>
 
             {isOpen && (

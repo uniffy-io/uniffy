@@ -112,12 +112,16 @@ export {
   removeAttendees,
 } from '@/features/calendar/store/calendarThunks';
 
+// Quick view (header widget)
+export { CalendarQuickView } from '@/features/calendar/components/quick-view/CalendarQuickView';
+
 // Hooks
 export {
   useCalendarNavigation,
   useCalendarEvents,
   useCurrentTime,
   useIsToday,
+  useTodayEvents,
 } from '@/features/calendar/hooks';
 
 // Utilities

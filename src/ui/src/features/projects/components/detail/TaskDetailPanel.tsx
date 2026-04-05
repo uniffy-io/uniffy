@@ -244,7 +244,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
 
           {/* Comments + Activity (in modal mode, in left column) */}
           {variant === "modal" && (
-            <div className="max-h-64 overflow-y-auto rounded-md border border-border">
+            <div className="rounded-md border border-border [&>div]:h-auto">
               <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
             </div>
           )}
@@ -253,7 +253,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
           </div>{/* end left column */}
 
           {/* Right column (or continues in single column for sidebar) */}
-          <div className={cn(variant === "modal" ? "w-72 shrink-0 space-y-6" : "space-y-6")}>
+          <div className={cn(variant === "modal" ? "w-80 shrink-0 space-y-6" : "space-y-6")}>
 
           {/* Fields Section */}
           <div className="space-y-4">

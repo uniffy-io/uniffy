@@ -24,37 +24,20 @@ export function NotificationBell() {
             <button
                 onClick={toggle}
                 className={cn(
-                    'group relative flex items-center justify-center py-1.5 px-1.5 rounded-lg',
-                    'transition-all duration-500 ease-out overflow-hidden',
-                    'focus:outline-none'
+                    'relative flex items-center justify-center w-7 h-7 rounded-md',
+                    'border border-border transition-colors duration-150',
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    panelOpen
+                        ? 'bg-primary/10 text-primary border-primary/30'
+                        : 'text-muted-foreground hover:text-primary hover:border-border'
                 )}
             >
-                {/* Hover/Active background */}
-                <span
-                    className={cn(
-                        'absolute inset-0 rounded-lg transition-all duration-500',
-                        panelOpen ? 'bg-primary/10' : 'bg-transparent'
-                    )}
-                />
-
-                {/* Hover underline effect */}
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
-
-                {/* Icon */}
-                <span className={cn(
-                    'relative z-10 flex items-center justify-center w-7 h-7 rounded-md',
-                    'transition-all duration-500 ease-out',
-                    panelOpen
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground group-hover:text-primary'
-                )}>
-                    <Bell size={20} weight={panelOpen ? 'fill' : 'duotone'} />
-                </span>
+                <Bell size={20} weight={panelOpen ? 'fill' : 'duotone'} />
 
                 {/* Unread badge */}
                 {unreadCount > 0 && (
                     <span className={cn(
-                        'absolute top-0.5 right-0.5 z-20 flex items-center justify-center',
+                        'absolute -top-1 -right-1 z-20 flex items-center justify-center',
                         'min-w-[16px] h-4 px-1 rounded-full',
                         'text-white text-[10px] font-bold leading-none'
                     )} style={{ backgroundColor: 'var(--status-error)' }}>
@@ -63,7 +46,7 @@ export function NotificationBell() {
                 )}
             </button>
 
-            {panelOpen && <NotificationPanel onClose={close} />}
+            {panelOpen && <NotificationPanel onClose={close} anchorRef={bellRef} />}
         </div>
     );
 }

@@ -138,9 +138,9 @@ export function CommentsPanel({ contentType, contentId }: CommentsPanelProps) {
 
 function EmptyState({ type }: { type: 'open' | 'resolved' }) {
     return (
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <ChatCircle size={32} className="text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-4 px-4 text-center">
+            <ChatCircle size={20} className="text-muted-foreground/50 mb-1.5" />
+            <p className="text-xs text-muted-foreground">
                 {type === 'open'
                     ? 'No comments yet. Select text or add a page-level comment above.'
                     : 'No resolved comments.'}

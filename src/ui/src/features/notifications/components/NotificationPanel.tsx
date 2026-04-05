@@ -57,6 +57,7 @@ function groupByTime(notifications: SerializedNotification[]): TimeGroup[] {
 
 interface NotificationPanelProps {
     onClose: () => void;
+    anchorRef?: React.RefObject<HTMLElement | null>;
 }
 
 /**
@@ -236,7 +237,7 @@ function NotificationContent({
     );
 }
 
-export function NotificationPanel({ onClose }: NotificationPanelProps) {
+export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps) {
     const {
         notifications,
         unreadCount,
@@ -261,7 +262,9 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
         if (isMobile) return;
 
         function handleClickOutside(event: MouseEvent) {
-            if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            if (panelRef.current && !panelRef.current.contains(target)
+                && !(anchorRef?.current && anchorRef.current.contains(target))) {
                 onClose();
             }
         }
