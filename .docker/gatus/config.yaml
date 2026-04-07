@@ -1,0 +1,82 @@
+storage:
+  type: postgres
+  path: "postgres://gatus:gatus@postgres:5432/gatus?sslmode=disable"
+
+ui:
+  title: "Uniffy Status"
+  header: "Uniffy Status"
+  description: "Real-time status and uptime monitoring for Uniffy services"
+  logo: ""
+
+endpoints:
+  # ---- Application ----
+  - name: App
+    group: Application
+    url: "https://cloud.uniffy.io"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 3000"
+
+  - name: Landing Page
+    group: Application
+    url: "https://uniffy.io"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 3000"
+
+  - name: Documentation
+    group: Application
+    url: "https://docs.uniffy.io"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 3000"
+
+  - name: Feedback
+    group: Application
+    url: "https://feedback.uniffy.io"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 3000"
+
+  # ---- Staging ----
+  - name: Staging
+    group: Staging
+    url: "https://staging.uniffy.io"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 3000"
+
+  # ---- Infrastructure ----
+  # Uncomment and adjust these when deploying with access to internal services
+  # - name: PostgreSQL
+  #   group: Infrastructure
+  #   url: "tcp://your-postgres-host:5432"
+  #   interval: 30s
+  #   conditions:
+  #     - "[CONNECTED] == true"
+  #
+  # - name: Meilisearch
+  #   group: Infrastructure
+  #   url: "http://your-meilisearch-host:7700/health"
+  #   interval: 30s
+  #   conditions:
+  #     - "[STATUS] == 200"
+  #
+  # - name: Valkey
+  #   group: Infrastructure
+  #   url: "tcp://your-valkey-host:6379"
+  #   interval: 30s
+  #   conditions:
+  #     - "[CONNECTED] == true"
+  #
+  # - name: Object Storage
+  #   group: Infrastructure
+  #   url: "http://your-s3-host:9000/minio/health/live"
+  #   interval: 30s
+  #   conditions:
+  #     - "[STATUS] == 200"

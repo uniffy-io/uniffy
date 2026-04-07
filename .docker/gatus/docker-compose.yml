@@ -1,0 +1,42 @@
+name: uniffy-gatus
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: gatus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gatus
+      POSTGRES_PASSWORD: gatus
+      POSTGRES_DB: gatus
+    volumes:
+      - gatus_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gatus -d gatus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gatus-network
+
+  gatus:
+    image: ghcr.io/twin/gatus:stable
+    container_name: gatus
+    restart: unless-stopped
+    ports:
+      - "8443:8080"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gatus-network
+
+volumes:
+  gatus_postgres_data:
+    driver: local
+
+networks:
+  gatus-network:
+    driver: bridge
