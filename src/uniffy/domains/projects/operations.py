@@ -265,7 +265,7 @@ class ProjectOperations(BaseContentOperations[Project]):
 
         """
         project = await self.get_by_id(user_id, organization_id, project_id)
-        await self._require_edit(user_id, organization_id, project)
+        await self._require_admin(user_id, organization_id, project)
 
         old_visibility = project.visibility
 
@@ -1724,11 +1724,14 @@ class SprintOperations:
         """Initialize sprint operations."""
         self.session = session
 
-    async def _verify_project_edit(
+    async def _verify_project_admin(
         self, user_id: UUID, organization_id: UUID, project_id: UUID
     ) -> None:
         """
-        Verify user has EDIT permission on the project.
+        Verify user has ADMIN permission on the project.
+
+        ADMIN is granted to: project owner, org ADMIN/OWNER,
+        projects domain admin, or users with explicit ADMIN grant.
 
         Parameters
         ----------
@@ -1744,12 +1747,12 @@ class SprintOperations:
         NotFoundError
             If the project does not exist.
         PermissionDeniedError
-            If the user lacks EDIT permission.
+            If the user lacks ADMIN permission.
 
         """
         project_ops = ProjectOperations(self.session)
         project = await project_ops.get_by_id(user_id, organization_id, project_id)
-        await project_ops._require_edit(user_id, organization_id, project)
+        await project_ops._require_admin(user_id, organization_id, project)
 
     async def _get_sprint(self, sprint_id: UUID, organization_id: UUID) -> Sprint:
         """
@@ -1820,7 +1823,7 @@ class SprintOperations:
             Created sprint.
 
         """
-        await self._verify_project_edit(user_id, organization_id, project_id)
+        await self._verify_project_admin(user_id, organization_id, project_id)
 
         # Get next sort_order
         max_result = await self.session.execute(
@@ -1886,7 +1889,7 @@ class SprintOperations:
 
         """
         sprint = await self._get_sprint(sprint_id, organization_id)
-        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+        await self._verify_project_admin(user_id, organization_id, sprint.project_id)
 
         if name is not None:
             sprint.name = name
@@ -1938,7 +1941,7 @@ class SprintOperations:
 
         """
         sprint = await self._get_sprint(sprint_id, organization_id)
-        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+        await self._verify_project_admin(user_id, organization_id, sprint.project_id)
 
         if sprint.status == "active":
             return sprint
@@ -1984,7 +1987,7 @@ class SprintOperations:
 
         """
         sprint = await self._get_sprint(sprint_id, organization_id)
-        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+        await self._verify_project_admin(user_id, organization_id, sprint.project_id)
 
         sprint.status = "closed"
         sprint.updated_at = datetime.now(UTC)
@@ -2019,7 +2022,7 @@ class SprintOperations:
         from sqlalchemy import update as sa_update
 
         sprint = await self._get_sprint(sprint_id, organization_id)
-        await self._verify_project_edit(user_id, organization_id, sprint.project_id)
+        await self._verify_project_admin(user_id, organization_id, sprint.project_id)
 
         # Move sprint tasks to backlog
         await self.session.execute(

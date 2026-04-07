@@ -172,6 +172,7 @@ class ProjectsHandlers:
                     content_type=DomainContentType.PROJECT,
                     content_id=project.id,
                     content_owner_id=project.owner_id,
+                    content_visibility=project.visibility,
                 )
 
                 # Fetch fields and views
@@ -490,13 +491,16 @@ class ProjectsHandlers:
                 task = await ops.get_by_id(user_id, organization_id, task_id)
 
                 # Compute user's permission level on the parent project
+                project_ops = ProjectOperations(session)
+                project = await project_ops.get_by_id(user_id, organization_id, task.project_id)
                 checker = PermissionChecker(session)
                 perm_level = await checker.get_user_permission_level(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=DomainContentType.PROJECT,
-                    content_id=task.project_id,
-                    content_owner_id=task.owner_id,
+                    content_id=project.id,
+                    content_owner_id=project.owner_id,
+                    content_visibility=project.visibility,
                 )
 
                 # Load subtask counts
@@ -941,18 +945,7 @@ class ProjectsHandlers:
                 # Verify project access (requires ADMIN permission)
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-
-                # Check for ADMIN permission
-                can_edit = await project_ops.permission_checker.can_edit_content(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=project_ops.content_type,
-                    content_id=project.id,
-                    content_owner_id=project.owner_id,
-                    content_visibility=project.visibility,
-                )
-                if not can_edit:
-                    raise PermissionDeniedError("create", "field", "Requires EDIT permission")
+                await project_ops._require_admin(user_id, organization_id, project)
 
                 # Parse config if provided
                 config = {}
@@ -1008,23 +1001,12 @@ class ProjectsHandlers:
 
         try:
             async for session in get_async_session():
-                # Verify project access
+                # Verify project access (requires ADMIN permission)
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-
-                can_edit = await project_ops.permission_checker.can_edit_content(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=project_ops.content_type,
-                    content_id=project.id,
-                    content_owner_id=project.owner_id,
-                    content_visibility=project.visibility,
-                )
-                if not can_edit:
-                    raise PermissionDeniedError("update", "field", "Requires EDIT permission")
+                await project_ops._require_admin(user_id, organization_id, project)
 
                 # Fetch field
-
                 result = await session.execute(
                     select(FieldDefinition).where(
                         FieldDefinition.id == request.field_id,
@@ -1084,23 +1066,12 @@ class ProjectsHandlers:
 
         try:
             async for session in get_async_session():
-                # Verify project access
+                # Verify project access (requires ADMIN permission)
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-
-                can_edit = await project_ops.permission_checker.can_edit_content(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=project_ops.content_type,
-                    content_id=project.id,
-                    content_owner_id=project.owner_id,
-                    content_visibility=project.visibility,
-                )
-                if not can_edit:
-                    raise PermissionDeniedError("delete", "field", "Requires EDIT permission")
+                await project_ops._require_admin(user_id, organization_id, project)
 
                 # Fetch field
-
                 result = await session.execute(
                     select(FieldDefinition).where(
                         FieldDefinition.id == request.field_id,
@@ -1152,10 +1123,10 @@ class ProjectsHandlers:
 
         try:
             async for session in get_async_session():
-                # Verify project access (requires EDIT permission)
+                # Verify project access (requires ADMIN permission)
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_edit(user_id, organization_id, project)
+                await project_ops._require_admin(user_id, organization_id, project)
 
                 # Parse config
                 config = {}
@@ -1166,7 +1137,6 @@ class ProjectsHandlers:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json")
 
                 # Generate view ID
-
                 view_id = f"view_{secrets.token_hex(8)}"
 
                 view = ViewConfig(
@@ -1209,13 +1179,12 @@ class ProjectsHandlers:
 
         try:
             async for session in get_async_session():
-                # Verify project access
+                # Verify project access (requires ADMIN permission)
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_edit(user_id, organization_id, project)
+                await project_ops._require_admin(user_id, organization_id, project)
 
                 # Fetch view
-
                 result = await session.execute(
                     select(ViewConfig).where(
                         ViewConfig.id == request.view_id,
@@ -1269,10 +1238,10 @@ class ProjectsHandlers:
 
         try:
             async for session in get_async_session():
-                # Verify project access
+                # Verify project access (requires ADMIN permission)
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_edit(user_id, organization_id, project)
+                await project_ops._require_admin(user_id, organization_id, project)
 
                 # Fetch view
 
