@@ -30,7 +30,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, CheckCircle, ArrowBendDownRight } from "@phosphor-icons/react";
+import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, CheckCircle, ArrowBendDownRight, EyeSlash, Eye, Columns } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -40,14 +40,11 @@ import {
   selectCurrentProject,
   optimisticUpdateTask,
   bulkUpdateTasks,
-  removeFieldDefinition,
 } from "@/features/projects/store/projectsSlice";
 import {
   deleteTasks,
   updateTask,
   bulkUpdateTasksThunk,
-  createFieldThunk,
-  deleteFieldThunk,
 } from "@/features/projects/store/projectsThunks";
 import {
   selectSelectedTaskIds,
@@ -70,6 +67,11 @@ import {
   popRedo,
   selectUndoStack,
   selectRedoStack,
+  selectColumnWidthsForProject,
+  setColumnWidth,
+  selectHiddenColumnsForProject,
+  hideColumn,
+  showColumn,
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import { moveTask } from "@/features/projects/store/projectsThunks";
@@ -78,9 +80,9 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
 import { SubjectPicker, SubjectAvatarStack } from "@/components/subject";
 import { EmptyState } from "./EmptyState";
-import { CreateFieldDialog } from "./CreateFieldDialog";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { getTaskTypeConfig, TASK_TYPES } from "@/features/projects/utils/taskTypes";
+import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 
 const MAX_SUBTASK_DEPTH = 5;
@@ -109,13 +111,15 @@ export function TableView() {
   const allTasks = useAppSelector((state) => state.projects.tasks);
   const filteredTasks = useFilteredTasks(project?.id ?? "");
   const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
+  const columnWidths = useAppSelector(selectColumnWidthsForProject(project?.id ?? ""));
+  const hiddenColumnIds = useAppSelector(selectHiddenColumnsForProject(project?.id ?? ""));
 
   // Track collapsed group sections
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   // Track expanded parent tasks (for subtask rows)
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   // Track create field dialog
-  const [isCreateFieldOpen, setIsCreateFieldOpen] = useState(false);
+  const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
   // Track known task IDs so we can detect newly created subtasks
   const knownTaskIdsRef = useRef<Set<string>>(new Set());
 
@@ -143,13 +147,19 @@ export function TableView() {
     knownTaskIdsRef.current = currentIds;
   }, [allTasks]);
 
-  // Get visible fields (system + custom, excluding title)
-  const visibleFields = useMemo(() => {
+  // All non-title fields for the column menu (including hidden ones)
+  const allNonTitleFields = useMemo(() => {
     if (!project) return [];
     return project.fieldDefinitions.filter(
       (f) => f.id !== SYSTEM_FIELD_IDS.TITLE
     );
   }, [project]);
+
+  // Get visible fields (system + custom, excluding title and hidden columns)
+  const hiddenSet = useMemo(() => new Set(hiddenColumnIds), [hiddenColumnIds]);
+  const visibleFields = useMemo(() => {
+    return allNonTitleFields.filter((f) => !hiddenSet.has(f.id));
+  }, [allNonTitleFields, hiddenSet]);
 
   // Compute groups
   const groups = useMemo((): TaskGroup[] | null => {
@@ -263,15 +273,18 @@ export function TableView() {
     return [SYSTEM_FIELD_IDS.TITLE, ...visibleFields.map((f) => f.id)];
   }, [visibleFields]);
 
+  // Resolved widths for the two system columns (id, title)
+  const idColumnWidth = resolveSystemColumnWidth(ID_COLUMN_KEY, columnWidths, TABLE_COLUMNS.ID_WIDTH);
+  const titleColumnWidth = resolveSystemColumnWidth(TITLE_COLUMN_KEY, columnWidths, 300);
+
   // Compute total table width for horizontal scroll
   const totalTableWidth = useMemo(() => {
     const dragCol = 28;
     const checkboxCol = TABLE_COLUMNS.CHECKBOX_WIDTH;
-    const titleCol = 300;
-    const fieldCols = visibleFields.reduce((sum, f) => sum + getColumnWidth(f), 0);
-    const addCol = 48;
-    return dragCol + checkboxCol + titleCol + fieldCols + addCol;
-  }, [visibleFields]);
+    const fieldCols = visibleFields.reduce((sum, f) => sum + resolveColumnWidth(f, columnWidths), 0);
+    const columnsMenuCol = 40;
+    return dragCol + checkboxCol + idColumnWidth + titleColumnWidth + fieldCols + columnsMenuCol;
+  }, [visibleFields, columnWidths, idColumnWidth, titleColumnWidth]);
 
   // Keyboard navigation handler
   useEffect(() => {
@@ -641,6 +654,9 @@ export function TableView() {
         <TableRow
           task={task}
           fields={visibleFields}
+          columnWidths={columnWidths}
+          idColumnWidth={idColumnWidth}
+          titleColumnWidth={titleColumnWidth}
           isSelected={selectedTaskIds.includes(task.id)}
           editingFieldId={editingCell?.taskId === task.id ? editingCell.fieldId : null}
           focusedFieldId={focusedCell?.taskId === task.id ? focusedCell.fieldId : null}
@@ -672,6 +688,9 @@ export function TableView() {
         <SortableTableRow
           task={task}
           fields={visibleFields}
+          columnWidths={columnWidths}
+          idColumnWidth={idColumnWidth}
+          titleColumnWidth={titleColumnWidth}
           isSelected={selectedTaskIds.includes(task.id)}
           editingFieldId={editingCell?.taskId === task.id ? editingCell.fieldId : null}
           focusedFieldId={focusedCell?.taskId === task.id ? focusedCell.fieldId : null}
@@ -753,10 +772,26 @@ export function TableView() {
               />
             </div>
 
+            {/* ID Column */}
+            <div
+              className="shrink-0 flex items-center px-3 border-r border-border select-none relative"
+              style={{ width: idColumnWidth }}
+            >
+              <span className="text-xs font-medium text-muted-foreground">ID</span>
+              {project && (
+                <ColumnResizeHandle
+                  columnKey={ID_COLUMN_KEY}
+                  projectId={project.id}
+                  currentWidth={idColumnWidth}
+                  minWidth={80}
+                />
+              )}
+            </div>
+
             {/* Title Column */}
             <div
-              className="shrink-0 flex items-center px-3 border-r border-border cursor-pointer hover:bg-muted/30 transition-colors select-none"
-              style={{ width: 300 }}
+              className="shrink-0 flex items-center px-3 border-r border-border cursor-pointer hover:bg-muted/30 transition-colors select-none relative"
+              style={{ width: titleColumnWidth }}
               onClick={() => handleHeaderClick(SYSTEM_FIELD_IDS.TITLE)}
             >
               <span className="text-xs font-medium text-muted-foreground flex-1">Title</span>
@@ -765,66 +800,73 @@ export function TableView() {
                   ? <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
                   : <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
               )}
+              {project && (
+                <ColumnResizeHandle
+                  columnKey={TITLE_COLUMN_KEY}
+                  projectId={project.id}
+                  currentWidth={titleColumnWidth}
+                  minWidth={150}
+                />
+              )}
             </div>
 
             {/* Field Columns */}
             {visibleFields.map((field) => (
               <div
                 key={field.id}
-                className="shrink-0 flex items-center px-3 border-r border-border cursor-pointer hover:bg-muted/30 transition-colors select-none group"
-                style={{ width: getColumnWidth(field) }}
+                className="shrink-0 flex items-center px-3 border-r border-border cursor-pointer hover:bg-muted/30 transition-colors select-none group relative"
+                style={{ width: resolveColumnWidth(field, columnWidths) }}
                 onClick={() => handleHeaderClick(field.id)}
-                onContextMenu={(e) => {
-                  if (!field.isSystem && project) {
-                    e.preventDefault();
-                    dispatch(removeFieldDefinition({ projectId: project.id, fieldId: field.id }));
-                    dispatch(deleteFieldThunk({ projectId: project.id, fieldId: field.id }));
-                  }
-                }}
               >
-                <span className="text-xs font-medium text-muted-foreground flex-1">
+                <span className="text-xs font-medium text-muted-foreground flex-1 truncate">
                   {field.name}
                 </span>
-                {!field.isSystem && (
-                  <button
-                    type="button"
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive ml-1 shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (project) {
-                        dispatch(removeFieldDefinition({ projectId: project.id, fieldId: field.id }));
-                        dispatch(deleteFieldThunk({ projectId: project.id, fieldId: field.id }));
-                      }
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
                 {activeSortConfig?.fieldId === field.id && (
                   activeSortConfig.direction === "asc"
                     ? <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
                     : <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
                 )}
+                <button
+                  type="button"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground ml-1 shrink-0"
+                  title="Hide column"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (project) {
+                      dispatch(hideColumn({ projectId: project.id, fieldId: field.id }));
+                    }
+                  }}
+                >
+                  <EyeSlash size={12} />
+                </button>
+                {/* Resize handle */}
+                {project && (
+                  <ColumnResizeHandle
+                    columnKey={field.id}
+                    projectId={project.id}
+                    currentWidth={resolveColumnWidth(field, columnWidths)}
+                  />
+                )}
               </div>
             ))}
 
-            {/* Add Column Button */}
+            {/* Columns Visibility Button */}
             <div className="shrink-0 flex items-center px-2 relative">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => setIsCreateFieldOpen(!isCreateFieldOpen)}
+                title="Show/hide columns"
+                onClick={() => setIsColumnsMenuOpen(!isColumnsMenuOpen)}
               >
-                <Plus size={14} className="text-muted-foreground" />
+                <Columns size={14} className="text-muted-foreground" />
               </Button>
-              {isCreateFieldOpen && project && (
-                <CreateFieldDialog
+              {isColumnsMenuOpen && project && (
+                <ColumnsVisibilityMenu
                   projectId={project.id}
-                  onSubmit={(field) => {
-                    dispatch(createFieldThunk({ projectId: project.id, field: { name: field.name, type: field.type, isRequired: field.isRequired, isSystem: field.isSystem, sortOrder: field.sortOrder, config: field.config } }));
-                  }}
-                  onClose={() => setIsCreateFieldOpen(false)}
+                  allFields={allNonTitleFields}
+                  hiddenIds={hiddenColumnIds}
+                  onClose={() => setIsColumnsMenuOpen(false)}
                 />
               )}
             </div>
@@ -1096,6 +1138,9 @@ function BulkEditToolbar({
 interface TableRowProps {
   task: Task;
   fields: FieldDefinition[];
+  columnWidths: Record<string, number>;
+  idColumnWidth: number;
+  titleColumnWidth: number;
   isSelected: boolean;
   editingFieldId: string | null;
   focusedFieldId: string | null;
@@ -1148,6 +1193,9 @@ function SortableTableRow(props: Omit<TableRowProps, "dragHandleProps" | "isDrag
 function TableRow({
   task,
   fields,
+  columnWidths,
+  idColumnWidth,
+  titleColumnWidth,
   isSelected,
   editingFieldId,
   focusedFieldId,
@@ -1218,6 +1266,15 @@ function TableRow({
         />
       </div>
 
+      {/* ID Column */}
+      <div
+        className="shrink-0 flex items-center px-3 border-r border-border overflow-hidden"
+        style={{ width: idColumnWidth }}
+        onClick={onTitleClick}
+      >
+        <TaskIdCell task={task} />
+      </div>
+
       {/* Title Column - single click opens detail panel */}
       <div
         className={cn(
@@ -1225,7 +1282,7 @@ function TableRow({
           focusedFieldId === SYSTEM_FIELD_IDS.TITLE && "ring-2 ring-inset ring-primary",
           !isSubtask && "px-3"
         )}
-        style={{ width: 300, ...(isSubtask ? { paddingLeft: 24 + (subtaskDepth ?? 1) * 16, paddingRight: 12 } : {}) }}
+        style={{ width: titleColumnWidth, ...(isSubtask ? { paddingLeft: 24 + (subtaskDepth ?? 1) * 16, paddingRight: 12 } : {}) }}
         onClick={onTitleClick}
       >
         {/* Expand/collapse chevron for parent tasks */}
@@ -1255,7 +1312,7 @@ function TableRow({
 
       {/* Field Columns */}
       {fields.map((field) => {
-        const isDropdownOpen = editingFieldId === field.id && (field.type === "single_select" || field.type === "date" || field.type === "person");
+        const isDropdownOpen = editingFieldId === field.id && (field.type === "single_select" || field.type === "multi_select" || field.type === "date" || field.type === "person");
         return (
         <div
           key={field.id}
@@ -1264,7 +1321,7 @@ function TableRow({
             isDropdownOpen ? "overflow-visible" : "overflow-hidden",
             focusedFieldId === field.id && "ring-2 ring-inset ring-primary"
           )}
-          style={{ width: getColumnWidth(field) }}
+          style={{ width: resolveColumnWidth(field, columnWidths) }}
           onClick={(e) => { e.stopPropagation(); onCellClick(field.id); }}
         >
           <EditableFieldCell
@@ -1295,6 +1352,7 @@ interface EditableFieldCellProps {
 
 function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onSave }: EditableFieldCellProps) {
   const isSelectField = field.type === "single_select";
+  const isMultiSelectField = field.type === "multi_select";
   const isDateField = field.type === "date";
   const isPersonField = field.type === "person";
 
@@ -1312,6 +1370,27 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
             options={field.config.options ?? []}
             currentValue={String(getFieldValue(task, field.id) ?? "")}
             onSave={onSave}
+            onClose={onEndEdit}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Multi-select fields: badge chips + caret trigger, dropdown appears below when editing
+  if (isMultiSelectField) {
+    return (
+      <div
+        className="w-full h-full flex items-center justify-between cursor-pointer relative"
+        onClick={(e) => { e.stopPropagation(); if (!isEditing) onStartEdit(); }}
+      >
+        <FieldCell task={task} field={field} />
+        <CaretDown size={12} className="text-muted-foreground shrink-0 ml-1" />
+        {isEditing && (
+          <InlineMultiSelectEditor
+            options={field.config.options ?? []}
+            currentValue={parseMultiSelectValue(getFieldValue(task, field.id))}
+            onSave={(ids) => onSave(ids.length > 0 ? ids : null)}
             onClose={onEndEdit}
           />
         )}
@@ -1476,6 +1555,74 @@ function InlineSelectEditor({ options, currentValue, onSave, onClose }: {
           {option.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function InlineMultiSelectEditor({ options, currentValue, onSave, onClose }: {
+  options: SelectOption[];
+  currentValue: string[];
+  onSave: (ids: string[]) => void;
+  onClose: () => void;
+}) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set(currentValue));
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        onSave([...selected]);
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose, onSave, selected]);
+
+  const toggle = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelected(next);
+  };
+
+  return (
+    <div
+      ref={dropdownRef}
+      className="absolute top-full left-0 z-50 mt-1 min-w-35 rounded-md border border-border bg-card shadow-lg py-1 max-h-48 overflow-y-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {options.map((option) => {
+        const isSelected = selected.has(option.id);
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => toggle(option.id)}
+            className={cn(
+              "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
+              isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+            )}
+          >
+            <span
+              className={cn(
+                "w-3.5 h-3.5 rounded-sm border shrink-0 flex items-center justify-center",
+                isSelected ? "bg-primary border-primary" : "border-border"
+              )}
+            >
+              {isSelected && <span className="text-primary-foreground text-[10px] font-bold">&#10003;</span>}
+            </span>
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: option.color }}
+            />
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1698,18 +1845,27 @@ function InlineAssigneeEditor({ currentAssigneeIds, onSave, onClose }: {
   );
 }
 
-// ===== Task Title Cell =====
+// ===== Task Id Cell =====
 
-function TaskTitleCell({ task }: { task: Task }) {
+function TaskIdCell({ task }: { task: Task }) {
   const project = useAppSelector(selectCurrentProject);
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
   const TypeIcon = typeConfig.icon;
   const ticketId = `${project?.slug || ""}-${task.number}`;
 
   return (
-    <div className="flex items-center gap-2 min-w-0">
+    <div className="flex items-center gap-1.5 min-w-0">
       <TypeIcon size={14} className="text-muted-foreground shrink-0" weight="fill" />
-      <span className="text-xs font-mono text-muted-foreground shrink-0">{ticketId}</span>
+      <span className="text-xs font-mono text-muted-foreground truncate">{ticketId}</span>
+    </div>
+  );
+}
+
+// ===== Task Title Cell =====
+
+function TaskTitleCell({ task }: { task: Task }) {
+  return (
+    <div className="flex items-center min-w-0">
       <span className="truncate text-foreground text-sm">{task.title}</span>
     </div>
   );
@@ -1730,6 +1886,21 @@ function FieldCell({ task, field }: FieldCellProps) {
       const option = field.config.options?.find((o) => o.id === value);
       if (!option) return <span className="text-muted-foreground text-sm">-</span>;
       return <SelectBadge option={option} />;
+    }
+
+    case "multi_select": {
+      const selectedIds = parseMultiSelectValue(value);
+      if (selectedIds.length === 0) return <span className="text-muted-foreground text-sm">-</span>;
+      const selectedOptions = selectedIds
+        .map((id) => field.config.options?.find((o) => o.id === id))
+        .filter(Boolean) as SelectOption[];
+      return (
+        <div className="flex items-center gap-1 overflow-hidden">
+          {selectedOptions.map((opt) => (
+            <SelectBadge key={opt.id} option={opt} />
+          ))}
+        </div>
+      );
     }
 
     case "person": {
@@ -1796,8 +1967,182 @@ function getFieldValue(task: Task, fieldId: string): unknown {
   }
 }
 
-function getColumnWidth(field: FieldDefinition): number {
+// Special column keys for system columns (id, title) not in fieldDefinitions
+const ID_COLUMN_KEY = "__id__";
+const TITLE_COLUMN_KEY = "__title__";
+
+function getDefaultColumnWidth(field: FieldDefinition): number {
   const defaultWidth = TABLE_COLUMNS.DEFAULT_WIDTHS[field.type];
   return defaultWidth || 150;
+}
+
+function resolveColumnWidth(field: FieldDefinition, widths: Record<string, number>): number {
+  const stored = widths[field.id];
+  if (typeof stored === "number" && stored > 0) return stored;
+  return getDefaultColumnWidth(field);
+}
+
+function resolveSystemColumnWidth(
+  columnKey: string,
+  widths: Record<string, number>,
+  defaultWidth: number,
+): number {
+  const stored = widths[columnKey];
+  if (typeof stored === "number" && stored > 0) return stored;
+  return defaultWidth;
+}
+
+// ===== Columns Visibility Menu =====
+
+interface ColumnsVisibilityMenuProps {
+  projectId: string;
+  allFields: FieldDefinition[];
+  hiddenIds: string[];
+  onClose: () => void;
+}
+
+function ColumnsVisibilityMenu({ projectId, allFields, hiddenIds, onClose }: ColumnsVisibilityMenuProps) {
+  const dispatch = useAppDispatch();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
+
+  const toggle = (fieldId: string, isVisible: boolean) => {
+    if (isVisible) {
+      dispatch(hideColumn({ projectId, fieldId }));
+    } else {
+      dispatch(showColumn({ projectId, fieldId }));
+    }
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute top-full right-0 z-50 mt-1 w-60 rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
+        Columns
+      </div>
+      <div className="max-h-80 overflow-y-auto py-1">
+        {allFields.length === 0 && (
+          <div className="px-3 py-2 text-xs text-muted-foreground">
+            No columns available
+          </div>
+        )}
+        {allFields.map((field) => {
+          const isVisible = !hiddenSet.has(field.id);
+          return (
+            <button
+              key={field.id}
+              type="button"
+              onClick={() => toggle(field.id, isVisible)}
+              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-sm text-left text-foreground hover:bg-muted transition-colors"
+            >
+              <span className="truncate">{field.name}</span>
+              {isVisible
+                ? <Eye size={14} className="text-muted-foreground shrink-0" />
+                : <EyeSlash size={14} className="text-muted-foreground/50 shrink-0" />
+              }
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ===== Column Resize Handle =====
+
+interface ColumnResizeHandleProps {
+  columnKey: string;
+  projectId: string;
+  currentWidth: number;
+  minWidth?: number;
+  maxWidth?: number;
+}
+
+function ColumnResizeHandle({
+  columnKey,
+  projectId,
+  currentWidth,
+  minWidth = TABLE_COLUMNS.MIN_COLUMN_WIDTH,
+  maxWidth = 800,
+}: ColumnResizeHandleProps) {
+  const dispatch = useAppDispatch();
+  const [isResizing, setIsResizing] = useState(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(currentWidth);
+  const latestWidthRef = useRef(currentWidth);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startXRef.current = e.clientX;
+      startWidthRef.current = currentWidth;
+      latestWidthRef.current = currentWidth;
+      setIsResizing(true);
+    },
+    [currentWidth]
+  );
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - startXRef.current;
+      const nextWidth = Math.min(
+        maxWidth,
+        Math.max(minWidth, startWidthRef.current + delta)
+      );
+      if (nextWidth !== latestWidthRef.current) {
+        latestWidthRef.current = nextWidth;
+        dispatch(setColumnWidth({ projectId, fieldId: columnKey, width: nextWidth }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [isResizing, dispatch, projectId, columnKey, minWidth, maxWidth]);
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      className={cn(
+        "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none z-10",
+        "hover:bg-primary/60 transition-colors",
+        isResizing && "bg-primary"
+      )}
+      onMouseDown={handleMouseDown}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
 }
 

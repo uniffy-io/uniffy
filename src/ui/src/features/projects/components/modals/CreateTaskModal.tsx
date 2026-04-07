@@ -23,6 +23,8 @@ import { createTask } from "../../store/projectsThunks";
 import { SYSTEM_FIELD_IDS } from "../../types";
 import { TASK_TYPES, getFieldsForTaskType } from "@/features/projects/utils/taskTypes";
 import type { FieldDefinition, FieldValue, SelectOption } from "@/features/projects/types";
+import { MultiSelectField } from "@/features/projects/utils/multiSelectUtils";
+import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 
 export function CreateTaskModal() {
   const dispatch = useAppDispatch();
@@ -407,6 +409,14 @@ export function CreateTaskModal() {
                           })) ?? []}
                           placeholder={`Select ${field.name.toLowerCase()}...`}
                           className="w-full"
+                        />
+                      ) : field.type === "multi_select" ? (
+                        <MultiSelectField
+                          options={field.config.options || []}
+                          value={parseMultiSelectValue(fieldValues[field.id])}
+                          onChange={(ids) => handleFieldValueChange(field.id, ids.length > 0 ? ids : null)}
+                          disabled={isSubmitting}
+                          placeholder={`Select ${field.name.toLowerCase()}...`}
                         />
                       ) : field.type === "number" ? (
                         <Input

@@ -94,8 +94,11 @@ export interface ProjectsUiState {
   // Keyboard navigation state
   focusedCell: { taskId: string; fieldId: string } | null;
 
-  // Table view state
-  columnWidths: Record<string, number>;
+  // Table view state - per-project column widths: { [projectId]: { [fieldId]: width } }
+  columnWidths: Record<string, Record<string, number>>;
+
+  // Table view state - per-project hidden column field ids: { [projectId]: string[] }
+  hiddenColumns: Record<string, string[]>;
 
   // Scope filter (all/personal/organization)
   projectScope: ProjectScope;
@@ -125,6 +128,8 @@ export interface ProjectsUiState {
 /**
  * Initial UI state
  */
+import { loadColumnWidths, loadHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
+
 export const initialProjectsUiState: ProjectsUiState = {
   viewMode: "table",
   currentViewId: null,
@@ -152,7 +157,8 @@ export const initialProjectsUiState: ProjectsUiState = {
 
   focusedCell: null,
 
-  columnWidths: {},
+  columnWidths: loadColumnWidths(),
+  hiddenColumns: loadHiddenColumns(),
 
   projectScope: "all",
 

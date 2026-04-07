@@ -43,6 +43,8 @@ export const LAYOUT = {
 export const TABLE_COLUMNS = {
   /** Checkbox column width */
   CHECKBOX_WIDTH: 40,
+  /** ID column width (task slug like PROJ-42) */
+  ID_WIDTH: 110,
   /** Minimum column width */
   MIN_COLUMN_WIDTH: 80,
   /** Default column widths by field type */

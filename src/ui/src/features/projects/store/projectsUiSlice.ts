@@ -3,6 +3,7 @@ import type { RootState } from "@/app/store";
 import type { DragState, HistoryEntry, ProjectScope } from "../types/ui";
 import type { ViewType, FilterConfig, SortConfig } from "../types/views";
 import { initialProjectsUiState } from "../types/ui";
+import { saveColumnWidths, saveHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
 
 export const projectsUiSlice = createSlice({
   name: "projectsUi",
@@ -252,17 +253,52 @@ export const projectsUiSlice = createSlice({
     // ===== Table View State =====
 
     /**
-     * Set column widths
+     * Set all column widths for a project
      */
-    setColumnWidths: (state, action: PayloadAction<Record<string, number>>) => {
-      state.columnWidths = action.payload;
+    setColumnWidths: (state, action: PayloadAction<{ projectId: string; widths: Record<string, number> }>) => {
+      if (!state.columnWidths) state.columnWidths = {};
+      state.columnWidths[action.payload.projectId] = action.payload.widths;
+      saveColumnWidths(state.columnWidths);
     },
 
     /**
-     * Update a single column width
+     * Update a single column width for a project
      */
-    setColumnWidth: (state, action: PayloadAction<{ fieldId: string; width: number }>) => {
-      state.columnWidths[action.payload.fieldId] = action.payload.width;
+    setColumnWidth: (state, action: PayloadAction<{ projectId: string; fieldId: string; width: number }>) => {
+      const { projectId, fieldId, width } = action.payload;
+      if (!state.columnWidths) state.columnWidths = {};
+      if (!state.columnWidths[projectId]) {
+        state.columnWidths[projectId] = {};
+      }
+      state.columnWidths[projectId][fieldId] = width;
+      saveColumnWidths(state.columnWidths);
+    },
+
+    /**
+     * Hide a column in the table view for a project
+     */
+    hideColumn: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
+      const { projectId, fieldId } = action.payload;
+      if (!state.hiddenColumns) state.hiddenColumns = {};
+      const current = state.hiddenColumns[projectId] ?? [];
+      if (!current.includes(fieldId)) {
+        state.hiddenColumns[projectId] = [...current, fieldId];
+        saveHiddenColumns(state.hiddenColumns);
+      }
+    },
+
+    /**
+     * Show a previously hidden column in the table view for a project
+     */
+    showColumn: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
+      const { projectId, fieldId } = action.payload;
+      if (!state.hiddenColumns) state.hiddenColumns = {};
+      const current = state.hiddenColumns[projectId] ?? [];
+      const next = current.filter((id) => id !== fieldId);
+      if (next.length !== current.length) {
+        state.hiddenColumns[projectId] = next;
+        saveHiddenColumns(state.hiddenColumns);
+      }
     },
 
     // ===== Scope Filter =====
@@ -442,6 +478,8 @@ export const {
   endDrag,
   setColumnWidths,
   setColumnWidth,
+  hideColumn,
+  showColumn,
   setProjectScope,
   setFilterConfig,
   setSortConfig,
@@ -481,6 +519,10 @@ export const selectSprintFilter = (state: RootState) => state.projectsUi.sprintF
 export const selectTaskTypeFilter = (state: RootState) => state.projectsUi.taskTypeFilter;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
+export const selectColumnWidthsForProject = (projectId: string) => (state: RootState): Record<string, number> =>
+  state.projectsUi.columnWidths?.[projectId] ?? {};
+export const selectHiddenColumnsForProject = (projectId: string) => (state: RootState): string[] =>
+  state.projectsUi.hiddenColumns?.[projectId] ?? [];
 export const selectUndoStack = (state: RootState) => state.projectsUi.undoStack;
 export const selectRedoStack = (state: RootState) => state.projectsUi.redoStack;
 export const selectEditProjectId = (state: RootState) => state.projectsUi.editProjectId;

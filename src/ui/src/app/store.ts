@@ -22,6 +22,7 @@ import { sessionsReducer } from '@/features/settings/store/sessionsSlice';
 import { commentsReducer } from '@/features/comments/store/commentsSlice';
 import { projectsReducer } from '@/features/projects/store/projectsSlice';
 import { projectsUiReducer } from '@/features/projects/store/projectsUiSlice';
+import { loadColumnWidths, loadHiddenColumns } from '@/features/projects/utils/tableColumnStorage';
 import { agentsUiReducer } from '@/features/agents/store/agentsUiSlice';
 import { agentsReducer } from '@/features/agents/store/agentsSlice';
 import { agentSessionsReducer } from '@/features/agents/store/agentSessionsSlice';
@@ -91,13 +92,21 @@ const calendarUiTransform = createTransform(
  * refresh (selections, modals, drag/editing, undo/redo).
  */
 const projectsUiTransform = createTransform(
-  // Transform state before persisting (outbound) - keep as is
+  // Transform state before persisting (outbound) - strip column state (source of truth is localStorage)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (inboundState: any) => inboundState,
-  // Transform state when rehydrating (inbound) - reset transient state
+  (inboundState: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { columnWidths, hiddenColumns, ...rest } = inboundState ?? {};
+    return rest;
+  },
+  // Transform state when rehydrating (inbound) - reset transient state and reload column state from localStorage
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
     ...outboundState,
+    // Reload column state from localStorage (the source of truth).
+    // The outbound transform strips these, so they won't be in persisted state.
+    columnWidths: loadColumnWidths(),
+    hiddenColumns: loadHiddenColumns(),
     // Reset selections
     selectedTaskId: null,
     selectedTaskIds: [],
