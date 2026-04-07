@@ -38,7 +38,7 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative bg-card w-[calc(100vw-2rem)] max-w-6xl rounded-t-xl sm:rounded-xl shadow-2xl border border-border overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="relative bg-card w-[calc(100vw-2rem)] max-w-6xl rounded-t-xl sm:rounded-xl shadow-2xl border border-border overflow-hidden h-[90vh] flex flex-col min-h-0">
         <TaskDetailPanel taskId={taskId} variant="modal" />
       </div>
     </div>

@@ -8,7 +8,7 @@
  * - Task filtering by search query
  */
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -51,20 +51,12 @@ import { useProjectPermission } from "@/features/projects/hooks/useProjectPermis
 export function BoardView() {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
-  const filteredTasks = useFilteredTasks(project?.id ?? "");
+  const tasks = useFilteredTasks(project?.id ?? "");
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
   const activeSprint = useAppSelector(selectActiveSprint(project?.id ?? ""));
   const allSprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
   const hasSprints = allSprints.length > 0;
-
-  const tasks = useMemo(
-    () =>
-      activeSprint
-        ? filteredTasks.filter((t) => t.sprintId === activeSprint.id)
-        : filteredTasks,
-    [filteredTasks, activeSprint]
-  );
 
   const { canEdit } = useProjectPermission();
   // Track the currently dragged task
@@ -208,26 +200,14 @@ export function BoardView() {
     return <EmptyState onCreateTask={handleAddTask} />;
   }
 
-  // Show empty sprint state when there is an active sprint but no tasks in it
-  if (tasks.length === 0 && activeSprint) {
-    return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="shrink-0 flex items-center gap-3 px-4 py-2 bg-primary/5 border-b border-border text-sm">
-          <span className="font-medium text-primary">{activeSprint.name}</span>
-        </div>
-        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          No tasks in this sprint. Go to Backlog to add tasks.
-        </div>
-      </div>
-    );
-  }
-
-  // Project uses sprints but no sprint is currently active
-  if (!activeSprint && hasSprints && !searchQuery) {
+  // Show empty state when no tasks match the current filter
+  if (tasks.length === 0 && !searchQuery) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-8">
         <span className="text-sm text-muted-foreground">
-          No active sprint. Go to the Backlog to plan and start your next sprint.
+          {hasSprints
+            ? "No tasks to show. Try clearing filters or adding tasks from the Backlog."
+            : "No tasks yet."}
         </span>
       </div>
     );

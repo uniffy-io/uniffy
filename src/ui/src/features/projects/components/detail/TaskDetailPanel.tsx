@@ -15,11 +15,13 @@ import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { formatDateFull, isOverdue } from "@/shared/utils/dateFormatting";
+import { isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
+import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { MentionChipCompact } from "@/components/editor/plugins/mention";
 import { selectTasksMap, selectCurrentProject, selectTasksForProject, optimisticUpdateTask } from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
@@ -177,7 +179,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
         </div>
       )}
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className={cn("p-4", variant === "modal" ? "flex gap-6 items-start" : "space-y-6")}>
 
         {/* Left column (or single column in sidebar mode) */}
@@ -208,24 +210,26 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
             </div>
           )}
 
-          {/* Description (in modal mode, shown in left column before fields) */}
+          {/* Description (in modal mode, edited inline - no secondary modal) */}
           {variant === "modal" && (
             <div className="space-y-2">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</h3>
-              <ExpandableEditor
-                contentType={ContentType.TASK}
-                contentId={task.id}
-                value={task.description}
-                onChange={(newDesc) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                  dispatch(updateTask({ id: task.id, description: newDesc }));
-                }}
-                placeholder="Click to add a description... (type @ to mention)"
-                label="Description"
-                enableUpload
-                fullPreview
-                readonly={!canEdit}
-              />
+              <div className="rounded-lg border border-border overflow-hidden bg-background">
+                <CrepeEditor
+                  contentType={ContentType.TASK}
+                  contentId={task.id}
+                  value={task.description}
+                  onChange={(newDesc) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                    dispatch(updateTask({ id: task.id, description: newDesc }));
+                  }}
+                  placeholder="Click to add a description... (type @ to mention)"
+                  enableUpload
+                  readonly={!canEdit}
+                  minHeight="160px"
+                  className="border-none bg-transparent"
+                />
+              </div>
             </div>
           )}
 
@@ -317,25 +321,38 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               )}
 
               {/* Start Date */}
-              {task.startDate && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-20">Start</span>
-                  <span className="text-sm">{formatDateFull(task.startDate)}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-20">Start</span>
+                <div className="flex-1 min-w-0">
+                  <DatePicker
+                    value={task.startDate ?? ""}
+                    onChange={(v) => {
+                      const next = v || null;
+                      dispatch(optimisticUpdateTask({ id: task.id, startDate: next }));
+                      dispatch(updateTask({ id: task.id, startDate: next }));
+                    }}
+                    disabled={!canEdit}
+                    placeholder="Set start date"
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Due Date */}
-              {task.dueDate && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-20">Due</span>
-                  <span className={cn(
-                    "text-sm",
-                    isOverdue(task.dueDate) && "text-destructive"
-                  )}>
-                    {formatDateFull(task.dueDate)}
-                  </span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-20">Due</span>
+                <div className={cn("flex-1 min-w-0", task.dueDate && isOverdue(task.dueDate) && "text-destructive")}>
+                  <DatePicker
+                    value={task.dueDate ?? ""}
+                    onChange={(v) => {
+                      const next = v || null;
+                      dispatch(optimisticUpdateTask({ id: task.id, dueDate: next }));
+                      dispatch(updateTask({ id: task.id, dueDate: next }));
+                    }}
+                    disabled={!canEdit}
+                    placeholder="Set due date"
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Recurrence */}
               <div className="flex items-start gap-3">

@@ -28,10 +28,8 @@ import {
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarStack } from "@/components/subject";
-import {
-  selectTasksForProject,
-  selectCurrentProject,
-} from "@/features/projects/store/projectsSlice";
+import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
+import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import {
   selectTask,
   openDetailPanel,
@@ -379,11 +377,7 @@ export function DependencyGraphView() {
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
 
   const projectId = currentProject?.id;
-  const selectTasks = useMemo(
-    () => (projectId ? selectTasksForProject(projectId) : () => [] as Task[]),
-    [projectId]
-  );
-  const tasks = useAppSelector(selectTasks);
+  const tasks = useFilteredTasks(projectId ?? "");
   const sprints = useAppSelector(
     selectSprintsForProject(currentProject?.id ?? "")
   );
