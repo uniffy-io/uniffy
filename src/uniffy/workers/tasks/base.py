@@ -95,11 +95,17 @@ async def on_shutdown(ctx: dict[str, Any]) -> None:
     """
     logger.info("Worker shutting down - cleaning up resources...")
 
-    await close_queue()
-    await close_pubsub()
-    await close_meilisearch()
-    await close_s3()
-    await close_db()
+    for name, coro in [
+        ("queue", close_queue()),
+        ("pubsub", close_pubsub()),
+        ("meilisearch", close_meilisearch()),
+        ("s3", close_s3()),
+        ("db", close_db()),
+    ]:
+        try:
+            await coro
+        except Exception as exc:
+            logger.warning("Failed to close {name} during shutdown: {exc}", name=name, exc=exc)
 
     logger.info("Worker shutdown complete")
 
