@@ -17,7 +17,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 from uniffy.core.auth.permissions import ContentAccessQuery, PermissionChecker
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-from uniffy.core.types import ContentType, VisibilityScope
+from uniffy.core.types import ContentType, PermissionLevel, VisibilityScope
 
 
 class BaseContentOperations[TModel](ABC):
@@ -447,6 +447,28 @@ class BaseContentOperations[TModel](ABC):
         )
         if not can_edit:
             raise PermissionDeniedError("edit", self.content_type.value)
+
+    async def _require_admin(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: TModel,
+    ) -> None:
+        """Raise PermissionDeniedError if user does not have ADMIN level.
+
+        ADMIN level is granted to: content owner, org ADMIN/OWNER,
+        domain admin, or users with an explicit ADMIN permission grant.
+        """
+        level = await self.permission_checker.get_user_permission_level(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id=content.id,
+            content_owner_id=content.owner_id,
+            content_visibility=content.visibility,
+        )
+        if level not in (PermissionLevel.ADMIN, PermissionLevel.OWNER):
+            raise PermissionDeniedError("admin", self.content_type.value)
 
     async def _require_delete(
         self,

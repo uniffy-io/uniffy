@@ -363,6 +363,7 @@ class PermissionChecker:
         content_type: ContentType,
         content_id: UUID,
         content_owner_id: UUID,
+        content_visibility: VisibilityScope | None = None,
     ) -> PermissionLevel:
         """
         Get the user's permission level for a piece of content.
@@ -379,6 +380,8 @@ class PermissionChecker:
             ID of the content.
         content_owner_id : UUID
             Owner of the content.
+        content_visibility : VisibilityScope | None
+            Visibility scope of the content (used to check org defaults).
 
         Returns
         -------
@@ -405,6 +408,12 @@ class PermissionChecker:
 
         if permission:
             return permission.permission_level
+
+        # For org-wide content, check org permission defaults
+        if content_visibility == VisibilityScope.ORGANIZATION:
+            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
+            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_edit"):
+                return PermissionLevel.EDIT
 
         # Default to VIEW if user has any access
         return PermissionLevel.VIEW
@@ -494,6 +503,10 @@ class PermissionChecker:
     ) -> bool:
         """
         Check if org permission defaults allow the given action for a content type.
+
+        When no defaults row exists, falls back to the built-in defaults
+        from the organizations domain (e.g. projects and calendar default
+        to members_can_edit=True).
 
         Parameters
         ----------

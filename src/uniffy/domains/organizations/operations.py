@@ -18,15 +18,6 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.shared import ContentType, DomainType, VisibilityScope
 
-_CONTENT_TYPE_DEFAULT_VISIBILITY: dict[ContentType, VisibilityScope] = {
-    ContentType.AGENT: VisibilityScope.ORGANIZATION,
-}
-
-
-def _default_visibility_for(content_type: ContentType) -> VisibilityScope:
-    """Return the default visibility for a content type when no record exists."""
-    return _CONTENT_TYPE_DEFAULT_VISIBILITY.get(content_type, VisibilityScope.PRIVATE)
-
 
 class OrganizationOperations:
     """Organization management operations."""
@@ -178,6 +169,20 @@ class OrganizationOperations:
             description="Organization-wide discussions",
             is_default=True,
         )
+        await self._session.commit()
+
+        # Populate default permission defaults for all content types
+        from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
+
+        for ct, flags in ORG_PERMISSION_DEFAULTS.items():
+            self._session.add(
+                OrganizationPermissionDefaults(
+                    organization_id=org.id,
+                    content_type=ct,
+                    updated_by_user_id=owner_user_id,
+                    **flags,
+                )
+            )
         await self._session.commit()
 
         return org
@@ -848,15 +853,33 @@ class OrganizationOperations:
             defaults.updated_by_user_id = user_id
             defaults.updated_at = datetime.now(UTC)
         else:
-            # Create new
+            # Create new - start from built-in defaults then apply overrides
+            from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
+
+            base = ORG_PERMISSION_DEFAULTS.get(content_type, {})
+            dv = default_visibility or base.get(
+                "default_visibility", VisibilityScope.PRIVATE
+            )
+            cv = members_can_view if members_can_view is not None else base.get(
+                "members_can_view", True
+            )
+            ce = members_can_edit if members_can_edit is not None else base.get(
+                "members_can_edit", False
+            )
+            cd = members_can_delete if members_can_delete is not None else base.get(
+                "members_can_delete", False
+            )
+            cs = members_can_share if members_can_share is not None else base.get(
+                "members_can_share", False
+            )
             defaults = OrganizationPermissionDefaults(
                 organization_id=org_id,
                 content_type=content_type,
-                default_visibility=default_visibility or _default_visibility_for(content_type),
-                members_can_view=members_can_view if members_can_view is not None else True,
-                members_can_edit=members_can_edit if members_can_edit is not None else False,
-                members_can_delete=members_can_delete if members_can_delete is not None else False,
-                members_can_share=members_can_share if members_can_share is not None else False,
+                default_visibility=dv,
+                members_can_view=cv,
+                members_can_edit=ce,
+                members_can_delete=cd,
+                members_can_share=cs,
                 updated_by_user_id=user_id,
             )
             self._session.add(defaults)

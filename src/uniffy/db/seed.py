@@ -90,8 +90,6 @@ async def seed_initial_data() -> None:
     from uniffy.core.models import (
         Note,
         Organization,
-        OrganizationMember,
-        OrganizationRole,
         User,
         VisibilityScope,
     )
@@ -100,7 +98,6 @@ async def seed_initial_data() -> None:
     from uniffy.core.types import ContentType
     from uniffy.db.session import get_async_session
     from uniffy.domains.auth.passwords import hash_password
-    from uniffy.domains.files.filters.presets import create_default_presets
 
     logger.info("Checking for existing data...")
 
@@ -116,23 +113,7 @@ async def seed_initial_data() -> None:
         logger.info("No organizations found. Seeding initial data...")
 
         try:
-            # 1. Create Default Organization
-            org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
-            org_slug = os.getenv("DEFAULT_ORG_SLUG")
-            if not org_slug:
-                from uniffy.core.types import slugify
-
-                org_slug = slugify(org_name)
-
-            default_org = Organization(
-                name=org_name, slug=org_slug, plan="enterprise", is_active=True
-            )
-            session.add(default_org)
-            await session.flush()
-            await session.refresh(default_org)
-            logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
-
-            # 2. Create System Admin User
+            # 1. Create System Admin User
             admin_password = os.getenv("INITIAL_ADMIN_PASSWORD")
             if not admin_password:
                 logger.warning(
@@ -157,34 +138,25 @@ async def seed_initial_data() -> None:
             await session.refresh(admin_user)
             logger.info(f"Created system admin user: {admin_user.username}")
 
-            # 3. Add Admin to Organization
-            member = OrganizationMember(
-                user_id=admin_user.id,
-                organization_id=default_org.id,
-                role=OrganizationRole.OWNER,
-                is_active=True,
+            # 2. Create Default Organization
+            # (includes membership, chat, presets, permission defaults)
+            from uniffy.domains.organizations.operations import OrganizationOperations
+
+            org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
+            org_slug = os.getenv("DEFAULT_ORG_SLUG")
+            if not org_slug:
+                from uniffy.core.types import slugify
+
+                org_slug = slugify(org_name)
+
+            org_ops = OrganizationOperations(session)
+            default_org = await org_ops.create(
+                name=org_name,
+                slug=org_slug,
+                owner_user_id=admin_user.id,
+                plan="enterprise",
             )
-            session.add(member)
-            await session.flush()
-
-            # 3b. Seed default file filter presets
-            await create_default_presets(session, default_org.id, admin_user.id)
-            logger.info("Seeded default file filter presets")
-
-            # 3c. Create default #general chat channel
-            from uniffy.core.models.chat.channel import ChannelType
-            from uniffy.domains.chat.channels.operations import ChatChannelOperations
-
-            chat_ops = ChatChannelOperations(session)
-            await chat_ops.create_channel(
-                user_id=admin_user.id,
-                organization_id=default_org.id,
-                name="general",
-                channel_type=ChannelType.PUBLIC,
-                description="Organization-wide discussions",
-                is_default=True,
-            )
-            logger.info("Created default #general chat channel")
+            logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
 
             # 4. Create Uniffy root folder
             uniffy_folder = Note(
