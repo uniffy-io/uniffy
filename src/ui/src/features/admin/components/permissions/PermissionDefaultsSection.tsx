@@ -15,16 +15,8 @@ import {
     Robot,
 } from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '@/features/admin/hooks/useAdminHooks';
-import { ContentType, VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import type { SerializedContentTypeDefaults } from '@/features/admin/store/adminSlice';
-import { Select, type SelectOption } from '@/components/ui/select';
-
-// Visibility scope options
-const VISIBILITY_OPTIONS: SelectOption<number>[] = [
-    { value: VisibilityScope.PRIVATE, label: 'Private' },
-    { value: VisibilityScope.GROUP, label: 'Group' },
-    { value: VisibilityScope.ORGANIZATION, label: 'Organization' },
-];
 
 const CONTENT_TYPE_ICONS: Record<number, typeof NotePencil> = {
     [ContentType.NOTE]: NotePencil,
@@ -42,15 +34,6 @@ const ALL_CONTENT_TYPES = [
     ContentType.AGENT,
 ];
 
-// Default visibility per content type when no DB record exists yet
-const DEFAULT_VISIBILITY_BY_TYPE: Record<number, number> = {
-    [ContentType.AGENT]: VisibilityScope.ORGANIZATION,
-};
-
-function getDefaultVisibility(contentType: number): number {
-    return DEFAULT_VISIBILITY_BY_TYPE[contentType] ?? VisibilityScope.PRIVATE;
-}
-
 interface ContentTypeCardProps {
     contentType: number;
     defaults: SerializedContentTypeDefaults | undefined;
@@ -66,9 +49,6 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
     const [membersCanEdit, setMembersCanEdit] = useState(defaults?.membersCanEdit ?? false);
     const [membersCanDelete, setMembersCanDelete] = useState(defaults?.membersCanDelete ?? false);
     const [membersCanShare, setMembersCanShare] = useState(defaults?.membersCanShare ?? false);
-    const [defaultVisibility, setDefaultVisibility] = useState(
-        defaults?.defaultVisibility ?? getDefaultVisibility(contentType)
-    );
 
     // Sync with props
     useEffect(() => {
@@ -77,7 +57,6 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
             setMembersCanEdit(defaults.membersCanEdit);
             setMembersCanDelete(defaults.membersCanDelete);
             setMembersCanShare(defaults.membersCanShare);
-            setDefaultVisibility(defaults.defaultVisibility);
         }
     }, [defaults]);
 
@@ -105,20 +84,6 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
         }
     };
 
-    const handleVisibilityChange = async (value: number) => {
-        const oldValue = defaultVisibility;
-        setDefaultVisibility(value);
-        setSaving(true);
-
-        try {
-            await onUpdate(contentType, { defaultVisibility: value });
-        } catch {
-            setDefaultVisibility(oldValue);
-        } finally {
-            setSaving(false);
-        }
-    };
-
     return (
         <div className="p-4 rounded-lg border border-border bg-card">
             {/* Header */}
@@ -135,20 +100,6 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
                 {saving && (
                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 )}
-            </div>
-
-            {/* Default visibility */}
-            <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Default Visibility</label>
-                <Select
-                    value={defaultVisibility}
-                    onChange={handleVisibilityChange}
-                    options={VISIBILITY_OPTIONS}
-                    className="w-full"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                    New content will be created with this visibility by default
-                </p>
             </div>
 
             {/* Permission toggles */}
@@ -244,11 +195,11 @@ export function PermissionDefaultsSection() {
             <div>
                 <div className="flex items-center gap-3 mb-2">
                     <ShieldCheck size={24} weight="duotone" className="text-primary shrink-0" />
-                    <h1 className="text-xl md:text-2xl font-bold">Permission Defaults</h1>
+                    <h1 className="text-xl md:text-2xl font-bold">Org Default Permissions</h1>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                    Configure default permissions for each content type when shared at the organization level.
-                    <span className="hidden sm:inline"> These settings apply to all new content and can be overridden per-item.</span>
+                    Configure what organization members can do with organization-visible content.
+                    <span className="hidden sm:inline"> These apply across the org and can be overridden with per-item permissions.</span>
                 </p>
             </div>
 

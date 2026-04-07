@@ -33,7 +33,7 @@ const orgNavItems: NavItem[] = [
     { name: 'Members', path: '/admin/members', icon: Users },
     { name: 'Groups', path: '/admin/groups', icon: UsersThree },
     { name: 'Domain Admins', path: '/admin/domain-admins', icon: Crown },
-    { name: 'Permissions', path: '/admin/permissions', icon: ShieldCheck },
+    { name: 'Default Permissions', path: '/admin/permissions', icon: ShieldCheck },
     { name: 'Organization', path: '/admin/org-settings', icon: Gear },
     { name: 'Rooms', path: '/admin/rooms', icon: Door },
 ];
