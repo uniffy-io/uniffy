@@ -20,17 +20,27 @@ function resolveLevel(level: number | undefined): number {
  *
  * Permission levels from proto:
  *   0 = UNSPECIFIED, 1 = VIEW, 2 = EDIT, 3 = ADMIN
+ *
+ * canAccessSettings is true for project owner, org admin/owner,
+ * projects domain admin, or system admin.
  */
-export function useProjectPermission(): { canEdit: boolean; canAdmin: boolean } {
+export function useProjectPermission(): {
+  canEdit: boolean;
+  canAdmin: boolean;
+  canAccessSettings: boolean;
+} {
   const project = useAppSelector(selectCurrentProject);
+  const isSystemAdmin = useAppSelector((s) => s.auth.user?.isSystemAdmin ?? false);
 
   return useMemo(() => {
     const level = resolveLevel(project?.userPermissionLevel);
+    const canAdmin = level >= PermissionLevel.ADMIN;
     return {
       canEdit: level >= PermissionLevel.EDIT,
-      canAdmin: level >= PermissionLevel.ADMIN,
+      canAdmin,
+      canAccessSettings: canAdmin || isSystemAdmin,
     };
-  }, [project?.userPermissionLevel]);
+  }, [project?.userPermissionLevel, isSystemAdmin]);
 }
 
 /**

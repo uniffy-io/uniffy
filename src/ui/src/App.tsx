@@ -54,6 +54,7 @@ const RoomsAdminPage = lazyImport(() => import('@/features/rooms/pages/RoomsPage
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
 const PortfolioPage = lazyImport(() => import('@/features/projects/pages/PortfolioPage'), 'PortfolioPage');
 const TaskRedirectPage = lazyImport(() => import('@/features/projects/pages/TaskRedirectPage'), 'TaskRedirectPage');
+const ProjectSettingsPage = lazyImport(() => import('@/features/projects/pages/ProjectSettingsPage'), 'ProjectSettingsPage');
 const AgentsPage = lazyImport(() => import('@/features/agents/pages/AgentsPage'), 'AgentsPage');
 const ChatPage = lazyImport(() => import('@/features/chat/pages/ChatPage'), 'ChatPage');
 const UserSettingsPage = lazyImport(() => import('@/features/settings/pages/SettingsPage'), 'SettingsPage');
@@ -353,6 +354,17 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><TaskRedirectPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/projects/:projectId/settings"
+                            element={
+                                <ProtectedRoute>
+                                    <MainLayout>
+                                        <LazyRoute><ProjectSettingsPage /></LazyRoute>
+                                    </MainLayout>
                                 </ProtectedRoute>
                             }
                         />

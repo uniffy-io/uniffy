@@ -15,7 +15,7 @@ export interface ConfirmDialogProps {
     onClose: () => void;
     onConfirm: () => void;
     title?: string;
-    message: string;
+    message: React.ReactNode;
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: 'danger' | 'warning' | 'default';
@@ -63,7 +63,7 @@ export function ConfirmDialog({
                 </div>
                 <div className="flex-1 pt-1">
                     <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+                    <div className="mt-2 text-sm text-muted-foreground">{message}</div>
                 </div>
                 <button
                     type="button"

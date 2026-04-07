@@ -9,7 +9,8 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners } from "@phosphor-icons/react";
+import { useNavigate } from "react-router-dom";
+import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners, Gear } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -59,6 +60,7 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { isMobile, isMobileOrTablet } = useBreakpoint();
   const viewMode = useAppSelector(selectViewMode);
   const searchQuery = useAppSelector(selectSearchQuery);
@@ -70,7 +72,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const timeStats = useAppSelector(
     useMemo(() => selectProjectTimeStats(project.id), [project.id])
   );
-  const { canEdit } = useProjectPermission();
+  const { canEdit, canAccessSettings } = useProjectPermission();
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
   const sprintFilter = useAppSelector(selectSprintFilter);
@@ -197,6 +199,18 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             <FrameCorners size={14} />
           </button>
         </div>
+
+        {/* Project Settings */}
+        {canAccessSettings && (
+          <button
+            type="button"
+            onClick={() => navigate(`/projects/${project.id}/settings`)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+            title="Project Settings"
+          >
+            <Gear size={16} />
+          </button>
+        )}
       </div>
 
       {/* View Tabs + Filter Bar */}

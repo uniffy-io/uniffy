@@ -5,26 +5,25 @@
  * No heading - just scope filter + create button, then project list.
  */
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash, PencilSimple, CaretDoubleLeft, ChartPieSlice } from "@phosphor-icons/react";
+import { Plus, Gear, CaretDoubleLeft, ChartPieSlice } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   selectProjects,
   selectCurrentProjectId,
   setCurrentProject,
   selectProjectCompletion,
 } from "@/features/projects/store/projectsSlice";
-import { deleteProject } from "@/features/projects/store/projectsThunks";
-import { openCreateProjectModal, openEditProjectModal, selectProjectScope, toggleSidebar } from "@/features/projects/store/projectsUiSlice";
+import { openCreateProjectModal, selectProjectScope, toggleSidebar } from "@/features/projects/store/projectsUiSlice";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { ProjectScopeFilter } from "@/features/projects/components/sidebar/ProjectScopeFilter";
 import { Progress } from "@/components/ui/progress";
 import { ProjectsListSkeleton } from "@/features/projects/components/layout/ProjectsListSkeleton";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { PermissionLevel } from "@uniffy/proto/common/v1/common_pb";
 import type { Project } from "@/features/projects/types";
 
 export function ProjectsSidebar() {
@@ -36,6 +35,7 @@ export function ProjectsSidebar() {
   const currentProjectId = useAppSelector(selectCurrentProjectId);
   const projectCompletion = useAppSelector(selectProjectCompletion);
   const projectScope = useAppSelector(selectProjectScope);
+  const isSystemAdmin = useAppSelector((s) => s.auth.user?.isSystemAdmin ?? false);
 
   // Filter projects by scope
   const filteredProjects = useMemo(() => {
@@ -55,30 +55,12 @@ export function ProjectsSidebar() {
     }
   };
 
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   const handleCreateProject = () => {
     dispatch(openCreateProjectModal());
   };
 
   const handleEditProject = (project: Project) => {
-    dispatch(openEditProjectModal(project.id));
-  };
-
-  const handleDeleteProject = (project: Project) => {
-    setProjectToDelete(project);
-  };
-
-  const confirmDeleteProject = async () => {
-    if (!projectToDelete) return;
-    setIsDeleting(true);
-    try {
-      await dispatch(deleteProject(projectToDelete.id)).unwrap();
-    } finally {
-      setIsDeleting(false);
-      setProjectToDelete(null);
-    }
+    navigate(`/projects/${project.id}/settings`);
   };
 
   return (
@@ -136,17 +118,20 @@ export function ProjectsSidebar() {
               )}
             </div>
           ) : (
-            filteredProjects.map((project) => (
-              <ProjectListItem
-                key={project.id}
-                project={project}
-                isActive={project.id === currentProjectId}
-                onClick={() => handleProjectClick(project)}
-                onEdit={() => handleEditProject(project)}
-                onDelete={() => handleDeleteProject(project)}
-                progress={projectCompletion[project.id] ?? 0}
-              />
-            ))
+            filteredProjects.map((project) => {
+              const level = project.userPermissionLevel > 0 ? project.userPermissionLevel : PermissionLevel.EDIT;
+              const canAccessSettings = level >= PermissionLevel.ADMIN || isSystemAdmin;
+              return (
+                <ProjectListItem
+                  key={project.id}
+                  project={project}
+                  isActive={project.id === currentProjectId}
+                  onClick={() => handleProjectClick(project)}
+                  onEdit={canAccessSettings ? () => handleEditProject(project) : undefined}
+                  progress={projectCompletion[project.id] ?? 0}
+                />
+              );
+            })
           )}
         </div>
       </ScrollArea>
@@ -164,16 +149,6 @@ export function ProjectsSidebar() {
       </div>
     </div>
 
-    <ConfirmDialog
-      isOpen={!!projectToDelete}
-      onClose={() => setProjectToDelete(null)}
-      onConfirm={confirmDeleteProject}
-      title="Delete Project"
-      message={`Are you sure you want to delete "${projectToDelete?.name}"? All tasks in this project will also be deleted. This action cannot be undone.`}
-      confirmLabel="Delete"
-      variant="danger"
-      loading={isDeleting}
-    />
     </>
   );
 }
@@ -182,12 +157,11 @@ interface ProjectListItemProps {
   project: Project;
   isActive: boolean;
   onClick: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
   progress: number;
 }
 
-function ProjectListItem({ project, isActive, onClick, onEdit, onDelete, progress }: ProjectListItemProps) {
+function ProjectListItem({ project, isActive, onClick, onEdit, progress }: ProjectListItemProps) {
   return (
     <div
       className={cn(
@@ -208,42 +182,26 @@ function ProjectListItem({ project, isActive, onClick, onEdit, onDelete, progres
           )}
         />
         <span className="flex-1 truncate">{project.name}</span>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
+        {onEdit && (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
               e.stopPropagation();
               onEdit();
-            }
-          }}
-          className="p-0.5 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-          title="Edit"
-        >
-          <PencilSimple size={14} weight="duotone" className="text-muted-foreground" />
-        </span>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.stopPropagation();
-              onDelete();
-            }
-          }}
-          className="p-0.5 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-          title="Delete"
-        >
-          <Trash size={14} weight="duotone" className="text-muted-foreground" />
-        </span>
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.stopPropagation();
+                onEdit();
+              }
+            }}
+            className="p-0.5 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            title="Settings"
+          >
+            <Gear size={14} weight="duotone" className="text-muted-foreground" />
+          </span>
+        )}
       </div>
 
       {/* Progress bar */}
