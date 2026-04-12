@@ -102,7 +102,7 @@ Inside `RuntimeOperations`:
 
 2. **Load session**: `SessionOperations.get_session(user_id, org_id, session_id)` -- verifies the user owns the session (or it is a `global` session).
 
-3. **Load agent config**: `AgentOperations.get_by_id(user_id, org_id, agent_id)` -- runs full `BaseContentOperations` permission check (3-layer: ownership, visibility scope, explicit grants).
+3. **Load agent config**: `AgentOperations.get_by_id(user_id, org_id, agent_id)` -- runs the canonical permission check via `BaseContentOperations._require_view` (admin bypass, ownership, BLOCKED-wins, explicit `ContentMember` rows, and `OPEN_TO_ORG` baseline).
 
 4. **Get LLM provider**: `ProviderOperations.get_active_provider(org_id)` -- finds the first `ProviderKey` where `is_valid=True` and `is_enabled=True`, decrypts the Fernet-encrypted credential, returns an `AnthropicProvider` (or OpenAI/Google) instance.
 
@@ -156,7 +156,7 @@ RuntimeOperations (runtime/operations.py)
   -> ToolExecutor.execute() (tools/executor.py)
     -> _execute_read_note() (tools/builtin/notes.py)
       -> NoteOperations.get_by_id() (domains/notes/operations.py)
-        -> BaseContentOperations permission check
+        -> PermissionChecker.effective_role + role_can_* check
         -> SQL query via AsyncSession
 ```
 
@@ -189,16 +189,18 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
     # serialize note to JSON and return as ToolResult
 ```
 
-`NoteOperations.get_by_id()` inherits from `BaseContentOperations`, which runs the full three-layer permission check:
+`NoteOperations.get_by_id()` inherits from `BaseContentOperations`, which runs the canonical permission check via `PermissionChecker.effective_role()`:
 
-1. **Ownership**: Is `user_id == note.owner_id`? Instant grant.
-2. **Visibility scope**:
-   - `PRIVATE` -- only the owner
-   - `ORGANIZATION` -- any org member
-   - `GROUP` -- user must be in a linked group (via `ContentGroupLink`)
-3. **Explicit permission**: Check `ContentPermission` table for a `VIEW` grant.
+1. **Admin bypass**: Org OWNER/ADMIN and per-domain `DomainAdmin` short-circuit to `OWNER`.
+2. **Ownership**: If `user_id == note.owner_id`, effective role is `OWNER`.
+3. **BLOCKED wins**: If the user has a `ContentMember` row (directly or via a group they belong to) with `role == BLOCKED`, access is denied immediately - even if they own the content.
+4. **Access mode + explicit members**:
+   - `OWNER_ONLY` - only the owner (above) and admins pass.
+   - `EXPLICIT_MEMBERS` - user must have a non-blocked `ContentMember` row (direct or group).
+   - `OPEN_TO_ORG` - every org member gets at least `baseline_role`; explicit `ContentMember` rows can elevate above it.
+5. The final role is the **highest** of (direct member, group member, baseline), filtered through the `role_can_view` predicate for `get_by_id`.
 
-If denied, `PermissionDeniedError` is raised. `ToolExecutor.execute()` catches it and returns `ToolResult(success=False, error="Permission denied: ...")`. The LLM sees the error in the tool result and explains it to the user.
+If the resulting role does not satisfy `role_can_view`, `PermissionDeniedError` is raised. `ToolExecutor.execute()` catches it and returns `ToolResult(success=False, error="Permission denied: ...")`. The LLM sees the error in the tool result and explains it to the user.
 
 ### Error Handling in ToolExecutor
 
@@ -395,7 +397,7 @@ When `non_compacted_message_count > 40`:
 
 | Table | Model | Purpose |
 |-------|-------|---------|
-| `agents_agents` | `Agent` | Agent config (personality, model, tools, skills, visibility) |
+| `agents_agents` | `Agent` | Agent config (personality, model, tools, skills, `access_mode` + `baseline_role`) |
 | `agents_sessions` | `AgentSession` | Conversation containers (kind: direct/group/global) |
 | `agents_messages` | `AgentMessage` | Messages (user/assistant/tool/system/summary) |
 | `agents_skills` | `AgentSkill` | Markdown instruction snippets |
@@ -409,7 +411,7 @@ When `non_compacted_message_count > 40`:
 
 | Action | Required Permission |
 |--------|--------------------|
-| Access agent config | `BaseContentOperations` 3-layer check (ownership/visibility/grants) |
+| Access agent config | `effective_role(user, agent)` must satisfy `role_can_view` (access_mode + baseline_role + ContentMember, with admin and BLOCKED overrides) |
 | Access session | User owns the session OR session kind is `global` |
 | Update/archive session | User must own the session |
 | Tool data access | Same permissions as direct UI access (user's `user_id` is passed through) |

@@ -136,7 +136,7 @@ The backend is organized into domain-specific ConnectRPC services. Each service 
 | `users.v1.UsersService` | `src/proto/users/v1/users.proto` | User profile CRUD, user org memberships |
 | `organizations.v1.OrganizationsService` | `src/proto/organizations/v1/organizations.proto` | Organization CRUD, member management, permission defaults |
 | `groups.v1.GroupsService` | `src/proto/groups/v1/groups.proto` | Group CRUD, group membership |
-| `permissions.v1.PermissionsService` | `src/proto/permissions/v1/permissions.proto` | Content permission management |
+| `permissions.v1.MembersService` | `src/proto/permissions/v1/permissions.proto` | Content member management (ListMembers, AddMember, UpdateMemberRole, RemoveMember, SetAccessMode, TransferOwnership, ListMemberEvents) |
 
 **Content Services:**
 
@@ -157,9 +157,11 @@ Shared enums and messages used across services:
 // Enums
 enum OrganizationRole { MEMBER, ADMIN, OWNER }
 enum GroupRole { MEMBER, ADMIN }
-enum ContentType { NOTE, FILE, CALENDAR_EVENT, ... }
-enum PermissionLevel { VIEW, EDIT, ADMIN }
-enum VisibilityScope { PRIVATE, GROUP, ORGANIZATION }
+enum ContentType { NOTE, FILE, CALENDAR_EVENT, PROJECT, TASK, AGENT, ... }
+enum AccessMode { OWNER_ONLY, EXPLICIT_MEMBERS, OPEN_TO_ORG }
+enum ContentRole { VIEWER, COMMENTER, EDITOR, ADMIN, OWNER, BLOCKED }
+enum SubjectType { USER, GROUP, ORGANIZATION }
+enum ContentMemberAction { MEMBER_ADDED, MEMBER_ROLE_CHANGED, MEMBER_REMOVED, ACCESS_MODE_CHANGED, BASELINE_ROLE_CHANGED, OWNERSHIP_TRANSFERRED }
 
 // Messages
 message UserInfo { id, email, full_name, username, avatar_url, created_at }
@@ -219,14 +221,91 @@ JWT-based authentication with access/refresh token pattern. Users authenticate g
 
 ## Permission System
 
-Three-layer system for content permissions:
-1. **VisibilityScope**: PRIVATE, GROUP, ORGANIZATION
-2. **ContentGroupLink**: Links content to groups
-3. **ContentPermission**: Fine-grained grants (VIEW, EDIT, ADMIN, OWNER)
+Every content row carries two columns that describe its baseline access:
 
-Use `PermissionChecker` or `BaseContentOperations` (handles it automatically).
+| Column | Values | Meaning |
+|---|---|---|
+| `access_mode` | `OWNER_ONLY` | Only the owner (and admin bypasses) can touch the content. |
+| | `EXPLICIT_MEMBERS` | Only users/groups listed in `permissions_content_members` can touch it. |
+| | `OPEN_TO_ORG` | Every org member inherits `baseline_role`; explicit members can be elevated above or blocked below it. |
+| `baseline_role` | `VIEWER` / `COMMENTER` / `EDITOR` / `ADMIN` (or `None`) | Only meaningful with `OPEN_TO_ORG`. Must be `None` for the other modes. `OWNER` and `BLOCKED` are never valid baselines. |
 
-Some domains (e.g., chat) override the 3-layer system with membership-based access. In these cases the domain implements its own access checker (e.g., `ChatAccessChecker`) while still respecting org-level and domain-level admin overrides.
+Explicit grants live in `permissions_content_members` as `ContentMember` rows keyed on `(content_type, content_id, subject_type, subject_id)` with a `role` from the `ContentRole` enum:
+
+```
+VIEWER < COMMENTER < EDITOR < ADMIN < OWNER   # plus BLOCKED (explicit deny, overrides everything)
+```
+
+The role ordering is exposed as `ROLE_ORDINAL` + `role_can_view / role_can_comment / role_can_edit / role_can_delete / role_can_manage / role_can_transfer` helpers in `core.auth.permissions.roles`. Use these predicates to gate operations.
+
+**Effective role resolution** (`PermissionChecker.effective_role`):
+
+1. If the user is org `OWNER`/`ADMIN` → `OWNER`.
+2. If the user is a domain admin for the content type (see Domain Admin System) → `OWNER`.
+3. If the user is the content's `owner_id` → `OWNER`.
+4. If any `ContentMember` row with `role == BLOCKED` matches the user (directly or via a group they belong to) → `BLOCKED` immediately (overrides ownership-of-content).
+5. Otherwise take the highest role of:
+   - the user's direct non-blocked `ContentMember` row, if any;
+   - the highest non-blocked role from groups the user belongs to;
+   - the `baseline_role` when `access_mode == OPEN_TO_ORG`.
+6. If nothing matches → `None` (no access).
+
+Expired `ContentMember` rows (`expires_at < now`) are ignored.
+
+**How to use it in domains:**
+
+- Extend `BaseContentOperations` and implement `_build_search_keywords`, `_get_search_title`, `_get_url_path`. You get `get_by_id`, `list_accessible`, `_resolve_role`, `_require_view`, `_require_edit`, `_require_delete`, `_require_manage`, `_require_transfer`, and `_index_for_search` for free.
+- `BaseContentOperations` does **not** supply `create / update / delete`; each domain writes its own because the signatures vary. Use the `_require_*` helpers inside them.
+- Every `create()` path must resolve defaults via `resolve_content_defaults(session, organization_id, content_type)` from `core.auth.permissions`, which reads the per-org row in `permissions_org_defaults` and falls back to `ORG_PERMISSION_DEFAULTS`.
+- List queries use `ContentAccessQuery.build_accessible_filter(user_id, organization_id, content_type, content_id_column, owner_id_column, access_mode_column, baseline_role_column)`. The filter handles ownership, explicit members (direct + group), `OPEN_TO_ORG` baseline, and the `BLOCKED` exclusion. Org/domain admins should bypass the filter entirely.
+- Member CRUD, `set_access_mode`, `transfer_ownership`, and audit-log reads go through `ContentMembersOperations` in `core/content/members.py` - never mutate `access_mode` or `ContentMember` rows directly from a domain.
+
+**MembersService (`permissions.v1.MembersService`):**
+
+Seven RPCs, all backed by `ContentMembersOperations`:
+
+| RPC | Purpose |
+|---|---|
+| `ListMembers` | List direct + group members on a content item |
+| `AddMember` | Add a user or group with a role (records `MEMBER_ADDED`) |
+| `UpdateMemberRole` | Change a member's role (records `MEMBER_ROLE_CHANGED`) |
+| `RemoveMember` | Remove a member (records `MEMBER_REMOVED`) |
+| `SetAccessMode` | Change `access_mode` and/or `baseline_role` (records `ACCESS_MODE_CHANGED` + optional `BASELINE_ROLE_CHANGED`) |
+| `TransferOwnership` | Move `owner_id` to another user; previous owner becomes `ADMIN` (records `OWNERSHIP_TRANSFERRED`) |
+| `ListMemberEvents` | Read the audit log for a content item |
+
+Each mutating RPC writes a `ContentMemberEvent` row in the same transaction as the mutation. The audit log is append-only.
+
+**Polymorphic content lookup:** `ContentMembersOperations` works on any content type via the `register_content_loader(content_type, loader)` registry. Every domain's `operations.py` must register a loader at module import time, for example:
+
+```python
+async def _load_note(session, organization_id, content_id):
+    return (await session.execute(
+        select(Note).where(Note.id == content_id, Note.organization_id == organization_id)
+    )).scalar_one_or_none()
+
+register_content_loader(ContentType.NOTE, _load_note)
+```
+
+**Child content (tasks, comments, attachments):** These do not have their own `access_mode` / `baseline_role` columns. They override `_resolve_role` on their `Operations` class to load the parent (project, parent content) and resolve against *its* access policy. Tasks, for example:
+
+```python
+async def _resolve_role(self, user_id, organization_id, content):
+    project = await self.session.get(Project, content.project_id)
+    return await self.permission_checker.effective_role(
+        user_id=user_id,
+        organization_id=organization_id,
+        content_type=ContentType.PROJECT,
+        content_id=project.id,
+        owner_id=project.owner_id,
+        access_mode=project.access_mode,
+        baseline_role=project.baseline_role,
+    )
+```
+
+**Domain overrides (e.g., chat channels):** Chat uses channel membership rather than the role model. `ChatChannelOperations` overrides `_require_view`, `_require_edit`, and `_require_delete` to delegate to `ChatAccessChecker`. Org OWNER/ADMIN and chat domain admin still bypass.
+
+**Organization defaults** (`permissions_org_defaults`): per `(organization_id, content_type)` row with `default_access_mode` + `default_baseline_role`. Created on org creation from `domains/organizations/defaults.py::ORG_PERMISSION_DEFAULTS`. Editable via `organizations.v1.OrganizationsService.UpdatePermissionDefaults`.
 
 ## Domain Admin System
 
@@ -427,47 +506,68 @@ http_app.include_router(files_router)       # /api/files/{org}/{file}
 
 ## Permission Checking with PermissionChecker
 
-When checking permissions outside of `BaseContentOperations`, you must fetch the content first to get `owner_id` and `visibility`.
+When checking permissions outside of `BaseContentOperations` (for example, from child content that delegates to a parent), fetch the parent row first to get `owner_id`, `access_mode`, and `baseline_role`, then call `PermissionChecker.effective_role()` and gate on the `role_can_*` helpers.
 
-**CORRECT - Fetch content first, then check with full parameters:**
+The comments and attachments domains are the canonical examples. Both define a `_load_parent_policy` helper plus a thin `_resolve_parent_role` that feeds the columns into the checker. Child content that hangs off a parent (e.g. tasks hanging off a project) should pass the parent's `(content_type, content_id, owner_id, access_mode, baseline_role)` to the checker so that the filter lines up with the parent's row.
+
+**Pattern:**
+
 ```python
-async def _get_content_for_permission_check(
+from uniffy.core.auth.permissions import role_can_edit, role_can_view
+from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.types import AccessMode, ContentRole, ContentType
+
+
+async def _load_parent_policy(
     self,
+    organization_id: UUID,
     content_type: ContentType,
     content_id: UUID,
-) -> tuple[UUID, VisibilityScope]:
-    """Fetch content to get owner_id and visibility for permission check."""
+) -> tuple[UUID, AccessMode, ContentRole | None, ContentType, UUID]:
+    """Load (owner_id, access_mode, baseline_role, type, id) for a parent."""
     if content_type == ContentType.NOTE:
-        result = await self.session.execute(
-            select(Note).where(Note.id == content_id)
+        from uniffy.core.models.notes.note import Note
+
+        result = await self._session.execute(
+            select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
+                Note.id == content_id,
+                Note.organization_id == organization_id,
+            )
         )
-        note = result.scalar_one_or_none()
-        if not note:
-            raise NotFoundError("Note not found")
-        return note.owner_id, note.visibility
-    # ... handle other content types
-    raise ValueError(f"Unsupported content type: {content_type}")
+        row = result.one_or_none()
+        if not row:
+            raise NotFoundError("Note", str(content_id))
+        return row[0], row[1], row[2], content_type, content_id
+    # ... other content types, tasks delegate to their parent project ...
+    raise NotFoundError("Content", str(content_id))
 
-async def verify_access(self, content_type: ContentType, content_id: UUID) -> None:
-    """Verify user can access the content."""
-    owner_id, visibility = await self._get_content_for_permission_check(
-        content_type, content_id
+
+async def verify_edit(
+    self,
+    user_id: UUID,
+    organization_id: UUID,
+    content_type: ContentType,
+    content_id: UUID,
+) -> None:
+    owner_id, access_mode, baseline_role, resolved_type, resolved_id = (
+        await self._load_parent_policy(organization_id, content_type, content_id)
     )
-
-    checker = PermissionChecker(self.session, self.user_id, self.organization_id)
-
-    if not await checker.can_access_content(
-        content_type=content_type,
-        content_id=content_id,
+    checker = PermissionChecker(self._session)
+    role = await checker.effective_role(
+        user_id=user_id,
+        organization_id=organization_id,
+        content_type=resolved_type,
+        content_id=resolved_id,
         owner_id=owner_id,
-        visibility=visibility,
-    ):
-        raise PermissionDeniedError("Access denied")
+        access_mode=access_mode,
+        baseline_role=baseline_role,
+    )
+    if not role_can_edit(role):
+        raise PermissionDeniedError("edit", "content")
 ```
 
-**PermissionChecker methods require these parameters:**
-- `can_access_content(content_type, content_id, owner_id, visibility)` - for VIEW
-- `can_edit_content(content_type, content_id, owner_id, visibility)` - for EDIT
+**`PermissionChecker.effective_role` takes:** `user_id`, `organization_id`, `content_type`, `content_id`, `owner_id`, `access_mode`, `baseline_role`. Returns a `ContentRole | None`. Combine with `role_can_view / role_can_comment / role_can_edit / role_can_delete / role_can_manage / role_can_transfer` to gate the operation.
 
 ## Background Task Worker (ARQ + Valkey)
 
