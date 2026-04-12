@@ -1,16 +1,27 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
+
+
+
+
 
 # Colors
 CYAN='\033[36m'
 NC='\033[0m'
 
 help() {
-  echo "Usage: ./run.sh <command>"
+  echo "
+    ▗▖ ▗▖▗▖  ▗▖▗▄▄▄▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
+    ▐▌ ▐▌▐▛▚▖▐▌  █  ▐▌   ▐▌    ▝▚▞▘
+    ▐▌ ▐▌▐▌ ▝▜▌  █  ▐▛▀▀▘▐▛▀▀▘  ▐▌
+    ▝▚▄▞▘▐▌  ▐▌▗▄█▄▖▐▌   ▐▌     ▐▌      ./run.sh
+  "
   echo ""
   echo "Available commands:"
   echo ""
   echo -e "  ${CYAN}Setup${NC}"
+  echo ""
   echo -e "  ${CYAN}install${NC}         Install all dependencies (uv + pnpm workspace)"
   echo -e "  ${CYAN}proto${NC}           Generate all protobuf code (python, typescript, go)"
   echo -e "  ${CYAN}clean${NC}           Clean generated files and caches"
