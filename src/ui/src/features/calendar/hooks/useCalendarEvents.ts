@@ -237,7 +237,6 @@ export function useCalendarEvents() {
     getPositionedEvents,
     getPositionedEventsWeek,
 
-    // Actions
     selectEvent: handleSelectEvent,
     deselectEvent: handleDeselectEvent,
     addEvent: handleAddEvent,

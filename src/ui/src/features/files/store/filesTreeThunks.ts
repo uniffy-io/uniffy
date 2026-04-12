@@ -8,7 +8,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import type { RootState } from '@/app/store';
 import type { TreeNode, Folder } from '@uniffy/proto/files/v1/files_pb';
-import type { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 // Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {
@@ -25,7 +25,7 @@ const treeNodeToPlain = (node: TreeNode): SerializedTreeNode => ({
     name: node.name,
     isFolder: node.isFolder,
     parentId: node.parentId,
-    visibility: node.visibility,
+    accessMode: node.accessMode,
     childCount: node.childCount,
     sizeBytes: node.sizeBytes ? (typeof node.sizeBytes === 'bigint' ? Number(node.sizeBytes) : node.sizeBytes) : undefined,
     mimeType: node.mimeType,
@@ -37,7 +37,8 @@ const folderToPlain = (folder: Folder): SerializedFolder => ({
     id: folder.id,
     name: folder.name,
     parentId: folder.parentId,
-    visibility: folder.visibility,
+    accessMode: folder.accessMode,
+    ownerId: folder.ownerId,
     isDeleted: folder.isDeleted,
 });
 
@@ -47,7 +48,7 @@ export interface SerializedTreeNode {
     name: string;
     isFolder: boolean;
     parentId?: string;
-    visibility: VisibilityScope;
+    accessMode: AccessMode;
     childCount: number;
     sizeBytes?: number;
     mimeType?: string;
@@ -59,7 +60,8 @@ export interface SerializedFolder {
     id: string;
     name: string;
     parentId?: string;
-    visibility: VisibilityScope;
+    accessMode: AccessMode;
+    ownerId: string;
     isDeleted: boolean;
 }
 
@@ -97,7 +99,6 @@ export const createFolder = createAsyncThunk<
     {
         name: string;
         parentId?: string;
-        visibility: VisibilityScope;
     },
     { state: RootState; rejectValue: string }
 >('filesTree/createFolder', async (params, { getState, rejectWithValue }) => {
@@ -108,7 +109,6 @@ export const createFolder = createAsyncThunk<
             organizationId,
             name: params.name,
             parentId: params.parentId,
-            visibility: params.visibility,
         });
 
         if (!response.folder) {
@@ -130,7 +130,6 @@ export const updateFolder = createAsyncThunk<
         folderId: string;
         name?: string;
         parentId?: string;
-        visibility?: VisibilityScope;
     },
     { state: RootState; rejectValue: string }
 >('filesTree/updateFolder', async (params, { getState, rejectWithValue }) => {
@@ -142,7 +141,6 @@ export const updateFolder = createAsyncThunk<
             organizationId,
             name: params.name,
             parentId: params.parentId,
-            visibility: params.visibility,
         });
 
         if (!response.folder) {

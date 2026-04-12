@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
 
 /**
  * Type of credential stored for a provider
@@ -133,11 +133,18 @@ export class ProviderKeyInfo extends Message<ProviderKeyInfo> {
   createdBy = "";
 
   /**
-   * Visibility scope
+   * Access mode
    *
-   * @generated from field: common.v1.VisibilityScope visibility = 14;
+   * @generated from field: common.v1.AccessMode access_mode = 14;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
+
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 15;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<ProviderKeyInfo>) {
     super();
@@ -160,7 +167,8 @@ export class ProviderKeyInfo extends Message<ProviderKeyInfo> {
     { no: 11, name: "updated_at", kind: "message", T: Timestamp },
     { no: 12, name: "is_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 14, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 14, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 15, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProviderKeyInfo {
@@ -311,11 +319,18 @@ export class AddProviderKeyRequest extends Message<AddProviderKeyRequest> {
   credential = "";
 
   /**
-   * Visibility scope for the key
+   * Access mode for the key
    *
-   * @generated from field: optional common.v1.VisibilityScope visibility = 6;
+   * @generated from field: optional common.v1.AccessMode access_mode = 6;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
+
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 7;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<AddProviderKeyRequest>) {
     super();
@@ -330,7 +345,8 @@ export class AddProviderKeyRequest extends Message<AddProviderKeyRequest> {
     { no: 3, name: "credential_type", kind: "enum", T: proto3.getEnumType(CredentialType) },
     { no: 4, name: "label", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "credential", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 7, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddProviderKeyRequest {

@@ -7,6 +7,7 @@
 package notesv1
 
 import (
+	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -21,126 +22,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-// Visibility scope for content
-type VisibilityScope int32
-
-const (
-	VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED VisibilityScope = 0
-	// Personal space - only owner can access
-	VisibilityScope_VISIBILITY_SCOPE_PRIVATE VisibilityScope = 1
-	// Group space - accessible to group members
-	VisibilityScope_VISIBILITY_SCOPE_GROUP VisibilityScope = 2
-	// Organization space - accessible to all org members
-	VisibilityScope_VISIBILITY_SCOPE_ORGANIZATION VisibilityScope = 3
-	// Public - accessible externally (future)
-	VisibilityScope_VISIBILITY_SCOPE_PUBLIC VisibilityScope = 4
-)
-
-// Enum value maps for VisibilityScope.
-var (
-	VisibilityScope_name = map[int32]string{
-		0: "VISIBILITY_SCOPE_UNSPECIFIED",
-		1: "VISIBILITY_SCOPE_PRIVATE",
-		2: "VISIBILITY_SCOPE_GROUP",
-		3: "VISIBILITY_SCOPE_ORGANIZATION",
-		4: "VISIBILITY_SCOPE_PUBLIC",
-	}
-	VisibilityScope_value = map[string]int32{
-		"VISIBILITY_SCOPE_UNSPECIFIED":  0,
-		"VISIBILITY_SCOPE_PRIVATE":      1,
-		"VISIBILITY_SCOPE_GROUP":        2,
-		"VISIBILITY_SCOPE_ORGANIZATION": 3,
-		"VISIBILITY_SCOPE_PUBLIC":       4,
-	}
-)
-
-func (x VisibilityScope) Enum() *VisibilityScope {
-	p := new(VisibilityScope)
-	*p = x
-	return p
-}
-
-func (x VisibilityScope) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (VisibilityScope) Descriptor() protoreflect.EnumDescriptor {
-	return file_notes_v1_notes_proto_enumTypes[0].Descriptor()
-}
-
-func (VisibilityScope) Type() protoreflect.EnumType {
-	return &file_notes_v1_notes_proto_enumTypes[0]
-}
-
-func (x VisibilityScope) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use VisibilityScope.Descriptor instead.
-func (VisibilityScope) EnumDescriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{0}
-}
-
-// Permission levels for content access
-type PermissionLevel int32
-
-const (
-	PermissionLevel_PERMISSION_LEVEL_UNSPECIFIED PermissionLevel = 0
-	// Can view content
-	PermissionLevel_PERMISSION_LEVEL_VIEW PermissionLevel = 1
-	// Can view and edit content
-	PermissionLevel_PERMISSION_LEVEL_EDIT PermissionLevel = 2
-	// Can view, edit, delete, and share
-	PermissionLevel_PERMISSION_LEVEL_ADMIN PermissionLevel = 3
-	// Full control including ownership transfer
-	PermissionLevel_PERMISSION_LEVEL_OWNER PermissionLevel = 4
-)
-
-// Enum value maps for PermissionLevel.
-var (
-	PermissionLevel_name = map[int32]string{
-		0: "PERMISSION_LEVEL_UNSPECIFIED",
-		1: "PERMISSION_LEVEL_VIEW",
-		2: "PERMISSION_LEVEL_EDIT",
-		3: "PERMISSION_LEVEL_ADMIN",
-		4: "PERMISSION_LEVEL_OWNER",
-	}
-	PermissionLevel_value = map[string]int32{
-		"PERMISSION_LEVEL_UNSPECIFIED": 0,
-		"PERMISSION_LEVEL_VIEW":        1,
-		"PERMISSION_LEVEL_EDIT":        2,
-		"PERMISSION_LEVEL_ADMIN":       3,
-		"PERMISSION_LEVEL_OWNER":       4,
-	}
-)
-
-func (x PermissionLevel) Enum() *PermissionLevel {
-	p := new(PermissionLevel)
-	*p = x
-	return p
-}
-
-func (x PermissionLevel) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (PermissionLevel) Descriptor() protoreflect.EnumDescriptor {
-	return file_notes_v1_notes_proto_enumTypes[1].Descriptor()
-}
-
-func (PermissionLevel) Type() protoreflect.EnumType {
-	return &file_notes_v1_notes_proto_enumTypes[1]
-}
-
-func (x PermissionLevel) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use PermissionLevel.Descriptor instead.
-func (PermissionLevel) EnumDescriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{1}
-}
 
 // Node type for notes hierarchy
 type NodeType int32
@@ -186,11 +67,11 @@ func (x NodeType) String() string {
 }
 
 func (NodeType) Descriptor() protoreflect.EnumDescriptor {
-	return file_notes_v1_notes_proto_enumTypes[2].Descriptor()
+	return file_notes_v1_notes_proto_enumTypes[0].Descriptor()
 }
 
 func (NodeType) Type() protoreflect.EnumType {
-	return &file_notes_v1_notes_proto_enumTypes[2]
+	return &file_notes_v1_notes_proto_enumTypes[0]
 }
 
 func (x NodeType) Number() protoreflect.EnumNumber {
@@ -199,7 +80,7 @@ func (x NodeType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use NodeType.Descriptor instead.
 func (NodeType) EnumDescriptor() ([]byte, []int) {
-	return file_notes_v1_notes_proto_rawDescGZIP(), []int{2}
+	return file_notes_v1_notes_proto_rawDescGZIP(), []int{0}
 }
 
 // Request to create a new note
@@ -219,14 +100,16 @@ type CreateNoteRequest struct {
 	Tags []string `protobuf:"bytes,6,rep,name=tags,proto3" json:"tags,omitempty"`
 	// Optional metadata
 	Metadata map[string]string `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Visibility scope (defaults to PRIVATE)
-	Visibility *VisibilityScope `protobuf:"varint,8,opt,name=visibility,proto3,enum=notes.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
-	// Optional group ID(s) if visibility is GROUP
+	// Access mode (defaults to OWNER_ONLY)
+	AccessMode *v1.AccessMode `protobuf:"varint,8,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	// Optional group ID(s) if using group-based membership
 	GroupIds []string `protobuf:"bytes,9,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
 	// Node type (defaults to NOTE)
 	NodeType *NodeType `protobuf:"varint,10,opt,name=node_type,json=nodeType,proto3,enum=notes.v1.NodeType,oneof" json:"node_type,omitempty"`
 	// Optional custom icon
-	Icon          *NoteIcon `protobuf:"bytes,11,opt,name=icon,proto3,oneof" json:"icon,omitempty"`
+	Icon *NoteIcon `protobuf:"bytes,11,opt,name=icon,proto3,oneof" json:"icon,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,12,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -310,11 +193,11 @@ func (x *CreateNoteRequest) GetMetadata() map[string]string {
 	return nil
 }
 
-func (x *CreateNoteRequest) GetVisibility() VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *CreateNoteRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED
+	return v1.AccessMode(0)
 }
 
 func (x *CreateNoteRequest) GetGroupIds() []string {
@@ -336,6 +219,13 @@ func (x *CreateNoteRequest) GetIcon() *NoteIcon {
 		return x.Icon
 	}
 	return nil
+}
+
+func (x *CreateNoteRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 // Request to get a note
@@ -695,8 +585,8 @@ type ListNotesRequest struct {
 	SortBy string `protobuf:"bytes,8,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
 	// Sort order (asc, desc)
 	SortOrder string `protobuf:"bytes,9,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	// Optional visibility filter
-	Visibility *VisibilityScope `protobuf:"varint,10,opt,name=visibility,proto3,enum=notes.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	// Optional access mode filter
+	AccessMode *v1.AccessMode `protobuf:"varint,10,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	// Optional group ID filter (for group-scoped notes)
 	GroupId *string `protobuf:"bytes,11,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
 	// Show only my personal notes
@@ -793,11 +683,11 @@ func (x *ListNotesRequest) GetSortOrder() string {
 	return ""
 }
 
-func (x *ListNotesRequest) GetVisibility() VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *ListNotesRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED
+	return v1.AccessMode(0)
 }
 
 func (x *ListNotesRequest) GetGroupId() string {
@@ -1552,8 +1442,8 @@ type Note struct {
 	OrganizationId string `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// Owner user ID (who owns the note)
 	OwnerId string `protobuf:"bytes,3,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	// Visibility scope
-	Visibility VisibilityScope `protobuf:"varint,4,opt,name=visibility,proto3,enum=notes.v1.VisibilityScope" json:"visibility,omitempty"`
+	// Access mode
+	AccessMode v1.AccessMode `protobuf:"varint,4,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	// Node type (note, folder, template)
 	NodeType NodeType `protobuf:"varint,5,opt,name=node_type,json=nodeType,proto3,enum=notes.v1.NodeType" json:"node_type,omitempty"`
 	// Note title
@@ -1582,8 +1472,8 @@ type Note struct {
 	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
 	// Group IDs if shared with groups
 	GroupIds []string `protobuf:"bytes,18,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
-	// User's permission level on this note
-	UserPermission PermissionLevel `protobuf:"varint,19,opt,name=user_permission,json=userPermission,proto3,enum=notes.v1.PermissionLevel" json:"user_permission,omitempty"`
+	// User's role on this note
+	UserRole v1.ContentRole `protobuf:"varint,19,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
 	// URNs referenced in this note's content (outgoing links)
 	OutgoingReferences []string `protobuf:"bytes,20,rep,name=outgoing_references,json=outgoingReferences,proto3" json:"outgoing_references,omitempty"`
 	// Custom icon for the note (optional)
@@ -1591,7 +1481,9 @@ type Note struct {
 	// Owner information (populated for notes shared with current user)
 	OwnerInfo *NoteOwner `protobuf:"bytes,22,opt,name=owner_info,json=ownerInfo,proto3,oneof" json:"owner_info,omitempty"`
 	// Users/groups this note is shared with (only populated for owner)
-	SharedWith    []*NoteShareTarget `protobuf:"bytes,23,rep,name=shared_with,json=sharedWith,proto3" json:"shared_with,omitempty"`
+	SharedWith []*NoteShareTarget `protobuf:"bytes,23,rep,name=shared_with,json=sharedWith,proto3" json:"shared_with,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,25,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1647,11 +1539,11 @@ func (x *Note) GetOwnerId() string {
 	return ""
 }
 
-func (x *Note) GetVisibility() VisibilityScope {
+func (x *Note) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED
+	return v1.AccessMode(0)
 }
 
 func (x *Note) GetNodeType() NodeType {
@@ -1752,11 +1644,11 @@ func (x *Note) GetGroupIds() []string {
 	return nil
 }
 
-func (x *Note) GetUserPermission() PermissionLevel {
+func (x *Note) GetUserRole() v1.ContentRole {
 	if x != nil {
-		return x.UserPermission
+		return x.UserRole
 	}
-	return PermissionLevel_PERMISSION_LEVEL_UNSPECIFIED
+	return v1.ContentRole(0)
 }
 
 func (x *Note) GetOutgoingReferences() []string {
@@ -1787,6 +1679,13 @@ func (x *Note) GetSharedWith() []*NoteShareTarget {
 	return nil
 }
 
+func (x *Note) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 // Note reference (lightweight representation for backlinks)
 type NoteReference struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1800,10 +1699,12 @@ type NoteReference struct {
 	OwnerId string `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	// Updated timestamp
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// Visibility scope
-	Visibility VisibilityScope `protobuf:"varint,6,opt,name=visibility,proto3,enum=notes.v1.VisibilityScope" json:"visibility,omitempty"`
+	// Access mode
+	AccessMode v1.AccessMode `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	// Node type
-	NodeType      NodeType `protobuf:"varint,7,opt,name=node_type,json=nodeType,proto3,enum=notes.v1.NodeType" json:"node_type,omitempty"`
+	NodeType NodeType `protobuf:"varint,7,opt,name=node_type,json=nodeType,proto3,enum=notes.v1.NodeType" json:"node_type,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,8,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1873,11 +1774,11 @@ func (x *NoteReference) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *NoteReference) GetVisibility() VisibilityScope {
+func (x *NoteReference) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED
+	return v1.AccessMode(0)
 }
 
 func (x *NoteReference) GetNodeType() NodeType {
@@ -1887,6 +1788,13 @@ func (x *NoteReference) GetNodeType() NodeType {
 	return NodeType_NODE_TYPE_UNSPECIFIED
 }
 
+func (x *NoteReference) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 // Request to move note between spaces
 type MoveNoteRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1894,12 +1802,14 @@ type MoveNoteRequest struct {
 	NoteId string `protobuf:"bytes,1,opt,name=note_id,json=noteId,proto3" json:"note_id,omitempty"`
 	// Organization ID for access control
 	OrganizationId string `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	// Target visibility scope
-	TargetVisibility VisibilityScope `protobuf:"varint,3,opt,name=target_visibility,json=targetVisibility,proto3,enum=notes.v1.VisibilityScope" json:"target_visibility,omitempty"`
-	// Target group ID(s) if moving to GROUP visibility
+	// Target access mode
+	TargetAccessMode v1.AccessMode `protobuf:"varint,3,opt,name=target_access_mode,json=targetAccessMode,proto3,enum=common.v1.AccessMode" json:"target_access_mode,omitempty"`
+	// Target group ID(s) if using group-based membership
 	TargetGroupIds []string `protobuf:"bytes,4,rep,name=target_group_ids,json=targetGroupIds,proto3" json:"target_group_ids,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Target baseline role granted by access mode
+	TargetBaselineRole *v1.ContentRole `protobuf:"varint,5,opt,name=target_baseline_role,json=targetBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"target_baseline_role,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *MoveNoteRequest) Reset() {
@@ -1946,11 +1856,11 @@ func (x *MoveNoteRequest) GetOrganizationId() string {
 	return ""
 }
 
-func (x *MoveNoteRequest) GetTargetVisibility() VisibilityScope {
+func (x *MoveNoteRequest) GetTargetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.TargetVisibility
+		return x.TargetAccessMode
 	}
-	return VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED
+	return v1.AccessMode(0)
 }
 
 func (x *MoveNoteRequest) GetTargetGroupIds() []string {
@@ -1960,6 +1870,13 @@ func (x *MoveNoteRequest) GetTargetGroupIds() []string {
 	return nil
 }
 
+func (x *MoveNoteRequest) GetTargetBaselineRole() v1.ContentRole {
+	if x != nil && x.TargetBaselineRole != nil {
+		return *x.TargetBaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 // Request to copy note to another space
 type CopyNoteRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1967,14 +1884,16 @@ type CopyNoteRequest struct {
 	NoteId string `protobuf:"bytes,1,opt,name=note_id,json=noteId,proto3" json:"note_id,omitempty"`
 	// Organization ID for access control
 	OrganizationId string `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	// Target visibility scope
-	TargetVisibility VisibilityScope `protobuf:"varint,3,opt,name=target_visibility,json=targetVisibility,proto3,enum=notes.v1.VisibilityScope" json:"target_visibility,omitempty"`
-	// Target group ID(s) if copying to GROUP visibility
+	// Target access mode
+	TargetAccessMode v1.AccessMode `protobuf:"varint,3,opt,name=target_access_mode,json=targetAccessMode,proto3,enum=common.v1.AccessMode" json:"target_access_mode,omitempty"`
+	// Target group ID(s) if using group-based membership
 	TargetGroupIds []string `protobuf:"bytes,4,rep,name=target_group_ids,json=targetGroupIds,proto3" json:"target_group_ids,omitempty"`
 	// Optional: new title for the copy
-	Title         *string `protobuf:"bytes,5,opt,name=title,proto3,oneof" json:"title,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Title *string `protobuf:"bytes,5,opt,name=title,proto3,oneof" json:"title,omitempty"`
+	// Target baseline role granted by access mode
+	TargetBaselineRole *v1.ContentRole `protobuf:"varint,6,opt,name=target_baseline_role,json=targetBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"target_baseline_role,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CopyNoteRequest) Reset() {
@@ -2021,11 +1940,11 @@ func (x *CopyNoteRequest) GetOrganizationId() string {
 	return ""
 }
 
-func (x *CopyNoteRequest) GetTargetVisibility() VisibilityScope {
+func (x *CopyNoteRequest) GetTargetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.TargetVisibility
+		return x.TargetAccessMode
 	}
-	return VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED
+	return v1.AccessMode(0)
 }
 
 func (x *CopyNoteRequest) GetTargetGroupIds() []string {
@@ -2040,6 +1959,13 @@ func (x *CopyNoteRequest) GetTitle() string {
 		return *x.Title
 	}
 	return ""
+}
+
+func (x *CopyNoteRequest) GetTargetBaselineRole() v1.ContentRole {
+	if x != nil && x.TargetBaselineRole != nil {
+		return *x.TargetBaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 // Request to share note with group
@@ -2292,14 +2218,16 @@ func (x *GetNoteSharingRequest) GetOrganizationId() string {
 // Response with note sharing information
 type NoteSharingResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Note visibility
-	Visibility VisibilityScope `protobuf:"varint,1,opt,name=visibility,proto3,enum=notes.v1.VisibilityScope" json:"visibility,omitempty"`
+	// Note access mode
+	AccessMode v1.AccessMode `protobuf:"varint,1,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	// Owner user ID
 	OwnerId string `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	// Group IDs if shared with groups
 	GroupIds []string `protobuf:"bytes,3,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
 	// Explicit permissions granted
-	Permissions   []*ContentPermission `protobuf:"bytes,4,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	Permissions []*ContentPermission `protobuf:"bytes,4,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,5,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2334,11 +2262,11 @@ func (*NoteSharingResponse) Descriptor() ([]byte, []int) {
 	return file_notes_v1_notes_proto_rawDescGZIP(), []int{26}
 }
 
-func (x *NoteSharingResponse) GetVisibility() VisibilityScope {
+func (x *NoteSharingResponse) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED
+	return v1.AccessMode(0)
 }
 
 func (x *NoteSharingResponse) GetOwnerId() string {
@@ -2362,6 +2290,13 @@ func (x *NoteSharingResponse) GetPermissions() []*ContentPermission {
 	return nil
 }
 
+func (x *NoteSharingResponse) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 // Request to grant permission
 type GrantPermissionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2373,8 +2308,8 @@ type GrantPermissionRequest struct {
 	SubjectType string `protobuf:"bytes,3,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
 	// Subject ID (user or group ID)
 	SubjectId string `protobuf:"bytes,4,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	// Permission level
-	PermissionLevel PermissionLevel `protobuf:"varint,5,opt,name=permission_level,json=permissionLevel,proto3,enum=notes.v1.PermissionLevel" json:"permission_level,omitempty"`
+	// Role to grant
+	Role v1.ContentRole `protobuf:"varint,5,opt,name=role,proto3,enum=common.v1.ContentRole" json:"role,omitempty"`
 	// Optional: fine-grained permissions
 	CanView       *bool `protobuf:"varint,6,opt,name=can_view,json=canView,proto3,oneof" json:"can_view,omitempty"`
 	CanEdit       *bool `protobuf:"varint,7,opt,name=can_edit,json=canEdit,proto3,oneof" json:"can_edit,omitempty"`
@@ -2443,11 +2378,11 @@ func (x *GrantPermissionRequest) GetSubjectId() string {
 	return ""
 }
 
-func (x *GrantPermissionRequest) GetPermissionLevel() PermissionLevel {
+func (x *GrantPermissionRequest) GetRole() v1.ContentRole {
 	if x != nil {
-		return x.PermissionLevel
+		return x.Role
 	}
-	return PermissionLevel_PERMISSION_LEVEL_UNSPECIFIED
+	return v1.ContentRole(0)
 }
 
 func (x *GrantPermissionRequest) GetCanView() bool {
@@ -2622,8 +2557,8 @@ type ContentPermission struct {
 	SubjectType string `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
 	// Subject ID
 	SubjectId string `protobuf:"bytes,3,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	// Permission level
-	PermissionLevel PermissionLevel `protobuf:"varint,4,opt,name=permission_level,json=permissionLevel,proto3,enum=notes.v1.PermissionLevel" json:"permission_level,omitempty"`
+	// Role granted
+	Role v1.ContentRole `protobuf:"varint,4,opt,name=role,proto3,enum=common.v1.ContentRole" json:"role,omitempty"`
 	// Fine-grained permissions
 	CanView   bool `protobuf:"varint,5,opt,name=can_view,json=canView,proto3" json:"can_view,omitempty"`
 	CanEdit   bool `protobuf:"varint,6,opt,name=can_edit,json=canEdit,proto3" json:"can_edit,omitempty"`
@@ -2691,11 +2626,11 @@ func (x *ContentPermission) GetSubjectId() string {
 	return ""
 }
 
-func (x *ContentPermission) GetPermissionLevel() PermissionLevel {
+func (x *ContentPermission) GetRole() v1.ContentRole {
 	if x != nil {
-		return x.PermissionLevel
+		return x.Role
 	}
-	return PermissionLevel_PERMISSION_LEVEL_UNSPECIFIED
+	return v1.ContentRole(0)
 }
 
 func (x *ContentPermission) GetCanView() bool {
@@ -2831,10 +2766,10 @@ type NoteShareTarget struct {
 	Email string `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
 	// Member count (only for groups)
 	MemberCount int32 `protobuf:"varint,5,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
-	// Permission level: "view", "edit", "admin"
-	PermissionLevel string `protobuf:"bytes,6,opt,name=permission_level,json=permissionLevel,proto3" json:"permission_level,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Role granted
+	Role          v1.ContentRole `protobuf:"varint,6,opt,name=role,proto3,enum=common.v1.ContentRole" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *NoteShareTarget) Reset() {
@@ -2902,18 +2837,18 @@ func (x *NoteShareTarget) GetMemberCount() int32 {
 	return 0
 }
 
-func (x *NoteShareTarget) GetPermissionLevel() string {
+func (x *NoteShareTarget) GetRole() v1.ContentRole {
 	if x != nil {
-		return x.PermissionLevel
+		return x.Role
 	}
-	return ""
+	return v1.ContentRole(0)
 }
 
 var File_notes_v1_notes_proto protoreflect.FileDescriptor
 
 const file_notes_v1_notes_proto_rawDesc = "" +
 	"\n" +
-	"\x14notes/v1/notes.proto\x12\bnotes.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x04\n" +
+	"\x14notes/v1/notes.proto\x12\bnotes.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\x8e\x05\n" +
 	"\x11CreateNoteRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
@@ -2921,24 +2856,25 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\x04slug\x18\x04 \x01(\tH\x00R\x04slug\x88\x01\x01\x12 \n" +
 	"\tparent_id\x18\x05 \x01(\tH\x01R\bparentId\x88\x01\x01\x12\x12\n" +
 	"\x04tags\x18\x06 \x03(\tR\x04tags\x12E\n" +
-	"\bmetadata\x18\a \x03(\v2).notes.v1.CreateNoteRequest.MetadataEntryR\bmetadata\x12>\n" +
-	"\n" +
-	"visibility\x18\b \x01(\x0e2\x19.notes.v1.VisibilityScopeH\x02R\n" +
-	"visibility\x88\x01\x01\x12\x1b\n" +
+	"\bmetadata\x18\a \x03(\v2).notes.v1.CreateNoteRequest.MetadataEntryR\bmetadata\x12;\n" +
+	"\vaccess_mode\x18\b \x01(\x0e2\x15.common.v1.AccessModeH\x02R\n" +
+	"accessMode\x88\x01\x01\x12\x1b\n" +
 	"\tgroup_ids\x18\t \x03(\tR\bgroupIds\x124\n" +
 	"\tnode_type\x18\n" +
 	" \x01(\x0e2\x12.notes.v1.NodeTypeH\x03R\bnodeType\x88\x01\x01\x12+\n" +
-	"\x04icon\x18\v \x01(\v2\x12.notes.v1.NoteIconH\x04R\x04icon\x88\x01\x01\x1a;\n" +
+	"\x04icon\x18\v \x01(\v2\x12.notes.v1.NoteIconH\x04R\x04icon\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\f \x01(\x0e2\x16.common.v1.ContentRoleH\x05R\fbaselineRole\x88\x01\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\a\n" +
 	"\x05_slugB\f\n" +
 	"\n" +
-	"_parent_idB\r\n" +
-	"\v_visibilityB\f\n" +
+	"_parent_idB\x0e\n" +
+	"\f_access_modeB\f\n" +
 	"\n" +
 	"_node_typeB\a\n" +
-	"\x05_icon\"R\n" +
+	"\x05_iconB\x10\n" +
+	"\x0e_baseline_role\"R\n" +
 	"\x0eGetNoteRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xc5\x03\n" +
@@ -2970,7 +2906,7 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"2\n" +
 	"\fNoteResponse\x12\"\n" +
-	"\x04note\x18\x01 \x01(\v2\x0e.notes.v1.NoteR\x04note\"\xee\x03\n" +
+	"\x04note\x18\x01 \x01(\v2\x0e.notes.v1.NoteR\x04note\"\xec\x03\n" +
 	"\x10ListNotesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12 \n" +
 	"\tparent_id\x18\x02 \x01(\tH\x00R\bparentId\x88\x01\x01\x12\x12\n" +
@@ -2980,17 +2916,16 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\tpage_size\x18\a \x01(\x05R\bpageSize\x12\x17\n" +
 	"\asort_by\x18\b \x01(\tR\x06sortBy\x12\x1d\n" +
 	"\n" +
-	"sort_order\x18\t \x01(\tR\tsortOrder\x12>\n" +
-	"\n" +
-	"visibility\x18\n" +
-	" \x01(\x0e2\x19.notes.v1.VisibilityScopeH\x01R\n" +
-	"visibility\x88\x01\x01\x12\x1e\n" +
+	"sort_order\x18\t \x01(\tR\tsortOrder\x12;\n" +
+	"\vaccess_mode\x18\n" +
+	" \x01(\x0e2\x15.common.v1.AccessModeH\x01R\n" +
+	"accessMode\x88\x01\x01\x12\x1e\n" +
 	"\bgroup_id\x18\v \x01(\tH\x02R\agroupId\x88\x01\x01\x12#\n" +
 	"\rpersonal_only\x18\f \x01(\bR\fpersonalOnly\x12'\n" +
 	"\x0fexclude_content\x18\r \x01(\bR\x0eexcludeContentB\f\n" +
 	"\n" +
-	"_parent_idB\r\n" +
-	"\v_visibilityB\v\n" +
+	"_parent_idB\x0e\n" +
+	"\f_access_modeB\v\n" +
 	"\t_group_idJ\x04\b\x05\x10\x06R\vpinned_only\"\xac\x01\n" +
 	"\x11ListNotesResponse\x12$\n" +
 	"\x05notes\x18\x01 \x03(\v2\x0e.notes.v1.NoteR\x05notes\x12\x1f\n" +
@@ -3042,14 +2977,13 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\aversion\x18\x03 \x01(\x03R\aversion\"=\n" +
 	"\bNoteIcon\x12\x1b\n" +
 	"\ticon_type\x18\x01 \x01(\tR\biconType\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\xc1\b\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\x83\t\n" +
 	"\x04Note\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bowner_id\x18\x03 \x01(\tR\aownerId\x129\n" +
-	"\n" +
-	"visibility\x18\x04 \x01(\x0e2\x19.notes.v1.VisibilityScopeR\n" +
-	"visibility\x12/\n" +
+	"\bowner_id\x18\x03 \x01(\tR\aownerId\x126\n" +
+	"\vaccess_mode\x18\x04 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12/\n" +
 	"\tnode_type\x18\x05 \x01(\x0e2\x12.notes.v1.NodeTypeR\bnodeType\x12\x14\n" +
 	"\x05title\x18\x06 \x01(\tR\x05title\x12\x18\n" +
 	"\acontent\x18\a \x01(\tR\acontent\x12\x12\n" +
@@ -3068,14 +3002,15 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
 	"\n" +
 	"deleted_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tdeletedAt\x88\x01\x01\x12\x1b\n" +
-	"\tgroup_ids\x18\x12 \x03(\tR\bgroupIds\x12B\n" +
-	"\x0fuser_permission\x18\x13 \x01(\x0e2\x19.notes.v1.PermissionLevelR\x0euserPermission\x12/\n" +
+	"\tgroup_ids\x18\x12 \x03(\tR\bgroupIds\x123\n" +
+	"\tuser_role\x18\x13 \x01(\x0e2\x16.common.v1.ContentRoleR\buserRole\x12/\n" +
 	"\x13outgoing_references\x18\x14 \x03(\tR\x12outgoingReferences\x12+\n" +
 	"\x04icon\x18\x15 \x01(\v2\x12.notes.v1.NoteIconH\x02R\x04icon\x88\x01\x01\x127\n" +
 	"\n" +
 	"owner_info\x18\x16 \x01(\v2\x13.notes.v1.NoteOwnerH\x03R\townerInfo\x88\x01\x01\x12:\n" +
 	"\vshared_with\x18\x17 \x03(\v2\x19.notes.v1.NoteShareTargetR\n" +
-	"sharedWith\x1a;\n" +
+	"sharedWith\x12@\n" +
+	"\rbaseline_role\x18\x19 \x01(\x0e2\x16.common.v1.ContentRoleH\x04R\fbaselineRole\x88\x01\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\f\n" +
@@ -3083,31 +3018,37 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"_parent_idB\r\n" +
 	"\v_deleted_atB\a\n" +
 	"\x05_iconB\r\n" +
-	"\v_owner_infoJ\x04\b\n" +
-	"\x10\vR\tis_pinned\"\x8b\x02\n" +
+	"\v_owner_infoB\x10\n" +
+	"\x0e_baseline_roleJ\x04\b\n" +
+	"\x10\vR\tis_pinned\"\xdc\x02\n" +
 	"\rNoteReference\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
 	"\x04slug\x18\x03 \x01(\tR\x04slug\x12\x19\n" +
 	"\bowner_id\x18\x04 \x01(\tR\aownerId\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x129\n" +
-	"\n" +
-	"visibility\x18\x06 \x01(\x0e2\x19.notes.v1.VisibilityScopeR\n" +
-	"visibility\x12/\n" +
-	"\tnode_type\x18\a \x01(\x0e2\x12.notes.v1.NodeTypeR\bnodeType\"\xc5\x01\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
+	"\vaccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12/\n" +
+	"\tnode_type\x18\a \x01(\x0e2\x12.notes.v1.NodeTypeR\bnodeType\x12@\n" +
+	"\rbaseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01B\x10\n" +
+	"\x0e_baseline_role\"\xaa\x02\n" +
 	"\x0fMoveNoteRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12F\n" +
-	"\x11target_visibility\x18\x03 \x01(\x0e2\x19.notes.v1.VisibilityScopeR\x10targetVisibility\x12(\n" +
-	"\x10target_group_ids\x18\x04 \x03(\tR\x0etargetGroupIds\"\xea\x01\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12C\n" +
+	"\x12target_access_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeR\x10targetAccessMode\x12(\n" +
+	"\x10target_group_ids\x18\x04 \x03(\tR\x0etargetGroupIds\x12M\n" +
+	"\x14target_baseline_role\x18\x05 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x12targetBaselineRole\x88\x01\x01B\x17\n" +
+	"\x15_target_baseline_role\"\xcf\x02\n" +
 	"\x0fCopyNoteRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12F\n" +
-	"\x11target_visibility\x18\x03 \x01(\x0e2\x19.notes.v1.VisibilityScopeR\x10targetVisibility\x12(\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12C\n" +
+	"\x12target_access_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeR\x10targetAccessMode\x12(\n" +
 	"\x10target_group_ids\x18\x04 \x03(\tR\x0etargetGroupIds\x12\x19\n" +
-	"\x05title\x18\x05 \x01(\tH\x00R\x05title\x88\x01\x01B\b\n" +
-	"\x06_title\"x\n" +
+	"\x05title\x18\x05 \x01(\tH\x00R\x05title\x88\x01\x01\x12M\n" +
+	"\x14target_baseline_role\x18\x06 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\x12targetBaselineRole\x88\x01\x01B\b\n" +
+	"\x06_titleB\x17\n" +
+	"\x15_target_baseline_role\"x\n" +
 	"\x19ShareNoteWithGroupRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -3122,21 +3063,22 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\tgroup_ids\x18\x03 \x03(\tR\bgroupIds\"Y\n" +
 	"\x15GetNoteSharingRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xc7\x01\n" +
-	"\x13NoteSharingResponse\x129\n" +
-	"\n" +
-	"visibility\x18\x01 \x01(\x0e2\x19.notes.v1.VisibilityScopeR\n" +
-	"visibility\x12\x19\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x98\x02\n" +
+	"\x13NoteSharingResponse\x126\n" +
+	"\vaccess_mode\x18\x01 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x1b\n" +
 	"\tgroup_ids\x18\x03 \x03(\tR\bgroupIds\x12=\n" +
-	"\vpermissions\x18\x04 \x03(\v2\x1b.notes.v1.ContentPermissionR\vpermissions\"\xcc\x03\n" +
+	"\vpermissions\x18\x04 \x03(\v2\x1b.notes.v1.ContentPermissionR\vpermissions\x12@\n" +
+	"\rbaseline_role\x18\x05 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01B\x10\n" +
+	"\x0e_baseline_role\"\xb2\x03\n" +
 	"\x16GrantPermissionRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12!\n" +
 	"\fsubject_type\x18\x03 \x01(\tR\vsubjectType\x12\x1d\n" +
 	"\n" +
-	"subject_id\x18\x04 \x01(\tR\tsubjectId\x12D\n" +
-	"\x10permission_level\x18\x05 \x01(\x0e2\x19.notes.v1.PermissionLevelR\x0fpermissionLevel\x12\x1e\n" +
+	"subject_id\x18\x04 \x01(\tR\tsubjectId\x12*\n" +
+	"\x04role\x18\x05 \x01(\x0e2\x16.common.v1.ContentRoleR\x04role\x12\x1e\n" +
 	"\bcan_view\x18\x06 \x01(\bH\x00R\acanView\x88\x01\x01\x12\x1e\n" +
 	"\bcan_edit\x18\a \x01(\bH\x01R\acanEdit\x88\x01\x01\x12\"\n" +
 	"\n" +
@@ -3158,13 +3100,13 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"subject_id\x18\x04 \x01(\tR\tsubjectId\"H\n" +
 	"\x12PermissionResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xef\x03\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xd5\x03\n" +
 	"\x11ContentPermission\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fsubject_type\x18\x02 \x01(\tR\vsubjectType\x12\x1d\n" +
 	"\n" +
-	"subject_id\x18\x03 \x01(\tR\tsubjectId\x12D\n" +
-	"\x10permission_level\x18\x04 \x01(\x0e2\x19.notes.v1.PermissionLevelR\x0fpermissionLevel\x12\x19\n" +
+	"subject_id\x18\x03 \x01(\tR\tsubjectId\x12*\n" +
+	"\x04role\x18\x04 \x01(\x0e2\x16.common.v1.ContentRoleR\x04role\x12\x19\n" +
 	"\bcan_view\x18\x05 \x01(\bR\acanView\x12\x19\n" +
 	"\bcan_edit\x18\x06 \x01(\bR\acanEdit\x12\x1d\n" +
 	"\n" +
@@ -3181,26 +3123,14 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\tNoteOwner\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
-	"\x05email\x18\x03 \x01(\tR\x05email\"\xad\x01\n" +
+	"\x05email\x18\x03 \x01(\tR\x05email\"\xae\x01\n" +
 	"\x0fNoteShareTarget\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
 	"\x05email\x18\x04 \x01(\tR\x05email\x12!\n" +
-	"\fmember_count\x18\x05 \x01(\x05R\vmemberCount\x12)\n" +
-	"\x10permission_level\x18\x06 \x01(\tR\x0fpermissionLevel*\xad\x01\n" +
-	"\x0fVisibilityScope\x12 \n" +
-	"\x1cVISIBILITY_SCOPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
-	"\x18VISIBILITY_SCOPE_PRIVATE\x10\x01\x12\x1a\n" +
-	"\x16VISIBILITY_SCOPE_GROUP\x10\x02\x12!\n" +
-	"\x1dVISIBILITY_SCOPE_ORGANIZATION\x10\x03\x12\x1b\n" +
-	"\x17VISIBILITY_SCOPE_PUBLIC\x10\x04*\xa1\x01\n" +
-	"\x0fPermissionLevel\x12 \n" +
-	"\x1cPERMISSION_LEVEL_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15PERMISSION_LEVEL_VIEW\x10\x01\x12\x19\n" +
-	"\x15PERMISSION_LEVEL_EDIT\x10\x02\x12\x1a\n" +
-	"\x16PERMISSION_LEVEL_ADMIN\x10\x03\x12\x1a\n" +
-	"\x16PERMISSION_LEVEL_OWNER\x10\x04*}\n" +
+	"\fmember_count\x18\x05 \x01(\x05R\vmemberCount\x12*\n" +
+	"\x04role\x18\x06 \x01(\x0e2\x16.common.v1.ContentRoleR\x04role*}\n" +
 	"\bNodeType\x12\x19\n" +
 	"\x15NODE_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eNODE_TYPE_NOTE\x10\x01\x12\x14\n" +
@@ -3243,123 +3173,130 @@ func file_notes_v1_notes_proto_rawDescGZIP() []byte {
 	return file_notes_v1_notes_proto_rawDescData
 }
 
-var file_notes_v1_notes_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_notes_v1_notes_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_notes_v1_notes_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_notes_v1_notes_proto_goTypes = []any{
-	(VisibilityScope)(0),                // 0: notes.v1.VisibilityScope
-	(PermissionLevel)(0),                // 1: notes.v1.PermissionLevel
-	(NodeType)(0),                       // 2: notes.v1.NodeType
-	(*CreateNoteRequest)(nil),           // 3: notes.v1.CreateNoteRequest
-	(*GetNoteRequest)(nil),              // 4: notes.v1.GetNoteRequest
-	(*UpdateNoteRequest)(nil),           // 5: notes.v1.UpdateNoteRequest
-	(*DeleteNoteRequest)(nil),           // 6: notes.v1.DeleteNoteRequest
-	(*DeleteNoteResponse)(nil),          // 7: notes.v1.DeleteNoteResponse
-	(*NoteResponse)(nil),                // 8: notes.v1.NoteResponse
-	(*ListNotesRequest)(nil),            // 9: notes.v1.ListNotesRequest
-	(*ListNotesResponse)(nil),           // 10: notes.v1.ListNotesResponse
-	(*SearchNotesRequest)(nil),          // 11: notes.v1.SearchNotesRequest
-	(*SearchNotesResponse)(nil),         // 12: notes.v1.SearchNotesResponse
-	(*GetBacklinksRequest)(nil),         // 13: notes.v1.GetBacklinksRequest
-	(*BacklinksResponse)(nil),           // 14: notes.v1.BacklinksResponse
-	(*RestoreNoteRequest)(nil),          // 15: notes.v1.RestoreNoteRequest
-	(*EmptyTrashRequest)(nil),           // 16: notes.v1.EmptyTrashRequest
-	(*EmptyTrashResponse)(nil),          // 17: notes.v1.EmptyTrashResponse
-	(*AutosaveNoteRequest)(nil),         // 18: notes.v1.AutosaveNoteRequest
-	(*AutosaveNoteResponse)(nil),        // 19: notes.v1.AutosaveNoteResponse
-	(*NoteIcon)(nil),                    // 20: notes.v1.NoteIcon
-	(*Note)(nil),                        // 21: notes.v1.Note
-	(*NoteReference)(nil),               // 22: notes.v1.NoteReference
-	(*MoveNoteRequest)(nil),             // 23: notes.v1.MoveNoteRequest
-	(*CopyNoteRequest)(nil),             // 24: notes.v1.CopyNoteRequest
-	(*ShareNoteWithGroupRequest)(nil),   // 25: notes.v1.ShareNoteWithGroupRequest
-	(*UnshareNoteFromGroupRequest)(nil), // 26: notes.v1.UnshareNoteFromGroupRequest
-	(*ShareNoteResponse)(nil),           // 27: notes.v1.ShareNoteResponse
-	(*GetNoteSharingRequest)(nil),       // 28: notes.v1.GetNoteSharingRequest
-	(*NoteSharingResponse)(nil),         // 29: notes.v1.NoteSharingResponse
-	(*GrantPermissionRequest)(nil),      // 30: notes.v1.GrantPermissionRequest
-	(*RevokePermissionRequest)(nil),     // 31: notes.v1.RevokePermissionRequest
-	(*PermissionResponse)(nil),          // 32: notes.v1.PermissionResponse
-	(*ContentPermission)(nil),           // 33: notes.v1.ContentPermission
-	(*NoteOwner)(nil),                   // 34: notes.v1.NoteOwner
-	(*NoteShareTarget)(nil),             // 35: notes.v1.NoteShareTarget
-	nil,                                 // 36: notes.v1.CreateNoteRequest.MetadataEntry
-	nil,                                 // 37: notes.v1.UpdateNoteRequest.MetadataEntry
-	nil,                                 // 38: notes.v1.Note.MetadataEntry
+	(NodeType)(0),                       // 0: notes.v1.NodeType
+	(*CreateNoteRequest)(nil),           // 1: notes.v1.CreateNoteRequest
+	(*GetNoteRequest)(nil),              // 2: notes.v1.GetNoteRequest
+	(*UpdateNoteRequest)(nil),           // 3: notes.v1.UpdateNoteRequest
+	(*DeleteNoteRequest)(nil),           // 4: notes.v1.DeleteNoteRequest
+	(*DeleteNoteResponse)(nil),          // 5: notes.v1.DeleteNoteResponse
+	(*NoteResponse)(nil),                // 6: notes.v1.NoteResponse
+	(*ListNotesRequest)(nil),            // 7: notes.v1.ListNotesRequest
+	(*ListNotesResponse)(nil),           // 8: notes.v1.ListNotesResponse
+	(*SearchNotesRequest)(nil),          // 9: notes.v1.SearchNotesRequest
+	(*SearchNotesResponse)(nil),         // 10: notes.v1.SearchNotesResponse
+	(*GetBacklinksRequest)(nil),         // 11: notes.v1.GetBacklinksRequest
+	(*BacklinksResponse)(nil),           // 12: notes.v1.BacklinksResponse
+	(*RestoreNoteRequest)(nil),          // 13: notes.v1.RestoreNoteRequest
+	(*EmptyTrashRequest)(nil),           // 14: notes.v1.EmptyTrashRequest
+	(*EmptyTrashResponse)(nil),          // 15: notes.v1.EmptyTrashResponse
+	(*AutosaveNoteRequest)(nil),         // 16: notes.v1.AutosaveNoteRequest
+	(*AutosaveNoteResponse)(nil),        // 17: notes.v1.AutosaveNoteResponse
+	(*NoteIcon)(nil),                    // 18: notes.v1.NoteIcon
+	(*Note)(nil),                        // 19: notes.v1.Note
+	(*NoteReference)(nil),               // 20: notes.v1.NoteReference
+	(*MoveNoteRequest)(nil),             // 21: notes.v1.MoveNoteRequest
+	(*CopyNoteRequest)(nil),             // 22: notes.v1.CopyNoteRequest
+	(*ShareNoteWithGroupRequest)(nil),   // 23: notes.v1.ShareNoteWithGroupRequest
+	(*UnshareNoteFromGroupRequest)(nil), // 24: notes.v1.UnshareNoteFromGroupRequest
+	(*ShareNoteResponse)(nil),           // 25: notes.v1.ShareNoteResponse
+	(*GetNoteSharingRequest)(nil),       // 26: notes.v1.GetNoteSharingRequest
+	(*NoteSharingResponse)(nil),         // 27: notes.v1.NoteSharingResponse
+	(*GrantPermissionRequest)(nil),      // 28: notes.v1.GrantPermissionRequest
+	(*RevokePermissionRequest)(nil),     // 29: notes.v1.RevokePermissionRequest
+	(*PermissionResponse)(nil),          // 30: notes.v1.PermissionResponse
+	(*ContentPermission)(nil),           // 31: notes.v1.ContentPermission
+	(*NoteOwner)(nil),                   // 32: notes.v1.NoteOwner
+	(*NoteShareTarget)(nil),             // 33: notes.v1.NoteShareTarget
+	nil,                                 // 34: notes.v1.CreateNoteRequest.MetadataEntry
+	nil,                                 // 35: notes.v1.UpdateNoteRequest.MetadataEntry
+	nil,                                 // 36: notes.v1.Note.MetadataEntry
+	(v1.AccessMode)(0),                  // 37: common.v1.AccessMode
+	(v1.ContentRole)(0),                 // 38: common.v1.ContentRole
 	(*timestamppb.Timestamp)(nil),       // 39: google.protobuf.Timestamp
 }
 var file_notes_v1_notes_proto_depIdxs = []int32{
-	36, // 0: notes.v1.CreateNoteRequest.metadata:type_name -> notes.v1.CreateNoteRequest.MetadataEntry
-	0,  // 1: notes.v1.CreateNoteRequest.visibility:type_name -> notes.v1.VisibilityScope
-	2,  // 2: notes.v1.CreateNoteRequest.node_type:type_name -> notes.v1.NodeType
-	20, // 3: notes.v1.CreateNoteRequest.icon:type_name -> notes.v1.NoteIcon
-	37, // 4: notes.v1.UpdateNoteRequest.metadata:type_name -> notes.v1.UpdateNoteRequest.MetadataEntry
-	20, // 5: notes.v1.UpdateNoteRequest.icon:type_name -> notes.v1.NoteIcon
-	21, // 6: notes.v1.NoteResponse.note:type_name -> notes.v1.Note
-	0,  // 7: notes.v1.ListNotesRequest.visibility:type_name -> notes.v1.VisibilityScope
-	21, // 8: notes.v1.ListNotesResponse.notes:type_name -> notes.v1.Note
-	21, // 9: notes.v1.SearchNotesResponse.notes:type_name -> notes.v1.Note
-	22, // 10: notes.v1.BacklinksResponse.backlinks:type_name -> notes.v1.NoteReference
-	39, // 11: notes.v1.AutosaveNoteResponse.saved_at:type_name -> google.protobuf.Timestamp
-	0,  // 12: notes.v1.Note.visibility:type_name -> notes.v1.VisibilityScope
-	2,  // 13: notes.v1.Note.node_type:type_name -> notes.v1.NodeType
-	38, // 14: notes.v1.Note.metadata:type_name -> notes.v1.Note.MetadataEntry
-	39, // 15: notes.v1.Note.created_at:type_name -> google.protobuf.Timestamp
-	39, // 16: notes.v1.Note.updated_at:type_name -> google.protobuf.Timestamp
-	39, // 17: notes.v1.Note.deleted_at:type_name -> google.protobuf.Timestamp
-	1,  // 18: notes.v1.Note.user_permission:type_name -> notes.v1.PermissionLevel
-	20, // 19: notes.v1.Note.icon:type_name -> notes.v1.NoteIcon
-	34, // 20: notes.v1.Note.owner_info:type_name -> notes.v1.NoteOwner
-	35, // 21: notes.v1.Note.shared_with:type_name -> notes.v1.NoteShareTarget
-	39, // 22: notes.v1.NoteReference.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 23: notes.v1.NoteReference.visibility:type_name -> notes.v1.VisibilityScope
-	2,  // 24: notes.v1.NoteReference.node_type:type_name -> notes.v1.NodeType
-	0,  // 25: notes.v1.MoveNoteRequest.target_visibility:type_name -> notes.v1.VisibilityScope
-	0,  // 26: notes.v1.CopyNoteRequest.target_visibility:type_name -> notes.v1.VisibilityScope
-	0,  // 27: notes.v1.NoteSharingResponse.visibility:type_name -> notes.v1.VisibilityScope
-	33, // 28: notes.v1.NoteSharingResponse.permissions:type_name -> notes.v1.ContentPermission
-	1,  // 29: notes.v1.GrantPermissionRequest.permission_level:type_name -> notes.v1.PermissionLevel
-	1,  // 30: notes.v1.ContentPermission.permission_level:type_name -> notes.v1.PermissionLevel
-	39, // 31: notes.v1.ContentPermission.granted_at:type_name -> google.protobuf.Timestamp
-	39, // 32: notes.v1.ContentPermission.expires_at:type_name -> google.protobuf.Timestamp
-	3,  // 33: notes.v1.NotesService.CreateNote:input_type -> notes.v1.CreateNoteRequest
-	4,  // 34: notes.v1.NotesService.GetNote:input_type -> notes.v1.GetNoteRequest
-	5,  // 35: notes.v1.NotesService.UpdateNote:input_type -> notes.v1.UpdateNoteRequest
-	6,  // 36: notes.v1.NotesService.DeleteNote:input_type -> notes.v1.DeleteNoteRequest
-	9,  // 37: notes.v1.NotesService.ListNotes:input_type -> notes.v1.ListNotesRequest
-	11, // 38: notes.v1.NotesService.SearchNotes:input_type -> notes.v1.SearchNotesRequest
-	13, // 39: notes.v1.NotesService.GetBacklinks:input_type -> notes.v1.GetBacklinksRequest
-	15, // 40: notes.v1.NotesService.RestoreNote:input_type -> notes.v1.RestoreNoteRequest
-	16, // 41: notes.v1.NotesService.EmptyTrash:input_type -> notes.v1.EmptyTrashRequest
-	18, // 42: notes.v1.NotesService.AutosaveNote:input_type -> notes.v1.AutosaveNoteRequest
-	23, // 43: notes.v1.NotesService.MoveNote:input_type -> notes.v1.MoveNoteRequest
-	24, // 44: notes.v1.NotesService.CopyNote:input_type -> notes.v1.CopyNoteRequest
-	25, // 45: notes.v1.NotesService.ShareNoteWithGroup:input_type -> notes.v1.ShareNoteWithGroupRequest
-	26, // 46: notes.v1.NotesService.UnshareNoteFromGroup:input_type -> notes.v1.UnshareNoteFromGroupRequest
-	28, // 47: notes.v1.NotesService.GetNoteSharing:input_type -> notes.v1.GetNoteSharingRequest
-	30, // 48: notes.v1.NotesService.GrantPermission:input_type -> notes.v1.GrantPermissionRequest
-	31, // 49: notes.v1.NotesService.RevokePermission:input_type -> notes.v1.RevokePermissionRequest
-	8,  // 50: notes.v1.NotesService.CreateNote:output_type -> notes.v1.NoteResponse
-	8,  // 51: notes.v1.NotesService.GetNote:output_type -> notes.v1.NoteResponse
-	8,  // 52: notes.v1.NotesService.UpdateNote:output_type -> notes.v1.NoteResponse
-	7,  // 53: notes.v1.NotesService.DeleteNote:output_type -> notes.v1.DeleteNoteResponse
-	10, // 54: notes.v1.NotesService.ListNotes:output_type -> notes.v1.ListNotesResponse
-	12, // 55: notes.v1.NotesService.SearchNotes:output_type -> notes.v1.SearchNotesResponse
-	14, // 56: notes.v1.NotesService.GetBacklinks:output_type -> notes.v1.BacklinksResponse
-	8,  // 57: notes.v1.NotesService.RestoreNote:output_type -> notes.v1.NoteResponse
-	17, // 58: notes.v1.NotesService.EmptyTrash:output_type -> notes.v1.EmptyTrashResponse
-	19, // 59: notes.v1.NotesService.AutosaveNote:output_type -> notes.v1.AutosaveNoteResponse
-	8,  // 60: notes.v1.NotesService.MoveNote:output_type -> notes.v1.NoteResponse
-	8,  // 61: notes.v1.NotesService.CopyNote:output_type -> notes.v1.NoteResponse
-	27, // 62: notes.v1.NotesService.ShareNoteWithGroup:output_type -> notes.v1.ShareNoteResponse
-	27, // 63: notes.v1.NotesService.UnshareNoteFromGroup:output_type -> notes.v1.ShareNoteResponse
-	29, // 64: notes.v1.NotesService.GetNoteSharing:output_type -> notes.v1.NoteSharingResponse
-	32, // 65: notes.v1.NotesService.GrantPermission:output_type -> notes.v1.PermissionResponse
-	32, // 66: notes.v1.NotesService.RevokePermission:output_type -> notes.v1.PermissionResponse
-	50, // [50:67] is the sub-list for method output_type
-	33, // [33:50] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	34, // 0: notes.v1.CreateNoteRequest.metadata:type_name -> notes.v1.CreateNoteRequest.MetadataEntry
+	37, // 1: notes.v1.CreateNoteRequest.access_mode:type_name -> common.v1.AccessMode
+	0,  // 2: notes.v1.CreateNoteRequest.node_type:type_name -> notes.v1.NodeType
+	18, // 3: notes.v1.CreateNoteRequest.icon:type_name -> notes.v1.NoteIcon
+	38, // 4: notes.v1.CreateNoteRequest.baseline_role:type_name -> common.v1.ContentRole
+	35, // 5: notes.v1.UpdateNoteRequest.metadata:type_name -> notes.v1.UpdateNoteRequest.MetadataEntry
+	18, // 6: notes.v1.UpdateNoteRequest.icon:type_name -> notes.v1.NoteIcon
+	19, // 7: notes.v1.NoteResponse.note:type_name -> notes.v1.Note
+	37, // 8: notes.v1.ListNotesRequest.access_mode:type_name -> common.v1.AccessMode
+	19, // 9: notes.v1.ListNotesResponse.notes:type_name -> notes.v1.Note
+	19, // 10: notes.v1.SearchNotesResponse.notes:type_name -> notes.v1.Note
+	20, // 11: notes.v1.BacklinksResponse.backlinks:type_name -> notes.v1.NoteReference
+	39, // 12: notes.v1.AutosaveNoteResponse.saved_at:type_name -> google.protobuf.Timestamp
+	37, // 13: notes.v1.Note.access_mode:type_name -> common.v1.AccessMode
+	0,  // 14: notes.v1.Note.node_type:type_name -> notes.v1.NodeType
+	36, // 15: notes.v1.Note.metadata:type_name -> notes.v1.Note.MetadataEntry
+	39, // 16: notes.v1.Note.created_at:type_name -> google.protobuf.Timestamp
+	39, // 17: notes.v1.Note.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 18: notes.v1.Note.deleted_at:type_name -> google.protobuf.Timestamp
+	38, // 19: notes.v1.Note.user_role:type_name -> common.v1.ContentRole
+	18, // 20: notes.v1.Note.icon:type_name -> notes.v1.NoteIcon
+	32, // 21: notes.v1.Note.owner_info:type_name -> notes.v1.NoteOwner
+	33, // 22: notes.v1.Note.shared_with:type_name -> notes.v1.NoteShareTarget
+	38, // 23: notes.v1.Note.baseline_role:type_name -> common.v1.ContentRole
+	39, // 24: notes.v1.NoteReference.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 25: notes.v1.NoteReference.access_mode:type_name -> common.v1.AccessMode
+	0,  // 26: notes.v1.NoteReference.node_type:type_name -> notes.v1.NodeType
+	38, // 27: notes.v1.NoteReference.baseline_role:type_name -> common.v1.ContentRole
+	37, // 28: notes.v1.MoveNoteRequest.target_access_mode:type_name -> common.v1.AccessMode
+	38, // 29: notes.v1.MoveNoteRequest.target_baseline_role:type_name -> common.v1.ContentRole
+	37, // 30: notes.v1.CopyNoteRequest.target_access_mode:type_name -> common.v1.AccessMode
+	38, // 31: notes.v1.CopyNoteRequest.target_baseline_role:type_name -> common.v1.ContentRole
+	37, // 32: notes.v1.NoteSharingResponse.access_mode:type_name -> common.v1.AccessMode
+	31, // 33: notes.v1.NoteSharingResponse.permissions:type_name -> notes.v1.ContentPermission
+	38, // 34: notes.v1.NoteSharingResponse.baseline_role:type_name -> common.v1.ContentRole
+	38, // 35: notes.v1.GrantPermissionRequest.role:type_name -> common.v1.ContentRole
+	38, // 36: notes.v1.ContentPermission.role:type_name -> common.v1.ContentRole
+	39, // 37: notes.v1.ContentPermission.granted_at:type_name -> google.protobuf.Timestamp
+	39, // 38: notes.v1.ContentPermission.expires_at:type_name -> google.protobuf.Timestamp
+	38, // 39: notes.v1.NoteShareTarget.role:type_name -> common.v1.ContentRole
+	1,  // 40: notes.v1.NotesService.CreateNote:input_type -> notes.v1.CreateNoteRequest
+	2,  // 41: notes.v1.NotesService.GetNote:input_type -> notes.v1.GetNoteRequest
+	3,  // 42: notes.v1.NotesService.UpdateNote:input_type -> notes.v1.UpdateNoteRequest
+	4,  // 43: notes.v1.NotesService.DeleteNote:input_type -> notes.v1.DeleteNoteRequest
+	7,  // 44: notes.v1.NotesService.ListNotes:input_type -> notes.v1.ListNotesRequest
+	9,  // 45: notes.v1.NotesService.SearchNotes:input_type -> notes.v1.SearchNotesRequest
+	11, // 46: notes.v1.NotesService.GetBacklinks:input_type -> notes.v1.GetBacklinksRequest
+	13, // 47: notes.v1.NotesService.RestoreNote:input_type -> notes.v1.RestoreNoteRequest
+	14, // 48: notes.v1.NotesService.EmptyTrash:input_type -> notes.v1.EmptyTrashRequest
+	16, // 49: notes.v1.NotesService.AutosaveNote:input_type -> notes.v1.AutosaveNoteRequest
+	21, // 50: notes.v1.NotesService.MoveNote:input_type -> notes.v1.MoveNoteRequest
+	22, // 51: notes.v1.NotesService.CopyNote:input_type -> notes.v1.CopyNoteRequest
+	23, // 52: notes.v1.NotesService.ShareNoteWithGroup:input_type -> notes.v1.ShareNoteWithGroupRequest
+	24, // 53: notes.v1.NotesService.UnshareNoteFromGroup:input_type -> notes.v1.UnshareNoteFromGroupRequest
+	26, // 54: notes.v1.NotesService.GetNoteSharing:input_type -> notes.v1.GetNoteSharingRequest
+	28, // 55: notes.v1.NotesService.GrantPermission:input_type -> notes.v1.GrantPermissionRequest
+	29, // 56: notes.v1.NotesService.RevokePermission:input_type -> notes.v1.RevokePermissionRequest
+	6,  // 57: notes.v1.NotesService.CreateNote:output_type -> notes.v1.NoteResponse
+	6,  // 58: notes.v1.NotesService.GetNote:output_type -> notes.v1.NoteResponse
+	6,  // 59: notes.v1.NotesService.UpdateNote:output_type -> notes.v1.NoteResponse
+	5,  // 60: notes.v1.NotesService.DeleteNote:output_type -> notes.v1.DeleteNoteResponse
+	8,  // 61: notes.v1.NotesService.ListNotes:output_type -> notes.v1.ListNotesResponse
+	10, // 62: notes.v1.NotesService.SearchNotes:output_type -> notes.v1.SearchNotesResponse
+	12, // 63: notes.v1.NotesService.GetBacklinks:output_type -> notes.v1.BacklinksResponse
+	6,  // 64: notes.v1.NotesService.RestoreNote:output_type -> notes.v1.NoteResponse
+	15, // 65: notes.v1.NotesService.EmptyTrash:output_type -> notes.v1.EmptyTrashResponse
+	17, // 66: notes.v1.NotesService.AutosaveNote:output_type -> notes.v1.AutosaveNoteResponse
+	6,  // 67: notes.v1.NotesService.MoveNote:output_type -> notes.v1.NoteResponse
+	6,  // 68: notes.v1.NotesService.CopyNote:output_type -> notes.v1.NoteResponse
+	25, // 69: notes.v1.NotesService.ShareNoteWithGroup:output_type -> notes.v1.ShareNoteResponse
+	25, // 70: notes.v1.NotesService.UnshareNoteFromGroup:output_type -> notes.v1.ShareNoteResponse
+	27, // 71: notes.v1.NotesService.GetNoteSharing:output_type -> notes.v1.NoteSharingResponse
+	30, // 72: notes.v1.NotesService.GrantPermission:output_type -> notes.v1.PermissionResponse
+	30, // 73: notes.v1.NotesService.RevokePermission:output_type -> notes.v1.PermissionResponse
+	57, // [57:74] is the sub-list for method output_type
+	40, // [40:57] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_notes_v1_notes_proto_init() }
@@ -3372,7 +3309,10 @@ func file_notes_v1_notes_proto_init() {
 	file_notes_v1_notes_proto_msgTypes[6].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[15].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[18].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[19].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[20].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[21].OneofWrappers = []any{}
+	file_notes_v1_notes_proto_msgTypes[26].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[27].OneofWrappers = []any{}
 	file_notes_v1_notes_proto_msgTypes[30].OneofWrappers = []any{}
 	type x struct{}
@@ -3380,7 +3320,7 @@ func file_notes_v1_notes_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notes_v1_notes_proto_rawDesc), len(file_notes_v1_notes_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      1,
 			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,

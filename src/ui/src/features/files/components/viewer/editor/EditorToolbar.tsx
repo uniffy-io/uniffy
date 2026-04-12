@@ -42,7 +42,6 @@ interface EditorToolbarProps {
     // Saving state
     isSaving: boolean;
 
-    // Actions
     onRotateLeft: () => void;
     onRotateRight: () => void;
     onFlipH: () => void;

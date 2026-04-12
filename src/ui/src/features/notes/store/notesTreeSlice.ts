@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 import { notesApi } from '@/features/notes/api/notesApi';
-import { organizeNotesByVisibility, noteToTreeNode, sortTreeNodes } from '@/features/notes/utils/notesTreeUtils';
+import { organizeNotesBySection, noteToTreeNode, sortTreeNodes } from '@/features/notes/utils/notesTreeUtils';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 import type { RootState } from '@/app/store';
 import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
 import { updateNote, updateNoteIcon, initializeNotesData, createNote, deleteNote, restoreNote, moveNote } from '@/features/notes/store/notesThunks';
@@ -13,7 +13,9 @@ const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
     ownerId: note.ownerId,
-    visibility: note.visibility,
+    accessMode: note.accessMode,
+    baselineRole: note.baselineRole ?? null,
+    userRole: note.userRole,
     nodeType: note.nodeType,
     title: note.title,
     content: note.content,
@@ -36,29 +38,11 @@ const noteToPlain = (note: Note) => ({
         seconds: typeof note.deletedAt.seconds === 'bigint' ? Number(note.deletedAt.seconds) : note.deletedAt.seconds,
         nanos: typeof note.deletedAt.nanos === 'bigint' ? Number(note.deletedAt.nanos) : note.deletedAt.nanos
     } : undefined,
-    groupIds: [...note.groupIds],
-    userPermission: note.userPermission,
     outgoingReferences: [...note.outgoingReferences],
-    // Custom icon (Phosphor icon name or emoji)
     icon: note.icon ? {
         type: note.icon.iconType as 'icon' | 'emoji',
         value: note.icon.value,
     } : undefined,
-    // Owner info for notes shared with current user
-    ownerInfo: note.ownerInfo ? {
-        id: note.ownerInfo.id,
-        name: note.ownerInfo.name,
-        email: note.ownerInfo.email,
-    } : undefined,
-    // Users/groups this note is shared with (only for owner)
-    sharedWith: note.sharedWith.length > 0 ? note.sharedWith.map(target => ({
-        id: target.id,
-        type: target.type as 'user' | 'group',
-        name: target.name,
-        email: target.email || undefined,
-        memberCount: target.memberCount || undefined,
-        permissionLevel: target.permissionLevel,
-    })) : undefined,
 });
 
 export interface TreeNode {
@@ -70,34 +54,18 @@ export interface TreeNode {
     noteId?: string;
     folderId?: string;
     isExpanded?: boolean;
-    visibility?: VisibilityScope;
+    accessMode?: number;
+    ownerId?: string;
     updatedAt?: string;
-    // Owner info for notes shared with current user
-    ownerInfo?: {
-        id: string;
-        name: string;
-        email: string;
-    };
-    // Whether this note is shared with others (for owned notes)
-    isShared?: boolean;
-}
-
-export interface GroupTreeSection {
-    groupId: string;
-    groupName: string;
-    nodes: TreeNode[];
-    isExpanded: boolean;
 }
 
 interface NotesTreeState {
-    // Tree structure organized by visibility
     tree: {
-        bookmarked: TreeNode[];   // User's bookmarked notes (populated from bookmarks store)
-        personal: TreeNode[];     // PRIVATE - only owner can see
-        shared: TreeNode[];       // Notes shared with the user (GROUP visibility, not owned)
-        groups: GroupTreeSection[]; // GROUP - organized by group
-        organization: TreeNode[]; // ORGANIZATION - visible to all org members
-        trash: TreeNode[];        // Deleted notes
+        bookmarked: TreeNode[];
+        personal: TreeNode[];
+        shared: TreeNode[];
+        organization: TreeNode[];
+        trash: TreeNode[];
     };
 
     // Expanded/collapsed state (note IDs and folder IDs)
@@ -125,9 +93,9 @@ interface NotesTreeState {
  */
 export const fetchNotesTree = createAsyncThunk<
     NotesTreeState['tree'],
-    { userGroups?: Array<{ groupId: string; groupName: string }> } | void,
+    void,
     { state: RootState; rejectValue: string }
->('notesTree/fetchNotesTree', async (params, { getState, rejectWithValue }) => {
+>('notesTree/fetchNotesTree', async (_, { getState, rejectWithValue }) => {
     try {
         const state = getState();
         const organizationId = state.auth.currentOrganizationId;
@@ -175,10 +143,8 @@ export const fetchNotesTree = createAsyncThunk<
         }
 
         const notes = allNotes.map(noteToPlain);
-        const userGroups = params?.userGroups ?? [];
 
-        // Organize into tree structure
-        const organized = organizeNotesByVisibility(notes, currentUserId, userGroups);
+        const organized = organizeNotesBySection(notes, currentUserId);
 
         return organized;
     } catch (error) {
@@ -191,7 +157,6 @@ const emptyTree: NotesTreeState['tree'] = {
     bookmarked: [],
     personal: [],
     shared: [],
-    groups: [],
     organization: [],
     trash: [],
 };
@@ -228,10 +193,6 @@ export const notesTreeSlice = createSlice({
 
         setSharedNodes: (state, action: PayloadAction<TreeNode[]>) => {
             state.tree.shared = action.payload;
-        },
-
-        setGroupSections: (state, action: PayloadAction<GroupTreeSection[]>) => {
-            state.tree.groups = action.payload;
         },
 
         setOrganizationNodes: (state, action: PayloadAction<TreeNode[]>) => {
@@ -278,12 +239,8 @@ export const notesTreeSlice = createSlice({
             for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                 if (updateAndSort(state.tree[section])) break;
             }
-            for (const group of state.tree.groups) {
-                if (updateAndSort(group.nodes)) break;
-            }
         },
 
-        // Remove a node from tree
         removeNode: (state, action: PayloadAction<string>) => {
             const nodeId = action.payload;
             const removeFromArray = (nodes: TreeNode[]): TreeNode[] => {
@@ -298,12 +255,8 @@ export const notesTreeSlice = createSlice({
             for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                 state.tree[section] = removeFromArray(state.tree[section]);
             }
-            for (const group of state.tree.groups) {
-                group.nodes = removeFromArray(group.nodes);
-            }
         },
 
-        // Expand/collapse nodes
         toggleNodeExpanded: (state, action: PayloadAction<string>) => {
             const nodeId = action.payload;
             const index = state.expandedNodes.indexOf(nodeId);
@@ -339,22 +292,11 @@ export const notesTreeSlice = createSlice({
                 return ids;
             };
 
-            // Expand all sections
             state.expandedNodes = ['bookmarked', 'personal', 'shared', 'organization', 'trash'];
 
-            // Expand all group sections
-            state.tree.groups.forEach(group => {
-                state.expandedNodes.push(`group-${group.groupId}`);
-                // Also expand all folders in this group
-                state.expandedNodes.push(...collectFolderIds(group.nodes));
-            });
-
-            // Expand all folders in each section
-            state.expandedNodes.push(...collectFolderIds(state.tree.bookmarked));
-            state.expandedNodes.push(...collectFolderIds(state.tree.personal));
-            state.expandedNodes.push(...collectFolderIds(state.tree.shared));
-            state.expandedNodes.push(...collectFolderIds(state.tree.organization));
-            state.expandedNodes.push(...collectFolderIds(state.tree.trash));
+            for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
+                state.expandedNodes.push(...collectFolderIds(state.tree[section]));
+            }
         },
 
         collapseAll: (state) => {
@@ -442,14 +384,9 @@ export const notesTreeSlice = createSlice({
                 for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                     if (updateAndSort(state.tree[section])) break;
                 }
-                for (const group of state.tree.groups) {
-                    if (updateAndSort(group.nodes)) break;
-                }
             })
-            // Sync tree when note icon is updated
             .addCase(updateNoteIcon.fulfilled, (state, action) => {
                 const { id, icon } = action.payload;
-                // Update the node icon in all sections
                 const updateInArray = (nodes: TreeNode[]): boolean => {
                     for (const node of nodes) {
                         if (node.id === id) {
@@ -465,9 +402,6 @@ export const notesTreeSlice = createSlice({
 
                 for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                     if (updateInArray(state.tree[section])) break;
-                }
-                for (const group of state.tree.groups) {
-                    if (updateInArray(group.nodes)) break;
                 }
             })
             // Listen to unified initializeNotesData - updates tree from same API call as notesSlice
@@ -513,17 +447,13 @@ export const notesTreeSlice = createSlice({
                     return false;
                 };
 
-                // Determine target section based on visibility
-                // VisibilityScope: PRIVATE=1, GROUP=2, ORGANIZATION=3
-                let targetSection: 'personal' | 'organization' = 'personal';
-                if (note.visibility === VisibilityScope.ORGANIZATION) {
-                    targetSection = 'organization';
-                }
+                // Created notes are always owned by the current user.
+                // OPEN_TO_ORG -> organization, otherwise personal.
+                const targetSection: 'personal' | 'organization' =
+                    note.accessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
 
-                // Try to add to parent, or add to root of section
                 if (note.parentId) {
-                    // Try all sections for parent
-                    const sections = ['personal', 'organization'] as const;
+                    const sections = ['personal', 'shared', 'organization'] as const;
                     let added = false;
                     for (const section of sections) {
                         if (addToParent(state.tree[section], note.parentId)) {
@@ -531,13 +461,10 @@ export const notesTreeSlice = createSlice({
                             break;
                         }
                     }
-                    // Also check groups
                     if (!added) {
-                        for (const group of state.tree.groups) {
-                            if (addToParent(group.nodes, note.parentId)) {
-                                break;
-                            }
-                        }
+                        // Parent not found, add to root of target section
+                        state.tree[targetSection].push(newNode);
+                        sortTreeNodes(state.tree[targetSection]);
                     }
                 } else {
                     // Add to root of appropriate section
@@ -563,9 +490,6 @@ export const notesTreeSlice = createSlice({
                     for (const section of ['bookmarked', 'personal', 'shared', 'organization', 'trash'] as const) {
                         state.tree[section] = removeFromArray(state.tree[section]);
                     }
-                    for (const group of state.tree.groups) {
-                        group.nodes = removeFromArray(group.nodes);
-                    }
                 } else {
                     // Soft deleted - move to trash
                     let removedNode: TreeNode | null = null;
@@ -589,9 +513,6 @@ export const notesTreeSlice = createSlice({
                     for (const section of ['bookmarked', 'personal', 'shared', 'organization'] as const) {
                         state.tree[section] = removeAndCapture(state.tree[section]);
                     }
-                    for (const group of state.tree.groups) {
-                        group.nodes = removeAndCapture(group.nodes);
-                    }
 
                     // Add to trash if found
                     if (removedNode) {
@@ -609,14 +530,9 @@ export const notesTreeSlice = createSlice({
                 // Create node from restored note
                 const restoredNode: TreeNode = noteToTreeNode(note);
 
-                // Add to appropriate section based on visibility
-                if (note.visibility === VisibilityScope.ORGANIZATION) {
-                    state.tree.organization.push(restoredNode);
-                    sortTreeNodes(state.tree.organization);
-                } else {
-                    state.tree.personal.push(restoredNode);
-                    sortTreeNodes(state.tree.personal);
-                }
+                const section = note.accessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
+                state.tree[section].push(restoredNode);
+                sortTreeNodes(state.tree[section]);
             })
             // Sync tree when a note is moved between visibility scopes
             .addCase(moveNote.fulfilled, (state, action) => {
@@ -643,47 +559,18 @@ export const notesTreeSlice = createSlice({
                     movedNode = findAndRemoveNode(state.tree[section], note.id);
                     if (movedNode) break;
                 }
-                // Also check groups
-                if (!movedNode) {
-                    for (const group of state.tree.groups) {
-                        movedNode = findAndRemoveNode(group.nodes, note.id);
-                        if (movedNode) break;
-                    }
-                }
-
-                // If not found, create a new node
                 if (!movedNode) {
                     movedNode = noteToTreeNode(note);
                 }
 
-                // Update the node's visibility
-                movedNode.visibility = note.visibility;
+                movedNode.accessMode = note.accessMode;
+                movedNode.ownerId = note.ownerId;
                 movedNode.updatedAt = note.updatedAt?.seconds?.toString();
 
-                // Add to the appropriate section based on new visibility
-                // Note: We add to root level; parentId update happens separately via updateNote
-                switch (note.visibility) {
-                    case VisibilityScope.ORGANIZATION:
-                        state.tree.organization.push(movedNode);
-                        sortTreeNodes(state.tree.organization);
-                        break;
-                    case VisibilityScope.GROUP:
-                        // For GROUP visibility, add to each group's nodes
-                        // Note: groupIds should be updated by the backend
-                        for (const groupId of note.groupIds || []) {
-                            const group = state.tree.groups.find(g => g.groupId === groupId);
-                            if (group) {
-                                group.nodes.push(movedNode);
-                                sortTreeNodes(group.nodes);
-                            }
-                        }
-                        break;
-                    case VisibilityScope.PRIVATE:
-                    default:
-                        state.tree.personal.push(movedNode);
-                        sortTreeNodes(state.tree.personal);
-                        break;
-                }
+                // Add to the appropriate section based on new access mode
+                const targetSection = note.accessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal';
+                state.tree[targetSection].push(movedNode);
+                sortTreeNodes(state.tree[targetSection]);
             })
             // Handle background refresh (stale-while-revalidate pattern)
             .addMatcher(
@@ -710,7 +597,6 @@ export const {
     setBookmarkedNodes,
     setPersonalNodes,
     setSharedNodes,
-    setGroupSections,
     setOrganizationNodes,
     setTrashNodes,
     addNodeToSection,

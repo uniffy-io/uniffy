@@ -20,7 +20,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/shared/utils/cn';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 import { moveItems } from '@/features/files/store/filesThunks';
 import { initializeFilesData } from '@/features/files/store/filesSlice';
 import { fetchFilesTree } from '@/features/files/store/filesTreeSlice';
@@ -31,7 +31,7 @@ interface MoveDialogProps {
     onClose: () => void;
     fileIds: string[];
     folderIds: string[];
-    currentVisibility?: VisibilityScope;
+    currentAccessMode?: AccessMode;
     currentFolderId?: string | null;
     itemName?: string; // For single item display
 }
@@ -43,7 +43,7 @@ export function MoveDialog({
     onClose,
     fileIds,
     folderIds,
-    currentVisibility,
+    currentAccessMode,
     currentFolderId,
     itemName,
 }: MoveDialogProps) {
@@ -52,7 +52,7 @@ export function MoveDialog({
 
     // Selected visibility scope
     const [selectedVisibility, setSelectedVisibility] = useState<VisibilityOption>(
-        currentVisibility === VisibilityScope.ORGANIZATION ? 'organization' : 'personal'
+        currentAccessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal'
     );
 
     // Selected folder ID (null = root)
@@ -102,16 +102,15 @@ export function MoveDialog({
 
     // Check if move is valid
     const canMove = useMemo(() => {
-        const newVisibility = selectedVisibility === 'organization'
-            ? VisibilityScope.ORGANIZATION
-            : VisibilityScope.PRIVATE;
+        const newAccessMode = selectedVisibility === 'organization'
+            ? AccessMode.OPEN_TO_ORG
+            : AccessMode.OWNER_ONLY;
 
-        // Check if anything changed
-        const visibilityChanged = newVisibility !== currentVisibility;
+        const accessModeChanged = newAccessMode !== currentAccessMode;
         const folderChanged = selectedFolderId !== currentFolderId;
 
-        return visibilityChanged || folderChanged;
-    }, [selectedVisibility, selectedFolderId, currentVisibility, currentFolderId]);
+        return accessModeChanged || folderChanged;
+    }, [selectedVisibility, selectedFolderId, currentAccessMode, currentFolderId]);
 
     // Perform the actual move
     const performMove = useCallback(async () => {
@@ -119,15 +118,15 @@ export function MoveDialog({
         setError(null);
 
         try {
-            const targetVisibility = selectedVisibility === 'organization'
-                ? VisibilityScope.ORGANIZATION
-                : VisibilityScope.PRIVATE;
+            const targetAccessMode = selectedVisibility === 'organization'
+                ? AccessMode.OPEN_TO_ORG
+                : AccessMode.OWNER_ONLY;
 
             await dispatch(moveItems({
                 fileIds,
                 folderIds,
                 targetFolderId: selectedFolderId,
-                targetVisibility,
+                targetAccessMode,
             })).unwrap();
 
             dispatch(initializeFilesData({ forceRefresh: true }));
@@ -144,18 +143,18 @@ export function MoveDialog({
 
     // Handle move button click - confirm before moving to organization
     const handleMove = useCallback(async () => {
-        const targetVisibility = selectedVisibility === 'organization'
-            ? VisibilityScope.ORGANIZATION
-            : VisibilityScope.PRIVATE;
+        const targetAccessMode = selectedVisibility === 'organization'
+            ? AccessMode.OPEN_TO_ORG
+            : AccessMode.OWNER_ONLY;
 
-        if (targetVisibility === VisibilityScope.ORGANIZATION &&
-            currentVisibility !== VisibilityScope.ORGANIZATION) {
+        if (targetAccessMode === AccessMode.OPEN_TO_ORG &&
+            currentAccessMode !== AccessMode.OPEN_TO_ORG) {
             setShowOrgConfirm(true);
             return;
         }
 
         await performMove();
-    }, [selectedVisibility, currentVisibility, performMove]);
+    }, [selectedVisibility, currentAccessMode, performMove]);
 
     // Render a folder node in the tree
     const renderFolderNode = useCallback((node: SerializedTreeNode, depth = 0): React.ReactNode => {

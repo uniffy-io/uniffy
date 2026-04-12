@@ -5,8 +5,9 @@
  * organized by visibility scope.
  */
 
-import { NodeType, VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
-import type { TreeNode, GroupTreeSection } from '@/features/notes/store/notesTreeSlice';
+import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
+import type { TreeNode } from '@/features/notes/store/notesTreeSlice';
+import { bucketForContent } from '@/shared/utils/contentRoles';
 import type { SerializedNote } from '@/features/notes/store/notesThunks';
 
 /**
@@ -29,12 +30,9 @@ export function noteToTreeNode(note: SerializedNote): TreeNode {
         type: nodeTypeToTreeType(note.nodeType),
         icon: note.icon,
         noteId: note.id,
-        visibility: note.visibility,
+        accessMode: note.accessMode,
+        ownerId: note.ownerId,
         updatedAt: note.updatedAt?.seconds?.toString(),
-        // Include owner info for shared notes
-        ownerInfo: note.ownerInfo,
-        // Mark note as shared if it has share targets
-        isShared: note.sharedWith && note.sharedWith.length > 0,
     };
 }
 
@@ -103,96 +101,56 @@ export interface OrganizedNotes {
     bookmarked: TreeNode[];
     personal: TreeNode[];
     shared: TreeNode[];
-    groups: GroupTreeSection[];
     organization: TreeNode[];
     trash: TreeNode[];
 }
 
 /**
- * Organize flat notes array into tree structure by visibility.
- */
-/**
- * Organize flat notes array into tree structure by visibility.
- * Note: The bookmarked section is empty here - it's populated separately by the
+ * Organize flat notes array into tree structure by access mode section.
+ * The bookmarked section is empty here - populated separately by the
  * NotesSidebar component using the bookmarks API since bookmarks are user-scoped.
  */
-export function organizeNotesByVisibility(
+export function organizeNotesBySection(
     notes: SerializedNote[],
     currentUserId: string,
-    userGroups: Array<{ groupId: string; groupName: string }>
 ): OrganizedNotes {
     const personal: SerializedNote[] = [];
     const shared: SerializedNote[] = [];
     const organization: SerializedNote[] = [];
     const trash: SerializedNote[] = [];
-    const groupNotes: Record<string, SerializedNote[]> = {};
 
-    // Initialize group note arrays
-    userGroups.forEach((g) => {
-        groupNotes[g.groupId] = [];
-    });
-
-    // Sort notes into categories
     notes.forEach((note) => {
         if (note.isDeleted) {
             trash.push(note);
             return;
         }
 
-        switch (note.visibility) {
-            case VisibilityScope.PRIVATE:
-                if (note.ownerId === currentUserId) {
-                    personal.push(note);
-                } else {
-                    // Private note not owned by user - must be explicitly shared with us
-                    shared.push(note);
-                }
-                break;
+        const bucket = bucketForContent({
+            ownerId: note.ownerId,
+            accessMode: note.accessMode,
+            currentUserId,
+        });
 
-            case VisibilityScope.GROUP:
-                // Notes shared with groups
-                if (note.ownerId === currentUserId) {
-                    // User owns this group note - put in each group
-                    note.groupIds.forEach((groupId) => {
-                        if (groupNotes[groupId]) {
-                            groupNotes[groupId].push(note);
-                        }
-                    });
-                } else {
-                    // Shared with user from someone else
-                    shared.push(note);
-                }
+        switch (bucket) {
+            case 'personal':
+                personal.push(note);
                 break;
-
-            case VisibilityScope.ORGANIZATION:
+            case 'shared':
+                shared.push(note);
+                break;
+            case 'organization':
                 organization.push(note);
                 break;
-
-            default:
-                // UNSPECIFIED or PUBLIC - treat as personal for now
-                if (note.ownerId === currentUserId) {
-                    personal.push(note);
-                }
         }
     });
 
-    // Build hierarchies for each section
-    // Note: bookmarked is empty - populated separately by component using bookmarks API
-    const result: OrganizedNotes = {
+    return {
         bookmarked: [],
         personal: buildNoteHierarchy(personal),
         shared: buildNoteHierarchy(shared),
-        groups: userGroups.map((g) => ({
-            groupId: g.groupId,
-            groupName: g.groupName,
-            isExpanded: false,
-            nodes: buildNoteHierarchy(groupNotes[g.groupId] || []),
-        })),
         organization: buildNoteHierarchy(organization),
         trash: trash.map(noteToTreeNode),
     };
-
-    return result;
 }
 
 /**

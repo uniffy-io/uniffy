@@ -56,9 +56,6 @@ import { ChatSessionSidebar } from "@/features/agents/components/chat/ChatSessio
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { TOOL_SECTIONS } from "@/features/agents/config/toolCatalog";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {};
 for (const section of TOOL_SECTIONS) {
@@ -147,9 +144,7 @@ function MarkdownLink({ href, children }: { href?: string; children?: React.Reac
 
 const markdownComponents = { a: MarkdownLink };
 
-// ---------------------------------------------------------------------------
 // Message bubbles
-// ---------------------------------------------------------------------------
 
 function ChatMessageContent({ content }: { content: string }) {
     const parts = useMemo(() => {
@@ -568,9 +563,7 @@ function ConfirmationDialog({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Empty state (no active session selected)
-// ---------------------------------------------------------------------------
 
 function ChatEmptyState({
     onSelectAgent,
@@ -648,9 +641,7 @@ function ChatEmptyState({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Active chat panel (messages + input)
-// ---------------------------------------------------------------------------
 
 function ChatPanel() {
     const dispatch = useAppDispatch();
@@ -1392,9 +1383,7 @@ function ChatPanel() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Main ChatView (two-panel layout)
-// ---------------------------------------------------------------------------
 
 export function ChatView() {
     const dispatch = useAppDispatch();

@@ -82,6 +82,11 @@ export enum ContentType {
    * @generated from enum value: CONTENT_TYPE_ROOM = 17;
    */
   ROOM = 17,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_AGENT_CRON_TASK = 18;
+   */
+  AGENT_CRON_TASK = 18,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ContentType)
 proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
@@ -99,6 +104,7 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
   { no: 15, name: "CONTENT_TYPE_PROMPT" },
   { no: 16, name: "CONTENT_TYPE_CHAT" },
   { no: 17, name: "CONTENT_TYPE_ROOM" },
+  { no: 18, name: "CONTENT_TYPE_AGENT_CRON_TASK" },
 ]);
 
 /**
@@ -136,77 +142,144 @@ proto3.util.setEnumType(SubjectType, "common.v1.SubjectType", [
 ]);
 
 /**
- * PermissionLevel defines access levels for content.
+ * ContentRole defines the role a subject has on a piece of content.
+ * BLOCKED is an explicit deny that overrides any baseline access.
  *
- * @generated from enum common.v1.PermissionLevel
+ * @generated from enum common.v1.ContentRole
  */
-export enum PermissionLevel {
+export enum ContentRole {
   /**
-   * @generated from enum value: PERMISSION_LEVEL_UNSPECIFIED = 0;
+   * @generated from enum value: CONTENT_ROLE_UNSPECIFIED = 0;
    */
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: PERMISSION_LEVEL_VIEW = 1;
+   * @generated from enum value: CONTENT_ROLE_VIEWER = 1;
    */
-  VIEW = 1,
+  VIEWER = 1,
 
   /**
-   * @generated from enum value: PERMISSION_LEVEL_EDIT = 2;
+   * @generated from enum value: CONTENT_ROLE_COMMENTER = 2;
    */
-  EDIT = 2,
+  COMMENTER = 2,
 
   /**
-   * @generated from enum value: PERMISSION_LEVEL_ADMIN = 3;
+   * @generated from enum value: CONTENT_ROLE_EDITOR = 3;
    */
-  ADMIN = 3,
+  EDITOR = 3,
+
+  /**
+   * @generated from enum value: CONTENT_ROLE_ADMIN = 4;
+   */
+  ADMIN = 4,
+
+  /**
+   * @generated from enum value: CONTENT_ROLE_OWNER = 5;
+   */
+  OWNER = 5,
+
+  /**
+   * @generated from enum value: CONTENT_ROLE_BLOCKED = 6;
+   */
+  BLOCKED = 6,
 }
-// Retrieve enum metadata with: proto3.getEnumType(PermissionLevel)
-proto3.util.setEnumType(PermissionLevel, "common.v1.PermissionLevel", [
-  { no: 0, name: "PERMISSION_LEVEL_UNSPECIFIED" },
-  { no: 1, name: "PERMISSION_LEVEL_VIEW" },
-  { no: 2, name: "PERMISSION_LEVEL_EDIT" },
-  { no: 3, name: "PERMISSION_LEVEL_ADMIN" },
+// Retrieve enum metadata with: proto3.getEnumType(ContentRole)
+proto3.util.setEnumType(ContentRole, "common.v1.ContentRole", [
+  { no: 0, name: "CONTENT_ROLE_UNSPECIFIED" },
+  { no: 1, name: "CONTENT_ROLE_VIEWER" },
+  { no: 2, name: "CONTENT_ROLE_COMMENTER" },
+  { no: 3, name: "CONTENT_ROLE_EDITOR" },
+  { no: 4, name: "CONTENT_ROLE_ADMIN" },
+  { no: 5, name: "CONTENT_ROLE_OWNER" },
+  { no: 6, name: "CONTENT_ROLE_BLOCKED" },
 ]);
 
 /**
- * VisibilityScope defines who can see content by default.
+ * AccessMode defines the baseline access mode for a piece of content.
+ * Explicit ContentMember rows always override the baseline (in either
+ * direction -- higher or BLOCKED).
  *
- * @generated from enum common.v1.VisibilityScope
+ * @generated from enum common.v1.AccessMode
  */
-export enum VisibilityScope {
+export enum AccessMode {
   /**
-   * @generated from enum value: VISIBILITY_SCOPE_UNSPECIFIED = 0;
+   * @generated from enum value: ACCESS_MODE_UNSPECIFIED = 0;
    */
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: VISIBILITY_SCOPE_PRIVATE = 1;
+   * @generated from enum value: ACCESS_MODE_OWNER_ONLY = 1;
    */
-  PRIVATE = 1,
+  OWNER_ONLY = 1,
 
   /**
-   * @generated from enum value: VISIBILITY_SCOPE_GROUP = 2;
+   * @generated from enum value: ACCESS_MODE_EXPLICIT_MEMBERS = 2;
    */
-  GROUP = 2,
+  EXPLICIT_MEMBERS = 2,
 
   /**
-   * @generated from enum value: VISIBILITY_SCOPE_ORGANIZATION = 3;
+   * @generated from enum value: ACCESS_MODE_OPEN_TO_ORG = 3;
    */
-  ORGANIZATION = 3,
-
-  /**
-   * @generated from enum value: VISIBILITY_SCOPE_PUBLIC = 4;
-   */
-  PUBLIC = 4,
+  OPEN_TO_ORG = 3,
 }
-// Retrieve enum metadata with: proto3.getEnumType(VisibilityScope)
-proto3.util.setEnumType(VisibilityScope, "common.v1.VisibilityScope", [
-  { no: 0, name: "VISIBILITY_SCOPE_UNSPECIFIED" },
-  { no: 1, name: "VISIBILITY_SCOPE_PRIVATE" },
-  { no: 2, name: "VISIBILITY_SCOPE_GROUP" },
-  { no: 3, name: "VISIBILITY_SCOPE_ORGANIZATION" },
-  { no: 4, name: "VISIBILITY_SCOPE_PUBLIC" },
+// Retrieve enum metadata with: proto3.getEnumType(AccessMode)
+proto3.util.setEnumType(AccessMode, "common.v1.AccessMode", [
+  { no: 0, name: "ACCESS_MODE_UNSPECIFIED" },
+  { no: 1, name: "ACCESS_MODE_OWNER_ONLY" },
+  { no: 2, name: "ACCESS_MODE_EXPLICIT_MEMBERS" },
+  { no: 3, name: "ACCESS_MODE_OPEN_TO_ORG" },
+]);
+
+/**
+ * ContentMemberAction is the action recorded in an audit log event.
+ *
+ * @generated from enum common.v1.ContentMemberAction
+ */
+export enum ContentMemberAction {
+  /**
+   * @generated from enum value: CONTENT_MEMBER_ACTION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CONTENT_MEMBER_ACTION_MEMBER_ADDED = 1;
+   */
+  MEMBER_ADDED = 1,
+
+  /**
+   * @generated from enum value: CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED = 2;
+   */
+  MEMBER_ROLE_CHANGED = 2,
+
+  /**
+   * @generated from enum value: CONTENT_MEMBER_ACTION_MEMBER_REMOVED = 3;
+   */
+  MEMBER_REMOVED = 3,
+
+  /**
+   * @generated from enum value: CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED = 4;
+   */
+  ACCESS_MODE_CHANGED = 4,
+
+  /**
+   * @generated from enum value: CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED = 5;
+   */
+  BASELINE_ROLE_CHANGED = 5,
+
+  /**
+   * @generated from enum value: CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED = 6;
+   */
+  OWNERSHIP_TRANSFERRED = 6,
+}
+// Retrieve enum metadata with: proto3.getEnumType(ContentMemberAction)
+proto3.util.setEnumType(ContentMemberAction, "common.v1.ContentMemberAction", [
+  { no: 0, name: "CONTENT_MEMBER_ACTION_UNSPECIFIED" },
+  { no: 1, name: "CONTENT_MEMBER_ACTION_MEMBER_ADDED" },
+  { no: 2, name: "CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED" },
+  { no: 3, name: "CONTENT_MEMBER_ACTION_MEMBER_REMOVED" },
+  { no: 4, name: "CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED" },
+  { no: 5, name: "CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED" },
+  { no: 6, name: "CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED" },
 ]);
 
 /**

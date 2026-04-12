@@ -11,7 +11,7 @@ Generate a comprehensive Product Requirements Document (PRD) based on the curren
 
 ## Output File
 
-Write the PRD to: `$ARGUMENTS` (default: `PRD.md`)
+Write the PRD to: `.claude/plans/$ARGUMENTS` (default: `.claude/plans/PRD.md`)
 
 ## PRD Structure
 

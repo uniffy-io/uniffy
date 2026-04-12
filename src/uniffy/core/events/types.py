@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from uniffy.core.models.shared import ContentType, NotificationType
+from uniffy.core.types import ContentType, NotificationType
 
 
 @dataclass(frozen=True)

@@ -91,11 +91,9 @@ async def seed_initial_data() -> None:
         Note,
         Organization,
         User,
-        VisibilityScope,
     )
-    from uniffy.core.models.shared import NodeType
     from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-    from uniffy.core.types import ContentType
+    from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
     from uniffy.db.session import get_async_session
     from uniffy.domains.auth.passwords import hash_password
 
@@ -162,7 +160,8 @@ async def seed_initial_data() -> None:
             uniffy_folder = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.FOLDER,
                 title="Uniffy",
                 slug="uniffy-folder",
@@ -178,7 +177,8 @@ async def seed_initial_data() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.FOLDER,
                 title="Docs",
                 slug="docs-folder",
@@ -197,7 +197,8 @@ async def seed_initial_data() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.NOTE,
                 title="About",
                 content="",  # Placeholder, will be updated
@@ -212,7 +213,8 @@ async def seed_initial_data() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.NOTE,
                 title="Plans",
                 content="",
@@ -227,7 +229,8 @@ async def seed_initial_data() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.NOTE,
                 title="Transparency",
                 content="",
@@ -242,7 +245,8 @@ async def seed_initial_data() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 parent_id=uniffy_folder.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.NOTE,
                 title="Licenses",
                 content="",
@@ -257,7 +261,8 @@ async def seed_initial_data() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 parent_id=docs_folder.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.NOTE,
                 title="Searching",
                 content="",
@@ -272,7 +277,8 @@ async def seed_initial_data() -> None:
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
                 parent_id=docs_folder.id,
-                visibility=VisibilityScope.ORGANIZATION,
+                access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
                 node_type=NodeType.NOTE,
                 title="Sharing",
                 content="",
@@ -363,7 +369,12 @@ async def seed_initial_data() -> None:
                 title=uniffy_folder.title,
                 entity_type=ContentType.NOTE.value,
                 url_path=f"/notes/{uniffy_folder.id}",
-                visibility=uniffy_folder.visibility.value,
+                access_mode=uniffy_folder.access_mode.value,
+                baseline_role=(
+                    uniffy_folder.baseline_role.value
+                    if uniffy_folder.baseline_role is not None
+                    else None
+                ),
                 owner_id=admin_user.id,
                 keywords=" ".join([uniffy_folder.title] + (uniffy_folder.tags or [])),
                 description=uniffy_folder.content[:200] if uniffy_folder.content else None,
@@ -376,7 +387,12 @@ async def seed_initial_data() -> None:
                 title=docs_folder.title,
                 entity_type=ContentType.NOTE.value,
                 url_path=f"/notes/{docs_folder.id}",
-                visibility=docs_folder.visibility.value,
+                access_mode=docs_folder.access_mode.value,
+                baseline_role=(
+                    docs_folder.baseline_role.value
+                    if docs_folder.baseline_role is not None
+                    else None
+                ),
                 owner_id=admin_user.id,
                 keywords=" ".join([docs_folder.title] + (docs_folder.tags or [])),
                 description=docs_folder.content[:200] if docs_folder.content else None,
@@ -390,7 +406,12 @@ async def seed_initial_data() -> None:
                     title=note.title,
                     entity_type=ContentType.NOTE.value,
                     url_path=f"/notes/{note.id}",
-                    visibility=note.visibility.value,
+                    access_mode=note.access_mode.value,
+                    baseline_role=(
+                        note.baseline_role.value
+                        if note.baseline_role is not None
+                        else None
+                    ),
                     owner_id=admin_user.id,
                     keywords=" ".join([note.title] + (note.tags or []) + [note.content[:1000]]),
                     description=note.content[:200] if note.content else None,

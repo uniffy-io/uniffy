@@ -19,303 +19,329 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PermissionsService_GrantPermission_FullMethodName        = "/permissions.v1.PermissionsService/GrantPermission"
-	PermissionsService_RevokePermission_FullMethodName       = "/permissions.v1.PermissionsService/RevokePermission"
-	PermissionsService_UpdatePermission_FullMethodName       = "/permissions.v1.PermissionsService/UpdatePermission"
-	PermissionsService_ListContentPermissions_FullMethodName = "/permissions.v1.PermissionsService/ListContentPermissions"
-	PermissionsService_GetMyPermission_FullMethodName        = "/permissions.v1.PermissionsService/GetMyPermission"
-	PermissionsService_SearchShareTargets_FullMethodName     = "/permissions.v1.PermissionsService/SearchShareTargets"
+	MembersService_ListMembers_FullMethodName       = "/permissions.v1.MembersService/ListMembers"
+	MembersService_AddMember_FullMethodName         = "/permissions.v1.MembersService/AddMember"
+	MembersService_UpdateMemberRole_FullMethodName  = "/permissions.v1.MembersService/UpdateMemberRole"
+	MembersService_RemoveMember_FullMethodName      = "/permissions.v1.MembersService/RemoveMember"
+	MembersService_SetAccessMode_FullMethodName     = "/permissions.v1.MembersService/SetAccessMode"
+	MembersService_TransferOwnership_FullMethodName = "/permissions.v1.MembersService/TransferOwnership"
+	MembersService_ListMemberEvents_FullMethodName  = "/permissions.v1.MembersService/ListMemberEvents"
 )
 
-// PermissionsServiceClient is the client API for PermissionsService service.
+// MembersServiceClient is the client API for MembersService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type PermissionsServiceClient interface {
-	// Grant permission to a user or group on content
-	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*PermissionInfo, error)
-	// Revoke permission from a user or group on content
-	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
-	// Update an existing permission
-	UpdatePermission(ctx context.Context, in *UpdatePermissionRequest, opts ...grpc.CallOption) (*PermissionInfo, error)
-	// List all permissions for a piece of content
-	ListContentPermissions(ctx context.Context, in *ListContentPermissionsRequest, opts ...grpc.CallOption) (*PermissionListResponse, error)
-	// Get the current user's permission on content
-	GetMyPermission(ctx context.Context, in *GetMyPermissionRequest, opts ...grpc.CallOption) (*PermissionInfo, error)
-	// Search for users and groups to share with
-	SearchShareTargets(ctx context.Context, in *SearchShareTargetsRequest, opts ...grpc.CallOption) (*ShareTargetsResponse, error)
+type MembersServiceClient interface {
+	ListMembers(ctx context.Context, in *ListMembersRequest, opts ...grpc.CallOption) (*ListMembersResponse, error)
+	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*MemberResponse, error)
+	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*MemberResponse, error)
+	RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error)
+	SetAccessMode(ctx context.Context, in *SetAccessModeRequest, opts ...grpc.CallOption) (*AccessModeResponse, error)
+	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
+	ListMemberEvents(ctx context.Context, in *ListMemberEventsRequest, opts ...grpc.CallOption) (*ListMemberEventsResponse, error)
 }
 
-type permissionsServiceClient struct {
+type membersServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewPermissionsServiceClient(cc grpc.ClientConnInterface) PermissionsServiceClient {
-	return &permissionsServiceClient{cc}
+func NewMembersServiceClient(cc grpc.ClientConnInterface) MembersServiceClient {
+	return &membersServiceClient{cc}
 }
 
-func (c *permissionsServiceClient) GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*PermissionInfo, error) {
+func (c *membersServiceClient) ListMembers(ctx context.Context, in *ListMembersRequest, opts ...grpc.CallOption) (*ListMembersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PermissionInfo)
-	err := c.cc.Invoke(ctx, PermissionsService_GrantPermission_FullMethodName, in, out, cOpts...)
+	out := new(ListMembersResponse)
+	err := c.cc.Invoke(ctx, MembersService_ListMembers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *permissionsServiceClient) RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error) {
+func (c *membersServiceClient) AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RevokePermissionResponse)
-	err := c.cc.Invoke(ctx, PermissionsService_RevokePermission_FullMethodName, in, out, cOpts...)
+	out := new(MemberResponse)
+	err := c.cc.Invoke(ctx, MembersService_AddMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *permissionsServiceClient) UpdatePermission(ctx context.Context, in *UpdatePermissionRequest, opts ...grpc.CallOption) (*PermissionInfo, error) {
+func (c *membersServiceClient) UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PermissionInfo)
-	err := c.cc.Invoke(ctx, PermissionsService_UpdatePermission_FullMethodName, in, out, cOpts...)
+	out := new(MemberResponse)
+	err := c.cc.Invoke(ctx, MembersService_UpdateMemberRole_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *permissionsServiceClient) ListContentPermissions(ctx context.Context, in *ListContentPermissionsRequest, opts ...grpc.CallOption) (*PermissionListResponse, error) {
+func (c *membersServiceClient) RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PermissionListResponse)
-	err := c.cc.Invoke(ctx, PermissionsService_ListContentPermissions_FullMethodName, in, out, cOpts...)
+	out := new(RemoveMemberResponse)
+	err := c.cc.Invoke(ctx, MembersService_RemoveMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *permissionsServiceClient) GetMyPermission(ctx context.Context, in *GetMyPermissionRequest, opts ...grpc.CallOption) (*PermissionInfo, error) {
+func (c *membersServiceClient) SetAccessMode(ctx context.Context, in *SetAccessModeRequest, opts ...grpc.CallOption) (*AccessModeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PermissionInfo)
-	err := c.cc.Invoke(ctx, PermissionsService_GetMyPermission_FullMethodName, in, out, cOpts...)
+	out := new(AccessModeResponse)
+	err := c.cc.Invoke(ctx, MembersService_SetAccessMode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *permissionsServiceClient) SearchShareTargets(ctx context.Context, in *SearchShareTargetsRequest, opts ...grpc.CallOption) (*ShareTargetsResponse, error) {
+func (c *membersServiceClient) TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ShareTargetsResponse)
-	err := c.cc.Invoke(ctx, PermissionsService_SearchShareTargets_FullMethodName, in, out, cOpts...)
+	out := new(TransferOwnershipResponse)
+	err := c.cc.Invoke(ctx, MembersService_TransferOwnership_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// PermissionsServiceServer is the server API for PermissionsService service.
-// All implementations must embed UnimplementedPermissionsServiceServer
+func (c *membersServiceClient) ListMemberEvents(ctx context.Context, in *ListMemberEventsRequest, opts ...grpc.CallOption) (*ListMemberEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMemberEventsResponse)
+	err := c.cc.Invoke(ctx, MembersService_ListMemberEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MembersServiceServer is the server API for MembersService service.
+// All implementations must embed UnimplementedMembersServiceServer
 // for forward compatibility.
-type PermissionsServiceServer interface {
-	// Grant permission to a user or group on content
-	GrantPermission(context.Context, *GrantPermissionRequest) (*PermissionInfo, error)
-	// Revoke permission from a user or group on content
-	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
-	// Update an existing permission
-	UpdatePermission(context.Context, *UpdatePermissionRequest) (*PermissionInfo, error)
-	// List all permissions for a piece of content
-	ListContentPermissions(context.Context, *ListContentPermissionsRequest) (*PermissionListResponse, error)
-	// Get the current user's permission on content
-	GetMyPermission(context.Context, *GetMyPermissionRequest) (*PermissionInfo, error)
-	// Search for users and groups to share with
-	SearchShareTargets(context.Context, *SearchShareTargetsRequest) (*ShareTargetsResponse, error)
-	mustEmbedUnimplementedPermissionsServiceServer()
+type MembersServiceServer interface {
+	ListMembers(context.Context, *ListMembersRequest) (*ListMembersResponse, error)
+	AddMember(context.Context, *AddMemberRequest) (*MemberResponse, error)
+	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*MemberResponse, error)
+	RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error)
+	SetAccessMode(context.Context, *SetAccessModeRequest) (*AccessModeResponse, error)
+	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
+	ListMemberEvents(context.Context, *ListMemberEventsRequest) (*ListMemberEventsResponse, error)
+	mustEmbedUnimplementedMembersServiceServer()
 }
 
-// UnimplementedPermissionsServiceServer must be embedded to have
+// UnimplementedMembersServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedPermissionsServiceServer struct{}
+type UnimplementedMembersServiceServer struct{}
 
-func (UnimplementedPermissionsServiceServer) GrantPermission(context.Context, *GrantPermissionRequest) (*PermissionInfo, error) {
-	return nil, status.Error(codes.Unimplemented, "method GrantPermission not implemented")
+func (UnimplementedMembersServiceServer) ListMembers(context.Context, *ListMembersRequest) (*ListMembersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMembers not implemented")
 }
-func (UnimplementedPermissionsServiceServer) RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RevokePermission not implemented")
+func (UnimplementedMembersServiceServer) AddMember(context.Context, *AddMemberRequest) (*MemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddMember not implemented")
 }
-func (UnimplementedPermissionsServiceServer) UpdatePermission(context.Context, *UpdatePermissionRequest) (*PermissionInfo, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdatePermission not implemented")
+func (UnimplementedMembersServiceServer) UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*MemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMemberRole not implemented")
 }
-func (UnimplementedPermissionsServiceServer) ListContentPermissions(context.Context, *ListContentPermissionsRequest) (*PermissionListResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListContentPermissions not implemented")
+func (UnimplementedMembersServiceServer) RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveMember not implemented")
 }
-func (UnimplementedPermissionsServiceServer) GetMyPermission(context.Context, *GetMyPermissionRequest) (*PermissionInfo, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetMyPermission not implemented")
+func (UnimplementedMembersServiceServer) SetAccessMode(context.Context, *SetAccessModeRequest) (*AccessModeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetAccessMode not implemented")
 }
-func (UnimplementedPermissionsServiceServer) SearchShareTargets(context.Context, *SearchShareTargetsRequest) (*ShareTargetsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SearchShareTargets not implemented")
+func (UnimplementedMembersServiceServer) TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferOwnership not implemented")
 }
-func (UnimplementedPermissionsServiceServer) mustEmbedUnimplementedPermissionsServiceServer() {}
-func (UnimplementedPermissionsServiceServer) testEmbeddedByValue()                            {}
+func (UnimplementedMembersServiceServer) ListMemberEvents(context.Context, *ListMemberEventsRequest) (*ListMemberEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMemberEvents not implemented")
+}
+func (UnimplementedMembersServiceServer) mustEmbedUnimplementedMembersServiceServer() {}
+func (UnimplementedMembersServiceServer) testEmbeddedByValue()                        {}
 
-// UnsafePermissionsServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to PermissionsServiceServer will
+// UnsafeMembersServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MembersServiceServer will
 // result in compilation errors.
-type UnsafePermissionsServiceServer interface {
-	mustEmbedUnimplementedPermissionsServiceServer()
+type UnsafeMembersServiceServer interface {
+	mustEmbedUnimplementedMembersServiceServer()
 }
 
-func RegisterPermissionsServiceServer(s grpc.ServiceRegistrar, srv PermissionsServiceServer) {
-	// If the following call panics, it indicates UnimplementedPermissionsServiceServer was
+func RegisterMembersServiceServer(s grpc.ServiceRegistrar, srv MembersServiceServer) {
+	// If the following call panics, it indicates UnimplementedMembersServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&PermissionsService_ServiceDesc, srv)
+	s.RegisterService(&MembersService_ServiceDesc, srv)
 }
 
-func _PermissionsService_GrantPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GrantPermissionRequest)
+func _MembersService_ListMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMembersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PermissionsServiceServer).GrantPermission(ctx, in)
+		return srv.(MembersServiceServer).ListMembers(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PermissionsService_GrantPermission_FullMethodName,
+		FullMethod: MembersService_ListMembers_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PermissionsServiceServer).GrantPermission(ctx, req.(*GrantPermissionRequest))
+		return srv.(MembersServiceServer).ListMembers(ctx, req.(*ListMembersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PermissionsService_RevokePermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RevokePermissionRequest)
+func _MembersService_AddMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PermissionsServiceServer).RevokePermission(ctx, in)
+		return srv.(MembersServiceServer).AddMember(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PermissionsService_RevokePermission_FullMethodName,
+		FullMethod: MembersService_AddMember_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PermissionsServiceServer).RevokePermission(ctx, req.(*RevokePermissionRequest))
+		return srv.(MembersServiceServer).AddMember(ctx, req.(*AddMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PermissionsService_UpdatePermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdatePermissionRequest)
+func _MembersService_UpdateMemberRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMemberRoleRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PermissionsServiceServer).UpdatePermission(ctx, in)
+		return srv.(MembersServiceServer).UpdateMemberRole(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PermissionsService_UpdatePermission_FullMethodName,
+		FullMethod: MembersService_UpdateMemberRole_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PermissionsServiceServer).UpdatePermission(ctx, req.(*UpdatePermissionRequest))
+		return srv.(MembersServiceServer).UpdateMemberRole(ctx, req.(*UpdateMemberRoleRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PermissionsService_ListContentPermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListContentPermissionsRequest)
+func _MembersService_RemoveMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PermissionsServiceServer).ListContentPermissions(ctx, in)
+		return srv.(MembersServiceServer).RemoveMember(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PermissionsService_ListContentPermissions_FullMethodName,
+		FullMethod: MembersService_RemoveMember_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PermissionsServiceServer).ListContentPermissions(ctx, req.(*ListContentPermissionsRequest))
+		return srv.(MembersServiceServer).RemoveMember(ctx, req.(*RemoveMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PermissionsService_GetMyPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetMyPermissionRequest)
+func _MembersService_SetAccessMode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetAccessModeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PermissionsServiceServer).GetMyPermission(ctx, in)
+		return srv.(MembersServiceServer).SetAccessMode(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PermissionsService_GetMyPermission_FullMethodName,
+		FullMethod: MembersService_SetAccessMode_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PermissionsServiceServer).GetMyPermission(ctx, req.(*GetMyPermissionRequest))
+		return srv.(MembersServiceServer).SetAccessMode(ctx, req.(*SetAccessModeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PermissionsService_SearchShareTargets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SearchShareTargetsRequest)
+func _MembersService_TransferOwnership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferOwnershipRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PermissionsServiceServer).SearchShareTargets(ctx, in)
+		return srv.(MembersServiceServer).TransferOwnership(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PermissionsService_SearchShareTargets_FullMethodName,
+		FullMethod: MembersService_TransferOwnership_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PermissionsServiceServer).SearchShareTargets(ctx, req.(*SearchShareTargetsRequest))
+		return srv.(MembersServiceServer).TransferOwnership(ctx, req.(*TransferOwnershipRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// PermissionsService_ServiceDesc is the grpc.ServiceDesc for PermissionsService service.
+func _MembersService_ListMemberEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMemberEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MembersServiceServer).ListMemberEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MembersService_ListMemberEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MembersServiceServer).ListMemberEvents(ctx, req.(*ListMemberEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MembersService_ServiceDesc is the grpc.ServiceDesc for MembersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var PermissionsService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "permissions.v1.PermissionsService",
-	HandlerType: (*PermissionsServiceServer)(nil),
+var MembersService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "permissions.v1.MembersService",
+	HandlerType: (*MembersServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GrantPermission",
-			Handler:    _PermissionsService_GrantPermission_Handler,
+			MethodName: "ListMembers",
+			Handler:    _MembersService_ListMembers_Handler,
 		},
 		{
-			MethodName: "RevokePermission",
-			Handler:    _PermissionsService_RevokePermission_Handler,
+			MethodName: "AddMember",
+			Handler:    _MembersService_AddMember_Handler,
 		},
 		{
-			MethodName: "UpdatePermission",
-			Handler:    _PermissionsService_UpdatePermission_Handler,
+			MethodName: "UpdateMemberRole",
+			Handler:    _MembersService_UpdateMemberRole_Handler,
 		},
 		{
-			MethodName: "ListContentPermissions",
-			Handler:    _PermissionsService_ListContentPermissions_Handler,
+			MethodName: "RemoveMember",
+			Handler:    _MembersService_RemoveMember_Handler,
 		},
 		{
-			MethodName: "GetMyPermission",
-			Handler:    _PermissionsService_GetMyPermission_Handler,
+			MethodName: "SetAccessMode",
+			Handler:    _MembersService_SetAccessMode_Handler,
 		},
 		{
-			MethodName: "SearchShareTargets",
-			Handler:    _PermissionsService_SearchShareTargets_Handler,
+			MethodName: "TransferOwnership",
+			Handler:    _MembersService_TransferOwnership_Handler,
+		},
+		{
+			MethodName: "ListMemberEvents",
+			Handler:    _MembersService_ListMemberEvents_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

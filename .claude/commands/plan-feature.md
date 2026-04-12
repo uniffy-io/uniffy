@@ -38,8 +38,8 @@ So that <benefit/value>
 
 **IMPORTANT: Always start by reading Uniffy's documentation:**
 - `CLAUDE.md` -- project rules and critical constraints
-- `docs/agents/backend.md` -- backend patterns (if feature touches Python code)
-- `docs/agents/frontend.md` -- frontend patterns (if feature touches React/TypeScript)
+- `.claude/rules/backend.md` -- backend patterns (if feature touches Python code)
+- `.claude/rules/frontend.md` -- frontend patterns (if feature touches React/TypeScript)
 
 **Use specialized agents and parallel analysis:**
 
@@ -64,7 +64,7 @@ So that <benefit/value>
 - Catalog external libraries relevant to feature
 - Understand how libraries are integrated (check imports, configs)
 - Check `pyproject.toml` for backend dependencies, `src/ui/package.json` for frontend
-- Review `docs/agents/backend.md` and `docs/agents/frontend.md` for documented patterns
+- Review `.claude/rules/backend.md` and `.claude/rules/frontend.md` for documented patterns
 
 **4. Testing Patterns**
 
@@ -195,8 +195,8 @@ So that <benefit/value>
 ### Mandatory Reading
 
 - `CLAUDE.md` - Project rules and critical constraints
-- `docs/agents/backend.md` - Backend patterns (if touching Python)
-- `docs/agents/frontend.md` - Frontend patterns (if touching React/TypeScript)
+- `.claude/rules/backend.md` - Backend patterns (if touching Python)
+- `.claude/rules/frontend.md` - Frontend patterns (if touching React/TypeScript)
 
 ### New Files to Create
 
@@ -389,12 +389,23 @@ Execute every command to ensure zero regressions and 100% feature correctness.
 
 ## Output Format
 
-**Filename**: `.agents/plans/{kebab-case-descriptive-name}.md`
+**Filename**: `.claude/plans/{kebab-case-descriptive-name}.md`
 
 - Replace `{kebab-case-descriptive-name}` with short, descriptive feature name
 - Examples: `add-user-authentication.md`, `implement-search-api.md`, `refactor-database-layer.md`
 
-**Directory**: Create `.agents/plans/` if it doesn't exist
+**Directory**: `.claude/plans/` (already exists)
+
+**Backlog**: If the plan has 3+ phases or estimated High complexity, also create a companion backlog file:
+`.claude/plans/backlogs/{name}-backlog.md`
+
+The backlog should contain:
+1. Progress summary table (phases with `[ ]` status)
+2. "How to resume" instructions for the next agent/human
+3. Per-phase detailed task checklists
+4. Empty "Session notes" section at the bottom
+
+See `CLAUDE.md` "Plans and Backlogs" section for the full convention.
 
 ## Quality Criteria
 

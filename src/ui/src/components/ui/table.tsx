@@ -8,9 +8,7 @@
 import { forwardRef } from 'react';
 import { cn } from '@/shared/utils/cn';
 
-// ============================================================================
 // Table Root
-// ============================================================================
 
 export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
     /** Add a wrapper with rounded corners and border */
@@ -42,9 +40,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 );
 Table.displayName = 'Table';
 
-// ============================================================================
 // Table Header
-// ============================================================================
 
 export const TableHeader = forwardRef<
     HTMLTableSectionElement,
@@ -58,9 +54,7 @@ export const TableHeader = forwardRef<
 ));
 TableHeader.displayName = 'TableHeader';
 
-// ============================================================================
 // Table Body
-// ============================================================================
 
 export const TableBody = forwardRef<
     HTMLTableSectionElement,
@@ -74,9 +68,7 @@ export const TableBody = forwardRef<
 ));
 TableBody.displayName = 'TableBody';
 
-// ============================================================================
 // Table Row
-// ============================================================================
 
 export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
     /** Enable hover highlight effect */
@@ -98,9 +90,7 @@ export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
 );
 TableRow.displayName = 'TableRow';
 
-// ============================================================================
 // Table Head (th)
-// ============================================================================
 
 export interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
     /** Text alignment */
@@ -124,9 +114,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
 );
 TableHead.displayName = 'TableHead';
 
-// ============================================================================
 // Table Cell (td)
-// ============================================================================
 
 export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
     /** Text alignment */
@@ -150,9 +138,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
 );
 TableCell.displayName = 'TableCell';
 
-// ============================================================================
 // Table Loading State
-// ============================================================================
 
 export interface TableLoadingProps {
     /** Number of columns to span */
@@ -174,9 +160,7 @@ export function TableLoading({ colSpan, message = 'Loading...' }: TableLoadingPr
     );
 }
 
-// ============================================================================
 // Table Empty State
-// ============================================================================
 
 export interface TableEmptyProps {
     /** Number of columns to span */

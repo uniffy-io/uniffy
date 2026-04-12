@@ -9,7 +9,7 @@ import type { RootState } from '@/app/store';
 import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
 import type { SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { bucketForContent } from '@/shared/utils/contentRoles';
 
 // MIME category mappings for filter matching
 const MIME_CATEGORY_PATTERNS: Record<string, RegExp> = {
@@ -156,9 +156,8 @@ export const selectFilesForCurrentFolderAndScope = createSelector(
             // For "Shared With Me", show ALL shared files regardless of folder
             if (viewScope === 'shared') {
                 filtered = filtered.filter(
-                    (f) => f.ownerId !== userId && f.visibility !== VisibilityScope.ORGANIZATION
+                    (f) => userId ? bucketForContent({ ownerId: f.ownerId, accessMode: f.accessMode, currentUserId: userId }) === 'shared' : false
                 );
-                // Apply viewScope filter and return early for shared view
                 return filtered;
             }
 
@@ -175,21 +174,20 @@ export const selectFilesForCurrentFolderAndScope = createSelector(
         }
 
         // Apply viewScope filter
-        if (viewScope === 'shared') {
-            // For shared view with active filter
-            filtered = filtered.filter(
-                (f) => f.ownerId !== userId && f.visibility !== VisibilityScope.ORGANIZATION
-            );
-        } else if (viewScope === 'personal') {
-            // Only user's own PRIVATE files
-            filtered = filtered.filter(
-                (f) => f.ownerId === userId && f.visibility === VisibilityScope.PRIVATE
-            );
-        } else if (viewScope === 'organization') {
-            // Only ORGANIZATION visibility files
-            filtered = filtered.filter(
-                (f) => f.visibility === VisibilityScope.ORGANIZATION
-            );
+        if (userId) {
+            if (viewScope === 'shared') {
+                filtered = filtered.filter(
+                    (f) => bucketForContent({ ownerId: f.ownerId, accessMode: f.accessMode, currentUserId: userId }) === 'shared'
+                );
+            } else if (viewScope === 'personal') {
+                filtered = filtered.filter(
+                    (f) => bucketForContent({ ownerId: f.ownerId, accessMode: f.accessMode, currentUserId: userId }) === 'personal'
+                );
+            } else if (viewScope === 'organization') {
+                filtered = filtered.filter(
+                    (f) => bucketForContent({ ownerId: f.ownerId, accessMode: f.accessMode, currentUserId: userId }) === 'organization'
+                );
+            }
         }
         // viewScope === 'all' shows everything (no additional filter)
 

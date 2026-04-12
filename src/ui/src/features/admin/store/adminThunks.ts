@@ -9,7 +9,8 @@ import type { RootState } from '@/app/store';
 import { adminApi } from '@/features/admin/api/adminApi';
 import {
     ContentType,
-    VisibilityScope,
+    AccessMode,
+    ContentRole,
     OrganizationRole,
     GroupRole,
     DomainType,
@@ -51,11 +52,8 @@ export const updatePermissionDefaults = createAsyncThunk<
     SerializedContentTypeDefaults,
     {
         contentType: number;
-        defaultVisibility?: number;
-        membersCanView?: boolean;
-        membersCanEdit?: boolean;
-        membersCanDelete?: boolean;
-        membersCanShare?: boolean;
+        defaultAccessMode?: number;
+        defaultBaselineRole?: number | null;
     },
     { state: RootState }
 >('admin/updatePermissionDefaults', async (args, { getState }) => {
@@ -69,13 +67,12 @@ export const updatePermissionDefaults = createAsyncThunk<
     const response = await adminApi.updatePermissionDefaults({
         organizationId,
         contentType: args.contentType as ContentType,
-        defaultVisibility: args.defaultVisibility !== undefined
-            ? args.defaultVisibility as VisibilityScope
+        defaultAccessMode: args.defaultAccessMode !== undefined
+            ? args.defaultAccessMode as AccessMode
             : undefined,
-        membersCanView: args.membersCanView,
-        membersCanEdit: args.membersCanEdit,
-        membersCanDelete: args.membersCanDelete,
-        membersCanShare: args.membersCanShare,
+        defaultBaselineRole: args.defaultBaselineRole !== undefined && args.defaultBaselineRole !== null
+            ? args.defaultBaselineRole as ContentRole
+            : undefined,
     });
 
     return serializeContentTypeDefaults(response);

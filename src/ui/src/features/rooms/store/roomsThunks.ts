@@ -18,7 +18,7 @@ import {
   RoomStatus as ProtoRoomStatus,
   BookingStatus as ProtoBookingStatus,
 } from '@uniffy/proto/rooms/v1/rooms_pb';
-import { VisibilityScope as ProtoVisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
 import { Timestamp } from '@bufbuild/protobuf';
 import type {
   Room,
@@ -30,9 +30,6 @@ import type {
 } from '@/features/rooms/types';
 import { DEFAULT_PAGE_SIZE } from '@/features/rooms/constants';
 
-// ============================================================================
-// Helpers
-// ============================================================================
 
 /**
  * Convert proto timestamp to ISO string.
@@ -54,9 +51,7 @@ const isoToTimestamp = (iso: string): Timestamp => {
   });
 };
 
-// ============================================================================
 // Enum Converters
-// ============================================================================
 
 const ROOM_TYPE_FROM_PROTO: Record<ProtoRoomType, RoomType> = {
   [ProtoRoomType.UNSPECIFIED]: 'meeting_room',
@@ -97,24 +92,17 @@ const BOOKING_STATUS_TO_PROTO: Record<BookingStatus, ProtoBookingStatus> = {
   'cancelled': ProtoBookingStatus.CANCELLED,
 };
 
-const VISIBILITY_TO_PROTO: Record<string, ProtoVisibilityScope> = {
-  'private': ProtoVisibilityScope.PRIVATE,
-  'group': ProtoVisibilityScope.GROUP,
-  'organization': ProtoVisibilityScope.ORGANIZATION,
-  'public': ProtoVisibilityScope.PUBLIC,
-};
+function frontendVisibilityToAccessMode(v: 'private' | 'organization'): { accessMode: number; baselineRole: number | undefined } {
+  return v === 'organization'
+    ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: ContentRole.VIEWER }
+    : { accessMode: AccessMode.OWNER_ONLY, baselineRole: undefined };
+}
 
-const VISIBILITY_FROM_PROTO: Record<ProtoVisibilityScope, string> = {
-  [ProtoVisibilityScope.UNSPECIFIED]: 'private',
-  [ProtoVisibilityScope.PRIVATE]: 'private',
-  [ProtoVisibilityScope.GROUP]: 'group',
-  [ProtoVisibilityScope.ORGANIZATION]: 'organization',
-  [ProtoVisibilityScope.PUBLIC]: 'organization',
-};
+function accessModeToFrontendVisibility(mode: number): 'private' | 'organization' {
+  return mode === AccessMode.OPEN_TO_ORG ? 'organization' : 'private';
+}
 
-// ============================================================================
 // Proto to Domain Converters
-// ============================================================================
 
 /**
  * Convert proto room to domain room.
@@ -133,7 +121,7 @@ const roomFromProto = (proto: ProtoRoom): Room => ({
   location: proto.location,
   amenities: [...proto.amenities],
   imageFileId: proto.imageFileId || null,
-  visibility: (VISIBILITY_FROM_PROTO[proto.visibility] || 'private') as 'private' | 'organization',
+  visibility: accessModeToFrontendVisibility(proto.accessMode),
   createdAt: timestampToIso(proto.createdAt),
   updatedAt: timestampToIso(proto.updatedAt),
 });
@@ -170,9 +158,7 @@ const timeSlotFromProto = (proto: ProtoTimeSlot): TimeSlot => ({
   bookerName: proto.bookerName,
 });
 
-// ============================================================================
 // Room Thunks
-// ============================================================================
 
 /**
  * Fetch rooms with optional filters.
@@ -340,9 +326,9 @@ export const createRoom = createAsyncThunk<
       building: params.building,
       location: params.location,
       amenities: params.amenities || [],
-      visibility: params.visibility
-        ? VISIBILITY_TO_PROTO[params.visibility]
-        : undefined,
+      ...(params.visibility
+        ? frontendVisibilityToAccessMode(params.visibility as 'private' | 'organization')
+        : {}),
       groupIds: params.groupIds || [],
     });
     if (!response.room) {
@@ -390,9 +376,9 @@ export const updateRoom = createAsyncThunk<
       location: params.location,
       amenities: params.amenities || [],
       replaceAmenities: params.replaceAmenities || false,
-      visibility: params.visibility
-        ? VISIBILITY_TO_PROTO[params.visibility]
-        : undefined,
+      ...(params.visibility
+        ? frontendVisibilityToAccessMode(params.visibility as 'private' | 'organization')
+        : {}),
     });
     if (!response.room) {
       return rejectWithValue('Failed to update room');
@@ -425,9 +411,7 @@ export const deleteRoom = createAsyncThunk<
   }
 });
 
-// ============================================================================
 // Booking Thunks
-// ============================================================================
 
 /**
  * Create a new booking.
@@ -526,9 +510,7 @@ export const fetchBookings = createAsyncThunk<
   }
 });
 
-// ============================================================================
 // Availability Thunks
-// ============================================================================
 
 /**
  * Check availability for a specific room over a date range.

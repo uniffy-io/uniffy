@@ -36,7 +36,7 @@ from uniffy_proto.groups.v1.groups_connect import GroupsServiceASGIApplication
 from uniffy_proto.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy_proto.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
 from uniffy_proto.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
-from uniffy_proto.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
+from uniffy_proto.permissions.v1.permissions_connect import MembersServiceASGIApplication
 from uniffy_proto.presence.v1.presence_connect import PresenceServiceASGIApplication
 from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplication
 from uniffy_proto.rooms.v1.rooms_connect import RoomsServiceASGIApplication
@@ -46,7 +46,13 @@ from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
-from uniffy.core.valkey import close_pubsub, close_queue, init_pubsub, init_queue
+from uniffy.core.valkey import (
+    close_pubsub,
+    close_queue,
+    init_pubsub,
+    init_queue,
+    signal_pubsub_shutdown,
+)
 from uniffy.db import close_db, init_db, seed_initial_data
 from uniffy.domains.agents.agents.http_routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
@@ -71,7 +77,7 @@ from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
-from uniffy.domains.permissions.service import PermissionsServiceImpl
+from uniffy.domains.permissions.service import MembersServiceImpl
 from uniffy.domains.presence.service import PresenceServiceImpl
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.rooms.service import RoomsServiceImpl
@@ -245,6 +251,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down UNIFFY application...")
+    signal_pubsub_shutdown()
     await close_pubsub()
     await close_queue()
     await close_s3()
@@ -330,9 +337,9 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         ),
     )
     dispatcher.add_service(
-        "/permissions.v1.PermissionsService",
-        PermissionsServiceASGIApplication(
-            PermissionsServiceImpl(), interceptors=[logging_interceptor]
+        "/permissions.v1.MembersService",
+        MembersServiceASGIApplication(
+            MembersServiceImpl(), interceptors=[logging_interceptor]
         ),
     )
     dispatcher.add_service(

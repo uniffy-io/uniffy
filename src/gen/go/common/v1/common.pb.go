@@ -27,20 +27,21 @@ const (
 type ContentType int32
 
 const (
-	ContentType_CONTENT_TYPE_UNSPECIFIED    ContentType = 0
-	ContentType_CONTENT_TYPE_NOTE           ContentType = 1
-	ContentType_CONTENT_TYPE_FILE           ContentType = 2
-	ContentType_CONTENT_TYPE_CALENDAR_EVENT ContentType = 3
-	ContentType_CONTENT_TYPE_CHAT_MESSAGE   ContentType = 7
-	ContentType_CONTENT_TYPE_USER           ContentType = 9
-	ContentType_CONTENT_TYPE_FOLDER         ContentType = 10
-	ContentType_CONTENT_TYPE_PROJECT        ContentType = 11
-	ContentType_CONTENT_TYPE_TASK           ContentType = 12
-	ContentType_CONTENT_TYPE_AGENT          ContentType = 13
-	ContentType_CONTENT_TYPE_PROVIDER_KEY   ContentType = 14
-	ContentType_CONTENT_TYPE_PROMPT         ContentType = 15
-	ContentType_CONTENT_TYPE_CHAT           ContentType = 16
-	ContentType_CONTENT_TYPE_ROOM           ContentType = 17
+	ContentType_CONTENT_TYPE_UNSPECIFIED     ContentType = 0
+	ContentType_CONTENT_TYPE_NOTE            ContentType = 1
+	ContentType_CONTENT_TYPE_FILE            ContentType = 2
+	ContentType_CONTENT_TYPE_CALENDAR_EVENT  ContentType = 3
+	ContentType_CONTENT_TYPE_CHAT_MESSAGE    ContentType = 7
+	ContentType_CONTENT_TYPE_USER            ContentType = 9
+	ContentType_CONTENT_TYPE_FOLDER          ContentType = 10
+	ContentType_CONTENT_TYPE_PROJECT         ContentType = 11
+	ContentType_CONTENT_TYPE_TASK            ContentType = 12
+	ContentType_CONTENT_TYPE_AGENT           ContentType = 13
+	ContentType_CONTENT_TYPE_PROVIDER_KEY    ContentType = 14
+	ContentType_CONTENT_TYPE_PROMPT          ContentType = 15
+	ContentType_CONTENT_TYPE_CHAT            ContentType = 16
+	ContentType_CONTENT_TYPE_ROOM            ContentType = 17
+	ContentType_CONTENT_TYPE_AGENT_CRON_TASK ContentType = 18
 )
 
 // Enum value maps for ContentType.
@@ -60,22 +61,24 @@ var (
 		15: "CONTENT_TYPE_PROMPT",
 		16: "CONTENT_TYPE_CHAT",
 		17: "CONTENT_TYPE_ROOM",
+		18: "CONTENT_TYPE_AGENT_CRON_TASK",
 	}
 	ContentType_value = map[string]int32{
-		"CONTENT_TYPE_UNSPECIFIED":    0,
-		"CONTENT_TYPE_NOTE":           1,
-		"CONTENT_TYPE_FILE":           2,
-		"CONTENT_TYPE_CALENDAR_EVENT": 3,
-		"CONTENT_TYPE_CHAT_MESSAGE":   7,
-		"CONTENT_TYPE_USER":           9,
-		"CONTENT_TYPE_FOLDER":         10,
-		"CONTENT_TYPE_PROJECT":        11,
-		"CONTENT_TYPE_TASK":           12,
-		"CONTENT_TYPE_AGENT":          13,
-		"CONTENT_TYPE_PROVIDER_KEY":   14,
-		"CONTENT_TYPE_PROMPT":         15,
-		"CONTENT_TYPE_CHAT":           16,
-		"CONTENT_TYPE_ROOM":           17,
+		"CONTENT_TYPE_UNSPECIFIED":     0,
+		"CONTENT_TYPE_NOTE":            1,
+		"CONTENT_TYPE_FILE":            2,
+		"CONTENT_TYPE_CALENDAR_EVENT":  3,
+		"CONTENT_TYPE_CHAT_MESSAGE":    7,
+		"CONTENT_TYPE_USER":            9,
+		"CONTENT_TYPE_FOLDER":          10,
+		"CONTENT_TYPE_PROJECT":         11,
+		"CONTENT_TYPE_TASK":            12,
+		"CONTENT_TYPE_AGENT":           13,
+		"CONTENT_TYPE_PROVIDER_KEY":    14,
+		"CONTENT_TYPE_PROMPT":          15,
+		"CONTENT_TYPE_CHAT":            16,
+		"CONTENT_TYPE_ROOM":            17,
+		"CONTENT_TYPE_AGENT_CRON_TASK": 18,
 	}
 )
 
@@ -159,113 +162,184 @@ func (SubjectType) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_common_proto_rawDescGZIP(), []int{1}
 }
 
-// PermissionLevel defines access levels for content.
-type PermissionLevel int32
+// ContentRole defines the role a subject has on a piece of content.
+// BLOCKED is an explicit deny that overrides any baseline access.
+type ContentRole int32
 
 const (
-	PermissionLevel_PERMISSION_LEVEL_UNSPECIFIED PermissionLevel = 0
-	PermissionLevel_PERMISSION_LEVEL_VIEW        PermissionLevel = 1
-	PermissionLevel_PERMISSION_LEVEL_EDIT        PermissionLevel = 2
-	PermissionLevel_PERMISSION_LEVEL_ADMIN       PermissionLevel = 3
+	ContentRole_CONTENT_ROLE_UNSPECIFIED ContentRole = 0
+	ContentRole_CONTENT_ROLE_VIEWER      ContentRole = 1
+	ContentRole_CONTENT_ROLE_COMMENTER   ContentRole = 2
+	ContentRole_CONTENT_ROLE_EDITOR      ContentRole = 3
+	ContentRole_CONTENT_ROLE_ADMIN       ContentRole = 4
+	ContentRole_CONTENT_ROLE_OWNER       ContentRole = 5
+	ContentRole_CONTENT_ROLE_BLOCKED     ContentRole = 6
 )
 
-// Enum value maps for PermissionLevel.
+// Enum value maps for ContentRole.
 var (
-	PermissionLevel_name = map[int32]string{
-		0: "PERMISSION_LEVEL_UNSPECIFIED",
-		1: "PERMISSION_LEVEL_VIEW",
-		2: "PERMISSION_LEVEL_EDIT",
-		3: "PERMISSION_LEVEL_ADMIN",
+	ContentRole_name = map[int32]string{
+		0: "CONTENT_ROLE_UNSPECIFIED",
+		1: "CONTENT_ROLE_VIEWER",
+		2: "CONTENT_ROLE_COMMENTER",
+		3: "CONTENT_ROLE_EDITOR",
+		4: "CONTENT_ROLE_ADMIN",
+		5: "CONTENT_ROLE_OWNER",
+		6: "CONTENT_ROLE_BLOCKED",
 	}
-	PermissionLevel_value = map[string]int32{
-		"PERMISSION_LEVEL_UNSPECIFIED": 0,
-		"PERMISSION_LEVEL_VIEW":        1,
-		"PERMISSION_LEVEL_EDIT":        2,
-		"PERMISSION_LEVEL_ADMIN":       3,
+	ContentRole_value = map[string]int32{
+		"CONTENT_ROLE_UNSPECIFIED": 0,
+		"CONTENT_ROLE_VIEWER":      1,
+		"CONTENT_ROLE_COMMENTER":   2,
+		"CONTENT_ROLE_EDITOR":      3,
+		"CONTENT_ROLE_ADMIN":       4,
+		"CONTENT_ROLE_OWNER":       5,
+		"CONTENT_ROLE_BLOCKED":     6,
 	}
 )
 
-func (x PermissionLevel) Enum() *PermissionLevel {
-	p := new(PermissionLevel)
+func (x ContentRole) Enum() *ContentRole {
+	p := new(ContentRole)
 	*p = x
 	return p
 }
 
-func (x PermissionLevel) String() string {
+func (x ContentRole) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (PermissionLevel) Descriptor() protoreflect.EnumDescriptor {
+func (ContentRole) Descriptor() protoreflect.EnumDescriptor {
 	return file_common_v1_common_proto_enumTypes[2].Descriptor()
 }
 
-func (PermissionLevel) Type() protoreflect.EnumType {
+func (ContentRole) Type() protoreflect.EnumType {
 	return &file_common_v1_common_proto_enumTypes[2]
 }
 
-func (x PermissionLevel) Number() protoreflect.EnumNumber {
+func (x ContentRole) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use PermissionLevel.Descriptor instead.
-func (PermissionLevel) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use ContentRole.Descriptor instead.
+func (ContentRole) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_common_proto_rawDescGZIP(), []int{2}
 }
 
-// VisibilityScope defines who can see content by default.
-type VisibilityScope int32
+// AccessMode defines the baseline access mode for a piece of content.
+// Explicit ContentMember rows always override the baseline (in either
+// direction -- higher or BLOCKED).
+type AccessMode int32
 
 const (
-	VisibilityScope_VISIBILITY_SCOPE_UNSPECIFIED  VisibilityScope = 0
-	VisibilityScope_VISIBILITY_SCOPE_PRIVATE      VisibilityScope = 1
-	VisibilityScope_VISIBILITY_SCOPE_GROUP        VisibilityScope = 2
-	VisibilityScope_VISIBILITY_SCOPE_ORGANIZATION VisibilityScope = 3
-	VisibilityScope_VISIBILITY_SCOPE_PUBLIC       VisibilityScope = 4
+	AccessMode_ACCESS_MODE_UNSPECIFIED      AccessMode = 0
+	AccessMode_ACCESS_MODE_OWNER_ONLY       AccessMode = 1
+	AccessMode_ACCESS_MODE_EXPLICIT_MEMBERS AccessMode = 2
+	AccessMode_ACCESS_MODE_OPEN_TO_ORG      AccessMode = 3
 )
 
-// Enum value maps for VisibilityScope.
+// Enum value maps for AccessMode.
 var (
-	VisibilityScope_name = map[int32]string{
-		0: "VISIBILITY_SCOPE_UNSPECIFIED",
-		1: "VISIBILITY_SCOPE_PRIVATE",
-		2: "VISIBILITY_SCOPE_GROUP",
-		3: "VISIBILITY_SCOPE_ORGANIZATION",
-		4: "VISIBILITY_SCOPE_PUBLIC",
+	AccessMode_name = map[int32]string{
+		0: "ACCESS_MODE_UNSPECIFIED",
+		1: "ACCESS_MODE_OWNER_ONLY",
+		2: "ACCESS_MODE_EXPLICIT_MEMBERS",
+		3: "ACCESS_MODE_OPEN_TO_ORG",
 	}
-	VisibilityScope_value = map[string]int32{
-		"VISIBILITY_SCOPE_UNSPECIFIED":  0,
-		"VISIBILITY_SCOPE_PRIVATE":      1,
-		"VISIBILITY_SCOPE_GROUP":        2,
-		"VISIBILITY_SCOPE_ORGANIZATION": 3,
-		"VISIBILITY_SCOPE_PUBLIC":       4,
+	AccessMode_value = map[string]int32{
+		"ACCESS_MODE_UNSPECIFIED":      0,
+		"ACCESS_MODE_OWNER_ONLY":       1,
+		"ACCESS_MODE_EXPLICIT_MEMBERS": 2,
+		"ACCESS_MODE_OPEN_TO_ORG":      3,
 	}
 )
 
-func (x VisibilityScope) Enum() *VisibilityScope {
-	p := new(VisibilityScope)
+func (x AccessMode) Enum() *AccessMode {
+	p := new(AccessMode)
 	*p = x
 	return p
 }
 
-func (x VisibilityScope) String() string {
+func (x AccessMode) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (VisibilityScope) Descriptor() protoreflect.EnumDescriptor {
+func (AccessMode) Descriptor() protoreflect.EnumDescriptor {
 	return file_common_v1_common_proto_enumTypes[3].Descriptor()
 }
 
-func (VisibilityScope) Type() protoreflect.EnumType {
+func (AccessMode) Type() protoreflect.EnumType {
 	return &file_common_v1_common_proto_enumTypes[3]
 }
 
-func (x VisibilityScope) Number() protoreflect.EnumNumber {
+func (x AccessMode) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use VisibilityScope.Descriptor instead.
-func (VisibilityScope) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use AccessMode.Descriptor instead.
+func (AccessMode) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_common_proto_rawDescGZIP(), []int{3}
+}
+
+// ContentMemberAction is the action recorded in an audit log event.
+type ContentMemberAction int32
+
+const (
+	ContentMemberAction_CONTENT_MEMBER_ACTION_UNSPECIFIED           ContentMemberAction = 0
+	ContentMemberAction_CONTENT_MEMBER_ACTION_MEMBER_ADDED          ContentMemberAction = 1
+	ContentMemberAction_CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED   ContentMemberAction = 2
+	ContentMemberAction_CONTENT_MEMBER_ACTION_MEMBER_REMOVED        ContentMemberAction = 3
+	ContentMemberAction_CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED   ContentMemberAction = 4
+	ContentMemberAction_CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED ContentMemberAction = 5
+	ContentMemberAction_CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED ContentMemberAction = 6
+)
+
+// Enum value maps for ContentMemberAction.
+var (
+	ContentMemberAction_name = map[int32]string{
+		0: "CONTENT_MEMBER_ACTION_UNSPECIFIED",
+		1: "CONTENT_MEMBER_ACTION_MEMBER_ADDED",
+		2: "CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED",
+		3: "CONTENT_MEMBER_ACTION_MEMBER_REMOVED",
+		4: "CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED",
+		5: "CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED",
+		6: "CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED",
+	}
+	ContentMemberAction_value = map[string]int32{
+		"CONTENT_MEMBER_ACTION_UNSPECIFIED":           0,
+		"CONTENT_MEMBER_ACTION_MEMBER_ADDED":          1,
+		"CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED":   2,
+		"CONTENT_MEMBER_ACTION_MEMBER_REMOVED":        3,
+		"CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED":   4,
+		"CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED": 5,
+		"CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED": 6,
+	}
+)
+
+func (x ContentMemberAction) Enum() *ContentMemberAction {
+	p := new(ContentMemberAction)
+	*p = x
+	return p
+}
+
+func (x ContentMemberAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ContentMemberAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_common_proto_enumTypes[4].Descriptor()
+}
+
+func (ContentMemberAction) Type() protoreflect.EnumType {
+	return &file_common_v1_common_proto_enumTypes[4]
+}
+
+func (x ContentMemberAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ContentMemberAction.Descriptor instead.
+func (ContentMemberAction) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_common_proto_rawDescGZIP(), []int{4}
 }
 
 // OrganizationRole defines a user's role within an organization.
@@ -305,11 +379,11 @@ func (x OrganizationRole) String() string {
 }
 
 func (OrganizationRole) Descriptor() protoreflect.EnumDescriptor {
-	return file_common_v1_common_proto_enumTypes[4].Descriptor()
+	return file_common_v1_common_proto_enumTypes[5].Descriptor()
 }
 
 func (OrganizationRole) Type() protoreflect.EnumType {
-	return &file_common_v1_common_proto_enumTypes[4]
+	return &file_common_v1_common_proto_enumTypes[5]
 }
 
 func (x OrganizationRole) Number() protoreflect.EnumNumber {
@@ -318,7 +392,7 @@ func (x OrganizationRole) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use OrganizationRole.Descriptor instead.
 func (OrganizationRole) EnumDescriptor() ([]byte, []int) {
-	return file_common_v1_common_proto_rawDescGZIP(), []int{4}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{5}
 }
 
 // GroupRole defines a user's role within a group.
@@ -356,11 +430,11 @@ func (x GroupRole) String() string {
 }
 
 func (GroupRole) Descriptor() protoreflect.EnumDescriptor {
-	return file_common_v1_common_proto_enumTypes[5].Descriptor()
+	return file_common_v1_common_proto_enumTypes[6].Descriptor()
 }
 
 func (GroupRole) Type() protoreflect.EnumType {
-	return &file_common_v1_common_proto_enumTypes[5]
+	return &file_common_v1_common_proto_enumTypes[6]
 }
 
 func (x GroupRole) Number() protoreflect.EnumNumber {
@@ -369,7 +443,7 @@ func (x GroupRole) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use GroupRole.Descriptor instead.
 func (GroupRole) EnumDescriptor() ([]byte, []int) {
-	return file_common_v1_common_proto_rawDescGZIP(), []int{5}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{6}
 }
 
 // DomainType defines application domains that support domain-level admins.
@@ -418,11 +492,11 @@ func (x DomainType) String() string {
 }
 
 func (DomainType) Descriptor() protoreflect.EnumDescriptor {
-	return file_common_v1_common_proto_enumTypes[6].Descriptor()
+	return file_common_v1_common_proto_enumTypes[7].Descriptor()
 }
 
 func (DomainType) Type() protoreflect.EnumType {
-	return &file_common_v1_common_proto_enumTypes[6]
+	return &file_common_v1_common_proto_enumTypes[7]
 }
 
 func (x DomainType) Number() protoreflect.EnumNumber {
@@ -431,7 +505,7 @@ func (x DomainType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DomainType.Descriptor instead.
 func (DomainType) EnumDescriptor() ([]byte, []int) {
-	return file_common_v1_common_proto_rawDescGZIP(), []int{6}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{7}
 }
 
 // UserInfo represents basic user information.
@@ -1208,7 +1282,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\vtotal_count\x18\x03 \x01(\x05R\n" +
 	"totalCount\x12\x1f\n" +
 	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
-	"totalPages*\xf8\x02\n" +
+	"totalPages*\x9a\x03\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CONTENT_TYPE_NOTE\x10\x01\x12\x15\n" +
@@ -1224,23 +1298,35 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x19CONTENT_TYPE_PROVIDER_KEY\x10\x0e\x12\x17\n" +
 	"\x13CONTENT_TYPE_PROMPT\x10\x0f\x12\x15\n" +
 	"\x11CONTENT_TYPE_CHAT\x10\x10\x12\x15\n" +
-	"\x11CONTENT_TYPE_ROOM\x10\x11*y\n" +
+	"\x11CONTENT_TYPE_ROOM\x10\x11\x12 \n" +
+	"\x1cCONTENT_TYPE_AGENT_CRON_TASK\x10\x12*y\n" +
 	"\vSubjectType\x12\x1c\n" +
 	"\x18SUBJECT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_TYPE_USER\x10\x01\x12\x16\n" +
 	"\x12SUBJECT_TYPE_GROUP\x10\x02\x12\x1d\n" +
-	"\x19SUBJECT_TYPE_ORGANIZATION\x10\x03*\x85\x01\n" +
-	"\x0fPermissionLevel\x12 \n" +
-	"\x1cPERMISSION_LEVEL_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15PERMISSION_LEVEL_VIEW\x10\x01\x12\x19\n" +
-	"\x15PERMISSION_LEVEL_EDIT\x10\x02\x12\x1a\n" +
-	"\x16PERMISSION_LEVEL_ADMIN\x10\x03*\xad\x01\n" +
-	"\x0fVisibilityScope\x12 \n" +
-	"\x1cVISIBILITY_SCOPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
-	"\x18VISIBILITY_SCOPE_PRIVATE\x10\x01\x12\x1a\n" +
-	"\x16VISIBILITY_SCOPE_GROUP\x10\x02\x12!\n" +
-	"\x1dVISIBILITY_SCOPE_ORGANIZATION\x10\x03\x12\x1b\n" +
-	"\x17VISIBILITY_SCOPE_PUBLIC\x10\x04*\x8d\x01\n" +
+	"\x19SUBJECT_TYPE_ORGANIZATION\x10\x03*\xc3\x01\n" +
+	"\vContentRole\x12\x1c\n" +
+	"\x18CONTENT_ROLE_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13CONTENT_ROLE_VIEWER\x10\x01\x12\x1a\n" +
+	"\x16CONTENT_ROLE_COMMENTER\x10\x02\x12\x17\n" +
+	"\x13CONTENT_ROLE_EDITOR\x10\x03\x12\x16\n" +
+	"\x12CONTENT_ROLE_ADMIN\x10\x04\x12\x16\n" +
+	"\x12CONTENT_ROLE_OWNER\x10\x05\x12\x18\n" +
+	"\x14CONTENT_ROLE_BLOCKED\x10\x06*\x84\x01\n" +
+	"\n" +
+	"AccessMode\x12\x1b\n" +
+	"\x17ACCESS_MODE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16ACCESS_MODE_OWNER_ONLY\x10\x01\x12 \n" +
+	"\x1cACCESS_MODE_EXPLICIT_MEMBERS\x10\x02\x12\x1b\n" +
+	"\x17ACCESS_MODE_OPEN_TO_ORG\x10\x03*\xce\x02\n" +
+	"\x13ContentMemberAction\x12%\n" +
+	"!CONTENT_MEMBER_ACTION_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"CONTENT_MEMBER_ACTION_MEMBER_ADDED\x10\x01\x12-\n" +
+	")CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED\x10\x02\x12(\n" +
+	"$CONTENT_MEMBER_ACTION_MEMBER_REMOVED\x10\x03\x12-\n" +
+	")CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED\x10\x04\x12/\n" +
+	"+CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED\x10\x05\x12/\n" +
+	"+CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED\x10\x06*\x8d\x01\n" +
 	"\x10OrganizationRole\x12!\n" +
 	"\x1dORGANIZATION_ROLE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18ORGANIZATION_ROLE_MEMBER\x10\x01\x12\x1b\n" +
@@ -1272,38 +1358,39 @@ func file_common_v1_common_proto_rawDescGZIP() []byte {
 	return file_common_v1_common_proto_rawDescData
 }
 
-var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
 var file_common_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_common_v1_common_proto_goTypes = []any{
 	(ContentType)(0),              // 0: common.v1.ContentType
 	(SubjectType)(0),              // 1: common.v1.SubjectType
-	(PermissionLevel)(0),          // 2: common.v1.PermissionLevel
-	(VisibilityScope)(0),          // 3: common.v1.VisibilityScope
-	(OrganizationRole)(0),         // 4: common.v1.OrganizationRole
-	(GroupRole)(0),                // 5: common.v1.GroupRole
-	(DomainType)(0),               // 6: common.v1.DomainType
-	(*UserInfo)(nil),              // 7: common.v1.UserInfo
-	(*OrganizationInfo)(nil),      // 8: common.v1.OrganizationInfo
-	(*GroupInfo)(nil),             // 9: common.v1.GroupInfo
-	(*MemberInfo)(nil),            // 10: common.v1.MemberInfo
-	(*GroupMemberInfo)(nil),       // 11: common.v1.GroupMemberInfo
-	(*DomainAdminInfo)(nil),       // 12: common.v1.DomainAdminInfo
-	(*PaginationRequest)(nil),     // 13: common.v1.PaginationRequest
-	(*PaginationResponse)(nil),    // 14: common.v1.PaginationResponse
-	(*timestamppb.Timestamp)(nil), // 15: google.protobuf.Timestamp
+	(ContentRole)(0),              // 2: common.v1.ContentRole
+	(AccessMode)(0),               // 3: common.v1.AccessMode
+	(ContentMemberAction)(0),      // 4: common.v1.ContentMemberAction
+	(OrganizationRole)(0),         // 5: common.v1.OrganizationRole
+	(GroupRole)(0),                // 6: common.v1.GroupRole
+	(DomainType)(0),               // 7: common.v1.DomainType
+	(*UserInfo)(nil),              // 8: common.v1.UserInfo
+	(*OrganizationInfo)(nil),      // 9: common.v1.OrganizationInfo
+	(*GroupInfo)(nil),             // 10: common.v1.GroupInfo
+	(*MemberInfo)(nil),            // 11: common.v1.MemberInfo
+	(*GroupMemberInfo)(nil),       // 12: common.v1.GroupMemberInfo
+	(*DomainAdminInfo)(nil),       // 13: common.v1.DomainAdminInfo
+	(*PaginationRequest)(nil),     // 14: common.v1.PaginationRequest
+	(*PaginationResponse)(nil),    // 15: common.v1.PaginationResponse
+	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
 }
 var file_common_v1_common_proto_depIdxs = []int32{
-	15, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
-	15, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
-	15, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	15, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 5: common.v1.MemberInfo.role:type_name -> common.v1.OrganizationRole
-	15, // 6: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
-	5,  // 7: common.v1.GroupMemberInfo.role:type_name -> common.v1.GroupRole
-	15, // 8: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
-	6,  // 9: common.v1.DomainAdminInfo.domain:type_name -> common.v1.DomainType
-	15, // 10: common.v1.DomainAdminInfo.granted_at:type_name -> google.protobuf.Timestamp
+	16, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	16, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
+	16, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	16, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	5,  // 5: common.v1.MemberInfo.role:type_name -> common.v1.OrganizationRole
+	16, // 6: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	6,  // 7: common.v1.GroupMemberInfo.role:type_name -> common.v1.GroupRole
+	16, // 8: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	7,  // 9: common.v1.DomainAdminInfo.domain:type_name -> common.v1.DomainType
+	16, // 10: common.v1.DomainAdminInfo.granted_at:type_name -> google.protobuf.Timestamp
 	11, // [11:11] is the sub-list for method output_type
 	11, // [11:11] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -1327,7 +1414,7 @@ func file_common_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_v1_common_proto_rawDesc), len(file_common_v1_common_proto_rawDesc)),
-			NumEnums:      7,
+			NumEnums:      8,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,

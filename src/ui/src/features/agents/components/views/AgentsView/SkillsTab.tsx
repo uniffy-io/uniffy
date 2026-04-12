@@ -8,8 +8,9 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { useMyPermission } from "@/features/sharing";
+import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import {
@@ -226,8 +227,8 @@ export function SkillsTab({ agent }: { agent: SerializedAgent }) {
     const skillsMap = useAppSelector(selectAllSkills);
     const loading = useAppSelector(selectSkillsLoading);
     const currentUserId = useAppSelector((state) => state.auth.user?.id);
-    const { permission } = useMyPermission(ContentType.AGENT, agent.id);
-    const canEdit = permission?.canEdit ?? permission?.isOwner ?? true;
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const canEdit = roleCanEdit(myRole);
     const [showNewForm, setShowNewForm] = useState(false);
 
     const skills = useMemo(() => Object.values(skillsMap), [skillsMap]);

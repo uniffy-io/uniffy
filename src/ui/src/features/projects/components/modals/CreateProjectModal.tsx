@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Kanban, LockSimple, Buildings } from "@phosphor-icons/react";
+import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -15,7 +16,6 @@ import { Modal } from "@/components/ui/modal";
 import { closeCreateProjectModal, selectProjectScope } from "@/features/projects/store/projectsUiSlice";
 import { createProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
-import type { VisibilityScope } from "@/features/projects/types/project";
 
 const ICON_OPTIONS: ProjectIconName[] = [
   "kanban",
@@ -38,9 +38,7 @@ export function CreateProjectModal() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
-  const [visibility, setVisibility] = useState<VisibilityScope>(
-    projectScope === "organization" ? "ORGANIZATION" : "PRIVATE"
-  );
+  const [isOrgScope, setIsOrgScope] = useState(projectScope === "organization");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [slug, setSlug] = useState("");
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
@@ -69,7 +67,7 @@ export function CreateProjectModal() {
     setName("");
     setDescription("");
     setIcon("kanban");
-    setVisibility(projectScope === "organization" ? "ORGANIZATION" : "PRIVATE");
+    setIsOrgScope(projectScope === "organization");
     setIsSlugManuallyEdited(false);
     setSlug("");
     dispatch(closeCreateProjectModal());
@@ -87,7 +85,8 @@ export function CreateProjectModal() {
           name: name.trim(),
           description: description.trim(),
           icon,
-          visibility,
+          accessMode: isOrgScope ? AccessMode.OPEN_TO_ORG : AccessMode.OWNER_ONLY,
+          baselineRole: isOrgScope ? ContentRole.EDITOR : null,
           slug: slug || undefined,
         })
       ).unwrap();
@@ -180,18 +179,18 @@ export function CreateProjectModal() {
               />
             </div>
 
-            {/* Visibility */}
+            {/* Access */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Visibility
+                Access
               </label>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setVisibility("PRIVATE")}
+                  onClick={() => setIsOrgScope(false)}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                    visibility === "PRIVATE"
+                    !isOrgScope
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
@@ -201,10 +200,10 @@ export function CreateProjectModal() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setVisibility("ORGANIZATION")}
+                  onClick={() => setIsOrgScope(true)}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                    visibility === "ORGANIZATION"
+                    isOrgScope
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}

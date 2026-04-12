@@ -487,7 +487,6 @@ export const projectsSlice = createSlice({
   },
 });
 
-// Actions
 export const {
   setCurrentProject,
   clearProjects,
@@ -499,7 +498,6 @@ export const {
   updateFieldDefinition,
 } = projectsSlice.actions;
 
-// Selectors
 const selectProjectsState = (state: RootState) => state.projects;
 
 export const selectProjects = createSelector(

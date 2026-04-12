@@ -5,7 +5,6 @@
  * permission defaults, group management, and member management.
  */
 
-// API
 export { adminApi } from '@/features/admin/api/adminApi';
 
 // Components
@@ -22,7 +21,6 @@ export {
     useGroups,
     useGroupMembers,
     getContentTypeLabel,
-    getVisibilityScopeLabel,
     getOrgRoleLabel,
     isOrgAdmin,
     useDomainAdmins,

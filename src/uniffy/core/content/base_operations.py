@@ -1,12 +1,34 @@
 """
 Base operations class for all content types.
 
-Provides generic CRUD operations with built-in permission checking
-and search indexing. All domain operations classes should extend this.
+Provides generic CRUD with built-in access control and search indexing.
+Every domain extends this class and inherits:
+
+- Permission checks through :meth:`PermissionChecker.effective_role` and
+  the ``role_can_*`` helpers.
+- List filtering via :class:`ContentAccessQuery.build_accessible_filter`
+  (with org-admin / domain-admin bypass).
+- Search indexing that mirrors the access model (shared + blocked member
+  lists, access_mode, baseline_role).
+
+Subclasses must define:
+
+- ``content_type``: the :class:`ContentType` value for this content.
+- ``model_class``: the SQLModel class.
+- ``_build_search_keywords(model)`` / ``_get_search_title(model)`` /
+  ``_get_url_path(model)`` for search indexing.
+
+Optional overrides:
+
+- ``_get_access_mode_column``, ``_get_baseline_role_column`` (default to
+  ``model_class.access_mode`` / ``model_class.baseline_role``).
+- ``_resolve_role(user_id, organization_id, content)`` for child content
+  types that delegate to a parent (tasks, comments, attachments, etc.).
+
 """
 
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime
+from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
@@ -14,27 +36,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
-from uniffy.core.auth.permissions import ContentAccessQuery, PermissionChecker
+from uniffy.core.auth.permissions import (
+    ContentAccessQuery,
+    PermissionChecker,
+    role_can_delete,
+    role_can_edit,
+    role_can_manage,
+    role_can_transfer,
+    role_can_view,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-from uniffy.core.types import ContentType, PermissionLevel, VisibilityScope
+from uniffy.core.types import ContentRole, ContentType, SubjectType
 
 
 class BaseContentOperations[TModel](ABC):
     """
     Base class for content CRUD operations.
-
-    Provides:
-    - Permission checking on all operations
-    - Automatic search indexing on create/update
-    - Consistent error handling
-
-    Subclasses must define:
-    - content_type: ContentType enum value
-    - model_class: SQLModel class
-    - _build_search_keywords(): Generate search text
-    - _get_search_title(): Get title for search
-    - _get_url_path(): Get URL path for search results
 
     Parameters
     ----------
@@ -47,139 +65,41 @@ class BaseContentOperations[TModel](ABC):
     model_class: type[TModel]
 
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize the base content operations.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session.
-
-        """
         self.session = session
         self.permission_checker = PermissionChecker(session)
         self.access_query = ContentAccessQuery(session)
         self.search_indexer = SearchIndexer(session)
 
-    # ─────────────────────────────────────────────────────────────
-    # Abstract methods - subclasses must implement
-    # ─────────────────────────────────────────────────────────────
+    # Abstract hooks -- must be implemented by subclasses
 
     @abstractmethod
     def _build_search_keywords(self, model: TModel) -> str:
-        """
-        Build search keywords string for indexing.
-
-        Parameters
-        ----------
-        model : TModel
-            The content model.
-
-        Returns
-        -------
-        str
-            Keywords string for search indexing.
-
-        """
+        """Return aggregated text for search indexing."""
         raise NotImplementedError
 
     @abstractmethod
     def _get_search_title(self, model: TModel) -> str:
-        """
-        Get title for search index.
-
-        Parameters
-        ----------
-        model : TModel
-            The content model.
-
-        Returns
-        -------
-        str
-            Title for search results.
-
-        """
+        """Return the title to show in search results."""
         raise NotImplementedError
 
     @abstractmethod
     def _get_url_path(self, model: TModel) -> str:
-        """
-        Get URL path for search results.
-
-        Parameters
-        ----------
-        model : TModel
-            The content model.
-
-        Returns
-        -------
-        str
-            Frontend route to navigate to.
-
-        """
+        """Return the frontend route path for the content."""
         raise NotImplementedError
 
     def _get_search_description(self, model: TModel) -> str | None:
-        """
-        Get description for search index.
-
-        Override in subclass to provide a description/snippet.
-
-        Parameters
-        ----------
-        model : TModel
-            The content model.
-
-        Returns
-        -------
-        str | None
-            Description for search results, or None.
-
-        """
+        """Optional preview/description snippet for search indexing."""
         return None
 
     def _get_search_tags(self, model: TModel) -> list[str] | None:
-        """
-        Get tags for search index.
-
-        Override in subclass to provide tags.
-
-        Parameters
-        ----------
-        model : TModel
-            The content model.
-
-        Returns
-        -------
-        list[str] | None
-            Tags for the content, or None.
-
-        """
+        """Optional tags for search indexing."""
         return None
 
     def _get_search_metadata(self, model: TModel) -> dict[str, str] | None:
-        """
-        Get extra metadata for search index.
-
-        Override in subclass to provide additional key-value metadata
-        (e.g. mime_type for files, start_time for calendar events).
-
-        Parameters
-        ----------
-        model : TModel
-            The content model.
-
-        Returns
-        -------
-        dict[str, str] | None
-            Metadata dict, or None.
-
-        """
+        """Optional extra metadata for search indexing."""
         return None
 
-    # ─────────────────────────────────────────────────────────────
     # Core CRUD operations
-    # ─────────────────────────────────────────────────────────────
 
     async def get_by_id(
         self,
@@ -187,36 +107,11 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content_id: UUID,
     ) -> TModel:
-        """
-        Get content by ID with permission check.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting access.
-        organization_id : UUID
-            Organization ID.
-        content_id : UUID
-            ID of the content.
-
-        Returns
-        -------
-        TModel
-            The content model.
-
-        Raises
-        ------
-        NotFoundError
-            If content does not exist.
-        PermissionDeniedError
-            If user cannot access the content.
-
-        """
+        """Fetch a content item by id, enforcing view permission."""
         content = await self._fetch_by_id(content_id, organization_id)
         if not content:
             raise NotFoundError(self.content_type.value, content_id)
-
-        await self._require_access(user_id, organization_id, content)
+        await self._require_view(user_id, organization_id, content)
         return content
 
     async def list_accessible(
@@ -226,209 +121,99 @@ class BaseContentOperations[TModel](ABC):
         include_deleted: bool = False,
         **filters: Any,
     ) -> list[TModel]:
+        """Return content items the user can see.
+
+        Org OWNER/ADMIN and domain admins bypass the access filter
+        entirely and see all content in the organization. Everyone else
+        goes through :meth:`ContentAccessQuery.build_accessible_filter`.
         """
-        List all content accessible to user.
+        query = select(self.model_class).where(
+            self._get_org_id_column() == organization_id
+        )
 
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting access.
-        organization_id : UUID
-            Organization ID.
-        include_deleted : bool
-            Whether to include soft-deleted content.
-        **filters : Any
-            Additional filters passed to _apply_filters.
+        if not include_deleted:
+            query = query.where(self._get_is_deleted_column() == False)  # noqa: E712
 
-        Returns
-        -------
-        list[TModel]
-            List of accessible content.
+        # Apply domain-specific filters first so they do not interact
+        # badly with access filtering.
+        query = self._apply_filters(query, **filters)
 
-        """
+        # Admin bypass: org admin or domain admin sees everything in org.
+        if await self.permission_checker.is_org_admin(user_id, organization_id):
+            result = await self.session.execute(query)
+            return list(result.scalars().all())
+        if await self.permission_checker.is_domain_admin(
+            user_id, organization_id, self.content_type
+        ):
+            result = await self.session.execute(query)
+            return list(result.scalars().all())
+
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
             content_id_column=self._get_id_column(),
             owner_id_column=self._get_owner_id_column(),
-            visibility_column=self._get_visibility_column(),
+            access_mode_column=self._get_access_mode_column(),
+            baseline_role_column=self._get_baseline_role_column(),
         )
-
-        query = (
-            select(self.model_class)
-            .where(self._get_org_id_column() == organization_id)
-            .where(access_filter)
-        )
-
-        if not include_deleted:
-            query = query.where(self._get_is_deleted_column() == False)  # noqa: E712
-
-        # Apply additional filters from subclass
-        query = self._apply_filters(query, **filters)
+        query = query.where(access_filter)
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def create(
+    # Note: ``create`` / ``update`` / ``delete`` are intentionally NOT
+    # provided by this base class. Each domain needs its own signature
+    # (notes take title + content + canvas; files take upload metadata;
+    # projects take deadlines; etc.) and a one-size-fits-all override
+    # would violate LSP. Subclasses implement these three methods
+    # directly and use the ``_require_*`` / ``_index_for_search``
+    # helpers below to stay consistent.
+
+    # Role resolution
+
+    async def _resolve_role(
         self,
         user_id: UUID,
         organization_id: UUID,
-        model: TModel,
-        group_ids: list[UUID] | None = None,
-    ) -> TModel:
+        content: TModel,
+    ) -> ContentRole | None:
+        """Resolve the user's effective role on the content.
+
+        Child content types (tasks, comments, attachments, ...) override
+        this method to delegate to their parent's access policy.
         """
-        Create content with search indexing.
+        return await self.permission_checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id=content.id,
+            owner_id=content.owner_id,
+            access_mode=content.access_mode,
+            baseline_role=content.baseline_role,
+        )
 
-        Parameters
-        ----------
-        user_id : UUID
-            User creating the content.
-        organization_id : UUID
-            Organization ID.
-        model : TModel
-            The content model to create.
-        group_ids : list[UUID] | None
-            Group IDs if visibility is GROUP.
-
-        Returns
-        -------
-        TModel
-            The created content.
-
-        """
-        # Set ownership
-        model.organization_id = organization_id
-        model.owner_id = user_id
-
-        self.session.add(model)
-        await self.session.commit()
-        await self.session.refresh(model)
-
-        # Handle group links if visibility is GROUP
-        if model.visibility == VisibilityScope.GROUP and group_ids:
-            await self._create_group_links(model.id, group_ids, user_id, organization_id)
-            await self.session.commit()
-
-        # Index for search (HTTP call to Meilisearch, no DB commit needed)
-        # Skip shared_user_ids query on create - content was just created, no shares yet
-        await self._index_for_search(model, group_ids or [], skip_shared_users=True)
-
-        return model
-
-    async def update(
+    async def _require_role(
         self,
         user_id: UUID,
         organization_id: UUID,
-        content_id: UUID,
-        **updates: Any,
-    ) -> TModel:
-        """
-        Update content with permission check and re-indexing.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting update.
-        organization_id : UUID
-            Organization ID.
-        content_id : UUID
-            ID of the content.
-        **updates : Any
-            Fields to update.
-
-        Returns
-        -------
-        TModel
-            The updated content.
-
-        Raises
-        ------
-        NotFoundError
-            If content does not exist.
-        PermissionDeniedError
-            If user cannot edit the content.
-
-        """
-        content = await self.get_by_id(user_id, organization_id, content_id)
-        await self._require_edit(user_id, organization_id, content)
-
-        # Apply updates
-        for key, value in updates.items():
-            if value is not None and hasattr(content, key):
-                setattr(content, key, value)
-
-        content.updated_at = datetime.now(UTC)
-
-        await self.session.commit()
-        await self.session.refresh(content)
-
-        # Re-index (HTTP call to Meilisearch, no DB commit needed)
-        group_ids = await self._get_content_group_ids(content_id)
-        await self._index_for_search(content, group_ids)
-
-        return content
-
-    async def delete(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_id: UUID,
-        permanent: bool = False,
+        content: TModel,
+        predicate: Callable[[ContentRole | None], bool],
+        action: str,
     ) -> None:
-        """
-        Delete content (soft or permanent).
+        role = await self._resolve_role(user_id, organization_id, content)
+        if not predicate(role):
+            raise PermissionDeniedError(action, self.content_type.value)
 
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting deletion.
-        organization_id : UUID
-            Organization ID.
-        content_id : UUID
-            ID of the content.
-        permanent : bool
-            If True, permanently delete. If False, soft delete.
-
-        Raises
-        ------
-        NotFoundError
-            If content does not exist.
-        PermissionDeniedError
-            If user cannot delete the content.
-
-        """
-        content = await self.get_by_id(user_id, organization_id, content_id)
-        await self._require_delete(user_id, organization_id, content)
-
-        if permanent:
-            await self.session.delete(content)
-        else:
-            content.is_deleted = True
-            content.deleted_at = datetime.now(UTC)
-
-        await self.session.commit()
-
-        # Remove from search index (HTTP call to Meilisearch, no DB commit needed)
-        await self.search_indexer.remove(build_content_urn(self.content_type, content_id))
-
-    async def _require_access(
+    async def _require_view(
         self,
         user_id: UUID,
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        """Raise PermissionDeniedError if user cannot access."""
-        can_access = await self.permission_checker.can_access_content(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id=content.id,
-            content_owner_id=content.owner_id,
-            content_visibility=content.visibility,
+        await self._require_role(
+            user_id, organization_id, content, role_can_view, "access"
         )
-        if not can_access:
-            raise PermissionDeniedError("access", self.content_type.value)
 
     async def _require_edit(
         self,
@@ -436,39 +221,9 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        """Raise PermissionDeniedError if user cannot edit."""
-        can_edit = await self.permission_checker.can_edit_content(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id=content.id,
-            content_owner_id=content.owner_id,
-            content_visibility=content.visibility,
+        await self._require_role(
+            user_id, organization_id, content, role_can_edit, "edit"
         )
-        if not can_edit:
-            raise PermissionDeniedError("edit", self.content_type.value)
-
-    async def _require_admin(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content: TModel,
-    ) -> None:
-        """Raise PermissionDeniedError if user does not have ADMIN level.
-
-        ADMIN level is granted to: content owner, org ADMIN/OWNER,
-        domain admin, or users with an explicit ADMIN permission grant.
-        """
-        level = await self.permission_checker.get_user_permission_level(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id=content.id,
-            content_owner_id=content.owner_id,
-            content_visibility=content.visibility,
-        )
-        if level not in (PermissionLevel.ADMIN, PermissionLevel.OWNER):
-            raise PermissionDeniedError("admin", self.content_type.value)
 
     async def _require_delete(
         self,
@@ -476,159 +231,138 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> None:
-        """Raise PermissionDeniedError if user cannot delete."""
-        can_delete = await self.permission_checker.can_delete_content(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id=content.id,
-            content_owner_id=content.owner_id,
-            content_visibility=content.visibility,
+        await self._require_role(
+            user_id, organization_id, content, role_can_delete, "delete"
         )
-        if not can_delete:
-            raise PermissionDeniedError("delete", self.content_type.value)
 
-    # ─────────────────────────────────────────────────────────────
+    async def _require_manage(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: TModel,
+    ) -> None:
+        await self._require_role(
+            user_id, organization_id, content, role_can_manage, "manage"
+        )
+
+    async def _require_transfer(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: TModel,
+    ) -> None:
+        await self._require_role(
+            user_id, organization_id, content, role_can_transfer, "transfer"
+        )
+
     # Search indexing
-    # ─────────────────────────────────────────────────────────────
 
     async def _index_for_search(
         self,
         model: TModel,
-        group_ids: list[UUID],
-        skip_shared_users: bool = False,
+        skip_member_lookup: bool = False,
     ) -> None:
-        """Index content for unified search.
+        """Index or re-index a content item in search.
 
         Parameters
         ----------
-        skip_shared_users : bool
-            If True, skip the shared_user_ids query (e.g., on create when
-            no permissions exist yet). Saves one DB round-trip.
+        model : TModel
+            The content row to index.
+        skip_member_lookup : bool
+            If True, skip the database lookup for shared/blocked members.
+            Set on create() when no members exist yet.
 
         """
-        shared_user_ids = [] if skip_shared_users else await self._get_shared_user_ids(model.id)
+        shared_user_ids: list[UUID] = []
+        shared_group_ids: list[UUID] = []
+        blocked_user_ids: list[UUID] = []
+        blocked_group_ids: list[UUID] = []
+
+        if not skip_member_lookup:
+            shared_user_ids, shared_group_ids, blocked_user_ids, blocked_group_ids = (
+                await self._get_member_id_lists(model.id)
+            )
+
         await self.search_indexer.index(
             urn=build_content_urn(self.content_type, model.id),
             organization_id=model.organization_id,
             title=self._get_search_title(model),
             entity_type=self.content_type.value,
             url_path=self._get_url_path(model),
-            visibility=model.visibility.value,
             owner_id=model.owner_id,
+            access_mode=model.access_mode.value,
+            baseline_role=(
+                model.baseline_role.value if model.baseline_role is not None else None
+            ),
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),
-            shared_group_ids=group_ids if group_ids else None,
             shared_user_ids=shared_user_ids if shared_user_ids else None,
+            shared_group_ids=shared_group_ids if shared_group_ids else None,
+            blocked_user_ids=blocked_user_ids if blocked_user_ids else None,
+            blocked_group_ids=blocked_group_ids if blocked_group_ids else None,
             tags=self._get_search_tags(model),
             metadata=self._get_search_metadata(model),
         )
 
-    async def _get_shared_user_ids(self, content_id: UUID) -> list[UUID]:
-        """Get user IDs with explicit permissions on this content."""
-        from uniffy.core.models.permissions.content_permission import ContentPermission
-        from uniffy.core.models.shared import SubjectType
-
-        result = await self.session.execute(
-            select(ContentPermission.subject_id).where(
-                ContentPermission.content_type == self.content_type,
-                ContentPermission.content_id == content_id,
-                ContentPermission.subject_type == SubjectType.USER,
-            )
-        )
-        return [row[0] for row in result.all()]
-
-    async def _create_group_links(
+    async def _get_member_id_lists(
         self,
         content_id: UUID,
-        group_ids: list[UUID],
-        user_id: UUID,
-        organization_id: UUID,
-    ) -> None:
-        """Create group links for content."""
-        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-
-        for group_id in group_ids:
-            link = ContentGroupLink(
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id=content_id,
-                group_id=group_id,
-                linked_by_user_id=user_id,
-            )
-            self.session.add(link)
-
-    async def _get_content_group_ids(self, content_id: UUID) -> list[UUID]:
-        """Get group IDs for content."""
-        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
+    ) -> tuple[list[UUID], list[UUID], list[UUID], list[UUID]]:
+        """Return (shared_users, shared_groups, blocked_users, blocked_groups)."""
+        from uniffy.core.models.permissions.content_member import ContentMember
 
         result = await self.session.execute(
-            select(ContentGroupLink.group_id)
-            .where(ContentGroupLink.content_id == content_id)
-            .where(ContentGroupLink.content_type == self.content_type)
-        )
-        return [row[0] for row in result.all()]
-
-    async def _remove_group_links(self, content_id: UUID) -> None:
-        """Remove all group links for a content item."""
-        from sqlalchemy import delete
-
-        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-
-        await self.session.execute(
-            delete(ContentGroupLink).where(
-                ContentGroupLink.content_id == content_id,
-                ContentGroupLink.content_type == self.content_type,
+            select(
+                ContentMember.subject_type,
+                ContentMember.subject_id,
+                ContentMember.role,
+            )
+            .where(
+                ContentMember.content_type == self.content_type,
+                ContentMember.content_id == content_id,
             )
         )
+        shared_users: list[UUID] = []
+        shared_groups: list[UUID] = []
+        blocked_users: list[UUID] = []
+        blocked_groups: list[UUID] = []
+        for subject_type, subject_id, role in result.all():
+            if subject_type == SubjectType.USER:
+                if role == ContentRole.BLOCKED:
+                    blocked_users.append(subject_id)
+                else:
+                    shared_users.append(subject_id)
+            elif subject_type == SubjectType.GROUP:
+                if role == ContentRole.BLOCKED:
+                    blocked_groups.append(subject_id)
+                else:
+                    shared_groups.append(subject_id)
+        return shared_users, shared_groups, blocked_users, blocked_groups
 
-    # ─────────────────────────────────────────────────────────────
-    # Column accessors (for query building)
-    # ─────────────────────────────────────────────────────────────
+    # Column accessors
 
     def _get_id_column(self) -> InstrumentedAttribute:
-        """Get the ID column for the model."""
         return self.model_class.id
 
     def _get_org_id_column(self) -> InstrumentedAttribute:
-        """Get the organization_id column for the model."""
         return self.model_class.organization_id
 
     def _get_owner_id_column(self) -> InstrumentedAttribute:
-        """Get the owner_id column for the model."""
         return self.model_class.owner_id
 
-    def _get_visibility_column(self) -> InstrumentedAttribute:
-        """Get the visibility column for the model."""
-        return self.model_class.visibility
+    def _get_access_mode_column(self) -> InstrumentedAttribute:
+        return self.model_class.access_mode
+
+    def _get_baseline_role_column(self) -> InstrumentedAttribute:
+        return self.model_class.baseline_role
 
     def _get_is_deleted_column(self) -> InstrumentedAttribute:
-        """Get the is_deleted column for the model."""
         return self.model_class.is_deleted
 
-    # ─────────────────────────────────────────────────────────────
     # Hooks for subclasses
-    # ─────────────────────────────────────────────────────────────
 
     def _apply_filters(self, query: Any, **filters: Any) -> Any:
-        """
-        Apply domain-specific filters to query.
-
-        Override in subclass to add custom filtering logic.
-
-        Parameters
-        ----------
-        query : Any
-            SQLAlchemy select query.
-        **filters : Any
-            Filter parameters.
-
-        Returns
-        -------
-        Any
-            Modified query.
-
-        """
+        """Apply domain-specific filters to the list query."""
         return query
 
     async def _fetch_by_id(
@@ -636,24 +370,7 @@ class BaseContentOperations[TModel](ABC):
         content_id: UUID,
         organization_id: UUID,
     ) -> TModel | None:
-        """
-        Fetch content by ID.
-
-        Override for custom queries (e.g., eager loading).
-
-        Parameters
-        ----------
-        content_id : UUID
-            ID of the content.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        TModel | None
-            The content or None if not found.
-
-        """
+        """Fetch a content row by id (override for eager loading)."""
         result = await self.session.execute(
             select(self.model_class)
             .where(self._get_id_column() == content_id)

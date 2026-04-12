@@ -25,6 +25,7 @@ class ContentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONTENT_TYPE_PROMPT: _ClassVar[ContentType]
     CONTENT_TYPE_CHAT: _ClassVar[ContentType]
     CONTENT_TYPE_ROOM: _ClassVar[ContentType]
+    CONTENT_TYPE_AGENT_CRON_TASK: _ClassVar[ContentType]
 
 class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -33,20 +34,32 @@ class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SUBJECT_TYPE_GROUP: _ClassVar[SubjectType]
     SUBJECT_TYPE_ORGANIZATION: _ClassVar[SubjectType]
 
-class PermissionLevel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+class ContentRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    PERMISSION_LEVEL_UNSPECIFIED: _ClassVar[PermissionLevel]
-    PERMISSION_LEVEL_VIEW: _ClassVar[PermissionLevel]
-    PERMISSION_LEVEL_EDIT: _ClassVar[PermissionLevel]
-    PERMISSION_LEVEL_ADMIN: _ClassVar[PermissionLevel]
+    CONTENT_ROLE_UNSPECIFIED: _ClassVar[ContentRole]
+    CONTENT_ROLE_VIEWER: _ClassVar[ContentRole]
+    CONTENT_ROLE_COMMENTER: _ClassVar[ContentRole]
+    CONTENT_ROLE_EDITOR: _ClassVar[ContentRole]
+    CONTENT_ROLE_ADMIN: _ClassVar[ContentRole]
+    CONTENT_ROLE_OWNER: _ClassVar[ContentRole]
+    CONTENT_ROLE_BLOCKED: _ClassVar[ContentRole]
 
-class VisibilityScope(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+class AccessMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    VISIBILITY_SCOPE_UNSPECIFIED: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_PRIVATE: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_GROUP: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_ORGANIZATION: _ClassVar[VisibilityScope]
-    VISIBILITY_SCOPE_PUBLIC: _ClassVar[VisibilityScope]
+    ACCESS_MODE_UNSPECIFIED: _ClassVar[AccessMode]
+    ACCESS_MODE_OWNER_ONLY: _ClassVar[AccessMode]
+    ACCESS_MODE_EXPLICIT_MEMBERS: _ClassVar[AccessMode]
+    ACCESS_MODE_OPEN_TO_ORG: _ClassVar[AccessMode]
+
+class ContentMemberAction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    CONTENT_MEMBER_ACTION_UNSPECIFIED: _ClassVar[ContentMemberAction]
+    CONTENT_MEMBER_ACTION_MEMBER_ADDED: _ClassVar[ContentMemberAction]
+    CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED: _ClassVar[ContentMemberAction]
+    CONTENT_MEMBER_ACTION_MEMBER_REMOVED: _ClassVar[ContentMemberAction]
+    CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED: _ClassVar[ContentMemberAction]
+    CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED: _ClassVar[ContentMemberAction]
+    CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED: _ClassVar[ContentMemberAction]
 
 class OrganizationRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -84,19 +97,29 @@ CONTENT_TYPE_PROVIDER_KEY: ContentType
 CONTENT_TYPE_PROMPT: ContentType
 CONTENT_TYPE_CHAT: ContentType
 CONTENT_TYPE_ROOM: ContentType
+CONTENT_TYPE_AGENT_CRON_TASK: ContentType
 SUBJECT_TYPE_UNSPECIFIED: SubjectType
 SUBJECT_TYPE_USER: SubjectType
 SUBJECT_TYPE_GROUP: SubjectType
 SUBJECT_TYPE_ORGANIZATION: SubjectType
-PERMISSION_LEVEL_UNSPECIFIED: PermissionLevel
-PERMISSION_LEVEL_VIEW: PermissionLevel
-PERMISSION_LEVEL_EDIT: PermissionLevel
-PERMISSION_LEVEL_ADMIN: PermissionLevel
-VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope
-VISIBILITY_SCOPE_PRIVATE: VisibilityScope
-VISIBILITY_SCOPE_GROUP: VisibilityScope
-VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope
-VISIBILITY_SCOPE_PUBLIC: VisibilityScope
+CONTENT_ROLE_UNSPECIFIED: ContentRole
+CONTENT_ROLE_VIEWER: ContentRole
+CONTENT_ROLE_COMMENTER: ContentRole
+CONTENT_ROLE_EDITOR: ContentRole
+CONTENT_ROLE_ADMIN: ContentRole
+CONTENT_ROLE_OWNER: ContentRole
+CONTENT_ROLE_BLOCKED: ContentRole
+ACCESS_MODE_UNSPECIFIED: AccessMode
+ACCESS_MODE_OWNER_ONLY: AccessMode
+ACCESS_MODE_EXPLICIT_MEMBERS: AccessMode
+ACCESS_MODE_OPEN_TO_ORG: AccessMode
+CONTENT_MEMBER_ACTION_UNSPECIFIED: ContentMemberAction
+CONTENT_MEMBER_ACTION_MEMBER_ADDED: ContentMemberAction
+CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED: ContentMemberAction
+CONTENT_MEMBER_ACTION_MEMBER_REMOVED: ContentMemberAction
+CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED: ContentMemberAction
+CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED: ContentMemberAction
+CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED: ContentMemberAction
 ORGANIZATION_ROLE_UNSPECIFIED: OrganizationRole
 ORGANIZATION_ROLE_MEMBER: OrganizationRole
 ORGANIZATION_ROLE_ADMIN: OrganizationRole

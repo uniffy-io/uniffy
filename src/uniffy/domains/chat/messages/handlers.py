@@ -299,9 +299,7 @@ class MessageHandlers:
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
-    # ---------------------------------------------------------------
     # Enrichment helpers
-    # ---------------------------------------------------------------
 
     async def _enrich_messages(
         self,

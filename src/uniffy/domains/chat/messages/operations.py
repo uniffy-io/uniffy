@@ -18,6 +18,7 @@ from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChanne
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
+from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.chat.access import ChatAccessChecker
 
 # Maximum message content length
@@ -33,9 +34,7 @@ class ChatMessageOperations:
         self.session = session
         self.access = access or ChatAccessChecker(session)
 
-    # ---------------------------------------------------------------
     # Send message (two-phase transaction)
-    # ---------------------------------------------------------------
 
     async def send_message(
         self,
@@ -322,10 +321,12 @@ class ChatMessageOperations:
 
             # Derive access from channel membership
             if channel.channel_type == ChannelType.PUBLIC:
-                visibility = "ORGANIZATION"
+                access_mode = AccessMode.OPEN_TO_ORG
+                baseline_role: ContentRole | None = ContentRole.VIEWER
                 shared_user_ids = None
             else:
-                visibility = "PRIVATE"
+                access_mode = AccessMode.EXPLICIT_MEMBERS
+                baseline_role = None
                 if member_ids is not None:
                     shared_user_ids = member_ids if member_ids else None
                 else:
@@ -347,7 +348,8 @@ class ChatMessageOperations:
                 title=plain[:120],
                 entity_type="chat_message",
                 url_path=f"/chat/{channel.id}",
-                visibility=visibility,
+                access_mode=access_mode,
+                baseline_role=baseline_role,
                 owner_id=message.sender_id,
                 keywords=plain,
                 shared_user_ids=shared_user_ids,
@@ -499,9 +501,7 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Notification emit failed for message {message.id}")
 
-    # ---------------------------------------------------------------
     # Get messages (cursor-based pagination)
-    # ---------------------------------------------------------------
 
     async def get_messages(
         self,
@@ -587,9 +587,7 @@ class ChatMessageOperations:
             raise NotFoundError("message", message_id)
         return msg
 
-    # ---------------------------------------------------------------
     # Update / delete / pin
-    # ---------------------------------------------------------------
 
     async def update_message(
         self,
@@ -811,9 +809,7 @@ class ChatMessageOperations:
         )
         return list(result.scalars().all())
 
-    # ---------------------------------------------------------------
     # Thread helpers
-    # ---------------------------------------------------------------
 
     async def _handle_thread_reply(
         self,
@@ -893,9 +889,7 @@ class ChatMessageOperations:
             )
         )
 
-    # ---------------------------------------------------------------
     # Permission helpers
-    # ---------------------------------------------------------------
 
     async def _require_message_action(
         self,
@@ -927,9 +921,7 @@ class ChatMessageOperations:
             if not is_elevated:
                 raise PermissionDeniedError("pin", "Requires channel admin")
 
-    # ---------------------------------------------------------------
     # Internal query helpers
-    # ---------------------------------------------------------------
 
     async def _get_message_by_id(self, message_id: UUID) -> ChatMessage | None:
         """Fetch a message by ID."""

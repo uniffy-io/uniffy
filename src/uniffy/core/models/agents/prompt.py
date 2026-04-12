@@ -3,11 +3,10 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Index, String, Text, Uuid, text
+from sqlalchemy import Column, DateTime, Enum, Index, String, Text, Uuid, text
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.content.model_mixins import visibility_field
-from uniffy.core.types import VisibilityScope, generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class AgentPrompt(SQLModel, table=True):
@@ -88,7 +87,31 @@ class AgentPrompt(SQLModel, table=True):
         default=None,
         sa_column=Column(Uuid(), nullable=True),
     )
-    visibility: VisibilityScope = visibility_field(default=VisibilityScope.PRIVATE)
+    access_mode: AccessMode = Field(
+        default=AccessMode.OPEN_TO_ORG,
+        sa_column=Column(
+            Enum(
+                AccessMode,
+                name="accessmode",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=False,
+            index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=ContentRole.VIEWER,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
+        ),
+    )
     created_by: UUID | None = Field(
         default=None,
         sa_column=Column(Uuid(), nullable=True),

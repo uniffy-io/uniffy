@@ -156,7 +156,6 @@ export function useSettings() {
     }, [dispatch]);
 
     return {
-        // State
         profiles,
         activeProfile,
         activeProfileId,
@@ -167,7 +166,6 @@ export function useSettings() {
         hasError,
         initialized,
 
-        // Actions
         initializeSettings,
         switchProfile,
         updateSettings,

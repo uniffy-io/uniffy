@@ -3,12 +3,12 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, String, Text, text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.content.model_mixins import deleted_at_field, is_deleted_field, visibility_field
-from uniffy.core.types import VisibilityScope, generate_id
+from uniffy.core.content.model_mixins import deleted_at_field, is_deleted_field
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class Agent(SQLModel, table=True):
@@ -119,7 +119,31 @@ class Agent(SQLModel, table=True):
         sa_column=Column(String(50), nullable=False, server_default=text("''")),
     )
     is_default: bool = Field(default=False, nullable=False)
-    visibility: VisibilityScope = visibility_field(default=VisibilityScope.ORGANIZATION)
+    access_mode: AccessMode = Field(
+        default=AccessMode.OPEN_TO_ORG,
+        sa_column=Column(
+            Enum(
+                AccessMode,
+                name="accessmode",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=False,
+            index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=ContentRole.VIEWER,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
+        ),
+    )
     is_deleted: bool = is_deleted_field()
     deleted_at: datetime | None = deleted_at_field()
     created_at: datetime = Field(

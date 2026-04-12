@@ -10,7 +10,6 @@ import { filesApi } from '@/features/files/api/filesApi';
 import { attachmentsApi } from '@/features/attachments';
 import { buildFileUrl } from '@/shared/utils/fileUrls';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 // Cache for attachments folder ID per organization
 const attachmentsFolderCache = new Map<string, string>();
@@ -75,7 +74,6 @@ export async function uploadImage(options: UploadImageOptions): Promise<string> 
         mimeType: file.type || 'application/octet-stream',
         totalSize: BigInt(file.size),
         folderId,
-        visibility: VisibilityScope.PRIVATE,
     });
 
     const { uploadId, chunkSize, totalChunks } = initiateResponse;

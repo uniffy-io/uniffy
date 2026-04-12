@@ -1,4 +1,4 @@
-"""Room and booking operations with permissions and search indexing."""
+"""Room and booking operations."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -7,31 +7,33 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.members import (
+    ContentMembersOperations,
+    register_content_loader,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.models.shared import (
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import (
+    AccessMode,
     BookingStatus,
+    ContentRole,
     ContentType,
     RoomStatus,
     RoomType,
-    VisibilityScope,
+    SubjectType,
 )
-from uniffy.core.search.indexer import build_content_urn
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.rooms import queries
 
 
 class RoomOperations(BaseContentOperations[Room]):
-    """
-    Room CRUD operations with permissions and search indexing.
-
-    Extends BaseContentOperations to provide room-specific functionality
-    including filtered listing, capacity search, and soft deletion
-    with booking safety checks.
-    """
+    """Room CRUD with permissions and search indexing."""
 
     content_type = ContentType.ROOM
     model_class = Room
@@ -40,28 +42,8 @@ class RoomOperations(BaseContentOperations[Room]):
         """Initialize room operations."""
         super().__init__(session)
 
-    # -----------------------------------------------------------------
-    # Search index hooks
-    # -----------------------------------------------------------------
-
     def _build_search_keywords(self, model: Room) -> str:
-        """
-        Build search keywords from room attributes.
-
-        Combines name, description, location, building, floor, and
-        amenities into a single searchable string.
-
-        Parameters
-        ----------
-        model : Room
-            The room model.
-
-        Returns
-        -------
-        str
-            Keywords string for search indexing.
-
-        """
+        """Aggregate searchable text for a room."""
         parts = [model.name]
         if model.description:
             parts.append(model.description)
@@ -76,30 +58,15 @@ class RoomOperations(BaseContentOperations[Room]):
         return " ".join(parts)
 
     def _get_search_title(self, model: Room) -> str:
-        """Get room name for search index."""
+        """Return the room name for the search index."""
         return model.name
 
     def _get_url_path(self, model: Room) -> str:
-        """Get URL path for room search results."""
+        """Return the frontend route for this room."""
         return f"/rooms/{model.id}"
 
     def _get_search_description(self, model: Room) -> str | None:
-        """
-        Get search description from room.
-
-        Falls back to location when no description is set.
-
-        Parameters
-        ----------
-        model : Room
-            The room model.
-
-        Returns
-        -------
-        str | None
-            Description for search results, or None.
-
-        """
+        """Return a description or location snippet."""
         if model.description:
             return model.description[:200]
         if model.location:
@@ -107,20 +74,7 @@ class RoomOperations(BaseContentOperations[Room]):
         return None
 
     def _get_search_metadata(self, model: Room) -> dict[str, str] | None:
-        """
-        Get room metadata for search index.
-
-        Parameters
-        ----------
-        model : Room
-            The room model.
-
-        Returns
-        -------
-        dict[str, str] | None
-            Metadata dict with room_type, capacity, and building.
-
-        """
+        """Return room metadata for the search index."""
         metadata: dict[str, str] = {
             "room_type": model.room_type.value,
             "capacity": str(model.capacity),
@@ -128,10 +82,6 @@ class RoomOperations(BaseContentOperations[Room]):
         if model.building:
             metadata["building"] = model.building
         return metadata
-
-    # -----------------------------------------------------------------
-    # Room CRUD
-    # -----------------------------------------------------------------
 
     async def create_room(
         self,
@@ -145,48 +95,22 @@ class RoomOperations(BaseContentOperations[Room]):
         building: str | None = None,
         location: str = "",
         amenities: list[str] | None = None,
-        visibility: VisibilityScope = VisibilityScope.ORGANIZATION,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
         group_ids: list[UUID] | None = None,
         image_file_id: UUID | None = None,
     ) -> Room:
+        """Create a new room.
+
+        ``access_mode`` and ``baseline_role`` default to the org defaults
+        for ``ContentType.ROOM``. ``group_ids`` is a convenience for
+        adding initial VIEWER group members atomically through
+        :class:`ContentMembersOperations`.
         """
-        Create a new room.
+        access_mode, baseline_role = await self._resolve_access_policy(
+            organization_id, access_mode, baseline_role
+        )
 
-        Parameters
-        ----------
-        user_id : UUID
-            User creating the room.
-        organization_id : UUID
-            Organization scope.
-        name : str
-            Room display name.
-        description : str
-            Room description in markdown.
-        room_type : RoomType
-            Type of room or resource.
-        capacity : int
-            Maximum occupancy.
-        floor : str | None
-            Floor identifier.
-        building : str | None
-            Building name.
-        location : str
-            Human-readable location.
-        amenities : list[str] | None
-            Available amenities.
-        visibility : VisibilityScope
-            Who can see and book this room.
-        group_ids : list[UUID] | None
-            Groups to share with (for GROUP visibility).
-        image_file_id : UUID | None
-            Optional photo of the room.
-
-        Returns
-        -------
-        Room
-            The created room.
-
-        """
         room = Room(
             organization_id=organization_id,
             owner_id=user_id,
@@ -199,28 +123,27 @@ class RoomOperations(BaseContentOperations[Room]):
             location=location,
             amenities=amenities,
             image_file_id=image_file_id,
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
         )
         self.session.add(room)
-        await self.session.flush()
-
-        # Create group links if visibility is GROUP
-        if visibility == VisibilityScope.GROUP and group_ids:
-            await self._create_group_links(
-                content_id=room.id,
-                organization_id=organization_id,
-                user_id=user_id,
-                group_ids=group_ids,
-            )
-
         await self.session.commit()
         await self.session.refresh(room)
 
-        # Index for search
-        await self._index_for_search(
-            model=room,
-            group_ids=group_ids if visibility == VisibilityScope.GROUP else [],
-        )
+        if group_ids:
+            members_ops = ContentMembersOperations(self.session)
+            for gid in group_ids:
+                await members_ops.add_member(
+                    actor_user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=self.content_type,
+                    content_id=room.id,
+                    subject_type=SubjectType.GROUP,
+                    subject_id=gid,
+                    role=ContentRole.VIEWER,
+                )
+
+        await self._index_for_search(room, skip_member_lookup=not group_ids)
         await self.session.commit()
 
         return room
@@ -239,55 +162,12 @@ class RoomOperations(BaseContentOperations[Room]):
         location: str | None = None,
         amenities: list[str] | None = None,
         status: RoomStatus | None = None,
-        visibility: VisibilityScope | None = None,
         image_file_id: UUID | None = None,
     ) -> Room:
-        """
-        Update an existing room.
+        """Update an existing room.
 
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the update.
-        organization_id : UUID
-            Organization scope.
-        room_id : UUID
-            Room to update.
-        name : str | None
-            New name (None = no change).
-        description : str | None
-            New description (None = no change).
-        room_type : RoomType | None
-            New room type (None = no change).
-        capacity : int | None
-            New capacity (None = no change).
-        floor : str | None
-            New floor (None = no change).
-        building : str | None
-            New building (None = no change).
-        location : str | None
-            New location (None = no change).
-        amenities : list[str] | None
-            New amenities list (None = no change).
-        status : RoomStatus | None
-            New operational status (None = no change).
-        visibility : VisibilityScope | None
-            New visibility scope (None = no change).
-        image_file_id : UUID | None
-            New image file ID (None = no change).
-
-        Returns
-        -------
-        Room
-            The updated room.
-
-        Raises
-        ------
-        NotFoundError
-            If room does not exist.
-        PermissionDeniedError
-            If user cannot edit the room.
-
+        Access-policy changes (access mode, baseline role, members) go
+        through ``permissions.v1.MembersService``, never this method.
         """
         room = await self.get_by_id(user_id, organization_id, room_id)
         await self._require_edit(user_id, organization_id, room)
@@ -310,8 +190,6 @@ class RoomOperations(BaseContentOperations[Room]):
             room.amenities = amenities
         if status is not None:
             room.status = status
-        if visibility is not None:
-            room.visibility = visibility
         if image_file_id is not None:
             room.image_file_id = image_file_id
 
@@ -320,9 +198,7 @@ class RoomOperations(BaseContentOperations[Room]):
         await self.session.commit()
         await self.session.refresh(room)
 
-        # Re-index for search
-        group_ids = await self._get_content_group_ids(room.id)
-        await self._index_for_search(model=room, group_ids=group_ids)
+        await self._index_for_search(room)
         await self.session.commit()
 
         return room
@@ -334,37 +210,13 @@ class RoomOperations(BaseContentOperations[Room]):
         room_id: UUID,
         permanent: bool = False,
     ) -> None:
-        """
-        Delete a room (soft delete by default).
+        """Delete a room (soft by default).
 
-        Checks for future CONFIRMED bookings before deleting. If any exist,
-        raises a ValidationError to prevent data loss.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the deletion.
-        organization_id : UUID
-            Organization scope.
-        room_id : UUID
-            Room to delete.
-        permanent : bool
-            If True, permanently delete the room.
-
-        Raises
-        ------
-        NotFoundError
-            If room does not exist.
-        PermissionDeniedError
-            If user cannot delete the room.
-        ValidationError
-            If room has future confirmed bookings.
-
+        Refuses to delete rooms with future CONFIRMED bookings.
         """
         room = await self.get_by_id(user_id, organization_id, room_id)
         await self._require_delete(user_id, organization_id, room)
 
-        # Check for future confirmed bookings
         now = datetime.now(UTC)
         future_count_result = await self.session.execute(
             select(func.count()).where(
@@ -391,8 +243,9 @@ class RoomOperations(BaseContentOperations[Room]):
 
         await self.session.commit()
 
-        # Remove from search index
-        await self.search_indexer.remove(build_content_urn(self.content_type, room_id))
+        await self.search_indexer.remove(
+            build_content_urn(self.content_type, room_id), organization_id
+        )
         await self.session.commit()
 
     async def list_rooms(
@@ -409,78 +262,42 @@ class RoomOperations(BaseContentOperations[Room]):
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Room], int]:
-        """
-        List rooms with filters and pagination.
-
-        Returns only ACTIVE, non-deleted rooms by default. Results are
-        permission-filtered so the user only sees rooms they can access.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the list.
-        organization_id : UUID
-            Organization scope.
-        room_type : RoomType | None
-            Filter by room type.
-        status : RoomStatus | None
-            Filter by operational status (defaults to ACTIVE only).
-        min_capacity : int | None
-            Minimum capacity filter.
-        amenities : list[str] | None
-            Required amenities (room must contain all listed).
-        building : str | None
-            Filter by building name.
-        floor : str | None
-            Filter by floor identifier.
-        search_query : str | None
-            Free-text search on name and description.
-        page : int
-            Page number (1-indexed).
-        page_size : int
-            Items per page.
-
-        Returns
-        -------
-        tuple[list[Room], int]
-            List of rooms and total count.
-
-        """
-        # Build permission-aware base query
-        access_filter = self.access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id_column=Room.id,
-            owner_id_column=Room.owner_id,
-            visibility_column=Room.visibility,
+        """List rooms the user can access, with filters and pagination."""
+        query = select(Room).where(
+            Room.organization_id == organization_id,
+            Room.is_deleted == False,  # noqa: E712
         )
 
-        query = (
-            select(Room)
-            .where(Room.organization_id == organization_id)
-            .where(Room.is_deleted == False)  # noqa: E712
-            .where(access_filter)
-        )
+        is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
+        if not is_admin:
+            is_admin = await self.permission_checker.is_domain_admin(
+                user_id, organization_id, self.content_type
+            )
+
+        if not is_admin:
+            access_filter = self.access_query.build_accessible_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id_column=Room.id,
+                owner_id_column=Room.owner_id,
+                access_mode_column=Room.access_mode,
+                baseline_role_column=Room.baseline_role,
+            )
+            query = query.where(access_filter)
 
         if status is not None:
             query = query.where(Room.status == status)
-
         if room_type is not None:
             query = query.where(Room.room_type == room_type)
-
         if min_capacity is not None:
             query = query.where(Room.capacity >= min_capacity)
-
         if amenities:
             query = query.where(Room.amenities.contains(amenities))
-
         if building is not None:
             query = query.where(Room.building == building)
-
         if floor is not None:
             query = query.where(Room.floor == floor)
-
         if search_query:
             pattern = f"%{search_query}%"
             query = query.where(
@@ -491,11 +308,9 @@ class RoomOperations(BaseContentOperations[Room]):
                 | Room.location.ilike(pattern)
             )
 
-        # Count total matching
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
-        # Sort and paginate
         query = query.order_by(Room.name.asc())
         query = query.offset((page - 1) * page_size).limit(page_size)
 
@@ -504,15 +319,38 @@ class RoomOperations(BaseContentOperations[Room]):
 
         return rooms, total
 
+    async def _resolve_access_policy(
+        self,
+        organization_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Fill in defaults and validate an (access_mode, baseline) pair."""
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, self.content_type
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
+
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+            return access_mode, baseline_role
+
+        return access_mode, None
+
 
 class BookingOperations:
-    """
-    Room booking operations.
-
-    Handles booking creation, cancellation, availability checks, and
-    conflict detection. Does not extend BaseContentOperations because
-    bookings are not searchable content items.
-    """
+    """Room booking operations (not content-indexed)."""
 
     def __init__(self, session: AsyncSession) -> None:
         """Initialize booking operations."""
@@ -529,51 +367,16 @@ class BookingOperations:
         notes: str = "",
         event_id: UUID | None = None,
     ) -> RoomBooking:
-        """
-        Create a room booking after conflict validation.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User making the booking.
-        organization_id : UUID
-            Organization scope.
-        room_id : UUID
-            Room to book.
-        start_time : datetime
-            Booking start time.
-        end_time : datetime
-            Booking end time.
-        title : str
-            Booking title.
-        notes : str
-            Additional notes.
-        event_id : UUID | None
-            Optional linked calendar event.
-
-        Returns
-        -------
-        RoomBooking
-            The created booking.
-
-        Raises
-        ------
-        NotFoundError
-            If room does not exist or is not active.
-        ValidationError
-            If room is already booked for the requested time slot.
-
-        """
-        # Verify room exists, is accessible, and is active
+        """Create a booking after access and conflict checks."""
         room_ops = RoomOperations(self.session)
         room = await room_ops.get_by_id(user_id, organization_id, room_id)
         if room.status != RoomStatus.ACTIVE:
             raise ValidationError(
                 "room",
-                f"Room '{room.name}' is not available for booking (status: {room.status.value}).",
+                f"Room '{room.name}' is not available for booking "
+                f"(status: {room.status.value}).",
             )
 
-        # Check for conflicts
         has_conflict = await queries.check_booking_conflict(
             self.session,
             room_id,
@@ -607,34 +410,7 @@ class BookingOperations:
         organization_id: UUID,
         booking_id: UUID,
     ) -> RoomBooking:
-        """
-        Cancel an existing booking.
-
-        The booking can be cancelled by the user who made it or by an
-        organization admin.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the cancellation.
-        organization_id : UUID
-            Organization scope.
-        booking_id : UUID
-            Booking to cancel.
-
-        Returns
-        -------
-        RoomBooking
-            The cancelled booking.
-
-        Raises
-        ------
-        NotFoundError
-            If booking does not exist.
-        PermissionDeniedError
-            If user is not the booker and not an org admin.
-
-        """
+        """Cancel a booking (booker or org admin only)."""
         result = await self.session.execute(
             select(RoomBooking).where(
                 and_(
@@ -647,11 +423,10 @@ class BookingOperations:
         if not booking:
             raise NotFoundError("RoomBooking", booking_id)
 
-        # Verify permission: must be the booker or an org admin
         if booking.user_id != user_id:
             org_ops = OrganizationOperations(self.session)
             membership = await org_ops.require_org_member(user_id, organization_id)
-            if membership.role not in ("ADMIN", "OWNER"):
+            if membership.role not in (OrganizationRole.ADMIN, OrganizationRole.OWNER):
                 raise PermissionDeniedError("cancel", "room booking")
 
         booking.status = BookingStatus.CANCELLED
@@ -668,29 +443,7 @@ class BookingOperations:
         organization_id: UUID,
         booking_id: UUID,
     ) -> RoomBooking:
-        """
-        Get a single booking by ID.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the booking.
-        organization_id : UUID
-            Organization scope.
-        booking_id : UUID
-            Booking ID.
-
-        Returns
-        -------
-        RoomBooking
-            The requested booking.
-
-        Raises
-        ------
-        NotFoundError
-            If booking does not exist in the organization.
-
-        """
+        """Get a single booking by ID."""
         result = await self.session.execute(
             select(RoomBooking).where(
                 and_(
@@ -715,37 +468,9 @@ class BookingOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[tuple[RoomBooking, str, str]], int]:
-        """
-        List bookings with optional filters, joined with room and user names.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the list.
-        organization_id : UUID
-            Organization scope.
-        room_id : UUID | None
-            Filter by room.
-        start_date : datetime | None
-            Only include bookings overlapping after this time.
-        end_date : datetime | None
-            Only include bookings overlapping before this time.
-        status : BookingStatus | None
-            Filter by booking status.
-        page : int
-            Page number (1-indexed).
-        page_size : int
-            Items per page.
-
-        Returns
-        -------
-        tuple[list[tuple[RoomBooking, str, str]], int]
-            List of (booking, room_name, booker_name) tuples and total count.
-
-        """
+        """List bookings (joined with room and booker names)."""
         booker = aliased(User)
 
-        # Filter bookings to only include rooms the user can access
         room_ops = RoomOperations(self.session)
         access_filter = room_ops.access_query.build_accessible_filter(
             user_id=user_id,
@@ -753,7 +478,8 @@ class BookingOperations:
             content_type=ContentType.ROOM,
             content_id_column=Room.id,
             owner_id_column=Room.owner_id,
-            visibility_column=Room.visibility,
+            access_mode_column=Room.access_mode,
+            baseline_role_column=Room.baseline_role,
         )
 
         query = (
@@ -766,21 +492,16 @@ class BookingOperations:
 
         if room_id is not None:
             query = query.where(RoomBooking.room_id == room_id)
-
         if start_date is not None:
             query = query.where(RoomBooking.end_time > start_date)
-
         if end_date is not None:
             query = query.where(RoomBooking.start_time < end_date)
-
         if status is not None:
             query = query.where(RoomBooking.status == status)
 
-        # Count total
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
-        # Sort and paginate
         query = query.order_by(RoomBooking.start_time.asc())
         query = query.offset((page - 1) * page_size).limit(page_size)
 
@@ -800,30 +521,7 @@ class BookingOperations:
         start_date: datetime,
         end_date: datetime,
     ) -> list[dict]:
-        """
-        Check room availability for a date range.
-
-        Returns a list of time slots with booking information, allowing
-        the frontend to render an availability timeline.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization scope.
-        room_id : UUID
-            Room to check.
-        start_date : datetime
-            Start of the range.
-        end_date : datetime
-            End of the range.
-
-        Returns
-        -------
-        list[dict]
-            List of dicts with keys: start_time, end_time, is_available,
-            booking_id, event_title, booker_name.
-
-        """
+        """Return occupied time slots for a room in a date range."""
         booking_rows = await queries.get_room_bookings_in_range(
             self.session,
             room_id,
@@ -853,30 +551,7 @@ class BookingOperations:
         amenities: list[str] | None = None,
         room_type: RoomType | None = None,
     ) -> list[Room]:
-        """
-        Find rooms available during a specific time range.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization scope.
-        start_time : datetime
-            Desired start time.
-        end_time : datetime
-            Desired end time.
-        min_capacity : int | None
-            Minimum room capacity.
-        amenities : list[str] | None
-            Required amenities.
-        room_type : RoomType | None
-            Required room type.
-
-        Returns
-        -------
-        list[Room]
-            Available rooms matching the criteria.
-
-        """
+        """Find rooms available during a specific time range."""
         return await queries.find_available_rooms(
             self.session,
             organization_id,
@@ -891,40 +566,37 @@ class BookingOperations:
         self,
         event_id: UUID,
     ) -> RoomBooking | None:
-        """
-        Get the confirmed booking linked to a calendar event.
-
-        Parameters
-        ----------
-        event_id : UUID
-            Calendar event ID.
-
-        Returns
-        -------
-        RoomBooking | None
-            The linked booking, or None if no booking exists for the event.
-
-        """
+        """Return the confirmed booking linked to a calendar event."""
         return await queries.get_booking_for_event(self.session, event_id)
 
     async def cancel_booking_for_event(
         self,
         event_id: UUID,
     ) -> None:
-        """
-        Cancel any confirmed booking linked to a calendar event.
-
-        This is used when a calendar event with a room booking is deleted
-        or modified to no longer need a room.
-
-        Parameters
-        ----------
-        event_id : UUID
-            Calendar event ID.
-
-        """
+        """Cancel any confirmed booking linked to a calendar event."""
         booking = await queries.get_booking_for_event(self.session, event_id)
         if booking is not None:
             booking.status = BookingStatus.CANCELLED
             booking.updated_at = datetime.now(UTC)
             await self.session.commit()
+
+
+# Content loader registration
+
+
+async def _load_room(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_id: UUID,
+) -> Room | None:
+    """Loader used by ``ContentMembersOperations`` to fetch a room row."""
+    result = await session.execute(
+        select(Room).where(
+            Room.id == content_id,
+            Room.organization_id == organization_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+register_content_loader(ContentType.ROOM, _load_room)

@@ -6,7 +6,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 import {
     fetchFilesTree,
     createFolder,
@@ -148,7 +148,8 @@ export const filesTreeSlice = createSlice({
                                 id: node.id,
                                 name: node.name,
                                 parentId: node.parentId,
-                                visibility: node.visibility,
+                                accessMode: node.accessMode,
+                                ownerId: '',
                                 isDeleted: false,
                             };
                         }
@@ -165,12 +166,12 @@ export const filesTreeSlice = createSlice({
                 const organization: SerializedTreeNode[] = [];
 
                 for (const node of action.payload.nodes) {
-                    if (node.visibility === VisibilityScope.PRIVATE) {
-                        personal.push(node);
-                    } else if (node.visibility === VisibilityScope.ORGANIZATION) {
+                    if (node.accessMode === AccessMode.OPEN_TO_ORG) {
                         organization.push(node);
-                    } else {
+                    } else if (node.accessMode === AccessMode.EXPLICIT_MEMBERS) {
                         shared.push(node);
+                    } else {
+                        personal.push(node);
                     }
                 }
 
@@ -200,12 +201,12 @@ export const filesTreeSlice = createSlice({
                     name: folder.name,
                     isFolder: true,
                     parentId: folder.parentId,
-                    visibility: folder.visibility,
+                    accessMode: folder.accessMode,
                     childCount: 0,
                     children: [],
                 };
 
-                if (folder.visibility === VisibilityScope.PRIVATE) {
+                if (folder.accessMode === AccessMode.OWNER_ONLY || folder.accessMode === AccessMode.UNSPECIFIED) {
                     if (folder.parentId) {
                         // Add as child to parent folder
                         const addToParent = (nodes: SerializedTreeNode[]): boolean => {
@@ -226,7 +227,7 @@ export const filesTreeSlice = createSlice({
                     } else {
                         state.tree.personal.push(newNode);
                     }
-                } else if (folder.visibility === VisibilityScope.ORGANIZATION) {
+                } else if (folder.accessMode === AccessMode.OPEN_TO_ORG) {
                     if (folder.parentId) {
                         const addToParent = (nodes: SerializedTreeNode[]): boolean => {
                             for (const node of nodes) {

@@ -26,7 +26,6 @@ __all__ = [
     "init_meilisearch",
     "close_meilisearch",
     "get_meilisearch_client",
-    # Constants
     "UNIFFY_INDEX_NAME",
     "INDEX_SETTINGS",
 ]

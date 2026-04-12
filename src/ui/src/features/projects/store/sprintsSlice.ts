@@ -64,7 +64,6 @@ export const {
   clearSprints,
 } = sprintsSlice.actions;
 
-// Selectors
 export const selectSprintsForProject = (projectId: string) => (state: RootState): Sprint[] => {
   const ids = state.sprints.sprintsByProject[projectId] ?? [];
   return ids

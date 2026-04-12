@@ -25,7 +25,7 @@ import {
     grantDomainAdmin,
     revokeDomainAdmin,
 } from '@/features/admin/store/adminThunks';
-import { ContentType, VisibilityScope, OrganizationRole, DomainType } from '@uniffy/proto/common/v1/common_pb';
+import { ContentType, AccessMode, ContentRole, OrganizationRole, DomainType } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Hook for checking admin access permissions.
@@ -75,11 +75,8 @@ export function usePermissionDefaults() {
         async (
             contentType: number,
             updates: {
-                defaultVisibility?: number;
-                membersCanView?: boolean;
-                membersCanEdit?: boolean;
-                membersCanDelete?: boolean;
-                membersCanShare?: boolean;
+                defaultAccessMode?: number;
+                defaultBaselineRole?: number | null;
             }
         ) => {
             await dispatch(
@@ -290,18 +287,40 @@ export function getContentTypeLabel(contentType: number): string {
 }
 
 /**
- * Get human-readable label for visibility scope.
+ * Get human-readable label for access mode.
  */
-export function getVisibilityScopeLabel(scope: number): string {
-    switch (scope) {
-        case VisibilityScope.PRIVATE:
-            return 'Private';
-        case VisibilityScope.GROUP:
-            return 'Group';
-        case VisibilityScope.ORGANIZATION:
-            return 'Organization';
+export function getAccessModeLabel(mode: number): string {
+    switch (mode) {
+        case AccessMode.OWNER_ONLY:
+            return 'Owner Only';
+        case AccessMode.EXPLICIT_MEMBERS:
+            return 'Explicit Members';
+        case AccessMode.OPEN_TO_ORG:
+            return 'Open to Organization';
         default:
             return 'Unknown';
+    }
+}
+
+/**
+ * Get human-readable label for content role.
+ */
+export function getContentRoleLabel(role: number): string {
+    switch (role) {
+        case ContentRole.VIEWER:
+            return 'Viewer';
+        case ContentRole.COMMENTER:
+            return 'Commenter';
+        case ContentRole.EDITOR:
+            return 'Editor';
+        case ContentRole.ADMIN:
+            return 'Admin';
+        case ContentRole.OWNER:
+            return 'Owner';
+        case ContentRole.BLOCKED:
+            return 'Blocked';
+        default:
+            return 'None';
     }
 }
 

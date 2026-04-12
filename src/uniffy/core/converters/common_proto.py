@@ -5,6 +5,15 @@ Provides bidirectional mapping between domain enums/models and common.v1 proto t
 """
 
 from uniffy_proto.common.v1.common_pb2 import (
+    AccessMode as ProtoAccessMode,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    ContentMemberAction as ProtoContentMemberAction,
+)
+from uniffy_proto.common.v1.common_pb2 import (
+    ContentRole as ProtoContentRole,
+)
+from uniffy_proto.common.v1.common_pb2 import (
     ContentType as ProtoContentType,
 )
 from uniffy_proto.common.v1.common_pb2 import (
@@ -32,16 +41,10 @@ from uniffy_proto.common.v1.common_pb2 import (
     OrganizationRole as ProtoOrgRole,
 )
 from uniffy_proto.common.v1.common_pb2 import (
-    PermissionLevel as ProtoPermissionLevel,
-)
-from uniffy_proto.common.v1.common_pb2 import (
     SubjectType as ProtoSubjectType,
 )
 from uniffy_proto.common.v1.common_pb2 import (
     UserInfo as ProtoUserInfo,
-)
-from uniffy_proto.common.v1.common_pb2 import (
-    VisibilityScope as ProtoVisibilityScope,
 )
 
 from uniffy.core.avatars import get_avatar_url
@@ -54,16 +57,18 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.organization_member import OrganizationRole as DomainOrgRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
-from uniffy.core.models.shared import ContentType as DomainContentType
-from uniffy.core.models.shared import DomainType as DomainDomainType
-from uniffy.core.models.shared import PermissionLevel as DomainPermissionLevel
-from uniffy.core.models.shared import SubjectType as DomainSubjectType
-from uniffy.core.models.shared import VisibilityScope as DomainVisibilityScope
+from uniffy.core.types import AccessMode as DomainAccessMode
+from uniffy.core.types import ContentMemberAction as DomainContentMemberAction
+from uniffy.core.types import ContentRole as DomainContentRole
+from uniffy.core.types import ContentType as DomainContentType
+from uniffy.core.types import DomainType as DomainDomainType
+from uniffy.core.types import SubjectType as DomainSubjectType
 
 # ContentType mappings
 CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.NOTE: ProtoContentType.CONTENT_TYPE_NOTE,
     DomainContentType.FILE: ProtoContentType.CONTENT_TYPE_FILE,
+    DomainContentType.FOLDER: ProtoContentType.CONTENT_TYPE_FOLDER,
     DomainContentType.CALENDAR_EVENT: ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT,
     DomainContentType.CHAT_MESSAGE: ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE,
     DomainContentType.USER: ProtoContentType.CONTENT_TYPE_USER,
@@ -74,11 +79,58 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.PROMPT: ProtoContentType.CONTENT_TYPE_PROMPT,
     DomainContentType.CHAT: ProtoContentType.CONTENT_TYPE_CHAT,
     DomainContentType.ROOM: ProtoContentType.CONTENT_TYPE_ROOM,
+    DomainContentType.AGENT_CRON_TASK: ProtoContentType.CONTENT_TYPE_AGENT_CRON_TASK,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType.ValueType, DomainContentType] = {
     v: k for k, v in CONTENT_TYPE_TO_PROTO.items()
 }
+
+# ContentRole mappings
+CONTENT_ROLE_TO_PROTO: dict[DomainContentRole, ProtoContentRole.ValueType] = {
+    DomainContentRole.VIEWER: ProtoContentRole.CONTENT_ROLE_VIEWER,
+    DomainContentRole.COMMENTER: ProtoContentRole.CONTENT_ROLE_COMMENTER,
+    DomainContentRole.EDITOR: ProtoContentRole.CONTENT_ROLE_EDITOR,
+    DomainContentRole.ADMIN: ProtoContentRole.CONTENT_ROLE_ADMIN,
+    DomainContentRole.OWNER: ProtoContentRole.CONTENT_ROLE_OWNER,
+    DomainContentRole.BLOCKED: ProtoContentRole.CONTENT_ROLE_BLOCKED,
+}
+
+CONTENT_ROLE_FROM_PROTO: dict[ProtoContentRole.ValueType, DomainContentRole] = {
+    v: k for k, v in CONTENT_ROLE_TO_PROTO.items()
+}
+
+# AccessMode mappings
+ACCESS_MODE_TO_PROTO: dict[DomainAccessMode, ProtoAccessMode.ValueType] = {
+    DomainAccessMode.OWNER_ONLY: ProtoAccessMode.ACCESS_MODE_OWNER_ONLY,
+    DomainAccessMode.EXPLICIT_MEMBERS: ProtoAccessMode.ACCESS_MODE_EXPLICIT_MEMBERS,
+    DomainAccessMode.OPEN_TO_ORG: ProtoAccessMode.ACCESS_MODE_OPEN_TO_ORG,
+}
+
+ACCESS_MODE_FROM_PROTO: dict[ProtoAccessMode.ValueType, DomainAccessMode] = {
+    v: k for k, v in ACCESS_MODE_TO_PROTO.items()
+}
+
+# ContentMemberAction mappings
+_cma = ProtoContentMemberAction  # alias to keep the lines short
+CONTENT_MEMBER_ACTION_TO_PROTO: dict[
+    DomainContentMemberAction, ProtoContentMemberAction.ValueType
+] = {
+    DomainContentMemberAction.MEMBER_ADDED: _cma.CONTENT_MEMBER_ACTION_MEMBER_ADDED,
+    DomainContentMemberAction.MEMBER_ROLE_CHANGED: _cma.CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED,
+    DomainContentMemberAction.MEMBER_REMOVED: _cma.CONTENT_MEMBER_ACTION_MEMBER_REMOVED,
+    DomainContentMemberAction.ACCESS_MODE_CHANGED: _cma.CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED,
+    DomainContentMemberAction.BASELINE_ROLE_CHANGED: (
+        _cma.CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED
+    ),
+    DomainContentMemberAction.OWNERSHIP_TRANSFERRED: (
+        _cma.CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED
+    ),
+}
+
+CONTENT_MEMBER_ACTION_FROM_PROTO: dict[
+    ProtoContentMemberAction.ValueType, DomainContentMemberAction
+] = {v: k for k, v in CONTENT_MEMBER_ACTION_TO_PROTO.items()}
 
 # SubjectType mappings
 SUBJECT_TYPE_TO_PROTO: dict[DomainSubjectType, ProtoSubjectType.ValueType] = {
@@ -89,29 +141,6 @@ SUBJECT_TYPE_TO_PROTO: dict[DomainSubjectType, ProtoSubjectType.ValueType] = {
 
 SUBJECT_TYPE_FROM_PROTO: dict[ProtoSubjectType.ValueType, DomainSubjectType] = {
     v: k for k, v in SUBJECT_TYPE_TO_PROTO.items()
-}
-
-# PermissionLevel mappings
-PERMISSION_LEVEL_TO_PROTO: dict[DomainPermissionLevel, ProtoPermissionLevel.ValueType] = {
-    DomainPermissionLevel.VIEW: ProtoPermissionLevel.PERMISSION_LEVEL_VIEW,
-    DomainPermissionLevel.EDIT: ProtoPermissionLevel.PERMISSION_LEVEL_EDIT,
-    DomainPermissionLevel.ADMIN: ProtoPermissionLevel.PERMISSION_LEVEL_ADMIN,
-    DomainPermissionLevel.OWNER: ProtoPermissionLevel.PERMISSION_LEVEL_ADMIN,
-}
-
-PERMISSION_LEVEL_FROM_PROTO: dict[ProtoPermissionLevel.ValueType, DomainPermissionLevel] = {
-    v: k for k, v in PERMISSION_LEVEL_TO_PROTO.items()
-}
-
-# VisibilityScope mappings
-VISIBILITY_TO_PROTO: dict[DomainVisibilityScope, ProtoVisibilityScope.ValueType] = {
-    DomainVisibilityScope.PRIVATE: ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    DomainVisibilityScope.GROUP: ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP,
-    DomainVisibilityScope.ORGANIZATION: ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION,
-}
-
-VISIBILITY_FROM_PROTO: dict[ProtoVisibilityScope.ValueType, DomainVisibilityScope] = {
-    v: k for k, v in VISIBILITY_TO_PROTO.items()
 }
 
 # OrganizationRole mappings
@@ -170,24 +199,40 @@ def subject_type_from_proto(st: ProtoSubjectType.ValueType) -> DomainSubjectType
     return SUBJECT_TYPE_FROM_PROTO.get(st)
 
 
-def permission_level_to_proto(pl: DomainPermissionLevel) -> ProtoPermissionLevel.ValueType:
-    """Convert domain PermissionLevel to proto."""
-    return PERMISSION_LEVEL_TO_PROTO.get(pl, ProtoPermissionLevel.PERMISSION_LEVEL_UNSPECIFIED)
+def content_role_to_proto(role: DomainContentRole) -> ProtoContentRole.ValueType:
+    """Convert domain ContentRole to proto."""
+    return CONTENT_ROLE_TO_PROTO.get(role, ProtoContentRole.CONTENT_ROLE_UNSPECIFIED)
 
 
-def permission_level_from_proto(pl: ProtoPermissionLevel.ValueType) -> DomainPermissionLevel | None:
-    """Convert proto PermissionLevel to domain."""
-    return PERMISSION_LEVEL_FROM_PROTO.get(pl)
+def content_role_from_proto(role: ProtoContentRole.ValueType) -> DomainContentRole | None:
+    """Convert proto ContentRole to domain."""
+    return CONTENT_ROLE_FROM_PROTO.get(role)
 
 
-def visibility_to_proto(vs: DomainVisibilityScope) -> ProtoVisibilityScope.ValueType:
-    """Convert domain VisibilityScope to proto."""
-    return VISIBILITY_TO_PROTO.get(vs, ProtoVisibilityScope.VISIBILITY_SCOPE_UNSPECIFIED)
+def access_mode_to_proto(mode: DomainAccessMode) -> ProtoAccessMode.ValueType:
+    """Convert domain AccessMode to proto."""
+    return ACCESS_MODE_TO_PROTO.get(mode, ProtoAccessMode.ACCESS_MODE_UNSPECIFIED)
 
 
-def visibility_from_proto(vs: ProtoVisibilityScope.ValueType) -> DomainVisibilityScope | None:
-    """Convert proto VisibilityScope to domain."""
-    return VISIBILITY_FROM_PROTO.get(vs)
+def access_mode_from_proto(mode: ProtoAccessMode.ValueType) -> DomainAccessMode | None:
+    """Convert proto AccessMode to domain."""
+    return ACCESS_MODE_FROM_PROTO.get(mode)
+
+
+def content_member_action_to_proto(
+    action: DomainContentMemberAction,
+) -> ProtoContentMemberAction.ValueType:
+    """Convert domain ContentMemberAction to proto."""
+    return CONTENT_MEMBER_ACTION_TO_PROTO.get(
+        action, ProtoContentMemberAction.CONTENT_MEMBER_ACTION_UNSPECIFIED
+    )
+
+
+def content_member_action_from_proto(
+    action: ProtoContentMemberAction.ValueType,
+) -> DomainContentMemberAction | None:
+    """Convert proto ContentMemberAction to domain."""
+    return CONTENT_MEMBER_ACTION_FROM_PROTO.get(action)
 
 
 def org_role_to_proto(role: DomainOrgRole) -> ProtoOrgRole.ValueType:

@@ -17,6 +17,7 @@ import { PageLoader } from '@/components/feedback/PageLoader';
 import { PageErrorFallback } from '@/components/feedback/PageErrorFallback';
 import { AppErrorFallback } from '@/components/feedback/AppErrorFallback';
 import { NotFoundPage } from '@/components/feedback/NotFoundPage';
+import { AccessPolicyDialogProvider, AccessPolicyDialog } from '@/features/permissions';
 import { lazyImport } from '@/shared/utils/lazyImport';
 
 // Expose toast on window in dev mode for testing
@@ -183,6 +184,9 @@ export function App() {
                     <StreamingProvider />
                     {/* Global toast notifications */}
                     <ThemedToaster />
+
+                    <AccessPolicyDialogProvider>
+                    <AccessPolicyDialog />
 
                     <Routes>
                         <Route
@@ -480,6 +484,7 @@ export function App() {
                         {/* Fallback for 404s */}
                         <Route path="*" element={<NotFoundPage />} />
                     </Routes>
+                    </AccessPolicyDialogProvider>
                 </BrowserRouter>
             </ErrorBoundary>
         </AuthInitializer>

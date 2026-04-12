@@ -1,488 +1,429 @@
-"""Permissions RPC handlers - thin layer delegating to operations."""
+"""Handlers for ``permissions.v1.MembersService``.
 
+Thin RPC layer that delegates to the generic
+:class:`~uniffy.core.content.members.ContentMembersOperations`. Each
+handler:
+
+1. Extracts the user id from the JWT context.
+2. Parses the request fields into domain types.
+3. Opens an async session and calls the appropriate operations method.
+4. Maps the result back to the proto response.
+
+The generic operations class enforces all permission rules, writes audit
+log rows, syncs the search index, and emits notifications. The handlers
+do not duplicate any of that logic.
+"""
+
+from math import ceil
 from uuid import UUID
 
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 from uniffy_proto.permissions.v1.permissions_pb2 import (
-    GetMyPermissionRequest,
-    GrantPermissionRequest,
-    ListContentPermissionsRequest,
-    PermissionInfo,
-    PermissionListResponse,
-    RevokePermissionRequest,
-    RevokePermissionResponse,
-    SearchShareTargetsRequest,
-    ShareTargetsResponse,
-    UpdatePermissionRequest,
+    AccessModeResponse,
+    AddMemberRequest,
+    ListMemberEventsRequest,
+    ListMemberEventsResponse,
+    ListMembersRequest,
+    ListMembersResponse,
+    MemberResponse,
+    RemoveMemberRequest,
+    RemoveMemberResponse,
+    SetAccessModeRequest,
+    TransferOwnershipRequest,
+    TransferOwnershipResponse,
+    UpdateMemberRoleRequest,
 )
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.shared import PermissionLevel
+from uniffy.core.content.members import (
+    ContentMembersOperations,
+    get_content_loader,
+)
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_member_action_from_proto,
+    content_role_from_proto,
+    content_type_from_proto,
+    subject_type_from_proto,
+)
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    ContentType,
+    SubjectType,
+)
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.permissions.converters import (
-    get_permission_flags_from_level,
-    group_to_share_target,
-    permission_to_proto,
-    proto_to_content_type,
-    proto_to_permission_level,
-    proto_to_subject_type,
-    user_to_share_target,
+    content_access_policy_to_proto,
+    content_member_event_to_proto,
+    content_member_to_proto,
 )
-from uniffy.domains.permissions.operations import PermissionsOperations
 
 
-class PermissionsHandlers:
-    """RPC handlers for permissions service."""
+def _parse_uuid(value: str, field: str) -> UUID:
+    """Parse a UUID string or raise INVALID_ARGUMENT."""
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
-    async def grant_permission(
+
+def _resolve_content_type(proto_type) -> ContentType:
+    """Translate proto ContentType to domain enum or raise."""
+    domain_type = content_type_from_proto(proto_type)
+    if domain_type is None:
+        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content type")
+    return domain_type
+
+
+def _resolve_subject_type(proto_type) -> SubjectType:
+    """Translate proto SubjectType to domain enum or raise."""
+    domain_type = subject_type_from_proto(proto_type)
+    if domain_type is None:
+        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid subject type")
+    return domain_type
+
+
+def _resolve_role(proto_role) -> ContentRole:
+    """Translate proto ContentRole to domain enum or raise."""
+    role = content_role_from_proto(proto_role)
+    if role is None:
+        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content role")
+    return role
+
+
+def _resolve_access_mode(proto_mode) -> AccessMode:
+    """Translate proto AccessMode to domain enum or raise."""
+    mode = access_mode_from_proto(proto_mode)
+    if mode is None:
+        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid access mode")
+    return mode
+
+
+def _map_domain_error(exc: Exception) -> ConnectError:
+    """Convert a domain error into a ConnectError with the right code."""
+    if isinstance(exc, PermissionDeniedError):
+        return ConnectError(Code.PERMISSION_DENIED, str(exc))
+    if isinstance(exc, NotFoundError):
+        return ConnectError(Code.NOT_FOUND, str(exc))
+    if isinstance(exc, ValidationError):
+        return ConnectError(Code.INVALID_ARGUMENT, str(exc))
+    logger.error("Unhandled error in MembersService handler", exc_info=True)
+    return ConnectError(Code.INTERNAL, "Internal server error")
+
+
+class MembersHandlers:
+    """RPC handlers for ``permissions.v1.MembersService``."""
+
+    async def list_members(
         self,
-        request: GrantPermissionRequest,
+        request: ListMembersRequest,
         ctx: RequestContext,
-    ) -> PermissionInfo:
-        """
-        Handle grant_permission RPC call.
-
-        Grants permission to a user or group on content.
-
-        Parameters
-        ----------
-        request : GrantPermissionRequest
-            The grant request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        PermissionInfo
-            The created permission.
-
-        """
+    ) -> ListMembersResponse:
+        """List explicit members and the access policy of a content item."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        content_id = _parse_uuid(request.content_id, "content_id")
+        content_type = _resolve_content_type(request.content_type)
 
         try:
-            organization_id = UUID(request.organization_id)
-            content_id = UUID(request.content_id)
-            subject_id = UUID(request.subject_id)
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID format: {e}")
+            async for session in get_async_session():
+                ops = ContentMembersOperations(session)
+                members = await ops.list_members(
+                    actor_user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
+                )
 
-        content_type = proto_to_content_type(request.content_type)
-        if content_type is None:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content type")
+                # Reload the content via the registered loader so we can
+                # return the access policy alongside the member list.
+                loader = get_content_loader(content_type)
+                content = await loader(session, organization_id, content_id)
+                if content is None:
+                    raise ConnectError(Code.NOT_FOUND, "Content not found")
 
-        subject_type = proto_to_subject_type(request.subject_type)
-        if subject_type is None:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid subject type")
+                policy = content_access_policy_to_proto(
+                    owner_id=content.owner_id,
+                    access_mode=content.access_mode,
+                    baseline_role=content.baseline_role,
+                )
+                response = ListMembersResponse(policy=policy)
+                response.members.extend(content_member_to_proto(m) for m in members)
+                return response
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
 
-        permission_level = proto_to_permission_level(request.level)
-        flags = get_permission_flags_from_level(request.level)
+    async def add_member(
+        self,
+        request: AddMemberRequest,
+        ctx: RequestContext,
+    ) -> MemberResponse:
+        """Add a new explicit member to a content item."""
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        content_id = _parse_uuid(request.content_id, "content_id")
+        subject_id = _parse_uuid(request.subject_id, "subject_id")
+        content_type = _resolve_content_type(request.content_type)
+        subject_type = _resolve_subject_type(request.subject_type)
+        role = _resolve_role(request.role)
 
-        # Parse optional expiration
         expires_at = None
         if request.HasField("expires_at"):
             expires_at = request.expires_at.ToDatetime()
 
         try:
             async for session in get_async_session():
-                ops = PermissionsOperations(session)
-
-                # Get the actual content owner
-                actual_owner_id = await ops._get_content_owner_id(content_type, content_id)
-                if not actual_owner_id:
-                    raise ConnectError(Code.NOT_FOUND, "Content not found")
-
-                permission = await ops.grant_permission(
-                    granted_by_user_id=user_id,
+                ops = ContentMembersOperations(session)
+                member = await ops.add_member(
+                    actor_user_id=user_id,
                     organization_id=organization_id,
                     content_type=content_type,
                     content_id=content_id,
-                    content_owner_id=actual_owner_id,
                     subject_type=subject_type,
                     subject_id=subject_id,
-                    permission_level=permission_level,
-                    **flags,
+                    role=role,
                     expires_at=expires_at,
+                    note=request.note,
                 )
-
-                # Get subject info
-                subject, member_count = await ops.get_permission_subject(permission)
-                granted_by = await ops.get_user_by_id(user_id)
-
-                return permission_to_proto(
-                    permission,
-                    subject=subject,
-                    granted_by=granted_by,
-                    member_count=member_count,
-                )
-
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "You cannot share this content")
+                return MemberResponse(member=content_member_to_proto(member))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error granting permission: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
 
-    async def revoke_permission(
+    async def update_member_role(
         self,
-        request: RevokePermissionRequest,
+        request: UpdateMemberRoleRequest,
         ctx: RequestContext,
-    ) -> RevokePermissionResponse:
-        """
-        Handle revoke_permission RPC call.
-
-        Revokes a permission.
-
-        Parameters
-        ----------
-        request : RevokePermissionRequest
-            The revoke request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        RevokePermissionResponse
-            Success flag.
-
-        """
+    ) -> MemberResponse:
+        """Change the role of an existing explicit member."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            organization_id = UUID(request.organization_id)
-            permission_id = UUID(request.permission_id)
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID format: {e}")
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        content_id = _parse_uuid(request.content_id, "content_id")
+        subject_id = _parse_uuid(request.subject_id, "subject_id")
+        content_type = _resolve_content_type(request.content_type)
+        subject_type = _resolve_subject_type(request.subject_type)
+        new_role = _resolve_role(request.new_role)
 
         try:
             async for session in get_async_session():
-                ops = PermissionsOperations(session)
-
-                # Fetch permission to get content info
-                existing_permission = await ops.get_permission_by_id(permission_id)
-                if not existing_permission:
-                    raise ConnectError(Code.NOT_FOUND, "Permission not found")
-
-                # Get the actual content owner
-                actual_owner_id = await ops._get_content_owner_id(
-                    existing_permission.content_type,
-                    existing_permission.content_id,
-                )
-                if not actual_owner_id:
-                    raise ConnectError(Code.NOT_FOUND, "Content not found")
-
-                success = await ops.revoke_permission(
-                    revoking_user_id=user_id,
-                    organization_id=organization_id,
-                    permission_id=permission_id,
-                    content_owner_id=actual_owner_id,
-                )
-                return RevokePermissionResponse(success=success)
-
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "You cannot revoke this permission")
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error revoking permission: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def update_permission(
-        self,
-        request: UpdatePermissionRequest,
-        ctx: RequestContext,
-    ) -> PermissionInfo:
-        """
-        Handle update_permission RPC call.
-
-        Updates a permission.
-
-        Parameters
-        ----------
-        request : UpdatePermissionRequest
-            The update request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        PermissionInfo
-            The updated permission.
-
-        """
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            organization_id = UUID(request.organization_id)
-            permission_id = UUID(request.permission_id)
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID format: {e}")
-
-        permission_level = None
-        if request.HasField("level"):
-            permission_level = proto_to_permission_level(request.level)
-
-        expires_at = None
-        if request.HasField("expires_at"):
-            expires_at = request.expires_at.ToDatetime()
-
-        try:
-            async for session in get_async_session():
-                ops = PermissionsOperations(session)
-
-                # Fetch permission to get content info
-                existing_permission = await ops.get_permission_by_id(permission_id)
-                if not existing_permission:
-                    raise ConnectError(Code.NOT_FOUND, "Permission not found")
-
-                # Get the actual content owner
-                actual_owner_id = await ops._get_content_owner_id(
-                    existing_permission.content_type,
-                    existing_permission.content_id,
-                )
-                if not actual_owner_id:
-                    raise ConnectError(Code.NOT_FOUND, "Content not found")
-
-                permission = await ops.update_permission(
-                    updating_user_id=user_id,
-                    organization_id=organization_id,
-                    permission_id=permission_id,
-                    content_owner_id=actual_owner_id,
-                    permission_level=permission_level,
-                    expires_at=expires_at,
-                    clear_expiration=request.clear_expiration,
-                )
-
-                # Get subject info
-                subject, member_count = await ops.get_permission_subject(permission)
-                granted_by = await ops.get_user_by_id(permission.granted_by_user_id)
-
-                return permission_to_proto(
-                    permission,
-                    subject=subject,
-                    granted_by=granted_by,
-                    member_count=member_count,
-                )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Permission not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "You cannot update this permission")
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error updating permission: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def list_content_permissions(
-        self,
-        request: ListContentPermissionsRequest,
-        ctx: RequestContext,
-    ) -> PermissionListResponse:
-        """
-        Handle list_content_permissions RPC call.
-
-        Lists all permissions for a piece of content.
-
-        Parameters
-        ----------
-        request : ListContentPermissionsRequest
-            The list request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        PermissionListResponse
-            List of permissions and owner.
-
-        """
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            organization_id = UUID(request.organization_id)
-            content_id = UUID(request.content_id)
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID format: {e}")
-
-        content_type = proto_to_content_type(request.content_type)
-        if content_type is None:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content type")
-
-        try:
-            async for session in get_async_session():
-                ops = PermissionsOperations(session)
-
-                # Get actual content owner ID
-                actual_owner_id = await ops._get_content_owner_id(content_type, content_id)
-                if not actual_owner_id:
-                    raise ConnectError(Code.NOT_FOUND, "Content not found")
-
-                permissions, owner = await ops.list_content_permissions(
-                    user_id=user_id,
+                ops = ContentMembersOperations(session)
+                member = await ops.update_member_role(
+                    actor_user_id=user_id,
                     organization_id=organization_id,
                     content_type=content_type,
                     content_id=content_id,
-                    content_owner_id=actual_owner_id,
+                    subject_type=subject_type,
+                    subject_id=subject_id,
+                    new_role=new_role,
+                    note=request.note,
+                )
+                return MemberResponse(member=content_member_to_proto(member))
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+
+    async def remove_member(
+        self,
+        request: RemoveMemberRequest,
+        ctx: RequestContext,
+    ) -> RemoveMemberResponse:
+        """Remove an explicit member from a content item."""
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        content_id = _parse_uuid(request.content_id, "content_id")
+        subject_id = _parse_uuid(request.subject_id, "subject_id")
+        content_type = _resolve_content_type(request.content_type)
+        subject_type = _resolve_subject_type(request.subject_type)
+
+        try:
+            async for session in get_async_session():
+                ops = ContentMembersOperations(session)
+                await ops.remove_member(
+                    actor_user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
+                    subject_type=subject_type,
+                    subject_id=subject_id,
+                    note=request.note,
+                )
+                return RemoveMemberResponse(success=True)
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+
+    async def set_access_mode(
+        self,
+        request: SetAccessModeRequest,
+        ctx: RequestContext,
+    ) -> AccessModeResponse:
+        """Change the access mode and/or baseline role of a content item."""
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        content_id = _parse_uuid(request.content_id, "content_id")
+        content_type = _resolve_content_type(request.content_type)
+        new_access_mode = _resolve_access_mode(request.access_mode)
+
+        baseline_role = None
+        if request.baseline_role:
+            baseline_role = _resolve_role(request.baseline_role)
+
+        try:
+            async for session in get_async_session():
+                ops = ContentMembersOperations(session)
+                await ops.set_access_mode(
+                    actor_user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
+                    new_access_mode=new_access_mode,
+                    new_baseline_role=baseline_role,
+                    remove_members_on_narrow=request.remove_members_on_narrow,
+                    note=request.note,
                 )
 
-                response = PermissionListResponse()
+                # Reload the content row to return the latest policy
+                loader = get_content_loader(content_type)
+                content = await loader(session, organization_id, content_id)
+                if content is None:
+                    raise ConnectError(Code.NOT_FOUND, "Content not found")
 
-                if owner:
-                    response.owner.CopyFrom(user_to_share_target(owner))
-
-                for permission in permissions:
-                    subject, member_count = await ops.get_permission_subject(permission)
-                    granted_by = await ops.get_user_by_id(permission.granted_by_user_id)
-                    proto = permission_to_proto(
-                        permission,
-                        subject=subject,
-                        granted_by=granted_by,
-                        member_count=member_count,
+                return AccessModeResponse(
+                    policy=content_access_policy_to_proto(
+                        owner_id=content.owner_id,
+                        access_mode=content.access_mode,
+                        baseline_role=content.baseline_role,
                     )
-                    response.permissions.append(proto)
-
-                return response
-
+                )
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing permissions: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
 
-    async def get_my_permission(
+    async def transfer_ownership(
         self,
-        request: GetMyPermissionRequest,
+        request: TransferOwnershipRequest,
         ctx: RequestContext,
-    ) -> PermissionInfo:
-        """
-        Handle get_my_permission RPC call.
-
-        Gets the current user's permission on content.
-
-        Parameters
-        ----------
-        request : GetMyPermissionRequest
-            The request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        PermissionInfo
-            The permission info.
-
-        """
+    ) -> TransferOwnershipResponse:
+        """Transfer ownership to another user."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            organization_id = UUID(request.organization_id)
-            content_id = UUID(request.content_id)
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID format: {e}")
-
-        content_type = proto_to_content_type(request.content_type)
-        if content_type is None:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content type")
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        content_id = _parse_uuid(request.content_id, "content_id")
+        new_owner_user_id = _parse_uuid(request.new_owner_user_id, "new_owner_user_id")
+        content_type = _resolve_content_type(request.content_type)
 
         try:
             async for session in get_async_session():
-                ops = PermissionsOperations(session)
-                permission = await ops.get_my_permission(
-                    user_id=user_id,
+                ops = ContentMembersOperations(session)
+                await ops.transfer_ownership(
+                    actor_user_id=user_id,
                     organization_id=organization_id,
                     content_type=content_type,
                     content_id=content_id,
+                    new_owner_user_id=new_owner_user_id,
+                    note=request.note,
                 )
 
-                if not permission:
-                    # Return empty permission info
-                    return PermissionInfo()
+                loader = get_content_loader(content_type)
+                content = await loader(session, organization_id, content_id)
+                if content is None:
+                    raise ConnectError(Code.NOT_FOUND, "Content not found")
 
-                subject = await ops.get_user_by_id(user_id)
-                granted_by = await ops.get_user_by_id(permission.granted_by_user_id)
-
-                # Check if user is the actual content owner (not just admin)
-                is_owner = permission.permission_level == PermissionLevel.OWNER
-
-                return permission_to_proto(
-                    permission,
-                    subject=subject,
-                    granted_by=granted_by,
-                    is_owner=is_owner,
+                return TransferOwnershipResponse(
+                    policy=content_access_policy_to_proto(
+                        owner_id=content.owner_id,
+                        access_mode=content.access_mode,
+                        baseline_role=content.baseline_role,
+                    )
                 )
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting my permission: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
 
-    async def search_share_targets(
+    async def list_member_events(
         self,
-        request: SearchShareTargetsRequest,
+        request: ListMemberEventsRequest,
         ctx: RequestContext,
-    ) -> ShareTargetsResponse:
-        """
-        Handle search_share_targets RPC call.
+    ) -> ListMemberEventsResponse:
+        """List the audit log entries for a content item."""
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        content_id = _parse_uuid(request.content_id, "content_id")
+        content_type = _resolve_content_type(request.content_type)
 
-        Searches for users and groups to share with.
+        page = 1
+        page_size = 50
+        if request.HasField("pagination"):
+            if request.pagination.page > 0:
+                page = request.pagination.page
+            if request.pagination.page_size > 0:
+                page_size = min(request.pagination.page_size, 200)
 
-        Parameters
-        ----------
-        request : SearchShareTargetsRequest
-            The search request.
-        ctx : RequestContext
-            RPC request context.
+        actor_filter_user_id = None
+        if request.actor_user_id:
+            actor_filter_user_id = _parse_uuid(request.actor_user_id, "actor_user_id")
 
-        Returns
-        -------
-        ShareTargetsResponse
-            List of share targets.
+        action_filter = None
+        if request.action:
+            action_filter = content_member_action_from_proto(request.action)
 
-        """
-        get_user_id_from_context(ctx)  # Ensure authenticated
+        after = None
+        if request.HasField("after"):
+            after = request.after.ToDatetime()
+        before = None
+        if request.HasField("before"):
+            before = request.before.ToDatetime()
 
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID format: {e}")
-
-        limit = request.limit if request.limit > 0 else 10
-        limit = min(limit, 50)  # Cap at 50
-
-        # Default to including both if not specified
-        include_users = request.include_users if request.include_users else True
-        include_groups = request.include_groups if request.include_groups else True
+        offset = (page - 1) * page_size
 
         try:
             async for session in get_async_session():
-                ops = PermissionsOperations(session)
-                results = await ops.search_share_targets(
+                ops = ContentMembersOperations(session)
+                events = await ops.list_member_events(
+                    actor_user_id=user_id,
                     organization_id=organization_id,
-                    query=request.query,
-                    limit=limit,
-                    include_users=include_users,
-                    include_groups=include_groups,
+                    content_type=content_type,
+                    content_id=content_id,
+                    limit=page_size,
+                    offset=offset,
+                    actor_filter_user_id=actor_filter_user_id,
+                    action_filter=action_filter,
+                    after=after,
+                    before=before,
                 )
 
-                response = ShareTargetsResponse()
-                from uniffy.core.models import Group, User
+                response = ListMemberEventsResponse()
+                response.events.extend(
+                    content_member_event_to_proto(event) for event in events
+                )
 
-                for target, member_count in results:
-                    if isinstance(target, User):
-                        response.targets.append(user_to_share_target(target))
-                    elif isinstance(target, Group):
-                        response.targets.append(group_to_share_target(target, member_count))
-
+                # Pagination response: total_count is unknown without an
+                # extra count query, so we report the page contents and a
+                # best-effort total based on whether the page was full.
+                approx_total = offset + len(events)
+                total_pages = max(1, ceil(approx_total / page_size)) if page_size else 1
+                response.pagination.CopyFrom(
+                    PaginationResponse(
+                        page=page,
+                        page_size=page_size,
+                        total_count=approx_total,
+                        total_pages=total_pages,
+                    )
+                )
                 return response
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error searching share targets: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc

@@ -65,7 +65,7 @@ ACTIVITY_ACTION_TYPE_CHANGED: ActivityAction
 ACTIVITY_ACTION_SPRINT_CHANGED: ActivityAction
 
 class Project(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "visibility", "field_definitions", "views", "default_view_id", "member_ids", "created_at", "updated_at", "deleted_at", "urn", "user_permission_level", "slug", "type_field_schemas")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "access_mode", "field_definitions", "views", "default_view_id", "created_at", "updated_at", "deleted_at", "urn", "user_role", "slug", "type_field_schemas", "baseline_role")
     class TypeFieldSchemasEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -80,18 +80,18 @@ class Project(_message.Message):
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
     COLOR_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     FIELD_DEFINITIONS_FIELD_NUMBER: _ClassVar[int]
     VIEWS_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_VIEW_ID_FIELD_NUMBER: _ClassVar[int]
-    MEMBER_IDS_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
     URN_FIELD_NUMBER: _ClassVar[int]
-    USER_PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    USER_ROLE_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_SCHEMAS_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -99,22 +99,22 @@ class Project(_message.Message):
     description: str
     icon: str
     color: str
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     field_definitions: _containers.RepeatedCompositeFieldContainer[FieldDefinition]
     views: _containers.RepeatedCompositeFieldContainer[ViewConfig]
     default_view_id: str
-    member_ids: _containers.RepeatedScalarFieldContainer[str]
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     deleted_at: _timestamp_pb2.Timestamp
     urn: str
-    user_permission_level: _common_pb2.PermissionLevel
+    user_role: _common_pb2.ContentRole
     slug: str
     type_field_schemas: _containers.MessageMap[str, TypeFieldSchema]
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class Task(_message.Message):
-    __slots__ = ("id", "project_id", "organization_id", "owner_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "completed_at", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values", "outgoing_references", "created_at", "updated_at", "deleted_at", "urn", "number", "task_type", "sprint_id", "user_permission_level", "subtask_total", "subtask_completed", "estimated_minutes", "time_spent_minutes")
+    __slots__ = ("id", "project_id", "organization_id", "owner_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "completed_at", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values", "outgoing_references", "created_at", "updated_at", "deleted_at", "urn", "number", "task_type", "sprint_id", "user_role", "subtask_total", "subtask_completed", "estimated_minutes", "time_spent_minutes")
     class FieldValuesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -148,7 +148,7 @@ class Task(_message.Message):
     NUMBER_FIELD_NUMBER: _ClassVar[int]
     TASK_TYPE_FIELD_NUMBER: _ClassVar[int]
     SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
-    USER_PERMISSION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    USER_ROLE_FIELD_NUMBER: _ClassVar[int]
     SUBTASK_TOTAL_FIELD_NUMBER: _ClassVar[int]
     SUBTASK_COMPLETED_FIELD_NUMBER: _ClassVar[int]
     ESTIMATED_MINUTES_FIELD_NUMBER: _ClassVar[int]
@@ -179,12 +179,12 @@ class Task(_message.Message):
     number: int
     task_type: str
     sprint_id: str
-    user_permission_level: _common_pb2.PermissionLevel
+    user_role: _common_pb2.ContentRole
     subtask_total: int
     subtask_completed: int
     estimated_minutes: int
     time_spent_minutes: int
-    def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., number: _Optional[int] = ..., task_type: _Optional[str] = ..., sprint_id: _Optional[str] = ..., user_permission_level: _Optional[_Union[_common_pb2.PermissionLevel, str]] = ..., subtask_total: _Optional[int] = ..., subtask_completed: _Optional[int] = ..., estimated_minutes: _Optional[int] = ..., time_spent_minutes: _Optional[int] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., number: _Optional[int] = ..., task_type: _Optional[str] = ..., sprint_id: _Optional[str] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., subtask_total: _Optional[int] = ..., subtask_completed: _Optional[int] = ..., estimated_minutes: _Optional[int] = ..., time_spent_minutes: _Optional[int] = ...) -> None: ...
 
 class FieldDefinition(_message.Message):
     __slots__ = ("id", "project_id", "name", "type", "is_required", "is_system", "sort_order", "config_json", "created_at", "updated_at")
@@ -301,22 +301,24 @@ class Sprint(_message.Message):
     def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., goal: _Optional[str] = ..., status: _Optional[str] = ..., start_date: _Optional[str] = ..., end_date: _Optional[str] = ..., sort_order: _Optional[int] = ..., task_count: _Optional[int] = ..., completed_task_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class CreateProjectRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "description", "icon", "color", "visibility", "slug")
+    __slots__ = ("organization_id", "name", "description", "icon", "color", "access_mode", "slug", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
     COLOR_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     description: str
     icon: str
     color: str
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     slug: str
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., slug: _Optional[str] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., slug: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class GetProjectRequest(_message.Message):
     __slots__ = ("organization_id", "project_id")
@@ -327,7 +329,7 @@ class GetProjectRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class UpdateProjectRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "name", "description", "icon", "color", "visibility", "member_ids", "default_view_id", "slug", "type_field_schemas")
+    __slots__ = ("organization_id", "project_id", "name", "description", "icon", "color", "access_mode", "default_view_id", "slug", "type_field_schemas", "baseline_role")
     class TypeFieldSchemasEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -341,23 +343,23 @@ class UpdateProjectRequest(_message.Message):
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
     COLOR_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
-    MEMBER_IDS_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_VIEW_ID_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_SCHEMAS_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     name: str
     description: str
     icon: str
     color: str
-    visibility: _common_pb2.VisibilityScope
-    member_ids: _containers.RepeatedScalarFieldContainer[str]
+    access_mode: _common_pb2.AccessMode
     default_view_id: str
     slug: str
     type_field_schemas: _containers.MessageMap[str, TypeFieldSchema]
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., member_ids: _Optional[_Iterable[str]] = ..., default_view_id: _Optional[str] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., default_view_id: _Optional[str] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class DeleteProjectRequest(_message.Message):
     __slots__ = ("organization_id", "project_id", "permanent")
@@ -370,16 +372,16 @@ class DeleteProjectRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., permanent: _Optional[bool] = ...) -> None: ...
 
 class ListProjectsRequest(_message.Message):
-    __slots__ = ("organization_id", "pagination", "visibility", "include_deleted")
+    __slots__ = ("organization_id", "pagination", "access_mode", "include_deleted")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PAGINATION_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     pagination: _common_pb2.PaginationRequest
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     include_deleted: bool
-    def __init__(self, organization_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., include_deleted: _Optional[bool] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., include_deleted: _Optional[bool] = ...) -> None: ...
 
 class ProjectResponse(_message.Message):
     __slots__ = ("project",)

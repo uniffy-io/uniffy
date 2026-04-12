@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
 
 /**
  * Recurrence patterns for repeating events
@@ -432,11 +432,11 @@ export class CalendarEvent extends Message<CalendarEvent> {
   linkedResources: LinkedResource[] = [];
 
   /**
-   * Visibility scope
+   * Access mode
    *
-   * @generated from field: common.v1.VisibilityScope visibility = 19;
+   * @generated from field: common.v1.AccessMode access_mode = 19;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * Is deleted flag (soft delete)
@@ -528,6 +528,13 @@ export class CalendarEvent extends Message<CalendarEvent> {
    */
   roomAmenities: string[] = [];
 
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 34;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<CalendarEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -554,7 +561,7 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 16, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 17, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 18, name: "linked_resources", kind: "message", T: LinkedResource, repeated: true },
-    { no: 19, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 19, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 20, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 21, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 22, name: "created_at", kind: "message", T: Timestamp },
@@ -569,6 +576,7 @@ export class CalendarEvent extends Message<CalendarEvent> {
     { no: 31, name: "room_location", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 32, name: "room_capacity", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 33, name: "room_amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 34, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CalendarEvent {
@@ -950,11 +958,11 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
   linkedResourceUrns: string[] = [];
 
   /**
-   * Visibility scope (defaults to PRIVATE)
+   * Access mode (defaults to OWNER_ONLY)
    *
-   * @generated from field: optional common.v1.VisibilityScope visibility = 17;
+   * @generated from field: optional common.v1.AccessMode access_mode = 17;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
@@ -969,6 +977,13 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
    * @generated from field: optional string room_id = 19;
    */
   roomId?: string;
+
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 20;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CreateEventRequest>) {
     super();
@@ -994,9 +1009,10 @@ export class CreateEventRequest extends Message<CreateEventRequest> {
     { no: 14, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 18, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
     { no: 19, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 20, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventRequest {
@@ -1184,11 +1200,11 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
   linkedResourceUrns: string[] = [];
 
   /**
-   * Updated visibility
+   * Updated access mode
    *
-   * @generated from field: optional common.v1.VisibilityScope visibility = 17;
+   * @generated from field: optional common.v1.AccessMode access_mode = 17;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * Updated attendee IDs (replaces existing list)
@@ -1225,6 +1241,13 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
    */
   roomId?: string;
 
+  /**
+   * Updated baseline role granted by access mode
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 23;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<UpdateEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1249,12 +1272,13 @@ export class UpdateEventRequest extends Message<UpdateEventRequest> {
     { no: 14, name: "is_focus_time", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 15, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 16, name: "linked_resource_urns", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 18, name: "attendee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 19, name: "reminders", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
     { no: 20, name: "recurrence_edit_scope", kind: "enum", T: proto3.getEnumType(RecurrenceEditScope), opt: true },
     { no: 21, name: "occurrence_date", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 22, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventRequest {
@@ -1997,7 +2021,7 @@ export class UpdateCalendarRequest extends Message<UpdateCalendarRequest> {
   color?: string;
 
   /**
-   * Updated visibility
+   * Updated is_visible flag (grid display toggle)
    *
    * @generated from field: optional bool is_visible = 5;
    */
@@ -3079,11 +3103,11 @@ export class EventTemplate extends Message<EventTemplate> {
   tags: string[] = [];
 
   /**
-   * Visibility scope
+   * Access mode
    *
-   * @generated from field: common.v1.VisibilityScope visibility = 10;
+   * @generated from field: common.v1.AccessMode access_mode = 10;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * Creator ID
@@ -3106,6 +3130,13 @@ export class EventTemplate extends Message<EventTemplate> {
    */
   updatedAt?: Timestamp;
 
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 14;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<EventTemplate>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3123,10 +3154,11 @@ export class EventTemplate extends Message<EventTemplate> {
     { no: 7, name: "meeting_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 10, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 10, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 11, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 12, name: "created_at", kind: "message", T: Timestamp },
     { no: 13, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 14, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventTemplate {
@@ -3191,9 +3223,14 @@ export class CreateEventTemplateRequest extends Message<CreateEventTemplateReque
   tags: string[] = [];
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 9;
+   * @generated from field: common.v1.AccessMode access_mode = 9;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 10;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CreateEventTemplateRequest>) {
     super();
@@ -3211,7 +3248,8 @@ export class CreateEventTemplateRequest extends Message<CreateEventTemplateReque
     { no: 6, name: "meeting_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 9, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 9, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 10, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventTemplateRequest {
@@ -3324,9 +3362,14 @@ export class UpdateEventTemplateRequest extends Message<UpdateEventTemplateReque
   tags: string[] = [];
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 10;
+   * @generated from field: optional common.v1.AccessMode access_mode = 10;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 11;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<UpdateEventTemplateRequest>) {
     super();
@@ -3345,7 +3388,8 @@ export class UpdateEventTemplateRequest extends Message<UpdateEventTemplateReque
     { no: 7, name: "meeting_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 10, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 10, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 11, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateEventTemplateRequest {

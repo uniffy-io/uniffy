@@ -40,9 +40,6 @@ import {
 import { fetchUsageStats } from "@/features/agents/store/agentUsageThunks";
 import type { UsageStats } from "@/features/agents/store/agentUsageThunks";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 const TIME_RANGES = [
     { label: "7d", days: 7 },
@@ -70,9 +67,7 @@ const CHART_PALETTE = [
     "#ec4899",
 ];
 
-// ---------------------------------------------------------------------------
 // Formatters
-// ---------------------------------------------------------------------------
 
 function formatNumber(n: number): string {
     if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
@@ -98,9 +93,7 @@ function formatDuration(ms: number): string {
     return `${ms}ms`;
 }
 
-// ---------------------------------------------------------------------------
 // Custom Tooltip
-// ---------------------------------------------------------------------------
 
 interface TooltipPayloadEntry {
     name: string;
@@ -142,9 +135,7 @@ function ChartTooltip({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Stat Card
-// ---------------------------------------------------------------------------
 
 function StatCard({
     label,
@@ -190,9 +181,7 @@ function StatCard({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Daily Usage Area Chart
-// ---------------------------------------------------------------------------
 
 function formatChartTimestamp(dateStr: string, interval: string): string {
     if (interval === "1d") return formatShortDate(dateStr);
@@ -308,9 +297,7 @@ function DailyUsageChart({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Model Distribution Bars
-// ---------------------------------------------------------------------------
 
 function ModelBars({ data }: { data: UsageStats["modelUsage"] }) {
     const chartData = useMemo(
@@ -393,9 +380,7 @@ function ModelBars({ data }: { data: UsageStats["modelUsage"] }) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Agent Usage Horizontal Bars
-// ---------------------------------------------------------------------------
 
 function AgentUsageBars({ data }: { data: UsageStats["agentUsage"] }) {
     const chartData = useMemo(() => {
@@ -477,9 +462,7 @@ function AgentUsageBars({ data }: { data: UsageStats["agentUsage"] }) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Tool Usage Horizontal Bars
-// ---------------------------------------------------------------------------
 
 function ToolUsageBars({ data }: { data: UsageStats["toolUsage"] }) {
     const chartData = useMemo(
@@ -548,9 +531,7 @@ function ToolUsageBars({ data }: { data: UsageStats["toolUsage"] }) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Provider Key Horizontal Bars
-// ---------------------------------------------------------------------------
 
 function ProviderKeyBars({ data }: { data: UsageStats["providerKeyUsage"] }) {
     const chartData = useMemo(() => {
@@ -629,9 +610,7 @@ function ProviderKeyBars({ data }: { data: UsageStats["providerKeyUsage"] }) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Sortable Table
-// ---------------------------------------------------------------------------
 
 type SortDirection = "asc" | "desc";
 
@@ -784,9 +763,7 @@ function SortableTable({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Chart Legend
-// ---------------------------------------------------------------------------
 
 function TokenLegend() {
     return (
@@ -809,9 +786,7 @@ function TokenLegend() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Main Component
-// ---------------------------------------------------------------------------
 
 export function UsageView() {
     const dispatch = useAppDispatch();

@@ -6,8 +6,7 @@ from uuid import UUID
 from sqlalchemy import Column, DateTime, Enum
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import CalendarType
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, CalendarType, ContentRole, generate_id
 
 
 class Calendar(SQLModel, table=True):
@@ -35,6 +34,10 @@ class Calendar(SQLModel, table=True):
         Whether this is the default calendar for new events.
     calendar_type : CalendarType
         Type of calendar (PERSONAL, WORK, TEAM, SHARED).
+    access_mode : AccessMode
+        How access to this calendar is governed.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     created_at : datetime
         Timestamp when the calendar was created.
     updated_at : datetime
@@ -61,6 +64,31 @@ class Calendar(SQLModel, table=True):
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    access_mode: AccessMode = Field(
+        default=AccessMode.OPEN_TO_ORG,
+        sa_column=Column(
+            Enum(
+                AccessMode,
+                name="accessmode",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=False,
+            index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=ContentRole.VIEWER,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     created_at: datetime = Field(

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { PaginationRequest, PaginationResponse, VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole, PaginationRequest, PaginationResponse } from "../../common/v1/common_pb.js";
 
 /**
  * Agent configuration info returned to clients
@@ -84,9 +84,9 @@ export class AgentInfo extends Message<AgentInfo> {
   enabledSkills: string[] = [];
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 17;
+   * @generated from field: common.v1.AccessMode access_mode = 17;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * S3 key prefix for avatar images (empty string if none)
@@ -123,6 +123,13 @@ export class AgentInfo extends Message<AgentInfo> {
    */
   promptId = "";
 
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 25;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<AgentInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -145,12 +152,13 @@ export class AgentInfo extends Message<AgentInfo> {
     { no: 14, name: "created_at", kind: "message", T: Timestamp },
     { no: 15, name: "updated_at", kind: "message", T: Timestamp },
     { no: 16, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 17, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 17, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 19, name: "avatar_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 21, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 22, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 23, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 24, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 25, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentInfo {
@@ -220,9 +228,9 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
   enabledSkills: string[] = [];
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 12;
+   * @generated from field: optional common.v1.AccessMode access_mode = 12;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: repeated string group_ids = 13;
@@ -257,6 +265,11 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
    */
   promptId?: string;
 
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 21;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<CreateAgentRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -274,12 +287,13 @@ export class CreateAgentRequest extends Message<CreateAgentRequest> {
     { no: 9, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 11, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 12, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 12, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 13, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 17, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 18, name: "primary_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 19, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 20, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 21, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAgentRequest {
@@ -394,9 +408,9 @@ export class ListAgentsRequest extends Message<ListAgentsRequest> {
   pagination?: PaginationRequest;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 3;
+   * @generated from field: optional common.v1.AccessMode access_mode = 3;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: optional bool personal_only = 4;
@@ -418,7 +432,7 @@ export class ListAgentsRequest extends Message<ListAgentsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "pagination", kind: "message", T: PaginationRequest, opt: true },
-    { no: 3, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 3, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 4, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
@@ -538,9 +552,9 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
   enabledSkills: string[] = [];
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 13;
+   * @generated from field: optional common.v1.AccessMode access_mode = 13;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: repeated string group_ids = 14;
@@ -587,6 +601,11 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
    */
   clearPrompt?: boolean;
 
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 23;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<UpdateAgentRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -605,7 +624,7 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
     { no: 10, name: "theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 12, name: "enabled_skills", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 13, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 13, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 14, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 15, name: "enabled_tools", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 18, name: "image_model", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -613,6 +632,7 @@ export class UpdateAgentRequest extends Message<UpdateAgentRequest> {
     { no: 20, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 21, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 22, name: "clear_prompt", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateAgentRequest {

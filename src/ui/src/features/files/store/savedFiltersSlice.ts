@@ -8,8 +8,6 @@ import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
 import type { RootState } from '@/app/store';
-import type { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
-
 /**
  * Serialized filter criteria for Redux state.
  */
@@ -17,7 +15,6 @@ export interface SerializedFilterCriteria {
     extensions?: string[];
     mimeCategories?: string[];
     ownerIds?: string[];
-    visibility?: VisibilityScope;
     tags?: string[];
     sizeMinBytes?: number;
     sizeMaxBytes?: number;
@@ -82,9 +79,6 @@ function serializeSavedFilter(filter: any): SerializedSavedFilter {
         if (filter.criteria.ownerIds?.length) {
             criteria.ownerIds = [...filter.criteria.ownerIds];
         }
-        if (filter.criteria.visibility !== undefined) {
-            criteria.visibility = filter.criteria.visibility;
-        }
         if (filter.criteria.tags?.length) {
             criteria.tags = [...filter.criteria.tags];
         }
@@ -128,10 +122,6 @@ function serializeSavedFilter(filter: any): SerializedSavedFilter {
         updatedAt: filter.updatedAt?.toDate?.()?.toISOString() ?? '',
     };
 }
-
-// ─────────────────────────────────────────────────────────────
-// Async Thunks
-// ─────────────────────────────────────────────────────────────
 
 export const fetchSavedFilters = createAsyncThunk(
     'savedFilters/fetchSavedFilters',
@@ -183,7 +173,6 @@ export const createSavedFilter = createAsyncThunk(
                     extensions: criteria.extensions,
                     mimeCategories: criteria.mimeCategories,
                     ownerIds: criteria.ownerIds,
-                    visibility: criteria.visibility,
                     tags: criteria.tags,
                     sizeMinBytes: criteria.sizeMinBytes ? BigInt(criteria.sizeMinBytes) : undefined,
                     sizeMaxBytes: criteria.sizeMaxBytes ? BigInt(criteria.sizeMaxBytes) : undefined,
@@ -234,7 +223,6 @@ export const updateSavedFilter = createAsyncThunk(
                     extensions: criteria.extensions,
                     mimeCategories: criteria.mimeCategories,
                     ownerIds: criteria.ownerIds,
-                    visibility: criteria.visibility,
                     tags: criteria.tags,
                     sizeMinBytes: criteria.sizeMinBytes ? BigInt(criteria.sizeMinBytes) : undefined,
                     sizeMaxBytes: criteria.sizeMaxBytes ? BigInt(criteria.sizeMaxBytes) : undefined,
@@ -266,10 +254,6 @@ export const deleteSavedFilter = createAsyncThunk(
         }
     }
 );
-
-// ─────────────────────────────────────────────────────────────
-// Slice
-// ─────────────────────────────────────────────────────────────
 
 const savedFiltersSlice = createSlice({
     name: 'savedFilters',
@@ -357,7 +341,6 @@ const savedFiltersSlice = createSlice({
 
 export const { clearSavedFilters, clearError, setFilter, removeFilter } = savedFiltersSlice.actions;
 
-// Selectors
 export const selectSavedFilters = (state: RootState) => state.savedFilters?.filters ?? {};
 export const selectSavedFiltersLoading = (state: RootState) => state.savedFilters?.loading ?? false;
 export const selectSavedFiltersError = (state: RootState) => state.savedFilters?.error ?? null;

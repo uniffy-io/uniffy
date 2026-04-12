@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { PermissionLevel, VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
 
 /**
  * Upload status for tracking multipart uploads.
@@ -123,9 +123,14 @@ export class InitiateUploadRequest extends Message<InitiateUploadRequest> {
   folderId?: string;
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 6;
+   * @generated from field: common.v1.AccessMode access_mode = 6;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 7;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<InitiateUploadRequest>) {
     super();
@@ -140,7 +145,8 @@ export class InitiateUploadRequest extends Message<InitiateUploadRequest> {
     { no: 3, name: "mime_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "total_size", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 5, name: "folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 7, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InitiateUploadRequest {
@@ -876,9 +882,9 @@ export class File extends Message<File> {
   ownerId = "";
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 5;
+   * @generated from field: common.v1.AccessMode access_mode = 5;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * @generated from field: string filename = 6;
@@ -953,9 +959,9 @@ export class File extends Message<File> {
   groupIds: string[] = [];
 
   /**
-   * @generated from field: common.v1.PermissionLevel user_permission = 20;
+   * @generated from field: common.v1.ContentRole user_role = 20;
    */
-  userPermission = PermissionLevel.UNSPECIFIED;
+  userRole = ContentRole.UNSPECIFIED;
 
   /**
    * @generated from field: optional files.v1.FileOwner owner_info = 21;
@@ -969,6 +975,13 @@ export class File extends Message<File> {
    */
   metadata?: FileMetadata;
 
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 23;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<File>) {
     super();
     proto3.util.initPartial(data, this);
@@ -981,7 +994,7 @@ export class File extends Message<File> {
     { no: 2, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 5, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 6, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "original_filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "mime_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -996,9 +1009,10 @@ export class File extends Message<File> {
     { no: 17, name: "updated_at", kind: "message", T: Timestamp },
     { no: 18, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 19, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 20, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 20, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
     { no: 21, name: "owner_info", kind: "message", T: FileOwner, opt: true },
     { no: 22, name: "metadata", kind: "message", T: FileMetadata, opt: true },
+    { no: 23, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): File {
@@ -1304,9 +1318,14 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
   description?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 6;
+   * @generated from field: optional common.v1.AccessMode access_mode = 6;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 7;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<UpdateFileRequest>) {
     super();
@@ -1321,7 +1340,8 @@ export class UpdateFileRequest extends Message<UpdateFileRequest> {
     { no: 3, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 7, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFileRequest {
@@ -1508,9 +1528,9 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
   personalOnly = false;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 6;
+   * @generated from field: optional common.v1.AccessMode access_mode = 6;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: optional string group_id = 7;
@@ -1561,7 +1581,7 @@ export class ListFilesRequest extends Message<ListFilesRequest> {
     { no: 3, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 7, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -1673,9 +1693,9 @@ export class Folder extends Message<Folder> {
   ownerId = "";
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 5;
+   * @generated from field: common.v1.AccessMode access_mode = 5;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * @generated from field: string name = 6;
@@ -1709,6 +1729,11 @@ export class Folder extends Message<Folder> {
    */
   isSystem = false;
 
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 12;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<Folder>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1721,13 +1746,14 @@ export class Folder extends Message<Folder> {
     { no: 2, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 5, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 6, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 9, name: "created_at", kind: "message", T: Timestamp },
     { no: 10, name: "updated_at", kind: "message", T: Timestamp },
     { no: 11, name: "is_system", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 12, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Folder {
@@ -1804,9 +1830,14 @@ export class CreateFolderRequest extends Message<CreateFolderRequest> {
   parentId?: string;
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 4;
+   * @generated from field: common.v1.AccessMode access_mode = 4;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 5;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CreateFolderRequest>) {
     super();
@@ -1819,7 +1850,8 @@ export class CreateFolderRequest extends Message<CreateFolderRequest> {
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 4, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 5, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFolderRequest {
@@ -1866,9 +1898,14 @@ export class UpdateFolderRequest extends Message<UpdateFolderRequest> {
   parentId?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 5;
+   * @generated from field: optional common.v1.AccessMode access_mode = 5;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 6;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<UpdateFolderRequest>) {
     super();
@@ -1882,7 +1919,8 @@ export class UpdateFolderRequest extends Message<UpdateFolderRequest> {
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 5, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 6, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFolderRequest {
@@ -2135,9 +2173,9 @@ export class TreeNode extends Message<TreeNode> {
   parentId?: string;
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 5;
+   * @generated from field: common.v1.AccessMode access_mode = 5;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * For folders: number of children
@@ -2167,6 +2205,11 @@ export class TreeNode extends Message<TreeNode> {
    */
   children: TreeNode[] = [];
 
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 10;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<TreeNode>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2179,11 +2222,12 @@ export class TreeNode extends Message<TreeNode> {
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "is_folder", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 5, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 6, name: "child_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 7, name: "size_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 8, name: "mime_type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "children", kind: "message", T: TreeNode, repeated: true },
+    { no: 10, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TreeNode {
@@ -2230,11 +2274,16 @@ export class MoveItemsRequest extends Message<MoveItemsRequest> {
   targetFolderId?: string;
 
   /**
-   * Change visibility scope
+   * Change access mode
    *
-   * @generated from field: optional common.v1.VisibilityScope target_visibility = 5;
+   * @generated from field: optional common.v1.AccessMode target_access_mode = 5;
    */
-  targetVisibility?: VisibilityScope;
+  targetAccessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole target_baseline_role = 6;
+   */
+  targetBaselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<MoveItemsRequest>) {
     super();
@@ -2248,7 +2297,8 @@ export class MoveItemsRequest extends Message<MoveItemsRequest> {
     { no: 2, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "folder_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "target_folder_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "target_visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 5, name: "target_access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 6, name: "target_baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveItemsRequest {
@@ -2855,11 +2905,11 @@ export class FilterCriteria extends Message<FilterCriteria> {
   ownerIds: string[] = [];
 
   /**
-   * Filter by visibility scope
+   * Filter by access mode
    *
-   * @generated from field: optional common.v1.VisibilityScope visibility = 4;
+   * @generated from field: optional common.v1.AccessMode access_mode = 4;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * Filter by tags
@@ -2907,7 +2957,7 @@ export class FilterCriteria extends Message<FilterCriteria> {
     { no: 1, name: "extensions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 2, name: "mime_categories", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "owner_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 4, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 5, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 6, name: "size_min_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 7, name: "size_max_bytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },

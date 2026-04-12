@@ -28,9 +28,7 @@ def _format_size(size_bytes: int | None) -> str:
     return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
 
-# ---------------------------------------------------------------------------
 # Tool executors
-# ---------------------------------------------------------------------------
 
 
 async def _execute_search_files(ctx: ToolContext, args: dict) -> ToolResult:
@@ -281,9 +279,7 @@ async def _execute_delete_file(ctx: ToolContext, args: dict) -> ToolResult:
     return ToolResult(success=True, data="File moved to trash successfully.")
 
 
-# ---------------------------------------------------------------------------
 # Tool definitions
-# ---------------------------------------------------------------------------
 
 search_files = ToolDefinition(
     name="files.search_files",

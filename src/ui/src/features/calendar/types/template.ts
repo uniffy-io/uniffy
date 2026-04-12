@@ -1,4 +1,4 @@
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 export interface EventTemplate {
     id: string;
@@ -10,7 +10,7 @@ export interface EventTemplate {
     meetingUrl?: string;
     categoryId?: string;
     tags: string[];
-    visibility: VisibilityScope;
+    visibility: AccessMode;
     createdBy: string;
     createdAt: Date;
     updatedAt: Date;
@@ -24,7 +24,7 @@ export interface CreateTemplatePayload {
     meetingUrl?: string;
     categoryId?: string;
     tags?: string[];
-    visibility?: VisibilityScope;
+    visibility?: AccessMode;
 }
 
 export interface UpdateTemplatePayload extends Partial<CreateTemplatePayload> {

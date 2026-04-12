@@ -53,9 +53,15 @@ from uniffy_proto.files.v1.files_pb2 import (
     UploadChunksResponse,
 )
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.content.members import ContentMembersOperations
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
+)
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
+from uniffy.core.types import ContentType
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.files.converters import (
@@ -65,7 +71,6 @@ from uniffy.domains.files.converters import (
     tree_node_from_file,
     tree_node_from_folder,
     upload_to_proto_status,
-    visibility_from_proto,
 )
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 
@@ -94,7 +99,13 @@ class FilesHandlers:
             async for session in get_async_session():
                 ops = FileOperations(session)
 
-                visibility = visibility_from_proto(request.visibility)
+                access_mode = None
+                if request.access_mode:
+                    access_mode = access_mode_from_proto(request.access_mode)
+                baseline_role = None
+                if request.baseline_role:
+                    baseline_role = content_role_from_proto(request.baseline_role)
+
                 folder_id = None
                 if request.HasField("folder_id"):
                     try:
@@ -111,7 +122,8 @@ class FilesHandlers:
                     mime_type=request.mime_type,
                     total_size=request.total_size,
                     folder_id=folder_id,
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                 )
 
                 return InitiateUploadResponse(
@@ -537,7 +549,12 @@ class FilesHandlers:
         request: UpdateFileRequest,
         ctx: RequestContext,
     ) -> FileResponse:
-        """Update file metadata."""
+        """Update file metadata.
+
+        Access policy changes (access_mode, baseline_role) on the request
+        are forwarded to the MembersService set_access_mode operation
+        before applying the metadata update.
+        """
         try:
             file_id = UUID(request.file_id)
             organization_id = UUID(request.organization_id)
@@ -550,9 +567,26 @@ class FilesHandlers:
             async for session in get_async_session():
                 ops = FileOperations(session)
 
-                visibility = None
-                if request.HasField("visibility"):
-                    visibility = visibility_from_proto(request.visibility)
+                if request.access_mode:
+                    new_access_mode = access_mode_from_proto(request.access_mode)
+                    if new_access_mode is None:
+                        raise ConnectError(
+                            Code.INVALID_ARGUMENT, "Invalid access_mode"
+                        )
+                    new_baseline_role = None
+                    if request.baseline_role:
+                        new_baseline_role = content_role_from_proto(
+                            request.baseline_role
+                        )
+                    members_ops = ContentMembersOperations(session)
+                    await members_ops.set_access_mode(
+                        actor_user_id=user_id,
+                        organization_id=organization_id,
+                        content_type=ContentType.FILE,
+                        content_id=file_id,
+                        new_access_mode=new_access_mode,
+                        new_baseline_role=new_baseline_role,
+                    )
 
                 file = await ops.update(
                     user_id=user_id,
@@ -561,20 +595,19 @@ class FilesHandlers:
                     filename=request.filename if request.HasField("filename") else None,
                     tags=list(request.tags) if request.tags else None,
                     description=request.description if request.HasField("description") else None,
-                    visibility=visibility,
                 )
 
                 return FileResponse(file=file_to_proto(file))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "File not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
         except ConnectError:
             raise
         except Exception as e:
-            if "ValidationError" in type(e).__name__:
-                raise ConnectError(Code.INVALID_ARGUMENT, str(e))
             logger.error(f"Error updating file: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
@@ -681,9 +714,9 @@ class FilesHandlers:
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid group_id")
 
-        visibility = None
-        if request.HasField("visibility"):
-            visibility = visibility_from_proto(request.visibility)
+        access_mode_filter = None
+        if request.access_mode:
+            access_mode_filter = access_mode_from_proto(request.access_mode)
 
         try:
             async for session in get_async_session():
@@ -692,7 +725,7 @@ class FilesHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                     folder_id=folder_id,
-                    visibility=visibility,
+                    access_mode=access_mode_filter,
                     group_id=group_id,
                     personal_only=request.personal_only,
                     shared_only=request.shared_only,
@@ -761,7 +794,12 @@ class FilesHandlers:
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
 
-        visibility = visibility_from_proto(request.visibility)
+        access_mode = None
+        if request.access_mode:
+            access_mode = access_mode_from_proto(request.access_mode)
+        baseline_role = None
+        if request.baseline_role:
+            baseline_role = content_role_from_proto(request.baseline_role)
 
         try:
             async for session in get_async_session():
@@ -771,10 +809,13 @@ class FilesHandlers:
                     organization_id=organization_id,
                     name=request.name,
                     parent_id=parent_id,
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                 )
                 return FolderResponse(folder=folder_to_proto(folder))
 
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except ConnectError:
             raise
         except Exception as e:
@@ -805,32 +846,49 @@ class FilesHandlers:
                 except ValueError:
                     raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
 
-        visibility = None
-        if request.HasField("visibility"):
-            visibility = visibility_from_proto(request.visibility)
-
         try:
             async for session in get_async_session():
                 ops = FolderOperations(session)
+
+                if request.access_mode:
+                    new_access_mode = access_mode_from_proto(request.access_mode)
+                    if new_access_mode is None:
+                        raise ConnectError(
+                            Code.INVALID_ARGUMENT, "Invalid access_mode"
+                        )
+                    new_baseline_role = None
+                    if request.baseline_role:
+                        new_baseline_role = content_role_from_proto(
+                            request.baseline_role
+                        )
+                    members_ops = ContentMembersOperations(session)
+                    await members_ops.set_access_mode(
+                        actor_user_id=user_id,
+                        organization_id=organization_id,
+                        content_type=ContentType.FOLDER,
+                        content_id=folder_id,
+                        new_access_mode=new_access_mode,
+                        new_baseline_role=new_baseline_role,
+                    )
+
                 folder = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     folder_id=folder_id,
                     name=request.name if request.HasField("name") else None,
                     parent_id=parent_id,
-                    visibility=visibility,
                 )
                 return FolderResponse(folder=folder_to_proto(folder))
 
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Folder not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
         except ConnectError:
             raise
         except Exception as e:
-            if "ValidationError" in type(e).__name__:
-                raise ConnectError(Code.INVALID_ARGUMENT, str(e))
             logger.error(f"Error updating folder: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
@@ -1058,7 +1116,7 @@ class FilesHandlers:
         request: MoveItemsRequest,
         ctx: RequestContext,
     ) -> MoveItemsResponse:
-        """Move files/folders to a different parent and/or visibility scope."""
+        """Move files / folders to a new parent and/or change their access mode."""
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
@@ -1066,7 +1124,6 @@ class FilesHandlers:
 
         user_id = get_user_id_from_context(ctx)
 
-        # Parse target folder ID
         target_folder_id = None
         if request.HasField("target_folder_id") and request.target_folder_id:
             try:
@@ -1074,12 +1131,13 @@ class FilesHandlers:
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid target folder ID")
 
-        # Parse target visibility
-        target_visibility = None
-        if request.HasField("target_visibility"):
-            target_visibility = visibility_from_proto(request.target_visibility)
+        target_access_mode = None
+        if request.target_access_mode:
+            target_access_mode = access_mode_from_proto(request.target_access_mode)
+        target_baseline_role = None
+        if request.target_baseline_role:
+            target_baseline_role = content_role_from_proto(request.target_baseline_role)
 
-        # Parse file and folder IDs
         file_ids = []
         for fid in request.file_ids:
             try:
@@ -1109,72 +1167,60 @@ class FilesHandlers:
             async for session in get_async_session():
                 file_ops = FileOperations(session)
                 folder_ops = FolderOperations(session)
+                members_ops = ContentMembersOperations(session)
 
-                # Move files
                 for file_id in file_ids:
                     file = await file_ops._fetch_by_id(file_id, organization_id)
                     if not file:
                         continue
 
-                    # Check if visibility is actually changing
-                    visibility_changing = (
-                        target_visibility is not None and target_visibility != file.visibility
-                    )
-
-                    # Check ownership only for visibility changes
-                    if visibility_changing and file.owner_id != user_id:
-                        raise PermissionDeniedError("change_visibility", "file")
-
-                    # Update folder if specified
-                    if target_folder_id is not None or request.HasField("target_folder_id"):
-                        file.folder_id = target_folder_id
-
-                    # Update visibility if actually changing (this also handles group links)
-                    if visibility_changing:
-                        await file_ops.update(
-                            user_id=user_id,
+                    if target_access_mode is not None and (
+                        target_access_mode != file.access_mode
+                        or target_baseline_role != file.baseline_role
+                    ):
+                        await members_ops.set_access_mode(
+                            actor_user_id=user_id,
                             organization_id=organization_id,
-                            file_id=file_id,
-                            visibility=target_visibility,
+                            content_type=ContentType.FILE,
+                            content_id=file_id,
+                            new_access_mode=target_access_mode,
+                            new_baseline_role=target_baseline_role,
                         )
-                    else:
-                        # Just update folder
-                        file.updated_at = datetime.now(UTC)
-                        await session.commit()
 
+                    if target_folder_id is not None or request.HasField("target_folder_id"):
+                        file = await file_ops._fetch_by_id(file_id, organization_id)
+                        if file is not None:
+                            file.folder_id = target_folder_id
+                            file.updated_at = datetime.now(UTC)
+
+                    await session.commit()
                     files_moved += 1
 
-                # Move folders
                 for folder_id in folder_ids:
                     folder = await folder_ops.get_by_id(folder_id, organization_id)
                     if not folder:
                         continue
 
-                    # Check if visibility is actually changing
-                    visibility_changing = (
-                        target_visibility is not None and target_visibility != folder.visibility
-                    )
-
-                    # Check ownership only for visibility changes
-                    if visibility_changing and folder.owner_id != user_id:
-                        raise PermissionDeniedError("change_visibility", "folder")
-
-                    # Update parent if specified
-                    if target_folder_id is not None or request.HasField("target_folder_id"):
-                        folder.parent_id = target_folder_id
-
-                    # Update visibility if actually changing (this also handles group links)
-                    if visibility_changing:
-                        await folder_ops.update(
-                            user_id=user_id,
+                    if target_access_mode is not None and (
+                        target_access_mode != folder.access_mode
+                        or target_baseline_role != folder.baseline_role
+                    ):
+                        await members_ops.set_access_mode(
+                            actor_user_id=user_id,
                             organization_id=organization_id,
-                            folder_id=folder_id,
-                            visibility=target_visibility,
+                            content_type=ContentType.FOLDER,
+                            content_id=folder_id,
+                            new_access_mode=target_access_mode,
+                            new_baseline_role=target_baseline_role,
                         )
-                    else:
-                        folder.updated_at = datetime.now(UTC)
-                        await session.commit()
 
+                    if target_folder_id is not None or request.HasField("target_folder_id"):
+                        folder = await folder_ops.get_by_id(folder_id, organization_id)
+                        if folder is not None:
+                            folder.parent_id = target_folder_id
+                            folder.updated_at = datetime.now(UTC)
+
+                    await session.commit()
                     folders_moved += 1
 
                 return MoveItemsResponse(
@@ -1184,13 +1230,13 @@ class FilesHandlers:
                     folders_moved=folders_moved,
                 )
 
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
         except ConnectError:
             raise
         except Exception as e:
-            if "ValidationError" in type(e).__name__:
-                raise ConnectError(Code.INVALID_ARGUMENT, str(e))
             logger.error(f"Error moving items: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 

@@ -1,4 +1,4 @@
-"""Agent agents RPC handlers - thin layer delegating to operations."""
+"""Agents RPC handlers."""
 
 from uuid import UUID
 
@@ -24,11 +24,13 @@ from uniffy_proto.agents.v1.agents_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
-from uniffy.core.converters.common_proto import visibility_from_proto
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.memory import AgentMemory
-from uniffy.core.types import VisibilityScope
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.agents.converters import agent_to_proto
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.runtime.prompt import build_system_prompt
@@ -38,35 +40,37 @@ from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
 
+def _parse_uuid(value: str, field: str) -> UUID:
+    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Translate a domain exception into the matching ``ConnectError``."""
+    if isinstance(exc, NotFoundError):
+        return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
+    if isinstance(exc, ValidationError):
+        return ConnectError(Code.INVALID_ARGUMENT, str(exc))
+    if isinstance(exc, PermissionDeniedError):
+        return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    return ConnectError(Code.INTERNAL, "Internal server error")
+
+
 class AgentsHandlers:
-    """RPC handlers for agents service."""
+    """RPC handlers for ``agents.v1.AgentsService``."""
 
     async def create_agent(
         self,
         request: CreateAgentRequest,
         ctx: RequestContext,
     ) -> AgentResponse:
-        """Handle create_agent RPC call.
-
-        Parameters
-        ----------
-        request : CreateAgentRequest
-            The request with agent details.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        AgentResponse
-            The created agent.
-
-        """
+        """Create a new agent."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
 
         soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else ""
         primary_model = (
@@ -75,29 +79,40 @@ class AgentsHandlers:
         avatar_emoji = request.avatar_emoji if request.HasField("avatar_emoji") else ""
         theme_color = request.theme_color if request.HasField("theme_color") else ""
         is_default = request.is_default if request.HasField("is_default") else False
-        visibility = (
-            visibility_from_proto(request.visibility)
-            if request.HasField("visibility")
-            else VisibilityScope.ORGANIZATION
+
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
         )
-        group_ids = [UUID(gid) for gid in request.group_ids] if request.group_ids else None
+        baseline_role = (
+            content_role_from_proto(request.baseline_role)
+            if request.baseline_role
+            else None
+        )
+
+        group_ids = (
+            [_parse_uuid(gid, "group_id") for gid in request.group_ids]
+            if request.group_ids
+            else None
+        )
         image_model = request.image_model if request.HasField("image_model") else ""
         primary_provider_key_id = (
-            UUID(request.primary_provider_key_id)
+            _parse_uuid(request.primary_provider_key_id, "primary_provider_key_id")
             if request.HasField("primary_provider_key_id") and request.primary_provider_key_id
             else None
         )
         image_provider_key_id = (
-            UUID(request.image_provider_key_id)
+            _parse_uuid(request.image_provider_key_id, "image_provider_key_id")
             if request.HasField("image_provider_key_id") and request.image_provider_key_id
             else None
         )
         prompt_id = (
-            UUID(request.prompt_id) if request.HasField("prompt_id") and request.prompt_id else None
+            _parse_uuid(request.prompt_id, "prompt_id")
+            if request.HasField("prompt_id") and request.prompt_id
+            else None
         )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AgentOperations(session)
                 agent = await ops.create_agent(
                     user_id=user_id,
@@ -110,7 +125,8 @@ class AgentsHandlers:
                     theme_color=theme_color,
                     is_default=is_default,
                     enabled_skills=list(request.enabled_skills),
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                     group_ids=group_ids,
                     image_model=image_model,
                     primary_provider_key_id=primary_provider_key_id,
@@ -118,93 +134,49 @@ class AgentsHandlers:
                     prompt_id=prompt_id,
                 )
                 return AgentResponse(agent=agent_to_proto(agent))
-
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating agent: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("create_agent", exc) from exc
 
     async def get_agent(
         self,
         request: GetAgentRequest,
         ctx: RequestContext,
     ) -> AgentResponse:
-        """Handle get_agent RPC call.
-
-        Parameters
-        ----------
-        request : GetAgentRequest
-            The request with agent ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        AgentResponse
-            The agent.
-
-        """
+        """Get an agent by ID."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AgentOperations(session)
                 agent = await ops.get_by_id(user_id, org_id, agent_id)
                 return AgentResponse(agent=agent_to_proto(agent))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Agent not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting agent: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_agent", exc) from exc
 
     async def list_agents(
         self,
         request: ListAgentsRequest,
         ctx: RequestContext,
     ) -> ListAgentsResponse:
-        """Handle list_agents RPC call.
-
-        Parameters
-        ----------
-        request : ListAgentsRequest
-            The request with organization ID and pagination.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListAgentsResponse
-            Paginated list of agents.
-
-        """
+        """List agents with filters and pagination."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
 
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
-
-        visibility = (
-            visibility_from_proto(request.visibility) if request.HasField("visibility") else None
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
         )
         personal_only = request.personal_only if request.HasField("personal_only") else False
-        group_id = UUID(request.group_id) if request.HasField("group_id") else None
+        group_id = (
+            _parse_uuid(request.group_id, "group_id")
+            if request.HasField("group_id")
+            else None
+        )
 
         page = 1
         page_size = 100
@@ -213,12 +185,12 @@ class AgentsHandlers:
             page_size = request.pagination.page_size or 100
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AgentOperations(session)
                 agents, total = await ops.list_agents(
                     user_id=user_id,
                     organization_id=org_id,
-                    visibility=visibility,
+                    access_mode=access_mode,
                     personal_only=personal_only,
                     group_id=group_id,
                     page=page,
@@ -234,42 +206,20 @@ class AgentsHandlers:
                         total_pages=total_pages,
                     ),
                 )
-
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing agents: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_agents", exc) from exc
 
     async def update_agent(
         self,
         request: UpdateAgentRequest,
         ctx: RequestContext,
     ) -> AgentResponse:
-        """Handle update_agent RPC call.
-
-        Parameters
-        ----------
-        request : UpdateAgentRequest
-            The request with updated fields.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        AgentResponse
-            The updated agent.
-
-        """
+        """Update an agent configuration."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         name = request.name if request.HasField("name") else None
         soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else None
@@ -277,18 +227,15 @@ class AgentsHandlers:
         avatar_emoji = request.avatar_emoji if request.HasField("avatar_emoji") else None
         theme_color = request.theme_color if request.HasField("theme_color") else None
         is_default = request.is_default if request.HasField("is_default") else None
-        visibility = (
-            visibility_from_proto(request.visibility) if request.HasField("visibility") else None
-        )
-        group_ids = [UUID(gid) for gid in request.group_ids] if request.group_ids else None
         image_model = request.image_model if request.HasField("image_model") else None
 
-        # Provider key fields: empty string means "clear", absent means "no change"
         primary_provider_key_id = None
         clear_primary_provider_key = False
         if request.HasField("primary_provider_key_id"):
             if request.primary_provider_key_id:
-                primary_provider_key_id = UUID(request.primary_provider_key_id)
+                primary_provider_key_id = _parse_uuid(
+                    request.primary_provider_key_id, "primary_provider_key_id"
+                )
             else:
                 clear_primary_provider_key = True
 
@@ -296,7 +243,9 @@ class AgentsHandlers:
         clear_image_provider_key = False
         if request.HasField("image_provider_key_id"):
             if request.image_provider_key_id:
-                image_provider_key_id = UUID(request.image_provider_key_id)
+                image_provider_key_id = _parse_uuid(
+                    request.image_provider_key_id, "image_provider_key_id"
+                )
             else:
                 clear_image_provider_key = True
 
@@ -304,22 +253,18 @@ class AgentsHandlers:
         clear_prompt = False
         if request.HasField("prompt_id"):
             if request.prompt_id:
-                prompt_id = UUID(request.prompt_id)
+                prompt_id = _parse_uuid(request.prompt_id, "prompt_id")
             else:
                 clear_prompt = True
         if request.HasField("clear_prompt") and request.clear_prompt:
             clear_prompt = True
 
-        # Repeated fields: protobuf cannot distinguish "not sent" from "sent empty"
-        # (both are []). The frontend always sends the full list when updating these
-        # fields, so we pass through whatever is received. An empty list means
-        # "clear all", not "no change".
         fallback_models = list(request.fallback_models)
         enabled_skills = list(request.enabled_skills)
         enabled_tools = list(request.enabled_tools)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AgentOperations(session)
                 agent = await ops.update_agent(
                     user_id=user_id,
@@ -334,8 +279,6 @@ class AgentsHandlers:
                     is_default=is_default,
                     enabled_skills=enabled_skills,
                     enabled_tools=enabled_tools,
-                    visibility=visibility,
-                    group_ids=group_ids,
                     image_model=image_model,
                     primary_provider_key_id=primary_provider_key_id,
                     image_provider_key_id=image_provider_key_id,
@@ -345,49 +288,23 @@ class AgentsHandlers:
                     clear_prompt=clear_prompt,
                 )
                 return AgentResponse(agent=agent_to_proto(agent))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Agent not found")
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error updating agent: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_agent", exc) from exc
 
     async def delete_agent(
         self,
         request: DeleteAgentRequest,
         ctx: RequestContext,
     ) -> DeleteAgentResponse:
-        """Handle delete_agent RPC call.
-
-        Parameters
-        ----------
-        request : DeleteAgentRequest
-            The request with agent ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        DeleteAgentResponse
-            Success response.
-
-        """
+        """Delete an agent."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AgentOperations(session)
                 await ops.delete_agent(
                     user_id=user_id,
@@ -395,37 +312,17 @@ class AgentsHandlers:
                     agent_id=agent_id,
                 )
                 return DeleteAgentResponse(success=True)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Agent not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error deleting agent: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_agent", exc) from exc
 
     async def upload_agent_avatar(
         self,
         request: UploadAgentAvatarRequest,
         ctx: RequestContext,
     ) -> AgentResponse:
-        """Handle upload_agent_avatar RPC call.
-
-        Parameters
-        ----------
-        request : UploadAgentAvatarRequest
-            The request with image data.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        AgentResponse
-            The updated agent.
-
-        """
+        """Upload and set an agent avatar."""
         user_id = get_user_id_from_context(ctx)
 
         if not request.image_data:
@@ -433,14 +330,11 @@ class AgentsHandlers:
         if not request.filename:
             raise ConnectError(Code.INVALID_ARGUMENT, "Filename is required")
 
-        try:
-            org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AgentOperations(session)
                 agent = await ops.upload_avatar(
                     user_id=user_id,
@@ -450,49 +344,25 @@ class AgentsHandlers:
                     filename=request.filename,
                 )
                 return AgentResponse(agent=agent_to_proto(agent))
-
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Agent not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(exc)) from exc
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error uploading agent avatar: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("upload_agent_avatar", exc) from exc
 
     async def delete_agent_avatar(
         self,
         request: DeleteAgentAvatarRequest,
         ctx: RequestContext,
     ) -> AgentResponse:
-        """Handle delete_agent_avatar RPC call.
-
-        Parameters
-        ----------
-        request : DeleteAgentAvatarRequest
-            The request with agent ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        AgentResponse
-            The updated agent.
-
-        """
+        """Delete an agent avatar."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = AgentOperations(session)
                 agent = await ops.delete_avatar(
                     user_id=user_id,
@@ -500,73 +370,42 @@ class AgentsHandlers:
                     agent_id=agent_id,
                 )
                 return AgentResponse(agent=agent_to_proto(agent))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Agent not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error deleting agent avatar: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_agent_avatar", exc) from exc
 
     async def preview_system_prompt(
         self,
         request: PreviewSystemPromptRequest,
         ctx: RequestContext,
     ) -> PreviewSystemPromptResponse:
-        """Handle preview_system_prompt RPC call.
-
-        Assembles the full system prompt for an agent as it would appear
-        at runtime, including skills, tools, memories, and user context.
-
-        Parameters
-        ----------
-        request : PreviewSystemPromptRequest
-            The request with agent ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        PreviewSystemPromptResponse
-            The assembled system prompt text.
-
-        """
+        """Assemble the runtime system prompt for an agent."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 agent_ops = AgentOperations(session)
                 org_ops = OrganizationOperations(session)
                 user_ops = UserOperations(session)
                 skill_ops = SkillOperations(session)
 
-                # Load agent (with permission check)
                 agent = await agent_ops.get_by_id(user_id, org_id, agent_id)
 
-                # Load org and user context
                 org = await org_ops.get_by_id(org_id)
                 membership = await org_ops.require_org_member(user_id, org_id)
                 user = await user_ops.get_by_id(user_id)
                 role = membership.role
                 user_role = role.value if hasattr(role, "value") else str(role)
 
-                # Fetch skill contents
                 skills = await skill_ops.get_skills_for_agent(
                     organization_id=org_id,
                     enabled_skill_ids=agent.enabled_skills or [],
                 )
                 skill_contents = [s.content for s in skills if s.content]
 
-                # Fetch memory context
                 memory_context = await self._fetch_memory_context_for_preview(
                     session=session,
                     agent_id=agent_id,
@@ -574,13 +413,11 @@ class AgentsHandlers:
                     organization_id=org_id,
                 )
 
-                # Resolve prompt template
                 prompt_content = await self._resolve_prompt_for_preview(
                     session=session,
                     prompt_id=agent.prompt_id,
                 )
 
-                # Assemble the prompt
                 system_prompt = build_system_prompt(
                     agent_name=agent.name,
                     soul_prompt=agent.soul_prompt,
@@ -594,16 +431,10 @@ class AgentsHandlers:
                 )
 
                 return PreviewSystemPromptResponse(system_prompt=system_prompt)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Agent not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error previewing system prompt: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("preview_system_prompt", exc) from exc
 
     @staticmethod
     async def _fetch_memory_context_for_preview(
@@ -614,27 +445,7 @@ class AgentsHandlers:
         organization_id: UUID,
         limit: int = 10,
     ) -> list[str]:
-        """Fetch memory context for prompt preview.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session.
-        agent_id : UUID
-            Agent ID.
-        user_id : UUID
-            User ID.
-        organization_id : UUID
-            Organization ID.
-        limit : int
-            Max memories to include.
-
-        Returns
-        -------
-        list[str]
-            Formatted memory strings.
-
-        """
+        """Fetch memory context strings for prompt preview."""
         try:
             result = await session.execute(
                 select(AgentMemory)
@@ -660,21 +471,7 @@ class AgentsHandlers:
         session: AsyncSession,
         prompt_id: UUID | None,
     ) -> str | None:
-        """Resolve prompt template content for preview.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session.
-        prompt_id : UUID | None
-            Prompt template ID.
-
-        Returns
-        -------
-        str | None
-            Prompt content, or None if no template set.
-
-        """
+        """Resolve prompt template content for preview."""
         if not prompt_id:
             return None
         try:

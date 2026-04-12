@@ -1,9 +1,8 @@
-"""Proto <-> domain converters for rooms domain."""
+"""Proto <-> domain converters for the rooms domain."""
 
 from datetime import datetime
 from uuid import UUID
 
-from uniffy_proto.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
 from uniffy_proto.rooms.v1.rooms_pb2 import (
     BookingStatus as ProtoBookingStatus,
 )
@@ -23,15 +22,17 @@ from uniffy_proto.rooms.v1.rooms_pb2 import (
     TimeSlot as ProtoTimeSlot,
 )
 
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
+)
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.models.shared import BookingStatus, RoomStatus, RoomType, VisibilityScope
+from uniffy.core.types import BookingStatus, RoomStatus, RoomType
 
-# ---------------------------------------------------------------------------
-# Enum mapping dicts (bidirectional)
-# ---------------------------------------------------------------------------
-
+# Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
+# across every domain so they live in ``core.converters.common_proto``.
 ROOM_TYPE_TO_PROTO: dict[RoomType, ProtoRoomType.ValueType] = {
     RoomType.MEETING_ROOM: ProtoRoomType.ROOM_TYPE_MEETING_ROOM,
     RoomType.CONFERENCE_ROOM: ProtoRoomType.ROOM_TYPE_CONFERENCE_ROOM,
@@ -71,57 +72,19 @@ BOOKING_STATUS_FROM_PROTO: dict[ProtoBookingStatus.ValueType, BookingStatus] = {
     ProtoBookingStatus.BOOKING_STATUS_CANCELLED: BookingStatus.CANCELLED,
 }
 
-VISIBILITY_TO_PROTO: dict[VisibilityScope, ProtoVisibilityScope.ValueType] = {
-    VisibilityScope.PRIVATE: ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    VisibilityScope.GROUP: ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP,
-    VisibilityScope.ORGANIZATION: ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION,
-    VisibilityScope.PUBLIC: ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC,
-}
-
-VISIBILITY_FROM_PROTO: dict[ProtoVisibilityScope.ValueType, VisibilityScope] = {
-    ProtoVisibilityScope.VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope.PRIVATE,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE: VisibilityScope.PRIVATE,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP: VisibilityScope.GROUP,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope.ORGANIZATION,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC: VisibilityScope.PUBLIC,
-}
-
-
-# ---------------------------------------------------------------------------
-# Conversion functions
-# ---------------------------------------------------------------------------
-
 
 def room_type_from_proto(proto_type: ProtoRoomType.ValueType) -> RoomType:
-    """Convert proto RoomType to model RoomType."""
+    """Convert a proto RoomType to the domain enum."""
     return ROOM_TYPE_FROM_PROTO.get(proto_type, RoomType.MEETING_ROOM)
 
 
 def room_status_from_proto(proto_status: ProtoRoomStatus.ValueType) -> RoomStatus:
-    """Convert proto RoomStatus to model RoomStatus."""
+    """Convert a proto RoomStatus to the domain enum."""
     return ROOM_STATUS_FROM_PROTO.get(proto_status, RoomStatus.ACTIVE)
 
 
-def visibility_from_proto(proto_vis: ProtoVisibilityScope.ValueType) -> VisibilityScope:
-    """Convert proto VisibilityScope to model VisibilityScope."""
-    return VISIBILITY_FROM_PROTO.get(proto_vis, VisibilityScope.PRIVATE)
-
-
 def room_to_proto(room: Room) -> ProtoRoom:
-    """
-    Convert Room model to proto Room message.
-
-    Parameters
-    ----------
-    room : Room
-        Room model instance.
-
-    Returns
-    -------
-    ProtoRoom
-        Proto message.
-
-    """
+    """Convert a :class:`Room` row to its proto representation."""
     proto_room_type = ROOM_TYPE_TO_PROTO.get(
         room.room_type,
         ProtoRoomType.ROOM_TYPE_MEETING_ROOM,
@@ -129,10 +92,6 @@ def room_to_proto(room: Room) -> ProtoRoom:
     proto_status = ROOM_STATUS_TO_PROTO.get(
         room.status,
         ProtoRoomStatus.ROOM_STATUS_ACTIVE,
-    )
-    proto_visibility = VISIBILITY_TO_PROTO.get(
-        room.visibility,
-        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
     )
 
     proto_room = ProtoRoom(
@@ -147,10 +106,13 @@ def room_to_proto(room: Room) -> ProtoRoom:
         location=room.location,
         amenities=room.amenities or [],
         image_file_id=str(room.image_file_id) if room.image_file_id else "",
-        visibility=proto_visibility,
+        access_mode=access_mode_to_proto(room.access_mode),
         created_at=datetime_to_timestamp(room.created_at),
         updated_at=datetime_to_timestamp(room.updated_at),
     )
+
+    if room.baseline_role is not None:
+        proto_room.baseline_role = content_role_to_proto(room.baseline_role)
 
     if room.floor:
         proto_room.floor = room.floor
@@ -166,24 +128,7 @@ def booking_to_proto(
     room_name: str = "",
     booker_name: str = "",
 ) -> ProtoRoomBooking:
-    """
-    Convert RoomBooking model to proto RoomBooking message.
-
-    Parameters
-    ----------
-    booking : RoomBooking
-        Booking model instance.
-    room_name : str
-        Denormalized room display name for the response.
-    booker_name : str
-        Denormalized booker display name for the response.
-
-    Returns
-    -------
-    ProtoRoomBooking
-        Proto message.
-
-    """
+    """Convert a :class:`RoomBooking` to its proto representation."""
     proto_status = BOOKING_STATUS_TO_PROTO.get(
         booking.status,
         ProtoBookingStatus.BOOKING_STATUS_CONFIRMED,
@@ -219,30 +164,7 @@ def time_slot_to_proto(
     event_title: str = "",
     booker_name: str = "",
 ) -> ProtoTimeSlot:
-    """
-    Convert availability slot data to proto TimeSlot message.
-
-    Parameters
-    ----------
-    start_time : datetime
-        Slot start time.
-    end_time : datetime
-        Slot end time.
-    is_available : bool
-        Whether the slot is available for booking.
-    booking_id : UUID | None
-        ID of the booking occupying this slot, if any.
-    event_title : str
-        Title of the event or booking in this slot.
-    booker_name : str
-        Display name of the person who booked this slot.
-
-    Returns
-    -------
-    ProtoTimeSlot
-        Proto message.
-
-    """
+    """Convert availability-slot data to a ``TimeSlot`` proto."""
     proto_slot = ProtoTimeSlot(
         start_time=datetime_to_timestamp(start_time),
         end_time=datetime_to_timestamp(end_time),

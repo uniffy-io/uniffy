@@ -3,7 +3,10 @@
 from uniffy_proto.agents.v1.cron_pb2 import CronRunLogInfo, CronTaskInfo
 
 from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
-from uniffy.core.converters.common_proto import visibility_to_proto
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
+)
 from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
 
@@ -42,9 +45,12 @@ def cron_task_to_proto(
         run_count=task.run_count,
         consecutive_failures=task.consecutive_failures,
         max_consecutive_failures=task.max_consecutive_failures,
-        visibility=visibility_to_proto(task.visibility),
+        access_mode=access_mode_to_proto(task.access_mode),
         created_at=datetime_to_timestamp(task.created_at),
     )
+
+    if task.baseline_role is not None:
+        info.baseline_role = content_role_to_proto(task.baseline_role)
 
     if task.session_id is not None:
         info.session_id = str(task.session_id)

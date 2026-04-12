@@ -1,4 +1,4 @@
-"""Agent providers RPC handlers - thin layer delegating to operations."""
+"""Providers RPC handlers."""
 
 from uuid import UUID
 
@@ -21,9 +21,12 @@ from uniffy_proto.agents.v1.providers_pb2 import (
     ValidateProviderKeyResponse,
 )
 
-from uniffy.core.converters.common_proto import visibility_from_proto
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
+)
 from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.providers.converters import (
     credential_type_from_proto,
     model_info_to_proto,
@@ -33,100 +36,82 @@ from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
 
+def _parse_uuid(value: str, field: str) -> UUID:
+    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Translate a domain exception into the matching ``ConnectError``."""
+    if isinstance(exc, NotFoundError):
+        return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
+    if isinstance(exc, ValidationError):
+        return ConnectError(Code.INVALID_ARGUMENT, str(exc))
+    if isinstance(exc, ConflictError):
+        return ConnectError(Code.ALREADY_EXISTS, str(exc))
+    if isinstance(exc, PermissionDeniedError):
+        return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    return ConnectError(Code.INTERNAL, "Internal server error")
+
+
 class ProvidersHandlers:
-    """RPC handlers for providers service."""
+    """RPC handlers for ``agents.v1.ProvidersService``."""
 
     async def add_provider_key(
         self,
         request: AddProviderKeyRequest,
         ctx: RequestContext,
     ) -> ProviderKeyResponse:
-        """Handle add_provider_key RPC call.
-
-        Parameters
-        ----------
-        request : AddProviderKeyRequest
-            The request with credential details.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ProviderKeyResponse
-            The created provider key info.
-
-        """
+        """Add a new provider key."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
 
         credential_type = credential_type_from_proto(request.credential_type)
-        visibility = (
-            visibility_from_proto(request.visibility) if request.HasField("visibility") else None
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
+        )
+        baseline_role = (
+            content_role_from_proto(request.baseline_role)
+            if request.baseline_role
+            else None
         )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProviderOperations(session)
-                kwargs: dict = {
-                    "user_id": user_id,
-                    "organization_id": org_id,
-                    "provider": request.provider,
-                    "credential_type": credential_type,
-                    "label": request.label,
-                    "credential": request.credential,
-                }
-                if visibility is not None:
-                    kwargs["visibility"] = visibility
-                key = await ops.add_key(**kwargs)
+                key = await ops.add_key(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    provider=request.provider,
+                    credential_type=credential_type,
+                    label=request.label,
+                    credential=request.credential,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
+                )
                 return ProviderKeyResponse(key=provider_key_to_proto(key))
-
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except ConflictError as e:
-            raise ConnectError(Code.ALREADY_EXISTS, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error adding provider key: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("add_provider_key", exc) from exc
 
     async def list_provider_keys(
         self,
         request: ListProviderKeysRequest,
         ctx: RequestContext,
     ) -> ListProviderKeysResponse:
-        """Handle list_provider_keys RPC call.
-
-        Parameters
-        ----------
-        request : ListProviderKeysRequest
-            The request with organization ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListProviderKeysResponse
-            List of provider key infos.
-
-        """
+        """List provider keys for an organization."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
 
         provider = request.provider if request.HasField("provider") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProviderOperations(session)
                 keys = await ops.list_keys(
                     user_id=user_id,
@@ -136,45 +121,23 @@ class ProvidersHandlers:
                 return ListProviderKeysResponse(
                     keys=[provider_key_to_proto(k) for k in keys],
                 )
-
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing provider keys: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_provider_keys", exc) from exc
 
     async def remove_provider_key(
         self,
         request: RemoveProviderKeyRequest,
         ctx: RequestContext,
     ) -> RemoveProviderKeyResponse:
-        """Handle remove_provider_key RPC call.
-
-        Parameters
-        ----------
-        request : RemoveProviderKeyRequest
-            The request with key ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        RemoveProviderKeyResponse
-            Success response.
-
-        """
+        """Remove a provider key."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        key_id = _parse_uuid(request.key_id, "key_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            key_id = UUID(request.key_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProviderOperations(session)
                 await ops.remove_key(
                     user_id=user_id,
@@ -182,47 +145,23 @@ class ProvidersHandlers:
                     key_id=key_id,
                 )
                 return RemoveProviderKeyResponse(success=True)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Provider key not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error removing provider key: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("remove_provider_key", exc) from exc
 
     async def validate_provider_key(
         self,
         request: ValidateProviderKeyRequest,
         ctx: RequestContext,
     ) -> ValidateProviderKeyResponse:
-        """Handle validate_provider_key RPC call.
-
-        Parameters
-        ----------
-        request : ValidateProviderKeyRequest
-            The request with key ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ValidateProviderKeyResponse
-            Validation result.
-
-        """
+        """Validate a provider key against the provider API."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        key_id = _parse_uuid(request.key_id, "key_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            key_id = UUID(request.key_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProviderOperations(session)
                 is_valid, error = await ops.validate_key(
                     user_id=user_id,
@@ -233,48 +172,24 @@ class ProvidersHandlers:
                 if error:
                     resp.error = error
                 return resp
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Provider key not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error validating provider key: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("validate_provider_key", exc) from exc
 
     async def list_available_models(
         self,
         request: ListAvailableModelsRequest,
         ctx: RequestContext,
     ) -> ListAvailableModelsResponse:
-        """Handle list_available_models RPC call.
-
-        Parameters
-        ----------
-        request : ListAvailableModelsRequest
-            The request with organization ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListAvailableModelsResponse
-            Available models.
-
-        """
+        """List models exposed by all provider keys in the org."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
 
         provider = request.provider if request.HasField("provider") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProviderOperations(session)
                 models = await ops.list_available_models(
                     user_id=user_id,
@@ -285,45 +200,23 @@ class ProvidersHandlers:
                 return ListAvailableModelsResponse(
                     models=[model_info_to_proto(m) for m in models],
                 )
-
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing available models: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_available_models", exc) from exc
 
     async def toggle_provider_key(
         self,
         request: ToggleProviderKeyRequest,
         ctx: RequestContext,
     ) -> ProviderKeyResponse:
-        """Handle toggle_provider_key RPC call.
-
-        Parameters
-        ----------
-        request : ToggleProviderKeyRequest
-            The request with organization ID, key ID, and enabled flag.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ProviderKeyResponse
-            Updated provider key info.
-
-        """
+        """Enable or disable a provider key."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        key_id = _parse_uuid(request.key_id, "key_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            key_id = UUID(request.key_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProviderOperations(session)
                 key = await ops.toggle_key(
                     user_id=user_id,
@@ -332,49 +225,23 @@ class ProvidersHandlers:
                     enabled=request.enabled,
                 )
                 return ProviderKeyResponse(key=provider_key_to_proto(key))
-
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error toggling provider key: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("toggle_provider_key", exc) from exc
 
     async def list_models_for_key(
         self,
         request: ListModelsForKeyRequest,
         ctx: RequestContext,
     ) -> ListAvailableModelsResponse:
-        """Handle list_models_for_key RPC call.
-
-        Lists models available through a specific provider key.
-
-        Parameters
-        ----------
-        request : ListModelsForKeyRequest
-            The request with key ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListAvailableModelsResponse
-            Available models for this key.
-
-        """
+        """List models exposed by a specific provider key."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        key_id = _parse_uuid(request.key_id, "key_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            key_id = UUID(request.key_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProviderOperations(session)
                 models = await ops.list_models_for_key(
                     user_id=user_id,
@@ -385,13 +252,7 @@ class ProvidersHandlers:
                 return ListAvailableModelsResponse(
                     models=[model_info_to_proto(m) for m in models],
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Provider key not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing models for key: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_models_for_key", exc) from exc

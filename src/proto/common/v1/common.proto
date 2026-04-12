@@ -25,6 +25,7 @@ enum ContentType {
   CONTENT_TYPE_PROMPT = 15;
   CONTENT_TYPE_CHAT = 16;
   CONTENT_TYPE_ROOM = 17;
+  CONTENT_TYPE_AGENT_CRON_TASK = 18;
 }
 
 // SubjectType defines who can be granted permissions.
@@ -35,21 +36,37 @@ enum SubjectType {
   SUBJECT_TYPE_ORGANIZATION = 3;
 }
 
-// PermissionLevel defines access levels for content.
-enum PermissionLevel {
-  PERMISSION_LEVEL_UNSPECIFIED = 0;
-  PERMISSION_LEVEL_VIEW = 1;
-  PERMISSION_LEVEL_EDIT = 2;
-  PERMISSION_LEVEL_ADMIN = 3;
+// ContentRole defines the role a subject has on a piece of content.
+// BLOCKED is an explicit deny that overrides any baseline access.
+enum ContentRole {
+  CONTENT_ROLE_UNSPECIFIED = 0;
+  CONTENT_ROLE_VIEWER = 1;
+  CONTENT_ROLE_COMMENTER = 2;
+  CONTENT_ROLE_EDITOR = 3;
+  CONTENT_ROLE_ADMIN = 4;
+  CONTENT_ROLE_OWNER = 5;
+  CONTENT_ROLE_BLOCKED = 6;
 }
 
-// VisibilityScope defines who can see content by default.
-enum VisibilityScope {
-  VISIBILITY_SCOPE_UNSPECIFIED = 0;
-  VISIBILITY_SCOPE_PRIVATE = 1;
-  VISIBILITY_SCOPE_GROUP = 2;
-  VISIBILITY_SCOPE_ORGANIZATION = 3;
-  VISIBILITY_SCOPE_PUBLIC = 4;
+// AccessMode defines the baseline access mode for a piece of content.
+// Explicit ContentMember rows always override the baseline (in either
+// direction -- higher or BLOCKED).
+enum AccessMode {
+  ACCESS_MODE_UNSPECIFIED = 0;
+  ACCESS_MODE_OWNER_ONLY = 1;
+  ACCESS_MODE_EXPLICIT_MEMBERS = 2;
+  ACCESS_MODE_OPEN_TO_ORG = 3;
+}
+
+// ContentMemberAction is the action recorded in an audit log event.
+enum ContentMemberAction {
+  CONTENT_MEMBER_ACTION_UNSPECIFIED = 0;
+  CONTENT_MEMBER_ACTION_MEMBER_ADDED = 1;
+  CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED = 2;
+  CONTENT_MEMBER_ACTION_MEMBER_REMOVED = 3;
+  CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED = 4;
+  CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED = 5;
+  CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED = 6;
 }
 
 // OrganizationRole defines a user's role within an organization.

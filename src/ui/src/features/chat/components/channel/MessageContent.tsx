@@ -19,9 +19,7 @@ import { parseUrn, urnToPath } from '@/shared/utils/urn';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { cn } from '@/shared/utils/cn';
 
-// ---------------------------------------------------------------------------
 // Mention preprocessing
-// ---------------------------------------------------------------------------
 
 // Convert [[[label|urn]]] mentions to markdown links so react-markdown processes them
 const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
@@ -30,9 +28,7 @@ function preprocessMentions(content: string): string {
   return content.replace(MENTION_RE, '[@$1]($2)');
 }
 
-// ---------------------------------------------------------------------------
 // Emoticon to emoji conversion
-// ---------------------------------------------------------------------------
 
 const EMOTICON_MAP: [RegExp, string][] = [
   [/(?<!\w)<3(?!\w)/g, '\u2764\uFE0F'],       // <3 -> red heart
@@ -76,9 +72,7 @@ function convertEmoticons(text: string): string {
   }).join('');
 }
 
-// ---------------------------------------------------------------------------
 // Custom markdown renderers
-// ---------------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MarkdownLink(props: any) {
@@ -237,9 +231,7 @@ function urlTransform(url: string): string {
   return defaultUrlTransform(url);
 }
 
-// ---------------------------------------------------------------------------
 // Emoji sizing
-// ---------------------------------------------------------------------------
 
 // Matches emoji characters (including multi-codepoint sequences like flags, skin tones)
 const EMOJI_RE = /\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu;
@@ -257,9 +249,7 @@ function isEmojiOnly(text: string): boolean {
   return withoutEmoji.length === 0 && emojiMatches.length <= 3;
 }
 
-// ---------------------------------------------------------------------------
 // MessageContent component
-// ---------------------------------------------------------------------------
 
 interface MessageContentProps {
   content: string;

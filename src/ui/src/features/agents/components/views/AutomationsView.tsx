@@ -39,9 +39,7 @@ import {
 } from "@/features/agents/store/agentCronThunks";
 import type { SerializedCronTask } from "@/features/agents/store/agentCronThunks";
 
-// ---------------------------------------------------------------------------
 // Schedule builder types and helpers
-// ---------------------------------------------------------------------------
 
 type Frequency = "minutes" | "hourly" | "daily" | "weekly" | "monthly";
 
@@ -203,9 +201,7 @@ function protoTimestampToDateStr(ts?: { seconds: number; nanos: number }): strin
     return new Date(ts.seconds * 1000).toISOString();
 }
 
-// ---------------------------------------------------------------------------
 // Schedule Builder component
-// ---------------------------------------------------------------------------
 
 function ScheduleBuilder({
     value,
@@ -360,9 +356,7 @@ function ScheduleBuilder({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Sub-components
-// ---------------------------------------------------------------------------
 
 function TaskStatusBadge({ task }: { task: SerializedCronTask }) {
     if (!task.isEnabled && task.consecutiveFailures >= task.maxConsecutiveFailures) {
@@ -758,9 +752,7 @@ function TaskDetailPanel({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Main view
-// ---------------------------------------------------------------------------
 
 export function AutomationsView({ agentId }: { agentId?: string } = {}) {
     const dispatch = useAppDispatch();

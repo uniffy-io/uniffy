@@ -24,11 +24,12 @@ import {
   addReactionToMessage,
   removeReactionFromMessage,
 } from '@/features/chat/store/chatMessagesSlice';
+import { fetchMembers } from '@/features/chat/store/chatThunks';
 import {
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
-import { updateChannel, incrementUnreadCount, addChannel } from '@/features/chat/store/chatChannelsSlice';
+import { updateChannel, incrementUnreadCount, addChannel, removeChannel } from '@/features/chat/store/chatChannelsSlice';
 import { chatApi } from '@/features/chat/api/chatApi';
 import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
 import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
@@ -50,13 +51,54 @@ function handleChannelEvent(
   event: UserChatEvent,
   activeChannelId: string | null,
   currentUserId: string,
+  organizationId: string,
   dispatch: AppDispatch,
 ): void {
   if (event.payload.case !== 'channelEvent' || !event.payload.value) return;
   const ce = event.payload.value;
+  const channelId = ce.channelId;
 
-  // Every ChatEvent carries channel_id - filter to active channel only
-  if (!activeChannelId || ce.channelId !== activeChannelId) return;
+  // Member events apply globally (not just the active channel).
+  // When the current user is added to a channel, fetch it into the sidebar.
+  // When viewing the affected channel, refresh the member list.
+  if (ce.eventType === ChatEventType.MEMBER_JOINED) {
+    if (ce.payload.case === 'member' && ce.payload.value) {
+      const joinedUserId = ce.payload.value.userId;
+      if (joinedUserId === currentUserId) {
+        chatApi
+          .getChannel({ organizationId, channelId })
+          .then((res) => {
+            if (res.channel) {
+              const plain = channelToPlain(res.channel);
+              plain.unreadCount = 1;
+              dispatch(addChannel(plain));
+            }
+          })
+          .catch(() => {});
+      }
+    }
+    if (activeChannelId && channelId === activeChannelId) {
+      dispatch(fetchMembers(activeChannelId));
+    }
+    return;
+  }
+
+  if (ce.eventType === ChatEventType.MEMBER_LEFT) {
+    if (ce.payload.case === 'member' && ce.payload.value) {
+      const leftUserId = ce.payload.value.userId;
+      if (leftUserId === currentUserId) {
+        dispatch(removeChannel(channelId));
+        return;
+      }
+    }
+    if (activeChannelId && channelId === activeChannelId) {
+      dispatch(fetchMembers(activeChannelId));
+    }
+    return;
+  }
+
+  // All other channel events filter to active channel only
+  if (!activeChannelId || channelId !== activeChannelId) return;
 
   switch (ce.eventType) {
     case ChatEventType.MESSAGE_CREATED: {
@@ -248,7 +290,7 @@ function usePersistentChatStream() {
                 break;
               }
               case UserChatEventType.CHANNEL_EVENT: {
-                handleChannelEvent(event, channelIdRef.current, userIdRef.current, dispatch);
+                handleChannelEvent(event, channelIdRef.current, userIdRef.current, organizationId!, dispatch);
                 break;
               }
               case UserChatEventType.HEARTBEAT:

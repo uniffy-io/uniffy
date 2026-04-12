@@ -3,11 +3,10 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, Column, DateTime, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum, String, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.content.model_mixins import visibility_field
-from uniffy.core.types import VisibilityScope, generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class ProviderKey(SQLModel, table=True):
@@ -85,7 +84,31 @@ class ProviderKey(SQLModel, table=True):
         default=True,
         sa_column=Column(Boolean, nullable=False, server_default="true"),
     )
-    visibility: VisibilityScope = visibility_field(default=VisibilityScope.ORGANIZATION)
+    access_mode: AccessMode = Field(
+        default=AccessMode.OWNER_ONLY,
+        sa_column=Column(
+            Enum(
+                AccessMode,
+                name="accessmode",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=False,
+            index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=None,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
+        ),
+    )
     last_validated_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),

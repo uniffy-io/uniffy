@@ -14,7 +14,10 @@ from uniffy.core.converters import (
     member_info_to_proto,
     org_info_to_proto,
     org_role_to_proto,
-    visibility_to_proto,
+)
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
 )
 from uniffy.core.models import Organization, OrganizationPermissionDefaults
 from uniffy.core.models.login.organization_member import OrganizationMember
@@ -145,15 +148,14 @@ def permission_defaults_to_proto(
         Proto message.
 
     """
-    return ContentTypeDefaults(
+    proto = ContentTypeDefaults(
         content_type=content_type_to_proto(defaults.content_type),
-        default_visibility=visibility_to_proto(defaults.default_visibility),
-        members_can_view=defaults.members_can_view,
-        members_can_edit=defaults.members_can_edit,
-        members_can_delete=defaults.members_can_delete,
-        members_can_share=defaults.members_can_share,
+        default_access_mode=access_mode_to_proto(defaults.default_access_mode),
         updated_at=datetime_to_timestamp(defaults.updated_at),
     )
+    if defaults.default_baseline_role is not None:
+        proto.default_baseline_role = content_role_to_proto(defaults.default_baseline_role)
+    return proto
 
 
 # Re-export from core converters for convenience

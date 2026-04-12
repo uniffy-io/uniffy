@@ -10,7 +10,10 @@ from uniffy_proto.agents.v1.prompts_pb2 import (
 )
 
 from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.converters.common_proto import visibility_to_proto
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
+)
 from uniffy.core.models.agents.prompt import AgentPrompt
 
 # --- Prompt Source mappings ---
@@ -85,9 +88,12 @@ def prompt_to_proto(prompt: AgentPrompt) -> PromptInfo:
         source=prompt_source_to_proto(prompt.source),
         created_at=datetime_to_timestamp(prompt.created_at),
         updated_at=datetime_to_timestamp(prompt.updated_at),
-        visibility=visibility_to_proto(prompt.visibility),
+        access_mode=access_mode_to_proto(prompt.access_mode),
         created_by=str(prompt.created_by) if prompt.created_by else "",
     )
+
+    if prompt.baseline_role is not None:
+        info.baseline_role = content_role_to_proto(prompt.baseline_role)
 
     if prompt.organization_id is not None:
         info.organization_id = str(prompt.organization_id)

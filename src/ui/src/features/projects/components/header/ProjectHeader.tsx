@@ -72,7 +72,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const timeStats = useAppSelector(
     useMemo(() => selectProjectTimeStats(project.id), [project.id])
   );
-  const { canEdit, canAccessSettings } = useProjectPermission();
+  const { canEdit, canManage } = useProjectPermission();
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
   const sprintFilter = useAppSelector(selectSprintFilter);
@@ -157,7 +157,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
         <div className="min-w-0 flex-1">
           <h1 className="font-medium text-sm md:text-base text-foreground truncate">{project.name}</h1>
           <p className="text-xs text-muted-foreground">
-            {taskCount} task{taskCount !== 1 ? "s" : ""}{!isMobile && <> · {project.memberIds.length} member{project.memberIds.length !== 1 ? "s" : ""}</>}
+            {taskCount} task{taskCount !== 1 ? "s" : ""}
             {timeStats.hasTimeData && !isMobile && (
               <> · {formatMinutes(timeStats.totalSpent)} spent{timeStats.totalEstimated > 0 && <> / {formatMinutes(timeStats.totalEstimated)} est{timeStats.remaining > 0 && <> · {formatMinutes(timeStats.remaining)} left</>}</>}</>
             )}
@@ -201,7 +201,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
         </div>
 
         {/* Project Settings */}
-        {canAccessSettings && (
+        {canManage && (
           <button
             type="button"
             onClick={() => navigate(`/projects/${project.id}/settings`)}

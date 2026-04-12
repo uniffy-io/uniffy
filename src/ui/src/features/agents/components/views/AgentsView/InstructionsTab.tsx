@@ -17,8 +17,9 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { useMyPermission } from "@/features/sharing";
+import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { createSession } from "@/features/agents/store/agentSessionsThunks";
 import { SessionKind } from "@uniffy/proto/agents/v1/sessions_pb";
 import { PROMPT_BUILDER_PREFIX } from "@/features/agents/store/agentSessionsSlice";
@@ -50,9 +51,7 @@ function formatTime(ts?: { seconds: number; nanos: number }): string {
     });
 }
 
-// ---------------------------------------------------------------------------
 // Chat Bubble
-// ---------------------------------------------------------------------------
 
 function ChatBubble({
     message,
@@ -106,9 +105,7 @@ function ChatBubble({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Thinking Indicator
-// ---------------------------------------------------------------------------
 
 const THINKING_PHASES = [
     "Understanding your request",
@@ -152,9 +149,7 @@ function ThinkingIndicator() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Prompt Builder Drawer (slide-over panel)
-// ---------------------------------------------------------------------------
 
 function PromptBuilderDrawer({
     agent,
@@ -357,9 +352,7 @@ function PromptBuilderDrawer({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Assembled Prompt Preview
-// ---------------------------------------------------------------------------
 
 function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
@@ -471,9 +464,7 @@ function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Soul Prompt Editor (main editor area)
-// ---------------------------------------------------------------------------
 
 function SoulPromptEditor({
     agent,
@@ -524,14 +515,12 @@ function SoulPromptEditor({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Main InstructionsTab
-// ---------------------------------------------------------------------------
 
 export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
-    const { permission } = useMyPermission(ContentType.AGENT, agent.id);
-    const canEdit = permission?.canEdit ?? permission?.isOwner ?? true;
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const canEdit = roleCanEdit(myRole);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const promptsMap = useAppSelector(selectAllPrompts);
 

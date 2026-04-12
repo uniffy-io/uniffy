@@ -66,20 +66,17 @@ export function useBookmarks() {
     );
 
     return {
-        // State
         bookmarkedUrns,
         bookmarks: bookmarksList,
         loading,
         error,
         totalCount,
 
-        // Actions
         toggle: handleToggle,
         bulkCheck: handleBulkCheck,
         clear: handleClear,
         refresh: handleRefresh,
 
-        // Helpers
         isBookmarked: (urn: string) => bookmarkedUrns[urn] ?? false,
     };
 }

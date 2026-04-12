@@ -10,14 +10,17 @@ Provides SearchOperations class that handles:
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import ContentAccessQuery
 from uniffy.core.models.files.file import File
+from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
+from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.search.queries import SearchResult, execute_search, get_documents_by_urns
 
 
@@ -93,10 +96,7 @@ class SearchOperations:
 
         """
         # Get user's group memberships for permission filtering
-        user_group_ids = await self.access_query.get_user_group_ids(
-            user_id=user_id,
-            organization_id=organization_id,
-        )
+        user_group_ids = await self._get_user_group_ids(user_id)
 
         # Execute the search with permission filtering via Meilisearch
         results, total = await execute_search(
@@ -122,7 +122,8 @@ class SearchOperations:
         entity_type: str,
         title: str,
         url_path: str,
-        visibility: str,
+        access_mode: AccessMode,
+        baseline_role: ContentRole | None,
         owner_id: UUID,
         keywords: str | None = None,
         description: str | None = None,
@@ -130,44 +131,15 @@ class SearchOperations:
         shared_user_ids: list[UUID] | None = None,
         tags: list[str] | None = None,
     ) -> None:
-        """
-        Index or update an item in Meilisearch.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        urn : str
-            Universal Resource Name.
-        entity_type : str
-            Type of entity (e.g., 'note', 'file').
-        title : str
-            Display title.
-        url_path : str
-            Frontend route path.
-        visibility : str
-            Visibility scope.
-        owner_id : UUID
-            Owner user ID.
-        keywords : str | None
-            Searchable text content.
-        description : str | None
-            Short description/snippet.
-        shared_group_ids : list[UUID] | None
-            Groups the item is shared with.
-        shared_user_ids : list[UUID] | None
-            Users the item is explicitly shared with.
-        tags : list[str] | None
-            Content tags.
-
-        """
+        """Index or update an item in Meilisearch."""
         await self.indexer.index(
             urn=urn,
             organization_id=organization_id,
             title=title,
             entity_type=entity_type,
             url_path=url_path,
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
             owner_id=owner_id,
             keywords=keywords,
             description=description,
@@ -223,57 +195,38 @@ class SearchOperations:
             List of referencing content and total count.
 
         """
-        from uniffy.core.models.notes.note import Note
+        if type_filters and "note" not in type_filters:
+            return [], 0
 
-        # Get user's group memberships for permission filtering
-        user_group_ids = await self.access_query.get_user_group_ids(
+        # Query notes that have the target URN in outgoing_references,
+        # filtered through the canonical access filter.
+        access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
+            content_type=ContentType.NOTE,
+            content_id_column=Note.id,
+            owner_id_column=Note.owner_id,
+            access_mode_column=Note.access_mode,
+            baseline_role_column=Note.baseline_role,
         )
 
-        # Query notes that have the target URN in outgoing_references
         query = select(Note).where(
             and_(
                 Note.organization_id == organization_id,
                 Note.is_deleted == False,  # noqa: E712
                 Note.outgoing_references.contains([target_urn]),
+                access_filter,
             )
         )
 
-        # Permission filtering
-        permission_conditions = [
-            Note.visibility == "ORGANIZATION",
-            Note.owner_id == user_id,
-        ]
-
-        if user_group_ids:
-            # For GROUP visibility, check if user is in a shared group
-            # This is simplified - in production would need to join ContentGroupLink
-            permission_conditions.append(
-                and_(
-                    Note.visibility == "GROUP",
-                    Note.owner_id == user_id,  # Owner can always see their GROUP notes
-                )
-            )
-
-        query = query.where(or_(*permission_conditions))
-
-        # Apply type filter (only notes for now)
-        if type_filters and "note" not in type_filters:
-            # No other types support references yet
-            return [], 0
-
-        # Get total count
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
-        # Apply limit
         query = query.order_by(Note.updated_at.desc()).limit(limit)
 
         result = await self.session.execute(query)
         notes = list(result.scalars().all())
 
-        # Convert notes to SearchResult objects
         search_results: list[SearchResult] = []
         for note in notes:
             search_results.append(
@@ -284,9 +237,13 @@ class SearchOperations:
                     description=note.content[:200] if note.content else None,
                     entity_type="note",
                     url_path=f"/notes/{note.id}",
-                    visibility=note.visibility.value,
+                    access_mode=note.access_mode.value,
+                    baseline_role=(
+                        note.baseline_role.value if note.baseline_role is not None else None
+                    ),
                     owner_id=note.owner_id,
                     tags=note.tags,
+                    metadata=None,
                     updated_at=note.updated_at,
                     rank_score=1.0,
                     search_score=None,
@@ -331,11 +288,7 @@ class SearchOperations:
         urns = urns[:100]
 
         # Fetch documents from Meilisearch with permission filtering
-        # Uses Meilisearch filter expressions instead of Python-side checking
-        user_group_ids = await self.access_query.get_user_group_ids(
-            user_id=user_id,
-            organization_id=organization_id,
-        )
+        user_group_ids = await self._get_user_group_ids(user_id)
         accessible = await get_documents_by_urns(
             urns, organization_id, user_id, user_group_ids,
         )
@@ -562,4 +515,14 @@ class SearchOperations:
                 results[urn].completed_tasks = row.completed
         except Exception:
             logger.warning("Failed to enrich project live state", exc_info=True)
+
+    async def _get_user_group_ids(self, user_id: UUID) -> list[UUID]:
+        """Return the active group ids for a user."""
+        result = await self.session.execute(
+            select(GroupMember.group_id).where(
+                GroupMember.user_id == user_id,
+                GroupMember.is_active == True,  # noqa: E712
+            )
+        )
+        return [row[0] for row in result.all()]
 

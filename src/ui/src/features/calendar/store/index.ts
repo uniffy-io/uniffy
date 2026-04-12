@@ -2,7 +2,6 @@
  * Calendar store exports
  */
 
-// Reducers
 export { calendarReducer } from '@/features/calendar/store/calendarSlice';
 export { calendarUiReducer } from '@/features/calendar/store/calendarUiSlice';
 

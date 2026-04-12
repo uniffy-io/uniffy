@@ -13,7 +13,6 @@ import { toggleSidebar, setEditorMode, setSidebarOpen, toggleMetadataPanel } fro
 import type { EditorMode } from '@/features/notes/store/editorSlice';
 import { setCurrentNote, fetchNote, initializeNotesData, loadLastOpenedNote } from '@/features/notes/store/notesSlice';
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
-import { SharingDialog } from '@/features/sharing';
 import { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
 
 export function NotesPage() {
@@ -122,7 +121,6 @@ export function NotesPage() {
         onCloseSidebar={handleCloseSidebar}
         onCloseMetadataPanel={handleCloseMetadataPanel}
       />
-      <SharingDialog />
     </>
   );
 }

@@ -302,11 +302,10 @@ async def run_stress_seed(config: StressConfig) -> None:
     from dotenv import load_dotenv
     from sqlalchemy import select
 
-    from uniffy.core.models import Note, Organization, User, VisibilityScope
-    from uniffy.core.models.shared import NodeType
+    from uniffy.core.models import Note, Organization, User
     from uniffy.core.search.indexer import SearchIndexer, build_content_urn
     from uniffy.core.search.meilisearch import init_meilisearch
-    from uniffy.core.types import ContentType
+    from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
     from uniffy.db.session import close_db, get_async_session, init_db
 
     # Load environment variables
@@ -379,7 +378,8 @@ async def run_stress_seed(config: StressConfig) -> None:
                 stress_root = Note(
                     organization_id=org.id,
                     owner_id=admin.id,
-                    visibility=VisibilityScope.ORGANIZATION,
+                    access_mode=AccessMode.OPEN_TO_ORG,
+                    baseline_role=ContentRole.VIEWER,
                     node_type=NodeType.FOLDER,
                     title="Stress Test Data",
                     slug="stress-root",
@@ -412,7 +412,8 @@ async def run_stress_seed(config: StressConfig) -> None:
                             organization_id=org.id,
                             owner_id=admin.id,
                             parent_id=parent.id,
-                            visibility=VisibilityScope.ORGANIZATION,
+                            access_mode=AccessMode.OPEN_TO_ORG,
+                            baseline_role=ContentRole.VIEWER,
                             node_type=NodeType.FOLDER,
                             title=generate_folder_name(folder_idx),
                             slug=f"stress-folder-{folder_idx}",
@@ -460,7 +461,8 @@ async def run_stress_seed(config: StressConfig) -> None:
                         organization_id=org.id,
                         owner_id=admin.id,
                         parent_id=parent.id,
-                        visibility=VisibilityScope.ORGANIZATION,
+                        access_mode=AccessMode.OPEN_TO_ORG,
+                        baseline_role=ContentRole.VIEWER,
                         node_type=NodeType.NOTE,
                         title=title,
                         content=content,
@@ -536,7 +538,12 @@ async def run_stress_seed(config: StressConfig) -> None:
                         title=item.title,
                         entity_type=ContentType.NOTE.value,
                         url_path=f"/notes/{item.id}",
-                        visibility=item.visibility.value,
+                        access_mode=item.access_mode.value,
+                        baseline_role=(
+                            item.baseline_role.value
+                            if item.baseline_role is not None
+                            else None
+                        ),
                         owner_id=admin.id,
                         keywords=" ".join([item.title] + (item.tags or [])),
                         description=item.content[:200] if item.content else None,

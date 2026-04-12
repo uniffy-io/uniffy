@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.attachments.attachment import Attachment
@@ -15,9 +16,13 @@ from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.login.user import User
-from uniffy.core.models.shared import ContentType, VisibilityScope
 from uniffy.core.storage import get_s3_client
-from uniffy.core.types import generate_id
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    ContentType,
+    generate_id,
+)
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, supports_thumbnail
 
 # Name of the system Attachments folder
@@ -89,12 +94,13 @@ class AttachmentOperations:
         if folder:
             return folder
 
-        # Create the Attachments folder
+        # Create the Attachments folder (always OWNER_ONLY).
         folder = Folder(
             organization_id=organization_id,
             owner_id=user_id,
             name=ATTACHMENTS_FOLDER_NAME,
-            visibility=VisibilityScope.PRIVATE,
+            access_mode=AccessMode.OWNER_ONLY,
+            baseline_role=None,
             is_system=True,
             parent_id=None,
         )
@@ -189,37 +195,40 @@ class AttachmentOperations:
         # Verify user can access the content they're attaching to
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
-        # Fetch parent content visibility to inherit on attachment files
-        _, content_visibility = await self._get_content_for_permission_check(
+        # Load parent content policy so the attachment file can inherit it.
+        _, parent_mode, parent_baseline, _, _ = await self._load_parent_policy(
             organization_id, content_type, content_id
         )
 
-        # Only inherit ORGANIZATION visibility; keep PRIVATE for GROUP/PRIVATE
-        # (GROUP requires group links which are handled by the cascade system)
-        file_visibility = (
-            content_visibility
-            if content_visibility == VisibilityScope.ORGANIZATION
-            else VisibilityScope.PRIVATE
-        )
+        # Only inherit OPEN_TO_ORG; otherwise keep the attachment private.
+        if parent_mode == AccessMode.OPEN_TO_ORG:
+            file_access_mode = AccessMode.OPEN_TO_ORG
+            file_baseline_role = parent_baseline
+        else:
+            file_access_mode = AccessMode.OWNER_ONLY
+            file_baseline_role = None
 
         # Get or create Attachments folder
         folder = await self.get_or_create_attachments_folder(user_id, organization_id)
 
         # Check if file is already in user's Attachments folder
         if source_file.folder_id == folder.id and source_file.owner_id == user_id:
-            # File is already in Attachments folder - sync visibility
-            if source_file.visibility != file_visibility:
-                source_file.visibility = file_visibility
+            if (
+                source_file.access_mode != file_access_mode
+                or source_file.baseline_role != file_baseline_role
+            ):
+                source_file.access_mode = file_access_mode
+                source_file.baseline_role = file_baseline_role
                 await self._session.flush()
             file_to_link = source_file
         else:
-            # Copy the file to Attachments folder
             file_to_link = await self._copy_file_to_folder(
                 source_file=source_file,
                 target_folder_id=folder.id,
                 user_id=user_id,
                 organization_id=organization_id,
-                content_visibility=file_visibility,
+                access_mode=file_access_mode,
+                baseline_role=file_baseline_role,
             )
 
         # Create the attachment link
@@ -577,7 +586,8 @@ class AttachmentOperations:
             content_type=ContentType.FILE,
             content_id_column=File.id,
             owner_id_column=File.owner_id,
-            visibility_column=File.visibility,
+            access_mode_column=File.access_mode,
+            baseline_role_column=File.baseline_role,
         )
 
         result = await self._session.execute(
@@ -597,7 +607,8 @@ class AttachmentOperations:
         target_folder_id: UUID,
         user_id: UUID,
         organization_id: UUID,
-        content_visibility: VisibilityScope = VisibilityScope.PRIVATE,
+        access_mode: AccessMode = AccessMode.OWNER_ONLY,
+        baseline_role: ContentRole | None = None,
     ) -> File:
         """Copy a file to a target folder with thumbnail handling."""
         # Generate new storage key
@@ -681,7 +692,8 @@ class AttachmentOperations:
             id=new_file_id,
             organization_id=organization_id,
             owner_id=user_id,
-            visibility=content_visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
             filename=source_file.filename,
             original_filename=source_file.original_filename,
             mime_type=source_file.mime_type,
@@ -751,40 +763,22 @@ class AttachmentOperations:
             # Queue not available - non-fatal, file stays PENDING
             logger.warning(f"Could not enqueue jobs for attachment {file.id}: {e}")
 
-    async def _get_content_for_permission_check(
+    async def _load_parent_policy(
         self,
         organization_id: UUID,
         content_type: ContentType,
         content_id: UUID,
-    ) -> tuple[UUID, VisibilityScope]:
-        """
-        Get content owner_id and visibility for permission checking.
+    ) -> tuple[UUID, AccessMode, ContentRole | None, ContentType, UUID]:
+        """Load (owner_id, access_mode, baseline_role, type, id) for a parent.
 
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Type of content.
-        content_id : UUID
-            Content ID.
-
-        Returns
-        -------
-        tuple[UUID, VisibilityScope]
-            Content owner_id and visibility.
-
-        Raises
-        ------
-        NotFoundError
-            If content not found.
-
+        Tasks delegate to their parent project; the returned ``(type, id)``
+        pair is what the permission checker should use.
         """
         if content_type == ContentType.NOTE:
             from uniffy.core.models.notes.note import Note
 
             result = await self._session.execute(
-                select(Note.owner_id, Note.visibility).where(
+                select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
                     Note.id == content_id,
                     Note.organization_id == organization_id,
                 )
@@ -792,11 +786,11 @@ class AttachmentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("Note", str(content_id))
-            return row[0], row[1]
+            return row[0], row[1], row[2], content_type, content_id
 
-        elif content_type == ContentType.FILE:
+        if content_type == ContentType.FILE:
             result = await self._session.execute(
-                select(File.owner_id, File.visibility).where(
+                select(File.owner_id, File.access_mode, File.baseline_role).where(
                     File.id == content_id,
                     File.organization_id == organization_id,
                 )
@@ -804,13 +798,17 @@ class AttachmentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("File", str(content_id))
-            return row[0], row[1]
+            return row[0], row[1], row[2], content_type, content_id
 
-        elif content_type == ContentType.CALENDAR_EVENT:
+        if content_type == ContentType.CALENDAR_EVENT:
             from uniffy.core.models.calendar.event import CalendarEvent
 
             result = await self._session.execute(
-                select(CalendarEvent.organizer_id, CalendarEvent.visibility).where(
+                select(
+                    CalendarEvent.organizer_id,
+                    CalendarEvent.access_mode,
+                    CalendarEvent.baseline_role,
+                ).where(
                     CalendarEvent.id == content_id,
                     CalendarEvent.organization_id == organization_id,
                 )
@@ -818,24 +816,64 @@ class AttachmentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("CalendarEvent", str(content_id))
-            return row[0], row[1]
+            return row[0], row[1], row[2], content_type, content_id
 
-        elif content_type == ContentType.TASK:
+        if content_type == ContentType.TASK:
+            from uniffy.core.models.projects.project import Project
             from uniffy.core.models.projects.task import Task
 
-            result = await self._session.execute(
-                select(Task.owner_id, Task.visibility).where(
+            task_result = await self._session.execute(
+                select(Task.project_id).where(
                     Task.id == content_id,
                     Task.organization_id == organization_id,
                 )
             )
-            row = result.one_or_none()
-            if not row:
+            task_row = task_result.one_or_none()
+            if not task_row:
                 raise NotFoundError("Task", str(content_id))
-            return row[0], row[1]
+            project_id = task_row[0]
 
-        else:
-            raise NotFoundError("Content", str(content_id))
+            proj_result = await self._session.execute(
+                select(
+                    Project.owner_id, Project.access_mode, Project.baseline_role
+                ).where(
+                    Project.id == project_id,
+                    Project.organization_id == organization_id,
+                )
+            )
+            proj_row = proj_result.one_or_none()
+            if not proj_row:
+                raise NotFoundError("Project", str(project_id))
+            return proj_row[0], proj_row[1], proj_row[2], ContentType.PROJECT, project_id
+
+        raise NotFoundError("Content", str(content_id))
+
+    async def _resolve_parent_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> ContentRole | None:
+        """Return the user's effective role on the parent content."""
+        from uniffy.core.auth.permissions.checker import PermissionChecker
+
+        owner_id, access_mode, baseline_role, resolved_type, resolved_id = (
+            await self._load_parent_policy(
+                organization_id, content_type, content_id
+            )
+        )
+
+        checker = PermissionChecker(self._session)
+        return await checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=resolved_type,
+            content_id=resolved_id,
+            owner_id=owner_id,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
+        )
 
     async def _verify_content_access(
         self,
@@ -844,23 +882,11 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify user has VIEW access to content."""
-        from uniffy.core.auth.permissions.checker import PermissionChecker
-
-        owner_id, visibility = await self._get_content_for_permission_check(
-            organization_id, content_type, content_id
+        """Verify the user can view the parent content."""
+        role = await self._resolve_parent_role(
+            user_id, organization_id, content_type, content_id
         )
-
-        checker = PermissionChecker(self._session)
-        has_access = await checker.can_access_content(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            content_owner_id=owner_id,
-            content_visibility=visibility,
-        )
-        if not has_access:
+        if not role_can_view(role):
             raise PermissionDeniedError("access", "content")
 
     async def _verify_content_edit_access(
@@ -870,21 +896,9 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify user has EDIT access to content."""
-        from uniffy.core.auth.permissions.checker import PermissionChecker
-
-        owner_id, visibility = await self._get_content_for_permission_check(
-            organization_id, content_type, content_id
+        """Verify the user can edit the parent content."""
+        role = await self._resolve_parent_role(
+            user_id, organization_id, content_type, content_id
         )
-
-        checker = PermissionChecker(self._session)
-        has_access = await checker.can_edit_content(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            content_owner_id=owner_id,
-            content_visibility=visibility,
-        )
-        if not has_access:
+        if not role_can_edit(role):
             raise PermissionDeniedError("edit", "content")

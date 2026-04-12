@@ -10,8 +10,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class UploadStatus(str, Enum):
@@ -71,8 +70,10 @@ class MultipartUpload(SQLModel, table=True):
         Size of each chunk in bytes.
     folder_id : UUID | None
         Target folder ID (nullable for root).
-    visibility : VisibilityScope
-        Target visibility for the file.
+    access_mode : AccessMode
+        Target access mode for the file.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     status : UploadStatus
         Current status of the upload.
     parts_completed : list[dict] | None
@@ -100,16 +101,29 @@ class MultipartUpload(SQLModel, table=True):
     total_chunks: int = Field(nullable=False)
     chunk_size: int = Field(nullable=False)
     folder_id: UUID | None = Field(default=None, foreign_key="files_folders.id", nullable=True)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OWNER_ONLY,
         sa_column=Column(
             SAEnum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
             nullable=False,
+            index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=None,
+        sa_column=Column(
+            SAEnum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     status: UploadStatus = Field(

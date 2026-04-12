@@ -1,64 +1,51 @@
 """
 Permission helper functions for requiring access.
 
-Provides convenience functions and decorators for common
-permission checking patterns.
+Thin wrappers around :meth:`PermissionChecker.effective_role` that raise
+:class:`PermissionDeniedError` when the required capability is not
+granted. Most code should use :class:`BaseContentOperations`' built-in
+``_require_*`` methods instead of calling these directly; they exist for
+code that checks access outside the base-operations flow (e.g. the
+cascade module).
 """
 
 from uuid import UUID
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.permissions.roles import (
+    role_can_delete,
+    role_can_edit,
+    role_can_manage,
+    role_can_transfer,
+    role_can_view,
+)
 from uniffy.core.errors import PermissionDeniedError
-from uniffy.core.types import ContentType, VisibilityScope
+from uniffy.core.types import AccessMode, ContentRole, ContentType
 
 
-async def require_access(
+async def require_view(
     checker: PermissionChecker,
     user_id: UUID,
     organization_id: UUID,
     content_type: ContentType,
     content_id: UUID,
-    content_owner_id: UUID,
-    content_visibility: VisibilityScope,
+    *,
+    owner_id: UUID,
+    access_mode: AccessMode,
+    baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """
-    Require that a user can access content, raising PermissionDeniedError if not.
-
-    Parameters
-    ----------
-    checker : PermissionChecker
-        Permission checker instance.
-    user_id : UUID
-        User attempting to access.
-    organization_id : UUID
-        Organization ID.
-    content_type : ContentType
-        Type of content.
-    content_id : UUID
-        ID of the content.
-    content_owner_id : UUID
-        Owner of the content.
-    content_visibility : VisibilityScope
-        Visibility of the content.
-    error_message : str | None
-        Custom error message.
-
-    Raises
-    ------
-    PermissionDeniedError
-        If user cannot access the content.
-
-    """
-    can_access = await checker.can_access_content(
+    """Raise ``PermissionDeniedError`` unless the user can view the content."""
+    role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
         content_id=content_id,
-        content_owner_id=content_owner_id,
-        content_visibility=content_visibility,
+        owner_id=owner_id,
+        access_mode=access_mode,
+        baseline_role=baseline_role,
     )
-    if not can_access:
+    if not role_can_view(role):
         raise PermissionDeniedError(
             action="access",
             resource=error_message or content_type.value,
@@ -71,47 +58,23 @@ async def require_edit(
     organization_id: UUID,
     content_type: ContentType,
     content_id: UUID,
-    content_owner_id: UUID,
-    content_visibility: VisibilityScope,
+    *,
+    owner_id: UUID,
+    access_mode: AccessMode,
+    baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """
-    Require that a user can edit content, raising PermissionDeniedError if not.
-
-    Parameters
-    ----------
-    checker : PermissionChecker
-        Permission checker instance.
-    user_id : UUID
-        User attempting to edit.
-    organization_id : UUID
-        Organization ID.
-    content_type : ContentType
-        Type of content.
-    content_id : UUID
-        ID of the content.
-    content_owner_id : UUID
-        Owner of the content.
-    content_visibility : VisibilityScope
-        Visibility of the content.
-    error_message : str | None
-        Custom error message.
-
-    Raises
-    ------
-    PermissionDeniedError
-        If user cannot edit the content.
-
-    """
-    can_edit = await checker.can_edit_content(
+    """Raise ``PermissionDeniedError`` unless the user can edit the content."""
+    role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
         content_id=content_id,
-        content_owner_id=content_owner_id,
-        content_visibility=content_visibility,
+        owner_id=owner_id,
+        access_mode=access_mode,
+        baseline_role=baseline_role,
     )
-    if not can_edit:
+    if not role_can_edit(role):
         raise PermissionDeniedError(
             action="edit",
             resource=error_message or content_type.value,
@@ -124,93 +87,90 @@ async def require_delete(
     organization_id: UUID,
     content_type: ContentType,
     content_id: UUID,
-    content_owner_id: UUID,
+    *,
+    owner_id: UUID,
+    access_mode: AccessMode,
+    baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """
-    Require that a user can delete content, raising PermissionDeniedError if not.
-
-    Parameters
-    ----------
-    checker : PermissionChecker
-        Permission checker instance.
-    user_id : UUID
-        User attempting to delete.
-    organization_id : UUID
-        Organization ID.
-    content_type : ContentType
-        Type of content.
-    content_id : UUID
-        ID of the content.
-    content_owner_id : UUID
-        Owner of the content.
-    error_message : str | None
-        Custom error message.
-
-    Raises
-    ------
-    PermissionDeniedError
-        If user cannot delete the content.
-
-    """
-    can_delete = await checker.can_delete_content(
+    """Raise ``PermissionDeniedError`` unless the user can delete the content."""
+    role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
         content_id=content_id,
-        content_owner_id=content_owner_id,
+        owner_id=owner_id,
+        access_mode=access_mode,
+        baseline_role=baseline_role,
     )
-    if not can_delete:
+    if not role_can_delete(role):
         raise PermissionDeniedError(
             action="delete",
             resource=error_message or content_type.value,
         )
 
 
-async def require_share(
+async def require_manage(
     checker: PermissionChecker,
     user_id: UUID,
     organization_id: UUID,
     content_type: ContentType,
     content_id: UUID,
-    content_owner_id: UUID,
+    *,
+    owner_id: UUID,
+    access_mode: AccessMode,
+    baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
+    """Raise ``PermissionDeniedError`` unless the user can manage the content.
+
+    Managing covers: adding / removing members, changing access mode,
+    changing baseline role. Requires at least ADMIN.
     """
-    Require that a user can share content, raising PermissionDeniedError if not.
-
-    Parameters
-    ----------
-    checker : PermissionChecker
-        Permission checker instance.
-    user_id : UUID
-        User attempting to share.
-    organization_id : UUID
-        Organization ID.
-    content_type : ContentType
-        Type of content.
-    content_id : UUID
-        ID of the content.
-    content_owner_id : UUID
-        Owner of the content.
-    error_message : str | None
-        Custom error message.
-
-    Raises
-    ------
-    PermissionDeniedError
-        If user cannot share the content.
-
-    """
-    can_share = await checker.can_share_content(
+    role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
         content_id=content_id,
-        content_owner_id=content_owner_id,
+        owner_id=owner_id,
+        access_mode=access_mode,
+        baseline_role=baseline_role,
     )
-    if not can_share:
+    if not role_can_manage(role):
         raise PermissionDeniedError(
-            action="share",
+            action="manage",
+            resource=error_message or content_type.value,
+        )
+
+
+async def require_transfer(
+    checker: PermissionChecker,
+    user_id: UUID,
+    organization_id: UUID,
+    content_type: ContentType,
+    content_id: UUID,
+    *,
+    owner_id: UUID,
+    access_mode: AccessMode,
+    baseline_role: ContentRole | None,
+    error_message: str | None = None,
+) -> None:
+    """Raise ``PermissionDeniedError`` unless the user can transfer ownership.
+
+    Requires the OWNER role (org and domain admins bypass at the checker
+    level).
+    """
+    role = await checker.effective_role(
+        user_id=user_id,
+        organization_id=organization_id,
+        content_type=content_type,
+        content_id=content_id,
+        owner_id=owner_id,
+        access_mode=access_mode,
+        baseline_role=baseline_role,
+    )
+    if not role_can_transfer(role):
+        raise PermissionDeniedError(
+            action="transfer",
             resource=error_message or content_type.value,
         )

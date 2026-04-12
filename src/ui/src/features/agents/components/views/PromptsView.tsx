@@ -36,8 +36,9 @@ import {
 } from "@/features/agents/store/agentPromptsThunks";
 import type { SerializedPrompt } from "@/features/agents/store/agentPromptsThunks";
 import { PromptSource } from "@uniffy/proto/agents/v1/prompts_pb";
-import { ContentType, VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
-import { ShareButton } from "@/features/sharing";
+import { ContentType, AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
+import { useAccessPolicyDialog, setContentAccessMode } from "@/features/permissions";
+import { accessModeIcon } from "@/shared/utils/contentRoles";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 
@@ -80,11 +81,6 @@ const SIDEBAR_SECTIONS: PromptSectionConfig[] = [
     { id: "organization", name: "Organization", icon: Buildings },
 ];
 
-const VISIBILITY_ICON: Record<number, Icon> = {
-    [VisibilityScope.PRIVATE]: LockSimple,
-    [VisibilityScope.GROUP]: UsersThree,
-    [VisibilityScope.ORGANIZATION]: Buildings,
-};
 
 function PromptDetailPanel({
     prompt,
@@ -98,10 +94,11 @@ function PromptDetailPanel({
     currentUserId: string | undefined;
 }) {
     const dispatch = useAppDispatch();
+    const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
     const isBundled = prompt.source === PromptSource.BUNDLED;
     const isOwner = prompt.createdBy === currentUserId;
     const canEdit = !isBundled && isOwner;
-    const isPersonal = prompt.visibility === VisibilityScope.PRIVATE;
+    const isPersonal = prompt.accessMode === AccessMode.OWNER_ONLY;
     const canMoveToOrg = canEdit && isPersonal;
 
     const [editing, setEditing] = useState(false);
@@ -130,7 +127,12 @@ function PromptDetailPanel({
         setMoving(true);
         try {
             await dispatch(
-                updatePrompt({ promptId: prompt.id, visibility: VisibilityScope.ORGANIZATION })
+                setContentAccessMode({
+                    contentType: ContentType.PROMPT,
+                    contentId: prompt.id,
+                    accessMode: AccessMode.OPEN_TO_ORG,
+                    baselineRole: ContentRole.VIEWER,
+                })
             ).unwrap();
             setShowMoveToOrgConfirm(false);
         } finally {
@@ -237,13 +239,19 @@ function PromptDetailPanel({
                                 <Buildings size={18} />
                             </Button>
                         )}
-                        {!isBundled && prompt.visibility === VisibilityScope.PRIVATE && isOwner && (
-                            <ShareButton
-                                contentType={ContentType.PROMPT}
-                                contentId={prompt.id}
-                                contentTitle={prompt.displayName}
-                                iconOnly
-                            />
+                        {!isBundled && prompt.accessMode === AccessMode.OWNER_ONLY && isOwner && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openAccessPolicyDialog(
+                                    ContentType.PROMPT,
+                                    prompt.id,
+                                    prompt.displayName,
+                                )}
+                                title="Share"
+                            >
+                                <UsersThree size={18} />
+                            </Button>
                         )}
                         {canEdit && (
                             <Button
@@ -337,7 +345,7 @@ function CreatePromptForm({ onDone }: { onDone: (id?: string) => void }) {
     const [displayName, setDisplayName] = useState("");
     const [description, setDescription] = useState("");
     const [content, setContent] = useState("");
-    const [visibility, setVisibility] = useState<number>(VisibilityScope.PRIVATE);
+    const [accessMode, setAccessMode] = useState<number>(AccessMode.OWNER_ONLY);
     const [submitting, setSubmitting] = useState(false);
 
     const canSubmit = displayName.trim() && content.trim() && !submitting;
@@ -352,7 +360,7 @@ function CreatePromptForm({ onDone }: { onDone: (id?: string) => void }) {
                     displayName: displayName.trim(),
                     description: description.trim(),
                     content: content.trim(),
-                    visibility,
+                    accessMode,
                 })
             ).unwrap();
             onDone(result.id);
@@ -397,16 +405,16 @@ function CreatePromptForm({ onDone }: { onDone: (id?: string) => void }) {
                         </label>
                         <div className="space-y-1.5">
                             {([
-                                { value: VisibilityScope.PRIVATE, label: "Private", desc: "Only you can use this prompt", icon: LockSimple },
-                                { value: VisibilityScope.ORGANIZATION, label: "Organization", desc: "All organization members", icon: Buildings },
+                                { value: AccessMode.OWNER_ONLY, label: "Private", desc: "Only you can use this prompt", icon: LockSimple },
+                                { value: AccessMode.OPEN_TO_ORG, label: "Organization", desc: "All organization members", icon: Buildings },
                             ] as const).map((opt) => {
                                 const Icon = opt.icon;
-                                const isActive = visibility === opt.value;
+                                const isActive = accessMode === opt.value;
                                 return (
                                     <button
                                         key={opt.value}
                                         type="button"
-                                        onClick={() => setVisibility(opt.value)}
+                                        onClick={() => setAccessMode(opt.value)}
                                         className={cn(
                                             "w-full px-3 py-2 rounded-lg border text-left text-sm transition-colors flex items-center gap-3",
                                             isActive
@@ -507,7 +515,7 @@ export function PromptsView() {
         for (const prompt of filteredPrompts) {
             if (prompt.source === PromptSource.BUNDLED) {
                 result.bundled.push(prompt);
-            } else if (prompt.visibility === VisibilityScope.ORGANIZATION) {
+            } else if (prompt.accessMode === AccessMode.OPEN_TO_ORG) {
                 result.organization.push(prompt);
             } else if (prompt.createdBy === currentUserId) {
                 result.personal.push(prompt);
@@ -548,7 +556,7 @@ export function PromptsView() {
                     displayName: `${prompt.displayName} (Copy)`,
                     description: prompt.description,
                     content: prompt.content,
-                    visibility: VisibilityScope.PRIVATE,
+                    accessMode: AccessMode.OWNER_ONLY,
                 })
             ).unwrap();
             selectPrompt(result.id);
@@ -643,7 +651,7 @@ export function PromptsView() {
                                         </button>
                                         {!isCollapsed && sectionPrompts.map((prompt) => {
                                             const isSelected = prompt.id === selectedPromptId;
-                                            const VisIcon = VISIBILITY_ICON[prompt.visibility] || LockSimple;
+                                            const VisIcon = accessModeIcon(prompt.accessMode);
 
                                             return (
                                                 <button

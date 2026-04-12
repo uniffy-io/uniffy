@@ -42,9 +42,6 @@ import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { computeCriticalPath } from "@/features/projects/utils/criticalPath";
 import type { CriticalPathResult } from "@/features/projects/utils/criticalPath";
 
-// ============================================================================
-// Constants
-// ============================================================================
 
 const NODE_W = 280;
 const NODE_H = 100;
@@ -60,9 +57,6 @@ const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 2.5;
 const ZOOM_SENSITIVITY = 0.002;
 
-// ============================================================================
-// Types
-// ============================================================================
 
 type NodeState = "completed" | "blocker" | "blocked" | "free" | "neutral";
 
@@ -118,9 +112,7 @@ interface PanState {
   moved: boolean;
 }
 
-// ============================================================================
 // Layout algorithm
-// ============================================================================
 
 function computeNodeState(
   task: Task,
@@ -367,9 +359,7 @@ function buildGraphLayout(
   };
 }
 
-// ============================================================================
 // Main component
-// ============================================================================
 
 export function DependencyGraphView() {
   const dispatch = useAppDispatch();
@@ -751,9 +741,7 @@ export function DependencyGraphView() {
   );
 }
 
-// ============================================================================
 // GraphNode
-// ============================================================================
 
 const STATE_CLASSES: Record<NodeState, string> = {
   completed: "bg-muted/40 border-border text-muted-foreground",
@@ -906,9 +894,7 @@ function GraphNode({
   );
 }
 
-// ============================================================================
 // Sprint group region
-// ============================================================================
 
 function SprintGroupRegion({ group }: { group: SprintGroup }) {
   const borderClass =
@@ -950,9 +936,7 @@ function SprintGroupRegion({ group }: { group: SprintGroup }) {
   );
 }
 
-// ============================================================================
 // Zoom controls
-// ============================================================================
 
 interface ZoomControlsProps {
   scale: number;
@@ -999,9 +983,7 @@ function ZoomControls({ scale, onZoomIn, onZoomOut, onFit }: ZoomControlsProps) 
   );
 }
 
-// ============================================================================
 // Legend bar
-// ============================================================================
 
 function LegendBar({
   showCriticalPath,

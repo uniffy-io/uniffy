@@ -1,101 +1,54 @@
-"""Business logic for agent configuration management."""
+"""Agent operations."""
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.avatars import delete_avatar as s3_delete_avatar
 from uniffy.core.avatars import upload_avatar as s3_upload_avatar
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.errors import ValidationError
+from uniffy.core.content.members import (
+    ContentMembersOperations,
+    register_content_loader,
+)
+from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.types import ContentType, VisibilityScope
+from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.domains.agents.audit import create_audit_log
 from uniffy.domains.agents.content_policy import check_admin_content
 
 
 class AgentOperations(BaseContentOperations[Agent]):
-    """Operations for managing agent configurations.
-
-    Extends BaseContentOperations to provide automatic permission
-    checking, search indexing, and soft-delete for agents.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Agent CRUD with permissions and search indexing."""
 
     content_type = ContentType.AGENT
     model_class = Agent
 
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize agent operations."""
+        super().__init__(session)
+
     def _build_search_keywords(self, model: Agent) -> str:
-        """Build search keywords from agent name and soul prompt.
-
-        Parameters
-        ----------
-        model : Agent
-            The agent model.
-
-        Returns
-        -------
-        str
-            Keywords string for search indexing.
-
-        """
+        """Aggregate searchable text for an agent."""
         parts = [model.name]
         if model.soul_prompt:
             parts.append(model.soul_prompt[:500])
         return " ".join(parts)
 
     def _get_search_title(self, model: Agent) -> str:
-        """Get agent name as search title.
-
-        Parameters
-        ----------
-        model : Agent
-            The agent model.
-
-        Returns
-        -------
-        str
-            The agent name.
-
-        """
+        """Return the agent name for the search index."""
         return model.name
 
     def _get_url_path(self, model: Agent) -> str:
-        """Get frontend URL path for the agent.
-
-        Parameters
-        ----------
-        model : Agent
-            The agent model.
-
-        Returns
-        -------
-        str
-            URL path.
-
-        """
+        """Return the frontend route for this agent."""
         return f"/agents/{model.id}"
 
     def _get_search_description(self, model: Agent) -> str | None:
-        """Get truncated soul prompt as search description.
-
-        Parameters
-        ----------
-        model : Agent
-            The agent model.
-
-        Returns
-        -------
-        str | None
-            First 200 chars of soul prompt, or None.
-
-        """
+        """Return a description snippet from the soul prompt."""
         return model.soul_prompt[:200] if model.soul_prompt else None
 
     async def create_agent(
@@ -111,76 +64,34 @@ class AgentOperations(BaseContentOperations[Agent]):
         theme_color: str = "",
         is_default: bool = False,
         enabled_skills: list[str] | None = None,
-        visibility: VisibilityScope = VisibilityScope.ORGANIZATION,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
         group_ids: list[UUID] | None = None,
         image_model: str = "",
         primary_provider_key_id: UUID | None = None,
         image_provider_key_id: UUID | None = None,
         prompt_id: UUID | None = None,
     ) -> Agent:
-        """Create a new agent configuration.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user creating the agent.
-        organization_id : UUID
-            Organization context.
-        name : str
-            Agent display name.
-        soul_prompt : str
-            Personality and instruction text.
-        primary_model : str
-            Default model identifier.
-        fallback_models : list[str] | None
-            Ordered fallback model list.
-        avatar_emoji : str
-            Emoji avatar.
-        theme_color : str
-            Theme color string.
-        is_default : bool
-            Whether this is the org's default agent.
-        enabled_skills : list[str] | None
-            List of skill IDs to enable.
-        visibility : VisibilityScope
-            Visibility scope for the agent.
-        group_ids : list[UUID] | None
-            Group IDs when visibility is GROUP.
-        image_model : str
-            Image generation model identifier (empty = disabled).
-        primary_provider_key_id : UUID | None
-            Provider key for the primary model.
-        image_provider_key_id : UUID | None
-            Provider key for the image model.
-        prompt_id : UUID | None
-            Prompt template to use.
-
-        Returns
-        -------
-        Agent
-            The created agent.
-
-        Raises
-        ------
-        ValidationError
-            If name is empty.
-
-        """
+        """Create a new agent configuration."""
         if not name or not name.strip():
             raise ValidationError("name", "Agent name cannot be empty")
 
-        # Content policy check on soul_prompt (warn-only)
         if soul_prompt:
             check_admin_content(soul_prompt, "soul_prompt")
+
+        access_mode, baseline_role = await self._resolve_access_policy(
+            organization_id, access_mode, baseline_role
+        )
 
         if is_default:
             await self._clear_existing_default(organization_id)
 
-        # Default to the bundled prompt template when none is specified
         if prompt_id is None:
             prompt_id = await self._get_default_bundled_prompt_id()
 
         agent = Agent(
+            organization_id=organization_id,
+            owner_id=user_id,
             name=name.strip(),
             soul_prompt=soul_prompt,
             primary_model=primary_model,
@@ -195,14 +106,32 @@ class AgentOperations(BaseContentOperations[Agent]):
             avatar_emoji=avatar_emoji,
             theme_color=theme_color,
             is_default=is_default,
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
             image_model=image_model,
             primary_provider_key_id=primary_provider_key_id,
             image_provider_key_id=image_provider_key_id,
             prompt_id=prompt_id,
         )
+        self.session.add(agent)
+        await self.session.commit()
+        await self.session.refresh(agent)
 
-        agent = await self.create(user_id, organization_id, agent, group_ids)
+        if group_ids:
+            members_ops = ContentMembersOperations(self.session)
+            for gid in group_ids:
+                await members_ops.add_member(
+                    actor_user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=self.content_type,
+                    content_id=agent.id,
+                    subject_type=SubjectType.GROUP,
+                    subject_id=gid,
+                    role=ContentRole.VIEWER,
+                )
+
+        await self._index_for_search(agent, skip_member_lookup=not group_ids)
+        await self.session.commit()
 
         await create_audit_log(
             self.session,
@@ -221,78 +150,70 @@ class AgentOperations(BaseContentOperations[Agent]):
         self,
         user_id: UUID,
         organization_id: UUID,
-        visibility: VisibilityScope | None = None,
+        access_mode: AccessMode | None = None,
         personal_only: bool = False,
         group_id: UUID | None = None,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Agent], int]:
-        """List agents with filters and permission checking.
+        """List agents the user can access."""
+        from sqlalchemy import or_
 
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the list.
-        organization_id : UUID
-            Organization context.
-        visibility : VisibilityScope | None
-            Filter by visibility scope.
-        personal_only : bool
-            Only return agents owned by the user with PRIVATE visibility.
-        group_id : UUID | None
-            Filter by group membership.
-        page : int
-            Page number (1-based).
-        page_size : int
-            Items per page.
+        from uniffy.core.models.login.group_member import GroupMember
+        from uniffy.core.models.permissions.content_member import ContentMember
 
-        Returns
-        -------
-        tuple[list[Agent], int]
-            List of agents and total count.
-
-        """
         query = select(Agent).where(
             Agent.organization_id == organization_id,
             Agent.is_deleted == False,  # noqa: E712
         )
 
-        # Apply visibility/access filter
         if personal_only:
-            personal_filter = self.access_query.build_personal_filter(
-                user_id=user_id,
-                owner_id_column=Agent.owner_id,
-                visibility_column=Agent.visibility,
-            )
-            query = query.where(personal_filter)
+            query = query.where(Agent.owner_id == user_id)
         elif group_id:
-            group_filter = self.access_query.build_group_filter(
-                group_id=group_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Agent.id,
-                visibility_column=Agent.visibility,
+            now = datetime.now(UTC)
+            group_subq = (
+                select(ContentMember.content_id).where(
+                    ContentMember.organization_id == organization_id,
+                    ContentMember.content_type == self.content_type,
+                    ContentMember.subject_type == SubjectType.GROUP,
+                    ContentMember.subject_id == group_id,
+                    ContentMember.role != ContentRole.BLOCKED,
+                    or_(
+                        ContentMember.expires_at.is_(None),
+                        ContentMember.expires_at > now,
+                    ),
+                )
             )
-            query = query.where(group_filter)
+            query = query.where(Agent.id.in_(group_subq))
         else:
-            access_filter = self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Agent.id,
-                owner_id_column=Agent.owner_id,
-                visibility_column=Agent.visibility,
+            is_admin = await self.permission_checker.is_org_admin(
+                user_id, organization_id
             )
-            query = query.where(access_filter)
+            if not is_admin:
+                is_admin = await self.permission_checker.is_domain_admin(
+                    user_id, organization_id, self.content_type
+                )
+            if not is_admin:
+                access_filter = self.access_query.build_accessible_filter(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=self.content_type,
+                    content_id_column=Agent.id,
+                    owner_id_column=Agent.owner_id,
+                    access_mode_column=Agent.access_mode,
+                    baseline_role_column=Agent.baseline_role,
+                )
+                query = query.where(access_filter)
 
-        if visibility:
-            query = query.where(Agent.visibility == visibility)
+        # Avoid the unused import warning if personal_only / group_id aren't taken.
+        _ = GroupMember
 
-        # Count total
+        if access_mode is not None:
+            query = query.where(Agent.access_mode == access_mode)
+
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
-        # Sort and paginate
         query = query.order_by(Agent.updated_at.desc())
         query = query.offset((page - 1) * page_size).limit(page_size)
 
@@ -316,8 +237,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         is_default: bool | None = None,
         enabled_skills: list[str] | None = None,
         enabled_tools: list[str] | None = None,
-        visibility: VisibilityScope | None = None,
-        group_ids: list[UUID] | None = None,
         image_model: str | None = None,
         primary_provider_key_id: UUID | None = None,
         image_provider_key_id: UUID | None = None,
@@ -328,137 +247,81 @@ class AgentOperations(BaseContentOperations[Agent]):
     ) -> Agent:
         """Update an agent configuration.
 
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        agent_id : UUID
-            Agent to update.
-        name : str | None
-            New name (None = no change).
-        soul_prompt : str | None
-            New soul prompt (None = no change).
-        primary_model : str | None
-            New primary model (None = no change).
-        fallback_models : list[str] | None
-            New fallback models (None = no change).
-        avatar_emoji : str | None
-            New avatar emoji (None = no change).
-        theme_color : str | None
-            New theme color (None = no change).
-        is_default : bool | None
-            New default status (None = no change).
-        enabled_skills : list[str] | None
-            New enabled skills list (None = no change).
-        enabled_tools : list[str] | None
-            New enabled tools list (None = no change).
-        visibility : VisibilityScope | None
-            New visibility (None = no change).
-        group_ids : list[UUID] | None
-            New group IDs for GROUP visibility.
-        image_model : str | None
-            New image model (None = no change).
-        primary_provider_key_id : UUID | None
-            New provider key for the primary model (None = no change).
-        image_provider_key_id : UUID | None
-            New provider key for the image model (None = no change).
-        clear_primary_provider_key : bool
-            Set to True to clear the primary provider key.
-        clear_image_provider_key : bool
-            Set to True to clear the image provider key.
-        prompt_id : UUID | None
-            New prompt template (None = no change).
-        clear_prompt : bool
-            Set to True to clear the prompt template.
-
-        Returns
-        -------
-        Agent
-            The updated agent.
-
-        Raises
-        ------
-        ValidationError
-            If name is empty.
-
+        Access-policy changes (access mode, baseline role, members) go
+        through ``permissions.v1.MembersService``, never this method.
         """
         if name is not None and not name.strip():
             raise ValidationError("name", "Agent name cannot be empty")
 
-        if name is not None:
-            name = name.strip()
+        agent = await self._fetch_by_id(agent_id, organization_id)
+        if agent is None:
+            raise NotFoundError("Agent", agent_id)
 
-        # Handle is_default: need to clear other defaults first
-        if is_default is not None:
-            agent = await self.get_by_id(user_id, organization_id, agent_id)
-            if is_default and not agent.is_default:
-                await self._clear_existing_default(organization_id)
+        await self._require_edit(user_id, organization_id, agent)
 
-        # Handle group links for GROUP visibility changes
-        if visibility is not None and group_ids is not None:
-            await self._remove_group_links(agent_id)
-            if visibility == VisibilityScope.GROUP and group_ids:
-                await self._create_group_links(
-                    agent_id,
-                    group_ids,
-                    user_id,
-                    organization_id,
-                )
+        if is_default is not None and is_default and not agent.is_default:
+            await self._clear_existing_default(organization_id)
 
-        # Build updates dict, filtering None values
         updates: dict[str, Any] = {}
         if name is not None:
-            updates["name"] = name
+            updates["name"] = name.strip()
+            agent.name = name.strip()
         if soul_prompt is not None:
+            check_admin_content(soul_prompt, "soul_prompt")
             updates["soul_prompt"] = soul_prompt
+            agent.soul_prompt = soul_prompt
         if primary_model is not None:
             updates["primary_model"] = primary_model
+            agent.primary_model = primary_model
         if fallback_models is not None:
             updates["fallback_models"] = fallback_models
+            agent.fallback_models = fallback_models
         if avatar_emoji is not None:
             updates["avatar_emoji"] = avatar_emoji
+            agent.avatar_emoji = avatar_emoji
         if theme_color is not None:
             updates["theme_color"] = theme_color
+            agent.theme_color = theme_color
         if is_default is not None:
             updates["is_default"] = is_default
+            agent.is_default = is_default
         if enabled_skills is not None:
             updates["enabled_skills"] = enabled_skills
+            agent.enabled_skills = enabled_skills
         if enabled_tools is not None:
             updates["enabled_tools"] = enabled_tools
-        if visibility is not None:
-            updates["visibility"] = visibility
+            agent.enabled_tools = enabled_tools
         if image_model is not None:
             updates["image_model"] = image_model
+            agent.image_model = image_model
         if primary_provider_key_id is not None:
             updates["primary_provider_key_id"] = primary_provider_key_id
+            agent.primary_provider_key_id = primary_provider_key_id
         if image_provider_key_id is not None:
             updates["image_provider_key_id"] = image_provider_key_id
+            agent.image_provider_key_id = image_provider_key_id
         if prompt_id is not None:
             updates["prompt_id"] = prompt_id
+            agent.prompt_id = prompt_id
 
-        # Content policy check on soul_prompt (warn-only)
-        if "soul_prompt" in updates:
-            check_admin_content(updates["soul_prompt"], "soul_prompt")
-
-        agent = await self.update(user_id, organization_id, agent_id, **updates)
-
-        # Nullable field clears must be handled after self.update()
-        # because BaseContentOperations.update() skips None values
-        # (it uses None to mean "no change").
-        needs_commit = False
         if clear_primary_provider_key:
             agent.primary_provider_key_id = None
-            needs_commit = True
+            updates["primary_provider_key_id"] = None
         if clear_image_provider_key:
             agent.image_provider_key_id = None
-            needs_commit = True
+            updates["image_provider_key_id"] = None
         if clear_prompt:
             agent.prompt_id = None
-            needs_commit = True
+            updates["prompt_id"] = None
 
-        # Audit log for security-relevant field changes
+        agent.updated_at = datetime.now(UTC)
+
+        await self.session.commit()
+        await self.session.refresh(agent)
+
+        await self._index_for_search(agent)
+        await self.session.commit()
+
         audit_fields = {
             k: v
             for k, v in updates.items()
@@ -469,19 +332,11 @@ class AgentOperations(BaseContentOperations[Agent]):
                 "fallback_models",
                 "enabled_tools",
                 "enabled_skills",
-                "visibility",
                 "primary_provider_key_id",
                 "image_provider_key_id",
                 "prompt_id",
             }
         }
-        if clear_primary_provider_key:
-            audit_fields["primary_provider_key_id"] = None
-        if clear_image_provider_key:
-            audit_fields["image_provider_key_id"] = None
-        if clear_prompt:
-            audit_fields["prompt_id"] = None
-
         if audit_fields:
             serializable = {}
             for k, v in audit_fields.items():
@@ -500,11 +355,7 @@ class AgentOperations(BaseContentOperations[Agent]):
                 resource_id=agent_id,
                 details={"changes": serializable},
             )
-            needs_commit = True
-
-        if needs_commit:
             await self.session.commit()
-            await self.session.refresh(agent)
 
         return agent
 
@@ -517,43 +368,13 @@ class AgentOperations(BaseContentOperations[Agent]):
         image_data: bytes,
         filename: str,
     ) -> Agent:
-        """Upload and set agent avatar.
-
-        Validates, resizes to 3 sizes (sm/md/lg), uploads to S3, and updates agent record.
-        Deletes any existing avatar before setting the new one.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user (for permission check).
-        organization_id : UUID
-            Organization context.
-        agent_id : UUID
-            Agent to update.
-        image_data : bytes
-            Raw image bytes.
-        filename : str
-            Original filename for MIME type detection.
-
-        Returns
-        -------
-        Agent
-            Updated agent.
-
-        Raises
-        ------
-        ValueError
-            If image validation fails.
-
-        """
+        """Upload and set an agent avatar."""
         agent = await self.get_by_id(user_id, organization_id, agent_id)
         await self._require_edit(user_id, organization_id, agent)
 
-        # Delete old avatar from S3 if exists
         if agent.avatar_key:
             await s3_delete_avatar(agent.avatar_key)
 
-        # Upload new avatar
         avatar_key = await s3_upload_avatar(
             agent_id,
             image_data,
@@ -573,25 +394,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         organization_id: UUID,
         agent_id: UUID,
     ) -> Agent:
-        """Delete agent avatar.
-
-        Removes avatar images from S3 and clears the avatar_key on the agent.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user (for permission check).
-        organization_id : UUID
-            Organization context.
-        agent_id : UUID
-            Agent to update.
-
-        Returns
-        -------
-        Agent
-            Updated agent.
-
-        """
+        """Delete an agent avatar."""
         agent = await self.get_by_id(user_id, organization_id, agent_id)
         await self._require_edit(user_id, organization_id, agent)
 
@@ -610,38 +413,30 @@ class AgentOperations(BaseContentOperations[Agent]):
         organization_id: UUID,
         agent_id: UUID,
     ) -> None:
-        """Soft-delete an agent.
+        """Soft-delete an agent."""
+        agent = await self._fetch_by_id(agent_id, organization_id)
+        if agent is None:
+            raise NotFoundError("Agent", agent_id)
 
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        agent_id : UUID
-            Agent to delete.
+        await self._require_delete(user_id, organization_id, agent)
 
-        """
-        await self.delete(user_id, organization_id, agent_id)
+        agent.is_deleted = True
+        agent.deleted_at = datetime.now(UTC)
+        await self.session.commit()
+
+        from uniffy.core.search.indexer import build_content_urn
+
+        await self.search_indexer.remove(
+            build_content_urn(self.content_type, agent_id), organization_id
+        )
+        await self.session.commit()
 
     async def get_default_agent(
         self,
         *,
         organization_id: UUID,
     ) -> Agent | None:
-        """Get the organization's default agent.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization context.
-
-        Returns
-        -------
-        Agent | None
-            The default agent, or None if not set.
-
-        """
+        """Return the organization's default agent, if any."""
         result = await self.session.execute(
             select(Agent).where(
                 Agent.organization_id == organization_id,
@@ -651,15 +446,37 @@ class AgentOperations(BaseContentOperations[Agent]):
         )
         return result.scalar_one_or_none()
 
+    async def _resolve_access_policy(
+        self,
+        organization_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Fill in defaults and validate an (access_mode, baseline) pair."""
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, self.content_type
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
+
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+            return access_mode, baseline_role
+
+        return access_mode, None
+
     async def _get_default_bundled_prompt_id(self) -> UUID | None:
-        """Return the ID of the first bundled prompt template, if any.
-
-        Returns
-        -------
-        UUID | None
-            The bundled prompt ID, or None if no bundled prompts exist.
-
-        """
+        """Return the id of the first bundled prompt template, if any."""
         from uniffy.core.models.agents.prompt import AgentPrompt
 
         result = await self.session.execute(
@@ -673,14 +490,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         return result.scalar_one_or_none()
 
     async def _clear_existing_default(self, organization_id: UUID) -> None:
-        """Clear the is_default flag on any existing default agent.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization context.
-
-        """
+        """Clear ``is_default`` on any existing default agent in the org."""
         result = await self.session.execute(
             select(Agent).where(
                 Agent.organization_id == organization_id,
@@ -691,3 +501,24 @@ class AgentOperations(BaseContentOperations[Agent]):
         existing = result.scalar_one_or_none()
         if existing:
             existing.is_default = False
+
+
+# Content loader registration
+
+
+async def _load_agent(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_id: UUID,
+) -> Agent | None:
+    """Loader used by ``ContentMembersOperations`` to fetch an agent row."""
+    result = await session.execute(
+        select(Agent).where(
+            Agent.id == content_id,
+            Agent.organization_id == organization_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+register_content_loader(ContentType.AGENT, _load_agent)

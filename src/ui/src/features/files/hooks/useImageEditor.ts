@@ -350,7 +350,6 @@ export function useImageEditor(options: UseImageEditorOptions) {
     );
 
     return {
-        // State
         isEditing: editorState.isEditing,
         isProcessing,
         isSaving: editorState.isSaving,
@@ -381,7 +380,6 @@ export function useImageEditor(options: UseImageEditorOptions) {
         previewFilter,
         previewTransform,
 
-        // Actions
         startEditing,
         stopEditing,
         rotateRight: handleRotateRight,

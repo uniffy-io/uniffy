@@ -20,9 +20,6 @@ import type {
     AutosaveNoteRequest,
     MoveNoteRequest,
     CopyNoteRequest,
-    ShareNoteWithGroupRequest,
-    UnshareNoteFromGroupRequest,
-    GetNoteSharingRequest,
     EmptyTrashRequest,
 } from '@uniffy/proto/notes/v1/notes_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
@@ -111,27 +108,6 @@ export const notesApi = {
      */
     copyNote: async (request: PartialMessage<CopyNoteRequest>) => {
         return notesClient.copyNote(request);
-    },
-
-    /**
-     * Share note with a group.
-     */
-    shareNoteWithGroup: async (request: PartialMessage<ShareNoteWithGroupRequest>) => {
-        return notesClient.shareNoteWithGroup(request);
-    },
-
-    /**
-     * Unshare note from a group.
-     */
-    unshareNoteFromGroup: async (request: PartialMessage<UnshareNoteFromGroupRequest>) => {
-        return notesClient.unshareNoteFromGroup(request);
-    },
-
-    /**
-     * Get sharing information for a note.
-     */
-    getNoteSharing: async (request: PartialMessage<GetNoteSharingRequest>) => {
-        return notesClient.getNoteSharing(request);
     },
 
     /**

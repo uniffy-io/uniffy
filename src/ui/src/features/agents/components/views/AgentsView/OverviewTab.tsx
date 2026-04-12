@@ -22,8 +22,9 @@ import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, type SelectOption } from "@/components/ui/select";
-import { useMyPermission } from "@/features/sharing";
+import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 
 function SectionHeader({
     icon: Icon,
@@ -102,8 +103,8 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     const navigate = useNavigate();
     const providerKeys = useAppSelector(selectProviderKeys);
 
-    const { permission } = useMyPermission(ContentType.AGENT, agent.id);
-    const canEdit = permission?.canEdit ?? permission?.isOwner ?? true;
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const canEdit = roleCanEdit(myRole);
 
     const primaryKeyId = agent.primaryProviderKeyId || "";
     const imageKeyId = agent.imageProviderKeyId || "";

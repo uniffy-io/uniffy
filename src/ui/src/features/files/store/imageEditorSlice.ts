@@ -417,7 +417,6 @@ export const {
     setSaveError,
 } = imageEditorSlice.actions;
 
-// Selectors
 export const selectIsEditing = (state: { imageEditor: ImageEditorState }) =>
     state.imageEditor.isEditing;
 

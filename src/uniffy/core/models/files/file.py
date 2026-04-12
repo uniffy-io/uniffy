@@ -10,8 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 from uniffy.core.models.files.media_info import FileMediaInfo  # noqa: F401
-from uniffy.core.models.shared import VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class ExtractionStatus(str, Enum):
@@ -47,11 +46,6 @@ class File(SQLModel, table=True):
     Files are organization-scoped and support versioning, folders,
     and the same permission model as notes.
 
-    Content Visibility:
-    - PRIVATE: Personal space - only owner can access
-    - GROUP: Shared with specific group(s) via ContentGroupLink
-    - ORGANIZATION: Accessible to all organization members
-
     Attributes
     ----------
     id : UUID
@@ -60,8 +54,10 @@ class File(SQLModel, table=True):
         Organization this file belongs to (foreign key).
     owner_id : UUID
         User who owns the file (foreign key to login_users).
-    visibility : VisibilityScope
-        Who can access this file (PRIVATE, GROUP, ORGANIZATION).
+    access_mode : AccessMode
+        How access to this file is governed (OWNER_ONLY, OPEN_TO_ORG, MEMBERS_ONLY).
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     filename : str
         Current filename (may differ from original after rename).
     original_filename : str
@@ -102,17 +98,29 @@ class File(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OWNER_ONLY,
         sa_column=Column(
             SAEnum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=None,
+        sa_column=Column(
+            SAEnum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     filename: str = Field(max_length=500, nullable=False)
@@ -168,5 +176,5 @@ class File(SQLModel, table=True):
         """Return string representation of File."""
         return (
             f"<File(id={self.id}, filename={self.filename!r}, "
-            f"visibility={self.visibility}, organization_id={self.organization_id})>"
+            f"access_mode={self.access_mode}, organization_id={self.organization_id})>"
         )

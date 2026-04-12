@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { PaginationRequest, PaginationResponse, VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole, PaginationRequest, PaginationResponse } from "../../common/v1/common_pb.js";
 
 /**
  * Scheduled task info returned to clients
@@ -109,9 +109,9 @@ export class CronTaskInfo extends Message<CronTaskInfo> {
   maxConsecutiveFailures = 0;
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 20;
+   * @generated from field: common.v1.AccessMode access_mode = 20;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * @generated from field: google.protobuf.Timestamp created_at = 21;
@@ -129,6 +129,13 @@ export class CronTaskInfo extends Message<CronTaskInfo> {
    * @generated from field: optional string agent_name = 23;
    */
   agentName?: string;
+
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 24;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CronTaskInfo>) {
     super();
@@ -157,10 +164,11 @@ export class CronTaskInfo extends Message<CronTaskInfo> {
     { no: 17, name: "run_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 18, name: "consecutive_failures", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 19, name: "max_consecutive_failures", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 20, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 20, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 21, name: "created_at", kind: "message", T: Timestamp },
     { no: 22, name: "updated_at", kind: "message", T: Timestamp, opt: true },
     { no: 23, name: "agent_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 24, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CronTaskInfo {
@@ -325,9 +333,14 @@ export class CreateCronTaskRequest extends Message<CreateCronTaskRequest> {
   description?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 8;
+   * @generated from field: optional common.v1.AccessMode access_mode = 8;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 9;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CreateCronTaskRequest>) {
     super();
@@ -344,7 +357,8 @@ export class CreateCronTaskRequest extends Message<CreateCronTaskRequest> {
     { no: 5, name: "cron_expression", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "timezone", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 8, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 9, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCronTaskRequest {

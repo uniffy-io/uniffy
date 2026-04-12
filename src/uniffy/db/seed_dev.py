@@ -34,7 +34,7 @@ async def seed_development_data(
     from uniffy.core.models import Group, OrganizationMember, OrganizationRole, User
     from uniffy.core.models.login.group_member import GroupMember, GroupRole
     from uniffy.core.search.indexer import build_content_urn
-    from uniffy.core.types import ContentType
+    from uniffy.core.types import AccessMode, ContentRole, ContentType
     from uniffy.domains.auth.passwords import hash_password
 
     logger.info("Creating 5 test users...")
@@ -164,7 +164,8 @@ async def seed_development_data(
             title=user.full_name,
             entity_type=ContentType.USER.value,
             url_path=f"/admin/users/{user.id}",
-            visibility="ORGANIZATION",  # Users are visible to org members
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
             owner_id=user.id,
             keywords=f"{user.full_name} {user.username} {user.email}",
             description=user.email,
@@ -202,7 +203,7 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
     """
     from uniffy.core.crypto import encrypt_value
     from uniffy.core.models.agents.provider_key import ProviderKey
-    from uniffy.core.types import VisibilityScope
+    from uniffy.core.types import AccessMode, ContentRole
     from uniffy.domains.agents.providers.utils import build_key_hint
 
     provider_key_configs = [
@@ -243,7 +244,8 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
             key_hint=build_key_hint(credential),
             is_valid=True,
             is_enabled=True,
-            visibility=VisibilityScope.ORGANIZATION,
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
             created_by=admin_user.id,
         )
         session.add(key)
@@ -340,7 +342,7 @@ async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list
 
     from uniffy.core.models.agents.agent import Agent
     from uniffy.core.models.agents.prompt import AgentPrompt
-    from uniffy.core.types import VisibilityScope
+    from uniffy.core.types import AccessMode, ContentRole
 
     if not provider_keys:
         logger.info("No provider keys seeded, skipping dev agent creation")
@@ -385,7 +387,8 @@ async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list
             avatar_emoji=config["avatar_emoji"],
             theme_color=config["theme_color"],
             is_default=is_first,
-            visibility=VisibilityScope.ORGANIZATION,
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
         )
         session.add(agent)
         is_first = False

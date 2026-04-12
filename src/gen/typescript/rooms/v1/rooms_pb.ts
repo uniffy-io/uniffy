@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
 
 /**
  * Type of bookable room or resource
@@ -181,9 +181,9 @@ export class Room extends Message<Room> {
   imageFileId?: string;
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 14;
+   * @generated from field: common.v1.AccessMode access_mode = 14;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * @generated from field: google.protobuf.Timestamp created_at = 15;
@@ -194,6 +194,11 @@ export class Room extends Message<Room> {
    * @generated from field: google.protobuf.Timestamp updated_at = 16;
    */
   updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 17;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<Room>) {
     super();
@@ -216,9 +221,10 @@ export class Room extends Message<Room> {
     { no: 11, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 12, name: "amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 13, name: "image_file_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 14, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 14, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 15, name: "created_at", kind: "message", T: Timestamp },
     { no: 16, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 17, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Room {
@@ -481,14 +487,19 @@ export class CreateRoomRequest extends Message<CreateRoomRequest> {
   imageFileId?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 11;
+   * @generated from field: optional common.v1.AccessMode access_mode = 11;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: repeated string group_ids = 12;
    */
   groupIds: string[] = [];
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 13;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CreateRoomRequest>) {
     super();
@@ -508,8 +519,9 @@ export class CreateRoomRequest extends Message<CreateRoomRequest> {
     { no: 8, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 10, name: "image_file_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 11, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 11, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 12, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 13, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateRoomRequest {
@@ -637,9 +649,9 @@ export class UpdateRoomRequest extends Message<UpdateRoomRequest> {
   imageFileId?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 13;
+   * @generated from field: optional common.v1.AccessMode access_mode = 13;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * Whether amenities list should replace existing (true) or be ignored if empty (false)
@@ -647,6 +659,11 @@ export class UpdateRoomRequest extends Message<UpdateRoomRequest> {
    * @generated from field: bool replace_amenities = 14;
    */
   replaceAmenities = false;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 15;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<UpdateRoomRequest>) {
     super();
@@ -668,8 +685,9 @@ export class UpdateRoomRequest extends Message<UpdateRoomRequest> {
     { no: 10, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "amenities", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 12, name: "image_file_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 13, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 13, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 14, name: "replace_amenities", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 15, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateRoomRequest {

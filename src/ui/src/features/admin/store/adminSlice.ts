@@ -39,12 +39,9 @@ import {
  */
 export interface SerializedContentTypeDefaults {
     contentType: number;
-    defaultVisibility: number;
-    membersCanView: boolean;
-    membersCanEdit: boolean;
-    membersCanDelete: boolean;
-    membersCanShare: boolean;
-    updatedAt: { seconds: number; nanos: number } | null;
+    defaultAccessMode: number;
+    defaultBaselineRole: number | null;
+    updatedAt: { seconds: string; nanos: number } | null;
 }
 
 /**
@@ -104,12 +101,9 @@ export interface SerializedOrgOverview {
 export function serializeContentTypeDefaults(d: ContentTypeDefaults): SerializedContentTypeDefaults {
     return {
         contentType: d.contentType,
-        defaultVisibility: d.defaultVisibility,
-        membersCanView: d.membersCanView,
-        membersCanEdit: d.membersCanEdit,
-        membersCanDelete: d.membersCanDelete,
-        membersCanShare: d.membersCanShare,
-        updatedAt: d.updatedAt ? { seconds: Number(d.updatedAt.seconds), nanos: d.updatedAt.nanos } : null,
+        defaultAccessMode: d.defaultAccessMode,
+        defaultBaselineRole: d.defaultBaselineRole ?? null,
+        updatedAt: d.updatedAt ? { seconds: String(d.updatedAt.seconds), nanos: d.updatedAt.nanos } : null,
     };
 }
 

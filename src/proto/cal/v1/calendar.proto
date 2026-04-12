@@ -201,8 +201,8 @@ message CalendarEvent {
   repeated string tags = 17;
   // Linked resources (notes, files, chats)
   repeated LinkedResource linked_resources = 18;
-  // Visibility scope
-  common.v1.VisibilityScope visibility = 19;
+  // Access mode
+  common.v1.AccessMode access_mode = 19;
   // Is deleted flag (soft delete)
   bool is_deleted = 20;
   // URNs referenced in this event's description (outgoing links)
@@ -227,6 +227,8 @@ message CalendarEvent {
   optional string room_location = 31;
   optional int32 room_capacity = 32;
   repeated string room_amenities = 33;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 34;
 }
 
 // Event attendee
@@ -311,12 +313,14 @@ message CreateEventRequest {
   repeated string tags = 15;
   // Linked resource URNs
   repeated string linked_resource_urns = 16;
-  // Visibility scope (defaults to PRIVATE)
-  optional common.v1.VisibilityScope visibility = 17;
+  // Access mode (defaults to OWNER_ONLY)
+  optional common.v1.AccessMode access_mode = 17;
   // Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
   repeated int32 reminders = 18;
   // Optional room ID to book alongside the event
   optional string room_id = 19;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 20;
 }
 
 // Request to get an event
@@ -361,8 +365,8 @@ message UpdateEventRequest {
   repeated string tags = 15;
   // Updated linked resource URNs (replaces existing)
   repeated string linked_resource_urns = 16;
-  // Updated visibility
-  optional common.v1.VisibilityScope visibility = 17;
+  // Updated access mode
+  optional common.v1.AccessMode access_mode = 17;
   // Updated attendee IDs (replaces existing list)
   repeated string attendee_ids = 18;
   // Updated reminder intervals in minutes before event
@@ -373,6 +377,8 @@ message UpdateEventRequest {
   optional string occurrence_date = 21;
   // Optional room ID to book/change for this event
   optional string room_id = 22;
+  // Updated baseline role granted by access mode
+  optional common.v1.ContentRole baseline_role = 23;
 }
 
 // Request to delete an event
@@ -512,7 +518,7 @@ message UpdateCalendarRequest {
   optional string name = 3;
   // Updated color
   optional string color = 4;
-  // Updated visibility
+  // Updated is_visible flag (grid display toggle)
   optional bool is_visible = 5;
   // Updated default flag
   optional bool is_default = 6;
@@ -704,14 +710,16 @@ message EventTemplate {
   string category_id = 8;
   // Tags
   repeated string tags = 9;
-  // Visibility scope
-  common.v1.VisibilityScope visibility = 10;
+  // Access mode
+  common.v1.AccessMode access_mode = 10;
   // Creator ID
   string created_by = 11;
   // Created timestamp
   google.protobuf.Timestamp created_at = 12;
   // Updated timestamp
   google.protobuf.Timestamp updated_at = 13;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 14;
 }
 
 message CreateEventTemplateRequest {
@@ -723,7 +731,8 @@ message CreateEventTemplateRequest {
   string meeting_url = 6;
   string category_id = 7;
   repeated string tags = 8;
-  common.v1.VisibilityScope visibility = 9;
+  common.v1.AccessMode access_mode = 9;
+  optional common.v1.ContentRole baseline_role = 10;
 }
 
 message GetEventTemplateRequest {
@@ -741,7 +750,8 @@ message UpdateEventTemplateRequest {
   optional string meeting_url = 7;
   optional string category_id = 8;
   repeated string tags = 9;
-  optional common.v1.VisibilityScope visibility = 10;
+  optional common.v1.AccessMode access_mode = 10;
+  optional common.v1.ContentRole baseline_role = 11;
 }
 
 message DeleteEventTemplateRequest {

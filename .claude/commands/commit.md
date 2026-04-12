@@ -1,5 +1,6 @@
 ---
 description: Create a conventional commit for all uncommitted changes
+user_invocable: true
 ---
 
 # Commit: Create Conventional Commit

@@ -18,15 +18,26 @@ down_revision: str | None = "003"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
     create_type=False,
 )
-_node_type_enum = postgresql.ENUM("NOTE", "FOLDER", "TEMPLATE", name="nodetype", create_type=False)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
+    create_type=False,
+)
+_node_type_enum = postgresql.ENUM(
+    "NOTE", "FOLDER", "TEMPLATE", "CANVAS", name="nodetype", create_type=False
+)
 
 
 def upgrade() -> None:
@@ -36,7 +47,10 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column(
+            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
+        ),
+        sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("node_type", _node_type_enum, nullable=False, server_default="NOTE"),
         sa.Column("title", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
         sa.Column(
@@ -67,7 +81,7 @@ def upgrade() -> None:
         "ix_notes_notes_organization_id", "notes_notes", ["organization_id"], unique=False
     )
     op.create_index("ix_notes_notes_owner_id", "notes_notes", ["owner_id"], unique=False)
-    op.create_index("ix_notes_notes_visibility", "notes_notes", ["visibility"], unique=False)
+    op.create_index("ix_notes_notes_access_mode", "notes_notes", ["access_mode"], unique=False)
     op.create_index("ix_notes_notes_node_type", "notes_notes", ["node_type"], unique=False)
     op.create_index("ix_notes_notes_slug", "notes_notes", ["slug"], unique=False)
     op.create_index("ix_notes_notes_parent_id", "notes_notes", ["parent_id"], unique=False)

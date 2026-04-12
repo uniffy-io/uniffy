@@ -21,7 +21,7 @@ CREDENTIAL_TYPE_API_KEY: CredentialType
 CREDENTIAL_TYPE_SETUP_TOKEN: CredentialType
 
 class ProviderKeyInfo(_message.Message):
-    __slots__ = ("id", "provider", "credential_type", "label", "key_hint", "is_valid", "last_validated_at", "last_used_at", "last_error", "created_at", "updated_at", "is_enabled", "created_by", "visibility")
+    __slots__ = ("id", "provider", "credential_type", "label", "key_hint", "is_valid", "last_validated_at", "last_used_at", "last_error", "created_at", "updated_at", "is_enabled", "created_by", "access_mode", "baseline_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
     CREDENTIAL_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -35,7 +35,8 @@ class ProviderKeyInfo(_message.Message):
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     IS_ENABLED_FIELD_NUMBER: _ClassVar[int]
     CREATED_BY_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     provider: str
     credential_type: CredentialType
@@ -49,8 +50,9 @@ class ProviderKeyInfo(_message.Message):
     updated_at: _timestamp_pb2.Timestamp
     is_enabled: bool
     created_by: str
-    visibility: _common_pb2.VisibilityScope
-    def __init__(self, id: _Optional[str] = ..., provider: _Optional[str] = ..., credential_type: _Optional[_Union[CredentialType, str]] = ..., label: _Optional[str] = ..., key_hint: _Optional[str] = ..., is_valid: _Optional[bool] = ..., last_validated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_used_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_error: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_enabled: _Optional[bool] = ..., created_by: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+    access_mode: _common_pb2.AccessMode
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., provider: _Optional[str] = ..., credential_type: _Optional[_Union[CredentialType, str]] = ..., label: _Optional[str] = ..., key_hint: _Optional[str] = ..., is_valid: _Optional[bool] = ..., last_validated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_used_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_error: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_enabled: _Optional[bool] = ..., created_by: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class ModelInfo(_message.Message):
     __slots__ = ("id", "display_name", "provider", "context_window", "supports_tools", "supports_vision", "supports_thinking")
@@ -71,20 +73,22 @@ class ModelInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., display_name: _Optional[str] = ..., provider: _Optional[str] = ..., context_window: _Optional[int] = ..., supports_tools: _Optional[bool] = ..., supports_vision: _Optional[bool] = ..., supports_thinking: _Optional[bool] = ...) -> None: ...
 
 class AddProviderKeyRequest(_message.Message):
-    __slots__ = ("organization_id", "provider", "credential_type", "label", "credential", "visibility")
+    __slots__ = ("organization_id", "provider", "credential_type", "label", "credential", "access_mode", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
     CREDENTIAL_TYPE_FIELD_NUMBER: _ClassVar[int]
     LABEL_FIELD_NUMBER: _ClassVar[int]
     CREDENTIAL_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     provider: str
     credential_type: CredentialType
     label: str
     credential: str
-    visibility: _common_pb2.VisibilityScope
-    def __init__(self, organization_id: _Optional[str] = ..., provider: _Optional[str] = ..., credential_type: _Optional[_Union[CredentialType, str]] = ..., label: _Optional[str] = ..., credential: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+    access_mode: _common_pb2.AccessMode
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., provider: _Optional[str] = ..., credential_type: _Optional[_Union[CredentialType, str]] = ..., label: _Optional[str] = ..., credential: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class ProviderKeyResponse(_message.Message):
     __slots__ = ("key",)

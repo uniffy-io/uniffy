@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from uniffy_proto.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
 from uniffy_proto.files.v1.files_pb2 import (
     FilterCriteria as ProtoFilterCriteria,
 )
@@ -14,9 +13,12 @@ from uniffy_proto.files.v1.files_pb2 import (
 )
 
 from uniffy.core.converters import datetime_to_timestamp, timestamp_to_datetime
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    access_mode_to_proto,
+)
 from uniffy.core.models.files.saved_filter import SavedFileFilter
-from uniffy.core.models.shared import VisibilityScope
-from uniffy.domains.files.converters import VISIBILITY_FROM_PROTO, VISIBILITY_TO_PROTO
+from uniffy.core.types import AccessMode
 
 
 def saved_filter_to_proto(filter_model: SavedFileFilter) -> ProtoSavedFilter:
@@ -124,12 +126,12 @@ def criteria_to_proto(criteria: dict[str, Any]) -> ProtoFilterCriteria:
         tags=criteria.get("tags", []),
     )
 
-    if "visibility" in criteria and criteria["visibility"]:
-        visibility = VisibilityScope(criteria["visibility"])
-        proto.visibility = VISIBILITY_TO_PROTO.get(
-            visibility,
-            ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-        )
+    if "access_mode" in criteria and criteria["access_mode"]:
+        try:
+            mode = AccessMode(criteria["access_mode"])
+            proto.access_mode = access_mode_to_proto(mode)
+        except ValueError:
+            pass
 
     if "size_min_bytes" in criteria and criteria["size_min_bytes"] is not None:
         proto.size_min_bytes = criteria["size_min_bytes"]
@@ -179,9 +181,10 @@ def criteria_from_proto(proto: ProtoFilterCriteria) -> dict[str, Any]:
     if proto.tags:
         criteria["tags"] = list(proto.tags)
 
-    if proto.HasField("visibility"):
-        visibility = VISIBILITY_FROM_PROTO.get(proto.visibility, VisibilityScope.PRIVATE)
-        criteria["visibility"] = visibility.value
+    if proto.access_mode:
+        mode = access_mode_from_proto(proto.access_mode)
+        if mode is not None:
+            criteria["access_mode"] = mode.value
 
     if proto.HasField("size_min_bytes"):
         criteria["size_min_bytes"] = proto.size_min_bytes

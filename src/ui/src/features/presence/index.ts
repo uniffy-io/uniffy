@@ -12,7 +12,6 @@ export {
 } from '@/features/presence/store/presenceSlice';
 export type { CustomStatus } from '@/features/presence/store/presenceSlice';
 
-// Thunks
 export {
     fetchBulkPresence,
     setCustomStatus,

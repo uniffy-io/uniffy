@@ -45,11 +45,13 @@ type CronTaskInfo struct {
 	RunCount               int32                  `protobuf:"varint,17,opt,name=run_count,json=runCount,proto3" json:"run_count,omitempty"`
 	ConsecutiveFailures    int32                  `protobuf:"varint,18,opt,name=consecutive_failures,json=consecutiveFailures,proto3" json:"consecutive_failures,omitempty"`
 	MaxConsecutiveFailures int32                  `protobuf:"varint,19,opt,name=max_consecutive_failures,json=maxConsecutiveFailures,proto3" json:"max_consecutive_failures,omitempty"`
-	Visibility             v1.VisibilityScope     `protobuf:"varint,20,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode             v1.AccessMode          `protobuf:"varint,20,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
 	// Agent name for display purposes
-	AgentName     *string `protobuf:"bytes,23,opt,name=agent_name,json=agentName,proto3,oneof" json:"agent_name,omitempty"`
+	AgentName *string `protobuf:"bytes,23,opt,name=agent_name,json=agentName,proto3,oneof" json:"agent_name,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,24,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -217,11 +219,11 @@ func (x *CronTaskInfo) GetMaxConsecutiveFailures() int32 {
 	return 0
 }
 
-func (x *CronTaskInfo) GetVisibility() v1.VisibilityScope {
+func (x *CronTaskInfo) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *CronTaskInfo) GetCreatedAt() *timestamppb.Timestamp {
@@ -243,6 +245,13 @@ func (x *CronTaskInfo) GetAgentName() string {
 		return *x.AgentName
 	}
 	return ""
+}
+
+func (x *CronTaskInfo) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 // Execution log entry
@@ -387,7 +396,8 @@ type CreateCronTaskRequest struct {
 	CronExpression string                 `protobuf:"bytes,5,opt,name=cron_expression,json=cronExpression,proto3" json:"cron_expression,omitempty"`
 	Timezone       *string                `protobuf:"bytes,6,opt,name=timezone,proto3,oneof" json:"timezone,omitempty"`
 	Description    *string                `protobuf:"bytes,7,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,8,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,8,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,9,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -471,11 +481,18 @@ func (x *CreateCronTaskRequest) GetDescription() string {
 	return ""
 }
 
-func (x *CreateCronTaskRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *CreateCronTaskRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *CreateCronTaskRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type CronTaskResponse struct {
@@ -1104,7 +1121,7 @@ var File_agents_v1_cron_proto protoreflect.FileDescriptor
 
 const file_agents_v1_cron_proto_rawDesc = "" +
 	"\n" +
-	"\x14agents/v1/cron.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xb2\b\n" +
+	"\x14agents/v1/cron.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\x82\t\n" +
 	"\fCronTaskInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1127,23 +1144,24 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"\x0elast_run_error\x18\x10 \x01(\tH\x04R\flastRunError\x88\x01\x01\x12\x1b\n" +
 	"\trun_count\x18\x11 \x01(\x05R\brunCount\x121\n" +
 	"\x14consecutive_failures\x18\x12 \x01(\x05R\x13consecutiveFailures\x128\n" +
-	"\x18max_consecutive_failures\x18\x13 \x01(\x05R\x16maxConsecutiveFailures\x12:\n" +
-	"\n" +
-	"visibility\x18\x14 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibility\x129\n" +
+	"\x18max_consecutive_failures\x18\x13 \x01(\x05R\x16maxConsecutiveFailures\x126\n" +
+	"\vaccess_mode\x18\x14 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x129\n" +
 	"\n" +
 	"created_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12>\n" +
 	"\n" +
 	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampH\x05R\tupdatedAt\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"agent_name\x18\x17 \x01(\tH\x06R\tagentName\x88\x01\x01B\r\n" +
+	"agent_name\x18\x17 \x01(\tH\x06R\tagentName\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\x18 \x01(\x0e2\x16.common.v1.ContentRoleH\aR\fbaselineRole\x88\x01\x01B\r\n" +
 	"\v_session_idB\x0e\n" +
 	"\f_last_run_atB\x0e\n" +
 	"\f_next_run_atB\x12\n" +
 	"\x10_last_run_statusB\x11\n" +
 	"\x0f_last_run_errorB\r\n" +
 	"\v_updated_atB\r\n" +
-	"\v_agent_name\"\xa1\x04\n" +
+	"\v_agent_nameB\x10\n" +
+	"\x0e_baseline_role\"\xa1\x04\n" +
 	"\x0eCronRunLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
 	"\fcron_task_id\x18\x02 \x01(\tR\n" +
@@ -1164,7 +1182,7 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"\x11_agent_run_log_idB\b\n" +
 	"\x06_errorB\x11\n" +
 	"\x0f_result_summaryB\x0f\n" +
-	"\r_completed_at\"\xe5\x02\n" +
+	"\r_completed_at\"\xb6\x03\n" +
 	"\x15CreateCronTaskRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x12\n" +
@@ -1172,13 +1190,14 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"\x06prompt\x18\x04 \x01(\tR\x06prompt\x12'\n" +
 	"\x0fcron_expression\x18\x05 \x01(\tR\x0ecronExpression\x12\x1f\n" +
 	"\btimezone\x18\x06 \x01(\tH\x00R\btimezone\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\a \x01(\tH\x01R\vdescription\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\b \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x02R\n" +
-	"visibility\x88\x01\x01B\v\n" +
+	"\vdescription\x18\a \x01(\tH\x01R\vdescription\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\b \x01(\x0e2\x15.common.v1.AccessModeH\x02R\n" +
+	"accessMode\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\t \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\v\n" +
 	"\t_timezoneB\x0e\n" +
-	"\f_descriptionB\r\n" +
-	"\v_visibility\"?\n" +
+	"\f_descriptionB\x0e\n" +
+	"\f_access_modeB\x10\n" +
+	"\x0e_baseline_role\"?\n" +
 	"\x10CronTaskResponse\x12+\n" +
 	"\x04task\x18\x01 \x01(\v2\x17.agents.v1.CronTaskInfoR\x04task\"V\n" +
 	"\x12GetCronTaskRequest\x12'\n" +
@@ -1274,47 +1293,50 @@ var file_agents_v1_cron_proto_goTypes = []any{
 	(*TriggerCronTaskRequest)(nil),  // 12: agents.v1.TriggerCronTaskRequest
 	(*TriggerCronTaskResponse)(nil), // 13: agents.v1.TriggerCronTaskResponse
 	(*timestamppb.Timestamp)(nil),   // 14: google.protobuf.Timestamp
-	(v1.VisibilityScope)(0),         // 15: common.v1.VisibilityScope
-	(*v1.PaginationRequest)(nil),    // 16: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),   // 17: common.v1.PaginationResponse
+	(v1.AccessMode)(0),              // 15: common.v1.AccessMode
+	(v1.ContentRole)(0),             // 16: common.v1.ContentRole
+	(*v1.PaginationRequest)(nil),    // 17: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),   // 18: common.v1.PaginationResponse
 }
 var file_agents_v1_cron_proto_depIdxs = []int32{
 	14, // 0: agents.v1.CronTaskInfo.last_run_at:type_name -> google.protobuf.Timestamp
 	14, // 1: agents.v1.CronTaskInfo.next_run_at:type_name -> google.protobuf.Timestamp
-	15, // 2: agents.v1.CronTaskInfo.visibility:type_name -> common.v1.VisibilityScope
+	15, // 2: agents.v1.CronTaskInfo.access_mode:type_name -> common.v1.AccessMode
 	14, // 3: agents.v1.CronTaskInfo.created_at:type_name -> google.protobuf.Timestamp
 	14, // 4: agents.v1.CronTaskInfo.updated_at:type_name -> google.protobuf.Timestamp
-	14, // 5: agents.v1.CronRunLogInfo.started_at:type_name -> google.protobuf.Timestamp
-	14, // 6: agents.v1.CronRunLogInfo.completed_at:type_name -> google.protobuf.Timestamp
-	15, // 7: agents.v1.CreateCronTaskRequest.visibility:type_name -> common.v1.VisibilityScope
-	0,  // 8: agents.v1.CronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	16, // 9: agents.v1.ListCronTasksRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 10: agents.v1.ListCronTasksResponse.tasks:type_name -> agents.v1.CronTaskInfo
-	17, // 11: agents.v1.ListCronTasksResponse.pagination:type_name -> common.v1.PaginationResponse
-	16, // 12: agents.v1.ListCronRunLogsRequest.pagination:type_name -> common.v1.PaginationRequest
-	1,  // 13: agents.v1.ListCronRunLogsResponse.logs:type_name -> agents.v1.CronRunLogInfo
-	17, // 14: agents.v1.ListCronRunLogsResponse.pagination:type_name -> common.v1.PaginationResponse
-	1,  // 15: agents.v1.TriggerCronTaskResponse.run_log:type_name -> agents.v1.CronRunLogInfo
-	0,  // 16: agents.v1.TriggerCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	2,  // 17: agents.v1.CronService.CreateCronTask:input_type -> agents.v1.CreateCronTaskRequest
-	4,  // 18: agents.v1.CronService.GetCronTask:input_type -> agents.v1.GetCronTaskRequest
-	5,  // 19: agents.v1.CronService.ListCronTasks:input_type -> agents.v1.ListCronTasksRequest
-	7,  // 20: agents.v1.CronService.UpdateCronTask:input_type -> agents.v1.UpdateCronTaskRequest
-	8,  // 21: agents.v1.CronService.DeleteCronTask:input_type -> agents.v1.DeleteCronTaskRequest
-	10, // 22: agents.v1.CronService.ListCronRunLogs:input_type -> agents.v1.ListCronRunLogsRequest
-	12, // 23: agents.v1.CronService.TriggerCronTask:input_type -> agents.v1.TriggerCronTaskRequest
-	3,  // 24: agents.v1.CronService.CreateCronTask:output_type -> agents.v1.CronTaskResponse
-	3,  // 25: agents.v1.CronService.GetCronTask:output_type -> agents.v1.CronTaskResponse
-	6,  // 26: agents.v1.CronService.ListCronTasks:output_type -> agents.v1.ListCronTasksResponse
-	3,  // 27: agents.v1.CronService.UpdateCronTask:output_type -> agents.v1.CronTaskResponse
-	9,  // 28: agents.v1.CronService.DeleteCronTask:output_type -> agents.v1.DeleteCronTaskResponse
-	11, // 29: agents.v1.CronService.ListCronRunLogs:output_type -> agents.v1.ListCronRunLogsResponse
-	13, // 30: agents.v1.CronService.TriggerCronTask:output_type -> agents.v1.TriggerCronTaskResponse
-	24, // [24:31] is the sub-list for method output_type
-	17, // [17:24] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	16, // 5: agents.v1.CronTaskInfo.baseline_role:type_name -> common.v1.ContentRole
+	14, // 6: agents.v1.CronRunLogInfo.started_at:type_name -> google.protobuf.Timestamp
+	14, // 7: agents.v1.CronRunLogInfo.completed_at:type_name -> google.protobuf.Timestamp
+	15, // 8: agents.v1.CreateCronTaskRequest.access_mode:type_name -> common.v1.AccessMode
+	16, // 9: agents.v1.CreateCronTaskRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 10: agents.v1.CronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	17, // 11: agents.v1.ListCronTasksRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,  // 12: agents.v1.ListCronTasksResponse.tasks:type_name -> agents.v1.CronTaskInfo
+	18, // 13: agents.v1.ListCronTasksResponse.pagination:type_name -> common.v1.PaginationResponse
+	17, // 14: agents.v1.ListCronRunLogsRequest.pagination:type_name -> common.v1.PaginationRequest
+	1,  // 15: agents.v1.ListCronRunLogsResponse.logs:type_name -> agents.v1.CronRunLogInfo
+	18, // 16: agents.v1.ListCronRunLogsResponse.pagination:type_name -> common.v1.PaginationResponse
+	1,  // 17: agents.v1.TriggerCronTaskResponse.run_log:type_name -> agents.v1.CronRunLogInfo
+	0,  // 18: agents.v1.TriggerCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	2,  // 19: agents.v1.CronService.CreateCronTask:input_type -> agents.v1.CreateCronTaskRequest
+	4,  // 20: agents.v1.CronService.GetCronTask:input_type -> agents.v1.GetCronTaskRequest
+	5,  // 21: agents.v1.CronService.ListCronTasks:input_type -> agents.v1.ListCronTasksRequest
+	7,  // 22: agents.v1.CronService.UpdateCronTask:input_type -> agents.v1.UpdateCronTaskRequest
+	8,  // 23: agents.v1.CronService.DeleteCronTask:input_type -> agents.v1.DeleteCronTaskRequest
+	10, // 24: agents.v1.CronService.ListCronRunLogs:input_type -> agents.v1.ListCronRunLogsRequest
+	12, // 25: agents.v1.CronService.TriggerCronTask:input_type -> agents.v1.TriggerCronTaskRequest
+	3,  // 26: agents.v1.CronService.CreateCronTask:output_type -> agents.v1.CronTaskResponse
+	3,  // 27: agents.v1.CronService.GetCronTask:output_type -> agents.v1.CronTaskResponse
+	6,  // 28: agents.v1.CronService.ListCronTasks:output_type -> agents.v1.ListCronTasksResponse
+	3,  // 29: agents.v1.CronService.UpdateCronTask:output_type -> agents.v1.CronTaskResponse
+	9,  // 30: agents.v1.CronService.DeleteCronTask:output_type -> agents.v1.DeleteCronTaskResponse
+	11, // 31: agents.v1.CronService.ListCronRunLogs:output_type -> agents.v1.ListCronRunLogsResponse
+	13, // 32: agents.v1.CronService.TriggerCronTask:output_type -> agents.v1.TriggerCronTaskResponse
+	26, // [26:33] is the sub-list for method output_type
+	19, // [19:26] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_cron_proto_init() }

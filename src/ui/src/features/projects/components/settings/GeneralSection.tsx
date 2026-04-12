@@ -3,14 +3,14 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Gear, LockSimple, Buildings, Check } from "@phosphor-icons/react";
+import { Gear, Check } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
-import type { Project, VisibilityScope } from "@/features/projects/types";
+import type { Project } from "@/features/projects/types";
 
 const ICON_OPTIONS: ProjectIconName[] = [
   "kanban",
@@ -42,7 +42,6 @@ export function GeneralSection({ project }: GeneralSectionProps) {
   const [description, setDescription] = useState(project.description || "");
   const [slug, setSlug] = useState(project.slug || "");
   const [icon, setIcon] = useState<ProjectIconName>((project.icon || "kanban") as ProjectIconName);
-  const [visibility, setVisibility] = useState<VisibilityScope>(project.visibility);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -52,15 +51,13 @@ export function GeneralSection({ project }: GeneralSectionProps) {
     setDescription(project.description || "");
     setSlug(project.slug || "");
     setIcon((project.icon || "kanban") as ProjectIconName);
-    setVisibility(project.visibility);
-  }, [project.id, project.name, project.description, project.slug, project.icon, project.visibility]);
+  }, [project.id, project.name, project.description, project.slug, project.icon]);
 
   const isDirty =
     name !== project.name ||
     description !== (project.description || "") ||
     slug !== (project.slug || "") ||
-    icon !== (project.icon || "kanban") ||
-    visibility !== project.visibility;
+    icon !== (project.icon || "kanban");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +71,6 @@ export function GeneralSection({ project }: GeneralSectionProps) {
           name: name.trim(),
           description: description.trim(),
           icon,
-          visibility,
           slug: slug.trim(),
         })
       ).unwrap();
@@ -94,7 +90,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
           General
         </h1>
         <p className="text-muted-foreground">
-          Basic project information and visibility.
+          Basic project information.
         </p>
       </div>
 
@@ -147,41 +143,6 @@ export function GeneralSection({ project }: GeneralSectionProps) {
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                 disabled={isSubmitting}
               />
-            </div>
-          </div>
-        </section>
-
-        {/* Visibility Card */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Visibility</h2>
-          <div className="bg-card rounded-lg border border-border p-4 md:p-6">
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setVisibility("PRIVATE")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                  visibility === "PRIVATE"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <LockSimple size={16} weight="duotone" />
-                Personal
-              </button>
-              <button
-                type="button"
-                onClick={() => setVisibility("ORGANIZATION")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                  visibility === "ORGANIZATION"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <Buildings size={16} weight="duotone" />
-                Organization
-              </button>
             </div>
           </div>
         </section>

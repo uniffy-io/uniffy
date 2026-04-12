@@ -2,7 +2,6 @@
  * Settings feature exports.
  */
 
-// API
 export { settingsApi } from '@/features/settings/api/settingsApi';
 
 // Components

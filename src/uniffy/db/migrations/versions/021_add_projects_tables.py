@@ -27,30 +27,45 @@ down_revision: str | None = "020"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-# Shared ENUM reference (already exists in DB)
-_visibility = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
     create_type=False,
 )
 
 
 def upgrade() -> None:
     """Create projects domain tables."""
-    # Add PROJECT and TASK to the contenttype enum
-    op.execute("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'PROJECT'")
-    op.execute("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'TASK'")
-
     # --- projects_projects ---
     op.create_table(
         "projects_projects",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column("visibility", _visibility, nullable=False),
+        sa.Column(
+            "access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OPEN_TO_ORG",
+        ),
+        sa.Column(
+            "baseline_role",
+            _content_role_enum,
+            nullable=True,
+            server_default="EDITOR",
+        ),
         sa.Column(
             "name",
             sqlmodel.sql.sqltypes.AutoString(length=255),
@@ -76,11 +91,6 @@ def upgrade() -> None:
             sqlmodel.sql.sqltypes.AutoString(length=100),
             nullable=True,
         ),
-        sa.Column(
-            "member_ids",
-            postgresql.JSONB(astext_type=sa.Text()),
-            nullable=True,
-        ),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -103,9 +113,9 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
-        op.f("ix_projects_projects_visibility"),
+        op.f("ix_projects_projects_access_mode"),
         "projects_projects",
-        ["visibility"],
+        ["access_mode"],
         unique=False,
     )
 
@@ -149,13 +159,14 @@ def upgrade() -> None:
     )
 
     # --- projects_tasks ---
+    # Tasks delegate access to their parent project: no access_mode or
+    # baseline_role columns of their own.
     op.create_table(
         "projects_tasks",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column("visibility", _visibility, nullable=False),
         sa.Column(
             "title",
             sqlmodel.sql.sqltypes.AutoString(length=500),
@@ -254,12 +265,6 @@ def upgrade() -> None:
         op.f("ix_projects_tasks_status"),
         "projects_tasks",
         ["status"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_projects_tasks_visibility"),
-        "projects_tasks",
-        ["visibility"],
         unique=False,
     )
 
@@ -567,10 +572,6 @@ def downgrade() -> None:
     )
     op.drop_table("projects_views")
     op.drop_index(
-        op.f("ix_projects_tasks_visibility"),
-        table_name="projects_tasks",
-    )
-    op.drop_index(
         op.f("ix_projects_tasks_status"),
         table_name="projects_tasks",
     )
@@ -597,7 +598,7 @@ def downgrade() -> None:
     )
     op.drop_table("projects_field_definitions")
     op.drop_index(
-        op.f("ix_projects_projects_visibility"),
+        op.f("ix_projects_projects_access_mode"),
         table_name="projects_projects",
     )
     op.drop_index(

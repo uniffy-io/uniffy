@@ -1,6 +1,5 @@
 """Proto <-> domain converters for files domain."""
 
-from uniffy_proto.common.v1.common_pb2 import VisibilityScope as ProtoVisibilityScope
 from uniffy_proto.files.v1.files_pb2 import (
     ExtractionStatus as ProtoExtractionStatus,
 )
@@ -27,29 +26,16 @@ from uniffy_proto.files.v1.files_pb2 import (
 )
 
 from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
+)
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
-from uniffy.core.models.shared import VisibilityScope
-
-# Visibility mapping: model -> proto
-VISIBILITY_TO_PROTO = {
-    VisibilityScope.PRIVATE: ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    VisibilityScope.GROUP: ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP,
-    VisibilityScope.ORGANIZATION: ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION,
-    VisibilityScope.PUBLIC: ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC,
-}
-
-# Visibility mapping: proto -> model
-VISIBILITY_FROM_PROTO = {
-    ProtoVisibilityScope.VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope.PRIVATE,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE: VisibilityScope.PRIVATE,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP: VisibilityScope.GROUP,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope.ORGANIZATION,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC: VisibilityScope.PUBLIC,
-}
+from uniffy.core.types import ContentRole
 
 # Extraction status mapping: model -> proto
 EXTRACTION_STATUS_TO_PROTO = {
@@ -71,20 +57,23 @@ UPLOAD_STATUS_TO_PROTO = {
 
 def file_to_proto(
     file: File,
+    user_role: ContentRole | None = None,
     owner_info: dict | None = None,
     group_ids: list[str] | None = None,
 ) -> ProtoFile:
-    """
-    Convert File model to proto File.
+    """Convert :class:`File` to its proto representation.
 
     Parameters
     ----------
     file : File
         File model instance.
+    user_role : ContentRole | None
+        Effective role of the requesting user, if known.
     owner_info : dict | None
         Owner information (id, name, email) if file is shared with current user.
     group_ids : list[str] | None
-        Group IDs if file is shared with groups.
+        Group ids the file is explicitly shared with (for the legacy
+        ``group_ids`` proto field).
 
     Returns
     -------
@@ -92,10 +81,6 @@ def file_to_proto(
         Proto message.
 
     """
-    proto_visibility = VISIBILITY_TO_PROTO.get(
-        file.visibility,
-        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    )
     proto_extraction = EXTRACTION_STATUS_TO_PROTO.get(
         file.extraction_status,
         ProtoExtractionStatus.EXTRACTION_STATUS_PENDING,
@@ -106,7 +91,7 @@ def file_to_proto(
         urn=file.urn,
         organization_id=str(file.organization_id),
         owner_id=str(file.owner_id),
-        visibility=proto_visibility,
+        access_mode=access_mode_to_proto(file.access_mode),
         filename=file.filename,
         original_filename=file.original_filename,
         mime_type=file.mime_type,
@@ -119,6 +104,12 @@ def file_to_proto(
         updated_at=datetime_to_timestamp(file.updated_at),
         group_ids=group_ids or [],
     )
+
+    if file.baseline_role is not None:
+        proto_file.baseline_role = content_role_to_proto(file.baseline_role)
+
+    if user_role is not None:
+        proto_file.user_role = content_role_to_proto(user_role)
 
     if file.folder_id:
         proto_file.folder_id = str(file.folder_id)
@@ -138,7 +129,6 @@ def file_to_proto(
             )
         )
 
-    # Build metadata from FileMediaInfo relationship
     if file.media_info:
         proto_file.metadata.CopyFrom(_build_file_metadata_from_model(file.media_info))
 
@@ -146,20 +136,7 @@ def file_to_proto(
 
 
 def _build_file_metadata_from_model(info: FileMediaInfo) -> ProtoFileMetadata:
-    """
-    Build FileMetadata proto from a FileMediaInfo model instance.
-
-    Parameters
-    ----------
-    info : FileMediaInfo
-        The FileMediaInfo model.
-
-    Returns
-    -------
-    ProtoFileMetadata
-        Proto message with extracted metadata.
-
-    """
+    """Build :class:`ProtoFileMetadata` from a :class:`FileMediaInfo` row."""
     proto_meta = ProtoFileMetadata(
         has_thumbnail=info.thumbnail_key is not None,
     )
@@ -192,37 +169,22 @@ def _build_file_metadata_from_model(info: FileMediaInfo) -> ProtoFileMetadata:
 
 
 def folder_to_proto(folder: Folder) -> ProtoFolder:
-    """
-    Convert Folder model to proto Folder.
-
-    Parameters
-    ----------
-    folder : Folder
-        Folder model instance.
-
-    Returns
-    -------
-    ProtoFolder
-        Proto message.
-
-    """
-    proto_visibility = VISIBILITY_TO_PROTO.get(
-        folder.visibility,
-        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    )
-
+    """Convert :class:`Folder` to its proto representation."""
     proto_folder = ProtoFolder(
         id=str(folder.id),
         urn=folder.urn,
         organization_id=str(folder.organization_id),
         owner_id=str(folder.owner_id),
-        visibility=proto_visibility,
+        access_mode=access_mode_to_proto(folder.access_mode),
         name=folder.name,
         is_deleted=folder.is_deleted,
         created_at=datetime_to_timestamp(folder.created_at),
         updated_at=datetime_to_timestamp(folder.updated_at),
         is_system=folder.is_system,
     )
+
+    if folder.baseline_role is not None:
+        proto_folder.baseline_role = content_role_to_proto(folder.baseline_role)
 
     if folder.parent_id:
         proto_folder.parent_id = str(folder.parent_id)
@@ -231,20 +193,7 @@ def folder_to_proto(folder: Folder) -> ProtoFolder:
 
 
 def file_version_to_proto(version: FileVersion) -> ProtoFileVersion:
-    """
-    Convert FileVersion model to proto FileVersion.
-
-    Parameters
-    ----------
-    version : FileVersion
-        FileVersion model instance.
-
-    Returns
-    -------
-    ProtoFileVersion
-        Proto message.
-
-    """
+    """Convert a :class:`FileVersion` to its proto representation."""
     proto_version = ProtoFileVersion(
         id=str(version.id),
         file_id=str(version.file_id),
@@ -269,32 +218,12 @@ def upload_to_proto_status(upload: MultipartUpload) -> ProtoUploadStatus:
 
 
 def tree_node_from_file(file: File, child_count: int = 0) -> ProtoTreeNode:
-    """
-    Create a TreeNode proto from a File model.
-
-    Parameters
-    ----------
-    file : File
-        File model instance.
-    child_count : int
-        Number of child items (always 0 for files).
-
-    Returns
-    -------
-    ProtoTreeNode
-        Proto tree node.
-
-    """
-    proto_visibility = VISIBILITY_TO_PROTO.get(
-        file.visibility,
-        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    )
-
+    """Build a :class:`ProtoTreeNode` from a :class:`File` row."""
     node = ProtoTreeNode(
         id=str(file.id),
         name=file.filename,
         is_folder=False,
-        visibility=proto_visibility,
+        access_mode=access_mode_to_proto(file.access_mode),
         child_count=0,
         size_bytes=file.size_bytes,
         mime_type=file.mime_type,
@@ -311,34 +240,12 @@ def tree_node_from_folder(
     child_count: int = 0,
     size_bytes: int | None = None,
 ) -> ProtoTreeNode:
-    """
-    Create a TreeNode proto from a Folder model.
-
-    Parameters
-    ----------
-    folder : Folder
-        Folder model instance.
-    child_count : int
-        Number of child items in the folder.
-    size_bytes : int | None
-        Total size of all files in the folder (recursively).
-
-    Returns
-    -------
-    ProtoTreeNode
-        Proto tree node.
-
-    """
-    proto_visibility = VISIBILITY_TO_PROTO.get(
-        folder.visibility,
-        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    )
-
+    """Build a :class:`ProtoTreeNode` from a :class:`Folder` row."""
     node = ProtoTreeNode(
         id=str(folder.id),
         name=folder.name,
         is_folder=True,
-        visibility=proto_visibility,
+        access_mode=access_mode_to_proto(folder.access_mode),
         child_count=child_count,
     )
 
@@ -349,21 +256,3 @@ def tree_node_from_folder(
         node.size_bytes = size_bytes
 
     return node
-
-
-def visibility_from_proto(proto_visibility: ProtoVisibilityScope) -> VisibilityScope:
-    """
-    Convert proto VisibilityScope to model.
-
-    Parameters
-    ----------
-    proto_visibility : ProtoVisibilityScope
-        Proto visibility enum.
-
-    Returns
-    -------
-    VisibilityScope
-        Model visibility enum.
-
-    """
-    return VISIBILITY_FROM_PROTO.get(proto_visibility, VisibilityScope.PRIVATE)

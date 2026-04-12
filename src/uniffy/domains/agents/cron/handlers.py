@@ -1,4 +1,4 @@
-"""Cron tasks RPC handlers - thin layer delegating to operations."""
+"""Cron task RPC handlers."""
 
 from uuid import UUID
 
@@ -22,9 +22,12 @@ from uniffy_proto.agents.v1.cron_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.types import VisibilityScope
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.cron.converters import (
     cron_run_log_to_proto,
     cron_task_to_proto,
@@ -32,37 +35,53 @@ from uniffy.domains.agents.cron.converters import (
 from uniffy.domains.agents.cron.operations import CronTaskOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
-VISIBILITY_FROM_PROTO: dict[int, VisibilityScope] = {
-    0: VisibilityScope.PRIVATE,
-    1: VisibilityScope.PRIVATE,
-    2: VisibilityScope.GROUP,
-    3: VisibilityScope.ORGANIZATION,
-}
+
+def _parse_uuid(value: str, field: str) -> UUID:
+    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Translate a domain exception into the matching ``ConnectError``."""
+    if isinstance(exc, NotFoundError):
+        return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
+    if isinstance(exc, ValidationError):
+        return ConnectError(Code.INVALID_ARGUMENT, str(exc))
+    if isinstance(exc, PermissionDeniedError):
+        return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    return ConnectError(Code.INTERNAL, "Internal server error")
 
 
 class CronHandlers:
-    """RPC handlers for cron tasks service."""
+    """RPC handlers for ``agents.v1.CronService``."""
 
     async def create_cron_task(
         self,
         request: CreateCronTaskRequest,
         ctx: RequestContext,
     ) -> CronTaskResponse:
-        """Handle create_cron_task RPC call."""
+        """Create a new cron task."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
 
-        try:
-            org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        visibility = VISIBILITY_FROM_PROTO.get(request.visibility, VisibilityScope.PRIVATE)
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
+        )
+        baseline_role = (
+            content_role_from_proto(request.baseline_role)
+            if request.baseline_role
+            else None
+        )
         timezone = request.timezone if request.HasField("timezone") else "UTC"
         description = request.description if request.HasField("description") else ""
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CronTaskOperations(session)
                 task = await ops.create_cron_task(
                     user_id=user_id,
@@ -72,76 +91,48 @@ class CronHandlers:
                     prompt=request.prompt,
                     cron_expression=request.cron_expression,
                     timezone=timezone,
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                     description=description,
                 )
                 return CronTaskResponse(task=cron_task_to_proto(task))
-
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating cron task: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("create_cron_task", exc) from exc
 
     async def get_cron_task(
         self,
         request: GetCronTaskRequest,
         ctx: RequestContext,
     ) -> CronTaskResponse:
-        """Handle get_cron_task RPC call."""
+        """Get a cron task by ID."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CronTaskOperations(session)
                 task = await ops.get_by_id(user_id, org_id, task_id)
                 return CronTaskResponse(task=cron_task_to_proto(task))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Cron task not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting cron task: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_cron_task", exc) from exc
 
     async def list_cron_tasks(
         self,
         request: ListCronTasksRequest,
         ctx: RequestContext,
     ) -> ListCronTasksResponse:
-        """Handle list_cron_tasks RPC call."""
+        """List cron tasks."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(
-                Code.INVALID_ARGUMENT,
-                "Invalid organization ID format",
-            )
+        org_id = _parse_uuid(request.organization_id, "organization_id")
 
         agent_id = None
         if request.HasField("agent_id") and request.agent_id:
-            try:
-                agent_id = UUID(request.agent_id)
-            except ValueError:
-                raise ConnectError(
-                    Code.INVALID_ARGUMENT,
-                    "Invalid agent ID format",
-                )
+            agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         page = 1
         page_size = 50
@@ -150,7 +141,7 @@ class CronHandlers:
             page_size = min(max(request.pagination.page_size, 1), 100)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CronTaskOperations(session)
                 tasks, total = await ops.list_cron_tasks(
                     user_id=user_id,
@@ -169,28 +160,20 @@ class CronHandlers:
                         total_pages=total_pages,
                     ),
                 )
-
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing cron tasks: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_cron_tasks", exc) from exc
 
     async def update_cron_task(
         self,
         request: UpdateCronTaskRequest,
         ctx: RequestContext,
     ) -> CronTaskResponse:
-        """Handle update_cron_task RPC call."""
+        """Update a cron task."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         kwargs: dict = {}
         if request.HasField("name"):
@@ -210,7 +193,7 @@ class CronHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "No updates provided")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CronTaskOperations(session)
                 task = await ops.update_cron_task(
                     user_id=user_id,
@@ -219,62 +202,44 @@ class CronHandlers:
                     **kwargs,
                 )
                 return CronTaskResponse(task=cron_task_to_proto(task))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Cron task not found")
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error updating cron task: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_cron_task", exc) from exc
 
     async def delete_cron_task(
         self,
         request: DeleteCronTaskRequest,
         ctx: RequestContext,
     ) -> DeleteCronTaskResponse:
-        """Handle delete_cron_task RPC call."""
+        """Delete a cron task."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CronTaskOperations(session)
-                await ops.delete(user_id, org_id, task_id)
+                await ops.delete_cron_task(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    task_id=task_id,
+                )
                 return DeleteCronTaskResponse(success=True)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Cron task not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error deleting cron task: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_cron_task", exc) from exc
 
     async def list_cron_run_logs(
         self,
         request: ListCronRunLogsRequest,
         ctx: RequestContext,
     ) -> ListCronRunLogsResponse:
-        """Handle list_cron_run_logs RPC call."""
+        """List cron run logs for a task."""
         user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         page = 1
         page_size = 20
@@ -283,7 +248,7 @@ class CronHandlers:
             page_size = min(max(request.pagination.page_size, 1), 50)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CronTaskOperations(session)
                 logs, total = await ops.get_run_logs(
                     user_id=user_id,
@@ -302,54 +267,23 @@ class CronHandlers:
                         total_pages=total_pages,
                     ),
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Cron task not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(
-                f"Error listing cron run logs: {e}",
-                exc_info=True,
-            )
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_cron_run_logs", exc) from exc
 
     async def trigger_cron_task(
         self,
         request: TriggerCronTaskRequest,
         ctx: RequestContext,
     ) -> TriggerCronTaskResponse:
-        """Handle trigger_cron_task RPC call.
-
-        Enqueues immediate execution of a scheduled task via the
-        background worker. Returns a pending run log that the
-        frontend can poll for completion.
-
-        Parameters
-        ----------
-        request : TriggerCronTaskRequest
-            The request with organization and task IDs.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        TriggerCronTaskResponse
-            The pending run log and current task info.
-
-        """
+        """Trigger immediate execution of a scheduled task."""
         user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            org_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CronTaskOperations(session)
                 task, run_log = await ops.trigger_now(
                     user_id=user_id,
@@ -360,18 +294,7 @@ class CronHandlers:
                     run_log=cron_run_log_to_proto(run_log),
                     task=cron_task_to_proto(task),
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Cron task not found")
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(
-                f"Error triggering cron task: {e}",
-                exc_info=True,
-            )
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("trigger_cron_task", exc) from exc

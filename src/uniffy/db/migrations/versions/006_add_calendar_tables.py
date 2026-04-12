@@ -40,9 +40,23 @@ attendeestatus_enum = postgresql.ENUM(
 attendeerole_enum = postgresql.ENUM(
     "ORGANIZER", "REQUIRED", "OPTIONAL", name="attendeerole", create_type=False
 )
-# Reuse existing visibilityscope enum
-visibilityscope_enum = postgresql.ENUM(
-    "PRIVATE", "GROUP", "ORGANIZATION", "PUBLIC", name="visibilityscope", create_type=False
+# Reuse existing access model enums
+accessmode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+contentrole_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
+    create_type=False,
 )
 
 
@@ -65,6 +79,12 @@ def upgrade() -> None:
         sa.Column("is_visible", sa.Boolean(), nullable=False),
         sa.Column("is_default", sa.Boolean(), nullable=False),
         sa.Column("calendar_type", calendartype_enum, nullable=False),
+        sa.Column(
+            "access_mode", accessmode_enum, nullable=False, server_default="OPEN_TO_ORG"
+        ),
+        sa.Column(
+            "baseline_role", contentrole_enum, nullable=True, server_default="VIEWER"
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
@@ -122,7 +142,12 @@ def upgrade() -> None:
         sa.Column("timezone", sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
         sa.Column("location", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
         sa.Column("meeting_url", sqlmodel.sql.sqltypes.AutoString(length=2000), nullable=True),
-        sa.Column("visibility", visibilityscope_enum, nullable=False),
+        sa.Column(
+            "access_mode", accessmode_enum, nullable=False, server_default="OPEN_TO_ORG"
+        ),
+        sa.Column(
+            "baseline_role", contentrole_enum, nullable=True, server_default="VIEWER"
+        ),
         sa.Column("is_focus_time", sa.Boolean(), nullable=False),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -145,7 +170,7 @@ def upgrade() -> None:
     op.create_index("ix_calendar_events_organization_id", "calendar_events", ["organization_id"])
     op.create_index("ix_calendar_events_organizer_id", "calendar_events", ["organizer_id"])
     op.create_index("ix_calendar_events_start_time", "calendar_events", ["start_time"])
-    op.create_index("ix_calendar_events_visibility", "calendar_events", ["visibility"])
+    op.create_index("ix_calendar_events_access_mode", "calendar_events", ["access_mode"])
 
     # Create calendar_event_attendees table
     op.create_table(
@@ -174,7 +199,7 @@ def downgrade() -> None:
     op.drop_table("calendar_event_attendees")
 
     # Drop calendar_events table
-    op.drop_index("ix_calendar_events_visibility", table_name="calendar_events")
+    op.drop_index("ix_calendar_events_access_mode", table_name="calendar_events")
     op.drop_index("ix_calendar_events_start_time", table_name="calendar_events")
     op.drop_index("ix_calendar_events_organizer_id", table_name="calendar_events")
     op.drop_index("ix_calendar_events_organization_id", table_name="calendar_events")

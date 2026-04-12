@@ -4,14 +4,11 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
-# ---------------------------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------------------------
-
 _RECURRENCE_VALUES = ("NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY")
-_VISIBILITY_VALUES = ("PRIVATE", "GROUP", "ORGANIZATION")
+_ACCESS_MODE_VALUES = ("OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG")
 _ATTENDEE_ROLE_VALUES = ("REQUIRED", "OPTIONAL")
 _RSVP_VALUES = ("ACCEPTED", "TENTATIVE", "DECLINED")
 
@@ -95,8 +92,8 @@ def _format_event_result(prefix: str, event) -> str:
         fields.append(f"Location: {event.location}")
     if event.meeting_url:
         fields.append(f"Meeting URL: {event.meeting_url}")
-    if event.visibility:
-        fields.append(f"Visibility: {event.visibility.value}")
+    if event.access_mode:
+        fields.append(f"Access mode: {event.access_mode.value}")
     if event.is_focus_time:
         fields.append("Focus time: yes")
     if event.recurrence_pattern and event.recurrence_pattern.value != "NONE":
@@ -115,9 +112,7 @@ def _format_event_result(prefix: str, event) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
 # Executors
-# ---------------------------------------------------------------------------
 
 
 async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
@@ -307,21 +302,22 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     if "reminders" in args and isinstance(args["reminders"], list):
         kwargs["reminders"] = [int(m) for m in args["reminders"]]
 
-    # Visibility
-    raw_vis = args.get("visibility")
-    if raw_vis:
-        from uniffy.core.models.shared import VisibilityScope
-
-        vis_upper = str(raw_vis).upper()
-        if vis_upper not in _VISIBILITY_VALUES:
+    # Access mode (handled separately from the normal update path; see
+    # permissions.v1.MembersService.SetAccessMode for changing policy on
+    # an existing event).
+    raw_mode = args.get("access_mode")
+    if raw_mode:
+        mode_upper = str(raw_mode).upper()
+        if mode_upper not in _ACCESS_MODE_VALUES:
             return ToolResult(
                 success=False,
                 data="",
                 error=(
-                    f"Invalid visibility: {raw_vis}. Must be one of: {', '.join(_VISIBILITY_VALUES)}"
+                    f"Invalid access_mode: {raw_mode}. "
+                    f"Must be one of: {', '.join(_ACCESS_MODE_VALUES)}"
                 ),
             )
-        kwargs["visibility"] = VisibilityScope(vis_upper)
+        kwargs["access_mode"] = AccessMode(mode_upper)
 
     # Category
     raw_cat = args.get("category_id")
@@ -429,21 +425,22 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
     if "reminders" in args and isinstance(args["reminders"], list):
         kwargs["reminders"] = [int(m) for m in args["reminders"]]
 
-    # Visibility
-    raw_vis = args.get("visibility")
-    if raw_vis:
-        from uniffy.core.models.shared import VisibilityScope
-
-        vis_upper = str(raw_vis).upper()
-        if vis_upper not in _VISIBILITY_VALUES:
+    # Access mode (handled separately from the normal update path; see
+    # permissions.v1.MembersService.SetAccessMode for changing policy on
+    # an existing event).
+    raw_mode = args.get("access_mode")
+    if raw_mode:
+        mode_upper = str(raw_mode).upper()
+        if mode_upper not in _ACCESS_MODE_VALUES:
             return ToolResult(
                 success=False,
                 data="",
                 error=(
-                    f"Invalid visibility: {raw_vis}. Must be one of: {', '.join(_VISIBILITY_VALUES)}"
+                    f"Invalid access_mode: {raw_mode}. "
+                    f"Must be one of: {', '.join(_ACCESS_MODE_VALUES)}"
                 ),
             )
-        kwargs["visibility"] = VisibilityScope(vis_upper)
+        kwargs["access_mode"] = AccessMode(mode_upper)
 
     # Category
     raw_cat = args.get("category_id")
@@ -668,9 +665,7 @@ async def _execute_list_categories(ctx: ToolContext, args: dict) -> ToolResult:
     return ToolResult(success=True, data="\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
 # Shared schema fragments
-# ---------------------------------------------------------------------------
 
 _DATETIME_DESC = (
     "ISO 8601 datetime in the user's local time "
@@ -697,10 +692,13 @@ _RECURRENCE_CONFIG_SCHEMA = {
     ),
 }
 
-_VISIBILITY_SCHEMA = {
+_ACCESS_MODE_SCHEMA = {
     "type": "string",
-    "enum": list(_VISIBILITY_VALUES),
-    "description": "Event visibility: PRIVATE, GROUP, or ORGANIZATION.",
+    "enum": list(_ACCESS_MODE_VALUES),
+    "description": (
+        "Event access mode: OWNER_ONLY (private), EXPLICIT_MEMBERS "
+        "(listed members only), or OPEN_TO_ORG (all org members)."
+    ),
 }
 
 _TAGS_SCHEMA = {
@@ -724,9 +722,7 @@ _ATTENDEE_IDS_SCHEMA = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Tool definitions
-# ---------------------------------------------------------------------------
 
 list_events = ToolDefinition(
     name="calendar.list_events",
@@ -782,7 +778,7 @@ create_event = ToolDefinition(
         "Create a single calendar event. For recurring events (daily, weekly, etc.), "
         "set recurrence_pattern on this ONE event - do NOT create multiple events. "
         "Supports title, times, location, attendees, recurrence, categories, "
-        "reminders, and visibility."
+        "reminders, and access_mode."
     ),
     parameter_schema={
         "type": "object",
@@ -837,7 +833,7 @@ create_event = ToolDefinition(
                 "description": "Mark as focus/deep work time.",
             },
             "tags": _TAGS_SCHEMA,
-            "visibility": _VISIBILITY_SCHEMA,
+            "access_mode": _ACCESS_MODE_SCHEMA,
             "reminders": _REMINDERS_SCHEMA,
         },
         "required": ["title", "start_time"],
@@ -849,7 +845,7 @@ update_event = ToolDefinition(
     name="calendar.update_event",
     description=(
         "Update a calendar event. Any field can be changed: title, times, "
-        "location, attendees, recurrence, category, visibility, reminders."
+        "location, attendees, recurrence, category, access_mode, reminders."
     ),
     parameter_schema={
         "type": "object",
@@ -899,7 +895,7 @@ update_event = ToolDefinition(
                 "description": "Mark as focus/deep work time.",
             },
             "tags": _TAGS_SCHEMA,
-            "visibility": _VISIBILITY_SCHEMA,
+            "access_mode": _ACCESS_MODE_SCHEMA,
             "reminders": _REMINDERS_SCHEMA,
         },
         "required": ["event_id"],

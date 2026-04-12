@@ -203,7 +203,10 @@ async def _reindex_file(file: File, extracted_text: str) -> None:
             title=file.filename,
             entity_type=ContentType.FILE.value,
             url_path=f"/files/{file.id}",
-            visibility=file.visibility.value,
+            access_mode=file.access_mode.value,
+            baseline_role=(
+                file.baseline_role.value if file.baseline_role is not None else None
+            ),
             owner_id=file.owner_id,
             keywords=keywords,
             description=file.description,

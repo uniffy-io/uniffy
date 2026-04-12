@@ -17,19 +17,27 @@ down_revision: str = "028"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
     create_type=False,
 )
 
 
 def upgrade() -> None:
     """Create agents_prompts table and add prompt_id to agents_agents."""
-    op.execute(sa.text("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'PROMPT'"))
 
     op.create_table(
         "agents_prompts",
@@ -41,7 +49,18 @@ def upgrade() -> None:
         sa.Column("content", sa.Text(), nullable=False, server_default=sa.text("''")),
         sa.Column("source", sa.String(20), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=True),
-        sa.Column("visibility", _visibility_enum, nullable=False, server_default="PRIVATE"),
+        sa.Column(
+            "access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OPEN_TO_ORG",
+        ),
+        sa.Column(
+            "baseline_role",
+            _content_role_enum,
+            nullable=True,
+            server_default="VIEWER",
+        ),
         sa.Column("created_by", sa.Uuid(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -52,7 +71,7 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_agents_prompts_organization_id", "agents_prompts", ["organization_id"])
-    op.create_index("ix_agents_prompts_visibility", "agents_prompts", ["visibility"])
+    op.create_index("ix_agents_prompts_access_mode", "agents_prompts", ["access_mode"])
     op.create_index(
         "uq_agents_prompts_org_name",
         "agents_prompts",
@@ -92,6 +111,6 @@ def downgrade() -> None:
 
     op.drop_index("uq_agents_prompts_bundled_name", table_name="agents_prompts")
     op.drop_index("uq_agents_prompts_org_name", table_name="agents_prompts")
-    op.drop_index("ix_agents_prompts_visibility", table_name="agents_prompts")
+    op.drop_index("ix_agents_prompts_access_mode", table_name="agents_prompts")
     op.drop_index("ix_agents_prompts_organization_id", table_name="agents_prompts")
     op.drop_table("agents_prompts")

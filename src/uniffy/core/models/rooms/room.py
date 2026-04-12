@@ -7,8 +7,7 @@ from sqlalchemy import Column, DateTime, Enum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import RoomStatus, RoomType, VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, RoomStatus, RoomType, generate_id
 
 
 class Room(SQLModel, table=True):
@@ -16,8 +15,8 @@ class Room(SQLModel, table=True):
     Room model representing a bookable room or resource.
 
     Rooms are organization-scoped and support different types (meeting rooms,
-    equipment, vehicles, etc.). They use the standard permission model via
-    VisibilityScope and can be booked through the RoomBooking model.
+    equipment, vehicles, etc.). They use the standard permission model and
+    can be booked through the RoomBooking model.
 
     Attributes
     ----------
@@ -47,8 +46,10 @@ class Room(SQLModel, table=True):
         Available amenities (projector, whiteboard, etc.).
     image_file_id : UUID | None
         Optional photo of the room (FK to files).
-    visibility : VisibilityScope
-        Who can see and book this room.
+    access_mode : AccessMode
+        How access to this room is governed.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     is_deleted : bool
         Soft delete flag.
     created_at : datetime
@@ -96,17 +97,29 @@ class Room(SQLModel, table=True):
     location: str = Field(default="", max_length=500, nullable=False)
     amenities: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     image_file_id: UUID | None = Field(default=None)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.ORGANIZATION,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OPEN_TO_ORG,
         sa_column=Column(
             Enum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=ContentRole.VIEWER,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     is_deleted: bool = Field(default=False, nullable=False)

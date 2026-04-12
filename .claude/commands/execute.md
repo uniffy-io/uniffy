@@ -18,8 +18,10 @@ Read plan file: `$ARGUMENTS`
 - Note the validation commands to run
 - Review the testing strategy
 - Read `CLAUDE.md` critical rules before starting
-- If the plan touches backend code, read `docs/agents/backend.md`
-- If the plan touches frontend code, read `docs/agents/frontend.md`
+- If the plan touches backend code, read `.claude/rules/backend.md`
+- If the plan touches frontend code, read `.claude/rules/frontend.md`
+- Check for an existing backlog file in `.claude/plans/backlogs/`. If one exists, resume from the first `[ ]` or `[~]` item instead of starting from scratch
+- If the plan has multiple phases and no backlog exists, create one in `.claude/plans/backlogs/` (see CLAUDE.md "Plans and Backlogs" section)
 
 ### 2. Execute Tasks in Order
 
@@ -115,9 +117,17 @@ Provide summary:
 - Confirm all validations pass
 - Ready for `/commit` command
 
+### 6. Update Backlog
+
+If a backlog exists (or was created in step 1):
+- Mark completed tasks `[x]`
+- Mark in-progress tasks `[~]` with a brief note
+- Add a dated session note at the bottom summarizing what changed
+- Commit the backlog update alongside the work
+
 ## Notes
 
-- If you encounter issues not addressed in the plan, document them
-- If you need to deviate from the plan, explain why
+- If you encounter issues not addressed in the plan, document them in the backlog
+- If you need to deviate from the plan, explain why in the backlog
 - If tests fail, fix implementation until they pass
 - Don't skip validation steps

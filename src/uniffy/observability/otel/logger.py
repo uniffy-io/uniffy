@@ -13,7 +13,6 @@ from loguru import logger
 # OTLP Handler for Loguru
 # Based on the user's provided example, adapted for this library
 
-# Constants
 MAX_QUEUE_SIZE = 10000
 
 

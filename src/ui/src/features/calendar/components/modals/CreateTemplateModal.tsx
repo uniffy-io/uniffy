@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 interface CreateTemplateModalProps {
   isOpen: boolean;
@@ -87,7 +87,7 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
                 categoryId: selectedCategoryId || undefined,
                 location,
                 meetingUrl: '', 
-                visibility: VisibilityScope.PRIVATE,
+                visibility: AccessMode.OWNER_ONLY,
                 tags: [],
             })).unwrap();
         }

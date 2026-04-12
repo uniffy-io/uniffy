@@ -90,8 +90,9 @@ type PromptInfo struct {
 	OwnerId       *string                `protobuf:"bytes,8,opt,name=owner_id,json=ownerId,proto3,oneof" json:"owner_id,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Visibility    v1.VisibilityScope     `protobuf:"varint,11,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode    v1.AccessMode          `protobuf:"varint,11,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	CreatedBy     string                 `protobuf:"bytes,12,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	BaselineRole  *v1.ContentRole        `protobuf:"varint,13,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -196,11 +197,11 @@ func (x *PromptInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *PromptInfo) GetVisibility() v1.VisibilityScope {
+func (x *PromptInfo) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *PromptInfo) GetCreatedBy() string {
@@ -208,6 +209,13 @@ func (x *PromptInfo) GetCreatedBy() string {
 		return x.CreatedBy
 	}
 	return ""
+}
+
+func (x *PromptInfo) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type CreatePromptRequest struct {
@@ -218,8 +226,9 @@ type CreatePromptRequest struct {
 	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	Content        string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
 	// Owner user ID for personal prompts
-	OwnerId       *string             `protobuf:"bytes,6,opt,name=owner_id,json=ownerId,proto3,oneof" json:"owner_id,omitempty"`
-	Visibility    *v1.VisibilityScope `protobuf:"varint,7,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	OwnerId       *string         `protobuf:"bytes,6,opt,name=owner_id,json=ownerId,proto3,oneof" json:"owner_id,omitempty"`
+	AccessMode    *v1.AccessMode  `protobuf:"varint,7,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	BaselineRole  *v1.ContentRole `protobuf:"varint,8,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -296,11 +305,18 @@ func (x *CreatePromptRequest) GetOwnerId() string {
 	return ""
 }
 
-func (x *CreatePromptRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *CreatePromptRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *CreatePromptRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type PromptResponse struct {
@@ -511,7 +527,8 @@ type UpdatePromptRequest struct {
 	DisplayName    *string                `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	Description    *string                `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	Content        *string                `protobuf:"bytes,6,opt,name=content,proto3,oneof" json:"content,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,7,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,7,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,8,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -588,11 +605,18 @@ func (x *UpdatePromptRequest) GetContent() string {
 	return ""
 }
 
-func (x *UpdatePromptRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *UpdatePromptRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *UpdatePromptRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type DeletePromptRequest struct {
@@ -695,7 +719,7 @@ var File_agents_v1_prompts_proto protoreflect.FileDescriptor
 
 const file_agents_v1_prompts_proto_rawDesc = "" +
 	"\n" +
-	"\x17agents/v1/prompts.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\x80\x04\n" +
+	"\x17agents/v1/prompts.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xd0\x04\n" +
 	"\n" +
 	"PromptInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
@@ -710,27 +734,29 @@ const file_agents_v1_prompts_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12:\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
+	"\vaccess_mode\x18\v \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12\x1d\n" +
 	"\n" +
-	"visibility\x18\v \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibility\x12\x1d\n" +
-	"\n" +
-	"created_by\x18\f \x01(\tR\tcreatedByB\x12\n" +
+	"created_by\x18\f \x01(\tR\tcreatedBy\x12@\n" +
+	"\rbaseline_role\x18\r \x01(\x0e2\x16.common.v1.ContentRoleH\x02R\fbaselineRole\x88\x01\x01B\x12\n" +
 	"\x10_organization_idB\v\n" +
-	"\t_owner_id\"\xbc\x02\n" +
+	"\t_owner_idB\x10\n" +
+	"\x0e_baseline_role\"\x8d\x03\n" +
 	"\x13CreatePromptRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12 \n" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x18\n" +
 	"\acontent\x18\x05 \x01(\tR\acontent\x12\x1e\n" +
-	"\bowner_id\x18\x06 \x01(\tH\x01R\aownerId\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\a \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x02R\n" +
-	"visibility\x88\x01\x01B\a\n" +
+	"\bowner_id\x18\x06 \x01(\tH\x01R\aownerId\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\a \x01(\x0e2\x15.common.v1.AccessModeH\x02R\n" +
+	"accessMode\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\a\n" +
 	"\x05_nameB\v\n" +
-	"\t_owner_idB\r\n" +
-	"\v_visibility\"?\n" +
+	"\t_owner_idB\x0e\n" +
+	"\f_access_modeB\x10\n" +
+	"\x0e_baseline_role\"?\n" +
 	"\x0ePromptResponse\x12-\n" +
 	"\x06prompt\x18\x01 \x01(\v2\x15.agents.v1.PromptInfoR\x06prompt\"X\n" +
 	"\x10GetPromptRequest\x12'\n" +
@@ -746,23 +772,24 @@ const file_agents_v1_prompts_proto_rawDesc = "" +
 	"\aprompts\x18\x01 \x03(\v2\x15.agents.v1.PromptInfoR\aprompts\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xe8\x02\n" +
+	"pagination\"\xb9\x03\n" +
 	"\x13UpdatePromptRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
 	"\tprompt_id\x18\x02 \x01(\tR\bpromptId\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12&\n" +
 	"\fdisplay_name\x18\x04 \x01(\tH\x01R\vdisplayName\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x05 \x01(\tH\x02R\vdescription\x88\x01\x01\x12\x1d\n" +
-	"\acontent\x18\x06 \x01(\tH\x03R\acontent\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\a \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x04R\n" +
-	"visibility\x88\x01\x01B\a\n" +
+	"\acontent\x18\x06 \x01(\tH\x03R\acontent\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\a \x01(\x0e2\x15.common.v1.AccessModeH\x04R\n" +
+	"accessMode\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x05R\fbaselineRole\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0f\n" +
 	"\r_display_nameB\x0e\n" +
 	"\f_descriptionB\n" +
 	"\n" +
-	"\b_contentB\r\n" +
-	"\v_visibility\"[\n" +
+	"\b_contentB\x0e\n" +
+	"\f_access_modeB\x10\n" +
+	"\x0e_baseline_role\"[\n" +
 	"\x13DeletePromptRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
 	"\tprompt_id\x18\x02 \x01(\tR\bpromptId\"0\n" +
@@ -806,36 +833,40 @@ var file_agents_v1_prompts_proto_goTypes = []any{
 	(*DeletePromptRequest)(nil),   // 8: agents.v1.DeletePromptRequest
 	(*DeletePromptResponse)(nil),  // 9: agents.v1.DeletePromptResponse
 	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
-	(v1.VisibilityScope)(0),       // 11: common.v1.VisibilityScope
-	(*v1.PaginationRequest)(nil),  // 12: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil), // 13: common.v1.PaginationResponse
+	(v1.AccessMode)(0),            // 11: common.v1.AccessMode
+	(v1.ContentRole)(0),           // 12: common.v1.ContentRole
+	(*v1.PaginationRequest)(nil),  // 13: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil), // 14: common.v1.PaginationResponse
 }
 var file_agents_v1_prompts_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.PromptInfo.source:type_name -> agents.v1.PromptSource
 	10, // 1: agents.v1.PromptInfo.created_at:type_name -> google.protobuf.Timestamp
 	10, // 2: agents.v1.PromptInfo.updated_at:type_name -> google.protobuf.Timestamp
-	11, // 3: agents.v1.PromptInfo.visibility:type_name -> common.v1.VisibilityScope
-	11, // 4: agents.v1.CreatePromptRequest.visibility:type_name -> common.v1.VisibilityScope
-	1,  // 5: agents.v1.PromptResponse.prompt:type_name -> agents.v1.PromptInfo
-	12, // 6: agents.v1.ListPromptsRequest.pagination:type_name -> common.v1.PaginationRequest
-	1,  // 7: agents.v1.ListPromptsResponse.prompts:type_name -> agents.v1.PromptInfo
-	13, // 8: agents.v1.ListPromptsResponse.pagination:type_name -> common.v1.PaginationResponse
-	11, // 9: agents.v1.UpdatePromptRequest.visibility:type_name -> common.v1.VisibilityScope
-	2,  // 10: agents.v1.PromptsService.CreatePrompt:input_type -> agents.v1.CreatePromptRequest
-	4,  // 11: agents.v1.PromptsService.GetPrompt:input_type -> agents.v1.GetPromptRequest
-	5,  // 12: agents.v1.PromptsService.ListPrompts:input_type -> agents.v1.ListPromptsRequest
-	7,  // 13: agents.v1.PromptsService.UpdatePrompt:input_type -> agents.v1.UpdatePromptRequest
-	8,  // 14: agents.v1.PromptsService.DeletePrompt:input_type -> agents.v1.DeletePromptRequest
-	3,  // 15: agents.v1.PromptsService.CreatePrompt:output_type -> agents.v1.PromptResponse
-	3,  // 16: agents.v1.PromptsService.GetPrompt:output_type -> agents.v1.PromptResponse
-	6,  // 17: agents.v1.PromptsService.ListPrompts:output_type -> agents.v1.ListPromptsResponse
-	3,  // 18: agents.v1.PromptsService.UpdatePrompt:output_type -> agents.v1.PromptResponse
-	9,  // 19: agents.v1.PromptsService.DeletePrompt:output_type -> agents.v1.DeletePromptResponse
-	15, // [15:20] is the sub-list for method output_type
-	10, // [10:15] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	11, // 3: agents.v1.PromptInfo.access_mode:type_name -> common.v1.AccessMode
+	12, // 4: agents.v1.PromptInfo.baseline_role:type_name -> common.v1.ContentRole
+	11, // 5: agents.v1.CreatePromptRequest.access_mode:type_name -> common.v1.AccessMode
+	12, // 6: agents.v1.CreatePromptRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 7: agents.v1.PromptResponse.prompt:type_name -> agents.v1.PromptInfo
+	13, // 8: agents.v1.ListPromptsRequest.pagination:type_name -> common.v1.PaginationRequest
+	1,  // 9: agents.v1.ListPromptsResponse.prompts:type_name -> agents.v1.PromptInfo
+	14, // 10: agents.v1.ListPromptsResponse.pagination:type_name -> common.v1.PaginationResponse
+	11, // 11: agents.v1.UpdatePromptRequest.access_mode:type_name -> common.v1.AccessMode
+	12, // 12: agents.v1.UpdatePromptRequest.baseline_role:type_name -> common.v1.ContentRole
+	2,  // 13: agents.v1.PromptsService.CreatePrompt:input_type -> agents.v1.CreatePromptRequest
+	4,  // 14: agents.v1.PromptsService.GetPrompt:input_type -> agents.v1.GetPromptRequest
+	5,  // 15: agents.v1.PromptsService.ListPrompts:input_type -> agents.v1.ListPromptsRequest
+	7,  // 16: agents.v1.PromptsService.UpdatePrompt:input_type -> agents.v1.UpdatePromptRequest
+	8,  // 17: agents.v1.PromptsService.DeletePrompt:input_type -> agents.v1.DeletePromptRequest
+	3,  // 18: agents.v1.PromptsService.CreatePrompt:output_type -> agents.v1.PromptResponse
+	3,  // 19: agents.v1.PromptsService.GetPrompt:output_type -> agents.v1.PromptResponse
+	6,  // 20: agents.v1.PromptsService.ListPrompts:output_type -> agents.v1.ListPromptsResponse
+	3,  // 21: agents.v1.PromptsService.UpdatePrompt:output_type -> agents.v1.PromptResponse
+	9,  // 22: agents.v1.PromptsService.DeletePrompt:output_type -> agents.v1.DeletePromptResponse
+	18, // [18:23] is the sub-list for method output_type
+	13, // [13:18] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_prompts_proto_init() }

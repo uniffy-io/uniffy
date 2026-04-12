@@ -23,7 +23,6 @@ class SavedFileFilter(SQLModel, table=True):
         "extensions": ["pdf", "docx"],       # File extensions (without dot)
         "mime_categories": ["document"],     # document, image, video, audio, archive
         "owner_ids": ["uuid1", "uuid2"],     # Filter by owner
-        "visibility": "PRIVATE",             # VisibilityScope value
         "tags": ["important", "work"],       # Filter by tags
         "size_min_bytes": 1024,              # Minimum file size
         "size_max_bytes": 10485760,          # Maximum file size

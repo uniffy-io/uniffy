@@ -1,4 +1,4 @@
-"""Room and booking RPC handlers - thin layer delegating to operations."""
+"""Room and booking RPC handlers."""
 
 from datetime import datetime
 from uuid import UUID
@@ -29,11 +29,15 @@ from uniffy_proto.rooms.v1.rooms_pb2 import (
     UpdateRoomRequest,
 )
 
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
+)
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.room import Room
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.rooms.converters import (
     BOOKING_STATUS_FROM_PROTO,
@@ -42,17 +46,32 @@ from uniffy.domains.rooms.converters import (
     room_to_proto,
     room_type_from_proto,
     time_slot_to_proto,
-    visibility_from_proto,
 )
 from uniffy.domains.rooms.operations import BookingOperations, RoomOperations
 
 
-class RoomHandlers:
-    """Room RPC handlers."""
+def _parse_uuid(value: str, field: str) -> UUID:
+    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
-    # -----------------------------------------------------------------
-    # Room CRUD
-    # -----------------------------------------------------------------
+
+def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Translate a domain exception into the matching ``ConnectError``."""
+    if isinstance(exc, NotFoundError):
+        return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
+    if isinstance(exc, ValidationError):
+        return ConnectError(Code.INVALID_ARGUMENT, str(exc))
+    if isinstance(exc, PermissionDeniedError):
+        return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    return ConnectError(Code.INTERNAL, "Internal server error")
+
+
+class RoomHandlers:
+    """RPC handlers for ``rooms.v1.RoomsService``."""
 
     async def create_room(
         self,
@@ -60,66 +79,60 @@ class RoomHandlers:
         ctx: RequestContext,
     ) -> RoomResponse:
         """Create a new room."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
+        )
+        baseline_role = (
+            content_role_from_proto(request.baseline_role)
+            if request.baseline_role
+            else None
+        )
+
+        group_ids = None
+        if request.group_ids:
+            group_ids = [_parse_uuid(gid, "group_id") for gid in request.group_ids]
+
+        image_file_id = None
+        if request.HasField("image_file_id"):
+            image_file_id = _parse_uuid(request.image_file_id, "image_file_id")
+
+        kwargs: dict = {
+            "user_id": user_id,
+            "organization_id": organization_id,
+            "name": request.name,
+            "room_type": room_type_from_proto(request.room_type),
+            "capacity": request.capacity,
+            "access_mode": access_mode,
+            "baseline_role": baseline_role,
+        }
+
+        if request.HasField("description"):
+            kwargs["description"] = request.description
+        if request.HasField("floor"):
+            kwargs["floor"] = request.floor
+        if request.HasField("building"):
+            kwargs["building"] = request.building
+        if request.HasField("location"):
+            kwargs["location"] = request.location
+        if request.amenities:
+            kwargs["amenities"] = list(request.amenities)
+        if image_file_id is not None:
+            kwargs["image_file_id"] = image_file_id
+        if group_ids is not None:
+            kwargs["group_ids"] = group_ids
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = RoomOperations(session)
-
-                # Parse optional fields
-                visibility = None
-                if request.HasField("visibility"):
-                    visibility = visibility_from_proto(request.visibility)
-
-                group_ids = None
-                if request.group_ids:
-                    group_ids = [UUID(gid) for gid in request.group_ids]
-
-                image_file_id = None
-                if request.HasField("image_file_id"):
-                    try:
-                        image_file_id = UUID(request.image_file_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid image_file_id")
-
-                kwargs: dict = {
-                    "user_id": user_id,
-                    "organization_id": organization_id,
-                    "name": request.name,
-                    "room_type": room_type_from_proto(request.room_type),
-                    "capacity": request.capacity,
-                }
-
-                if request.HasField("description"):
-                    kwargs["description"] = request.description
-                if request.HasField("floor"):
-                    kwargs["floor"] = request.floor
-                if request.HasField("building"):
-                    kwargs["building"] = request.building
-                if request.HasField("location"):
-                    kwargs["location"] = request.location
-                if request.amenities:
-                    kwargs["amenities"] = list(request.amenities)
-                if image_file_id is not None:
-                    kwargs["image_file_id"] = image_file_id
-                if visibility is not None:
-                    kwargs["visibility"] = visibility
-                if group_ids is not None:
-                    kwargs["group_ids"] = group_ids
-
                 room = await ops.create_room(**kwargs)
                 return RoomResponse(room=room_to_proto(room))
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating room: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("create_room", exc) from exc
 
     async def get_room(
         self,
@@ -127,29 +140,19 @@ class RoomHandlers:
         ctx: RequestContext,
     ) -> RoomResponse:
         """Get a room by ID."""
-        try:
-            room_id = UUID(request.room_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        room_id = _parse_uuid(request.room_id, "room_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = RoomOperations(session)
                 room = await ops.get_by_id(user_id, organization_id, room_id)
                 return RoomResponse(room=room_to_proto(room))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Room not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting room: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_room", exc) from exc
 
     async def update_room(
         self,
@@ -157,67 +160,46 @@ class RoomHandlers:
         ctx: RequestContext,
     ) -> RoomResponse:
         """Update an existing room."""
-        try:
-            room_id = UUID(request.room_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        room_id = _parse_uuid(request.room_id, "room_id")
+
+        kwargs: dict = {}
+        if request.HasField("name"):
+            kwargs["name"] = request.name
+        if request.HasField("description"):
+            kwargs["description"] = request.description
+        if request.HasField("room_type"):
+            kwargs["room_type"] = room_type_from_proto(request.room_type)
+        if request.HasField("status"):
+            kwargs["status"] = room_status_from_proto(request.status)
+        if request.HasField("capacity"):
+            kwargs["capacity"] = request.capacity
+        if request.HasField("floor"):
+            kwargs["floor"] = request.floor
+        if request.HasField("building"):
+            kwargs["building"] = request.building
+        if request.HasField("location"):
+            kwargs["location"] = request.location
+        if request.HasField("image_file_id"):
+            kwargs["image_file_id"] = _parse_uuid(request.image_file_id, "image_file_id")
+        if request.replace_amenities:
+            kwargs["amenities"] = list(request.amenities)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = RoomOperations(session)
-
-                # Build update kwargs from optional fields
-                kwargs: dict = {}
-
-                if request.HasField("name"):
-                    kwargs["name"] = request.name
-                if request.HasField("description"):
-                    kwargs["description"] = request.description
-                if request.HasField("room_type"):
-                    kwargs["room_type"] = room_type_from_proto(request.room_type)
-                if request.HasField("status"):
-                    kwargs["status"] = room_status_from_proto(request.status)
-                if request.HasField("capacity"):
-                    kwargs["capacity"] = request.capacity
-                if request.HasField("floor"):
-                    kwargs["floor"] = request.floor
-                if request.HasField("building"):
-                    kwargs["building"] = request.building
-                if request.HasField("location"):
-                    kwargs["location"] = request.location
-                if request.HasField("image_file_id"):
-                    try:
-                        kwargs["image_file_id"] = UUID(request.image_file_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid image_file_id")
-                if request.HasField("visibility"):
-                    kwargs["visibility"] = visibility_from_proto(request.visibility)
-
-                # Handle amenities: only include if replace_amenities is True
-                if request.replace_amenities:
-                    kwargs["amenities"] = list(request.amenities)
-
                 room = await ops.update_room(
                     user_id=user_id,
                     organization_id=organization_id,
                     room_id=room_id,
                     **kwargs,
                 )
-
                 return RoomResponse(room=room_to_proto(room))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Room not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error updating room: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_room", exc) from exc
 
     async def delete_room(
         self,
@@ -225,16 +207,12 @@ class RoomHandlers:
         ctx: RequestContext,
     ) -> DeleteRoomResponse:
         """Delete a room (soft or permanent)."""
-        try:
-            room_id = UUID(request.room_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        room_id = _parse_uuid(request.room_id, "room_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = RoomOperations(session)
                 await ops.delete_room(
                     user_id=user_id,
@@ -242,21 +220,12 @@ class RoomHandlers:
                     room_id=room_id,
                     permanent=request.permanent,
                 )
-
                 message = "Room permanently deleted" if request.permanent else "Room deleted"
                 return DeleteRoomResponse(success=True, message=message)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Room not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error deleting room: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_room", exc) from exc
 
     async def list_rooms(
         self,
@@ -264,42 +233,25 @@ class RoomHandlers:
         ctx: RequestContext,
     ) -> ListRoomsResponse:
         """List rooms with filters and pagination."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        room_type = None
+        if request.HasField("room_type"):
+            room_type = room_type_from_proto(request.room_type)
+
+        status = None
+        if request.HasField("status"):
+            status = room_status_from_proto(request.status)
+
+        min_capacity = request.min_capacity if request.HasField("min_capacity") else None
+        building = request.building if request.HasField("building") else None
+        floor = request.floor if request.HasField("floor") else None
+        search_query = request.search_query if request.HasField("search_query") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = RoomOperations(session)
-
-                # Parse optional filters
-                room_type = None
-                if request.HasField("room_type"):
-                    room_type = room_type_from_proto(request.room_type)
-
-                status = None
-                if request.HasField("status"):
-                    status = room_status_from_proto(request.status)
-
-                min_capacity = None
-                if request.HasField("min_capacity"):
-                    min_capacity = request.min_capacity
-
-                building = None
-                if request.HasField("building"):
-                    building = request.building
-
-                floor = None
-                if request.HasField("floor"):
-                    floor = request.floor
-
-                search_query = None
-                if request.HasField("search_query"):
-                    search_query = request.search_query
-
                 rooms, total = await ops.list_rooms(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -324,20 +276,14 @@ class RoomHandlers:
                     page_size=page_size,
                     total_pages=total_pages,
                 )
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing rooms: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("list_rooms", exc) from exc
 
 
 class BookingHandlers:
-    """Booking RPC handlers."""
-
-    # -----------------------------------------------------------------
-    # Booking CRUD
-    # -----------------------------------------------------------------
+    """RPC handlers for ``rooms.v1.BookingsService``."""
 
     async def create_booking(
         self,
@@ -345,25 +291,17 @@ class BookingHandlers:
         ctx: RequestContext,
     ) -> BookingResponse:
         """Create a new room booking."""
-        try:
-            organization_id = UUID(request.organization_id)
-            room_id = UUID(request.room_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        room_id = _parse_uuid(request.room_id, "room_id")
+
+        event_id = None
+        if request.HasField("event_id"):
+            event_id = _parse_uuid(request.event_id, "event_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookingOperations(session)
-
-                event_id = None
-                if request.HasField("event_id"):
-                    try:
-                        event_id = UUID(request.event_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid event_id")
-
                 booking = await ops.create_booking(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -375,35 +313,17 @@ class BookingHandlers:
                     event_id=event_id,
                 )
 
-                # Fetch room name for proto response
-                room = (
-                    await session.execute(
-                        select(Room).where(Room.id == booking.room_id)
-                    )
-                ).scalar_one_or_none()
-                room_name = room.name if room else ""
-
-                # Fetch booker display name for proto response
-                user = (
-                    await session.execute(
-                        select(User).where(User.id == user_id)
-                    )
-                ).scalar_one_or_none()
-                booker_name = user.full_name or user.username if user else ""
+                room_name, booker_name = await _load_booking_names(
+                    session, booking.room_id, user_id
+                )
 
                 return BookingResponse(
                     booking=booking_to_proto(booking, room_name, booker_name)
                 )
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating booking: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("create_booking", exc) from exc
 
     async def get_booking(
         self,
@@ -411,46 +331,24 @@ class BookingHandlers:
         ctx: RequestContext,
     ) -> BookingResponse:
         """Get a booking by ID."""
-        try:
-            booking_id = UUID(request.booking_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        booking_id = _parse_uuid(request.booking_id, "booking_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookingOperations(session)
                 booking = await ops.get_booking(user_id, organization_id, booking_id)
-
-                # Fetch room name for proto response
-                room = (
-                    await session.execute(
-                        select(Room).where(Room.id == booking.room_id)
-                    )
-                ).scalar_one_or_none()
-                room_name = room.name if room else ""
-
-                # Fetch booker display name for proto response
-                user = (
-                    await session.execute(
-                        select(User).where(User.id == booking.user_id)
-                    )
-                ).scalar_one_or_none()
-                booker_name = user.full_name or user.username if user else ""
-
+                room_name, booker_name = await _load_booking_names(
+                    session, booking.room_id, booking.user_id
+                )
                 return BookingResponse(
                     booking=booking_to_proto(booking, room_name, booker_name)
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Booking not found")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting booking: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_booking", exc) from exc
 
     async def cancel_booking(
         self,
@@ -458,48 +356,24 @@ class BookingHandlers:
         ctx: RequestContext,
     ) -> BookingResponse:
         """Cancel an existing booking."""
-        try:
-            booking_id = UUID(request.booking_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        booking_id = _parse_uuid(request.booking_id, "booking_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookingOperations(session)
                 booking = await ops.cancel_booking(user_id, organization_id, booking_id)
-
-                # Fetch room name for proto response
-                room = (
-                    await session.execute(
-                        select(Room).where(Room.id == booking.room_id)
-                    )
-                ).scalar_one_or_none()
-                room_name = room.name if room else ""
-
-                # Fetch booker display name for proto response
-                user = (
-                    await session.execute(
-                        select(User).where(User.id == booking.user_id)
-                    )
-                ).scalar_one_or_none()
-                booker_name = user.full_name or user.username if user else ""
-
+                room_name, booker_name = await _load_booking_names(
+                    session, booking.room_id, booking.user_id
+                )
                 return BookingResponse(
                     booking=booking_to_proto(booking, room_name, booker_name)
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Booking not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error cancelling booking: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("cancel_booking", exc) from exc
 
     async def list_bookings(
         self,
@@ -507,37 +381,28 @@ class BookingHandlers:
         ctx: RequestContext,
     ) -> ListBookingsResponse:
         """List bookings with filters and pagination."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        room_id = None
+        if request.HasField("room_id"):
+            room_id = _parse_uuid(request.room_id, "room_id")
+
+        start_date = None
+        if request.HasField("start_date"):
+            start_date = timestamp_to_datetime(request.start_date)
+
+        end_date = None
+        if request.HasField("end_date"):
+            end_date = timestamp_to_datetime(request.end_date)
+
+        status = None
+        if request.HasField("status"):
+            status = BOOKING_STATUS_FROM_PROTO.get(request.status)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookingOperations(session)
-
-                # Parse optional filters
-                room_id = None
-                if request.HasField("room_id"):
-                    try:
-                        room_id = UUID(request.room_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid room_id")
-
-                start_date = None
-                if request.HasField("start_date"):
-                    start_date = timestamp_to_datetime(request.start_date)
-
-                end_date = None
-                if request.HasField("end_date"):
-                    end_date = timestamp_to_datetime(request.end_date)
-
-                status = None
-                if request.HasField("status"):
-                    status = BOOKING_STATUS_FROM_PROTO.get(request.status)
-
                 bookings_with_names, total = await ops.list_bookings(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -552,11 +417,10 @@ class BookingHandlers:
                 page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
 
-                proto_bookings = []
-                for booking, room_name, booker_name in bookings_with_names:
-                    proto_bookings.append(
-                        booking_to_proto(booking, room_name, booker_name)
-                    )
+                proto_bookings = [
+                    booking_to_proto(booking, room_name, booker_name)
+                    for booking, room_name, booker_name in bookings_with_names
+                ]
 
                 return ListBookingsResponse(
                     bookings=proto_bookings,
@@ -565,16 +429,10 @@ class BookingHandlers:
                     page_size=page_size,
                     total_pages=total_pages,
                 )
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing bookings: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
-
-    # -----------------------------------------------------------------
-    # Availability
-    # -----------------------------------------------------------------
+        except Exception as exc:
+            raise _map_domain_error("list_bookings", exc) from exc
 
     async def check_availability(
         self,
@@ -582,16 +440,12 @@ class BookingHandlers:
         ctx: RequestContext,
     ) -> CheckAvailabilityResponse:
         """Check room availability for a date range."""
-        try:
-            organization_id = UUID(request.organization_id)
-            room_id = UUID(request.room_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        room_id = _parse_uuid(request.room_id, "room_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookingOperations(session)
                 slots = await ops.check_availability(
                     organization_id=organization_id,
@@ -618,12 +472,10 @@ class BookingHandlers:
                     )
 
                 return CheckAvailabilityResponse(slots=proto_slots)
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error checking availability: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("check_availability", exc) from exc
 
     async def find_available_rooms(
         self,
@@ -631,25 +483,19 @@ class BookingHandlers:
         ctx: RequestContext,
     ) -> FindAvailableRoomsResponse:
         """Find rooms available during a specific time range."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        min_capacity = request.min_capacity if request.HasField("min_capacity") else None
+        room_type = (
+            room_type_from_proto(request.room_type)
+            if request.HasField("room_type")
+            else None
+        )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = BookingOperations(session)
-
-                min_capacity = None
-                if request.HasField("min_capacity"):
-                    min_capacity = request.min_capacity
-
-                room_type = None
-                if request.HasField("room_type"):
-                    room_type = room_type_from_proto(request.room_type)
-
                 rooms = await ops.find_available_rooms(
                     organization_id=organization_id,
                     start_time=timestamp_to_datetime(request.start_time),
@@ -658,13 +504,29 @@ class BookingHandlers:
                     amenities=list(request.amenities) if request.amenities else None,
                     room_type=room_type,
                 )
-
                 return FindAvailableRoomsResponse(
                     rooms=[room_to_proto(r) for r in rooms]
                 )
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error finding available rooms: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("find_available_rooms", exc) from exc
+
+
+async def _load_booking_names(
+    session,
+    room_id: UUID,
+    booker_id: UUID,
+) -> tuple[str, str]:
+    """Fetch the room name and booker display name for proto responses."""
+    room = (
+        await session.execute(select(Room).where(Room.id == room_id))
+    ).scalar_one_or_none()
+    room_name = room.name if room else ""
+
+    user = (
+        await session.execute(select(User).where(User.id == booker_id))
+    ).scalar_one_or_none()
+    booker_name = (user.full_name or user.username) if user else ""
+
+    return room_name, booker_name

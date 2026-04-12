@@ -31,7 +31,6 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import { useBookmarks } from '@/features/bookmarks';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
@@ -375,7 +374,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                     name: file.filename,
                     isFolder: false,
                     parentId: file.folderId,
-                    visibility: file.visibility,
+                    accessMode: file.accessMode,
                     childCount: 0,
                     children: [],
                 } as SerializedTreeNode;
@@ -455,13 +454,12 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
 
     // Create a new folder
     const handleNewFolder = useCallback(
-        async (visibility: VisibilityScope, parentId?: string) => {
+        async (parentId?: string) => {
             try {
                 const result = await dispatch(
                     createFolder({
                         name: 'New Folder',
                         parentId,
-                        visibility,
                     })
                 ).unwrap();
 
@@ -482,24 +480,9 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
     // Create subfolder
     const handleCreateSubfolder = useCallback(
         (parentId: string) => {
-            // Get parent's visibility
-            const findNode = (nodes: SerializedTreeNode[]): SerializedTreeNode | null => {
-                for (const node of nodes) {
-                    if (node.id === parentId) return node;
-                    if (node.children) {
-                        const found = findNode(node.children);
-                        if (found) return found;
-                    }
-                }
-                return null;
-            };
-
-            const parent = findNode(tree.personal) || findNode(tree.organization);
-            const visibility = parent?.visibility ?? VisibilityScope.PRIVATE;
-
-            handleNewFolder(visibility, parentId);
+            handleNewFolder(parentId);
         },
-        [tree, handleNewFolder]
+        [handleNewFolder]
     );
 
     // Rename folder

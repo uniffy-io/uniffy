@@ -445,7 +445,6 @@ export const projectsUiSlice = createSlice({
   },
 });
 
-// Actions
 export const {
   setViewMode,
   setCurrentView,
@@ -499,7 +498,6 @@ export const {
   resetUiState,
 } = projectsUiSlice.actions;
 
-// Selectors
 export const selectViewMode = (state: RootState) => state.projectsUi.viewMode;
 export const selectCurrentViewId = (state: RootState) => state.projectsUi.currentViewId;
 export const selectSelectedTaskId = (state: RootState) => state.projectsUi.selectedTaskId;

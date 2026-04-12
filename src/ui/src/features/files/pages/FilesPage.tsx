@@ -16,7 +16,6 @@ import { FilesList } from '@/features/files/components/list/FilesList';
 import { UploadPanel } from '@/features/files/components/upload/UploadPanel';
 import { FileDetailsPanel } from '@/features/files/components/details';
 import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
-import { SharingDialog } from '@/features/sharing';
 import { initializeFilesData, setFolderId, setDetailsPanelOpen, toggleSidebar } from '@/features/files/store/filesSlice';
 import { fetchFilesTree, setSelectedFolder, createFolder } from '@/features/files/store/filesTreeSlice';
 import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '@/features/files/store/selectors';
@@ -25,7 +24,7 @@ import { addToQueue } from '@/features/files/store/uploadSlice';
 import { storeFile } from '@/features/files/utils/fileStore';
 import { filesApi } from '@/features/files/api/filesApi';
 import { downloadAsArchive, type FileDownloadItem } from '@/features/files/utils/archiveDownload';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 export function FilesPage() {
     useDocumentTitle('Files');
@@ -206,21 +205,21 @@ export function FilesPage() {
             if (selectedFiles && selectedFiles.length > 0) {
                 const fileArray = Array.from(selectedFiles);
 
-                // Determine visibility - inherit from parent folder if inside one
-                let visibility = VisibilityScope.PRIVATE;
+                // Determine access mode - inherit from parent folder if inside one
+                let accessMode = AccessMode.OWNER_ONLY;
                 if (currentFolderId && folders[currentFolderId]) {
-                    // Get parent folder's visibility directly from folders map
-                    visibility = folders[currentFolderId].visibility;
+                    // Get parent folder's access mode directly from folders map
+                    accessMode = folders[currentFolderId].accessMode;
                 } else {
-                    // No parent folder - use visibility based on current view scope
+                    // No parent folder - use access mode based on current view scope
                     // (same logic as handleCreateFolder)
                     if (viewScope === 'organization') {
-                        visibility = VisibilityScope.ORGANIZATION;
+                        accessMode = AccessMode.OPEN_TO_ORG;
                     } else if (viewScope === 'shared') {
                         // Should not happen since upload is disabled in shared view
-                        visibility = VisibilityScope.PRIVATE;
+                        accessMode = AccessMode.OWNER_ONLY;
                     } else {
-                        visibility = VisibilityScope.PRIVATE;
+                        accessMode = AccessMode.OWNER_ONLY;
                     }
                 }
 
@@ -234,7 +233,7 @@ export function FilesPage() {
                         mimeType: file.type || 'application/octet-stream',
                         totalSize: file.size,
                         folderId: currentFolderId ?? undefined,
-                        visibility,
+                        visibility: accessMode,
                         totalChunks: 0,
                         chunkSize: 0,
                     };
@@ -251,33 +250,16 @@ export function FilesPage() {
     // Handle create folder from context menu
     const handleCreateFolder = useCallback(async () => {
         try {
-            // Determine visibility - inherit from parent folder if inside one
-            let visibility = VisibilityScope.PRIVATE;
-            if (currentFolderId && folders[currentFolderId]) {
-                // Get parent folder's visibility directly from folders map
-                visibility = folders[currentFolderId].visibility;
-            } else {
-                // No parent folder - use visibility based on current view scope
-                if (viewScope === 'organization') {
-                    visibility = VisibilityScope.ORGANIZATION;
-                } else if (viewScope === 'shared') {
-                    visibility = VisibilityScope.GROUP;
-                } else {
-                    visibility = VisibilityScope.PRIVATE;
-                }
-            }
-
             await dispatch(
                 createFolder({
                     name: 'New Folder',
                     parentId: currentFolderId ?? undefined,
-                    visibility,
                 })
             ).unwrap();
         } catch (err) {
             console.error('Failed to create folder:', err);
         }
-    }, [dispatch, currentFolderId, folders, viewScope]);
+    }, [dispatch, currentFolderId]);
 
     return (
         <>
@@ -316,9 +298,6 @@ export function FilesPage() {
 
             {/* Upload progress panel */}
             <UploadPanel />
-
-            {/* Sharing dialog */}
-            <SharingDialog />
 
             {/* FileViewerModal is now global (in App.tsx), no need to render here */}
         </>

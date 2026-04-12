@@ -32,27 +32,20 @@ from uniffy.domains.auth.tokens import (
 from uniffy.domains.auth.types import AuthResult, TokenPair
 
 __all__ = [
-    # Context
     "get_user_id_from_context",
     "get_organization_id_from_context",
-    # Passwords
     "hash_password",
     "verify_password",
-    # Tokens
     "create_access_token",
     "create_refresh_token",
     "decode_access_token",
-    # Types
     "AuthResult",
     "TokenPair",
-    # Errors
     "AuthenticationError",
     "RegistrationError",
     "TokenError",
     "OrganizationAccessError",
-    # Operations
     "AuthOperations",
-    # Handlers
     "AuthHandlers",
     # Service (for mounting)
     "AuthServiceImpl",

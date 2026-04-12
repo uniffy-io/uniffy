@@ -23,7 +23,7 @@ import {
     DayOfWeek as ProtoDayOfWeek,
     ResourceType as ProtoResourceType,
 } from '@uniffy/proto/cal/v1/calendar_pb';
-import { VisibilityScope as ProtoVisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
 import { Timestamp } from '@bufbuild/protobuf';
 import type {
     CalendarEvent,
@@ -45,9 +45,6 @@ import {
     RecurrenceEditScope as ProtoRecurrenceEditScope,
 } from '@uniffy/proto/cal/v1/calendar_pb';
 
-// ============================================================================
-// Helpers
-// ============================================================================
 
 /**
  * Get organization ID from state.
@@ -80,9 +77,7 @@ const isoToTimestamp = (iso: string): Timestamp => {
     });
 };
 
-// ============================================================================
 // Enum Converters
-// ============================================================================
 
 const RECURRENCE_FROM_PROTO: Record<ProtoRecurrencePattern, RecurrencePattern> = {
     [ProtoRecurrencePattern.UNSPECIFIED]: 'none',
@@ -165,24 +160,17 @@ const EDIT_SCOPE_TO_PROTO: Record<RecurrenceEditScope, ProtoRecurrenceEditScope>
     'this_and_following': ProtoRecurrenceEditScope.THIS_AND_FOLLOWING,
 };
 
-const VISIBILITY_TO_PROTO: Record<string, ProtoVisibilityScope> = {
-    'private': ProtoVisibilityScope.PRIVATE,
-    'group': ProtoVisibilityScope.GROUP,
-    'organization': ProtoVisibilityScope.ORGANIZATION,
-    'public': ProtoVisibilityScope.PUBLIC,
-};
+function frontendVisibilityToAccessMode(v: 'private' | 'organization'): { accessMode: number; baselineRole: number | undefined } {
+    return v === 'organization'
+        ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: ContentRole.VIEWER }
+        : { accessMode: AccessMode.OWNER_ONLY, baselineRole: undefined };
+}
 
-const PROTO_TO_VISIBILITY: Record<ProtoVisibilityScope, 'private' | 'organization'> = {
-    [ProtoVisibilityScope.UNSPECIFIED]: 'private',
-    [ProtoVisibilityScope.PRIVATE]: 'private',
-    [ProtoVisibilityScope.GROUP]: 'organization',
-    [ProtoVisibilityScope.ORGANIZATION]: 'organization',
-    [ProtoVisibilityScope.PUBLIC]: 'organization',
-};
+function accessModeToFrontendVisibility(mode: number): 'private' | 'organization' {
+    return mode === AccessMode.OPEN_TO_ORG ? 'organization' : 'private';
+}
 
-// ============================================================================
 // Proto to Domain Converters
-// ============================================================================
 
 /**
  * Convert proto attendee to domain attendee.
@@ -246,7 +234,7 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     isFocusTime: proto.isFocusTime,
     tags: [...proto.tags],
     linkedResources: proto.linkedResources.map(linkedResourceFromProto),
-    visibility: PROTO_TO_VISIBILITY[proto.visibility] || 'private',
+    visibility: accessModeToFrontendVisibility(proto.accessMode),
     createdAt: timestampToIso(proto.createdAt),
     updatedAt: timestampToIso(proto.updatedAt),
     reminders: [...(proto.reminders || [])],
@@ -288,15 +276,13 @@ const templateFromProto = (proto: ProtoEventTemplate): EventTemplate => ({
     meetingUrl: proto.meetingUrl,
     categoryId: proto.categoryId,
     tags: proto.tags,
-    visibility: proto.visibility,
+    visibility: proto.accessMode,
     createdBy: proto.createdBy,
     createdAt: proto.createdAt?.toDate() || new Date(),
     updatedAt: proto.updatedAt?.toDate() || new Date(),
 });
 
-// ============================================================================
 // Event Thunks
-// ============================================================================
 
 /**
  * Fetch events in a date range.
@@ -403,7 +389,7 @@ export const createEvent = createAsyncThunk<
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime || false,
             tags: params.tags || [],
-            visibility: VISIBILITY_TO_PROTO[params.visibility || 'private'] || ProtoVisibilityScope.PRIVATE,
+            ...frontendVisibilityToAccessMode((params.visibility as 'private' | 'organization') || 'private'),
             reminders: params.reminders || [],
             roomId: params.roomId || undefined,
         });
@@ -493,7 +479,7 @@ export const updateEvent = createAsyncThunk<
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime,
             tags: params.tags,
-            visibility: params.visibility ? VISIBILITY_TO_PROTO[params.visibility] : undefined,
+            ...(params.visibility ? frontendVisibilityToAccessMode(params.visibility as 'private' | 'organization') : {}),
             reminders: params.reminders,
             recurrenceEditScope: params.recurrenceEditScope
                 ? EDIT_SCOPE_TO_PROTO[params.recurrenceEditScope]
@@ -565,9 +551,7 @@ export const deleteEvent = createAsyncThunk<
     }
 });
 
-// ============================================================================
 // Category Thunks
-// ============================================================================
 
 /**
  * Fetch all categories for the current organization.
@@ -673,9 +657,7 @@ export const deleteCategory = createAsyncThunk<
     }
 });
 
-// ============================================================================
 // Attendee Thunks
-// ============================================================================
 
 /**
  * Update attendee status for an event.
@@ -765,9 +747,7 @@ export const removeAttendees = createAsyncThunk<
     }
 });
 
-// ============================================================================
 // Template Thunks
-// ============================================================================
 
 export const createEventTemplate = createAsyncThunk<
     EventTemplate,
@@ -785,7 +765,7 @@ export const createEventTemplate = createAsyncThunk<
             meetingUrl: params.meetingUrl,
             categoryId: params.categoryId,
             tags: params.tags,
-            visibility: params.visibility ?? ProtoVisibilityScope.PRIVATE,
+            accessMode: params.visibility ?? AccessMode.OWNER_ONLY,
         });
         if (!response.template) {
             return rejectWithValue('Failed to create template');
@@ -833,7 +813,7 @@ export const updateEventTemplate = createAsyncThunk<
             meetingUrl: params.meetingUrl,
             categoryId: params.categoryId,
             tags: params.tags,
-            visibility: params.visibility,
+            accessMode: params.visibility,
         });
         if (!response.template) {
             return rejectWithValue('Failed to update template');

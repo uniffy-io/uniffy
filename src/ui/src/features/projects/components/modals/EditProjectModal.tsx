@@ -5,9 +5,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, PencilSimple, LockSimple, Buildings } from "@phosphor-icons/react";
+import { X, PencilSimple } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -15,7 +14,7 @@ import { closeEditProjectModal, selectEditProjectId } from "@/features/projects/
 import { selectProjects } from "@/features/projects/store/projectsSlice";
 import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
-import type { VisibilityScope, TypeFieldSchema } from "@/features/projects/types/project";
+import type { TypeFieldSchema } from "@/features/projects/types/project";
 import { TypeFieldSchemasSection } from "@/features/projects/components/settings/TypeFieldSchemasSection";
 
 const ICON_OPTIONS: ProjectIconName[] = [
@@ -40,7 +39,6 @@ export function EditProjectModal() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
-  const [visibility, setVisibility] = useState<VisibilityScope>("PRIVATE");
   const [typeFieldSchemas, setTypeFieldSchemas] = useState<Record<string, TypeFieldSchema>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +49,6 @@ export function EditProjectModal() {
       setName(project.name);
       setDescription(project.description || "");
       setIcon((project.icon || "kanban") as ProjectIconName);
-      setVisibility(project.visibility);
       setTypeFieldSchemas(project.typeFieldSchemas || {});
     }
   }, [project]);
@@ -82,7 +79,6 @@ export function EditProjectModal() {
           name: name.trim(),
           description: description.trim(),
           icon,
-          visibility,
           typeFieldSchemas,
         })
       ).unwrap();
@@ -146,41 +142,6 @@ export function EditProjectModal() {
                 rows={2}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
               />
-            </div>
-
-            {/* Visibility */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Visibility
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setVisibility("PRIVATE")}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                    visibility === "PRIVATE"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <LockSimple size={16} weight="duotone" />
-                  Personal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVisibility("ORGANIZATION")}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                    visibility === "ORGANIZATION"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <Buildings size={16} weight="duotone" />
-                  Organization
-                </button>
-              </div>
             </div>
 
             {/* Icon Picker */}

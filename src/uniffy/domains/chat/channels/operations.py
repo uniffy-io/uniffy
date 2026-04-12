@@ -1,8 +1,9 @@
 """Chat channel operations with membership-based permission model.
 
-This is the first Uniffy domain that overrides BaseContentOperations._require_access().
-Chat uses channel membership as the permission instead of the standard 3-layer system
-(VisibilityScope + ContentGroupLink + ContentPermission).
+Chat uses channel membership as the permission. The BaseContentOperations
+``_require_*`` helpers are overridden to delegate to ``ChatAccessChecker``.
+Channels do not participate in the generic access_mode / baseline_role
+model -- channel_type (PUBLIC / PRIVATE / DIRECT / GROUP_DM) drives access.
 """
 
 from datetime import UTC, datetime
@@ -24,15 +25,16 @@ from uniffy.core.models.chat.channel_member import (
     ChatChannelMember,
 )
 from uniffy.core.models.login.user import User
-from uniffy.core.types import ContentType, VisibilityScope, slugify
+from uniffy.core.types import AccessMode, ContentType, slugify
 from uniffy.domains.chat.access import ChatAccessChecker
 
 
 class ChatChannelOperations(BaseContentOperations[ChatChannel]):
     """Channel CRUD with membership-based permission model.
 
-    Overrides the standard 3-layer permission check. Channel membership IS the
-    permission - no VisibilityScope check, no ContentGroupLink, no ContentPermission.
+    Channel membership is the permission: the standard
+    ``_require_view / _require_edit / _require_delete`` helpers are
+    overridden to delegate to :class:`ChatAccessChecker`.
     """
 
     content_type = ContentType.CHAT
@@ -42,9 +44,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         super().__init__(session)
         self.access = access or ChatAccessChecker(session)
 
-    # ---------------------------------------------------------------
     # Abstract method implementations (required by BaseContentOperations)
-    # ---------------------------------------------------------------
 
     def _build_search_keywords(self, model: ChatChannel) -> str:
         return f"{model.name} {model.description}"
@@ -58,17 +58,15 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
     def _get_search_description(self, model: ChatChannel) -> str | None:
         return model.description[:200] if model.description else None
 
-    # ---------------------------------------------------------------
     # Permission override - membership-based access
-    # ---------------------------------------------------------------
 
-    async def _require_access(
+    async def _require_view(
         self,
         user_id: UUID,
         organization_id: UUID,
         content: ChatChannel,
     ) -> None:
-        """Override: check membership instead of standard 3-layer permission."""
+        """Override: check channel membership instead of the generic role model."""
         await self.access.check_access(user_id, organization_id, content)
 
     async def _require_edit(
@@ -101,28 +99,28 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if not member or member.role != ChannelRole.OWNER:
             raise PermissionDeniedError("delete", "channel")
 
-    # ---------------------------------------------------------------
     # Search index override - derive access from membership
-    # ---------------------------------------------------------------
 
     async def _index_for_search(
         self,
         model: ChatChannel,
-        group_ids: list[UUID],
+        skip_member_lookup: bool = False,
     ) -> None:
-        """Override: derive Meilisearch access from membership.
+        """Override: derive the search document access from membership.
 
-        DMs and group DMs are excluded from search - they are private
-        conversations found via the sidebar, not searchable content.
+        Public channels index as ``OPEN_TO_ORG``. Private channels index
+        as ``EXPLICIT_MEMBERS`` with the channel member list attached.
+        DMs and group DMs are excluded from search entirely.
         """
+        del skip_member_lookup  # membership is always the source of truth
         if model.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
             return
 
         if model.channel_type == ChannelType.PUBLIC:
-            visibility = VisibilityScope.ORGANIZATION.value
+            access_mode = AccessMode.OPEN_TO_ORG.value
             shared_user_ids = None
         else:
-            visibility = VisibilityScope.PRIVATE.value
+            access_mode = AccessMode.EXPLICIT_MEMBERS.value
             member_ids = await self._get_all_member_ids(model.id)
             shared_user_ids = member_ids if member_ids else None
 
@@ -132,16 +130,15 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             title=self._get_search_title(model),
             entity_type=self.content_type.value,
             url_path=self._get_url_path(model),
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=None,
             owner_id=model.owner_id,
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),
             shared_user_ids=shared_user_ids,
         )
 
-    # ---------------------------------------------------------------
     # Channel CRUD
-    # ---------------------------------------------------------------
 
     async def create_channel(
         self,
@@ -169,9 +166,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if existing.scalar_one_or_none():
             slug = f"{slug}-{str(UUID(int=0))[:8]}"
 
-        # Auto-set visibility from channel_type
-        visibility = self._derive_visibility(channel_type)
-
         channel = ChatChannel(
             organization_id=organization_id,
             owner_id=user_id,
@@ -179,7 +173,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             slug=slug,
             description=description,
             channel_type=channel_type,
-            visibility=visibility,
             icon=icon,
             is_default=is_default,
             category_id=category_id,
@@ -218,7 +211,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         # Index for search (post-commit)
         try:
-            await self._index_for_search(channel, [])
+            await self._index_for_search(channel)
         except Exception:
             logger.warning(f"Failed to index channel {channel.id}")
 
@@ -361,6 +354,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
 
+        # Publish MEMBER_JOINED event to existing members
+        await self._publish_member_event(channel_id, user_id, joined=True)
+
         # Post a system message announcing the join
         await self._post_join_system_message(user_id, organization_id, channel)
 
@@ -433,6 +429,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
 
+        # Publish MEMBER_LEFT event to remaining members
+        await self._publish_member_event(channel_id, user_id, joined=False)
+
     async def add_members(
         self,
         user_id: UUID,
@@ -480,10 +479,14 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
             await self.session.commit()
 
+            # Publish MEMBER_JOINED events for each added member
+            for m in added:
+                await self._publish_member_event(channel_id, m.user_id, joined=True)
+
             # Re-index search for private channels (shared_user_ids changed)
             if channel.channel_type != ChannelType.PUBLIC:
                 try:
-                    await self._index_for_search(channel, [])
+                    await self._index_for_search(channel)
                 except Exception:
                     logger.warning(f"Failed to re-index channel {channel_id}")
 
@@ -535,9 +538,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
             await self.session.commit()
 
+            # Publish MEMBER_LEFT events for each removed member
+            for rid in removable_ids:
+                await self._publish_member_event(channel_id, rid, joined=False)
+
             if channel.channel_type != ChannelType.PUBLIC:
                 try:
-                    await self._index_for_search(channel, [])
+                    await self._index_for_search(channel)
                 except Exception:
                     logger.warning(f"Failed to re-index channel {channel_id}")
 
@@ -567,9 +574,44 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         """Verify user can send messages. Returns membership for role checks."""
         return await self.access.require_send(user_id, channel)
 
-    # ---------------------------------------------------------------
     # Internal helpers
-    # ---------------------------------------------------------------
+
+    async def _publish_member_event(
+        self,
+        channel_id: UUID,
+        member_user_id: UUID,
+        *,
+        joined: bool,
+    ) -> None:
+        """Publish a MEMBER_JOINED or MEMBER_LEFT event to channel members."""
+        try:
+            from uniffy.domains.chat.streaming.events import (
+                MEMBER_JOINED,
+                MEMBER_LEFT,
+                build_member_payload,
+            )
+            from uniffy.domains.chat.streaming.publisher import (
+                publish_channel_event_to_members,
+            )
+
+            user = await self.session.get(User, member_user_id)
+            display_name = user.full_name if user else ""
+
+            member_ids = await self._get_all_member_ids(channel_id)
+            await publish_channel_event_to_members(
+                member_ids,
+                MEMBER_JOINED if joined else MEMBER_LEFT,
+                build_member_payload(
+                    user_id=member_user_id,
+                    display_name=display_name,
+                    role="MEMBER",
+                ),
+                channel_id=channel_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                f"Failed to publish member event for channel {channel_id}: {exc}"
+            )
 
     async def _get_all_member_ids(self, channel_id: UUID) -> list[UUID]:
         """Get all member user IDs for a channel."""
@@ -644,10 +686,3 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
         except Exception:
             logger.warning(f"Failed to post join system message for {user_id}")
-
-    @staticmethod
-    def _derive_visibility(channel_type: ChannelType) -> VisibilityScope:
-        """Auto-derive visibility from channel type for search indexing."""
-        if channel_type == ChannelType.PUBLIC:
-            return VisibilityScope.ORGANIZATION
-        return VisibilityScope.PRIVATE

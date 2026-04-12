@@ -1,8 +1,4 @@
-"""
-Projects proto converters.
-
-Provides bidirectional mapping between domain models and projects.v1 proto types.
-"""
+"""Projects proto converters."""
 
 import json
 
@@ -33,7 +29,10 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     ViewConfig as ProtoViewConfig,
 )
 
-from uniffy.core.converters.common_proto import permission_level_to_proto, visibility_to_proto
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
+)
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
@@ -41,13 +40,10 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
-from uniffy.core.types import PermissionLevel
+from uniffy.core.types import ContentRole
 
-# =============================================================================
-# ENUM MAPPINGS - Domain <-> Proto
-# =============================================================================
-
-# FieldType mappings
+# Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
+# across every domain so they live in ``core.converters.common_proto``.
 FIELD_TYPE_TO_PROTO: dict[str, FieldType.ValueType] = {
     "text": FieldType.FIELD_TYPE_TEXT,
     "number": FieldType.FIELD_TYPE_NUMBER,
@@ -62,16 +58,16 @@ FIELD_TYPE_FROM_PROTO: dict[FieldType.ValueType, str] = {
     v: k for k, v in FIELD_TYPE_TO_PROTO.items()
 }
 
-# ViewType mappings
 VIEW_TYPE_TO_PROTO: dict[str, ViewType.ValueType] = {
     "table": ViewType.VIEW_TYPE_TABLE,
     "board": ViewType.VIEW_TYPE_BOARD,
     "roadmap": ViewType.VIEW_TYPE_ROADMAP,
 }
 
-VIEW_TYPE_FROM_PROTO: dict[ViewType.ValueType, str] = {v: k for k, v in VIEW_TYPE_TO_PROTO.items()}
+VIEW_TYPE_FROM_PROTO: dict[ViewType.ValueType, str] = {
+    v: k for k, v in VIEW_TYPE_TO_PROTO.items()
+}
 
-# ActivityAction mappings
 ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
     "created": ActivityAction.ACTIVITY_ACTION_CREATED,
     "status_changed": ActivityAction.ACTIVITY_ACTION_STATUS_CHANGED,
@@ -84,68 +80,52 @@ ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
     "sprint_changed": ActivityAction.ACTIVITY_ACTION_SPRINT_CHANGED,
 }
 
-# =============================================================================
-# ENUM CONVERTER FUNCTIONS
-# =============================================================================
-
 
 def field_type_to_proto(field_type: str) -> FieldType.ValueType:
-    """Convert domain field type string to proto FieldType."""
+    """Convert a domain field-type string to a proto FieldType value."""
     return FIELD_TYPE_TO_PROTO.get(field_type, FieldType.FIELD_TYPE_UNSPECIFIED)
 
 
 def field_type_from_proto(proto_type: FieldType.ValueType) -> str:
-    """Convert proto FieldType to domain string."""
+    """Convert a proto FieldType value to a domain string."""
     return FIELD_TYPE_FROM_PROTO.get(proto_type, "text")
 
 
 def view_type_to_proto(view_type: str) -> ViewType.ValueType:
-    """Convert domain view type string to proto ViewType."""
+    """Convert a domain view-type string to a proto ViewType value."""
     return VIEW_TYPE_TO_PROTO.get(view_type, ViewType.VIEW_TYPE_UNSPECIFIED)
 
 
 def view_type_from_proto(proto_type: ViewType.ValueType) -> str:
-    """Convert proto ViewType to domain string."""
+    """Convert a proto ViewType value to a domain string."""
     return VIEW_TYPE_FROM_PROTO.get(proto_type, "table")
 
 
 def activity_action_to_proto(action: str) -> ActivityAction.ValueType:
-    """Convert domain action string to proto ActivityAction."""
+    """Convert a domain action string to a proto ActivityAction value."""
     return ACTIVITY_ACTION_TO_PROTO.get(action, ActivityAction.ACTIVITY_ACTION_UNSPECIFIED)
-
-
-# =============================================================================
-# MODEL -> PROTO CONVERTERS
-# =============================================================================
 
 
 def project_to_proto(
     project: Project,
     fields: list[FieldDefinition],
     views: list[ViewConfig],
-    user_permission_level: PermissionLevel | None = None,
+    user_role: ContentRole | None = None,
 ) -> ProtoProject:
-    """
-    Convert Project model to proto Project message.
+    """Convert a :class:`Project` row to its proto representation.
 
     Parameters
     ----------
     project : Project
-        Project model instance.
+        Project row.
     fields : list[FieldDefinition]
-        Field definitions for this project.
+        Field definitions for the project.
     views : list[ViewConfig]
-        View configurations for this project.
-    user_permission_level : PermissionLevel | None
-        The requesting user's permission level for this project.
-
-    Returns
-    -------
-    ProtoProject
-        Proto project message.
-
+        View configurations for the project.
+    user_role : ContentRole | None
+        Effective role of the requesting user.
     """
-    type_schemas_proto = {}
+    type_schemas_proto: dict[str, ProtoTypeFieldSchema] = {}
     if project.type_field_schemas:
         for type_name, schema in project.type_field_schemas.items():
             type_schemas_proto[type_name] = ProtoTypeFieldSchema(
@@ -162,19 +142,20 @@ def project_to_proto(
         icon=project.icon,
         color=project.color,
         slug=project.slug,
-        visibility=visibility_to_proto(project.visibility),
+        access_mode=access_mode_to_proto(project.access_mode),
         field_definitions=[field_to_proto(f) for f in fields],
         views=[view_to_proto(v) for v in views],
         default_view_id=project.default_view_id or "",
-        member_ids=project.member_ids or [],
         created_at=datetime_to_timestamp(project.created_at),
         updated_at=datetime_to_timestamp(project.updated_at),
         urn=project.urn,
         type_field_schemas=type_schemas_proto,
     )
 
-    if user_permission_level:
-        proto.user_permission_level = permission_level_to_proto(user_permission_level)
+    if project.baseline_role is not None:
+        proto.baseline_role = content_role_to_proto(project.baseline_role)
+    if user_role is not None:
+        proto.user_role = content_role_to_proto(user_role)
 
     if project.deleted_at:
         proto.deleted_at.CopyFrom(datetime_to_timestamp(project.deleted_at))
@@ -184,29 +165,12 @@ def project_to_proto(
 
 def task_to_proto(
     task: Task,
-    user_permission_level: PermissionLevel | None = None,
+    user_role: ContentRole | None = None,
     subtask_total: int = 0,
     subtask_completed: int = 0,
 ) -> ProtoTask:
-    """
-    Convert Task model to proto Task message.
-
-    Parameters
-    ----------
-    task : Task
-        Task model instance.
-    user_permission_level : PermissionLevel | None
-        The requesting user's permission level for this task.
-
-    Returns
-    -------
-    ProtoTask
-        Proto task message.
-
-    """
-    # Convert field_values dict to map<string, string>
-    # Complex values (arrays) are JSON-encoded
-    field_values_map = {}
+    """Convert a :class:`Task` row to its proto representation."""
+    field_values_map: dict[str, str] = {}
     if task.field_values:
         for key, value in task.field_values.items():
             if isinstance(value, (list, dict)):
@@ -237,7 +201,6 @@ def task_to_proto(
         subtask_completed=subtask_completed,
     )
 
-    # Optional fields
     if task.start_date:
         proto.start_date = task.start_date
     if task.due_date:
@@ -259,28 +222,14 @@ def task_to_proto(
     if task.time_spent_minutes is not None:
         proto.time_spent_minutes = task.time_spent_minutes
 
-    if user_permission_level:
-        proto.user_permission_level = permission_level_to_proto(user_permission_level)
+    if user_role is not None:
+        proto.user_role = content_role_to_proto(user_role)
 
     return proto
 
 
 def field_to_proto(field: FieldDefinition) -> ProtoFieldDefinition:
-    """
-    Convert FieldDefinition model to proto FieldDefinition message.
-
-    Parameters
-    ----------
-    field : FieldDefinition
-        Field definition model instance.
-
-    Returns
-    -------
-    ProtoFieldDefinition
-        Proto field definition message.
-
-    """
-    # Convert config dict to JSON string
+    """Convert a :class:`FieldDefinition` to its proto representation."""
     config_json = json.dumps(field.config) if field.config else "{}"
 
     return ProtoFieldDefinition(
@@ -298,21 +247,7 @@ def field_to_proto(field: FieldDefinition) -> ProtoFieldDefinition:
 
 
 def view_to_proto(view: ViewConfig) -> ProtoViewConfig:
-    """
-    Convert ViewConfig model to proto ViewConfig message.
-
-    Parameters
-    ----------
-    view : ViewConfig
-        View configuration model instance.
-
-    Returns
-    -------
-    ProtoViewConfig
-        Proto view config message.
-
-    """
-    # Convert config dict to JSON string
+    """Convert a :class:`ViewConfig` to its proto representation."""
     config_json = json.dumps(view.config) if view.config else "{}"
 
     return ProtoViewConfig(
@@ -328,20 +263,7 @@ def view_to_proto(view: ViewConfig) -> ProtoViewConfig:
 
 
 def activity_to_proto(activity: TaskActivity) -> ProtoTaskActivity:
-    """
-    Convert TaskActivity model to proto TaskActivity message.
-
-    Parameters
-    ----------
-    activity : TaskActivity
-        Task activity model instance.
-
-    Returns
-    -------
-    ProtoTaskActivity
-        Proto task activity message.
-
-    """
+    """Convert a :class:`TaskActivity` to its proto representation."""
     proto = ProtoTaskActivity(
         id=str(activity.id),
         task_id=str(activity.task_id),
@@ -350,7 +272,6 @@ def activity_to_proto(activity: TaskActivity) -> ProtoTaskActivity:
         timestamp=datetime_to_timestamp(activity.timestamp),
     )
 
-    # Optional fields
     if activity.field_id:
         proto.field_id = activity.field_id
     if activity.previous_value:
@@ -365,24 +286,7 @@ def sprint_to_proto(
     task_count: int = 0,
     completed_task_count: int = 0,
 ) -> ProtoSprint:
-    """
-    Convert Sprint model to proto Sprint message.
-
-    Parameters
-    ----------
-    sprint : Sprint
-        Sprint model instance.
-    task_count : int
-        Total tasks in this sprint.
-    completed_task_count : int
-        Completed tasks in this sprint.
-
-    Returns
-    -------
-    ProtoSprint
-        Proto sprint message.
-
-    """
+    """Convert a :class:`Sprint` to its proto representation."""
     proto = ProtoSprint(
         id=str(sprint.id),
         project_id=str(sprint.project_id),

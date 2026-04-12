@@ -1,9 +1,3 @@
-/**
- * Permission Defaults Section
- *
- * Admin UI for configuring organization-wide permission defaults per content type.
- */
-
 import { useEffect, useState } from 'react';
 import {
     ShieldCheck,
@@ -15,7 +9,9 @@ import {
     Robot,
 } from '@phosphor-icons/react';
 import { usePermissionDefaults, getContentTypeLabel } from '@/features/admin/hooks/useAdminHooks';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import { ContentType, AccessMode } from '@uniffy/proto/common/v1/common_pb';
+import { AccessModeSelector } from '@/features/permissions';
+import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import type { SerializedContentTypeDefaults } from '@/features/admin/store/adminSlice';
 
 const CONTENT_TYPE_ICONS: Record<number, typeof NotePencil> = {
@@ -44,178 +40,86 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
     const [saving, setSaving] = useState(false);
     const Icon = CONTENT_TYPE_ICONS[contentType] || NotePencil;
 
-    // Local state for toggles
-    const [membersCanView, setMembersCanView] = useState(defaults?.membersCanView ?? true);
-    const [membersCanEdit, setMembersCanEdit] = useState(defaults?.membersCanEdit ?? false);
-    const [membersCanDelete, setMembersCanDelete] = useState(defaults?.membersCanDelete ?? false);
-    const [membersCanShare, setMembersCanShare] = useState(defaults?.membersCanShare ?? false);
-
-    // Sync with props
-    useEffect(() => {
-        if (defaults) {
-            setMembersCanView(defaults.membersCanView);
-            setMembersCanEdit(defaults.membersCanEdit);
-            setMembersCanDelete(defaults.membersCanDelete);
-            setMembersCanShare(defaults.membersCanShare);
-        }
-    }, [defaults]);
-
-    const handleToggle = async (
-        field: 'membersCanView' | 'membersCanEdit' | 'membersCanDelete' | 'membersCanShare',
-        value: boolean
-    ) => {
-        const setters = {
-            membersCanView: setMembersCanView,
-            membersCanEdit: setMembersCanEdit,
-            membersCanDelete: setMembersCanDelete,
-            membersCanShare: setMembersCanShare,
-        };
-
-        setters[field](value);
+    const handleChange = async (next: { accessMode: AccessMode; baselineRole: number | null }) => {
         setSaving(true);
-
         try {
-            await onUpdate(contentType, { [field]: value });
-        } catch {
-            // Revert on error
-            setters[field](!value);
+            await onUpdate(contentType, {
+                defaultAccessMode: next.accessMode,
+                defaultBaselineRole: next.baselineRole,
+            });
         } finally {
             setSaving(false);
         }
     };
 
+    const updatedIso = defaults?.updatedAt
+        ? new Date(Number(defaults.updatedAt.seconds) * 1000).toISOString()
+        : undefined;
+
     return (
         <div className="p-4 rounded-lg border border-border bg-card">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                     <Icon size={20} weight="duotone" className="text-primary" />
                 </div>
                 <div className="flex-1">
                     <h3 className="font-medium">{getContentTypeLabel(contentType)}</h3>
-                    <p className="text-xs text-muted-foreground">
-                        Member permissions for organization-visible {getContentTypeLabel(contentType).toLowerCase()}
-                    </p>
                 </div>
                 {saving && (
                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 )}
             </div>
 
-            {/* Permission toggles */}
-            <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                    Organization members can:
+            <AccessModeSelector
+                value={{
+                    accessMode: (defaults?.defaultAccessMode ?? AccessMode.OWNER_ONLY) as AccessMode,
+                    baselineRole: defaults?.defaultBaselineRole ?? null,
+                }}
+                onChange={handleChange}
+            />
+
+            {updatedIso && (
+                <p className="text-xs text-muted-foreground mt-3">
+                    Updated {formatRelativeTime(updatedIso)}
                 </p>
-
-                <PermissionToggle
-                    label="View"
-                    description="View organization-visible content"
-                    checked={membersCanView}
-                    onChange={(v) => handleToggle('membersCanView', v)}
-                />
-
-                <PermissionToggle
-                    label="Edit"
-                    description="Edit organization-visible content"
-                    checked={membersCanEdit}
-                    onChange={(v) => handleToggle('membersCanEdit', v)}
-                />
-
-                <PermissionToggle
-                    label="Delete"
-                    description="Delete organization-visible content"
-                    checked={membersCanDelete}
-                    onChange={(v) => handleToggle('membersCanDelete', v)}
-                />
-
-                <PermissionToggle
-                    label="Share"
-                    description="Share organization-visible content with others"
-                    checked={membersCanShare}
-                    onChange={(v) => handleToggle('membersCanShare', v)}
-                />
-            </div>
+            )}
         </div>
-    );
-}
-
-interface PermissionToggleProps {
-    label: string;
-    description: string;
-    checked: boolean;
-    onChange: (value: boolean) => void;
-}
-
-function PermissionToggle({ label, description, checked, onChange }: PermissionToggleProps) {
-    return (
-        <label className="flex items-center justify-between py-2 cursor-pointer group">
-            <div>
-                <span className="text-sm font-medium">{label}</span>
-                <p className="text-xs text-muted-foreground">{description}</p>
-            </div>
-            <button
-                type="button"
-                role="switch"
-                aria-checked={checked}
-                onClick={() => onChange(!checked)}
-                className={`
-                    relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full
-                    border-2 border-transparent transition-colors duration-200 ease-in-out
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                    ${checked ? 'bg-primary' : 'bg-muted'}
-                `}
-            >
-                <span
-                    className={`
-                        pointer-events-none inline-block h-5 w-5 transform rounded-full
-                        bg-white shadow ring-0 transition duration-200 ease-in-out
-                        ${checked ? 'translate-x-5' : 'translate-x-0'}
-                    `}
-                />
-            </button>
-        </label>
     );
 }
 
 export function PermissionDefaultsSection() {
     const { defaults, loading, error, refresh, update, dismissError } = usePermissionDefaults();
 
-    // Fetch on mount
     useEffect(() => {
         refresh();
     }, [refresh]);
 
-    // Create a map of defaults by content type
     const defaultsByType = new Map(defaults.map((d) => [d.contentType, d]));
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">
                     <ShieldCheck size={24} weight="duotone" className="text-primary shrink-0" />
-                    <h1 className="text-xl md:text-2xl font-bold">Org Default Permissions</h1>
+                    <h1 className="text-xl md:text-2xl font-bold">Permission Defaults</h1>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                    Configure what organization members can do with organization-visible content.
-                    <span className="hidden sm:inline"> These apply across the org and can be overridden with per-item permissions.</span>
+                    Default access mode for new content created in this organization.
+                    <span className="hidden sm:inline"> These can be overridden per item.</span>
                 </p>
             </div>
 
-            {/* Error banner */}
             {error && (
-                <div className="p-4 rounded-lg border status-error">
+                <div className="p-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--status-error)' }}>
+                        <div className="flex items-center gap-2 text-sm text-red-800 dark:text-red-400">
                             <WarningCircle size={20} weight="fill" />
                             {error}
                         </div>
                         <button
                             type="button"
                             onClick={dismissError}
-                            className="text-sm hover:underline"
-                            style={{ color: 'var(--status-error)' }}
+                            className="text-sm text-red-800 dark:text-red-400 hover:underline"
                         >
                             Dismiss
                         </button>
@@ -223,20 +127,18 @@ export function PermissionDefaultsSection() {
                 </div>
             )}
 
-            {/* Loading state */}
             {loading ? (
                 <div className="py-12 text-center">
                     <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-muted-foreground">Loading permission defaults...</p>
                 </div>
             ) : (
-                /* Content type cards */
                 <div className="grid gap-4 md:grid-cols-2">
-                    {ALL_CONTENT_TYPES.map((contentType) => (
+                    {ALL_CONTENT_TYPES.map((ct) => (
                         <ContentTypeCard
-                            key={contentType}
-                            contentType={contentType}
-                            defaults={defaultsByType.get(contentType)}
+                            key={ct}
+                            contentType={ct}
+                            defaults={defaultsByType.get(ct)}
                             onUpdate={update}
                         />
                     ))}
@@ -245,4 +147,3 @@ export function PermissionDefaultsSection() {
         </div>
     );
 }
-

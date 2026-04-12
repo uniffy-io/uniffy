@@ -10,8 +10,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.permissions.domain_admin import DomainAdmin
-from uniffy.core.models.shared import DomainType
+from uniffy.core.types import DomainType
+
+# Lazy import inside functions to avoid circular dependency with
+# core.models package initialization.
 
 
 async def is_domain_admin(
@@ -40,6 +42,8 @@ async def is_domain_admin(
         True if the user has a domain admin row for this domain.
 
     """
+    from uniffy.core.models.permissions.domain_admin import DomainAdmin
+
     result = await session.execute(
         select(DomainAdmin.id).where(
             DomainAdmin.user_id == user_id,
@@ -73,6 +77,8 @@ async def get_user_domain_admins(
         List of domains where the user is admin.
 
     """
+    from uniffy.core.models.permissions.domain_admin import DomainAdmin
+
     result = await session.execute(
         select(DomainAdmin.domain).where(
             DomainAdmin.user_id == user_id,

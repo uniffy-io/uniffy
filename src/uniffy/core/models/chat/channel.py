@@ -8,7 +8,6 @@ from sqlalchemy import Column, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import VisibilityScope
 from uniffy.core.types import generate_id
 
 
@@ -45,17 +44,6 @@ class ChatChannel(SQLModel, table=True):
             SAEnum(ChannelType, name="channeltype", values_callable=lambda x: [e.value for e in x]),
             nullable=False,
             index=True,
-        ),
-    )
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
-        sa_column=Column(
-            SAEnum(
-                VisibilityScope,
-                name="visibilityscope",
-                values_callable=lambda x: [e.value for e in x],
-            ),
-            nullable=False,
         ),
     )
     is_encrypted: bool = Field(default=False, nullable=False)

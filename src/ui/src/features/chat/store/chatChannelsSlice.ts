@@ -71,6 +71,10 @@ export const chatChannelsSlice = createSlice({
       action: PayloadAction<{ channelId: string; members: ChatChannelMember[] }>,
     ) => {
       state.channelMembers[action.payload.channelId] = action.payload.members;
+      const channel = state.channels.find((c) => c.id === action.payload.channelId);
+      if (channel) {
+        channel.memberCount = action.payload.members.length;
+      }
     },
     setCategories: (state, action: PayloadAction<ChatChannelCategory[]>) => {
       state.categories = action.payload;

@@ -40,7 +40,7 @@ type AgentInfo struct {
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	EnabledSkills  []string               `protobuf:"bytes,16,rep,name=enabled_skills,json=enabledSkills,proto3" json:"enabled_skills,omitempty"`
-	Visibility     v1.VisibilityScope     `protobuf:"varint,17,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode     v1.AccessMode          `protobuf:"varint,17,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	// S3 key prefix for avatar images (empty string if none)
 	AvatarKey string `protobuf:"bytes,19,opt,name=avatar_key,json=avatarKey,proto3" json:"avatar_key,omitempty"`
 	// Image generation model (empty string = disabled)
@@ -50,7 +50,9 @@ type AgentInfo struct {
 	// Provider key ID for the image model (empty = not assigned)
 	ImageProviderKeyId string `protobuf:"bytes,23,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3" json:"image_provider_key_id,omitempty"`
 	// Prompt template ID (empty = no template, uses soul_prompt directly)
-	PromptId      string `protobuf:"bytes,24,opt,name=prompt_id,json=promptId,proto3" json:"prompt_id,omitempty"`
+	PromptId string `protobuf:"bytes,24,opt,name=prompt_id,json=promptId,proto3" json:"prompt_id,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,25,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,11 +185,11 @@ func (x *AgentInfo) GetEnabledSkills() []string {
 	return nil
 }
 
-func (x *AgentInfo) GetVisibility() v1.VisibilityScope {
+func (x *AgentInfo) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *AgentInfo) GetAvatarKey() string {
@@ -225,6 +227,13 @@ func (x *AgentInfo) GetPromptId() string {
 	return ""
 }
 
+func (x *AgentInfo) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 type CreateAgentRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -236,7 +245,7 @@ type CreateAgentRequest struct {
 	ThemeColor     *string                `protobuf:"bytes,9,opt,name=theme_color,json=themeColor,proto3,oneof" json:"theme_color,omitempty"`
 	IsDefault      *bool                  `protobuf:"varint,10,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
 	EnabledSkills  []string               `protobuf:"bytes,11,rep,name=enabled_skills,json=enabledSkills,proto3" json:"enabled_skills,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,12,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,12,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	GroupIds       []string               `protobuf:"bytes,13,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
 	// Image generation model (empty string = disabled)
 	ImageModel *string `protobuf:"bytes,17,opt,name=image_model,json=imageModel,proto3,oneof" json:"image_model,omitempty"`
@@ -245,7 +254,8 @@ type CreateAgentRequest struct {
 	// Provider key ID for the image model
 	ImageProviderKeyId *string `protobuf:"bytes,19,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3,oneof" json:"image_provider_key_id,omitempty"`
 	// Prompt template ID
-	PromptId      *string `protobuf:"bytes,20,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
+	PromptId      *string         `protobuf:"bytes,20,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
+	BaselineRole  *v1.ContentRole `protobuf:"varint,21,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -343,11 +353,11 @@ func (x *CreateAgentRequest) GetEnabledSkills() []string {
 	return nil
 }
 
-func (x *CreateAgentRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *CreateAgentRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *CreateAgentRequest) GetGroupIds() []string {
@@ -383,6 +393,13 @@ func (x *CreateAgentRequest) GetPromptId() string {
 		return *x.PromptId
 	}
 	return ""
+}
+
+func (x *CreateAgentRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type AgentResponse struct {
@@ -485,7 +502,7 @@ type ListAgentsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Pagination     *v1.PaginationRequest  `protobuf:"bytes,2,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,3,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,3,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	PersonalOnly   *bool                  `protobuf:"varint,4,opt,name=personal_only,json=personalOnly,proto3,oneof" json:"personal_only,omitempty"`
 	GroupId        *string                `protobuf:"bytes,5,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -536,11 +553,11 @@ func (x *ListAgentsRequest) GetPagination() *v1.PaginationRequest {
 	return nil
 }
 
-func (x *ListAgentsRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *ListAgentsRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *ListAgentsRequest) GetPersonalOnly() bool {
@@ -621,7 +638,7 @@ type UpdateAgentRequest struct {
 	ThemeColor     *string                `protobuf:"bytes,10,opt,name=theme_color,json=themeColor,proto3,oneof" json:"theme_color,omitempty"`
 	IsDefault      *bool                  `protobuf:"varint,11,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
 	EnabledSkills  []string               `protobuf:"bytes,12,rep,name=enabled_skills,json=enabledSkills,proto3" json:"enabled_skills,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,13,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,13,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	GroupIds       []string               `protobuf:"bytes,14,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
 	EnabledTools   []string               `protobuf:"bytes,15,rep,name=enabled_tools,json=enabledTools,proto3" json:"enabled_tools,omitempty"`
 	// Image generation model (empty string = disabled)
@@ -633,7 +650,8 @@ type UpdateAgentRequest struct {
 	// Prompt template ID
 	PromptId *string `protobuf:"bytes,21,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
 	// Clear the prompt template (set to null)
-	ClearPrompt   *bool `protobuf:"varint,22,opt,name=clear_prompt,json=clearPrompt,proto3,oneof" json:"clear_prompt,omitempty"`
+	ClearPrompt   *bool           `protobuf:"varint,22,opt,name=clear_prompt,json=clearPrompt,proto3,oneof" json:"clear_prompt,omitempty"`
+	BaselineRole  *v1.ContentRole `protobuf:"varint,23,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -738,11 +756,11 @@ func (x *UpdateAgentRequest) GetEnabledSkills() []string {
 	return nil
 }
 
-func (x *UpdateAgentRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *UpdateAgentRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *UpdateAgentRequest) GetGroupIds() []string {
@@ -792,6 +810,13 @@ func (x *UpdateAgentRequest) GetClearPrompt() bool {
 		return *x.ClearPrompt
 	}
 	return false
+}
+
+func (x *UpdateAgentRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type DeleteAgentRequest struct {
@@ -1110,7 +1135,7 @@ var File_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xa2\x06\n" +
+	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xf2\x06\n" +
 	"\tAgentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1131,18 +1156,19 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
-	"\x0eenabled_skills\x18\x10 \x03(\tR\renabledSkills\x12:\n" +
-	"\n" +
-	"visibility\x18\x11 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibility\x12\x1d\n" +
+	"\x0eenabled_skills\x18\x10 \x03(\tR\renabledSkills\x126\n" +
+	"\vaccess_mode\x18\x11 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12\x1d\n" +
 	"\n" +
 	"avatar_key\x18\x13 \x01(\tR\tavatarKey\x12\x1f\n" +
 	"\vimage_model\x18\x15 \x01(\tR\n" +
 	"imageModel\x125\n" +
 	"\x17primary_provider_key_id\x18\x16 \x01(\tR\x14primaryProviderKeyId\x121\n" +
 	"\x15image_provider_key_id\x18\x17 \x01(\tR\x12imageProviderKeyId\x12\x1b\n" +
-	"\tprompt_id\x18\x18 \x01(\tR\bpromptIdJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
-	"J\x04\b\x12\x10\x13J\x04\b\x14\x10\x15\"\xd0\x06\n" +
+	"\tprompt_id\x18\x18 \x01(\tR\bpromptId\x12@\n" +
+	"\rbaseline_role\x18\x19 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01B\x10\n" +
+	"\x0e_baseline_roleJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"J\x04\b\x12\x10\x13J\x04\b\x14\x10\x15\"\xa1\a\n" +
 	"\x12CreateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -1156,51 +1182,52 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
 	"is_default\x18\n" +
 	" \x01(\bH\x04R\tisDefault\x88\x01\x01\x12%\n" +
-	"\x0eenabled_skills\x18\v \x03(\tR\renabledSkills\x12?\n" +
-	"\n" +
-	"visibility\x18\f \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x05R\n" +
-	"visibility\x88\x01\x01\x12\x1b\n" +
+	"\x0eenabled_skills\x18\v \x03(\tR\renabledSkills\x12;\n" +
+	"\vaccess_mode\x18\f \x01(\x0e2\x15.common.v1.AccessModeH\x05R\n" +
+	"accessMode\x88\x01\x01\x12\x1b\n" +
 	"\tgroup_ids\x18\r \x03(\tR\bgroupIds\x12$\n" +
 	"\vimage_model\x18\x11 \x01(\tH\x06R\n" +
 	"imageModel\x88\x01\x01\x12:\n" +
 	"\x17primary_provider_key_id\x18\x12 \x01(\tH\aR\x14primaryProviderKeyId\x88\x01\x01\x126\n" +
 	"\x15image_provider_key_id\x18\x13 \x01(\tH\bR\x12imageProviderKeyId\x88\x01\x01\x12 \n" +
-	"\tprompt_id\x18\x14 \x01(\tH\tR\bpromptId\x88\x01\x01B\x0e\n" +
+	"\tprompt_id\x18\x14 \x01(\tH\tR\bpromptId\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\x15 \x01(\x0e2\x16.common.v1.ContentRoleH\n" +
+	"R\fbaselineRole\x88\x01\x01B\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
 	"\r_avatar_emojiB\x0e\n" +
 	"\f_theme_colorB\r\n" +
-	"\v_is_defaultB\r\n" +
-	"\v_visibilityB\x0e\n" +
+	"\v_is_defaultB\x0e\n" +
+	"\f_access_modeB\x0e\n" +
 	"\f_image_modelB\x1a\n" +
 	"\x18_primary_provider_key_idB\x18\n" +
 	"\x16_image_provider_key_idB\f\n" +
 	"\n" +
-	"_prompt_idJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\x0e\x10\x0fJ\x04\b\x0f\x10\x10J\x04\b\x10\x10\x11\";\n" +
+	"_prompt_idB\x10\n" +
+	"\x0e_baseline_roleJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\x0e\x10\x0fJ\x04\b\x0f\x10\x10J\x04\b\x10\x10\x11\";\n" +
 	"\rAgentResponse\x12*\n" +
 	"\x05agent\x18\x01 \x01(\v2\x14.agents.v1.AgentInfoR\x05agent\"U\n" +
 	"\x0fGetAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\"\xc7\x02\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\"\xc4\x02\n" +
 	"\x11ListAgentsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1c.common.v1.PaginationRequestH\x00R\n" +
-	"pagination\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\x03 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x01R\n" +
-	"visibility\x88\x01\x01\x12(\n" +
+	"pagination\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x01R\n" +
+	"accessMode\x88\x01\x01\x12(\n" +
 	"\rpersonal_only\x18\x04 \x01(\bH\x02R\fpersonalOnly\x88\x01\x01\x12\x1e\n" +
 	"\bgroup_id\x18\x05 \x01(\tH\x03R\agroupId\x88\x01\x01B\r\n" +
-	"\v_paginationB\r\n" +
-	"\v_visibilityB\x10\n" +
+	"\v_paginationB\x0e\n" +
+	"\f_access_modeB\x10\n" +
 	"\x0e_personal_onlyB\v\n" +
 	"\t_group_id\"\x81\x01\n" +
 	"\x12ListAgentsResponse\x12,\n" +
 	"\x06agents\x18\x01 \x03(\v2\x14.agents.v1.AgentInfoR\x06agents\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xd1\a\n" +
+	"pagination\"\xa2\b\n" +
 	"\x12UpdateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x17\n" +
@@ -1215,10 +1242,9 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"themeColor\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"is_default\x18\v \x01(\bH\x05R\tisDefault\x88\x01\x01\x12%\n" +
-	"\x0eenabled_skills\x18\f \x03(\tR\renabledSkills\x12?\n" +
-	"\n" +
-	"visibility\x18\r \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x06R\n" +
-	"visibility\x88\x01\x01\x12\x1b\n" +
+	"\x0eenabled_skills\x18\f \x03(\tR\renabledSkills\x12;\n" +
+	"\vaccess_mode\x18\r \x01(\x0e2\x15.common.v1.AccessModeH\x06R\n" +
+	"accessMode\x88\x01\x01\x12\x1b\n" +
 	"\tgroup_ids\x18\x0e \x03(\tR\bgroupIds\x12#\n" +
 	"\renabled_tools\x18\x0f \x03(\tR\fenabledTools\x12$\n" +
 	"\vimage_model\x18\x12 \x01(\tH\aR\n" +
@@ -1227,20 +1253,22 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x15image_provider_key_id\x18\x14 \x01(\tH\tR\x12imageProviderKeyId\x88\x01\x01\x12 \n" +
 	"\tprompt_id\x18\x15 \x01(\tH\n" +
 	"R\bpromptId\x88\x01\x01\x12&\n" +
-	"\fclear_prompt\x18\x16 \x01(\bH\vR\vclearPrompt\x88\x01\x01B\a\n" +
+	"\fclear_prompt\x18\x16 \x01(\bH\vR\vclearPrompt\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\x17 \x01(\x0e2\x16.common.v1.ContentRoleH\fR\fbaselineRole\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
 	"\r_avatar_emojiB\x0e\n" +
 	"\f_theme_colorB\r\n" +
-	"\v_is_defaultB\r\n" +
-	"\v_visibilityB\x0e\n" +
+	"\v_is_defaultB\x0e\n" +
+	"\f_access_modeB\x0e\n" +
 	"\f_image_modelB\x1a\n" +
 	"\x18_primary_provider_key_idB\x18\n" +
 	"\x16_image_provider_key_idB\f\n" +
 	"\n" +
 	"_prompt_idB\x0f\n" +
-	"\r_clear_promptJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\x10\x10\x11J\x04\b\x11\x10\x12\"X\n" +
+	"\r_clear_promptB\x10\n" +
+	"\x0e_baseline_roleJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\x10\x10\x11J\x04\b\x11\x10\x12\"X\n" +
 	"\x12DeleteAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\"/\n" +
@@ -1299,42 +1327,46 @@ var file_agents_v1_agents_proto_goTypes = []any{
 	(*PreviewSystemPromptRequest)(nil),  // 11: agents.v1.PreviewSystemPromptRequest
 	(*PreviewSystemPromptResponse)(nil), // 12: agents.v1.PreviewSystemPromptResponse
 	(*timestamppb.Timestamp)(nil),       // 13: google.protobuf.Timestamp
-	(v1.VisibilityScope)(0),             // 14: common.v1.VisibilityScope
-	(*v1.PaginationRequest)(nil),        // 15: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),       // 16: common.v1.PaginationResponse
+	(v1.AccessMode)(0),                  // 14: common.v1.AccessMode
+	(v1.ContentRole)(0),                 // 15: common.v1.ContentRole
+	(*v1.PaginationRequest)(nil),        // 16: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),       // 17: common.v1.PaginationResponse
 }
 var file_agents_v1_agents_proto_depIdxs = []int32{
 	13, // 0: agents.v1.AgentInfo.created_at:type_name -> google.protobuf.Timestamp
 	13, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
-	14, // 2: agents.v1.AgentInfo.visibility:type_name -> common.v1.VisibilityScope
-	14, // 3: agents.v1.CreateAgentRequest.visibility:type_name -> common.v1.VisibilityScope
-	0,  // 4: agents.v1.AgentResponse.agent:type_name -> agents.v1.AgentInfo
-	15, // 5: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
-	14, // 6: agents.v1.ListAgentsRequest.visibility:type_name -> common.v1.VisibilityScope
-	0,  // 7: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
-	16, // 8: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
-	14, // 9: agents.v1.UpdateAgentRequest.visibility:type_name -> common.v1.VisibilityScope
-	1,  // 10: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
-	3,  // 11: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
-	4,  // 12: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
-	6,  // 13: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
-	7,  // 14: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
-	9,  // 15: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
-	10, // 16: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
-	11, // 17: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
-	2,  // 18: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.AgentResponse
-	2,  // 19: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.AgentResponse
-	5,  // 20: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
-	2,  // 21: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.AgentResponse
-	8,  // 22: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
-	2,  // 23: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.AgentResponse
-	2,  // 24: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.AgentResponse
-	12, // 25: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
-	18, // [18:26] is the sub-list for method output_type
-	10, // [10:18] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	14, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
+	15, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
+	14, // 4: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	15, // 5: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 6: agents.v1.AgentResponse.agent:type_name -> agents.v1.AgentInfo
+	16, // 7: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
+	14, // 8: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
+	0,  // 9: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
+	17, // 10: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
+	14, // 11: agents.v1.UpdateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	15, // 12: agents.v1.UpdateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 13: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
+	3,  // 14: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
+	4,  // 15: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
+	6,  // 16: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
+	7,  // 17: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
+	9,  // 18: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
+	10, // 19: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
+	11, // 20: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
+	2,  // 21: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.AgentResponse
+	2,  // 22: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.AgentResponse
+	5,  // 23: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
+	2,  // 24: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.AgentResponse
+	8,  // 25: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
+	2,  // 26: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.AgentResponse
+	2,  // 27: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.AgentResponse
+	12, // 28: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
+	21, // [21:29] is the sub-list for method output_type
+	13, // [13:21] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_agents_proto_init() }
@@ -1342,6 +1374,7 @@ func file_agents_v1_agents_proto_init() {
 	if File_agents_v1_agents_proto != nil {
 		return
 	}
+	file_agents_v1_agents_proto_msgTypes[0].OneofWrappers = []any{}
 	file_agents_v1_agents_proto_msgTypes[1].OneofWrappers = []any{}
 	file_agents_v1_agents_proto_msgTypes[4].OneofWrappers = []any{}
 	file_agents_v1_agents_proto_msgTypes[6].OneofWrappers = []any{}

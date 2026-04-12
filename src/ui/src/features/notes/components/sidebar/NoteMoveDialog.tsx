@@ -1,7 +1,7 @@
 /**
  * Note Move Dialog Component
  *
- * Dialog for moving notes/folders to a different visibility scope and/or parent folder.
+ * Dialog for moving notes/folders to a different access mode and/or parent folder.
  * Adapted from the files MoveDialog pattern.
  */
 
@@ -20,7 +20,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/shared/utils/cn';
-import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 import { moveNote, updateNote, initializeNotesData } from '@/features/notes/store/notesSlice';
 import type { TreeNode, MoveTarget } from '@/features/notes/components/sidebar/types';
 
@@ -36,7 +36,7 @@ export function NoteMoveDialog({ target, onClose }: NoteMoveDialogProps) {
     const tree = useAppSelector((state) => state.notesTree.tree);
 
     const [selectedVisibility, setSelectedVisibility] = useState<VisibilityOption>(
-        target.currentVisibility === VisibilityScope.ORGANIZATION ? 'organization' : 'personal'
+        target.currentAccessMode === AccessMode.OPEN_TO_ORG ? 'organization' : 'personal'
     );
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(target.currentParentId);
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -81,30 +81,30 @@ export function NoteMoveDialog({ target, onClose }: NoteMoveDialogProps) {
     }, []);
 
     const canMove = useMemo(() => {
-        const newVisibility = selectedVisibility === 'organization'
-            ? VisibilityScope.ORGANIZATION
-            : VisibilityScope.PRIVATE;
+        const newAccessMode = selectedVisibility === 'organization'
+            ? AccessMode.OPEN_TO_ORG
+            : AccessMode.OWNER_ONLY;
 
-        const visibilityChanged = newVisibility !== target.currentVisibility;
+        const accessModeChanged = newAccessMode !== target.currentAccessMode;
         const folderChanged = selectedFolderId !== target.currentParentId;
 
-        return visibilityChanged || folderChanged;
-    }, [selectedVisibility, selectedFolderId, target.currentVisibility, target.currentParentId]);
+        return accessModeChanged || folderChanged;
+    }, [selectedVisibility, selectedFolderId, target.currentAccessMode, target.currentParentId]);
 
     const performMove = useCallback(async () => {
         setIsMoving(true);
         setError(null);
 
         try {
-            const targetVisibility = selectedVisibility === 'organization'
-                ? VisibilityScope.ORGANIZATION
-                : VisibilityScope.PRIVATE;
+            const targetAccessMode = selectedVisibility === 'organization'
+                ? AccessMode.OPEN_TO_ORG
+                : AccessMode.OWNER_ONLY;
 
-            // Change visibility if needed
-            if (targetVisibility !== target.currentVisibility) {
+            // Change access mode if needed
+            if (targetAccessMode !== target.currentAccessMode) {
                 await dispatch(moveNote({
                     noteId: target.noteId,
-                    targetVisibility,
+                    targetAccessMode,
                 })).unwrap();
             }
 
@@ -129,18 +129,18 @@ export function NoteMoveDialog({ target, onClose }: NoteMoveDialogProps) {
     }, [dispatch, selectedVisibility, selectedFolderId, target, onClose]);
 
     const handleMove = useCallback(async () => {
-        const targetVisibility = selectedVisibility === 'organization'
-            ? VisibilityScope.ORGANIZATION
-            : VisibilityScope.PRIVATE;
+        const targetAccessMode = selectedVisibility === 'organization'
+            ? AccessMode.OPEN_TO_ORG
+            : AccessMode.OWNER_ONLY;
 
-        if (targetVisibility === VisibilityScope.ORGANIZATION &&
-            target.currentVisibility !== VisibilityScope.ORGANIZATION) {
+        if (targetAccessMode === AccessMode.OPEN_TO_ORG &&
+            target.currentAccessMode !== AccessMode.OPEN_TO_ORG) {
             setShowOrgConfirm(true);
             return;
         }
 
         await performMove();
-    }, [selectedVisibility, target.currentVisibility, performMove]);
+    }, [selectedVisibility, target.currentAccessMode, performMove]);
 
     const renderFolderNode = useCallback((node: TreeNode, depth = 0): React.ReactNode => {
         if (node.type !== 'folder') return null;

@@ -20,6 +20,7 @@ from uniffy_proto.search.v1.search_pb2 import (
     SearchResponse,
 )
 
+from uniffy.core.types import AccessMode, ContentRole
 from uniffy.db import get_async_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.search.converters import (
@@ -180,7 +181,9 @@ class SearchHandlers:
                 raise ConnectError(Code.INVALID_ARGUMENT, "owner_id required in metadata")
 
             owner_id = UUID(owner_id_str)
-            visibility = request.metadata.get("visibility", "PRIVATE")
+            access_mode = AccessMode(request.metadata.get("access_mode", AccessMode.OWNER_ONLY))
+            baseline_role_str = request.metadata.get("baseline_role") or None
+            baseline_role = ContentRole(baseline_role_str) if baseline_role_str else None
 
             async for session in get_async_session():
                 ops = SearchOperations(session)
@@ -190,7 +193,8 @@ class SearchHandlers:
                     entity_type=entity_type,
                     title=request.title,
                     url_path=request.url,
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                     owner_id=owner_id,
                     keywords=request.content if request.content else None,
                 )

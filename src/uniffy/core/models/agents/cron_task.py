@@ -3,11 +3,11 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, String, Text, text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, String, Text, text
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.content.model_mixins import deleted_at_field, is_deleted_field, visibility_field
-from uniffy.core.types import VisibilityScope, generate_id
+from uniffy.core.content.model_mixins import deleted_at_field, is_deleted_field
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class AgentCronTask(SQLModel, table=True):
@@ -57,8 +57,10 @@ class AgentCronTask(SQLModel, table=True):
         Consecutive failure count (resets on success).
     max_consecutive_failures : int
         Auto-disable threshold (default 3).
-    visibility : VisibilityScope
-        Content visibility scope.
+    access_mode : AccessMode
+        How access to this task is governed.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     is_deleted : bool
         Soft-delete flag.
     deleted_at : datetime | None
@@ -135,7 +137,31 @@ class AgentCronTask(SQLModel, table=True):
     run_count: int = Field(default=0, nullable=False)
     consecutive_failures: int = Field(default=0, nullable=False)
     max_consecutive_failures: int = Field(default=3, nullable=False)
-    visibility: VisibilityScope = visibility_field(default=VisibilityScope.PRIVATE)
+    access_mode: AccessMode = Field(
+        default=AccessMode.OWNER_ONLY,
+        sa_column=Column(
+            Enum(
+                AccessMode,
+                name="accessmode",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=False,
+            index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=None,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
+        ),
+    )
     is_deleted: bool = is_deleted_field()
     deleted_at: datetime | None = deleted_at_field()
     created_at: datetime = Field(

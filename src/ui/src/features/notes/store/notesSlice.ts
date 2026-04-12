@@ -1,6 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
 import {
     fetchNotes,
     fetchDeletedNotes,
@@ -94,7 +93,6 @@ interface NotesState {
     // Filters
     filters: {
         searchQuery: string;
-        visibility: VisibilityScope | 'all';
         sortBy: 'title' | 'updated' | 'created';
         sortOrder: 'asc' | 'desc';
         showDeleted: boolean;
@@ -127,7 +125,6 @@ const initialState: NotesState = {
     searchLoading: false,
     filters: {
         searchQuery: '',
-        visibility: 'all',
         sortBy: 'updated',
         sortOrder: 'desc',
         showDeleted: false,
@@ -215,10 +212,6 @@ export const notesSlice = createSlice({
         // Filters
         setSearchQuery: (state, action: PayloadAction<string>) => {
             state.filters.searchQuery = action.payload;
-        },
-
-        setVisibilityFilter: (state, action: PayloadAction<VisibilityScope | 'all'>) => {
-            state.filters.visibility = action.payload;
         },
 
         setSortBy: (state, action: PayloadAction<'title' | 'updated' | 'created'>) => {
@@ -480,7 +473,6 @@ export const {
     setError,
     clearError,
     setSearchQuery,
-    setVisibilityFilter,
     setSortBy,
     setSortOrder,
     setShowDeleted,

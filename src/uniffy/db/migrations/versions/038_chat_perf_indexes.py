@@ -20,10 +20,8 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     """Add performance indexes and restructure chat_reactions PK."""
 
-    # ------------------------------------------------------------------
     # 1. Composite partial index on channels for sidebar/browse queries
     #    Replaces single-column ix_chat_channels_org for filtered lookups
-    # ------------------------------------------------------------------
     op.drop_index("ix_chat_channels_org", table_name="chat_channels")
     op.drop_index("ix_chat_channels_type", table_name="chat_channels")
     op.create_index(
@@ -33,11 +31,9 @@ def upgrade() -> None:
         postgresql_where=sa.text("is_deleted = false"),
     )
 
-    # ------------------------------------------------------------------
     # 2. Covering index on members for sidebar query (user -> channels)
     #    The PK is (channel_id, user_id) which is wrong direction for
     #    "list all channels for user_id". This index covers the JOIN.
-    # ------------------------------------------------------------------
     op.drop_index("ix_chat_members_user", table_name="chat_channel_members")
     op.create_index(
         "ix_chat_members_user_covering",
@@ -46,18 +42,14 @@ def upgrade() -> None:
         postgresql_include=["channel_id", "role"],
     )
 
-    # ------------------------------------------------------------------
     # 3. Index on channel_stats for sidebar sort order
-    # ------------------------------------------------------------------
     op.create_index(
         "ix_chat_channel_stats_last_root",
         "chat_channel_stats",
         [sa.text("last_root_message_at DESC NULLS LAST")],
     )
 
-    # ------------------------------------------------------------------
     # 4. FILLFACTOR for HOT updates on high-write tables
-    # ------------------------------------------------------------------
     op.execute(sa.text(
         "ALTER TABLE chat_channel_stats SET (fillfactor = 70)"
     ))
@@ -68,11 +60,9 @@ def upgrade() -> None:
         "ALTER TABLE chat_messages SET (fillfactor = 90)"
     ))
 
-    # ------------------------------------------------------------------
     # 5. Fix ix_chat_resources_channel_type to have explicit DESC
     #    The migration 037 used sa.text("last_mentioned_at DESC") but
     #    the model Index didn't match. Drop and recreate consistently.
-    # ------------------------------------------------------------------
     op.drop_index(
         "ix_chat_resources_channel_type",
         table_name="chat_channel_resources",
@@ -83,10 +73,8 @@ def upgrade() -> None:
         ["channel_id", "content_type", sa.text("last_mentioned_at DESC")],
     )
 
-    # ------------------------------------------------------------------
     # 6. Restructure chat_reactions: drop surrogate id PK,
     #    use composite PK (message_id, user_id, emoji)
-    # ------------------------------------------------------------------
     # Drop the unique constraint (it becomes the PK)
     op.drop_constraint("uq_chat_reactions_unique", "chat_reactions")
     # Drop the existing index on (message_id, emoji)

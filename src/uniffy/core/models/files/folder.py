@@ -7,8 +7,7 @@ from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class Folder(SQLModel, table=True):
@@ -26,8 +25,10 @@ class Folder(SQLModel, table=True):
         Organization this folder belongs to (foreign key).
     owner_id : UUID
         User who owns the folder (foreign key to login_users).
-    visibility : VisibilityScope
-        Who can access this folder (PRIVATE, GROUP, ORGANIZATION).
+    access_mode : AccessMode
+        How access to this folder is governed.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     name : str
         Folder name.
     parent_id : UUID | None
@@ -50,17 +51,29 @@ class Folder(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OWNER_ONLY,
         sa_column=Column(
             SAEnum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=None,
+        sa_column=Column(
+            SAEnum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     name: str = Field(max_length=255, nullable=False)
@@ -86,5 +99,5 @@ class Folder(SQLModel, table=True):
         """Return string representation of Folder."""
         return (
             f"<Folder(id={self.id}, name={self.name!r}, "
-            f"visibility={self.visibility}, organization_id={self.organization_id})>"
+            f"access_mode={self.access_mode}, organization_id={self.organization_id})>"
         )

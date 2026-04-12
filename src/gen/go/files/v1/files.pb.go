@@ -145,7 +145,8 @@ type InitiateUploadRequest struct {
 	MimeType       string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
 	TotalSize      int64                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	FolderId       *string                `protobuf:"bytes,5,opt,name=folder_id,json=folderId,proto3,oneof" json:"folder_id,omitempty"`
-	Visibility     v1.VisibilityScope     `protobuf:"varint,6,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode     v1.AccessMode          `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,7,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -215,11 +216,18 @@ func (x *InitiateUploadRequest) GetFolderId() string {
 	return ""
 }
 
-func (x *InitiateUploadRequest) GetVisibility() v1.VisibilityScope {
+func (x *InitiateUploadRequest) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *InitiateUploadRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type InitiateUploadResponse struct {
@@ -1035,7 +1043,7 @@ type File struct {
 	Urn              string                 `protobuf:"bytes,2,opt,name=urn,proto3" json:"urn,omitempty"`
 	OrganizationId   string                 `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	OwnerId          string                 `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Visibility       v1.VisibilityScope     `protobuf:"varint,5,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode       v1.AccessMode          `protobuf:"varint,5,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	Filename         string                 `protobuf:"bytes,6,opt,name=filename,proto3" json:"filename,omitempty"`
 	OriginalFilename string                 `protobuf:"bytes,7,opt,name=original_filename,json=originalFilename,proto3" json:"original_filename,omitempty"`
 	MimeType         string                 `protobuf:"bytes,8,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
@@ -1050,11 +1058,13 @@ type File struct {
 	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	DeletedAt        *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
 	// Sharing info (populated based on context)
-	GroupIds       []string           `protobuf:"bytes,19,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
-	UserPermission v1.PermissionLevel `protobuf:"varint,20,opt,name=user_permission,json=userPermission,proto3,enum=common.v1.PermissionLevel" json:"user_permission,omitempty"`
-	OwnerInfo      *FileOwner         `protobuf:"bytes,21,opt,name=owner_info,json=ownerInfo,proto3,oneof" json:"owner_info,omitempty"`
+	GroupIds  []string       `protobuf:"bytes,19,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
+	UserRole  v1.ContentRole `protobuf:"varint,20,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	OwnerInfo *FileOwner     `protobuf:"bytes,21,opt,name=owner_info,json=ownerInfo,proto3,oneof" json:"owner_info,omitempty"`
 	// Media metadata (extracted from file content)
-	Metadata      *FileMetadata `protobuf:"bytes,22,opt,name=metadata,proto3,oneof" json:"metadata,omitempty"`
+	Metadata *FileMetadata `protobuf:"bytes,22,opt,name=metadata,proto3,oneof" json:"metadata,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,23,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1117,11 +1127,11 @@ func (x *File) GetOwnerId() string {
 	return ""
 }
 
-func (x *File) GetVisibility() v1.VisibilityScope {
+func (x *File) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *File) GetFilename() string {
@@ -1222,11 +1232,11 @@ func (x *File) GetGroupIds() []string {
 	return nil
 }
 
-func (x *File) GetUserPermission() v1.PermissionLevel {
+func (x *File) GetUserRole() v1.ContentRole {
 	if x != nil {
-		return x.UserPermission
+		return x.UserRole
 	}
-	return v1.PermissionLevel(0)
+	return v1.ContentRole(0)
 }
 
 func (x *File) GetOwnerInfo() *FileOwner {
@@ -1241,6 +1251,13 @@ func (x *File) GetMetadata() *FileMetadata {
 		return x.Metadata
 	}
 	return nil
+}
+
+func (x *File) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 // Metadata extracted from media files (images, videos, PDFs).
@@ -1539,7 +1556,8 @@ type UpdateFileRequest struct {
 	Filename       *string                `protobuf:"bytes,3,opt,name=filename,proto3,oneof" json:"filename,omitempty"`
 	Tags           []string               `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty"`
 	Description    *string                `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,6,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,7,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1609,11 +1627,18 @@ func (x *UpdateFileRequest) GetDescription() string {
 	return ""
 }
 
-func (x *UpdateFileRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *UpdateFileRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *UpdateFileRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type DeleteFileRequest struct {
@@ -1787,7 +1812,7 @@ type ListFilesRequest struct {
 	Tags           []string               `protobuf:"bytes,3,rep,name=tags,proto3" json:"tags,omitempty"`
 	IncludeDeleted bool                   `protobuf:"varint,4,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
 	PersonalOnly   bool                   `protobuf:"varint,5,opt,name=personal_only,json=personalOnly,proto3" json:"personal_only,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,6,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	GroupId        *string                `protobuf:"bytes,7,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
 	Page           int32                  `protobuf:"varint,8,opt,name=page,proto3" json:"page,omitempty"`
 	PageSize       int32                  `protobuf:"varint,9,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
@@ -1863,11 +1888,11 @@ func (x *ListFilesRequest) GetPersonalOnly() bool {
 	return false
 }
 
-func (x *ListFilesRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *ListFilesRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *ListFilesRequest) GetGroupId() string {
@@ -1994,13 +2019,14 @@ type Folder struct {
 	Urn            string                 `protobuf:"bytes,2,opt,name=urn,proto3" json:"urn,omitempty"`
 	OrganizationId string                 `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	OwnerId        string                 `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Visibility     v1.VisibilityScope     `protobuf:"varint,5,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode     v1.AccessMode          `protobuf:"varint,5,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	Name           string                 `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`
 	ParentId       *string                `protobuf:"bytes,7,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
 	IsDeleted      bool                   `protobuf:"varint,8,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	IsSystem       bool                   `protobuf:"varint,11,opt,name=is_system,json=isSystem,proto3" json:"is_system,omitempty"` // System folders (e.g., Attachments) cannot be deleted
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,12,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -2063,11 +2089,11 @@ func (x *Folder) GetOwnerId() string {
 	return ""
 }
 
-func (x *Folder) GetVisibility() v1.VisibilityScope {
+func (x *Folder) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *Folder) GetName() string {
@@ -2110,6 +2136,13 @@ func (x *Folder) GetIsSystem() bool {
 		return x.IsSystem
 	}
 	return false
+}
+
+func (x *Folder) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type FolderResponse struct {
@@ -2161,7 +2194,8 @@ type CreateFolderRequest struct {
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	ParentId       *string                `protobuf:"bytes,3,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
-	Visibility     v1.VisibilityScope     `protobuf:"varint,4,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode     v1.AccessMode          `protobuf:"varint,4,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,5,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -2217,11 +2251,18 @@ func (x *CreateFolderRequest) GetParentId() string {
 	return ""
 }
 
-func (x *CreateFolderRequest) GetVisibility() v1.VisibilityScope {
+func (x *CreateFolderRequest) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *CreateFolderRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type UpdateFolderRequest struct {
@@ -2230,7 +2271,8 @@ type UpdateFolderRequest struct {
 	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Name           *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	ParentId       *string                `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"` // "" to move to root
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,5,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,5,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,6,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -2293,11 +2335,18 @@ func (x *UpdateFolderRequest) GetParentId() string {
 	return ""
 }
 
-func (x *UpdateFolderRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *UpdateFolderRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *UpdateFolderRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type DeleteFolderRequest struct {
@@ -2554,11 +2603,12 @@ type TreeNode struct {
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	IsFolder      bool                   `protobuf:"varint,3,opt,name=is_folder,json=isFolder,proto3" json:"is_folder,omitempty"`
 	ParentId      *string                `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
-	Visibility    v1.VisibilityScope     `protobuf:"varint,5,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	AccessMode    v1.AccessMode          `protobuf:"varint,5,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	ChildCount    int32                  `protobuf:"varint,6,opt,name=child_count,json=childCount,proto3" json:"child_count,omitempty"`    // For folders: number of children
 	SizeBytes     *int64                 `protobuf:"varint,7,opt,name=size_bytes,json=sizeBytes,proto3,oneof" json:"size_bytes,omitempty"` // For files: file size
 	MimeType      *string                `protobuf:"bytes,8,opt,name=mime_type,json=mimeType,proto3,oneof" json:"mime_type,omitempty"`     // For files: MIME type
 	Children      []*TreeNode            `protobuf:"bytes,9,rep,name=children,proto3" json:"children,omitempty"`                           // Nested children (if requested)
+	BaselineRole  *v1.ContentRole        `protobuf:"varint,10,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2621,11 +2671,11 @@ func (x *TreeNode) GetParentId() string {
 	return ""
 }
 
-func (x *TreeNode) GetVisibility() v1.VisibilityScope {
+func (x *TreeNode) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *TreeNode) GetChildCount() int32 {
@@ -2656,15 +2706,23 @@ func (x *TreeNode) GetChildren() []*TreeNode {
 	return nil
 }
 
+func (x *TreeNode) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 type MoveItemsRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId   string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	FileIds          []string               `protobuf:"bytes,2,rep,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`
-	FolderIds        []string               `protobuf:"bytes,3,rep,name=folder_ids,json=folderIds,proto3" json:"folder_ids,omitempty"`
-	TargetFolderId   *string                `protobuf:"bytes,4,opt,name=target_folder_id,json=targetFolderId,proto3,oneof" json:"target_folder_id,omitempty"`                                     // null = root
-	TargetVisibility *v1.VisibilityScope    `protobuf:"varint,5,opt,name=target_visibility,json=targetVisibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"target_visibility,omitempty"` // Change visibility scope
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId     string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	FileIds            []string               `protobuf:"bytes,2,rep,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`
+	FolderIds          []string               `protobuf:"bytes,3,rep,name=folder_ids,json=folderIds,proto3" json:"folder_ids,omitempty"`
+	TargetFolderId     *string                `protobuf:"bytes,4,opt,name=target_folder_id,json=targetFolderId,proto3,oneof" json:"target_folder_id,omitempty"`                                  // null = root
+	TargetAccessMode   *v1.AccessMode         `protobuf:"varint,5,opt,name=target_access_mode,json=targetAccessMode,proto3,enum=common.v1.AccessMode,oneof" json:"target_access_mode,omitempty"` // Change access mode
+	TargetBaselineRole *v1.ContentRole        `protobuf:"varint,6,opt,name=target_baseline_role,json=targetBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"target_baseline_role,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *MoveItemsRequest) Reset() {
@@ -2725,11 +2783,18 @@ func (x *MoveItemsRequest) GetTargetFolderId() string {
 	return ""
 }
 
-func (x *MoveItemsRequest) GetTargetVisibility() v1.VisibilityScope {
-	if x != nil && x.TargetVisibility != nil {
-		return *x.TargetVisibility
+func (x *MoveItemsRequest) GetTargetAccessMode() v1.AccessMode {
+	if x != nil && x.TargetAccessMode != nil {
+		return *x.TargetAccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *MoveItemsRequest) GetTargetBaselineRole() v1.ContentRole {
+	if x != nil && x.TargetBaselineRole != nil {
+		return *x.TargetBaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type MoveItemsResponse struct {
@@ -3419,15 +3484,15 @@ func (x *RestoreFileVersionRequest) GetVersionId() string {
 // Filter criteria for file search/filtering.
 type FilterCriteria struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	Extensions     []string               `protobuf:"bytes,1,rep,name=extensions,proto3" json:"extensions,omitempty"`                                       // File extensions without dot (pdf, docx)
-	MimeCategories []string               `protobuf:"bytes,2,rep,name=mime_categories,json=mimeCategories,proto3" json:"mime_categories,omitempty"`         // document, image, video, audio, archive
-	OwnerIds       []string               `protobuf:"bytes,3,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`                           // Filter by owner user IDs
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,4,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"` // Filter by visibility scope
-	Tags           []string               `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`                                                   // Filter by tags
-	SizeMinBytes   *int64                 `protobuf:"varint,6,opt,name=size_min_bytes,json=sizeMinBytes,proto3,oneof" json:"size_min_bytes,omitempty"`      // Minimum file size
-	SizeMaxBytes   *int64                 `protobuf:"varint,7,opt,name=size_max_bytes,json=sizeMaxBytes,proto3,oneof" json:"size_max_bytes,omitempty"`      // Maximum file size
-	CreatedAfter   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_after,json=createdAfter,proto3,oneof" json:"created_after,omitempty"`         // Created after date
-	CreatedBefore  *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_before,json=createdBefore,proto3,oneof" json:"created_before,omitempty"`      // Created before date
+	Extensions     []string               `protobuf:"bytes,1,rep,name=extensions,proto3" json:"extensions,omitempty"`                                                    // File extensions without dot (pdf, docx)
+	MimeCategories []string               `protobuf:"bytes,2,rep,name=mime_categories,json=mimeCategories,proto3" json:"mime_categories,omitempty"`                      // document, image, video, audio, archive
+	OwnerIds       []string               `protobuf:"bytes,3,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`                                        // Filter by owner user IDs
+	AccessMode     *v1.AccessMode         `protobuf:"varint,4,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"` // Filter by access mode
+	Tags           []string               `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`                                                                // Filter by tags
+	SizeMinBytes   *int64                 `protobuf:"varint,6,opt,name=size_min_bytes,json=sizeMinBytes,proto3,oneof" json:"size_min_bytes,omitempty"`                   // Minimum file size
+	SizeMaxBytes   *int64                 `protobuf:"varint,7,opt,name=size_max_bytes,json=sizeMaxBytes,proto3,oneof" json:"size_max_bytes,omitempty"`                   // Maximum file size
+	CreatedAfter   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_after,json=createdAfter,proto3,oneof" json:"created_after,omitempty"`                      // Created after date
+	CreatedBefore  *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_before,json=createdBefore,proto3,oneof" json:"created_before,omitempty"`                   // Created before date
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -3483,11 +3548,11 @@ func (x *FilterCriteria) GetOwnerIds() []string {
 	return nil
 }
 
-func (x *FilterCriteria) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *FilterCriteria) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *FilterCriteria) GetTags() []string {
@@ -4203,19 +4268,20 @@ var File_files_v1_files_proto protoreflect.FileDescriptor
 
 const file_files_v1_files_proto_rawDesc = "" +
 	"\n" +
-	"\x14files/v1/files.proto\x12\bfiles.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\x84\x02\n" +
+	"\x14files/v1/files.proto\x12\bfiles.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xd4\x02\n" +
 	"\x15InitiateUploadRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x1b\n" +
 	"\tmime_type\x18\x03 \x01(\tR\bmimeType\x12\x1d\n" +
 	"\n" +
 	"total_size\x18\x04 \x01(\x03R\ttotalSize\x12 \n" +
-	"\tfolder_id\x18\x05 \x01(\tH\x00R\bfolderId\x88\x01\x01\x12:\n" +
+	"\tfolder_id\x18\x05 \x01(\tH\x00R\bfolderId\x88\x01\x01\x126\n" +
+	"\vaccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12@\n" +
+	"\rbaseline_role\x18\a \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\f\n" +
 	"\n" +
-	"visibility\x18\x06 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibilityB\f\n" +
-	"\n" +
-	"_folder_id\"w\n" +
+	"_folder_idB\x10\n" +
+	"\x0e_baseline_role\"w\n" +
 	"\x16InitiateUploadResponse\x12\x1b\n" +
 	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x1d\n" +
 	"\n" +
@@ -4284,15 +4350,14 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\trange_end\x18\x04 \x01(\x03R\brangeEnd\x12\x1b\n" +
 	"\tmime_type\x18\x05 \x01(\tR\bmimeType\x12\x1a\n" +
 	"\bfilename\x18\x06 \x01(\tR\bfilename\x12$\n" +
-	"\x0eis_first_chunk\x18\a \x01(\bR\fisFirstChunk\"\xdf\a\n" +
+	"\x0eis_first_chunk\x18\a \x01(\bR\fisFirstChunk\"\x9f\b\n" +
 	"\x04File\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03urn\x18\x02 \x01(\tR\x03urn\x12'\n" +
 	"\x0forganization_id\x18\x03 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bowner_id\x18\x04 \x01(\tR\aownerId\x12:\n" +
-	"\n" +
-	"visibility\x18\x05 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibility\x12\x1a\n" +
+	"\bowner_id\x18\x04 \x01(\tR\aownerId\x126\n" +
+	"\vaccess_mode\x18\x05 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12\x1a\n" +
 	"\bfilename\x18\x06 \x01(\tR\bfilename\x12+\n" +
 	"\x11original_filename\x18\a \x01(\tR\x10originalFilename\x12\x1b\n" +
 	"\tmime_type\x18\b \x01(\tR\bmimeType\x12\x1d\n" +
@@ -4312,17 +4377,19 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
 	"\n" +
 	"deleted_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tdeletedAt\x88\x01\x01\x12\x1b\n" +
-	"\tgroup_ids\x18\x13 \x03(\tR\bgroupIds\x12C\n" +
-	"\x0fuser_permission\x18\x14 \x01(\x0e2\x1a.common.v1.PermissionLevelR\x0euserPermission\x127\n" +
+	"\tgroup_ids\x18\x13 \x03(\tR\bgroupIds\x123\n" +
+	"\tuser_role\x18\x14 \x01(\x0e2\x16.common.v1.ContentRoleR\buserRole\x127\n" +
 	"\n" +
 	"owner_info\x18\x15 \x01(\v2\x13.files.v1.FileOwnerH\x03R\townerInfo\x88\x01\x01\x127\n" +
-	"\bmetadata\x18\x16 \x01(\v2\x16.files.v1.FileMetadataH\x04R\bmetadata\x88\x01\x01B\f\n" +
+	"\bmetadata\x18\x16 \x01(\v2\x16.files.v1.FileMetadataH\x04R\bmetadata\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\x17 \x01(\x0e2\x16.common.v1.ContentRoleH\x05R\fbaselineRole\x88\x01\x01B\f\n" +
 	"\n" +
 	"_folder_idB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_deleted_atB\r\n" +
 	"\v_owner_infoB\v\n" +
-	"\t_metadata\"\xf6\x04\n" +
+	"\t_metadataB\x10\n" +
+	"\x0e_baseline_role\"\xf6\x04\n" +
 	"\fFileMetadata\x12#\n" +
 	"\rhas_thumbnail\x18\x01 \x01(\bR\fhasThumbnail\x12\x19\n" +
 	"\x05width\x18\x02 \x01(\x05H\x00R\x05width\x88\x01\x01\x12\x1b\n" +
@@ -4362,19 +4429,20 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x04file\x18\x01 \x01(\v2\x0e.files.v1.FileR\x04file\"R\n" +
 	"\x0eGetFileRequest\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x9e\x02\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xef\x02\n" +
 	"\x11UpdateFileRequest\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1f\n" +
 	"\bfilename\x18\x03 \x01(\tH\x00R\bfilename\x88\x01\x01\x12\x12\n" +
 	"\x04tags\x18\x04 \x03(\tR\x04tags\x12%\n" +
-	"\vdescription\x18\x05 \x01(\tH\x01R\vdescription\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\x06 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x02R\n" +
-	"visibility\x88\x01\x01B\v\n" +
+	"\vdescription\x18\x05 \x01(\tH\x01R\vdescription\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeH\x02R\n" +
+	"accessMode\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\a \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\v\n" +
 	"\t_filenameB\x0e\n" +
-	"\f_descriptionB\r\n" +
-	"\v_visibility\"s\n" +
+	"\f_descriptionB\x0e\n" +
+	"\f_access_modeB\x10\n" +
+	"\x0e_baseline_role\"s\n" +
 	"\x11DeleteFileRequest\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1c\n" +
@@ -4384,16 +4452,15 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"V\n" +
 	"\x12RestoreFileRequest\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xd4\x03\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xd1\x03\n" +
 	"\x10ListFilesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12 \n" +
 	"\tfolder_id\x18\x02 \x01(\tH\x00R\bfolderId\x88\x01\x01\x12\x12\n" +
 	"\x04tags\x18\x03 \x03(\tR\x04tags\x12'\n" +
 	"\x0finclude_deleted\x18\x04 \x01(\bR\x0eincludeDeleted\x12#\n" +
-	"\rpersonal_only\x18\x05 \x01(\bR\fpersonalOnly\x12?\n" +
-	"\n" +
-	"visibility\x18\x06 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x01R\n" +
-	"visibility\x88\x01\x01\x12\x1e\n" +
+	"\rpersonal_only\x18\x05 \x01(\bR\fpersonalOnly\x12;\n" +
+	"\vaccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeH\x01R\n" +
+	"accessMode\x88\x01\x01\x12\x1e\n" +
 	"\bgroup_id\x18\a \x01(\tH\x02R\agroupId\x88\x01\x01\x12\x12\n" +
 	"\x04page\x18\b \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\t \x01(\x05R\bpageSize\x12\x17\n" +
@@ -4404,8 +4471,8 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\vshared_only\x18\f \x01(\bR\n" +
 	"sharedOnlyB\f\n" +
 	"\n" +
-	"_folder_idB\r\n" +
-	"\v_visibilityB\v\n" +
+	"_folder_idB\x0e\n" +
+	"\f_access_modeB\v\n" +
 	"\t_group_id\"\xac\x01\n" +
 	"\x11ListFilesResponse\x12$\n" +
 	"\x05files\x18\x01 \x03(\v2\x0e.files.v1.FileR\x05files\x12\x1f\n" +
@@ -4414,15 +4481,14 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1f\n" +
 	"\vtotal_pages\x18\x05 \x01(\x05R\n" +
-	"totalPages\"\xa0\x03\n" +
+	"totalPages\"\xf0\x03\n" +
 	"\x06Folder\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03urn\x18\x02 \x01(\tR\x03urn\x12'\n" +
 	"\x0forganization_id\x18\x03 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bowner_id\x18\x04 \x01(\tR\aownerId\x12:\n" +
-	"\n" +
-	"visibility\x18\x05 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibility\x12\x12\n" +
+	"\bowner_id\x18\x04 \x01(\tR\aownerId\x126\n" +
+	"\vaccess_mode\x18\x05 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12\x12\n" +
 	"\x04name\x18\x06 \x01(\tR\x04name\x12 \n" +
 	"\tparent_id\x18\a \x01(\tH\x00R\bparentId\x88\x01\x01\x12\x1d\n" +
 	"\n" +
@@ -4432,32 +4498,36 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1b\n" +
-	"\tis_system\x18\v \x01(\bR\bisSystemB\f\n" +
+	"\tis_system\x18\v \x01(\bR\bisSystem\x12@\n" +
+	"\rbaseline_role\x18\f \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\f\n" +
 	"\n" +
-	"_parent_id\":\n" +
+	"_parent_idB\x10\n" +
+	"\x0e_baseline_role\":\n" +
 	"\x0eFolderResponse\x12(\n" +
-	"\x06folder\x18\x01 \x01(\v2\x10.files.v1.FolderR\x06folder\"\xbe\x01\n" +
+	"\x06folder\x18\x01 \x01(\v2\x10.files.v1.FolderR\x06folder\"\x8e\x02\n" +
 	"\x13CreateFolderRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
-	"\tparent_id\x18\x03 \x01(\tH\x00R\bparentId\x88\x01\x01\x12:\n" +
+	"\tparent_id\x18\x03 \x01(\tH\x00R\bparentId\x88\x01\x01\x126\n" +
+	"\vaccess_mode\x18\x04 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12@\n" +
+	"\rbaseline_role\x18\x05 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\f\n" +
 	"\n" +
-	"visibility\x18\x04 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibilityB\f\n" +
-	"\n" +
-	"_parent_id\"\xfd\x01\n" +
+	"_parent_idB\x10\n" +
+	"\x0e_baseline_role\"\xce\x02\n" +
 	"\x13UpdateFolderRequest\x12\x1b\n" +
 	"\tfolder_id\x18\x01 \x01(\tR\bfolderId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12 \n" +
-	"\tparent_id\x18\x04 \x01(\tH\x01R\bparentId\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\x05 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x02R\n" +
-	"visibility\x88\x01\x01B\a\n" +
+	"\tparent_id\x18\x04 \x01(\tH\x01R\bparentId\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\x05 \x01(\x0e2\x15.common.v1.AccessModeH\x02R\n" +
+	"accessMode\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\x06 \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\a\n" +
 	"\x05_nameB\f\n" +
 	"\n" +
-	"_parent_idB\r\n" +
-	"\v_visibility\"\x97\x01\n" +
+	"_parent_idB\x0e\n" +
+	"\f_access_modeB\x10\n" +
+	"\x0e_baseline_role\"\x97\x01\n" +
 	"\x13DeleteFolderRequest\x12\x1b\n" +
 	"\tfolder_id\x18\x01 \x01(\tR\bfolderId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1c\n" +
@@ -4475,35 +4545,39 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\rpersonal_only\x18\x04 \x01(\bR\fpersonalOnlyB\x11\n" +
 	"\x0f_root_folder_id\"@\n" +
 	"\x14GetFilesTreeResponse\x12(\n" +
-	"\x05nodes\x18\x01 \x03(\v2\x12.files.v1.TreeNodeR\x05nodes\"\xeb\x02\n" +
+	"\x05nodes\x18\x01 \x03(\v2\x12.files.v1.TreeNodeR\x05nodes\"\xbb\x03\n" +
 	"\bTreeNode\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
 	"\tis_folder\x18\x03 \x01(\bR\bisFolder\x12 \n" +
-	"\tparent_id\x18\x04 \x01(\tH\x00R\bparentId\x88\x01\x01\x12:\n" +
-	"\n" +
-	"visibility\x18\x05 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibility\x12\x1f\n" +
+	"\tparent_id\x18\x04 \x01(\tH\x00R\bparentId\x88\x01\x01\x126\n" +
+	"\vaccess_mode\x18\x05 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12\x1f\n" +
 	"\vchild_count\x18\x06 \x01(\x05R\n" +
 	"childCount\x12\"\n" +
 	"\n" +
 	"size_bytes\x18\a \x01(\x03H\x01R\tsizeBytes\x88\x01\x01\x12 \n" +
 	"\tmime_type\x18\b \x01(\tH\x02R\bmimeType\x88\x01\x01\x12.\n" +
-	"\bchildren\x18\t \x03(\v2\x12.files.v1.TreeNodeR\bchildrenB\f\n" +
+	"\bchildren\x18\t \x03(\v2\x12.files.v1.TreeNodeR\bchildren\x12@\n" +
+	"\rbaseline_role\x18\n" +
+	" \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\f\n" +
 	"\n" +
 	"_parent_idB\r\n" +
 	"\v_size_bytesB\f\n" +
 	"\n" +
-	"_mime_type\"\x9d\x02\n" +
+	"_mime_typeB\x10\n" +
+	"\x0e_baseline_role\"\x82\x03\n" +
 	"\x10MoveItemsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bfile_ids\x18\x02 \x03(\tR\afileIds\x12\x1d\n" +
 	"\n" +
 	"folder_ids\x18\x03 \x03(\tR\tfolderIds\x12-\n" +
-	"\x10target_folder_id\x18\x04 \x01(\tH\x00R\x0etargetFolderId\x88\x01\x01\x12L\n" +
-	"\x11target_visibility\x18\x05 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x01R\x10targetVisibility\x88\x01\x01B\x13\n" +
-	"\x11_target_folder_idB\x14\n" +
-	"\x12_target_visibility\"\x8d\x01\n" +
+	"\x10target_folder_id\x18\x04 \x01(\tH\x00R\x0etargetFolderId\x88\x01\x01\x12H\n" +
+	"\x12target_access_mode\x18\x05 \x01(\x0e2\x15.common.v1.AccessModeH\x01R\x10targetAccessMode\x88\x01\x01\x12M\n" +
+	"\x14target_baseline_role\x18\x06 \x01(\x0e2\x16.common.v1.ContentRoleH\x02R\x12targetBaselineRole\x88\x01\x01B\x13\n" +
+	"\x11_target_folder_idB\x15\n" +
+	"\x13_target_access_modeB\x17\n" +
+	"\x15_target_baseline_role\"\x8d\x01\n" +
 	"\x11MoveItemsResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1f\n" +
@@ -4558,22 +4632,21 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
-	"version_id\x18\x03 \x01(\tR\tversionId\"\x89\x04\n" +
+	"version_id\x18\x03 \x01(\tR\tversionId\"\x86\x04\n" +
 	"\x0eFilterCriteria\x12\x1e\n" +
 	"\n" +
 	"extensions\x18\x01 \x03(\tR\n" +
 	"extensions\x12'\n" +
 	"\x0fmime_categories\x18\x02 \x03(\tR\x0emimeCategories\x12\x1b\n" +
-	"\towner_ids\x18\x03 \x03(\tR\bownerIds\x12?\n" +
-	"\n" +
-	"visibility\x18\x04 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x00R\n" +
-	"visibility\x88\x01\x01\x12\x12\n" +
+	"\towner_ids\x18\x03 \x03(\tR\bownerIds\x12;\n" +
+	"\vaccess_mode\x18\x04 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\n" +
+	"accessMode\x88\x01\x01\x12\x12\n" +
 	"\x04tags\x18\x05 \x03(\tR\x04tags\x12)\n" +
 	"\x0esize_min_bytes\x18\x06 \x01(\x03H\x01R\fsizeMinBytes\x88\x01\x01\x12)\n" +
 	"\x0esize_max_bytes\x18\a \x01(\x03H\x02R\fsizeMaxBytes\x88\x01\x01\x12D\n" +
 	"\rcreated_after\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x03R\fcreatedAfter\x88\x01\x01\x12F\n" +
-	"\x0ecreated_before\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x04R\rcreatedBefore\x88\x01\x01B\r\n" +
-	"\v_visibilityB\x11\n" +
+	"\x0ecreated_before\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x04R\rcreatedBefore\x88\x01\x01B\x0e\n" +
+	"\f_access_modeB\x11\n" +
 	"\x0f_size_min_bytesB\x11\n" +
 	"\x0f_size_max_bytesB\x10\n" +
 	"\x0e_created_afterB\x11\n" +
@@ -4772,114 +4845,122 @@ var file_files_v1_files_proto_goTypes = []any{
 	(*ListSavedFiltersRequest)(nil),   // 57: files.v1.ListSavedFiltersRequest
 	(*ListSavedFiltersResponse)(nil),  // 58: files.v1.ListSavedFiltersResponse
 	nil,                               // 59: files.v1.FileMetadata.ExifEntry
-	(v1.VisibilityScope)(0),           // 60: common.v1.VisibilityScope
-	(*timestamppb.Timestamp)(nil),     // 61: google.protobuf.Timestamp
-	(v1.PermissionLevel)(0),           // 62: common.v1.PermissionLevel
+	(v1.AccessMode)(0),                // 60: common.v1.AccessMode
+	(v1.ContentRole)(0),               // 61: common.v1.ContentRole
+	(*timestamppb.Timestamp)(nil),     // 62: google.protobuf.Timestamp
 }
 var file_files_v1_files_proto_depIdxs = []int32{
-	60, // 0: files.v1.InitiateUploadRequest.visibility:type_name -> common.v1.VisibilityScope
-	16, // 1: files.v1.UploadChunksResponse.file:type_name -> files.v1.File
-	0,  // 2: files.v1.GetUploadStatusResponse.status:type_name -> files.v1.UploadStatus
-	60, // 3: files.v1.File.visibility:type_name -> common.v1.VisibilityScope
-	1,  // 4: files.v1.File.extraction_status:type_name -> files.v1.ExtractionStatus
-	61, // 5: files.v1.File.created_at:type_name -> google.protobuf.Timestamp
-	61, // 6: files.v1.File.updated_at:type_name -> google.protobuf.Timestamp
-	61, // 7: files.v1.File.deleted_at:type_name -> google.protobuf.Timestamp
-	62, // 8: files.v1.File.user_permission:type_name -> common.v1.PermissionLevel
-	18, // 9: files.v1.File.owner_info:type_name -> files.v1.FileOwner
-	17, // 10: files.v1.File.metadata:type_name -> files.v1.FileMetadata
-	59, // 11: files.v1.FileMetadata.exif:type_name -> files.v1.FileMetadata.ExifEntry
-	16, // 12: files.v1.FileResponse.file:type_name -> files.v1.File
-	60, // 13: files.v1.UpdateFileRequest.visibility:type_name -> common.v1.VisibilityScope
-	60, // 14: files.v1.ListFilesRequest.visibility:type_name -> common.v1.VisibilityScope
-	16, // 15: files.v1.ListFilesResponse.files:type_name -> files.v1.File
-	60, // 16: files.v1.Folder.visibility:type_name -> common.v1.VisibilityScope
-	61, // 17: files.v1.Folder.created_at:type_name -> google.protobuf.Timestamp
-	61, // 18: files.v1.Folder.updated_at:type_name -> google.protobuf.Timestamp
-	27, // 19: files.v1.FolderResponse.folder:type_name -> files.v1.Folder
-	60, // 20: files.v1.CreateFolderRequest.visibility:type_name -> common.v1.VisibilityScope
-	60, // 21: files.v1.UpdateFolderRequest.visibility:type_name -> common.v1.VisibilityScope
-	35, // 22: files.v1.GetFilesTreeResponse.nodes:type_name -> files.v1.TreeNode
-	60, // 23: files.v1.TreeNode.visibility:type_name -> common.v1.VisibilityScope
-	35, // 24: files.v1.TreeNode.children:type_name -> files.v1.TreeNode
-	60, // 25: files.v1.MoveItemsRequest.target_visibility:type_name -> common.v1.VisibilityScope
-	16, // 26: files.v1.CopyItemsResponse.copied_files:type_name -> files.v1.File
-	61, // 27: files.v1.FileVersion.created_at:type_name -> google.protobuf.Timestamp
-	44, // 28: files.v1.ListFileVersionsResponse.versions:type_name -> files.v1.FileVersion
-	60, // 29: files.v1.FilterCriteria.visibility:type_name -> common.v1.VisibilityScope
-	61, // 30: files.v1.FilterCriteria.created_after:type_name -> google.protobuf.Timestamp
-	61, // 31: files.v1.FilterCriteria.created_before:type_name -> google.protobuf.Timestamp
-	49, // 32: files.v1.SavedFilter.icon:type_name -> files.v1.IconValue
-	48, // 33: files.v1.SavedFilter.criteria:type_name -> files.v1.FilterCriteria
-	61, // 34: files.v1.SavedFilter.created_at:type_name -> google.protobuf.Timestamp
-	61, // 35: files.v1.SavedFilter.updated_at:type_name -> google.protobuf.Timestamp
-	50, // 36: files.v1.SavedFilterResponse.filter:type_name -> files.v1.SavedFilter
-	49, // 37: files.v1.CreateSavedFilterRequest.icon:type_name -> files.v1.IconValue
-	48, // 38: files.v1.CreateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
-	49, // 39: files.v1.UpdateSavedFilterRequest.icon:type_name -> files.v1.IconValue
-	48, // 40: files.v1.UpdateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
-	50, // 41: files.v1.ListSavedFiltersResponse.filters:type_name -> files.v1.SavedFilter
-	2,  // 42: files.v1.FilesService.InitiateUpload:input_type -> files.v1.InitiateUploadRequest
-	4,  // 43: files.v1.FilesService.UploadChunk:input_type -> files.v1.UploadChunkRequest
-	6,  // 44: files.v1.FilesService.CompleteUpload:input_type -> files.v1.CompleteUploadRequest
-	4,  // 45: files.v1.FilesService.UploadChunks:input_type -> files.v1.UploadChunkRequest
-	8,  // 46: files.v1.FilesService.GetUploadStatus:input_type -> files.v1.GetUploadStatusRequest
-	10, // 47: files.v1.FilesService.AbortUpload:input_type -> files.v1.AbortUploadRequest
-	12, // 48: files.v1.FilesService.DownloadFile:input_type -> files.v1.DownloadFileRequest
-	14, // 49: files.v1.FilesService.StreamFileRange:input_type -> files.v1.StreamFileRangeRequest
-	20, // 50: files.v1.FilesService.GetFile:input_type -> files.v1.GetFileRequest
-	21, // 51: files.v1.FilesService.UpdateFile:input_type -> files.v1.UpdateFileRequest
-	22, // 52: files.v1.FilesService.DeleteFile:input_type -> files.v1.DeleteFileRequest
-	24, // 53: files.v1.FilesService.RestoreFile:input_type -> files.v1.RestoreFileRequest
-	25, // 54: files.v1.FilesService.ListFiles:input_type -> files.v1.ListFilesRequest
-	29, // 55: files.v1.FilesService.CreateFolder:input_type -> files.v1.CreateFolderRequest
-	30, // 56: files.v1.FilesService.UpdateFolder:input_type -> files.v1.UpdateFolderRequest
-	31, // 57: files.v1.FilesService.DeleteFolder:input_type -> files.v1.DeleteFolderRequest
-	33, // 58: files.v1.FilesService.GetFilesTree:input_type -> files.v1.GetFilesTreeRequest
-	36, // 59: files.v1.FilesService.MoveItems:input_type -> files.v1.MoveItemsRequest
-	38, // 60: files.v1.FilesService.CopyItems:input_type -> files.v1.CopyItemsRequest
-	40, // 61: files.v1.FilesService.BulkDelete:input_type -> files.v1.BulkDeleteRequest
-	42, // 62: files.v1.FilesService.EmptyTrash:input_type -> files.v1.EmptyTrashRequest
-	45, // 63: files.v1.FilesService.ListFileVersions:input_type -> files.v1.ListFileVersionsRequest
-	47, // 64: files.v1.FilesService.RestoreFileVersion:input_type -> files.v1.RestoreFileVersionRequest
-	52, // 65: files.v1.FilesService.CreateSavedFilter:input_type -> files.v1.CreateSavedFilterRequest
-	53, // 66: files.v1.FilesService.GetSavedFilter:input_type -> files.v1.GetSavedFilterRequest
-	54, // 67: files.v1.FilesService.UpdateSavedFilter:input_type -> files.v1.UpdateSavedFilterRequest
-	55, // 68: files.v1.FilesService.DeleteSavedFilter:input_type -> files.v1.DeleteSavedFilterRequest
-	57, // 69: files.v1.FilesService.ListSavedFilters:input_type -> files.v1.ListSavedFiltersRequest
-	3,  // 70: files.v1.FilesService.InitiateUpload:output_type -> files.v1.InitiateUploadResponse
-	5,  // 71: files.v1.FilesService.UploadChunk:output_type -> files.v1.UploadChunkResponse
-	7,  // 72: files.v1.FilesService.CompleteUpload:output_type -> files.v1.UploadChunksResponse
-	7,  // 73: files.v1.FilesService.UploadChunks:output_type -> files.v1.UploadChunksResponse
-	9,  // 74: files.v1.FilesService.GetUploadStatus:output_type -> files.v1.GetUploadStatusResponse
-	11, // 75: files.v1.FilesService.AbortUpload:output_type -> files.v1.AbortUploadResponse
-	13, // 76: files.v1.FilesService.DownloadFile:output_type -> files.v1.DownloadChunkResponse
-	15, // 77: files.v1.FilesService.StreamFileRange:output_type -> files.v1.StreamFileRangeResponse
-	19, // 78: files.v1.FilesService.GetFile:output_type -> files.v1.FileResponse
-	19, // 79: files.v1.FilesService.UpdateFile:output_type -> files.v1.FileResponse
-	23, // 80: files.v1.FilesService.DeleteFile:output_type -> files.v1.DeleteFileResponse
-	19, // 81: files.v1.FilesService.RestoreFile:output_type -> files.v1.FileResponse
-	26, // 82: files.v1.FilesService.ListFiles:output_type -> files.v1.ListFilesResponse
-	28, // 83: files.v1.FilesService.CreateFolder:output_type -> files.v1.FolderResponse
-	28, // 84: files.v1.FilesService.UpdateFolder:output_type -> files.v1.FolderResponse
-	32, // 85: files.v1.FilesService.DeleteFolder:output_type -> files.v1.DeleteFolderResponse
-	34, // 86: files.v1.FilesService.GetFilesTree:output_type -> files.v1.GetFilesTreeResponse
-	37, // 87: files.v1.FilesService.MoveItems:output_type -> files.v1.MoveItemsResponse
-	39, // 88: files.v1.FilesService.CopyItems:output_type -> files.v1.CopyItemsResponse
-	41, // 89: files.v1.FilesService.BulkDelete:output_type -> files.v1.BulkDeleteResponse
-	43, // 90: files.v1.FilesService.EmptyTrash:output_type -> files.v1.EmptyTrashResponse
-	46, // 91: files.v1.FilesService.ListFileVersions:output_type -> files.v1.ListFileVersionsResponse
-	19, // 92: files.v1.FilesService.RestoreFileVersion:output_type -> files.v1.FileResponse
-	51, // 93: files.v1.FilesService.CreateSavedFilter:output_type -> files.v1.SavedFilterResponse
-	51, // 94: files.v1.FilesService.GetSavedFilter:output_type -> files.v1.SavedFilterResponse
-	51, // 95: files.v1.FilesService.UpdateSavedFilter:output_type -> files.v1.SavedFilterResponse
-	56, // 96: files.v1.FilesService.DeleteSavedFilter:output_type -> files.v1.DeleteSavedFilterResponse
-	58, // 97: files.v1.FilesService.ListSavedFilters:output_type -> files.v1.ListSavedFiltersResponse
-	70, // [70:98] is the sub-list for method output_type
-	42, // [42:70] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	60, // 0: files.v1.InitiateUploadRequest.access_mode:type_name -> common.v1.AccessMode
+	61, // 1: files.v1.InitiateUploadRequest.baseline_role:type_name -> common.v1.ContentRole
+	16, // 2: files.v1.UploadChunksResponse.file:type_name -> files.v1.File
+	0,  // 3: files.v1.GetUploadStatusResponse.status:type_name -> files.v1.UploadStatus
+	60, // 4: files.v1.File.access_mode:type_name -> common.v1.AccessMode
+	1,  // 5: files.v1.File.extraction_status:type_name -> files.v1.ExtractionStatus
+	62, // 6: files.v1.File.created_at:type_name -> google.protobuf.Timestamp
+	62, // 7: files.v1.File.updated_at:type_name -> google.protobuf.Timestamp
+	62, // 8: files.v1.File.deleted_at:type_name -> google.protobuf.Timestamp
+	61, // 9: files.v1.File.user_role:type_name -> common.v1.ContentRole
+	18, // 10: files.v1.File.owner_info:type_name -> files.v1.FileOwner
+	17, // 11: files.v1.File.metadata:type_name -> files.v1.FileMetadata
+	61, // 12: files.v1.File.baseline_role:type_name -> common.v1.ContentRole
+	59, // 13: files.v1.FileMetadata.exif:type_name -> files.v1.FileMetadata.ExifEntry
+	16, // 14: files.v1.FileResponse.file:type_name -> files.v1.File
+	60, // 15: files.v1.UpdateFileRequest.access_mode:type_name -> common.v1.AccessMode
+	61, // 16: files.v1.UpdateFileRequest.baseline_role:type_name -> common.v1.ContentRole
+	60, // 17: files.v1.ListFilesRequest.access_mode:type_name -> common.v1.AccessMode
+	16, // 18: files.v1.ListFilesResponse.files:type_name -> files.v1.File
+	60, // 19: files.v1.Folder.access_mode:type_name -> common.v1.AccessMode
+	62, // 20: files.v1.Folder.created_at:type_name -> google.protobuf.Timestamp
+	62, // 21: files.v1.Folder.updated_at:type_name -> google.protobuf.Timestamp
+	61, // 22: files.v1.Folder.baseline_role:type_name -> common.v1.ContentRole
+	27, // 23: files.v1.FolderResponse.folder:type_name -> files.v1.Folder
+	60, // 24: files.v1.CreateFolderRequest.access_mode:type_name -> common.v1.AccessMode
+	61, // 25: files.v1.CreateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
+	60, // 26: files.v1.UpdateFolderRequest.access_mode:type_name -> common.v1.AccessMode
+	61, // 27: files.v1.UpdateFolderRequest.baseline_role:type_name -> common.v1.ContentRole
+	35, // 28: files.v1.GetFilesTreeResponse.nodes:type_name -> files.v1.TreeNode
+	60, // 29: files.v1.TreeNode.access_mode:type_name -> common.v1.AccessMode
+	35, // 30: files.v1.TreeNode.children:type_name -> files.v1.TreeNode
+	61, // 31: files.v1.TreeNode.baseline_role:type_name -> common.v1.ContentRole
+	60, // 32: files.v1.MoveItemsRequest.target_access_mode:type_name -> common.v1.AccessMode
+	61, // 33: files.v1.MoveItemsRequest.target_baseline_role:type_name -> common.v1.ContentRole
+	16, // 34: files.v1.CopyItemsResponse.copied_files:type_name -> files.v1.File
+	62, // 35: files.v1.FileVersion.created_at:type_name -> google.protobuf.Timestamp
+	44, // 36: files.v1.ListFileVersionsResponse.versions:type_name -> files.v1.FileVersion
+	60, // 37: files.v1.FilterCriteria.access_mode:type_name -> common.v1.AccessMode
+	62, // 38: files.v1.FilterCriteria.created_after:type_name -> google.protobuf.Timestamp
+	62, // 39: files.v1.FilterCriteria.created_before:type_name -> google.protobuf.Timestamp
+	49, // 40: files.v1.SavedFilter.icon:type_name -> files.v1.IconValue
+	48, // 41: files.v1.SavedFilter.criteria:type_name -> files.v1.FilterCriteria
+	62, // 42: files.v1.SavedFilter.created_at:type_name -> google.protobuf.Timestamp
+	62, // 43: files.v1.SavedFilter.updated_at:type_name -> google.protobuf.Timestamp
+	50, // 44: files.v1.SavedFilterResponse.filter:type_name -> files.v1.SavedFilter
+	49, // 45: files.v1.CreateSavedFilterRequest.icon:type_name -> files.v1.IconValue
+	48, // 46: files.v1.CreateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
+	49, // 47: files.v1.UpdateSavedFilterRequest.icon:type_name -> files.v1.IconValue
+	48, // 48: files.v1.UpdateSavedFilterRequest.criteria:type_name -> files.v1.FilterCriteria
+	50, // 49: files.v1.ListSavedFiltersResponse.filters:type_name -> files.v1.SavedFilter
+	2,  // 50: files.v1.FilesService.InitiateUpload:input_type -> files.v1.InitiateUploadRequest
+	4,  // 51: files.v1.FilesService.UploadChunk:input_type -> files.v1.UploadChunkRequest
+	6,  // 52: files.v1.FilesService.CompleteUpload:input_type -> files.v1.CompleteUploadRequest
+	4,  // 53: files.v1.FilesService.UploadChunks:input_type -> files.v1.UploadChunkRequest
+	8,  // 54: files.v1.FilesService.GetUploadStatus:input_type -> files.v1.GetUploadStatusRequest
+	10, // 55: files.v1.FilesService.AbortUpload:input_type -> files.v1.AbortUploadRequest
+	12, // 56: files.v1.FilesService.DownloadFile:input_type -> files.v1.DownloadFileRequest
+	14, // 57: files.v1.FilesService.StreamFileRange:input_type -> files.v1.StreamFileRangeRequest
+	20, // 58: files.v1.FilesService.GetFile:input_type -> files.v1.GetFileRequest
+	21, // 59: files.v1.FilesService.UpdateFile:input_type -> files.v1.UpdateFileRequest
+	22, // 60: files.v1.FilesService.DeleteFile:input_type -> files.v1.DeleteFileRequest
+	24, // 61: files.v1.FilesService.RestoreFile:input_type -> files.v1.RestoreFileRequest
+	25, // 62: files.v1.FilesService.ListFiles:input_type -> files.v1.ListFilesRequest
+	29, // 63: files.v1.FilesService.CreateFolder:input_type -> files.v1.CreateFolderRequest
+	30, // 64: files.v1.FilesService.UpdateFolder:input_type -> files.v1.UpdateFolderRequest
+	31, // 65: files.v1.FilesService.DeleteFolder:input_type -> files.v1.DeleteFolderRequest
+	33, // 66: files.v1.FilesService.GetFilesTree:input_type -> files.v1.GetFilesTreeRequest
+	36, // 67: files.v1.FilesService.MoveItems:input_type -> files.v1.MoveItemsRequest
+	38, // 68: files.v1.FilesService.CopyItems:input_type -> files.v1.CopyItemsRequest
+	40, // 69: files.v1.FilesService.BulkDelete:input_type -> files.v1.BulkDeleteRequest
+	42, // 70: files.v1.FilesService.EmptyTrash:input_type -> files.v1.EmptyTrashRequest
+	45, // 71: files.v1.FilesService.ListFileVersions:input_type -> files.v1.ListFileVersionsRequest
+	47, // 72: files.v1.FilesService.RestoreFileVersion:input_type -> files.v1.RestoreFileVersionRequest
+	52, // 73: files.v1.FilesService.CreateSavedFilter:input_type -> files.v1.CreateSavedFilterRequest
+	53, // 74: files.v1.FilesService.GetSavedFilter:input_type -> files.v1.GetSavedFilterRequest
+	54, // 75: files.v1.FilesService.UpdateSavedFilter:input_type -> files.v1.UpdateSavedFilterRequest
+	55, // 76: files.v1.FilesService.DeleteSavedFilter:input_type -> files.v1.DeleteSavedFilterRequest
+	57, // 77: files.v1.FilesService.ListSavedFilters:input_type -> files.v1.ListSavedFiltersRequest
+	3,  // 78: files.v1.FilesService.InitiateUpload:output_type -> files.v1.InitiateUploadResponse
+	5,  // 79: files.v1.FilesService.UploadChunk:output_type -> files.v1.UploadChunkResponse
+	7,  // 80: files.v1.FilesService.CompleteUpload:output_type -> files.v1.UploadChunksResponse
+	7,  // 81: files.v1.FilesService.UploadChunks:output_type -> files.v1.UploadChunksResponse
+	9,  // 82: files.v1.FilesService.GetUploadStatus:output_type -> files.v1.GetUploadStatusResponse
+	11, // 83: files.v1.FilesService.AbortUpload:output_type -> files.v1.AbortUploadResponse
+	13, // 84: files.v1.FilesService.DownloadFile:output_type -> files.v1.DownloadChunkResponse
+	15, // 85: files.v1.FilesService.StreamFileRange:output_type -> files.v1.StreamFileRangeResponse
+	19, // 86: files.v1.FilesService.GetFile:output_type -> files.v1.FileResponse
+	19, // 87: files.v1.FilesService.UpdateFile:output_type -> files.v1.FileResponse
+	23, // 88: files.v1.FilesService.DeleteFile:output_type -> files.v1.DeleteFileResponse
+	19, // 89: files.v1.FilesService.RestoreFile:output_type -> files.v1.FileResponse
+	26, // 90: files.v1.FilesService.ListFiles:output_type -> files.v1.ListFilesResponse
+	28, // 91: files.v1.FilesService.CreateFolder:output_type -> files.v1.FolderResponse
+	28, // 92: files.v1.FilesService.UpdateFolder:output_type -> files.v1.FolderResponse
+	32, // 93: files.v1.FilesService.DeleteFolder:output_type -> files.v1.DeleteFolderResponse
+	34, // 94: files.v1.FilesService.GetFilesTree:output_type -> files.v1.GetFilesTreeResponse
+	37, // 95: files.v1.FilesService.MoveItems:output_type -> files.v1.MoveItemsResponse
+	39, // 96: files.v1.FilesService.CopyItems:output_type -> files.v1.CopyItemsResponse
+	41, // 97: files.v1.FilesService.BulkDelete:output_type -> files.v1.BulkDeleteResponse
+	43, // 98: files.v1.FilesService.EmptyTrash:output_type -> files.v1.EmptyTrashResponse
+	46, // 99: files.v1.FilesService.ListFileVersions:output_type -> files.v1.ListFileVersionsResponse
+	19, // 100: files.v1.FilesService.RestoreFileVersion:output_type -> files.v1.FileResponse
+	51, // 101: files.v1.FilesService.CreateSavedFilter:output_type -> files.v1.SavedFilterResponse
+	51, // 102: files.v1.FilesService.GetSavedFilter:output_type -> files.v1.SavedFilterResponse
+	51, // 103: files.v1.FilesService.UpdateSavedFilter:output_type -> files.v1.SavedFilterResponse
+	56, // 104: files.v1.FilesService.DeleteSavedFilter:output_type -> files.v1.DeleteSavedFilterResponse
+	58, // 105: files.v1.FilesService.ListSavedFilters:output_type -> files.v1.ListSavedFiltersResponse
+	78, // [78:106] is the sub-list for method output_type
+	50, // [50:78] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_files_v1_files_proto_init() }

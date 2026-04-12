@@ -13,7 +13,6 @@ export {
     setError,
     clearError,
     setSearchQuery,
-    setVisibilityFilter,
     setSortBy,
     setSortOrder,
     setShowDeleted,

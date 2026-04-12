@@ -8,7 +8,6 @@
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/config/api';
 import { ProjectsService } from '@uniffy/proto/projects/v1/projects_connect';
-import { VisibilityScope as ProtoVisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import {
   FieldType as ProtoFieldType,
   ViewType as ProtoViewType,
@@ -44,44 +43,6 @@ import type { TaskActivity, ActivityAction } from '../types/activity';
  * Create a projects service client with the shared transport.
  */
 const projectsClient = createClient(ProjectsService, transport);
-
-/**
- * Convert frontend visibility scope to proto enum
- */
-function frontendVisibilityToProto(visibility: string | undefined): ProtoVisibilityScope {
-  if (!visibility) return ProtoVisibilityScope.PRIVATE;
-
-  switch (visibility.toUpperCase()) {
-    case 'PRIVATE':
-      return ProtoVisibilityScope.PRIVATE;
-    case 'GROUP':
-      return ProtoVisibilityScope.GROUP;
-    case 'ORGANIZATION':
-      return ProtoVisibilityScope.ORGANIZATION;
-    case 'PUBLIC':
-      return ProtoVisibilityScope.PUBLIC;
-    default:
-      return ProtoVisibilityScope.PRIVATE;
-  }
-}
-
-/**
- * Convert proto visibility scope to frontend string
- */
-function protoVisibilityToFrontend(visibility: ProtoVisibilityScope): string {
-  switch (visibility) {
-    case ProtoVisibilityScope.PRIVATE:
-      return 'PRIVATE';
-    case ProtoVisibilityScope.GROUP:
-      return 'GROUP';
-    case ProtoVisibilityScope.ORGANIZATION:
-      return 'ORGANIZATION';
-    case ProtoVisibilityScope.PUBLIC:
-      return 'PUBLIC';
-    default:
-      return 'PRIVATE';
-  }
-}
 
 /**
  * Convert frontend field type to proto enum
@@ -175,16 +136,16 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     description: proto.description,
     icon: proto.icon,
     color: proto.color,
-    visibility: protoVisibilityToFrontend(proto.visibility) as Project['visibility'],
+    accessMode: proto.accessMode,
+    baselineRole: proto.baselineRole ?? null,
+    userRole: proto.userRole,
     fieldDefinitions: proto.fieldDefinitions.map(protoFieldDefinitionToFrontend),
     views: proto.views.map(protoViewConfigToFrontend),
     defaultViewId: proto.defaultViewId,
-    memberIds: proto.memberIds,
     createdAt: proto.createdAt?.toDate().toISOString() || new Date().toISOString(),
     updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
     deletedAt: proto.deletedAt?.toDate().toISOString() || null,
     urn: proto.urn,
-    userPermissionLevel: proto.userPermissionLevel,
     slug: proto.slug,
     typeFieldSchemas: Object.fromEntries(
       Object.entries(proto.typeFieldSchemas).map(([typeName, schema]) => [
@@ -238,7 +199,7 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     updatedAt: proto.updatedAt?.toDate().toISOString() || new Date().toISOString(),
     deletedAt: proto.deletedAt?.toDate().toISOString() || null,
     urn: proto.urn,
-    userPermissionLevel: proto.userPermissionLevel,
+    userRole: proto.userRole,
     number: proto.number,
     taskType: proto.taskType || "task",
     sprintId: proto.sprintId ?? null,
@@ -425,7 +386,8 @@ export const projectsApi = {
       description: data.description,
       icon: data.icon,
       color: data.color,
-      visibility: data.visibility ? frontendVisibilityToProto(data.visibility) : ProtoVisibilityScope.PRIVATE,
+      ...(data.accessMode !== undefined ? { accessMode: data.accessMode } : {}),
+      ...(data.baselineRole !== undefined && data.baselineRole !== null ? { baselineRole: data.baselineRole } : {}),
       ...(data.slug ? { slug: data.slug } : {}),
     });
     return {
@@ -458,7 +420,6 @@ export const projectsApi = {
       description: data.description,
       icon: data.icon,
       color: data.color,
-      visibility: data.visibility ? frontendVisibilityToProto(data.visibility) : undefined,
       ...(data.typeFieldSchemas ? { typeFieldSchemas } : {}),
     });
     return {

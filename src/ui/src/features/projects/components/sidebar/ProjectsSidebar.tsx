@@ -23,7 +23,8 @@ import { ProjectScopeFilter } from "@/features/projects/components/sidebar/Proje
 import { Progress } from "@/components/ui/progress";
 import { ProjectsListSkeleton } from "@/features/projects/components/layout/ProjectsListSkeleton";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { PermissionLevel } from "@uniffy/proto/common/v1/common_pb";
+import { bucketForContent } from "@/shared/utils/contentRoles";
+import { roleCanManage } from "@/shared/utils/contentRoles";
 import type { Project } from "@/features/projects/types";
 
 export function ProjectsSidebar() {
@@ -36,15 +37,16 @@ export function ProjectsSidebar() {
   const projectCompletion = useAppSelector(selectProjectCompletion);
   const projectScope = useAppSelector(selectProjectScope);
   const isSystemAdmin = useAppSelector((s) => s.auth.user?.isSystemAdmin ?? false);
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
 
-  // Filter projects by scope
   const filteredProjects = useMemo(() => {
     if (projectScope === "all") return projects;
-    if (projectScope === "personal") {
-      return projects.filter((p) => p.visibility === "PRIVATE");
-    }
-    return projects.filter((p) => p.visibility === "ORGANIZATION");
-  }, [projects, projectScope]);
+    return projects.filter((p) => bucketForContent({
+      ownerId: p.ownerId,
+      accessMode: p.accessMode,
+      currentUserId,
+    }) === projectScope);
+  }, [projects, projectScope, currentUserId]);
 
   const handleProjectClick = (project: Project) => {
     dispatch(setCurrentProject(project.id));
@@ -119,8 +121,7 @@ export function ProjectsSidebar() {
             </div>
           ) : (
             filteredProjects.map((project) => {
-              const level = project.userPermissionLevel > 0 ? project.userPermissionLevel : PermissionLevel.EDIT;
-              const canAccessSettings = level >= PermissionLevel.ADMIN || isSystemAdmin;
+              const canAccessSettings = roleCanManage(project.userRole) || isSystemAdmin;
               return (
                 <ProjectListItem
                   key={project.id}

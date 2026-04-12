@@ -7,127 +7,150 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1";
 
-// PermissionsService - Fine-grained content permission management
+// MembersService - Manage ContentMember rows, access policies, and audit events
+// for the new ContentMember / ContentMemberEvent permission system.
 
-service PermissionsService {
-  // Grant permission to a user or group on content
-  rpc GrantPermission(GrantPermissionRequest) returns (PermissionInfo);
+service MembersService {
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc AddMember(AddMemberRequest) returns (MemberResponse);
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (MemberResponse);
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+  rpc SetAccessMode(SetAccessModeRequest) returns (AccessModeResponse);
+  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
+  rpc ListMemberEvents(ListMemberEventsRequest) returns (ListMemberEventsResponse);
+}
 
-  // Revoke permission from a user or group on content
-  rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse);
+// Data Messages
 
-  // Update an existing permission
-  rpc UpdatePermission(UpdatePermissionRequest) returns (PermissionInfo);
+// A single member row on a piece of content.
+message ContentMember {
+  common.v1.SubjectType subject_type = 1;
+  string subject_id = 2;
+  common.v1.ContentRole role = 3;
+  string added_by_user_id = 4;
+  google.protobuf.Timestamp added_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  optional google.protobuf.Timestamp expires_at = 7;
+}
 
-  // List all permissions for a piece of content
-  rpc ListContentPermissions(ListContentPermissionsRequest) returns (PermissionListResponse);
+// The access policy for a piece of content (owner + baseline access).
+message ContentAccessPolicy {
+  string owner_id = 1;
+  common.v1.AccessMode access_mode = 2;
+  optional common.v1.ContentRole baseline_role = 3;
+}
 
-  // Get the current user's permission on content
-  rpc GetMyPermission(GetMyPermissionRequest) returns (PermissionInfo);
-
-  // Search for users and groups to share with
-  rpc SearchShareTargets(SearchShareTargetsRequest) returns (ShareTargetsResponse);
+// Audit log entry for a content member change.
+message ContentMemberEvent {
+  string id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  common.v1.ContentMemberAction action = 4;
+  optional common.v1.SubjectType subject_type = 5;
+  optional string subject_id = 6;
+  optional common.v1.ContentRole previous_role = 7;
+  optional common.v1.ContentRole new_role = 8;
+  optional common.v1.AccessMode previous_access_mode = 9;
+  optional common.v1.AccessMode new_access_mode = 10;
+  optional common.v1.ContentRole previous_baseline_role = 11;
+  optional common.v1.ContentRole new_baseline_role = 12;
+  optional string previous_owner_id = 13;
+  optional string new_owner_id = 14;
+  string actor_user_id = 15;
+  common.v1.OrganizationRole actor_org_role = 16;
+  string note = 17;
+  google.protobuf.Timestamp occurred_at = 18;
 }
 
 // Request Messages
 
-// Request to grant permission
-message GrantPermissionRequest {
+message ListMembersRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+}
+
+message ListMembersResponse {
+  ContentAccessPolicy policy = 1;
+  repeated ContentMember members = 2;
+}
+
+message AddMemberRequest {
   string organization_id = 1;
   common.v1.ContentType content_type = 2;
   string content_id = 3;
   common.v1.SubjectType subject_type = 4;
   string subject_id = 5;
-  common.v1.PermissionLevel level = 6;
+  common.v1.ContentRole role = 6;
   optional google.protobuf.Timestamp expires_at = 7;
+  string note = 8;
 }
 
-// Request to revoke permission
-message RevokePermissionRequest {
+message UpdateMemberRoleRequest {
   string organization_id = 1;
-  string permission_id = 2;
-}
-
-// Request to update permission
-message UpdatePermissionRequest {
-  string organization_id = 1;
-  string permission_id = 2;
-  optional common.v1.PermissionLevel level = 3;
-  optional google.protobuf.Timestamp expires_at = 4;
-  bool clear_expiration = 5;
-}
-
-// Request to list permissions for content
-message ListContentPermissionsRequest {
-  string organization_id = 1;
-  common.v1.ContentType content_type = 2;
-  string content_id = 3;
-}
-
-// Request to get current user's permission
-message GetMyPermissionRequest {
-  string organization_id = 1;
-  common.v1.ContentType content_type = 2;
-  string content_id = 3;
-}
-
-// Request to search for share targets
-message SearchShareTargetsRequest {
-  string organization_id = 1;
-  string query = 2;
-  int32 limit = 3;
-  bool include_users = 4;
-  bool include_groups = 5;
-}
-
-// Response Messages
-
-// Response for revoke operation
-message RevokePermissionResponse {
-  bool success = 1;
-}
-
-// Response for listing permissions
-message PermissionListResponse {
-  repeated PermissionInfo permissions = 1;
-  ShareTarget owner = 2;
-}
-
-// Response for search share targets
-message ShareTargetsResponse {
-  repeated ShareTarget targets = 1;
-}
-
-// Data Messages
-
-// Permission information
-message PermissionInfo {
-  string id = 1;
   common.v1.ContentType content_type = 2;
   string content_id = 3;
   common.v1.SubjectType subject_type = 4;
-  ShareTarget subject = 5;
-  common.v1.PermissionLevel level = 6;
-  // Fine-grained permissions
-  bool can_view = 7;
-  bool can_edit = 8;
-  bool can_delete = 9;
-  bool can_share = 10;
-  bool can_move = 11;
-  // Audit fields
-  ShareTarget granted_by = 12;
-  google.protobuf.Timestamp granted_at = 13;
-  optional google.protobuf.Timestamp expires_at = 14;
-  // True if the subject is the actual content owner (not just an admin)
-  bool is_owner = 15;
+  string subject_id = 5;
+  common.v1.ContentRole new_role = 6;
+  string note = 7;
 }
 
-// Share target (user or group)
-message ShareTarget {
-  string id = 1;
-  common.v1.SubjectType type = 2;
-  string name = 3;
-  string email = 4;
-  string avatar_url = 5;
-  int32 member_count = 6; // For groups
+message RemoveMemberRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  common.v1.SubjectType subject_type = 4;
+  string subject_id = 5;
+  string note = 6;
+}
+
+message RemoveMemberResponse {
+  bool success = 1;
+}
+
+message SetAccessModeRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  common.v1.AccessMode access_mode = 4;
+  optional common.v1.ContentRole baseline_role = 5;
+  bool remove_members_on_narrow = 6;
+  string note = 7;
+}
+
+message AccessModeResponse {
+  ContentAccessPolicy policy = 1;
+}
+
+message TransferOwnershipRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  string new_owner_user_id = 4;
+  string note = 5;
+}
+
+message TransferOwnershipResponse {
+  ContentAccessPolicy policy = 1;
+}
+
+message MemberResponse {
+  ContentMember member = 1;
+}
+
+message ListMemberEventsRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+  optional common.v1.PaginationRequest pagination = 4;
+  optional string actor_user_id = 5;
+  optional common.v1.ContentMemberAction action = 6;
+  optional google.protobuf.Timestamp after = 7;
+  optional google.protobuf.Timestamp before = 8;
+}
+
+message ListMemberEventsResponse {
+  repeated ContentMemberEvent events = 1;
+  common.v1.PaginationResponse pagination = 2;
 }

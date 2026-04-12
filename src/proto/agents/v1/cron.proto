@@ -52,11 +52,13 @@ message CronTaskInfo {
   int32 run_count = 17;
   int32 consecutive_failures = 18;
   int32 max_consecutive_failures = 19;
-  common.v1.VisibilityScope visibility = 20;
+  common.v1.AccessMode access_mode = 20;
   google.protobuf.Timestamp created_at = 21;
   optional google.protobuf.Timestamp updated_at = 22;
   // Agent name for display purposes
   optional string agent_name = 23;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 24;
 }
 
 // Execution log entry
@@ -85,7 +87,8 @@ message CreateCronTaskRequest {
   string cron_expression = 5;
   optional string timezone = 6;
   optional string description = 7;
-  optional common.v1.VisibilityScope visibility = 8;
+  optional common.v1.AccessMode access_mode = 8;
+  optional common.v1.ContentRole baseline_role = 9;
 }
 
 message CronTaskResponse {

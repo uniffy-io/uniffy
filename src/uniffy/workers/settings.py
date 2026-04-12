@@ -99,7 +99,6 @@ class WorkerSettings:
         extract_document_content,
         # Agent cron (on-demand trigger)
         execute_single_agent_cron_task,
-        # Notifications
         process_notification_event,
         deliver_push_notification,
         deliver_email_notification,
