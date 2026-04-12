@@ -33,7 +33,7 @@ Critical rules:
 | Phase | Description | Status |
 |---|---|---|
 | 0 | Foundation: enums, models, permission engine, audit log, migrations, protos, gen code | `[x]` |
-| 1 | Domains: notes, files, calendar, projects, agents, rooms, comments, chat, permissions, organizations, search, seed | `[~]` |
+| 1 | Domains: notes, files, calendar, projects, agents, rooms, comments, chat, permissions, organizations, search, seed | `[x]` |
 | 2 | Frontend: new permissions feature, delete sharing feature, update all pages | `[ ]` |
 | 3 | End-to-end verification | `[ ]` |
 
@@ -44,21 +44,24 @@ Phase 1 sub-status:
 | 1.0 Permissions (MembersService) | `[x]` |
 | 1.1 Notes | `[x]` (reference implementation) |
 | 1.2 Files / Folders | `[x]` |
-| 1.3 Calendar | `[ ]` |
-| 1.4 Projects | `[ ]` |
-| 1.5 Agents (4 sub-domains) | `[ ]` |
-| 1.6 Rooms | `[ ]` |
-| 1.7 Comments (delegates) | `[ ]` |
-| 1.8 Attachments (delegates) | `[ ]` |
-| 1.9 Chat (drop unused `visibility`) | `[ ]` |
-| 1.10 Organizations | `[ ]` |
+| 1.3 Calendar | `[x]` |
+| 1.4 Projects | `[x]` |
+| 1.5 Agents (4 sub-domains) | `[x]` |
+| 1.6 Rooms | `[x]` |
+| 1.7 Comments (delegates) | `[x]` |
+| 1.8 Attachments (delegates) | `[x]` |
+| 1.9 Chat (drop unused `visibility`) | `[x]` |
+| 1.10 Organizations | `[x]` |
 | 1.10a Owner deletion preserves content | `[ ]` |
-| 1.12 Search | `[ ]` |
-| 1.13 Factory / workers / seed | `[x]` (factory.py done; workers/seed pending) |
-| 1.16 Verification | `[ ]` |
+| 1.12 Search | `[x]` |
+| 1.13 Factory / workers / seed | `[x]` |
+| 1.16 Verification | `[x]` (lint-backend clean; factory imports clean) |
 
 Current worker: (empty -- set to your identifier when you start working)
-Last updated: 2026-04-11
+Last updated: 2026-04-12
+
+Branch: `refactor/permissions-redesign` (started from `main` at 47798a1).
+Baseline commit on the branch: `8954eee refactor(permissions): phase 0 + notes/files/calendar/projects domains`.
 
 **The next LLM should use `src/uniffy/domains/notes/` as the reference for every remaining domain**: `operations.py` shows the canonical class layout with `_resolve_access_policy`, `_extract_content_fields`, `_notify_new_mentions`, and the `_load_*` / content loader registration pattern; `converters.py` shows the enum-map + `_build_*` helpers pattern; `handlers.py` shows the `_parse_uuid` / `_map_domain_error` / `_parse_canvas_content` thin-handler pattern. Every other domain should mirror that structure, not invent its own.
 
@@ -92,11 +95,9 @@ Last updated: 2026-04-11
 - `rtk grep -n "VisibilityScope\|PermissionLevel\|permission_level" src/proto` → zero matches
 - `rtk grep -n "visibility" src/uniffy/db/migrations` → zero matches
 
-**What's still broken** (phase 1 work, after 2026-04-11 session):
-- Calendar, projects, agents, rooms, comments, attachments, chat, organizations, and search domains still import `VisibilityScope` / `PermissionLevel` or use the deleted `visibility_*` / `permission_level_*` converters. Each needs the same treatment notes and files received this session.
-- `src/uniffy/db/seed.py` and `src/uniffy/db/seed_dev.py` still reference `VisibilityScope`.
-- `src/uniffy/workers/` has not been audited yet.
+**What's still broken** (after 2026-04-12 session):
 - `src/uniffy/domains/users/` user deletion path has not been updated to clean up `ContentMember` rows (task 1.10a).
+- Legacy proto messages in `notes.proto` (`ContentPermission`, `GrantPermissionRequest`, `RevokePermissionRequest`, `NoteSharingResponse.permissions`) and the corresponding `share_note_with_group` / `grant_permission` / `revoke_permission` RPCs are still defined and mapped to `UNIMPLEMENTED` stubs. They can be deleted once the frontend stops calling them.
 - The frontend is entirely unchanged and still talks the old API.
 
 **Done in the 2026-04-11 session:**
@@ -105,6 +106,25 @@ Last updated: 2026-04-11
 - Files / folders / saved-filter converters migrated.
 - New helper: `core/auth/permissions/defaults.py::resolve_content_defaults(session, org_id, content_type)` -- resolves the per-org access policy defaults with fallback to `ORG_PERMISSION_DEFAULTS`. Every domain's `create()` path must call this instead of hard-coding a default.
 - New helper: `db/session.py::open_session` (``asynccontextmanager``) -- use with ``async with`` in RPC handlers so the type checker can prove the ``return`` inside is reachable. Exported from `uniffy.db`.
+
+**Done in the 2026-04-12 session:**
+- Calendar domain (1.3) migrated. `CalendarEventOperations` and `EventTemplateOperations` use `access_mode`/`baseline_role`, `_resolve_access_policy` helper, `ContentMembersOperations.add_member` for initial group members, and register a `CALENDAR_EVENT` loader. Handlers rewritten with `_parse_uuid` / `_map_domain_error` and `open_session`. Converters dropped the visibility map and use `access_mode_to_proto` / `content_role_to_proto`.
+- Projects domain (1.4) migrated. `ProjectOperations` dropped `member_ids`, dropped `_propagate_visibility_to_tasks`, and now resolves access defaults via `resolve_content_defaults`. `TaskOperations._resolve_role` delegates to the parent project, and `_index_for_search` was overridden to index tasks with the project's access policy and member rows. `SprintOperations._verify_project_manage` replaces `_verify_project_admin` (uses `_require_manage`). Handlers rewritten with `_parse_uuid` / `_map_domain_error` and `open_session`. Converters dropped `permission_level_to_proto` / `visibility_to_proto` and use `access_mode_to_proto` / `content_role_to_proto` + `user_role` fields. `PROJECT` and `TASK` loaders registered.
+- Rooms domain (1.6) migrated. `RoomOperations.create_room` / `update_room` take `access_mode` + `baseline_role`; `_resolve_access_policy` helper; list filter uses the canonical `build_accessible_filter`. `BookingOperations.list_bookings` uses the new access filter columns. `_load_room` loader registered.
+- Agents sub-domains (1.5) migrated:
+  - `agents/agents/operations.py`: `AgentOperations.create_agent` / `update_agent` take `access_mode` + `baseline_role`; audit logging kept for security-relevant field changes; `_load_agent` registered.
+  - `agents/providers/operations.py`: `ProviderOperations.list_keys` uses `OPEN_TO_ORG` + `ContentMember` for visibility instead of the old `ContentPermission` table; key creation goes through `_resolve_access_policy`; `_load_provider_key` registered.
+  - `agents/prompts/operations.py`: `PromptOperations` uses `access_mode` + `baseline_role`; `list_prompts` applies the canonical access filter + bundled fallback; `_load_prompt` registered.
+  - `agents/cron/operations.py`: `CronTaskOperations` writes cron tasks directly (no base CRUD); list query filters tasks via the parent agent's access; `_load_cron_task` registered; `ContentType.AGENT_CRON_TASK` added to `common.proto` and `common_proto.py`.
+  - All four `handlers.py` rewritten with the thin `_parse_uuid` / `_map_domain_error` / `open_session` pattern. All four `converters.py` files dropped `visibility_to_proto` and use `access_mode_to_proto` / `content_role_to_proto`.
+  - `agents/tools/builtin/{projects,calendar,cron}.py` updated: the `visibility` tool argument was replaced with `access_mode` (schema + parsing); cron tool defaults to `AccessMode.OWNER_ONLY`.
+- Comments domain (1.7) audited. `_verify_content_access` / `_verify_content_edit` now delegate to `PermissionChecker.effective_role` via `_load_parent_policy`, which loads the parent content's `owner_id` / `access_mode` / `baseline_role` (tasks delegate to their parent project).
+- Attachments domain (1.8) audited. Same delegation pattern. The Attachments folder is now `OWNER_ONLY`; file copies inherit `OPEN_TO_ORG` from parent content, otherwise fall back to `OWNER_ONLY`. The file-access subquery uses `access_mode_column` / `baseline_role_column`.
+- Chat channels (1.9) migrated. `ChatChannelOperations._require_view` replaces `_require_access`; the base class helper name is the new one. `_index_for_search` now indexes as `OPEN_TO_ORG` (public) or `EXPLICIT_MEMBERS` + the channel member list (private). `_derive_visibility` helper deleted; the `visibility` column had already been removed from the model.
+- Organizations domain (1.10) migrated. `OrganizationOperations.update_permission_defaults` takes `default_access_mode` + `default_baseline_role` instead of `default_visibility` + `members_can_*`. Handlers rewritten to parse the new fields. Proto trimmed: `UpdatePermissionDefaultsRequest` and `ContentTypeDefaults` no longer expose `members_can_*`.
+- Search domain (1.12) migrated. `SearchOperations.index_item` and `SearchResult` now use `access_mode` / `baseline_role`. `get_references` filters notes through `ContentAccessQuery.build_accessible_filter` (no more hardcoded `visibility == ORGANIZATION` checks). `_get_user_group_ids` moved into the operations class.
+- Seed + workers (1.13). `db/seed.py`, `db/seed_dev.py`, `scripts/stress/stressseed.py` and `workers/tasks/content_extraction.py` all updated to use `access_mode` / `baseline_role` and the new `SearchIndexer.index` signature.
+- Verification (1.16). `./run.sh lint-backend` is clean. `from uniffy.factory import create_app` imports cleanly, exercising the full permissions-redesigned domain graph.
 
 ---
 
@@ -360,32 +380,31 @@ Completed and set as the canonical reference. See the "REFERENCE IMPLEMENTATION"
 - [x] `_load_file` and `_load_folder` loaders registered.
 - [x] File versions delegate to parent file (no model changes needed).
 
-### 1.3 Calendar
+### 1.3 Calendar -- [DONE 2026-04-12]
 
-- [ ] `src/uniffy/core/models/calendar/event.py` -- remove visibility, add new columns (via migration)
-- [ ] `src/uniffy/core/models/calendar/calendar.py` -- add new columns
-- [ ] `src/uniffy/core/models/calendar/template.py` -- audit
-- [ ] `src/uniffy/domains/calendar/operations.py` -- update event ops to use the new access checker. EventAttendee stays as-is; it's orthogonal to access.
-- [ ] `src/uniffy/domains/calendar/handlers.py` -- update
-- [ ] `src/uniffy/domains/calendar/converters.py` -- update
-- [ ] Verify reminders delegate to parent event
+- [x] `src/uniffy/core/models/calendar/event.py` -- has `access_mode` + `baseline_role` (Phase 0).
+- [x] `src/uniffy/core/models/calendar/calendar.py` -- has `access_mode` + `baseline_role` (Phase 0).
+- [x] `src/uniffy/core/models/calendar/template.py` -- has `access_mode` + `baseline_role` (Phase 0).
+- [x] `src/uniffy/domains/calendar/operations.py` -- `CalendarEventOperations` and `EventTemplateOperations` rewritten; `_resolve_access_policy` helper; attendee bypass in `list_events` / `get_events_in_range`; `_load_calendar_event` loader registered.
+- [x] `src/uniffy/domains/calendar/handlers.py` -- rewritten with `_parse_uuid` / `_map_domain_error` / `open_session`. Access-mode / baseline-role parsed from request into create paths.
+- [x] `src/uniffy/domains/calendar/converters.py` -- dropped visibility map; uses `access_mode_to_proto` / `content_role_to_proto`.
+- [x] Reminders delegate to parent event (unchanged).
 
-### 1.4 Projects
+### 1.4 Projects -- [DONE 2026-04-12]
 
-- [ ] `src/uniffy/core/models/projects/project.py` -- remove visibility, `member_ids`; rely on access_mode + baseline_role
-- [ ] `src/uniffy/core/models/projects/task.py` -- remove visibility (tasks delegate)
-- [ ] `src/uniffy/core/models/projects/sprint.py` -- audit for visibility references; delegates
-- [ ] `src/uniffy/core/models/projects/field_definition.py` -- audit; delegates
-- [ ] `src/uniffy/core/models/projects/view_config.py` -- audit; delegates
-- [ ] `src/uniffy/core/models/projects/activity.py` -- audit; delegates
-- [ ] `src/uniffy/domains/projects/operations.py`:
-  - [ ] `ProjectOperations.create` -- set access_mode/baseline_role from org defaults
-  - [ ] `ProjectOperations.update` -- remove visibility propagation logic and the `_propagate_visibility_to_tasks` helper (tasks no longer carry visibility)
-  - [ ] `ProjectOperations.delete` -- no changes
-  - [ ] `TaskOperations` -- override `_resolve_role` to delegate to parent project
-  - [ ] Remove any direct ContentPermission/ContentGroupLink references
-- [ ] `src/uniffy/domains/projects/handlers.py` -- update
-- [ ] `src/uniffy/domains/projects/converters.py` -- update
+- [x] `src/uniffy/core/models/projects/project.py` -- has `access_mode` + `baseline_role`; `member_ids` dropped (Phase 0).
+- [x] `src/uniffy/core/models/projects/task.py` -- no access columns (delegates to parent).
+- [x] `src/uniffy/core/models/projects/sprint.py` / `field_definition.py` / `view_config.py` / `activity.py` -- no access columns (delegate via the project).
+- [x] `src/uniffy/domains/projects/operations.py`:
+  - [x] `ProjectOperations.create` -- resolves defaults via `_resolve_access_policy` and `resolve_content_defaults`.
+  - [x] `ProjectOperations.update` -- dropped `_propagate_visibility_to_tasks`; access-mode changes go through `MembersService.set_access_mode`.
+  - [x] `ProjectOperations.delete` -- uses `build_content_urn` for search-index removal.
+  - [x] `TaskOperations._resolve_role` -- delegates to parent project.
+  - [x] `TaskOperations._index_for_search` -- overridden to index tasks with the project's `access_mode` / `baseline_role` / member rows.
+  - [x] `SprintOperations._verify_project_manage` replaces `_verify_project_admin` (uses `_require_manage`).
+  - [x] No ContentPermission / ContentGroupLink references remain.
+- [x] `src/uniffy/domains/projects/handlers.py` -- rewritten with `_parse_uuid` / `_map_domain_error` / `open_session`. Field / view / sprint handlers use `_require_manage` on the parent project.
+- [x] `src/uniffy/domains/projects/converters.py` -- `project_to_proto` / `task_to_proto` emit `access_mode` / `baseline_role` / `user_role`. `PROJECT` and `TASK` loaders registered at module level.
 
 ### 1.5 Agents
 

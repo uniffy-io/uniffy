@@ -12,7 +12,10 @@ from uniffy_proto.agents.v1.providers_pb2 import (
 )
 
 from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.converters.common_proto import visibility_to_proto
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
+)
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.domains.agents.providers.base import ModelInfo as DomainModelInfo
 
@@ -88,8 +91,11 @@ def provider_key_to_proto(key: ProviderKey) -> ProviderKeyInfo:
         created_at=datetime_to_timestamp(key.created_at),
         updated_at=datetime_to_timestamp(key.updated_at),
         created_by=str(key.created_by),
-        visibility=visibility_to_proto(key.visibility),
+        access_mode=access_mode_to_proto(key.access_mode),
     )
+
+    if key.baseline_role is not None:
+        info.baseline_role = content_role_to_proto(key.baseline_role)
 
     if key.last_validated_at:
         info.last_validated_at.CopyFrom(datetime_to_timestamp(key.last_validated_at))

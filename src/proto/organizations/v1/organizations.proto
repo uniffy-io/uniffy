@@ -168,20 +168,12 @@ message UpdatePermissionDefaultsRequest {
   string organization_id = 1;
   common.v1.ContentType content_type = 2;
   optional common.v1.AccessMode default_access_mode = 3;
-  optional bool members_can_view = 4;
-  optional bool members_can_edit = 5;
-  optional bool members_can_delete = 6;
-  optional bool members_can_share = 7;
   optional common.v1.ContentRole default_baseline_role = 8;
 }
 
 message ContentTypeDefaults {
   common.v1.ContentType content_type = 1;
   common.v1.AccessMode default_access_mode = 2;
-  bool members_can_view = 3;
-  bool members_can_edit = 4;
-  bool members_can_delete = 5;
-  bool members_can_share = 6;
   google.protobuf.Timestamp updated_at = 7;
   optional common.v1.ContentRole default_baseline_role = 8;
 }

@@ -1212,10 +1212,6 @@ type UpdatePermissionDefaultsRequest struct {
 	OrganizationId      string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	ContentType         v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
 	DefaultAccessMode   *v1.AccessMode         `protobuf:"varint,3,opt,name=default_access_mode,json=defaultAccessMode,proto3,enum=common.v1.AccessMode,oneof" json:"default_access_mode,omitempty"`
-	MembersCanView      *bool                  `protobuf:"varint,4,opt,name=members_can_view,json=membersCanView,proto3,oneof" json:"members_can_view,omitempty"`
-	MembersCanEdit      *bool                  `protobuf:"varint,5,opt,name=members_can_edit,json=membersCanEdit,proto3,oneof" json:"members_can_edit,omitempty"`
-	MembersCanDelete    *bool                  `protobuf:"varint,6,opt,name=members_can_delete,json=membersCanDelete,proto3,oneof" json:"members_can_delete,omitempty"`
-	MembersCanShare     *bool                  `protobuf:"varint,7,opt,name=members_can_share,json=membersCanShare,proto3,oneof" json:"members_can_share,omitempty"`
 	DefaultBaselineRole *v1.ContentRole        `protobuf:"varint,8,opt,name=default_baseline_role,json=defaultBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"default_baseline_role,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
@@ -1272,34 +1268,6 @@ func (x *UpdatePermissionDefaultsRequest) GetDefaultAccessMode() v1.AccessMode {
 	return v1.AccessMode(0)
 }
 
-func (x *UpdatePermissionDefaultsRequest) GetMembersCanView() bool {
-	if x != nil && x.MembersCanView != nil {
-		return *x.MembersCanView
-	}
-	return false
-}
-
-func (x *UpdatePermissionDefaultsRequest) GetMembersCanEdit() bool {
-	if x != nil && x.MembersCanEdit != nil {
-		return *x.MembersCanEdit
-	}
-	return false
-}
-
-func (x *UpdatePermissionDefaultsRequest) GetMembersCanDelete() bool {
-	if x != nil && x.MembersCanDelete != nil {
-		return *x.MembersCanDelete
-	}
-	return false
-}
-
-func (x *UpdatePermissionDefaultsRequest) GetMembersCanShare() bool {
-	if x != nil && x.MembersCanShare != nil {
-		return *x.MembersCanShare
-	}
-	return false
-}
-
 func (x *UpdatePermissionDefaultsRequest) GetDefaultBaselineRole() v1.ContentRole {
 	if x != nil && x.DefaultBaselineRole != nil {
 		return *x.DefaultBaselineRole
@@ -1311,10 +1279,6 @@ type ContentTypeDefaults struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	ContentType         v1.ContentType         `protobuf:"varint,1,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
 	DefaultAccessMode   v1.AccessMode          `protobuf:"varint,2,opt,name=default_access_mode,json=defaultAccessMode,proto3,enum=common.v1.AccessMode" json:"default_access_mode,omitempty"`
-	MembersCanView      bool                   `protobuf:"varint,3,opt,name=members_can_view,json=membersCanView,proto3" json:"members_can_view,omitempty"`
-	MembersCanEdit      bool                   `protobuf:"varint,4,opt,name=members_can_edit,json=membersCanEdit,proto3" json:"members_can_edit,omitempty"`
-	MembersCanDelete    bool                   `protobuf:"varint,5,opt,name=members_can_delete,json=membersCanDelete,proto3" json:"members_can_delete,omitempty"`
-	MembersCanShare     bool                   `protobuf:"varint,6,opt,name=members_can_share,json=membersCanShare,proto3" json:"members_can_share,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	DefaultBaselineRole *v1.ContentRole        `protobuf:"varint,8,opt,name=default_baseline_role,json=defaultBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"default_baseline_role,omitempty"`
 	unknownFields       protoimpl.UnknownFields
@@ -1363,34 +1327,6 @@ func (x *ContentTypeDefaults) GetDefaultAccessMode() v1.AccessMode {
 		return x.DefaultAccessMode
 	}
 	return v1.AccessMode(0)
-}
-
-func (x *ContentTypeDefaults) GetMembersCanView() bool {
-	if x != nil {
-		return x.MembersCanView
-	}
-	return false
-}
-
-func (x *ContentTypeDefaults) GetMembersCanEdit() bool {
-	if x != nil {
-		return x.MembersCanEdit
-	}
-	return false
-}
-
-func (x *ContentTypeDefaults) GetMembersCanDelete() bool {
-	if x != nil {
-		return x.MembersCanDelete
-	}
-	return false
-}
-
-func (x *ContentTypeDefaults) GetMembersCanShare() bool {
-	if x != nil {
-		return x.MembersCanShare
-	}
-	return false
 }
 
 func (x *ContentTypeDefaults) GetUpdatedAt() *timestamppb.Timestamp {
@@ -1880,29 +1816,17 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x1cGetPermissionDefaultsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"_\n" +
 	"\x1aPermissionDefaultsResponse\x12A\n" +
-	"\bdefaults\x18\x01 \x03(\v2%.organizations.v1.ContentTypeDefaultsR\bdefaults\"\xed\x04\n" +
+	"\bdefaults\x18\x01 \x03(\v2%.organizations.v1.ContentTypeDefaultsR\bdefaults\"\xd4\x02\n" +
 	"\x1fUpdatePermissionDefaultsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
 	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12J\n" +
-	"\x13default_access_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\x11defaultAccessMode\x88\x01\x01\x12-\n" +
-	"\x10members_can_view\x18\x04 \x01(\bH\x01R\x0emembersCanView\x88\x01\x01\x12-\n" +
-	"\x10members_can_edit\x18\x05 \x01(\bH\x02R\x0emembersCanEdit\x88\x01\x01\x121\n" +
-	"\x12members_can_delete\x18\x06 \x01(\bH\x03R\x10membersCanDelete\x88\x01\x01\x12/\n" +
-	"\x11members_can_share\x18\a \x01(\bH\x04R\x0fmembersCanShare\x88\x01\x01\x12O\n" +
-	"\x15default_baseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x05R\x13defaultBaselineRole\x88\x01\x01B\x16\n" +
-	"\x14_default_access_modeB\x13\n" +
-	"\x11_members_can_viewB\x13\n" +
-	"\x11_members_can_editB\x15\n" +
-	"\x13_members_can_deleteB\x14\n" +
-	"\x12_members_can_shareB\x18\n" +
-	"\x16_default_baseline_role\"\xeb\x03\n" +
+	"\x13default_access_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\x11defaultAccessMode\x88\x01\x01\x12O\n" +
+	"\x15default_baseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\x13defaultBaselineRole\x88\x01\x01B\x16\n" +
+	"\x14_default_access_modeB\x18\n" +
+	"\x16_default_baseline_role\"\xbd\x02\n" +
 	"\x13ContentTypeDefaults\x129\n" +
 	"\fcontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12E\n" +
-	"\x13default_access_mode\x18\x02 \x01(\x0e2\x15.common.v1.AccessModeR\x11defaultAccessMode\x12(\n" +
-	"\x10members_can_view\x18\x03 \x01(\bR\x0emembersCanView\x12(\n" +
-	"\x10members_can_edit\x18\x04 \x01(\bR\x0emembersCanEdit\x12,\n" +
-	"\x12members_can_delete\x18\x05 \x01(\bR\x10membersCanDelete\x12*\n" +
-	"\x11members_can_share\x18\x06 \x01(\bR\x0fmembersCanShare\x129\n" +
+	"\x13default_access_mode\x18\x02 \x01(\x0e2\x15.common.v1.AccessModeR\x11defaultAccessMode\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12O\n" +
 	"\x15default_baseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x13defaultBaselineRole\x88\x01\x01B\x18\n" +

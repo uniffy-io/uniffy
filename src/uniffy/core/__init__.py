@@ -39,7 +39,6 @@ __all__ = [
     "ContentType",
     "NodeType",
     "SubjectType",
-    # Errors
     "AuthenticationError",
     "ConflictError",
     "NotFoundError",

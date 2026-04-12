@@ -180,7 +180,8 @@ class SearchHandlers:
                 raise ConnectError(Code.INVALID_ARGUMENT, "owner_id required in metadata")
 
             owner_id = UUID(owner_id_str)
-            visibility = request.metadata.get("visibility", "PRIVATE")
+            access_mode = request.metadata.get("access_mode", "OWNER_ONLY")
+            baseline_role = request.metadata.get("baseline_role") or None
 
             async for session in get_async_session():
                 ops = SearchOperations(session)
@@ -190,7 +191,8 @@ class SearchHandlers:
                     entity_type=entity_type,
                     title=request.title,
                     url_path=request.url,
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                     owner_id=owner_id,
                     keywords=request.content if request.content else None,
                 )

@@ -1218,7 +1218,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         return True
 
-
     async def _resolve_access_policy(
         self,
         organization_id: UUID,

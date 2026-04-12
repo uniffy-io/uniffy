@@ -6,13 +6,13 @@ from uuid import UUID
 from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
-from uniffy.core.models.shared import ContentType, VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
 from uniffy.domains.comments.queries import (
     aggregate_reactions,
     build_comments_query,
@@ -669,40 +669,54 @@ class CommentOperations:
             return "Unknown", None
         return row[0] or "Unknown", None
 
-    async def _get_content_for_permission_check(
+    async def _resolve_parent_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> ContentRole | None:
+        """Return the user's effective role on the parent content.
+
+        Comments inherit their access policy from the parent content
+        item. Tasks delegate to their parent project.
+        """
+        from uniffy.core.auth.permissions.checker import PermissionChecker
+
+        owner_id, access_mode, baseline_role, resolved_type, resolved_id = (
+            await self._load_parent_policy(
+                organization_id, content_type, content_id
+            )
+        )
+
+        checker = PermissionChecker(self._session)
+        return await checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=resolved_type,
+            content_id=resolved_id,
+            owner_id=owner_id,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
+        )
+
+    async def _load_parent_policy(
         self,
         organization_id: UUID,
         content_type: ContentType,
         content_id: UUID,
-    ) -> tuple[UUID, VisibilityScope]:
-        """
-        Get content owner_id and visibility for permission checking.
+    ) -> tuple[UUID, AccessMode, ContentRole | None, ContentType, UUID]:
+        """Load (owner_id, access_mode, baseline_role, type, id) for a parent.
 
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Type of content.
-        content_id : UUID
-            Content ID.
-
-        Returns
-        -------
-        tuple[UUID, VisibilityScope]
-            Content owner_id and visibility.
-
-        Raises
-        ------
-        NotFoundError
-            If content not found.
-
+        Tasks are not access-controlled themselves; they defer to the
+        owning project. The returned ``(type, id)`` pair is what the
+        permission checker should use -- for tasks this is the project.
         """
         if content_type == ContentType.NOTE:
             from uniffy.core.models.notes.note import Note
 
             result = await self._session.execute(
-                select(Note.owner_id, Note.visibility).where(
+                select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
                     Note.id == content_id,
                     Note.organization_id == organization_id,
                 )
@@ -710,11 +724,11 @@ class CommentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("Note", str(content_id))
-            return row[0], row[1]
+            return row[0], row[1], row[2], content_type, content_id
 
-        elif content_type == ContentType.FILE:
+        if content_type == ContentType.FILE:
             result = await self._session.execute(
-                select(File.owner_id, File.visibility).where(
+                select(File.owner_id, File.access_mode, File.baseline_role).where(
                     File.id == content_id,
                     File.organization_id == organization_id,
                 )
@@ -722,13 +736,17 @@ class CommentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("File", str(content_id))
-            return row[0], row[1]
+            return row[0], row[1], row[2], content_type, content_id
 
-        elif content_type == ContentType.CALENDAR_EVENT:
+        if content_type == ContentType.CALENDAR_EVENT:
             from uniffy.core.models.calendar.event import CalendarEvent
 
             result = await self._session.execute(
-                select(CalendarEvent.owner_id, CalendarEvent.visibility).where(
+                select(
+                    CalendarEvent.organizer_id,
+                    CalendarEvent.access_mode,
+                    CalendarEvent.baseline_role,
+                ).where(
                     CalendarEvent.id == content_id,
                     CalendarEvent.organization_id == organization_id,
                 )
@@ -736,13 +754,15 @@ class CommentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("CalendarEvent", str(content_id))
-            return row[0], row[1]
+            return row[0], row[1], row[2], content_type, content_id
 
-        elif content_type == ContentType.PROJECT:
+        if content_type == ContentType.PROJECT:
             from uniffy.core.models.projects.project import Project
 
             result = await self._session.execute(
-                select(Project.owner_id, Project.visibility).where(
+                select(
+                    Project.owner_id, Project.access_mode, Project.baseline_role
+                ).where(
                     Project.id == content_id,
                     Project.organization_id == organization_id,
                 )
@@ -750,24 +770,37 @@ class CommentOperations:
             row = result.one_or_none()
             if not row:
                 raise NotFoundError("Project", str(content_id))
-            return row[0], row[1]
+            return row[0], row[1], row[2], content_type, content_id
 
-        elif content_type == ContentType.TASK:
+        if content_type == ContentType.TASK:
+            from uniffy.core.models.projects.project import Project
             from uniffy.core.models.projects.task import Task
 
-            result = await self._session.execute(
-                select(Task.owner_id, Task.visibility).where(
+            task_result = await self._session.execute(
+                select(Task.project_id).where(
                     Task.id == content_id,
                     Task.organization_id == organization_id,
                 )
             )
-            row = result.one_or_none()
-            if not row:
+            task_row = task_result.one_or_none()
+            if not task_row:
                 raise NotFoundError("Task", str(content_id))
-            return row[0], row[1]
+            project_id = task_row[0]
 
-        else:
-            raise NotFoundError("Content", str(content_id))
+            proj_result = await self._session.execute(
+                select(
+                    Project.owner_id, Project.access_mode, Project.baseline_role
+                ).where(
+                    Project.id == project_id,
+                    Project.organization_id == organization_id,
+                )
+            )
+            proj_row = proj_result.one_or_none()
+            if not proj_row:
+                raise NotFoundError("Project", str(project_id))
+            return proj_row[0], proj_row[1], proj_row[2], ContentType.PROJECT, project_id
+
+        raise NotFoundError("Content", str(content_id))
 
     async def _verify_content_access(
         self,
@@ -776,23 +809,11 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify user has VIEW access to content."""
-        from uniffy.core.auth.permissions.checker import PermissionChecker
-
-        owner_id, visibility = await self._get_content_for_permission_check(
-            organization_id, content_type, content_id
+        """Verify the user can view the parent content."""
+        role = await self._resolve_parent_role(
+            user_id, organization_id, content_type, content_id
         )
-
-        checker = PermissionChecker(self._session)
-        has_access = await checker.can_access_content(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            content_owner_id=owner_id,
-            content_visibility=visibility,
-        )
-        if not has_access:
+        if not role_can_view(role):
             raise PermissionDeniedError("access", "content")
 
     async def _verify_content_edit(
@@ -802,21 +823,9 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify user has EDIT access to content."""
-        from uniffy.core.auth.permissions.checker import PermissionChecker
-
-        owner_id, visibility = await self._get_content_for_permission_check(
-            organization_id, content_type, content_id
+        """Verify the user can edit the parent content."""
+        role = await self._resolve_parent_role(
+            user_id, organization_id, content_type, content_id
         )
-
-        checker = PermissionChecker(self._session)
-        has_access = await checker.can_edit_content(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            content_owner_id=owner_id,
-            content_visibility=visibility,
-        )
-        if not has_access:
+        if not role_can_edit(role):
             raise PermissionDeniedError("edit", "content")

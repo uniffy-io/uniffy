@@ -74,7 +74,6 @@ class PermissionChecker:
         self._org_role_cache: dict[tuple[UUID, UUID], OrganizationRole | None] = {}
         self._domain_admin_cache: dict[tuple[UUID, UUID, DomainType], bool] = {}
 
-
     async def effective_role(
         self,
         user_id: UUID,

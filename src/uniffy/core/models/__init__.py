@@ -123,7 +123,6 @@ __all__ = [
     "Comment",
     "CommentAnchorType",
     "CommentReaction",
-    # Notifications
     "Notification",
     "NotificationType",
     "PushSubscription",

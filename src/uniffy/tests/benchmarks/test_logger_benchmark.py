@@ -12,9 +12,7 @@ import re
 
 import pytest
 
-# =============================================================================
 # Test data representing real-world log messages
-# =============================================================================
 
 # Typical access log - no special characters (most common case ~90%)
 CLEAN_ACCESS_LOG = "access notes.v1.NotesService/GetNote"
@@ -32,9 +30,7 @@ LONG_CLEAN_MSG = "Processing request for user authentication " * 10
 LONG_DIRTY_MSG = "Error in {module} at <line> with [context]: " * 10
 
 
-# =============================================================================
 # Implementation variants for comparison
-# =============================================================================
 
 
 def escape_naive(s: str) -> str:
@@ -105,9 +101,7 @@ def escape_regex(s: str) -> str:
     return _ESCAPE_PATTERN.sub(_escape_match, s)
 
 
-# =============================================================================
 # Correctness tests
-# =============================================================================
 
 
 @pytest.mark.parametrize(
@@ -150,9 +144,7 @@ class TestEscapeCorrectness:
         assert "[" not in result or "\\[" in result
 
 
-# =============================================================================
 # Benchmarks
-# =============================================================================
 
 
 class TestBenchmarkCleanMessages:

@@ -1,8 +1,9 @@
 """Chat channel operations with membership-based permission model.
 
-This is the first Uniffy domain that overrides BaseContentOperations._require_access().
-Chat uses channel membership as the permission instead of the standard 3-layer system
-(VisibilityScope + ContentGroupLink + ContentPermission).
+Chat uses channel membership as the permission. The BaseContentOperations
+``_require_*`` helpers are overridden to delegate to ``ChatAccessChecker``.
+Channels do not participate in the generic access_mode / baseline_role
+model -- channel_type (PUBLIC / PRIVATE / DIRECT / GROUP_DM) drives access.
 """
 
 from datetime import UTC, datetime
@@ -24,15 +25,16 @@ from uniffy.core.models.chat.channel_member import (
     ChatChannelMember,
 )
 from uniffy.core.models.login.user import User
-from uniffy.core.types import ContentType, VisibilityScope, slugify
+from uniffy.core.types import AccessMode, ContentType, slugify
 from uniffy.domains.chat.access import ChatAccessChecker
 
 
 class ChatChannelOperations(BaseContentOperations[ChatChannel]):
     """Channel CRUD with membership-based permission model.
 
-    Overrides the standard 3-layer permission check. Channel membership IS the
-    permission - no VisibilityScope check, no ContentGroupLink, no ContentPermission.
+    Channel membership is the permission: the standard
+    ``_require_view / _require_edit / _require_delete`` helpers are
+    overridden to delegate to :class:`ChatAccessChecker`.
     """
 
     content_type = ContentType.CHAT
@@ -58,13 +60,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
     # Permission override - membership-based access
 
-    async def _require_access(
+    async def _require_view(
         self,
         user_id: UUID,
         organization_id: UUID,
         content: ChatChannel,
     ) -> None:
-        """Override: check membership instead of standard 3-layer permission."""
+        """Override: check channel membership instead of the generic role model."""
         await self.access.check_access(user_id, organization_id, content)
 
     async def _require_edit(
@@ -102,21 +104,23 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
     async def _index_for_search(
         self,
         model: ChatChannel,
-        group_ids: list[UUID],
+        skip_member_lookup: bool = False,
     ) -> None:
-        """Override: derive Meilisearch access from membership.
+        """Override: derive the search document access from membership.
 
-        DMs and group DMs are excluded from search - they are private
-        conversations found via the sidebar, not searchable content.
+        Public channels index as ``OPEN_TO_ORG``. Private channels index
+        as ``EXPLICIT_MEMBERS`` with the channel member list attached.
+        DMs and group DMs are excluded from search entirely.
         """
+        del skip_member_lookup  # membership is always the source of truth
         if model.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
             return
 
         if model.channel_type == ChannelType.PUBLIC:
-            visibility = VisibilityScope.ORGANIZATION.value
+            access_mode = AccessMode.OPEN_TO_ORG.value
             shared_user_ids = None
         else:
-            visibility = VisibilityScope.PRIVATE.value
+            access_mode = AccessMode.EXPLICIT_MEMBERS.value
             member_ids = await self._get_all_member_ids(model.id)
             shared_user_ids = member_ids if member_ids else None
 
@@ -126,7 +130,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             title=self._get_search_title(model),
             entity_type=self.content_type.value,
             url_path=self._get_url_path(model),
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=None,
             owner_id=model.owner_id,
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),
@@ -161,9 +166,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if existing.scalar_one_or_none():
             slug = f"{slug}-{str(UUID(int=0))[:8]}"
 
-        # Auto-set visibility from channel_type
-        visibility = self._derive_visibility(channel_type)
-
         channel = ChatChannel(
             organization_id=organization_id,
             owner_id=user_id,
@@ -171,7 +173,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             slug=slug,
             description=description,
             channel_type=channel_type,
-            visibility=visibility,
             icon=icon,
             is_default=is_default,
             category_id=category_id,
@@ -210,7 +211,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         # Index for search (post-commit)
         try:
-            await self._index_for_search(channel, [])
+            await self._index_for_search(channel)
         except Exception:
             logger.warning(f"Failed to index channel {channel.id}")
 
@@ -475,7 +476,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             # Re-index search for private channels (shared_user_ids changed)
             if channel.channel_type != ChannelType.PUBLIC:
                 try:
-                    await self._index_for_search(channel, [])
+                    await self._index_for_search(channel)
                 except Exception:
                     logger.warning(f"Failed to re-index channel {channel_id}")
 
@@ -529,7 +530,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
             if channel.channel_type != ChannelType.PUBLIC:
                 try:
-                    await self._index_for_search(channel, [])
+                    await self._index_for_search(channel)
                 except Exception:
                     logger.warning(f"Failed to re-index channel {channel_id}")
 
@@ -634,10 +635,3 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
         except Exception:
             logger.warning(f"Failed to post join system message for {user_id}")
-
-    @staticmethod
-    def _derive_visibility(channel_type: ChannelType) -> VisibilityScope:
-        """Auto-derive visibility from channel type for search indexing."""
-        if channel_type == ChannelType.PUBLIC:
-            return VisibilityScope.ORGANIZATION
-        return VisibilityScope.PRIVATE

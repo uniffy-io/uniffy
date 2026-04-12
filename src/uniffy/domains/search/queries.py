@@ -3,7 +3,8 @@ Search query utilities using Meilisearch.
 
 This module provides search execution via Meilisearch with:
 1. Typo-tolerant fuzzy matching
-2. Permission filtering based on visibility
+2. Permission filtering based on ``access_mode`` / ``baseline_role``
+   plus explicit ``ContentMember`` grants
 3. Type and tag filtering
 """
 
@@ -31,7 +32,8 @@ class SearchResult:
     description: str | None
     entity_type: str
     url_path: str
-    visibility: str
+    access_mode: str
+    baseline_role: str | None
     owner_id: UUID
     tags: list[str] | None
     metadata: dict[str, str] | None
@@ -78,7 +80,8 @@ class SearchResult:
             description=hit.get("description"),
             entity_type=hit.get("entity_type", ""),
             url_path=hit.get("url_path", ""),
-            visibility=hit.get("visibility", "PRIVATE"),
+            access_mode=hit.get("access_mode", "OWNER_ONLY"),
+            baseline_role=hit.get("baseline_role"),
             owner_id=UUID(hit["owner_id"]),
             tags=hit.get("tags"),
             metadata=hit.get("metadata"),

@@ -1003,26 +1003,6 @@ export class UpdatePermissionDefaultsRequest extends Message<UpdatePermissionDef
   defaultAccessMode?: AccessMode;
 
   /**
-   * @generated from field: optional bool members_can_view = 4;
-   */
-  membersCanView?: boolean;
-
-  /**
-   * @generated from field: optional bool members_can_edit = 5;
-   */
-  membersCanEdit?: boolean;
-
-  /**
-   * @generated from field: optional bool members_can_delete = 6;
-   */
-  membersCanDelete?: boolean;
-
-  /**
-   * @generated from field: optional bool members_can_share = 7;
-   */
-  membersCanShare?: boolean;
-
-  /**
    * @generated from field: optional common.v1.ContentRole default_baseline_role = 8;
    */
   defaultBaselineRole?: ContentRole;
@@ -1038,10 +1018,6 @@ export class UpdatePermissionDefaultsRequest extends Message<UpdatePermissionDef
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
     { no: 3, name: "default_access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
-    { no: 4, name: "members_can_view", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 5, name: "members_can_edit", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 6, name: "members_can_delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 7, name: "members_can_share", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 8, name: "default_baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
@@ -1077,26 +1053,6 @@ export class ContentTypeDefaults extends Message<ContentTypeDefaults> {
   defaultAccessMode = AccessMode.UNSPECIFIED;
 
   /**
-   * @generated from field: bool members_can_view = 3;
-   */
-  membersCanView = false;
-
-  /**
-   * @generated from field: bool members_can_edit = 4;
-   */
-  membersCanEdit = false;
-
-  /**
-   * @generated from field: bool members_can_delete = 5;
-   */
-  membersCanDelete = false;
-
-  /**
-   * @generated from field: bool members_can_share = 6;
-   */
-  membersCanShare = false;
-
-  /**
    * @generated from field: google.protobuf.Timestamp updated_at = 7;
    */
   updatedAt?: Timestamp;
@@ -1116,10 +1072,6 @@ export class ContentTypeDefaults extends Message<ContentTypeDefaults> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
     { no: 2, name: "default_access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
-    { no: 3, name: "members_can_view", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "members_can_edit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "members_can_delete", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "members_can_share", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "updated_at", kind: "message", T: Timestamp },
     { no: 8, name: "default_baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);

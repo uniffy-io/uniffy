@@ -2,7 +2,7 @@
 
 import json
 
-from uniffy.core.types import VisibilityScope
+from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
 
@@ -37,7 +37,7 @@ async def _execute_cron_create(ctx: ToolContext, args: dict) -> ToolResult:
         prompt=prompt,
         cron_expression=cron_expression,
         timezone=timezone,
-        visibility=VisibilityScope.PRIVATE,
+        access_mode=AccessMode.OWNER_ONLY,
     )
 
     # Compute human-readable next run info

@@ -3,15 +3,28 @@
 import contextlib
 from uuid import UUID
 
+from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
-# Valid enums for validation hints in tool descriptions
-VALID_VISIBILITY_SCOPES = ["PRIVATE", "GROUP", "ORGANIZATION"]
+VALID_ACCESS_MODES = ["OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG"]
+
+
+def _parse_access_mode(args: dict, kwargs: dict) -> str | None:
+    """Parse ``access_mode`` from tool args into ``kwargs`` (mutates in place)."""
+    if "access_mode" not in args:
+        return None
+    try:
+        kwargs["access_mode"] = AccessMode(args["access_mode"])
+        return None
+    except ValueError:
+        return (
+            f"Invalid access_mode: {args['access_mode']}. "
+            f"Must be one of: {VALID_ACCESS_MODES}"
+        )
 
 
 async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
     """Create a new project."""
-    from uniffy.core.models.shared import VisibilityScope
     from uniffy.domains.projects.operations import ProjectOperations
 
     name = args.get("name", "")
@@ -27,18 +40,10 @@ async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
         kwargs["color"] = args["color"]
     if "slug" in args:
         kwargs["slug"] = args["slug"]
-    if "visibility" in args:
-        try:
-            kwargs["visibility"] = VisibilityScope(args["visibility"])
-        except ValueError:
-            return ToolResult(
-                success=False,
-                data="",
-                error=(
-                    f"Invalid visibility: {args['visibility']}. "
-                    f"Must be one of: {VALID_VISIBILITY_SCOPES}"
-                ),
-            )
+
+    err = _parse_access_mode(args, kwargs)
+    if err:
+        return ToolResult(success=False, data="", error=err)
 
     ops = ProjectOperations(ctx.session)
     project = await ops.create(
@@ -56,8 +61,11 @@ async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_update_project(ctx: ToolContext, args: dict) -> ToolResult:
-    """Update a project's details."""
-    from uniffy.core.models.shared import VisibilityScope
+    """Update a project's details.
+
+    Note: access-mode / baseline-role changes go through
+    ``MembersService.SetAccessMode``; this tool ignores those fields.
+    """
     from uniffy.domains.projects.operations import ProjectOperations
 
     project_id_str = args.get("project_id", "")
@@ -73,18 +81,6 @@ async def _execute_update_project(ctx: ToolContext, args: dict) -> ToolResult:
     for field in ("name", "description", "icon", "color", "slug"):
         if field in args:
             kwargs[field] = args[field]
-    if "visibility" in args:
-        try:
-            kwargs["visibility"] = VisibilityScope(args["visibility"])
-        except ValueError:
-            return ToolResult(
-                success=False,
-                data="",
-                error=(
-                    f"Invalid visibility: {args['visibility']}. "
-                    f"Must be one of: {VALID_VISIBILITY_SCOPES}"
-                ),
-            )
 
     if not kwargs:
         return ToolResult(success=False, data="", error="At least one field to update is required")
@@ -570,10 +566,13 @@ create_project = ToolDefinition(
                 "description": "Icon identifier (e.g. 'folder', 'rocket', 'bug').",
             },
             "color": {"type": "string", "description": "Hex color code (e.g. '#3b82f6')."},
-            "visibility": {
+            "access_mode": {
                 "type": "string",
-                "enum": ["PRIVATE", "GROUP", "ORGANIZATION"],
-                "description": ("PRIVATE (owner only), GROUP (shared), ORGANIZATION (all members)."),
+                "enum": ["OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG"],
+                "description": (
+                    "Access mode: OWNER_ONLY (private), EXPLICIT_MEMBERS (listed members "
+                    "only), or OPEN_TO_ORG (everyone in the org with baseline role)."
+                ),
             },
             "slug": {
                 "type": "string",
@@ -589,7 +588,10 @@ create_project = ToolDefinition(
 
 update_project = ToolDefinition(
     name="projects.update_project",
-    description=("Update a project's name, description, icon, color, or visibility."),
+    description=(
+        "Update a project's name, description, icon, color, or slug. "
+        "Use permissions.v1.MembersService to change the access mode or members."
+    ),
     parameter_schema={
         "type": "object",
         "properties": {
@@ -598,11 +600,6 @@ update_project = ToolDefinition(
             "description": {"type": "string", "description": "New project description."},
             "icon": {"type": "string", "description": "New icon identifier."},
             "color": {"type": "string", "description": "New hex color code."},
-            "visibility": {
-                "type": "string",
-                "enum": ["PRIVATE", "GROUP", "ORGANIZATION"],
-                "description": "New access scope.",
-            },
             "slug": {"type": "string", "description": "New project slug (2-5 uppercase chars)."},
         },
         "required": ["project_id"],

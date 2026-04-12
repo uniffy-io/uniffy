@@ -52,7 +52,10 @@ from uniffy.core.converters import (
     member_info_to_proto,
     org_info_to_proto,
     org_role_from_proto,
-    visibility_from_proto,
+)
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationRole
@@ -581,29 +584,24 @@ class OrganizationsHandlers:
             async for session in get_async_session():
                 ops = OrganizationOperations(session)
 
-                default_visibility = None
-                if request.HasField("default_visibility"):
-                    default_visibility = visibility_from_proto(request.default_visibility)
+                default_access_mode = None
+                if request.HasField("default_access_mode"):
+                    default_access_mode = access_mode_from_proto(
+                        request.default_access_mode
+                    )
+
+                default_baseline_role = None
+                if request.HasField("default_baseline_role"):
+                    default_baseline_role = content_role_from_proto(
+                        request.default_baseline_role
+                    )
 
                 defaults = await ops.update_permission_defaults(
                     user_id=user_id,
                     org_id=org_id,
                     content_type=content_type,
-                    default_visibility=default_visibility,
-                    members_can_view=(
-                        request.members_can_view if request.HasField("members_can_view") else None
-                    ),
-                    members_can_edit=(
-                        request.members_can_edit if request.HasField("members_can_edit") else None
-                    ),
-                    members_can_delete=(
-                        request.members_can_delete
-                        if request.HasField("members_can_delete")
-                        else None
-                    ),
-                    members_can_share=(
-                        request.members_can_share if request.HasField("members_can_share") else None
-                    ),
+                    default_access_mode=default_access_mode,
+                    default_baseline_role=default_baseline_role,
                 )
 
                 return permission_defaults_to_proto(defaults)

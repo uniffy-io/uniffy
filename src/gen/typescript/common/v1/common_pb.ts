@@ -82,6 +82,11 @@ export enum ContentType {
    * @generated from enum value: CONTENT_TYPE_ROOM = 17;
    */
   ROOM = 17,
+
+  /**
+   * @generated from enum value: CONTENT_TYPE_AGENT_CRON_TASK = 18;
+   */
+  AGENT_CRON_TASK = 18,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ContentType)
 proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
@@ -99,6 +104,7 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
   { no: 15, name: "CONTENT_TYPE_PROMPT" },
   { no: 16, name: "CONTENT_TYPE_CHAT" },
   { no: 17, name: "CONTENT_TYPE_ROOM" },
+  { no: 18, name: "CONTENT_TYPE_AGENT_CRON_TASK" },
 ]);
 
 /**

@@ -111,7 +111,6 @@ class ContentMembersOperations:
         self.permission_checker = PermissionChecker(session)
         self.search_indexer = SearchIndexer(session)
 
-
     async def list_members(
         self,
         actor_user_id: UUID,

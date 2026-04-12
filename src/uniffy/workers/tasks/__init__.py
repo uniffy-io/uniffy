@@ -33,7 +33,6 @@ __all__ = [
     "extract_image_metadata",
     "extract_audio_metadata",
     "extract_document_content",
-    # Notifications
     "process_notification_event",
     "deliver_push_notification",
     "deliver_email_notification",

@@ -112,8 +112,6 @@ class DomainType(str, Enum):
     AGENTS = "AGENTS"
 
 
-
-
 class NodeType(str, Enum):
     """Type of a node in the notes hierarchy."""
 
@@ -121,8 +119,6 @@ class NodeType(str, Enum):
     FOLDER = "FOLDER"
     TEMPLATE = "TEMPLATE"
     CANVAS = "CANVAS"
-
-
 
 
 class CalendarType(str, Enum):
@@ -182,8 +178,6 @@ class ResourceType(str, Enum):
     CHAT = "CHAT"
 
 
-
-
 class NotificationType(str, Enum):
     """Types of notifications in the system."""
 
@@ -210,8 +204,6 @@ class NotificationType(str, Enum):
     CHAT_THREAD_REPLY = "CHAT_THREAD_REPLY"
 
 
-
-
 class RoomType(str, Enum):
     """Types of bookable rooms and resources."""
 
@@ -234,8 +226,6 @@ class BookingStatus(str, Enum):
 
     CONFIRMED = "CONFIRMED"
     CANCELLED = "CANCELLED"
-
-
 
 
 def slugify(text: str, max_length: int = 500) -> str:

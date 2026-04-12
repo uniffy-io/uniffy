@@ -16,7 +16,7 @@ from uniffy.core.models import Group, Organization, OrganizationPermissionDefaul
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
-from uniffy.core.models.shared import ContentType, DomainType, VisibilityScope
+from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 
 
 class OrganizationOperations:
@@ -794,43 +794,12 @@ class OrganizationOperations:
         user_id: UUID,
         org_id: UUID,
         content_type: ContentType,
-        default_visibility: VisibilityScope | None = None,
-        members_can_view: bool | None = None,
-        members_can_edit: bool | None = None,
-        members_can_delete: bool | None = None,
-        members_can_share: bool | None = None,
+        default_access_mode: AccessMode | None = None,
+        default_baseline_role: ContentRole | None = None,
     ) -> OrganizationPermissionDefaults:
-        """
-        Update permission defaults for a content type.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User making the update.
-        org_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Content type to update.
-        default_visibility : VisibilityScope | None
-            New default visibility.
-        members_can_view : bool | None
-            Can members view.
-        members_can_edit : bool | None
-            Can members edit.
-        members_can_delete : bool | None
-            Can members delete.
-        members_can_share : bool | None
-            Can members share.
-
-        Returns
-        -------
-        OrganizationPermissionDefaults
-            The updated defaults.
-
-        """
+        """Update permission defaults for a content type (org admin only)."""
         await self.require_org_admin(user_id, org_id)
 
-        # Get existing or create new
         result = await self._session.execute(
             select(OrganizationPermissionDefaults)
             .where(OrganizationPermissionDefaults.organization_id == org_id)
@@ -839,47 +808,33 @@ class OrganizationOperations:
         defaults = result.scalar_one_or_none()
 
         if defaults:
-            # Update existing
-            if default_visibility is not None:
-                defaults.default_visibility = default_visibility
-            if members_can_view is not None:
-                defaults.members_can_view = members_can_view
-            if members_can_edit is not None:
-                defaults.members_can_edit = members_can_edit
-            if members_can_delete is not None:
-                defaults.members_can_delete = members_can_delete
-            if members_can_share is not None:
-                defaults.members_can_share = members_can_share
+            if default_access_mode is not None:
+                defaults.default_access_mode = default_access_mode
+                if default_access_mode != AccessMode.OPEN_TO_ORG:
+                    defaults.default_baseline_role = None
+            if default_baseline_role is not None:
+                defaults.default_baseline_role = default_baseline_role
             defaults.updated_by_user_id = user_id
             defaults.updated_at = datetime.now(UTC)
         else:
-            # Create new - start from built-in defaults then apply overrides
             from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
 
             base = ORG_PERMISSION_DEFAULTS.get(content_type, {})
-            dv = default_visibility or base.get(
-                "default_visibility", VisibilityScope.PRIVATE
+            mode = default_access_mode or base.get(
+                "default_access_mode", AccessMode.OWNER_ONLY
             )
-            cv = members_can_view if members_can_view is not None else base.get(
-                "members_can_view", True
+            baseline = (
+                default_baseline_role
+                if default_baseline_role is not None
+                else base.get("default_baseline_role")
             )
-            ce = members_can_edit if members_can_edit is not None else base.get(
-                "members_can_edit", False
-            )
-            cd = members_can_delete if members_can_delete is not None else base.get(
-                "members_can_delete", False
-            )
-            cs = members_can_share if members_can_share is not None else base.get(
-                "members_can_share", False
-            )
+            if mode != AccessMode.OPEN_TO_ORG:
+                baseline = None
             defaults = OrganizationPermissionDefaults(
                 organization_id=org_id,
                 content_type=content_type,
-                default_visibility=dv,
-                members_can_view=cv,
-                members_can_edit=ce,
-                members_can_delete=cd,
-                members_can_share=cs,
+                default_access_mode=mode,
+                default_baseline_role=baseline,
                 updated_by_user_id=user_id,
             )
             self._session.add(defaults)

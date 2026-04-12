@@ -1,4 +1,4 @@
-"""Business logic for prompt template management."""
+"""Agent prompt template operations."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -6,25 +6,21 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
+from uniffy.core.content.members import register_content_loader
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.prompt import AgentPrompt
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-from uniffy.core.types import ContentType, VisibilityScope, slugify
+from uniffy.core.types import AccessMode, ContentRole, ContentType, slugify
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
 class PromptOperations:
-    """Operations for managing prompt templates.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Operations for managing prompt templates."""
 
     def __init__(self, session: AsyncSession) -> None:
+        """Initialize prompt operations."""
         self._session = session
         self._org_ops = OrganizationOperations(session)
         self._search = SearchIndexer(session)
@@ -40,56 +36,26 @@ class PromptOperations:
         description: str = "",
         content: str = "",
         owner_id: UUID | None = None,
-        visibility: VisibilityScope = VisibilityScope.PRIVATE,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
     ) -> AgentPrompt:
         """Create a new prompt.
 
-        Org admins can create organization prompts. Any user can create
-        personal prompts (owner_id set to their own user_id).
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user creating the prompt.
-        organization_id : UUID
-            Organization context.
-        display_name : str
-            Human-readable name.
-        name : str | None
-            Machine name (auto-generated from display_name if not provided).
-        description : str
-            Short description.
-        content : str
-            Markdown instructions.
-        owner_id : UUID | None
-            Owner user ID for personal prompts.
-        visibility : VisibilityScope
-            Visibility scope for the prompt (default PRIVATE).
-
-        Returns
-        -------
-        AgentPrompt
-            The created prompt.
-
-        Raises
-        ------
-        PermissionDeniedError
-            If user is not an org admin (for org prompts).
-        ValidationError
-            If display_name is empty.
-
+        Personal prompts (``owner_id`` set) only need org membership.
+        Organization prompts require org admin.
         """
+        access_mode, baseline_role = await self._resolve_access_policy(
+            organization_id, access_mode, baseline_role
+        )
+
         if owner_id:
-            # Personal prompts: user must be org member
             await self._org_ops.require_org_member(user_id, organization_id)
         else:
-            # Organization prompts: user must be org admin
             await self._org_ops.require_org_admin(user_id, organization_id)
 
         if not display_name or not display_name.strip():
             raise ValidationError("display_name", "Prompt display name cannot be empty")
 
-        # Auto-generate slug from display_name if not provided
         if name and name.strip():
             resolved_name = name.strip()
         else:
@@ -97,7 +63,6 @@ class PromptOperations:
         if not resolved_name:
             resolved_name = "prompt"
 
-        # Ensure uniqueness within org by appending a suffix if needed
         resolved_name = await self._ensure_unique_name(organization_id, resolved_name)
 
         source = "personal" if owner_id else "organization"
@@ -109,7 +74,8 @@ class PromptOperations:
             content=content,
             source=source,
             owner_id=owner_id or user_id,
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
             created_by=user_id,
         )
         self._session.add(prompt)
@@ -124,25 +90,7 @@ class PromptOperations:
         base_name: str,
         exclude_id: UUID | None = None,
     ) -> str:
-        """Ensure a prompt name is unique within the organization.
-
-        Appends -2, -3, etc. if the base name is already taken.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization context.
-        base_name : str
-            Desired slug name.
-        exclude_id : UUID | None
-            Prompt ID to exclude from the check (for updates).
-
-        Returns
-        -------
-        str
-            A unique name.
-
-        """
+        """Return ``base_name`` with a numeric suffix if already taken."""
         candidate = base_name
         suffix = 1
         while True:
@@ -165,32 +113,7 @@ class PromptOperations:
         organization_id: UUID,
         prompt_id: UUID,
     ) -> AgentPrompt:
-        """Fetch a prompt by ID.
-
-        Returns bundled prompts or org-specific prompts.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        prompt_id : UUID
-            Prompt to fetch.
-
-        Returns
-        -------
-        AgentPrompt
-            The prompt.
-
-        Raises
-        ------
-        NotFoundError
-            If the prompt does not exist or is not accessible.
-        PermissionDeniedError
-            If user is not an org member.
-
-        """
+        """Fetch a prompt by ID (bundled or org-scoped)."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         result = await self._session.execute(
@@ -212,22 +135,10 @@ class PromptOperations:
         self,
         prompt_id: UUID,
     ) -> AgentPrompt | None:
-        """Fetch a prompt by ID without permission checks.
-
-        Used by the runtime to resolve prompt content.
-
-        Parameters
-        ----------
-        prompt_id : UUID
-            Prompt to fetch.
-
-        Returns
-        -------
-        AgentPrompt | None
-            The prompt, or None if not found.
-
-        """
-        result = await self._session.execute(select(AgentPrompt).where(AgentPrompt.id == prompt_id))
+        """Fetch a prompt by ID without permission checks (runtime only)."""
+        result = await self._session.execute(
+            select(AgentPrompt).where(AgentPrompt.id == prompt_id)
+        )
         return result.scalar_one_or_none()
 
     async def list_prompts(
@@ -238,44 +149,21 @@ class PromptOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[AgentPrompt], int]:
-        """List prompts visible to the organization.
+        """List prompts visible in the organization.
 
-        Returns bundled, organization, and user's personal prompts.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        page : int
-            Page number (1-based).
-        page_size : int
-            Results per page.
-
-        Returns
-        -------
-        tuple[list[AgentPrompt], int]
-            (prompts, total_count).
-
-        Raises
-        ------
-        PermissionDeniedError
-            If user is not an org member.
-
+        Always includes bundled prompts (``organization_id IS NULL``)
+        plus any org-scoped prompts the user can access.
         """
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        # Use the standard access filter for org-scoped prompts (handles
-        # ownership, org visibility, group membership, and explicit shares),
-        # plus always include bundled prompts (org_id is null).
         access_filter = self._access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.PROMPT,
             content_id_column=AgentPrompt.id,
             owner_id_column=AgentPrompt.owner_id,
-            visibility_column=AgentPrompt.visibility,
+            access_mode_column=AgentPrompt.access_mode,
+            baseline_role_column=AgentPrompt.baseline_role,
         )
         base_filter = or_(
             AgentPrompt.organization_id.is_(None),
@@ -308,47 +196,8 @@ class PromptOperations:
         display_name: str | None = None,
         description: str | None = None,
         content: str | None = None,
-        visibility: VisibilityScope | None = None,
     ) -> AgentPrompt:
-        """Update a prompt.
-
-        Cannot update bundled prompts. Org admins can update org prompts.
-        Users can update their own personal prompts.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        prompt_id : UUID
-            Prompt to update.
-        name : str | None
-            New machine name (None = no change).
-        display_name : str | None
-            New display name (None = no change).
-        description : str | None
-            New description (None = no change).
-        content : str | None
-            New content (None = no change).
-        visibility : VisibilityScope | None
-            New visibility scope (None = no change).
-
-        Returns
-        -------
-        AgentPrompt
-            The updated prompt.
-
-        Raises
-        ------
-        NotFoundError
-            If the prompt does not exist.
-        PermissionDeniedError
-            If user lacks permission or prompt is bundled.
-        ValidationError
-            If name is empty or already taken.
-
-        """
+        """Update a prompt (access-policy changes go through MembersService)."""
         result = await self._session.execute(
             select(AgentPrompt).where(
                 AgentPrompt.id == prompt_id,
@@ -357,7 +206,6 @@ class PromptOperations:
         )
         prompt = result.scalar_one_or_none()
         if not prompt:
-            # Check if it's a bundled prompt
             bundled = await self._session.execute(
                 select(AgentPrompt).where(
                     AgentPrompt.id == prompt_id,
@@ -368,7 +216,6 @@ class PromptOperations:
                 raise PermissionDeniedError("update", "Cannot update bundled prompts")
             raise NotFoundError("AgentPrompt", str(prompt_id))
 
-        # Check permission based on source
         if prompt.source == "personal":
             if prompt.owner_id != user_id:
                 raise PermissionDeniedError("update", "Cannot update another user's prompt")
@@ -404,17 +251,6 @@ class PromptOperations:
         if content is not None:
             prompt.content = content
 
-        if visibility is not None:
-            # Only allow moving from personal to organization, not the reverse
-            if visibility == VisibilityScope.PRIVATE and prompt.source == "organization":
-                raise ValidationError(
-                    "visibility",
-                    "Organization prompts cannot be moved back to personal",
-                )
-            prompt.visibility = visibility
-            if visibility == VisibilityScope.ORGANIZATION:
-                prompt.source = "organization"
-
         prompt.updated_at = datetime.now(UTC)
         await self._session.commit()
         await self._session.refresh(prompt)
@@ -428,28 +264,7 @@ class PromptOperations:
         organization_id: UUID,
         prompt_id: UUID,
     ) -> None:
-        """Delete a prompt.
-
-        Cannot delete bundled prompts. Org admins can delete org prompts.
-        Users can delete their own personal prompts.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        prompt_id : UUID
-            Prompt to delete.
-
-        Raises
-        ------
-        NotFoundError
-            If the prompt does not exist.
-        PermissionDeniedError
-            If user lacks permission or prompt is bundled.
-
-        """
+        """Delete a prompt."""
         result = await self._session.execute(
             select(AgentPrompt).where(
                 AgentPrompt.id == prompt_id,
@@ -458,7 +273,6 @@ class PromptOperations:
         )
         prompt = result.scalar_one_or_none()
         if not prompt:
-            # Check if it's a bundled prompt
             bundled = await self._session.execute(
                 select(AgentPrompt).where(
                     AgentPrompt.id == prompt_id,
@@ -469,7 +283,6 @@ class PromptOperations:
                 raise PermissionDeniedError("delete", "Cannot delete bundled prompts")
             raise NotFoundError("AgentPrompt", str(prompt_id))
 
-        # Check permission based on source
         if prompt.source == "personal":
             if prompt.owner_id != user_id:
                 raise PermissionDeniedError("delete", "Cannot delete another user's prompt")
@@ -481,17 +294,38 @@ class PromptOperations:
         await self._session.commit()
         await self._search.remove(urn, organization_id)
 
+    async def _resolve_access_policy(
+        self,
+        organization_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Fill in defaults and validate an (access_mode, baseline) pair."""
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self._session, organization_id, ContentType.PROMPT
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
+
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+            return access_mode, baseline_role
+
+        return access_mode, None
+
     async def _index_prompt(self, prompt: AgentPrompt) -> None:
-        """Index a prompt for search.
-
-        Parameters
-        ----------
-        prompt : AgentPrompt
-            The prompt to index.
-
-        """
+        """Index a prompt for search (bundled prompts are skipped)."""
         if prompt.organization_id is None:
-            # Bundled prompts are not org-scoped, skip indexing
             return
 
         keywords_parts = [prompt.display_name, prompt.name]
@@ -506,9 +340,33 @@ class PromptOperations:
             title=prompt.display_name,
             entity_type=ContentType.PROMPT.value,
             url_path=f"/agents/prompts/{prompt.id}",
-            visibility=prompt.visibility.value,
+            access_mode=prompt.access_mode.value,
+            baseline_role=(
+                prompt.baseline_role.value if prompt.baseline_role is not None else None
+            ),
             owner_id=prompt.owner_id or prompt.created_by,
             keywords=" ".join(keywords_parts),
             description=prompt.description or None,
             metadata={"source": prompt.source},
         )
+
+
+# Content loader registration
+
+
+async def _load_prompt(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_id: UUID,
+) -> AgentPrompt | None:
+    """Loader used by ``ContentMembersOperations`` to fetch a prompt."""
+    result = await session.execute(
+        select(AgentPrompt).where(
+            AgentPrompt.id == content_id,
+            AgentPrompt.organization_id == organization_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+register_content_loader(ContentType.PROMPT, _load_prompt)
