@@ -1,6 +1,13 @@
-# Agents Domain Documentation
+---
+paths:
+  - "src/uniffy/domains/agents/**/*.py"
+  - "src/uniffy/core/models/agents/**/*.py"
+  - "src/proto/agents/**/*.proto"
+  - "src/ui/src/features/agents/**/*.ts"
+  - "src/ui/src/features/agents/**/*.tsx"
+---
 
-> Use this documentation when working on the AI agents system in `src/uniffy/domains/agents/`, `src/uniffy/core/models/agents/`, `src/proto/agents/`, or `src/ui/src/features/agents/`.
+# Agents Domain Documentation
 
 The agents domain provides AI assistants that can converse with users and take actions on their behalf within the Uniffy workspace. Agents are LLM-powered (Anthropic, OpenAI, Google) and interact with other domains (notes, calendar, projects, tasks, search) through a built-in tool system. Agents never have their own identity for data access -- they always act as the human user, inheriting the exact same permissions the user has in the UI.
 

@@ -1,6 +1,10 @@
-# Frontend Documentation
-
-> Use this documentation when working on React/TypeScript code in `src/ui/`.
+---
+paths:
+  - "src/ui/**/*.ts"
+  - "src/ui/**/*.tsx"
+  - "src/ui/**/*.css"
+  - "src/gen/typescript/**/*.ts"
+---
 
 ## Directory Structure
 

@@ -1,46 +1,38 @@
 {
-  "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-    "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
-    "DISABLE_ERROR_REPORTING": "1",
-    "DISABLE_TELEMETRY": "1"
-  },
-  "permissions": {
-    "allow": [
-      "Read(./**)",
-      "Bash(ls:*)",
-      "Bash(cat:*)",
-      "Bash(grep:*)",
-      "Bash(find:*)",
-      "Bash(wc:*)",
-      "Bash(tree:*)",
-      "Bash(./run.sh:*)",
-      "Bash(uv run ruff:*)",
-      "Bash(pnpm run lint)",
-      "WebFetch(domain:milkdown.dev)",
-      "WebFetch(domain:docs.anthropic.com)",
-      "WebFetch(domain:connectrpc.com)",
-      "WebFetch(domain:reactflow.dev)",
-      "mcp__sequential-thinking__sequentialthinking",
-      "mcp__ide__getDiagnostics",
-      "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs",
-      "WebSearch",
-      "Bash(gh pr create:*)",
-      "Bash(pnpm lint:*)",
-      "Bash(pnpm eslint:*)",
-      "Bash(pnpm build:*)",
-      "Bash(git checkout:*)",
-      "Bash(git stash:*)",
-      "Bash(git mv:*)",
-      "Bash(gh pr:*)"
-    ]
-  },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "context7",
-    "sequential-thinking"
-  ],
-  "outputStyle": "default",
-  "teammateMode": "tmux"
+    "env": {
+        "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+        "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
+        "DISABLE_ERROR_REPORTING": "1",
+        "DISABLE_TELEMETRY": "1"
+    },
+    "permissions": {
+        "allow": [
+            "Read(./**)",
+            "Bash(ls:*)",
+            "Bash(cat:*)",
+            "Bash(grep:*)",
+            "Bash(find:*)",
+            "Bash(wc:*)",
+            "Bash(tree:*)",
+            "Bash(./run.sh:*)",
+            "Bash(uv run ruff:*)",
+            "Bash(pnpm run lint)",
+            "WebFetch(domain:milkdown.dev)",
+            "WebFetch(domain:docs.anthropic.com)",
+            "WebFetch(domain:connectrpc.com)",
+            "WebFetch(domain:reactflow.dev)",
+            "Bash(gh pr create:*)",
+            "Bash(pnpm lint:*)",
+            "Bash(pnpm eslint:*)",
+            "Bash(pnpm build:*)",
+            "Bash(git checkout:*)",
+            "Bash(git stash:*)",
+            "Bash(git mv:*)",
+            "Bash(gh pr:*)",
+            "Edit(.claude/plans/**)",
+            "Write(.claude/plans/**)"
+        ]
+    },
+    "outputStyle": "default",
+    "teammateMode": "tmux"
 }

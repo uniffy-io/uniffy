@@ -1,6 +1,9 @@
-# Backend Documentation
-
-> Use this documentation when working on Python backend code in `src/uniffy/`.
+---
+paths:
+  - "src/uniffy/**/*.py"
+  - "src/proto/**/*.proto"
+  - "src/gen/python/**/*.py"
+---
 
 ## Directory Structure
 

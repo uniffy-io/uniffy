@@ -100,12 +100,12 @@ uniffy/
 - **Note on Valkey:** While Redis should in theory work as a drop-in replacement for Valkey, this has not been tested and is not recommended by us. We only support and test against Valkey.
 
 ```
-               +--------------+       +-------+
-               | Browser      |       |  TUI  |
-               | (React)      |       +---+---+
-               +------+-------+           |
-                      |                   |
-                      +--------+----------+
+               +--------------+       +----------+       +-------+
+               | Browser      |       | Chat TUI |       |  CLI  |
+               | (React)      |       +----+-----+       +---+---+
+               +------+-------+            |                 |
+                      |                    |                 |
+                      +--------+-----------+---------+-------+
                                |
                              HTTP/2
                                |
