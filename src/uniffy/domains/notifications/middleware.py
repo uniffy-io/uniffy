@@ -2,9 +2,9 @@
 
 ConnectRPC's server streaming handler does not monitor the ASGI ``receive``
 callable for ``http.disconnect`` events. When the client closes the tab or
-navigates away, hypercorn enqueues ``http.disconnect`` but ConnectRPC never
+navigates away, granian enqueues ``http.disconnect`` but ConnectRPC never
 reads it -- it only reads the initial request, then enters a send-only loop.
-Worse, hypercorn's ``protocol_send`` silently swallows ``ConnectionError``,
+Worse, granian's ``protocol_send`` silently swallows ``ConnectionError``,
 so ``await send(...)`` succeeds even on a dead socket.
 
 This middleware runs a background task that waits for ``http.disconnect``
@@ -15,7 +15,7 @@ event on each poll tick and breaks cleanly, allowing ``aclosing()`` to
 release the Valkey subscriber connection.
 
 We deliberately do NOT cancel the handler task -- that would corrupt
-hypercorn's internal ``TaskGroup`` and break Ctrl+C shutdown.
+granian's internal ``TaskGroup`` and break Ctrl+C shutdown.
 """
 
 import asyncio
@@ -45,7 +45,7 @@ class StreamDisconnectMiddleware:
     """
     ASGI middleware that detects client disconnect for streaming RPCs.
 
-    Instead of cancelling tasks (which corrupts hypercorn's TaskGroup),
+    Instead of cancelling tasks (which corrupts granian's TaskGroup),
     this sets a shared ``asyncio.Event`` that the handler checks on each
     poll tick. The handler breaks cleanly, and ``aclosing()`` ensures
     proper Valkey connection cleanup.

@@ -336,8 +336,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
         "sqlalchemy",
         "sqlalchemy.engine",
         "sqlalchemy.pool",
-        "uvicorn",
-        "uvicorn.error",
+        "_granian",
         "fastapi",
     ]
     for logger_name in loggers_to_intercept:
@@ -349,9 +348,9 @@ def configure_loguru(config: ObservabilityConfig) -> None:
         mod_logger.handlers = [InterceptHandler(level=level)]
         mod_logger.propagate = False
 
-    # Disable uvicorn access logs - we have our own ConnectRPC access logging
-    logging.getLogger("uvicorn.access").handlers = []
-    logging.getLogger("uvicorn.access").propagate = False
+    # Disable granian access logs - we have our own ConnectRPC access logging
+    logging.getLogger("granian.access").handlers = []
+    logging.getLogger("granian.access").propagate = False
 
     # Suppress DEBUG/INFO logs from HTTP transport libraries (too noisy)
     # These produce verbose connection-level logs that clutter output

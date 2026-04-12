@@ -46,7 +46,13 @@ from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
-from uniffy.core.valkey import close_pubsub, close_queue, init_pubsub, init_queue
+from uniffy.core.valkey import (
+    close_pubsub,
+    close_queue,
+    init_pubsub,
+    init_queue,
+    signal_pubsub_shutdown,
+)
 from uniffy.db import close_db, init_db, seed_initial_data
 from uniffy.domains.agents.agents.http_routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
@@ -245,6 +251,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down UNIFFY application...")
+    signal_pubsub_shutdown()
     await close_pubsub()
     await close_queue()
     await close_s3()

@@ -47,7 +47,7 @@ _publisher: aioredis.Redis | None = None
 
 # Process-wide shutdown event -- set during lifespan shutdown so every
 # active subscriber generator breaks on the next poll tick (within 1s)
-# instead of waiting for hypercorn's full graceful_timeout.
+# instead of waiting for granian's full graceful_timeout.
 _shutdown_event: asyncio.Event | None = None
 
 LOGGER_COMPONENT = "pubsub"
@@ -120,7 +120,7 @@ def signal_pubsub_shutdown() -> None:
 
     Safe to call from a signal handler (non-async, no I/O).
     Should be called as early as possible during process shutdown,
-    BEFORE hypercorn's graceful_timeout starts counting.
+    BEFORE granian's graceful_timeout starts counting.
     """
     if _shutdown_event is not None:
         _shutdown_event.set()
