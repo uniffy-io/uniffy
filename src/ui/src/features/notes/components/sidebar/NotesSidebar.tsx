@@ -200,13 +200,13 @@ export function NotesSidebar() {
     );
 
     const handleNewNote = useCallback(
-        async (visibility: number = AccessMode.OWNER_ONLY) => {
+        async (accessMode: number = AccessMode.OWNER_ONLY) => {
             try {
                 const result = await dispatch(
                     createNote({
                         title: 'Untitled Note',
                         content: '# Untitled Note\n\nStart writing here...',
-                        visibility,
+                        accessMode,
                         nodeType: NodeType.NOTE,
                     })
                 ).unwrap();
@@ -220,14 +220,14 @@ export function NotesSidebar() {
     );
 
     const handleNewCanvas = useCallback(
-        async (visibility: number = AccessMode.OWNER_ONLY) => {
+        async (accessMode: number = AccessMode.OWNER_ONLY) => {
             try {
                 const { createEmptyCanvas, serializeCanvas } = await import('@/features/notes/canvas/types');
                 const result = await dispatch(
                     createNote({
                         title: 'Untitled Canvas',
                         content: serializeCanvas(createEmptyCanvas()),
-                        visibility,
+                        accessMode,
                         nodeType: NodeType.CANVAS,
                     })
                 ).unwrap();
@@ -241,13 +241,13 @@ export function NotesSidebar() {
     );
 
     const handleNewFolder = useCallback(
-        async (visibility: number = AccessMode.OWNER_ONLY, parentId?: string) => {
+        async (accessMode: number = AccessMode.OWNER_ONLY, parentId?: string) => {
             try {
                 const result = await dispatch(
                     createNote({
                         title: 'New Folder',
                         content: '',
-                        visibility,
+                        accessMode,
                         nodeType: NodeType.FOLDER,
                         parentId,
                     })
@@ -263,8 +263,8 @@ export function NotesSidebar() {
     const handleCreateSubfolder = useCallback(
         async (parentId: string) => {
             dispatch(expandNode(parentId));
-            const visibility = findNodeVisibility(parentId);
-            await handleNewFolder(visibility, parentId);
+            const accessMode = findNodeVisibility(parentId);
+            await handleNewFolder(accessMode, parentId);
         },
         [dispatch, findNodeVisibility, handleNewFolder]
     );
@@ -272,13 +272,13 @@ export function NotesSidebar() {
     const handleCreateNoteInFolder = useCallback(
         async (parentId: string) => {
             dispatch(expandNode(parentId));
-            const visibility = findNodeVisibility(parentId);
+            const accessMode = findNodeVisibility(parentId);
             try {
                 const result = await dispatch(
                     createNote({
                         title: 'Untitled Note',
                         content: '# Untitled Note\n\nStart writing here...',
-                        visibility,
+                        accessMode,
                         nodeType: NodeType.NOTE,
                         parentId,
                     })
@@ -295,14 +295,14 @@ export function NotesSidebar() {
     const handleCreateCanvasInFolder = useCallback(
         async (parentId: string) => {
             dispatch(expandNode(parentId));
-            const visibility = findNodeVisibility(parentId);
+            const accessMode = findNodeVisibility(parentId);
             try {
                 const { createEmptyCanvas, serializeCanvas } = await import('@/features/notes/canvas/types');
                 const result = await dispatch(
                     createNote({
                         title: 'Untitled Canvas',
                         content: serializeCanvas(createEmptyCanvas()),
-                        visibility,
+                        accessMode,
                         nodeType: NodeType.CANVAS,
                         parentId,
                     })

@@ -20,7 +20,7 @@ export function ProjectSettingsPage() {
   const dispatch = useAppDispatch();
   const selectProject = useMemo(() => selectProjectById(projectId || ""), [projectId]);
   const project = useAppSelector(selectProject);
-  const { canAccessSettings } = useProjectPermission();
+  const { canManage } = useProjectPermission();
 
   useDocumentTitle(project ? `${project.name} Settings` : "Project Settings");
 
@@ -36,10 +36,10 @@ export function ProjectSettingsPage() {
 
   // Redirect if no settings permission (owner, org admin, domain admin, system admin)
   useEffect(() => {
-    if (project && !canAccessSettings) {
+    if (project && !canManage) {
       navigate(`/projects/${projectId}`, { replace: true });
     }
-  }, [project, canAccessSettings, projectId, navigate]);
+  }, [project, canManage, projectId, navigate]);
 
   if (!projectId) {
     navigate("/projects", { replace: true });

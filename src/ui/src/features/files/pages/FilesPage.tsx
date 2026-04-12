@@ -250,33 +250,16 @@ export function FilesPage() {
     // Handle create folder from context menu
     const handleCreateFolder = useCallback(async () => {
         try {
-            // Determine access mode - inherit from parent folder if inside one
-            let accessMode = AccessMode.OWNER_ONLY;
-            if (currentFolderId && folders[currentFolderId]) {
-                // Get parent folder's access mode directly from folders map
-                accessMode = folders[currentFolderId].accessMode;
-            } else {
-                // No parent folder - use access mode based on current view scope
-                if (viewScope === 'organization') {
-                    accessMode = AccessMode.OPEN_TO_ORG;
-                } else if (viewScope === 'shared') {
-                    accessMode = AccessMode.EXPLICIT_MEMBERS;
-                } else {
-                    accessMode = AccessMode.OWNER_ONLY;
-                }
-            }
-
             await dispatch(
                 createFolder({
                     name: 'New Folder',
                     parentId: currentFolderId ?? undefined,
-                    visibility: accessMode,
                 })
             ).unwrap();
         } catch (err) {
             console.error('Failed to create folder:', err);
         }
-    }, [dispatch, currentFolderId, folders, viewScope]);
+    }, [dispatch, currentFolderId]);
 
     return (
         <>

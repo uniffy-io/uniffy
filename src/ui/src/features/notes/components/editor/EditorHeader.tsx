@@ -477,11 +477,11 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
                   </>
                 )}
                 {/* Sharing info: show share count for notes owned by user */}
-                {note.sharedWith && note.sharedWith.length > 0 && (
+                {note.accessMode === AccessMode.EXPLICIT_MEMBERS && note.ownerId === currentUserId && (
                   <>
                     <span>·</span>
                     <span className="text-blue-500">
-                      Shared with {note.sharedWith.length} {note.sharedWith.length === 1 ? 'person' : 'people'}
+                      Shared
                     </span>
                   </>
                 )}

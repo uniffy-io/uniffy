@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ContentRole } from '@uniffy/proto/common/v1/common_pb';
 import { Plus, Clock } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ export function AddMemberPopover({ existingSubjectIds, onAdd, disabled }: AddMem
         setExpiryValue('');
     };
 
-    const minDate = useMemo(() => new Date(Date.now() + 60_000).toISOString().slice(0, 16), []);
+    const [minDate] = useState(() => new Date(Date.now() + 60_000).toISOString().slice(0, 16));
 
     return (
         <div ref={anchorRef} className="space-y-2">

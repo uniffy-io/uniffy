@@ -269,12 +269,9 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         }
 
         return subfolders.filter(f => {
-            const bucket = bucketForContent({
-                ownerId: f.ownerId,
-                accessMode: f.accessMode,
-                currentUserId: userId,
-            });
-            return bucket === viewScope;
+            if (viewScope === 'organization') return f.accessMode === AccessMode.OPEN_TO_ORG;
+            if (viewScope === 'personal') return f.accessMode === AccessMode.OWNER_ONLY;
+            return f.accessMode === AccessMode.EXPLICIT_MEMBERS;
         });
     }, [subfolders, viewScope, userId]);
 

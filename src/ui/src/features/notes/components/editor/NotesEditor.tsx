@@ -60,7 +60,7 @@ export function NotesEditor() {
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
 
   // Check user's role on the current note
-  const role = useMyContentRole(ContentType.NOTE, currentNoteId);
+  const role = useMyContentRole(ContentType.NOTE, currentNoteId ?? '');
 
   // Force readonly mode if user doesn't have edit permission
   const canEdit = role === null ? true : roleCanEdit(role); // Default to true while loading

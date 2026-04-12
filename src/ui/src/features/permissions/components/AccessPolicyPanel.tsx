@@ -172,7 +172,7 @@ export function AccessPolicyPanel({
                                 key={`${m.subjectType}:${m.subjectId}`}
                                 member={m}
                                 canEdit={canManage}
-                                onUpdate={(role) => update(m.subjectType, m.subjectId, role)}
+                                onUpdate={(role) => { update(m.subjectType, m.subjectId, role); }}
                                 onRemove={() => remove(m.subjectType, m.subjectId)}
                             />
                         ))}

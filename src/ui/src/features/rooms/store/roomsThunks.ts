@@ -92,10 +92,10 @@ const BOOKING_STATUS_TO_PROTO: Record<BookingStatus, ProtoBookingStatus> = {
   'cancelled': ProtoBookingStatus.CANCELLED,
 };
 
-function frontendVisibilityToAccessMode(v: 'private' | 'organization'): { accessMode: number; baselineRole: number | null } {
+function frontendVisibilityToAccessMode(v: 'private' | 'organization'): { accessMode: number; baselineRole: number | undefined } {
   return v === 'organization'
     ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: ContentRole.VIEWER }
-    : { accessMode: AccessMode.OWNER_ONLY, baselineRole: null };
+    : { accessMode: AccessMode.OWNER_ONLY, baselineRole: undefined };
 }
 
 function accessModeToFrontendVisibility(mode: number): 'private' | 'organization' {
