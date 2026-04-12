@@ -40,9 +40,7 @@ const calendarClient = createClient(CalendarService, transport);
  * Calendar API service with typed methods.
  */
 export const calendarApi = {
-    // ========================================================================
     // Event Operations
-    // ========================================================================
 
     /**
      * Create a new calendar event.
@@ -86,9 +84,7 @@ export const calendarApi = {
         return calendarClient.getEventsInRange(request);
     },
 
-    // ========================================================================
     // Category Operations
-    // ========================================================================
 
     /**
      * Create a new category.
@@ -125,9 +121,7 @@ export const calendarApi = {
         return calendarClient.listCategories(request);
     },
 
-    // ========================================================================
     // Attendee Operations
-    // ========================================================================
 
     /**
      * Update attendee response status.
@@ -150,9 +144,7 @@ export const calendarApi = {
         return calendarClient.removeAttendees(request);
     },
 
-    // ========================================================================
     // Template Operations
-    // ========================================================================
 
     createEventTemplate: async (request: PartialMessage<CreateEventTemplateRequest>) => {
         return calendarClient.createEventTemplate(request);

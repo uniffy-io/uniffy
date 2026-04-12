@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CronTaskInfo(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "agent_id", "execution_user_id", "session_id", "name", "description", "prompt", "cron_expression", "timezone", "is_enabled", "last_run_at", "next_run_at", "last_run_status", "last_run_error", "run_count", "consecutive_failures", "max_consecutive_failures", "visibility", "created_at", "updated_at", "agent_name")
+    __slots__ = ("id", "organization_id", "owner_id", "agent_id", "execution_user_id", "session_id", "name", "description", "prompt", "cron_expression", "timezone", "is_enabled", "last_run_at", "next_run_at", "last_run_status", "last_run_error", "run_count", "consecutive_failures", "max_consecutive_failures", "access_mode", "created_at", "updated_at", "agent_name", "baseline_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -31,10 +31,11 @@ class CronTaskInfo(_message.Message):
     RUN_COUNT_FIELD_NUMBER: _ClassVar[int]
     CONSECUTIVE_FAILURES_FIELD_NUMBER: _ClassVar[int]
     MAX_CONSECUTIVE_FAILURES_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -54,11 +55,12 @@ class CronTaskInfo(_message.Message):
     run_count: int
     consecutive_failures: int
     max_consecutive_failures: int
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     agent_name: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., execution_user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., is_enabled: _Optional[bool] = ..., last_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., next_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_run_status: _Optional[str] = ..., last_run_error: _Optional[str] = ..., run_count: _Optional[int] = ..., consecutive_failures: _Optional[int] = ..., max_consecutive_failures: _Optional[int] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., agent_name: _Optional[str] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., execution_user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., is_enabled: _Optional[bool] = ..., last_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., next_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_run_status: _Optional[str] = ..., last_run_error: _Optional[str] = ..., run_count: _Optional[int] = ..., consecutive_failures: _Optional[int] = ..., max_consecutive_failures: _Optional[int] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., agent_name: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class CronRunLogInfo(_message.Message):
     __slots__ = ("id", "cron_task_id", "organization_id", "agent_run_log_id", "session_id", "status", "error", "result_summary", "started_at", "completed_at", "input_tokens", "output_tokens")
@@ -89,7 +91,7 @@ class CronRunLogInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., cron_task_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., agent_run_log_id: _Optional[str] = ..., session_id: _Optional[str] = ..., status: _Optional[str] = ..., error: _Optional[str] = ..., result_summary: _Optional[str] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
 
 class CreateCronTaskRequest(_message.Message):
-    __slots__ = ("organization_id", "agent_id", "name", "prompt", "cron_expression", "timezone", "description", "visibility")
+    __slots__ = ("organization_id", "agent_id", "name", "prompt", "cron_expression", "timezone", "description", "access_mode", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -97,7 +99,8 @@ class CreateCronTaskRequest(_message.Message):
     CRON_EXPRESSION_FIELD_NUMBER: _ClassVar[int]
     TIMEZONE_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     agent_id: str
     name: str
@@ -105,8 +108,9 @@ class CreateCronTaskRequest(_message.Message):
     cron_expression: str
     timezone: str
     description: str
-    visibility: _common_pb2.VisibilityScope
-    def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., name: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., description: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+    access_mode: _common_pb2.AccessMode
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., name: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., description: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class CronTaskResponse(_message.Message):
     __slots__ = ("task",)

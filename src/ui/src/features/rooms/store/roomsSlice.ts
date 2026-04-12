@@ -160,9 +160,7 @@ const roomsSlice = createSlice({
     clearRooms: () => initialState,
   },
   extraReducers: (builder) => {
-    // ========================================================================
     // Room Thunks
-    // ========================================================================
 
     // Initialize all rooms (multi-page eager load)
     builder
@@ -276,9 +274,7 @@ const roomsSlice = createSlice({
         state.errors.deleting = action.payload || 'Failed to delete room';
       });
 
-    // ========================================================================
     // Booking Thunks
-    // ========================================================================
 
     // Create booking
     builder
@@ -326,9 +322,7 @@ const roomsSlice = createSlice({
         state.errors.bookings = action.payload || 'Failed to fetch bookings';
       });
 
-    // ========================================================================
     // Availability Thunks
-    // ========================================================================
 
     // Check availability
     builder
@@ -381,9 +375,6 @@ const roomsSlice = createSlice({
   },
 });
 
-// ============================================================================
-// Actions
-// ============================================================================
 
 export const roomsActions = roomsSlice.actions;
 
@@ -395,9 +386,6 @@ export const {
   clearRooms,
 } = roomsSlice.actions;
 
-// ============================================================================
-// Selectors
-// ============================================================================
 
 export const selectAllRooms = (state: RootState): Room[] =>
   state.rooms.roomIds.map((id) => state.rooms.rooms[id]).filter(Boolean);
@@ -426,8 +414,6 @@ export const selectRoomAvailability = (state: RootState, roomId: string): TimeSl
 export const selectAvailableRoomIds = (state: RootState): string[] | null =>
   state.rooms.availableRoomIds;
 
-// ============================================================================
 // Reducer
-// ============================================================================
 
 export const roomsReducer = roomsSlice.reducer;

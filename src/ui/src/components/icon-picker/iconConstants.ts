@@ -126,7 +126,6 @@ import {
     List,
     ListBullets,
     ListNumbers,
-    // Actions
     Rocket,
     Trophy,
     Gift,
@@ -316,7 +315,6 @@ export const ICON_COMPONENTS: Record<string, Icon> = {
     List,
     ListBullets,
     ListNumbers,
-    // Actions
     Rocket,
     Trophy,
     Gift,
@@ -514,7 +512,6 @@ export const CURATED_ICONS = [
     { name: 'List', category: 'Organization' },
     { name: 'ListBullets', category: 'Organization' },
 
-    // Actions
     { name: 'Rocket', category: 'Actions' },
     { name: 'Trophy', category: 'Actions' },
     { name: 'Gift', category: 'Actions' },

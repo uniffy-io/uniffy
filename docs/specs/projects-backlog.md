@@ -7,18 +7,18 @@
 
 ## 1. Project Settings Page
 
-- [ ] Create route `/projects/:projectId/settings` with tabbed layout
-- [ ] Add gear icon in ProjectHeader to navigate to settings
-- [ ] Replace "Edit" in sidebar context menu with "Settings" link
-- [ ] Breadcrumb navigation: Projects > Project Name > Settings
+- [x] Create route `/projects/:projectId/settings` with tabbed layout
+- [x] Add gear icon in ProjectHeader to navigate to settings
+- [x] Replace "Edit" in sidebar context menu with "Settings" link
+- [ ] Breadcrumb navigation: Projects > Project Name > Settings (only a "Back to project" link exists)
 
 ### 1.1 General Tab
-- [ ] Project name editing
-- [ ] Description editing
-- [ ] Icon picker
+- [x] Project name editing
+- [x] Description editing
+- [x] Icon picker
 - [ ] Color picker
-- [ ] Slug editing with uniqueness validation
-- [ ] Visibility scope selector (Private/Organization)
+- [ ] Slug editing with uniqueness validation (slug is editable but no uniqueness validation)
+- [x] Visibility scope selector (Private/Organization)
 - [ ] Default view selector
 
 ### 1.2 Members Tab
@@ -28,32 +28,32 @@
 - [ ] Bulk invite
 
 ### 1.3 Statuses Tab
-- [ ] Full status list with color dots and labels
-- [ ] Add new status (name + color)
-- [ ] Edit status name and color inline
-- [ ] Drag-to-reorder statuses
-- [ ] Delete status with migration target (reassign tasks using it)
+- [x] Full status list with color dots and labels
+- [x] Add new status (name + color)
+- [x] Edit status name and color inline
+- [x] Drag-to-reorder statuses
+- [x] Delete status with migration target (reassign tasks using it)
 - [ ] Mark status as "done" category for completion tracking
-- [ ] Remove ManageStatusesDialog from board view (link to settings page instead)
+- [ ] Remove ManageStatusesDialog from board view (still mounted in ProjectHeader)
 
 ### 1.4 Custom Fields Tab
-- [ ] Field list showing name, type, required flag, sort order
-- [ ] Create field with all 7 types (text, number, single_select, multi_select, date, person, reference)
-- [ ] Edit field: rename, change required, update config
-- [ ] Drag-to-reorder fields
-- [ ] Delete field with confirmation (show affected task count)
-- [ ] For select fields: manage options inline (add/edit/delete/reorder/color)
-- [ ] Remove CreateFieldDialog from table view "+" button (link to settings page instead, or keep both)
+- [x] Field list showing name, type, required flag, sort order
+- [x] Create field with all 7 types (text, number, single_select, multi_select, date, person, reference)
+- [x] Edit field: rename, change required, update config
+- [x] Drag-to-reorder fields
+- [x] Delete field with confirmation (show affected task count)
+- [x] For select fields: manage options inline (add/edit/delete/reorder/color)
+- [x] Remove CreateFieldDialog from table view "+" button (file now orphaned, no callers)
 
 ### 1.5 Task Types Tab
-- [ ] List of task types with icons
-- [ ] Per-type field configuration: shown fields, required fields
-- [ ] Add/remove task types
+- [x] List of task types with icons
+- [x] Per-type field configuration: shown fields, required fields
+- [ ] Add/remove task types (TASK_TYPES is still a hardcoded list)
 - [ ] Preview of create-task form per type
 
 ### 1.6 Danger Zone
 - [ ] Archive project (soft delete)
-- [ ] Delete project permanently with confirmation
+- [x] Delete project permanently with confirmation
 - [ ] Transfer ownership
 
 ---
@@ -304,8 +304,8 @@
 
 - [ ] Editable cell visual hints (pencil icon on hover)
 - [ ] Compact/comfortable/spacious row density toggle
-- [ ] Column visibility popover (show/hide columns)
-- [ ] Visible column resize handles
+- [x] Column visibility popover (show/hide columns)
+- [x] Visible column resize handles
 
 ---
 

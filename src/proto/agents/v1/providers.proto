@@ -66,8 +66,10 @@ message ProviderKeyInfo {
   bool is_enabled = 12;
   // User who created this key
   string created_by = 13;
-  // Visibility scope
-  common.v1.VisibilityScope visibility = 14;
+  // Access mode
+  common.v1.AccessMode access_mode = 14;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 15;
 }
 
 // Model capabilities and metadata
@@ -100,8 +102,10 @@ message AddProviderKeyRequest {
   string label = 4;
   // The actual credential (API key or setup token)
   string credential = 5;
-  // Visibility scope for the key
-  optional common.v1.VisibilityScope visibility = 6;
+  // Access mode for the key
+  optional common.v1.AccessMode access_mode = 6;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 7;
 }
 
 // Response containing a single provider key

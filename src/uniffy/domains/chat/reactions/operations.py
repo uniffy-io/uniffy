@@ -172,9 +172,7 @@ class ChatReactionOperations:
 
         return dict(reactions_map)
 
-    # ---------------------------------------------------------------
     # Internal helpers
-    # ---------------------------------------------------------------
 
     async def _verify_message_access(
         self,

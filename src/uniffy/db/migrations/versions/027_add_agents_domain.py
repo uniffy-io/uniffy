@@ -17,21 +17,27 @@ down_revision: str = "025"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
     create_type=False,
 )
 
 
 def upgrade() -> None:
     """Create all agents domain tables."""
-    # -- Add content types --
-    op.execute(sa.text("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'AGENT'"))
-    op.execute(sa.text("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'PROVIDER_KEY'"))
 
     # -- agents_provider_keys --
     op.create_table(
@@ -45,7 +51,13 @@ def upgrade() -> None:
         sa.Column("key_hint", sa.String(20), nullable=False),
         sa.Column("is_valid", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("visibility", _visibility_enum, nullable=False, server_default="ORGANIZATION"),
+        sa.Column(
+            "access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OWNER_ONLY",
+        ),
+        sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("last_validated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_error", sa.Text(), nullable=True),
@@ -115,7 +127,18 @@ def upgrade() -> None:
         sa.Column("avatar_key", sa.String(255), nullable=True),
         sa.Column("theme_color", sa.String(50), nullable=False, server_default=sa.text("''")),
         sa.Column("is_default", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-        sa.Column("visibility", _visibility_enum, nullable=False, server_default="ORGANIZATION"),
+        sa.Column(
+            "access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OPEN_TO_ORG",
+        ),
+        sa.Column(
+            "baseline_role",
+            _content_role_enum,
+            nullable=True,
+            server_default="VIEWER",
+        ),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(

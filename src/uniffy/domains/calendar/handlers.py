@@ -1,4 +1,4 @@
-"""Calendar RPC handlers - thin layer delegating to operations."""
+"""Calendar RPC handlers."""
 
 import contextlib
 from datetime import date as date_type
@@ -42,10 +42,14 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     UpdateEventTemplateRequest,
 )
 
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
+)
 from uniffy.core.converters.proto import timestamp_to_datetime
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.shared import RecurrencePattern, VisibilityScope
-from uniffy.db import get_async_session
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.types import RecurrencePattern
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.converters import (
@@ -57,7 +61,6 @@ from uniffy.domains.calendar.converters import (
     recurrence_edit_scope_from_proto,
     recurrence_from_proto,
     template_to_proto,
-    visibility_from_proto,
 )
 from uniffy.domains.calendar.operations import (
     CalendarEventOperations,
@@ -66,12 +69,32 @@ from uniffy.domains.calendar.operations import (
 )
 
 
+def _parse_uuid(value: str, field: str) -> UUID:
+    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Translate a domain exception into the matching ``ConnectError``."""
+    if isinstance(exc, NotFoundError):
+        return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
+    if isinstance(exc, ValidationError):
+        return ConnectError(Code.INVALID_ARGUMENT, str(exc))
+    if isinstance(exc, PermissionDeniedError):
+        return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    return ConnectError(Code.INTERNAL, "Internal server error")
+
+
 class CalendarHandlers:
-    """Calendar RPC handlers."""
+    """RPC handlers for ``cal.v1.CalendarService``."""
 
     @staticmethod
     async def _get_event_room_info(session: AsyncSession, event_id: UUID) -> dict:
-        """Fetch room booking info for an event, returning kwargs for event_to_proto."""
+        """Fetch room booking info for an event as event_to_proto kwargs."""
         from uniffy.domains.rooms.operations import BookingOperations
 
         booking_ops = BookingOperations(session)
@@ -93,9 +116,7 @@ class CalendarHandlers:
             "room_amenities": list(room.amenities) if room and room.amenities else [],
         }
 
-    # ─────────────────────────────────────────────────────────────
-    # Event Operations
-    # ─────────────────────────────────────────────────────────────
+    # Event operations
 
     async def create_event(
         self,
@@ -103,18 +124,47 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> EventResponse:
         """Create a new calendar event."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
+        )
+        baseline_role = (
+            content_role_from_proto(request.baseline_role)
+            if request.baseline_role
+            else None
+        )
+
+        category_id = None
+        if request.HasField("category_id"):
+            category_id = _parse_uuid(request.category_id, "category_id")
+
+        recurrence_config = None
+        recurrence_pattern = RecurrencePattern.NONE
+        if request.HasField("recurrence"):
+            recurrence_config = recurrence_config_from_proto(request.recurrence)
+            recurrence_pattern = recurrence_from_proto(request.recurrence.pattern)
+
+        attendee_ids = None
+        if request.attendee_ids:
+            attendee_ids = [_parse_uuid(aid, "attendee_id") for aid in request.attendee_ids]
+
+        linked_resources = None
+        if request.linked_resource_urns:
+            linked_resources = [
+                {"id": urn, "type": "NOTE", "name": ""}
+                for urn in request.linked_resource_urns
+            ]
+
+        room_id = None
+        if request.HasField("room_id") and request.room_id:
+            room_id = _parse_uuid(request.room_id, "room_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
 
-                # Auto-fetch/create default calendar if not provided
                 calendar_id = None
                 if request.calendar_id:
                     with contextlib.suppress(ValueError):
@@ -125,40 +175,6 @@ class CalendarHandlers:
                         session, organization_id, user_id
                     )
                     calendar_id = default_calendar.id
-
-                # Parse optional fields
-                visibility = VisibilityScope.PRIVATE
-                if request.HasField("visibility"):
-                    visibility = visibility_from_proto(request.visibility)
-
-                category_id = None
-                if request.HasField("category_id"):
-                    try:
-                        category_id = UUID(request.category_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid category_id")
-
-                recurrence_config = None
-                recurrence_pattern = RecurrencePattern.NONE
-                if request.HasField("recurrence"):
-                    recurrence_config = recurrence_config_from_proto(request.recurrence)
-                    recurrence_pattern = recurrence_from_proto(request.recurrence.pattern)
-
-                attendee_ids = None
-                if request.attendee_ids:
-                    attendee_ids = [UUID(aid) for aid in request.attendee_ids]
-
-                linked_resources = None
-                if request.linked_resource_urns:
-                    linked_resources = [
-                        {"id": urn, "type": "NOTE", "name": ""}
-                        for urn in request.linked_resource_urns
-                    ]
-
-                # Parse optional room_id
-                room_id = None
-                if request.HasField("room_id") and request.room_id:
-                    room_id = UUID(request.room_id)
 
                 event = await ops.create(
                     user_id=user_id,
@@ -179,158 +195,131 @@ class CalendarHandlers:
                     is_focus_time=request.is_focus_time,
                     tags=list(request.tags) if request.tags else None,
                     linked_resources=linked_resources,
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                     reminders=list(request.reminders) if request.reminders else None,
                     room_id=room_id,
                 )
 
-                # Fetch attendees for response
                 attendees = await queries.get_event_attendees(session, event.id)
-
-                # Fetch room booking info if present
                 room_info = await self._get_event_room_info(session, event.id)
                 return EventResponse(event=event_to_proto(event, attendees, **room_info))
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating event: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("create_event", exc) from exc
 
     async def get_event(
         self,
         request: GetEventRequest,
         ctx: RequestContext,
     ) -> EventResponse:
-        """Get an event by ID."""
-        try:
-            event_id = UUID(request.event_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Get a single event (requires view access)."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        event_id = _parse_uuid(request.event_id, "event_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
                 event, attendees = await ops.get_event_with_attendees(
                     user_id, organization_id, event_id
                 )
                 room_info = await self._get_event_room_info(session, event_id)
                 return EventResponse(event=event_to_proto(event, attendees, **room_info))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Event not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting event: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_event", exc) from exc
 
     async def update_event(
         self,
         request: UpdateEventRequest,
         ctx: RequestContext,
     ) -> EventResponse:
-        """Update an existing event."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+        """Update event metadata."""
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
 
-        # event_id may be a synthetic ID for recurring occurrences
         try:
             event_id = UUID(request.event_id.split("__occurrence__")[0])
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid event_id: {exc}") from exc
 
-        user_id = get_user_id_from_context(ctx)
+        kwargs: dict = {}
+        if request.HasField("title"):
+            kwargs["title"] = request.title
+        if request.HasField("description"):
+            kwargs["description"] = request.description
+        if request.HasField("start_time"):
+            kwargs["start_time"] = timestamp_to_datetime(request.start_time)
+        if request.HasField("end_time"):
+            kwargs["end_time"] = timestamp_to_datetime(request.end_time)
+        if request.HasField("is_all_day"):
+            kwargs["is_all_day"] = request.is_all_day
+        if request.HasField("timezone"):
+            kwargs["timezone"] = request.timezone
+        if request.HasField("location"):
+            kwargs["location"] = request.location
+        if request.HasField("meeting_url"):
+            kwargs["meeting_url"] = request.meeting_url
+        if request.HasField("calendar_id"):
+            kwargs["calendar_id"] = _parse_uuid(request.calendar_id, "calendar_id")
+        if request.HasField("category_id"):
+            kwargs["category_id"] = (
+                _parse_uuid(request.category_id, "category_id")
+                if request.category_id
+                else None
+            )
+        if request.HasField("recurrence"):
+            kwargs["recurrence_config"] = recurrence_config_from_proto(request.recurrence)
+        if request.HasField("is_focus_time"):
+            kwargs["is_focus_time"] = request.is_focus_time
+        if request.tags:
+            kwargs["tags"] = list(request.tags)
+        if request.linked_resource_urns:
+            kwargs["linked_resources"] = [
+                {"id": urn, "type": "NOTE", "name": ""}
+                for urn in request.linked_resource_urns
+            ]
+        if request.attendee_ids:
+            kwargs["attendee_ids"] = [
+                _parse_uuid(aid, "attendee_id") for aid in request.attendee_ids
+            ]
+        if request.reminders:
+            kwargs["reminders"] = list(request.reminders)
+
+        if request.HasField("recurrence_edit_scope"):
+            kwargs["recurrence_edit_scope"] = recurrence_edit_scope_from_proto(
+                request.recurrence_edit_scope
+            )
+        if request.HasField("occurrence_date"):
+            try:
+                kwargs["occurrence_date"] = date_type.fromisoformat(request.occurrence_date)
+            except ValueError as exc:
+                raise ConnectError(
+                    Code.INVALID_ARGUMENT, f"Invalid occurrence_date: {exc}"
+                ) from exc
+
+        if request.HasField("room_id"):
+            kwargs["room_id"] = request.room_id
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
-
-                # Build update kwargs
-                kwargs = {}
-
-                if request.HasField("title"):
-                    kwargs["title"] = request.title
-                if request.HasField("description"):
-                    kwargs["description"] = request.description
-                if request.HasField("start_time"):
-                    kwargs["start_time"] = timestamp_to_datetime(request.start_time)
-                if request.HasField("end_time"):
-                    kwargs["end_time"] = timestamp_to_datetime(request.end_time)
-                if request.HasField("is_all_day"):
-                    kwargs["is_all_day"] = request.is_all_day
-                if request.HasField("timezone"):
-                    kwargs["timezone"] = request.timezone
-                if request.HasField("location"):
-                    kwargs["location"] = request.location
-                if request.HasField("meeting_url"):
-                    kwargs["meeting_url"] = request.meeting_url
-                if request.HasField("calendar_id"):
-                    kwargs["calendar_id"] = UUID(request.calendar_id)
-                if request.HasField("category_id"):
-                    cat_id = UUID(request.category_id) if request.category_id else None
-                    kwargs["category_id"] = cat_id
-                if request.HasField("recurrence"):
-                    kwargs["recurrence_config"] = recurrence_config_from_proto(request.recurrence)
-                if request.HasField("is_focus_time"):
-                    kwargs["is_focus_time"] = request.is_focus_time
-                if request.tags:
-                    kwargs["tags"] = list(request.tags)
-                if request.linked_resource_urns:
-                    kwargs["linked_resources"] = [
-                        {"id": urn, "type": "NOTE", "name": ""}
-                        for urn in request.linked_resource_urns
-                    ]
-                if request.HasField("visibility"):
-                    kwargs["visibility"] = visibility_from_proto(request.visibility)
-                if request.attendee_ids:
-                    kwargs["attendee_ids"] = [UUID(id) for id in request.attendee_ids]
-                if request.reminders:
-                    kwargs["reminders"] = list(request.reminders)
-
-                # Recurring event edit scope
-                if request.HasField("recurrence_edit_scope"):
-                    kwargs["recurrence_edit_scope"] = recurrence_edit_scope_from_proto(
-                        request.recurrence_edit_scope
-                    )
-                if request.HasField("occurrence_date"):
-                    try:
-                        kwargs["occurrence_date"] = date_type.fromisoformat(request.occurrence_date)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid occurrence_date format")
-
-                # Room booking
-                if request.HasField("room_id"):
-                    kwargs["room_id"] = request.room_id  # empty string = remove room
-
                 event = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,
                     **kwargs,
                 )
-
-                # Fetch attendees for response
                 attendees = await queries.get_event_attendees(session, event.id)
                 room_info = await self._get_event_room_info(session, event.id)
                 return EventResponse(event=event_to_proto(event, attendees, **room_info))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Event not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error updating event: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_event", exc) from exc
 
     async def delete_event(
         self,
@@ -338,37 +327,29 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> DeleteEventResponse:
         """Delete an event (soft or permanent)."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
-        # event_id may be a synthetic ID for recurring occurrences
-        # (e.g., "uuid__occurrence__2026-03-25"), so parse UUID only
-        # when there's no recurrence scope
-        raw_event_id = request.event_id
-        try:
-            event_id = UUID(raw_event_id.split("__occurrence__")[0])
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
-            async for session in get_async_session():
+            event_id = UUID(request.event_id.split("__occurrence__")[0])
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid event_id: {exc}") from exc
+
+        edit_scope = None
+        occ_date = None
+        if request.HasField("recurrence_edit_scope"):
+            edit_scope = recurrence_edit_scope_from_proto(request.recurrence_edit_scope)
+        if request.HasField("occurrence_date"):
+            try:
+                occ_date = date_type.fromisoformat(request.occurrence_date)
+            except ValueError as exc:
+                raise ConnectError(
+                    Code.INVALID_ARGUMENT, f"Invalid occurrence_date: {exc}"
+                ) from exc
+
+        try:
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
-
-                # Parse recurring event scope
-                edit_scope = None
-                occ_date = None
-                if request.HasField("recurrence_edit_scope"):
-                    edit_scope = recurrence_edit_scope_from_proto(request.recurrence_edit_scope)
-                if request.HasField("occurrence_date"):
-                    try:
-                        occ_date = date_type.fromisoformat(request.occurrence_date)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid occurrence_date format")
-
                 await ops.delete(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -377,19 +358,14 @@ class CalendarHandlers:
                     recurrence_edit_scope=edit_scope,
                     occurrence_date=occ_date,
                 )
-
-                message = "Event permanently deleted" if request.permanent else "Event deleted"
+                message = (
+                    "Event permanently deleted" if request.permanent else "Event deleted"
+                )
                 return DeleteEventResponse(success=True, message=message)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Event not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error deleting event: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_event", exc) from exc
 
     async def list_events(
         self,
@@ -397,34 +373,28 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> ListEventsResponse:
         """List events with filters and pagination."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        calendar_id = None
+        if request.HasField("calendar_id"):
+            calendar_id = _parse_uuid(request.calendar_id, "calendar_id")
+
+        category_id = None
+        if request.HasField("category_id"):
+            category_id = _parse_uuid(request.category_id, "category_id")
+
+        start_date = None
+        if request.HasField("start_date"):
+            start_date = timestamp_to_datetime(request.start_date)
+
+        end_date = None
+        if request.HasField("end_date"):
+            end_date = timestamp_to_datetime(request.end_date)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
-
-                # Parse filters
-                calendar_id = None
-                if request.HasField("calendar_id"):
-                    calendar_id = UUID(request.calendar_id)
-
-                category_id = None
-                if request.HasField("category_id"):
-                    category_id = UUID(request.category_id)
-
-                start_date = None
-                if request.HasField("start_date"):
-                    start_date = timestamp_to_datetime(request.start_date)
-
-                end_date = None
-                if request.HasField("end_date"):
-                    end_date = timestamp_to_datetime(request.end_date)
-
                 events, total = await ops.list_events(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -443,7 +413,6 @@ class CalendarHandlers:
                 page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
 
-                # Fetch attendees and room info for each event
                 proto_events = []
                 for event in events:
                     attendees = await queries.get_event_attendees(session, event.id)
@@ -457,38 +426,31 @@ class CalendarHandlers:
                     page_size=page_size,
                     total_pages=total_pages,
                 )
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing events: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("list_events", exc) from exc
 
     async def get_events_in_range(
         self,
         request: GetEventsInRangeRequest,
         ctx: RequestContext,
     ) -> GetEventsInRangeResponse:
-        """Get events in a date range (optimized for calendar views)."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
+        """Fetch events in a date range (optimized for calendar views)."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        calendar_ids = None
+        if request.calendar_ids:
+            calendar_ids = [_parse_uuid(cid, "calendar_id") for cid in request.calendar_ids]
+
+        category_ids = None
+        if request.category_ids:
+            category_ids = [_parse_uuid(cid, "category_id") for cid in request.category_ids]
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
-
-                calendar_ids = None
-                if request.calendar_ids:
-                    calendar_ids = [UUID(cid) for cid in request.calendar_ids]
-
-                category_ids = None
-                if request.category_ids:
-                    category_ids = [UUID(cid) for cid in request.category_ids]
-
                 events = await ops.get_events_in_range(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -498,15 +460,11 @@ class CalendarHandlers:
                     category_ids=category_ids,
                 )
 
-                # Fetch attendees and room info for each event
-                # Cache by real event ID to avoid duplicate queries
-                # for virtual instances that share the same master event
                 attendees_cache: dict[str, list] = {}
                 room_info_cache: dict[str, dict] = {}
                 proto_events = []
                 for event in events:
                     event_id_str = str(event.id)
-                    # Virtual instances have synthetic IDs - use master ID
                     if "__occurrence__" in event_id_str:
                         real_id = UUID(event_id_str.split("__occurrence__")[0])
                     else:
@@ -530,40 +488,34 @@ class CalendarHandlers:
                     )
 
                 return GetEventsInRangeResponse(events=proto_events)
-
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting events in range: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("get_events_in_range", exc) from exc
 
-    # ─────────────────────────────────────────────────────────────
-    # Calendar Operations (deprecated - single calendar per user)
-    # ─────────────────────────────────────────────────────────────
+    # Calendar operations (deprecated)
 
     async def create_calendar(self, request, ctx: RequestContext):
-        """Deprecated: Calendars are auto-created per user."""
+        """Deprecated. Calendars are auto-created per user."""
         raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
     async def get_calendar(self, request, ctx: RequestContext):
-        """Deprecated: Calendars are auto-created per user."""
+        """Deprecated. Calendars are auto-created per user."""
         raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
     async def update_calendar(self, request, ctx: RequestContext):
-        """Deprecated: Calendars are auto-created per user."""
+        """Deprecated. Calendars are auto-created per user."""
         raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
     async def delete_calendar(self, request, ctx: RequestContext):
-        """Deprecated: Calendars are auto-created per user."""
+        """Deprecated. Calendars are auto-created per user."""
         raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
     async def list_calendars(self, request, ctx: RequestContext):
-        """Deprecated: Calendars are auto-created per user."""
+        """Deprecated. Calendars are auto-created per user."""
         raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
-    # ─────────────────────────────────────────────────────────────
-    # Category Operations
-    # ─────────────────────────────────────────────────────────────
+    # Category operations
 
     async def create_category(
         self,
@@ -571,15 +523,11 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> CategoryResponse:
         """Create a new category."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CategoryOperations(session)
                 category = await ops.create(
                     user_id=user_id,
@@ -588,16 +536,11 @@ class CalendarHandlers:
                     color=request.color,
                     icon=request.icon if request.HasField("icon") else None,
                 )
-
                 return CategoryResponse(category=category_to_proto(category))
-
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating category: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("create_category", exc) from exc
 
     async def get_category(
         self,
@@ -605,29 +548,19 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> CategoryResponse:
         """Get a category by ID."""
-        try:
-            category_id = UUID(request.category_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        category_id = _parse_uuid(request.category_id, "category_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CategoryOperations(session)
                 category = await ops.get_by_id(user_id, category_id, organization_id)
                 return CategoryResponse(category=category_to_proto(category))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Category not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error getting category: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_category", exc) from exc
 
     async def update_category(
         self,
@@ -635,16 +568,12 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> CategoryResponse:
         """Update a category."""
-        try:
-            category_id = UUID(request.category_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        category_id = _parse_uuid(request.category_id, "category_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CategoryOperations(session)
                 category = await ops.update(
                     user_id=user_id,
@@ -655,18 +584,11 @@ class CalendarHandlers:
                     icon=request.icon if request.HasField("icon") else None,
                     sort_order=request.sort_order if request.HasField("sort_order") else None,
                 )
-
                 return CategoryResponse(category=category_to_proto(category))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Category not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error updating category: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_category", exc) from exc
 
     async def delete_category(
         self,
@@ -674,29 +596,19 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> DeleteCategoryResponse:
         """Delete a category."""
-        try:
-            category_id = UUID(request.category_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        category_id = _parse_uuid(request.category_id, "category_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CategoryOperations(session)
                 await ops.delete(user_id, category_id, organization_id)
                 return DeleteCategoryResponse(success=True, message="Category deleted")
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Category not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error deleting category: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_category", exc) from exc
 
     async def list_categories(
         self,
@@ -704,35 +616,23 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> ListCategoriesResponse:
         """List categories for an organization."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CategoryOperations(session)
-
-                # Ensure default categories exist
                 await ops.ensure_defaults(user_id, organization_id)
-
                 categories = await ops.list_categories(user_id, organization_id)
-
-                return ListCategoriesResponse(categories=[category_to_proto(c) for c in categories])
-
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+                return ListCategoriesResponse(
+                    categories=[category_to_proto(c) for c in categories]
+                )
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error listing categories: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
+        except Exception as exc:
+            raise _map_domain_error("list_categories", exc) from exc
 
-    # ─────────────────────────────────────────────────────────────
-    # Attendee Operations
-    # ─────────────────────────────────────────────────────────────
+    # Attendee operations
 
     async def update_attendee_status(
         self,
@@ -740,16 +640,12 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> UpdateAttendeeStatusResponse:
         """Update current user's attendee status for an event."""
-        try:
-            event_id = UUID(request.event_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        event_id = _parse_uuid(request.event_id, "event_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
                 status = attendee_status_from_proto(request.status)
                 await ops.update_attendee_status(
@@ -758,19 +654,11 @@ class CalendarHandlers:
                     event_id=event_id,
                     status=status,
                 )
-
-                return UpdateAttendeeStatusResponse(
-                    success=True,
-                    message="Status updated",
-                )
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
+                return UpdateAttendeeStatusResponse(success=True, message="Status updated")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error updating attendee status: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_attendee_status", exc) from exc
 
     async def add_attendees(
         self,
@@ -778,20 +666,15 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> EventResponse:
         """Add attendees to an event."""
-        try:
-            event_id = UUID(request.event_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        event_id = _parse_uuid(request.event_id, "event_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
-
                 role = attendee_role_from_proto(request.role)
-                attendee_ids = [UUID(uid) for uid in request.user_ids]
+                attendee_ids = [_parse_uuid(uid, "user_id") for uid in request.user_ids]
 
                 event = await ops.add_attendees(
                     user_id=user_id,
@@ -800,20 +683,12 @@ class CalendarHandlers:
                     attendee_ids=attendee_ids,
                     role=role,
                 )
-
-                # Fetch attendees for response
                 attendees = await queries.get_event_attendees(session, event.id)
                 return EventResponse(event=event_to_proto(event, attendees))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Event not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error adding attendees: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("add_attendees", exc) from exc
 
     async def remove_attendees(
         self,
@@ -821,19 +696,14 @@ class CalendarHandlers:
         ctx: RequestContext,
     ) -> EventResponse:
         """Remove attendees from an event."""
-        try:
-            event_id = UUID(request.event_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        event_id = _parse_uuid(request.event_id, "event_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CalendarEventOperations(session)
-
-                attendee_ids = [UUID(uid) for uid in request.user_ids]
+                attendee_ids = [_parse_uuid(uid, "user_id") for uid in request.user_ids]
 
                 event = await ops.remove_attendees(
                     user_id=user_id,
@@ -841,48 +711,41 @@ class CalendarHandlers:
                     event_id=event_id,
                     attendee_ids=attendee_ids,
                 )
-
-                # Fetch attendees for response
                 attendees = await queries.get_event_attendees(session, event.id)
                 return EventResponse(event=event_to_proto(event, attendees))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Event not found")
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except ConnectError:
             raise
-        except Exception as e:
-            logger.error(f"Error removing attendees: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("remove_attendees", exc) from exc
 
-    # ─────────────────────────────────────────────────────────────
-    # Template Operations
-    # ─────────────────────────────────────────────────────────────
+    # Template operations
 
     async def create_event_template(
         self,
         request: CreateEventTemplateRequest,
         ctx: RequestContext,
     ) -> EventTemplateResponse:
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Create an event template."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
+        )
+        baseline_role = (
+            content_role_from_proto(request.baseline_role)
+            if request.baseline_role
+            else None
+        )
+
+        category_id = None
+        if request.category_id:
+            with contextlib.suppress(ValueError):
+                category_id = UUID(request.category_id)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = EventTemplateOperations(session)
-
-                category_id = None
-                if request.category_id:
-                    with contextlib.suppress(ValueError):
-                        category_id = UUID(request.category_id)
-
-                visibility = visibility_from_proto(request.visibility)
-
                 template = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -893,56 +756,46 @@ class CalendarHandlers:
                     meeting_url=request.meeting_url if request.meeting_url else None,
                     category_id=category_id,
                     tags=list(request.tags),
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                 )
-
                 return EventTemplateResponse(template=template_to_proto(template))
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except Exception as e:
-            logger.error(f"Error creating template: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("create_event_template", exc) from exc
 
     async def get_event_template(
         self,
         request: GetEventTemplateRequest,
         ctx: RequestContext,
     ) -> EventTemplateResponse:
-        try:
-            template_id = UUID(request.template_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Get an event template by ID."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        template_id = _parse_uuid(request.template_id, "template_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 template = await ops.get_by_id(template_id, organization_id, user_id)
                 return EventTemplateResponse(template=template_to_proto(template))
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Template not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except Exception as e:
-            logger.error(f"Error getting template: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("get_event_template", exc) from exc
 
     async def update_event_template(
         self,
         request: UpdateEventTemplateRequest,
         ctx: RequestContext,
     ) -> EventTemplateResponse:
-        try:
-            template_id = UUID(request.template_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Update an event template."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        template_id = _parse_uuid(request.template_id, "template_id")
 
-        update_data = {}
+        update_data: dict = {}
         if request.HasField("title"):
             update_data["title"] = request.title
         if request.HasField("description"):
@@ -960,11 +813,9 @@ class CalendarHandlers:
                 update_data["category_id"] = None
         if request.tags:
             update_data["tags"] = list(request.tags)
-        if request.HasField("visibility"):
-            update_data["visibility"] = visibility_from_proto(request.visibility)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 template = await ops.update(
                     template_id=template_id,
@@ -973,61 +824,50 @@ class CalendarHandlers:
                     **update_data,
                 )
                 return EventTemplateResponse(template=template_to_proto(template))
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Template not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except Exception as e:
-            logger.error(f"Error updating template: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("update_event_template", exc) from exc
 
     async def delete_event_template(
         self,
         request: DeleteEventTemplateRequest,
         ctx: RequestContext,
     ) -> DeleteEventTemplateResponse:
-        try:
-            template_id = UUID(request.template_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Delete an event template."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        template_id = _parse_uuid(request.template_id, "template_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 await ops.delete(template_id, organization_id, user_id)
-                return DeleteEventTemplateResponse(success=True, message="Template deleted")
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Template not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except Exception as e:
-            logger.error(f"Error deleting template: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+                return DeleteEventTemplateResponse(
+                    success=True, message="Template deleted"
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("delete_event_template", exc) from exc
 
     async def list_event_templates(
         self,
         request: ListEventTemplatesRequest,
         ctx: RequestContext,
     ) -> ListEventTemplatesResponse:
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """List event templates for an organization."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 templates = await ops.list(organization_id, user_id)
                 return ListEventTemplatesResponse(
                     templates=[template_to_proto(t) for t in templates]
                 )
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except Exception as e:
-            logger.error(f"Error listing templates: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("list_event_templates", exc) from exc

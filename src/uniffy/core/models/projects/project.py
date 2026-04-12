@@ -8,8 +8,7 @@ from sqlalchemy import Column, DateTime, Enum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class Project(SQLModel, table=True):
@@ -24,8 +23,10 @@ class Project(SQLModel, table=True):
         Organization this project belongs to.
     owner_id : UUID
         User who created/owns the project.
-    visibility : VisibilityScope
-        Access scope (PRIVATE, GROUP, ORGANIZATION).
+    access_mode : AccessMode
+        How access to this project is governed.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     name : str
         Project name (max 255 chars).
     description : str
@@ -40,8 +41,6 @@ class Project(SQLModel, table=True):
         Monotonically increasing counter for task number generation.
     default_view_id : str | None
         ID of the default view.
-    member_ids : list[str] | None
-        User IDs of project members.
     is_deleted : bool
         Soft delete flag.
     version : int
@@ -60,17 +59,29 @@ class Project(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OPEN_TO_ORG,
         sa_column=Column(
             Enum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=ContentRole.EDITOR,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     name: str = Field(max_length=255, nullable=False)
@@ -80,7 +91,6 @@ class Project(SQLModel, table=True):
     slug: str = Field(max_length=20, nullable=False)
     task_counter: int = Field(default=0, nullable=False)
     default_view_id: str | None = Field(default=None, max_length=100)
-    member_ids: list[str] | None = Field(default=None, sa_column=Column(JSONB))
     type_field_schemas: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     is_deleted: bool = Field(default=False, nullable=False)
     version: int = Field(default=1, nullable=False)

@@ -259,9 +259,7 @@ const calendarSlice = createSlice({
     resetCalendarState: () => initialState,
   },
   extraReducers: (builder) => {
-    // ========================================================================
     // Event Thunks
-    // ========================================================================
 
     // Fetch events in range
     builder
@@ -346,9 +344,7 @@ const calendarSlice = createSlice({
         state.errors.deleting = action.payload || 'Failed to delete event';
       });
 
-    // ========================================================================
     // Category Thunks
-    // ========================================================================
 
     // Fetch categories
     builder
@@ -388,9 +384,7 @@ const calendarSlice = createSlice({
         delete state.categories[action.payload.categoryId];
       });
 
-    // ========================================================================
     // Attendee Thunks
-    // ========================================================================
 
     // Add attendees
     builder

@@ -82,7 +82,6 @@ export {
 } from '@/features/files/store';
 export type { UploadItem } from '@/features/files/store';
 
-// Selectors
 export {
     selectAllFiles,
     selectFilesForCurrentFolder,
@@ -98,7 +97,6 @@ export { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 export { useSavedFilters } from '@/features/files/hooks/useSavedFilters';
 export { useApplyFilter } from '@/features/files/hooks/useApplyFilter';
 
-// API
 export { filesApi } from '@/features/files/api/filesApi';
 export { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
 

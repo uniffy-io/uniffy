@@ -5,7 +5,6 @@
  * and permission level controls.
  */
 
-// API
 export { sharingApi } from '@/features/sharing/api/sharingApi';
 
 // Components

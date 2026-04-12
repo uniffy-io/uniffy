@@ -357,7 +357,6 @@ const savedFiltersSlice = createSlice({
 
 export const { clearSavedFilters, clearError, setFilter, removeFilter } = savedFiltersSlice.actions;
 
-// Selectors
 export const selectSavedFilters = (state: RootState) => state.savedFilters?.filters ?? {};
 export const selectSavedFiltersLoading = (state: RootState) => state.savedFilters?.loading ?? false;
 export const selectSavedFiltersError = (state: RootState) => state.savedFilters?.error ?? null;

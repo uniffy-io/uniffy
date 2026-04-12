@@ -33,9 +33,7 @@ class ChatMessageOperations:
         self.session = session
         self.access = access or ChatAccessChecker(session)
 
-    # ---------------------------------------------------------------
     # Send message (two-phase transaction)
-    # ---------------------------------------------------------------
 
     async def send_message(
         self,
@@ -499,9 +497,7 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Notification emit failed for message {message.id}")
 
-    # ---------------------------------------------------------------
     # Get messages (cursor-based pagination)
-    # ---------------------------------------------------------------
 
     async def get_messages(
         self,
@@ -587,9 +583,7 @@ class ChatMessageOperations:
             raise NotFoundError("message", message_id)
         return msg
 
-    # ---------------------------------------------------------------
     # Update / delete / pin
-    # ---------------------------------------------------------------
 
     async def update_message(
         self,
@@ -811,9 +805,7 @@ class ChatMessageOperations:
         )
         return list(result.scalars().all())
 
-    # ---------------------------------------------------------------
     # Thread helpers
-    # ---------------------------------------------------------------
 
     async def _handle_thread_reply(
         self,
@@ -893,9 +885,7 @@ class ChatMessageOperations:
             )
         )
 
-    # ---------------------------------------------------------------
     # Permission helpers
-    # ---------------------------------------------------------------
 
     async def _require_message_action(
         self,
@@ -927,9 +917,7 @@ class ChatMessageOperations:
             if not is_elevated:
                 raise PermissionDeniedError("pin", "Requires channel admin")
 
-    # ---------------------------------------------------------------
     # Internal query helpers
-    # ---------------------------------------------------------------
 
     async def _get_message_by_id(self, message_id: UUID) -> ChatMessage | None:
         """Fetch a message by ID."""

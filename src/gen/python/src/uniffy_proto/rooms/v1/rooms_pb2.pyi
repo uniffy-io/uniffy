@@ -45,7 +45,7 @@ BOOKING_STATUS_CONFIRMED: BookingStatus
 BOOKING_STATUS_CANCELLED: BookingStatus
 
 class Room(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "room_type", "status", "capacity", "floor", "building", "location", "amenities", "image_file_id", "visibility", "created_at", "updated_at")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "room_type", "status", "capacity", "floor", "building", "location", "amenities", "image_file_id", "access_mode", "created_at", "updated_at", "baseline_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -59,9 +59,10 @@ class Room(_message.Message):
     LOCATION_FIELD_NUMBER: _ClassVar[int]
     AMENITIES_FIELD_NUMBER: _ClassVar[int]
     IMAGE_FILE_ID_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -75,10 +76,11 @@ class Room(_message.Message):
     location: str
     amenities: _containers.RepeatedScalarFieldContainer[str]
     image_file_id: str
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., status: _Optional[_Union[RoomStatus, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., status: _Optional[_Union[RoomStatus, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class RoomBooking(_message.Message):
     __slots__ = ("id", "room_id", "organization_id", "user_id", "event_id", "title", "start_time", "end_time", "status", "notes", "booker_name", "room_name", "created_at", "updated_at")
@@ -129,7 +131,7 @@ class TimeSlot(_message.Message):
     def __init__(self, start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_available: _Optional[bool] = ..., booking_id: _Optional[str] = ..., event_title: _Optional[str] = ..., booker_name: _Optional[str] = ...) -> None: ...
 
 class CreateRoomRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "description", "room_type", "capacity", "floor", "building", "location", "amenities", "image_file_id", "visibility", "group_ids")
+    __slots__ = ("organization_id", "name", "description", "room_type", "capacity", "floor", "building", "location", "amenities", "image_file_id", "access_mode", "group_ids", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -140,8 +142,9 @@ class CreateRoomRequest(_message.Message):
     LOCATION_FIELD_NUMBER: _ClassVar[int]
     AMENITIES_FIELD_NUMBER: _ClassVar[int]
     IMAGE_FILE_ID_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     description: str
@@ -152,9 +155,10 @@ class CreateRoomRequest(_message.Message):
     location: str
     amenities: _containers.RepeatedScalarFieldContainer[str]
     image_file_id: str
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     group_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., group_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class GetRoomRequest(_message.Message):
     __slots__ = ("room_id", "organization_id")
@@ -165,7 +169,7 @@ class GetRoomRequest(_message.Message):
     def __init__(self, room_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class UpdateRoomRequest(_message.Message):
-    __slots__ = ("room_id", "organization_id", "name", "description", "room_type", "status", "capacity", "floor", "building", "location", "amenities", "image_file_id", "visibility", "replace_amenities")
+    __slots__ = ("room_id", "organization_id", "name", "description", "room_type", "status", "capacity", "floor", "building", "location", "amenities", "image_file_id", "access_mode", "replace_amenities", "baseline_role")
     ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -178,8 +182,9 @@ class UpdateRoomRequest(_message.Message):
     LOCATION_FIELD_NUMBER: _ClassVar[int]
     AMENITIES_FIELD_NUMBER: _ClassVar[int]
     IMAGE_FILE_ID_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     REPLACE_AMENITIES_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     room_id: str
     organization_id: str
     name: str
@@ -192,9 +197,10 @@ class UpdateRoomRequest(_message.Message):
     location: str
     amenities: _containers.RepeatedScalarFieldContainer[str]
     image_file_id: str
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     replace_amenities: bool
-    def __init__(self, room_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., status: _Optional[_Union[RoomStatus, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., replace_amenities: _Optional[bool] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, room_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., status: _Optional[_Union[RoomStatus, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., replace_amenities: _Optional[bool] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class DeleteRoomRequest(_message.Message):
     __slots__ = ("room_id", "organization_id", "permanent")

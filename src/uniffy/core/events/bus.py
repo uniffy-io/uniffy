@@ -68,7 +68,7 @@ def event_from_json(json_str: str) -> NotificationEvent:
     """
     from uuid import UUID
 
-    from uniffy.core.models.shared import ContentType, NotificationType
+    from uniffy.core.types import ContentType, NotificationType
 
     data = json.loads(json_str)
 

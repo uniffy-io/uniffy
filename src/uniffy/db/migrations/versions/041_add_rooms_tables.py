@@ -38,21 +38,27 @@ _booking_status_enum = postgresql.ENUM(
     create_type=False,
 )
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
     create_type=False,
 )
 
 
 def upgrade() -> None:
     """Create rooms and bookings tables with supporting enums and indexes."""
-    # Add ROOM to existing contenttype enum
-    op.execute("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'ROOM'")
-
     # Create new enums
     postgresql.ENUM(
         "MEETING_ROOM",
@@ -91,7 +97,18 @@ def upgrade() -> None:
         sa.Column("location", sa.String(length=500), nullable=False, server_default=""),
         sa.Column("amenities", JSONB, nullable=True),
         sa.Column("image_file_id", sa.Uuid(), nullable=True),
-        sa.Column("visibility", _visibility_enum, nullable=False, server_default="ORGANIZATION"),
+        sa.Column(
+            "access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OPEN_TO_ORG",
+        ),
+        sa.Column(
+            "baseline_role",
+            _content_role_enum,
+            nullable=True,
+            server_default="VIEWER",
+        ),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -102,7 +119,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_rooms_rooms_organization_id", "rooms_rooms", ["organization_id"])
     op.create_index("ix_rooms_rooms_owner_id", "rooms_rooms", ["owner_id"])
-    op.create_index("ix_rooms_rooms_visibility", "rooms_rooms", ["visibility"])
+    op.create_index("ix_rooms_rooms_access_mode", "rooms_rooms", ["access_mode"])
 
     # Create bookings table
     op.create_table(

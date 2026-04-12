@@ -6,9 +6,7 @@ from zoneinfo import ZoneInfo
 
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
-# ---------------------------------------------------------------------------
 # Shared helpers
-# ---------------------------------------------------------------------------
 
 _RECURRENCE_VALUES = ("NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY")
 _VISIBILITY_VALUES = ("PRIVATE", "GROUP", "ORGANIZATION")
@@ -115,9 +113,7 @@ def _format_event_result(prefix: str, event) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
 # Executors
-# ---------------------------------------------------------------------------
 
 
 async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
@@ -668,9 +664,7 @@ async def _execute_list_categories(ctx: ToolContext, args: dict) -> ToolResult:
     return ToolResult(success=True, data="\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
 # Shared schema fragments
-# ---------------------------------------------------------------------------
 
 _DATETIME_DESC = (
     "ISO 8601 datetime in the user's local time "
@@ -724,9 +718,7 @@ _ATTENDEE_IDS_SCHEMA = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Tool definitions
-# ---------------------------------------------------------------------------
 
 list_events = ToolDefinition(
     name="calendar.list_events",

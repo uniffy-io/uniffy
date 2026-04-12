@@ -50,9 +50,7 @@ from uniffy.domains.rooms.operations import BookingOperations, RoomOperations
 class RoomHandlers:
     """Room RPC handlers."""
 
-    # -----------------------------------------------------------------
     # Room CRUD
-    # -----------------------------------------------------------------
 
     async def create_room(
         self,
@@ -335,9 +333,7 @@ class RoomHandlers:
 class BookingHandlers:
     """Booking RPC handlers."""
 
-    # -----------------------------------------------------------------
     # Booking CRUD
-    # -----------------------------------------------------------------
 
     async def create_booking(
         self,
@@ -572,9 +568,7 @@ class BookingHandlers:
             logger.error(f"Error listing bookings: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {str(e)}")
 
-    # -----------------------------------------------------------------
     # Availability
-    # -----------------------------------------------------------------
 
     async def check_availability(
         self,

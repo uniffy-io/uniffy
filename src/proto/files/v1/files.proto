@@ -142,7 +142,8 @@ message InitiateUploadRequest {
   string mime_type = 3;
   int64 total_size = 4;
   optional string folder_id = 5;
-  common.v1.VisibilityScope visibility = 6;
+  common.v1.AccessMode access_mode = 6;
+  optional common.v1.ContentRole baseline_role = 7;
 }
 
 message InitiateUploadResponse {
@@ -238,7 +239,7 @@ message File {
   string urn = 2;
   string organization_id = 3;
   string owner_id = 4;
-  common.v1.VisibilityScope visibility = 5;
+  common.v1.AccessMode access_mode = 5;
   string filename = 6;
   string original_filename = 7;
   string mime_type = 8;
@@ -255,11 +256,14 @@ message File {
 
   // Sharing info (populated based on context)
   repeated string group_ids = 19;
-  common.v1.PermissionLevel user_permission = 20;
+  common.v1.ContentRole user_role = 20;
   optional FileOwner owner_info = 21;
 
   // Media metadata (extracted from file content)
   optional FileMetadata metadata = 22;
+
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 23;
 }
 
 // Metadata extracted from media files (images, videos, PDFs).
@@ -299,7 +303,8 @@ message UpdateFileRequest {
   optional string filename = 3;
   repeated string tags = 4;
   optional string description = 5;
-  optional common.v1.VisibilityScope visibility = 6;
+  optional common.v1.AccessMode access_mode = 6;
+  optional common.v1.ContentRole baseline_role = 7;
 }
 
 message DeleteFileRequest {
@@ -324,7 +329,7 @@ message ListFilesRequest {
   repeated string tags = 3;
   bool include_deleted = 4;
   bool personal_only = 5;
-  optional common.v1.VisibilityScope visibility = 6;
+  optional common.v1.AccessMode access_mode = 6;
   optional string group_id = 7;
   int32 page = 8;
   int32 page_size = 9;
@@ -348,13 +353,14 @@ message Folder {
   string urn = 2;
   string organization_id = 3;
   string owner_id = 4;
-  common.v1.VisibilityScope visibility = 5;
+  common.v1.AccessMode access_mode = 5;
   string name = 6;
   optional string parent_id = 7;
   bool is_deleted = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   bool is_system = 11;               // System folders (e.g., Attachments) cannot be deleted
+  optional common.v1.ContentRole baseline_role = 12;
 }
 
 message FolderResponse {
@@ -365,7 +371,8 @@ message CreateFolderRequest {
   string organization_id = 1;
   string name = 2;
   optional string parent_id = 3;
-  common.v1.VisibilityScope visibility = 4;
+  common.v1.AccessMode access_mode = 4;
+  optional common.v1.ContentRole baseline_role = 5;
 }
 
 message UpdateFolderRequest {
@@ -373,7 +380,8 @@ message UpdateFolderRequest {
   string organization_id = 2;
   optional string name = 3;
   optional string parent_id = 4;      // "" to move to root
-  optional common.v1.VisibilityScope visibility = 5;
+  optional common.v1.AccessMode access_mode = 5;
+  optional common.v1.ContentRole baseline_role = 6;
 }
 
 message DeleteFolderRequest {
@@ -408,11 +416,12 @@ message TreeNode {
   string name = 2;
   bool is_folder = 3;
   optional string parent_id = 4;
-  common.v1.VisibilityScope visibility = 5;
+  common.v1.AccessMode access_mode = 5;
   int32 child_count = 6;               // For folders: number of children
   optional int64 size_bytes = 7;       // For files: file size
   optional string mime_type = 8;       // For files: MIME type
   repeated TreeNode children = 9;      // Nested children (if requested)
+  optional common.v1.ContentRole baseline_role = 10;
 }
 
 // BULK OPERATION MESSAGES
@@ -422,7 +431,8 @@ message MoveItemsRequest {
   repeated string file_ids = 2;
   repeated string folder_ids = 3;
   optional string target_folder_id = 4;  // null = root
-  optional common.v1.VisibilityScope target_visibility = 5;  // Change visibility scope
+  optional common.v1.AccessMode target_access_mode = 5;  // Change access mode
+  optional common.v1.ContentRole target_baseline_role = 6;
 }
 
 message MoveItemsResponse {
@@ -503,7 +513,7 @@ message FilterCriteria {
   repeated string extensions = 1;           // File extensions without dot (pdf, docx)
   repeated string mime_categories = 2;      // document, image, video, audio, archive
   repeated string owner_ids = 3;            // Filter by owner user IDs
-  optional common.v1.VisibilityScope visibility = 4;  // Filter by visibility scope
+  optional common.v1.AccessMode access_mode = 4;  // Filter by access mode
   repeated string tags = 5;                 // Filter by tags
   optional int64 size_min_bytes = 6;        // Minimum file size
   optional int64 size_max_bytes = 7;        // Maximum file size

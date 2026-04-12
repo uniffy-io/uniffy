@@ -316,9 +316,7 @@ class ChatReadStateOperations:
 
         return counts
 
-    # ---------------------------------------------------------------
     # Direct PG operations (used by flush job and fallback)
-    # ---------------------------------------------------------------
 
     async def _upsert_channel_cursor_pg(
         self,

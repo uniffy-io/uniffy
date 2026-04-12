@@ -7,8 +7,7 @@ from sqlalchemy import Column, DateTime, Enum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class EventTemplate(SQLModel, table=True):
@@ -37,8 +36,10 @@ class EventTemplate(SQLModel, table=True):
         Default category.
     tags : list[str]
         Default tags.
-    visibility : VisibilityScope
-        Template visibility.
+    access_mode : AccessMode
+        How access to this template is governed.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     created_by : UUID
         User who created the template.
     created_at : datetime
@@ -63,17 +64,29 @@ class EventTemplate(SQLModel, table=True):
 
     tags: list[str] = Field(default=[], sa_column=Column(JSONB))
 
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OPEN_TO_ORG,
         sa_column=Column(
             Enum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
                 create_type=False,
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=ContentRole.VIEWER,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
 

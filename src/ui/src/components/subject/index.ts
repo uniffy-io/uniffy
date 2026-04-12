@@ -4,7 +4,6 @@
  * Shared components for displaying and selecting users and groups.
  */
 
-// Types
 export type {
     Subject,
     SubjectTypeValue,
@@ -14,7 +13,6 @@ export type {
 } from '@/components/subject/types';
 export { SUBJECT_TYPE } from '@/components/subject/types';
 
-// Utils
 export {
     getInitials,
     memberToSubject,

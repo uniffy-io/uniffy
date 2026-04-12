@@ -4,7 +4,6 @@
  * Central export point for all notes feature modules.
  */
 
-// API
 export { notesApi } from '@/features/notes/api/notesApi';
 
 // Components
@@ -130,7 +129,6 @@ export {
 export { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
 export { useTreeStateSync } from '@/features/notes/hooks/useTreeStateSync';
 
-// Utils
 export {
     buildGraphData,
     parseMentionsFromContent,
@@ -173,7 +171,6 @@ export {
     clearTreeState,
 } from '@/features/notes/utils/treeStateStorage';
 
-// Types
 export type { TreeNode, GroupTreeSection } from '@/features/notes/store/notesTreeSlice';
 export type { EditorMode, MetadataPanelTab } from '@/features/notes/store/editorSlice';
 export type { GraphNode, GraphLink, GraphData } from '@/features/notes/utils/notesGraphUtils';

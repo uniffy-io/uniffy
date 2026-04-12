@@ -17,19 +17,27 @@ down_revision: str = "027"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
     create_type=False,
 )
 
 
 def upgrade() -> None:
     """Create agents_cron_tasks and agents_cron_run_logs tables."""
-    op.execute(sa.text("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'AGENT_CRON_TASK'"))
 
     op.create_table(
         "agents_cron_tasks",
@@ -54,7 +62,13 @@ def upgrade() -> None:
         sa.Column(
             "max_consecutive_failures", sa.Integer(), nullable=False, server_default=sa.text("3")
         ),
-        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column(
+            "access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OWNER_ONLY",
+        ),
+        sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
@@ -82,7 +96,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_agents_cron_tasks_execution_user_id", "agents_cron_tasks", ["execution_user_id"]
     )
-    op.create_index("ix_agents_cron_tasks_visibility", "agents_cron_tasks", ["visibility"])
+    op.create_index("ix_agents_cron_tasks_access_mode", "agents_cron_tasks", ["access_mode"])
 
     op.execute(
         sa.text(

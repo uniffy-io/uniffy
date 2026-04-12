@@ -1,7 +1,8 @@
 """Database session management and initialization."""
 
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import asynccontextmanager
 
 from alembic import command
 from alembic.config import Config
@@ -173,13 +174,41 @@ async def init_db(*, skip_migrations: bool = False) -> None:
 
 async def get_async_session() -> AsyncGenerator[AsyncSession]:
     """
-    Get an async database session.
+    Get an async database session (async generator form).
 
     Yields
     ------
     AsyncSession
         An async SQLAlchemy session.
 
+    """
+    if _async_session_maker is None:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+
+    async with _async_session_maker() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def open_session() -> AsyncIterator[AsyncSession]:
+    """
+    Open an async database session as a context manager.
+
+    Use this instead of ``get_async_session`` in RPC handlers so the
+    type checker can prove that the ``async with`` body always executes
+    and the ``return`` inside it is guaranteed reachable::
+
+        async with open_session() as session:
+            ops = NoteOperations(session)
+            note = await ops.create(...)
+            return NoteResponse(note=note_to_proto(note))
+
+    ``get_async_session`` is kept for FastAPI ``Depends`` callers and for
+    background tasks that iterate explicitly; new handler code should
+    prefer ``open_session``.
     """
     if _async_session_maker is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")

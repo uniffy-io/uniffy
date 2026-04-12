@@ -102,8 +102,10 @@ type ProviderKeyInfo struct {
 	IsEnabled bool `protobuf:"varint,12,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
 	// User who created this key
 	CreatedBy string `protobuf:"bytes,13,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	// Visibility scope
-	Visibility    v1.VisibilityScope `protobuf:"varint,14,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
+	// Access mode
+	AccessMode v1.AccessMode `protobuf:"varint,14,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,15,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -229,11 +231,18 @@ func (x *ProviderKeyInfo) GetCreatedBy() string {
 	return ""
 }
 
-func (x *ProviderKeyInfo) GetVisibility() v1.VisibilityScope {
+func (x *ProviderKeyInfo) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *ProviderKeyInfo) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 // Model capabilities and metadata
@@ -349,8 +358,10 @@ type AddProviderKeyRequest struct {
 	Label string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	// The actual credential (API key or setup token)
 	Credential string `protobuf:"bytes,5,opt,name=credential,proto3" json:"credential,omitempty"`
-	// Visibility scope for the key
-	Visibility    *v1.VisibilityScope `protobuf:"varint,6,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	// Access mode for the key
+	AccessMode *v1.AccessMode `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	// Baseline role granted by access mode (when applicable)
+	BaselineRole  *v1.ContentRole `protobuf:"varint,7,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -420,11 +431,18 @@ func (x *AddProviderKeyRequest) GetCredential() string {
 	return ""
 }
 
-func (x *AddProviderKeyRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *AddProviderKeyRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
+}
+
+func (x *AddProviderKeyRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 // Response containing a single provider key
@@ -1026,7 +1044,7 @@ var File_agents_v1_providers_proto protoreflect.FileDescriptor
 
 const file_agents_v1_providers_proto_rawDesc = "" +
 	"\n" +
-	"\x19agents/v1/providers.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xa7\x05\n" +
+	"\x19agents/v1/providers.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xf7\x05\n" +
 	"\x0fProviderKeyInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12B\n" +
@@ -1047,13 +1065,14 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\n" +
 	"is_enabled\x18\f \x01(\bR\tisEnabled\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\r \x01(\tR\tcreatedBy\x12:\n" +
-	"\n" +
-	"visibility\x18\x0e \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibilityB\x14\n" +
+	"created_by\x18\r \x01(\tR\tcreatedBy\x126\n" +
+	"\vaccess_mode\x18\x0e \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12@\n" +
+	"\rbaseline_role\x18\x0f \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\x14\n" +
 	"\x12_last_validated_atB\x0f\n" +
 	"\r_last_used_atB\r\n" +
-	"\v_last_error\"\xfe\x01\n" +
+	"\v_last_errorB\x10\n" +
+	"\x0e_baseline_role\"\xfe\x01\n" +
 	"\tModelInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
@@ -1061,7 +1080,7 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x0econtext_window\x18\x04 \x01(\x05R\rcontextWindow\x12%\n" +
 	"\x0esupports_tools\x18\x05 \x01(\bR\rsupportsTools\x12'\n" +
 	"\x0fsupports_vision\x18\x06 \x01(\bR\x0esupportsVision\x12+\n" +
-	"\x11supports_thinking\x18\a \x01(\bR\x10supportsThinking\"\xa6\x02\n" +
+	"\x11supports_thinking\x18\a \x01(\bR\x10supportsThinking\"\xf7\x02\n" +
 	"\x15AddProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12B\n" +
@@ -1069,11 +1088,12 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1e\n" +
 	"\n" +
 	"credential\x18\x05 \x01(\tR\n" +
-	"credential\x12?\n" +
-	"\n" +
-	"visibility\x18\x06 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x00R\n" +
-	"visibility\x88\x01\x01B\r\n" +
-	"\v_visibility\"C\n" +
+	"credential\x12;\n" +
+	"\vaccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\n" +
+	"accessMode\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\a \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\x0e\n" +
+	"\f_access_modeB\x10\n" +
+	"\x0e_baseline_role\"C\n" +
 	"\x13ProviderKeyResponse\x12,\n" +
 	"\x03key\x18\x01 \x01(\v2\x1a.agents.v1.ProviderKeyInfoR\x03key\"p\n" +
 	"\x17ListProviderKeysRequest\x12'\n" +
@@ -1153,7 +1173,8 @@ var file_agents_v1_providers_proto_goTypes = []any{
 	(*ListModelsForKeyRequest)(nil),     // 13: agents.v1.ListModelsForKeyRequest
 	(*ToggleProviderKeyRequest)(nil),    // 14: agents.v1.ToggleProviderKeyRequest
 	(*timestamppb.Timestamp)(nil),       // 15: google.protobuf.Timestamp
-	(v1.VisibilityScope)(0),             // 16: common.v1.VisibilityScope
+	(v1.AccessMode)(0),                  // 16: common.v1.AccessMode
+	(v1.ContentRole)(0),                 // 17: common.v1.ContentRole
 }
 var file_agents_v1_providers_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.ProviderKeyInfo.credential_type:type_name -> agents.v1.CredentialType
@@ -1161,31 +1182,33 @@ var file_agents_v1_providers_proto_depIdxs = []int32{
 	15, // 2: agents.v1.ProviderKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
 	15, // 3: agents.v1.ProviderKeyInfo.created_at:type_name -> google.protobuf.Timestamp
 	15, // 4: agents.v1.ProviderKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 5: agents.v1.ProviderKeyInfo.visibility:type_name -> common.v1.VisibilityScope
-	0,  // 6: agents.v1.AddProviderKeyRequest.credential_type:type_name -> agents.v1.CredentialType
-	16, // 7: agents.v1.AddProviderKeyRequest.visibility:type_name -> common.v1.VisibilityScope
-	1,  // 8: agents.v1.ProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
-	1,  // 9: agents.v1.ListProviderKeysResponse.keys:type_name -> agents.v1.ProviderKeyInfo
-	2,  // 10: agents.v1.ListAvailableModelsResponse.models:type_name -> agents.v1.ModelInfo
-	3,  // 11: agents.v1.ProvidersService.AddProviderKey:input_type -> agents.v1.AddProviderKeyRequest
-	5,  // 12: agents.v1.ProvidersService.ListProviderKeys:input_type -> agents.v1.ListProviderKeysRequest
-	7,  // 13: agents.v1.ProvidersService.RemoveProviderKey:input_type -> agents.v1.RemoveProviderKeyRequest
-	9,  // 14: agents.v1.ProvidersService.ValidateProviderKey:input_type -> agents.v1.ValidateProviderKeyRequest
-	11, // 15: agents.v1.ProvidersService.ListAvailableModels:input_type -> agents.v1.ListAvailableModelsRequest
-	14, // 16: agents.v1.ProvidersService.ToggleProviderKey:input_type -> agents.v1.ToggleProviderKeyRequest
-	13, // 17: agents.v1.ProvidersService.ListModelsForKey:input_type -> agents.v1.ListModelsForKeyRequest
-	4,  // 18: agents.v1.ProvidersService.AddProviderKey:output_type -> agents.v1.ProviderKeyResponse
-	6,  // 19: agents.v1.ProvidersService.ListProviderKeys:output_type -> agents.v1.ListProviderKeysResponse
-	8,  // 20: agents.v1.ProvidersService.RemoveProviderKey:output_type -> agents.v1.RemoveProviderKeyResponse
-	10, // 21: agents.v1.ProvidersService.ValidateProviderKey:output_type -> agents.v1.ValidateProviderKeyResponse
-	12, // 22: agents.v1.ProvidersService.ListAvailableModels:output_type -> agents.v1.ListAvailableModelsResponse
-	4,  // 23: agents.v1.ProvidersService.ToggleProviderKey:output_type -> agents.v1.ProviderKeyResponse
-	12, // 24: agents.v1.ProvidersService.ListModelsForKey:output_type -> agents.v1.ListAvailableModelsResponse
-	18, // [18:25] is the sub-list for method output_type
-	11, // [11:18] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	16, // 5: agents.v1.ProviderKeyInfo.access_mode:type_name -> common.v1.AccessMode
+	17, // 6: agents.v1.ProviderKeyInfo.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 7: agents.v1.AddProviderKeyRequest.credential_type:type_name -> agents.v1.CredentialType
+	16, // 8: agents.v1.AddProviderKeyRequest.access_mode:type_name -> common.v1.AccessMode
+	17, // 9: agents.v1.AddProviderKeyRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 10: agents.v1.ProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
+	1,  // 11: agents.v1.ListProviderKeysResponse.keys:type_name -> agents.v1.ProviderKeyInfo
+	2,  // 12: agents.v1.ListAvailableModelsResponse.models:type_name -> agents.v1.ModelInfo
+	3,  // 13: agents.v1.ProvidersService.AddProviderKey:input_type -> agents.v1.AddProviderKeyRequest
+	5,  // 14: agents.v1.ProvidersService.ListProviderKeys:input_type -> agents.v1.ListProviderKeysRequest
+	7,  // 15: agents.v1.ProvidersService.RemoveProviderKey:input_type -> agents.v1.RemoveProviderKeyRequest
+	9,  // 16: agents.v1.ProvidersService.ValidateProviderKey:input_type -> agents.v1.ValidateProviderKeyRequest
+	11, // 17: agents.v1.ProvidersService.ListAvailableModels:input_type -> agents.v1.ListAvailableModelsRequest
+	14, // 18: agents.v1.ProvidersService.ToggleProviderKey:input_type -> agents.v1.ToggleProviderKeyRequest
+	13, // 19: agents.v1.ProvidersService.ListModelsForKey:input_type -> agents.v1.ListModelsForKeyRequest
+	4,  // 20: agents.v1.ProvidersService.AddProviderKey:output_type -> agents.v1.ProviderKeyResponse
+	6,  // 21: agents.v1.ProvidersService.ListProviderKeys:output_type -> agents.v1.ListProviderKeysResponse
+	8,  // 22: agents.v1.ProvidersService.RemoveProviderKey:output_type -> agents.v1.RemoveProviderKeyResponse
+	10, // 23: agents.v1.ProvidersService.ValidateProviderKey:output_type -> agents.v1.ValidateProviderKeyResponse
+	12, // 24: agents.v1.ProvidersService.ListAvailableModels:output_type -> agents.v1.ListAvailableModelsResponse
+	4,  // 25: agents.v1.ProvidersService.ToggleProviderKey:output_type -> agents.v1.ProviderKeyResponse
+	12, // 26: agents.v1.ProvidersService.ListModelsForKey:output_type -> agents.v1.ListAvailableModelsResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_providers_proto_init() }

@@ -6,9 +6,6 @@ import { describe, it, expect } from 'vitest';
 import { AUDIO_REGEX } from '../audio/index';
 import { VIDEO_REGEX } from '../video/index';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function matchAudio(input: string) {
     const m = AUDIO_REGEX.exec(input);
@@ -24,9 +21,7 @@ function matchVideo(input: string) {
 
 const SAMPLE_URL = '/media-stream/019c55b1-5789-75a1-836c-2c7c48177b0b/019c55b5-0d69-7220-a489-ca74c6b29dcb';
 
-// ---------------------------------------------------------------------------
 // AUDIO_REGEX
-// ---------------------------------------------------------------------------
 
 describe('AUDIO_REGEX', () => {
     it('matches audio block without title', () => {
@@ -98,9 +93,7 @@ describe('AUDIO_REGEX', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // VIDEO_REGEX
-// ---------------------------------------------------------------------------
 
 describe('VIDEO_REGEX', () => {
     it('matches video block without title', () => {
@@ -133,9 +126,7 @@ describe('VIDEO_REGEX', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // Stringify sanitization (bracket replacement)
-// ---------------------------------------------------------------------------
 
 describe('title bracket sanitization', () => {
     // Mirrors the logic in the stringify handlers of audio/video plugins

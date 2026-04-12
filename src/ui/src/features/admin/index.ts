@@ -5,7 +5,6 @@
  * permission defaults, group management, and member management.
  */
 
-// API
 export { adminApi } from '@/features/admin/api/adminApi';
 
 // Components

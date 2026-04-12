@@ -1,762 +1,306 @@
 """
 Core permission checking logic for all content types.
 
-Provides centralized permission verification based on:
-- Organization role (OWNER/ADMIN have elevated access)
-- Content ownership
-- Visibility scope (private, group, organization, public)
-- Group membership
-- Explicit permission grants (with expiration support)
+Single source of truth for access decisions. Every domain operation
+ultimately calls :meth:`PermissionChecker.effective_role` (directly or
+through :class:`BaseContentOperations`) to resolve a user's role on a
+content item, then uses the ``role_can_*`` predicates in
+:mod:`uniffy.core.auth.permissions.roles` to check capabilities.
+
+The checker caches per-request state (org role, domain admin status) so
+repeated checks within a single handler do not re-query the database.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.auth.permissions.roles import ROLE_ORDINAL
 from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
     ContentType,
-    PermissionLevel,
+    DomainType,
     SubjectType,
-    VisibilityScope,
 )
+
+if TYPE_CHECKING:
+    from uniffy.core.models.login.organization_member import OrganizationRole
+
+# Mapping from content type to the DomainType used by the domain-admin
+# bypass. Content types that have no matching domain admin (e.g. USER,
+# ROOM, CHAT_MESSAGE) are not in this map.
+_CONTENT_TYPE_TO_DOMAIN: dict[ContentType, DomainType] = {
+    ContentType.NOTE: DomainType.NOTES,
+    ContentType.FILE: DomainType.FILES,
+    ContentType.FOLDER: DomainType.FILES,
+    ContentType.CALENDAR_EVENT: DomainType.CALENDAR,
+    ContentType.CHAT_MESSAGE: DomainType.CHAT,
+    ContentType.CHAT: DomainType.CHAT,
+    ContentType.PROJECT: DomainType.PROJECTS,
+    ContentType.TASK: DomainType.PROJECTS,
+    ContentType.AGENT: DomainType.AGENTS,
+    ContentType.PROVIDER_KEY: DomainType.AGENTS,
+    ContentType.PROMPT: DomainType.AGENTS,
+    ContentType.AGENT_CRON_TASK: DomainType.AGENTS,
+}
 
 
 class PermissionChecker:
     """
-    Core permission checking service for all content types.
+    Compute effective roles for users on content items.
 
-    Provides centralized logic for verifying user access to content
-    based on visibility, group membership, and explicit permissions.
+    Usage
+    -----
+    Each handler constructs one checker per request, reuses it for every
+    access decision in that request, and discards it at the end. The
+    internal caches mean repeated checks on the same user/org/content are
+    effectively free.
 
     Parameters
     ----------
     session : AsyncSession
-        Database session for queries.
+        Database session (request-scoped).
 
     """
 
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize the permission checker.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session for queries.
-
-        """
         self.session = session
+        self._org_role_cache: dict[tuple[UUID, UUID], OrganizationRole | None] = {}
+        self._domain_admin_cache: dict[tuple[UUID, UUID, DomainType], bool] = {}
 
-    async def can_access_content(
+
+    async def effective_role(
         self,
         user_id: UUID,
         organization_id: UUID,
         content_type: ContentType,
         content_id: UUID,
-        content_owner_id: UUID,
-        content_visibility: VisibilityScope,
+        *,
+        owner_id: UUID,
+        access_mode: AccessMode,
+        baseline_role: ContentRole | None,
+    ) -> ContentRole | None:
+        """Compute the user's effective role on a content item.
+
+        Returns ``None`` when the user has no access. Callers map the
+        returned role to capabilities via the ``role_can_*`` helpers.
+
+        Parameters
+        ----------
+        user_id : UUID
+            User whose access we are computing.
+        organization_id : UUID
+            Organization scope. The user must be a member of this org
+            for OPEN_TO_ORG baseline access to apply.
+        content_type : ContentType
+            Type of content. Must be one that has ``access_mode`` and
+            ``baseline_role`` columns; delegating types (TASK, COMMENT,
+            ATTACHMENT, etc.) resolve to their parent before calling.
+        content_id : UUID
+            ID of the content item.
+        owner_id : UUID
+            Owner column from the content row.
+        access_mode : AccessMode
+            Access mode column from the content row.
+        baseline_role : ContentRole | None
+            Baseline role column from the content row. Must be non-null
+            iff ``access_mode == OPEN_TO_ORG``.
+
+        Returns
+        -------
+        ContentRole | None
+            The effective role, or None if the user has no access.
+
+        """
+        # 1. Org admin / owner bypass: always full control over everything
+        #    in their organization.
+        if await self._is_org_admin(user_id, organization_id):
+            return ContentRole.OWNER
+
+        # 2. Domain admin bypass: full control over their domain's
+        #    content types.
+        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
+            return ContentRole.ADMIN
+
+        # 3. Owner of the content.
+        if owner_id == user_id:
+            return ContentRole.OWNER
+
+        # 4. Explicit member grant (direct user or via group).
+        member_role = await self._get_member_role(
+            organization_id, content_type, content_id, user_id
+        )
+
+        # 4a. BLOCKED is an explicit deny regardless of baseline access.
+        if member_role == ContentRole.BLOCKED:
+            return None
+
+        # 4b. Non-blocked explicit grants always beat the baseline.
+        if member_role is not None:
+            return member_role
+
+        # 5. Baseline from the content's access mode.
+        if access_mode == AccessMode.OWNER_ONLY:
+            return None
+
+        if access_mode == AccessMode.EXPLICIT_MEMBERS:
+            return None
+
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                return None
+            if not await self._is_user_in_organization(user_id, organization_id):
+                return None
+            return baseline_role
+
+        return None
+
+    async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
+        """Public accessor used by callers that need to bypass role checks."""
+        return await self._is_org_admin(user_id, organization_id)
+
+    async def is_domain_admin(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
     ) -> bool:
-        """
-        Check if a user can access a piece of content.
+        """Public accessor for the domain-admin bypass."""
+        return await self._is_domain_admin_for_content(
+            user_id, organization_id, content_type
+        )
 
-        Parameters
-        ----------
-        user_id : UUID
-            User attempting to access the content.
-        organization_id : UUID
-            Organization the content belongs to.
-        content_type : ContentType
-            Type of content (note, file, etc.).
-        content_id : UUID
-            ID of the content.
-        content_owner_id : UUID
-            Owner of the content.
-        content_visibility : VisibilityScope
-            Visibility scope of the content.
-
-        Returns
-        -------
-        bool
-            True if user can access, False otherwise.
-
-        """
-        # Owner always has access
-        if content_owner_id == user_id:
-            return True
-
-        # Org OWNER/ADMIN always have full access to all org content
-        if await self._is_org_admin(user_id, organization_id):
-            return True
-
-        # Domain admin has full access within their domain
-        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
-            return True
-
-        # Check if user is in the organization
-        if not await self._is_user_in_organization(user_id, organization_id):
-            return False
-
-        # Organization-wide content
-        if content_visibility == VisibilityScope.ORGANIZATION:
-            return True
-
-        # Group-level content
-        if content_visibility == VisibilityScope.GROUP:
-            return await self._can_access_group_content(
-                user_id, organization_id, content_type, content_id
-            )
-
-        # Private content - only owner (already checked above)
-        if content_visibility == VisibilityScope.PRIVATE:
-            # Check for explicit permission grant
-            return await self._has_explicit_permission(
-                user_id, content_type, content_id, organization_id
-            )
-
-        # Public content (future feature)
-        return content_visibility == VisibilityScope.PUBLIC
-
-    async def can_edit_content(
+    async def get_user_org_role(
         self,
         user_id: UUID,
         organization_id: UUID,
+    ) -> OrganizationRole | None:
+        """Public accessor for the user's org role (used by audit logging)."""
+        return await self._get_user_org_role(user_id, organization_id)
+
+    # Internal helpers
+
+    async def _get_member_role(
+        self,
+        organization_id: UUID,
         content_type: ContentType,
         content_id: UUID,
-        content_owner_id: UUID,
-        content_visibility: VisibilityScope,
-    ) -> bool:
-        """
-        Check if a user can edit a piece of content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User attempting to edit the content.
-        organization_id : UUID
-            Organization the content belongs to.
-        content_type : ContentType
-            Type of content (note, file, etc.).
-        content_id : UUID
-            ID of the content.
-        content_owner_id : UUID
-            Owner of the content.
-        content_visibility : VisibilityScope
-            Visibility scope of the content.
-
-        Returns
-        -------
-        bool
-            True if user can edit, False otherwise.
-
-        """
-        # Owner always can edit
-        if content_owner_id == user_id:
-            return True
-
-        # Org OWNER/ADMIN always have full access to all org content
-        if await self._is_org_admin(user_id, organization_id):
-            return True
-
-        # Domain admin has full access within their domain
-        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
-            return True
-
-        # Check if user can access first
-        if not await self.can_access_content(
-            user_id,
-            organization_id,
-            content_type,
-            content_id,
-            content_owner_id,
-            content_visibility,
-        ):
-            return False
-
-        # For org-wide content, check org permission defaults
-        if content_visibility == VisibilityScope.ORGANIZATION:
-            # Tasks use project defaults (tasks are children of projects)
-            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
-            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_edit"):
-                return True
-
-        # Check for explicit edit permission
-        return await self._has_permission_level(
-            user_id,
-            content_type,
-            content_id,
-            organization_id,
-            min_level=PermissionLevel.EDIT,
-        )
-
-    async def can_delete_content(
-        self,
         user_id: UUID,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        content_owner_id: UUID,
-        content_visibility: VisibilityScope = VisibilityScope.PRIVATE,
-    ) -> bool:
+    ) -> ContentRole | None:
+        """Highest applicable role from direct + group-derived membership.
+
+        BLOCKED from any source wins over every other role. When multiple
+        non-BLOCKED roles apply (e.g. direct EDITOR plus group VIEWER),
+        the highest ordinal wins.
         """
-        Check if a user can delete a piece of content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User attempting to delete the content.
-        organization_id : UUID
-            Organization the content belongs to.
-        content_type : ContentType
-            Type of content (note, file, etc.).
-        content_id : UUID
-            ID of the content.
-        content_owner_id : UUID
-            Owner of the content.
-        content_visibility : VisibilityScope
-            Visibility scope of the content.
-
-        Returns
-        -------
-        bool
-            True if user can delete, False otherwise.
-
-        """
-        # Owner always can delete
-        if content_owner_id == user_id:
-            return True
-
-        # Org OWNER/ADMIN always have full access to all org content
-        if await self._is_org_admin(user_id, organization_id):
-            return True
-
-        # Domain admin has full access within their domain
-        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
-            return True
-
-        # For org-wide content, check org permission defaults
-        if content_visibility == VisibilityScope.ORGANIZATION:
-            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
-            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_delete"):
-                return True
-
-        # Check for explicit delete permission
-        permission = await self._get_user_permission(
-            user_id, content_type, content_id, organization_id
-        )
-
-        return permission is not None and permission.can_delete
-
-    async def can_share_content(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        content_owner_id: UUID,
-        content_visibility: VisibilityScope = VisibilityScope.PRIVATE,
-    ) -> bool:
-        """
-        Check if a user can share a piece of content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User attempting to share the content.
-        organization_id : UUID
-            Organization the content belongs to.
-        content_type : ContentType
-            Type of content (note, file, etc.).
-        content_id : UUID
-            ID of the content.
-        content_owner_id : UUID
-            Owner of the content.
-        content_visibility : VisibilityScope
-            Visibility scope of the content.
-
-        Returns
-        -------
-        bool
-            True if user can share, False otherwise.
-
-        """
-        # Owner always can share
-        if content_owner_id == user_id:
-            return True
-
-        # Org OWNER/ADMIN always have full access to all org content
-        if await self._is_org_admin(user_id, organization_id):
-            return True
-
-        # Domain admin has full access within their domain
-        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
-            return True
-
-        # For org-wide content, check org permission defaults
-        if content_visibility == VisibilityScope.ORGANIZATION:
-            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
-            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_share"):
-                return True
-
-        # Check for explicit share permission
-        permission = await self._get_user_permission(
-            user_id, content_type, content_id, organization_id
-        )
-
-        return permission is not None and permission.can_share
-
-    async def can_move_content(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        content_owner_id: UUID,
-    ) -> bool:
-        """
-        Check if a user can move a piece of content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User attempting to move the content.
-        organization_id : UUID
-            Organization the content belongs to.
-        content_type : ContentType
-            Type of content (note, file, etc.).
-        content_id : UUID
-            ID of the content.
-        content_owner_id : UUID
-            Owner of the content.
-
-        Returns
-        -------
-        bool
-            True if user can move, False otherwise.
-
-        """
-        # Owner always can move
-        if content_owner_id == user_id:
-            return True
-
-        # Org OWNER/ADMIN always have full access to all org content
-        if await self._is_org_admin(user_id, organization_id):
-            return True
-
-        # Domain admin has full access within their domain
-        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
-            return True
-
-        # Check for explicit move permission
-        permission = await self._get_user_permission(
-            user_id, content_type, content_id, organization_id
-        )
-
-        return permission is not None and permission.can_move
-
-    async def get_user_permission_level(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        content_owner_id: UUID,
-        content_visibility: VisibilityScope | None = None,
-    ) -> PermissionLevel:
-        """
-        Get the user's permission level for a piece of content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-        organization_id : UUID
-            Organization the content belongs to.
-        content_type : ContentType
-            Type of content.
-        content_id : UUID
-            ID of the content.
-        content_owner_id : UUID
-            Owner of the content.
-        content_visibility : VisibilityScope | None
-            Visibility scope of the content (used to check org defaults).
-
-        Returns
-        -------
-        PermissionLevel
-            The user's permission level (VIEW, EDIT, ADMIN, OWNER).
-
-        """
-        # Owner has OWNER level
-        if content_owner_id == user_id:
-            return PermissionLevel.OWNER
-
-        # Org OWNER/ADMIN have ADMIN level on all content
-        if await self._is_org_admin(user_id, organization_id):
-            return PermissionLevel.ADMIN
-
-        # Domain admin has ADMIN level within their domain
-        if await self._is_domain_admin_for_content(user_id, organization_id, content_type):
-            return PermissionLevel.ADMIN
-
-        # Check for explicit permission
-        permission = await self._get_user_permission(
-            user_id, content_type, content_id, organization_id
-        )
-
-        if permission:
-            return permission.permission_level
-
-        # For org-wide content, check org permission defaults
-        if content_visibility == VisibilityScope.ORGANIZATION:
-            defaults_type = ContentType.PROJECT if content_type == ContentType.TASK else content_type
-            if await self._org_defaults_allow(organization_id, defaults_type, "members_can_edit"):
-                return PermissionLevel.EDIT
-
-        # Default to VIEW if user has any access
-        return PermissionLevel.VIEW
-
-    async def get_content_groups(
-        self,
-        content_type: ContentType,
-        content_id: UUID,
-        organization_id: UUID,
-    ) -> list[UUID]:
-        """
-        Get all groups that have access to a piece of content.
-
-        Parameters
-        ----------
-        content_type : ContentType
-            Type of content.
-        content_id : UUID
-            ID of the content.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        list[UUID]
-            List of group IDs.
-
-        """
-        # Import here to avoid circular imports
-        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-
-        result = await self.session.execute(
-            select(ContentGroupLink.group_id)
-            .where(ContentGroupLink.organization_id == organization_id)
-            .where(ContentGroupLink.content_type == content_type)
-            .where(ContentGroupLink.content_id == content_id)
-        )
-        return [row[0] for row in result.all()]
-
-    async def get_user_groups(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-    ) -> list[UUID]:
-        """
-        Get all groups a user is a member of in an organization.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        list[UUID]
-            List of group IDs.
-
-        """
-        # Import here to avoid circular imports
         from uniffy.core.models.login.group_member import GroupMember
-        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-
-        result = await self.session.execute(
-            select(GroupMember.group_id)
-            .where(GroupMember.user_id == user_id)
-            .where(GroupMember.is_active == True)  # noqa: E712
-            .join(
-                ContentGroupLink,
-                ContentGroupLink.group_id == GroupMember.group_id,
-            )
-            .where(ContentGroupLink.organization_id == organization_id)
-            .distinct()
-        )
-        return [row[0] for row in result.all()]
-
-    # ─────────────────────────────────────────────────────────────
-    # Private helper methods
-    # ─────────────────────────────────────────────────────────────
-
-    async def _org_defaults_allow(
-        self,
-        organization_id: UUID,
-        content_type: ContentType,
-        field: str,
-    ) -> bool:
-        """
-        Check if org permission defaults allow the given action for a content type.
-
-        When no defaults row exists, falls back to the built-in defaults
-        from the organizations domain (e.g. projects and calendar default
-        to members_can_edit=True).
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Content type to check defaults for.
-        field : str
-            The defaults field to check (e.g. 'members_can_edit').
-
-        Returns
-        -------
-        bool
-            True if the org default allows the action.
-
-        """
-        from uniffy.core.models.permissions.org_permission_defaults import (
-            OrganizationPermissionDefaults,
-        )
-
-        result = await self.session.execute(
-            select(getattr(OrganizationPermissionDefaults, field))
-            .where(OrganizationPermissionDefaults.organization_id == organization_id)
-            .where(OrganizationPermissionDefaults.content_type == content_type)
-        )
-        value = result.scalar_one_or_none()
-        return value is True
-
-    async def _is_user_in_organization(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-    ) -> bool:
-        """Check if user is a member of the organization."""
-        from uniffy.core.models.login.organization_member import OrganizationMember
-
-        result = await self.session.execute(
-            select(OrganizationMember)
-            .where(OrganizationMember.user_id == user_id)
-            .where(OrganizationMember.organization_id == organization_id)
-            .where(OrganizationMember.is_active == True)  # noqa: E712
-        )
-        return result.scalar_one_or_none() is not None
-
-    async def _can_access_group_content(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-    ) -> bool:
-        """Check if user can access group-level content."""
-        from uniffy.core.models.login.group_member import GroupMember
-        from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-
-        # Get user's groups
-        user_groups_result = await self.session.execute(
-            select(GroupMember.group_id)
-            .where(GroupMember.user_id == user_id)
-            .where(GroupMember.is_active == True)  # noqa: E712
-        )
-        user_group_ids = [row[0] for row in user_groups_result.all()]
-
-        if not user_group_ids:
-            return False
-
-        # Check if content is linked to any of user's groups
-        result = await self.session.execute(
-            select(ContentGroupLink)
-            .where(ContentGroupLink.organization_id == organization_id)
-            .where(ContentGroupLink.content_type == content_type)
-            .where(ContentGroupLink.content_id == content_id)
-            .where(ContentGroupLink.group_id.in_(user_group_ids))
-        )
-
-        return result.scalar_one_or_none() is not None
-
-    async def _has_explicit_permission(
-        self,
-        user_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        organization_id: UUID,
-    ) -> bool:
-        """Check if user has an explicit permission grant (not expired), including group grants."""
-        from sqlalchemy import or_
-
-        from uniffy.core.models.login.group_member import GroupMember
-        from uniffy.core.models.permissions.content_permission import ContentPermission
+        from uniffy.core.models.permissions.content_member import ContentMember
 
         now = datetime.now(UTC)
 
-        # Check direct user grant
-        result = await self.session.execute(
-            select(ContentPermission)
-            .where(ContentPermission.organization_id == organization_id)
-            .where(ContentPermission.content_type == content_type)
-            .where(ContentPermission.content_id == content_id)
-            .where(ContentPermission.subject_type == SubjectType.USER)
-            .where(ContentPermission.subject_id == user_id)
-            .where(ContentPermission.can_view == True)  # noqa: E712
+        # Direct user grant -- at most one row due to unique constraint.
+        direct_result = await self.session.execute(
+            select(ContentMember.role)
             .where(
+                ContentMember.organization_id == organization_id,
+                ContentMember.content_type == content_type,
+                ContentMember.content_id == content_id,
+                ContentMember.subject_type == SubjectType.USER,
+                ContentMember.subject_id == user_id,
                 or_(
-                    ContentPermission.expires_at.is_(None),
-                    ContentPermission.expires_at > now,
-                )
+                    ContentMember.expires_at.is_(None),
+                    ContentMember.expires_at > now,
+                ),
             )
         )
+        direct_role = direct_result.scalar_one_or_none()
+        if direct_role == ContentRole.BLOCKED:
+            return ContentRole.BLOCKED
 
-        if result.scalar_one_or_none() is not None:
-            return True
-
-        # Check group grant (user is member of a group that has permission)
-        user_groups_subquery = (
+        user_groups_subq = (
             select(GroupMember.group_id)
-            .where(GroupMember.user_id == user_id)
-            .where(GroupMember.is_active == True)  # noqa: E712
+            .where(
+                GroupMember.user_id == user_id,
+                GroupMember.is_active == True,  # noqa: E712
+            )
         )
+
         group_result = await self.session.execute(
-            select(ContentPermission)
-            .where(ContentPermission.organization_id == organization_id)
-            .where(ContentPermission.content_type == content_type)
-            .where(ContentPermission.content_id == content_id)
-            .where(ContentPermission.subject_type == SubjectType.GROUP)
-            .where(ContentPermission.subject_id.in_(user_groups_subquery))
-            .where(ContentPermission.can_view == True)  # noqa: E712
+            select(ContentMember.role)
             .where(
+                ContentMember.organization_id == organization_id,
+                ContentMember.content_type == content_type,
+                ContentMember.content_id == content_id,
+                ContentMember.subject_type == SubjectType.GROUP,
+                ContentMember.subject_id.in_(user_groups_subq),
                 or_(
-                    ContentPermission.expires_at.is_(None),
-                    ContentPermission.expires_at > now,
-                )
+                    ContentMember.expires_at.is_(None),
+                    ContentMember.expires_at > now,
+                ),
             )
         )
+        group_roles = [row[0] for row in group_result.all()]
+        if ContentRole.BLOCKED in group_roles:
+            return ContentRole.BLOCKED
 
-        return group_result.scalar_one_or_none() is not None
+        candidates: list[ContentRole] = []
+        if direct_role is not None:
+            candidates.append(direct_role)
+        candidates.extend(group_roles)
 
-    async def _has_permission_level(
-        self,
-        user_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        organization_id: UUID,
-        min_level: PermissionLevel,
-    ) -> bool:
-        """Check if user has at least the specified permission level."""
-        permission = await self._get_user_permission(
-            user_id, content_type, content_id, organization_id
-        )
+        if not candidates:
+            return None
 
-        if not permission:
-            return False
-
-        # Define permission hierarchy
-        level_hierarchy = {
-            PermissionLevel.VIEW: 1,
-            PermissionLevel.EDIT: 2,
-            PermissionLevel.ADMIN: 3,
-            PermissionLevel.OWNER: 4,
-        }
-
-        user_level = level_hierarchy.get(permission.permission_level, 0)
-        required_level = level_hierarchy.get(min_level, 0)
-
-        return user_level >= required_level
-
-    async def _get_user_permission(
-        self,
-        user_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        organization_id: UUID,
-    ):
-        """Get the explicit permission for a user on content (not expired).
-
-        Also checks group-level permission grants.
-        """
-        from sqlalchemy import or_
-
-        from uniffy.core.models.login.group_member import GroupMember
-        from uniffy.core.models.permissions.content_permission import ContentPermission
-
-        now = datetime.now(UTC)
-
-        # Check direct user grant first
-        result = await self.session.execute(
-            select(ContentPermission)
-            .where(ContentPermission.organization_id == organization_id)
-            .where(ContentPermission.content_type == content_type)
-            .where(ContentPermission.content_id == content_id)
-            .where(ContentPermission.subject_type == SubjectType.USER)
-            .where(ContentPermission.subject_id == user_id)
-            .where(
-                or_(
-                    ContentPermission.expires_at.is_(None),
-                    ContentPermission.expires_at > now,
-                )
-            )
-        )
-        user_permission = result.scalar_one_or_none()
-        if user_permission:
-            return user_permission
-
-        # Check group grant (user is member of a group that has permission)
-        user_groups_subquery = (
-            select(GroupMember.group_id)
-            .where(GroupMember.user_id == user_id)
-            .where(GroupMember.is_active == True)  # noqa: E712
-        )
-        group_result = await self.session.execute(
-            select(ContentPermission)
-            .where(ContentPermission.organization_id == organization_id)
-            .where(ContentPermission.content_type == content_type)
-            .where(ContentPermission.content_id == content_id)
-            .where(ContentPermission.subject_type == SubjectType.GROUP)
-            .where(ContentPermission.subject_id.in_(user_groups_subquery))
-            .where(
-                or_(
-                    ContentPermission.expires_at.is_(None),
-                    ContentPermission.expires_at > now,
-                )
-            )
-            .order_by(ContentPermission.permission_level.desc())
-            .limit(1)
-        )
-
-        return group_result.scalar_one_or_none()
+        return max(candidates, key=lambda r: ROLE_ORDINAL[r])
 
     async def _get_user_org_role(
         self,
         user_id: UUID,
         organization_id: UUID,
     ) -> OrganizationRole | None:
-        """Get the user's role in the organization."""
+        """Get the user's role in the organization. Cached per-request."""
+        from uniffy.core.models.login.organization_member import OrganizationMember
+
+        key = (user_id, organization_id)
+        if key in self._org_role_cache:
+            return self._org_role_cache[key]
+
         result = await self.session.execute(
             select(OrganizationMember.role)
-            .where(OrganizationMember.user_id == user_id)
-            .where(OrganizationMember.organization_id == organization_id)
-            .where(OrganizationMember.is_active == True)  # noqa: E712
+            .where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active == True,  # noqa: E712
+            )
         )
-        row = result.scalar_one_or_none()
-        return row if row else None
+        role = result.scalar_one_or_none()
+        self._org_role_cache[key] = role
+        return role
 
     async def _is_org_admin(
         self,
         user_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Check if user is an organization OWNER or ADMIN."""
+        """Return True if the user is an org OWNER or ADMIN."""
+        from uniffy.core.models.login.organization_member import OrganizationRole
+
         role = await self._get_user_org_role(user_id, organization_id)
         return role in (OrganizationRole.OWNER, OrganizationRole.ADMIN)
+
+    async def _is_user_in_organization(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> bool:
+        """Return True if the user has an active membership in the org."""
+        return await self._get_user_org_role(user_id, organization_id) is not None
 
     async def _is_domain_admin_for_content(
         self,
@@ -764,24 +308,17 @@ class PermissionChecker:
         organization_id: UUID,
         content_type: ContentType,
     ) -> bool:
-        """Check if user is a domain admin for the domain matching this content type."""
-        from uniffy.core.auth.domain_admin import is_domain_admin
-        from uniffy.core.models.shared import DomainType
-
-        domain_map: dict[ContentType, DomainType] = {
-            ContentType.NOTE: DomainType.NOTES,
-            ContentType.FILE: DomainType.FILES,
-            ContentType.CALENDAR_EVENT: DomainType.CALENDAR,
-            ContentType.CHAT_MESSAGE: DomainType.CHAT,
-            ContentType.CHAT: DomainType.CHAT,
-            ContentType.PROJECT: DomainType.PROJECTS,
-            ContentType.TASK: DomainType.PROJECTS,
-            ContentType.AGENT: DomainType.AGENTS,
-            ContentType.PROVIDER_KEY: DomainType.AGENTS,
-            ContentType.PROMPT: DomainType.AGENTS,
-            ContentType.AGENT_CRON_TASK: DomainType.AGENTS,
-        }
-        domain = domain_map.get(content_type)
+        """Return True if the user is a domain admin for the content's domain."""
+        domain = _CONTENT_TYPE_TO_DOMAIN.get(content_type)
         if domain is None:
             return False
-        return await is_domain_admin(self.session, user_id, organization_id, domain)
+
+        key = (user_id, organization_id, domain)
+        if key in self._domain_admin_cache:
+            return self._domain_admin_cache[key]
+
+        from uniffy.core.auth.domain_admin import is_domain_admin
+
+        result = await is_domain_admin(self.session, user_id, organization_id, domain)
+        self._domain_admin_cache[key] = result
+        return result

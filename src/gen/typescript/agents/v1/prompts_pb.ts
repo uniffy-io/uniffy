@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { PaginationRequest, PaginationResponse, VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole, PaginationRequest, PaginationResponse } from "../../common/v1/common_pb.js";
 
 /**
  * Source of a prompt definition
@@ -110,14 +110,19 @@ export class PromptInfo extends Message<PromptInfo> {
   updatedAt?: Timestamp;
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 11;
+   * @generated from field: common.v1.AccessMode access_mode = 11;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * @generated from field: string created_by = 12;
    */
   createdBy = "";
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 13;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<PromptInfo>) {
     super();
@@ -137,8 +142,9 @@ export class PromptInfo extends Message<PromptInfo> {
     { no: 8, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "created_at", kind: "message", T: Timestamp },
     { no: 10, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 11, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 11, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 12, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 13, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromptInfo {
@@ -197,9 +203,14 @@ export class CreatePromptRequest extends Message<CreatePromptRequest> {
   ownerId?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 7;
+   * @generated from field: optional common.v1.AccessMode access_mode = 7;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 8;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CreatePromptRequest>) {
     super();
@@ -215,7 +226,8 @@ export class CreatePromptRequest extends Message<CreatePromptRequest> {
     { no: 4, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 7, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 8, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreatePromptRequest {
@@ -436,9 +448,14 @@ export class UpdatePromptRequest extends Message<UpdatePromptRequest> {
   content?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 7;
+   * @generated from field: optional common.v1.AccessMode access_mode = 7;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 8;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<UpdatePromptRequest>) {
     super();
@@ -454,7 +471,8 @@ export class UpdatePromptRequest extends Message<UpdatePromptRequest> {
     { no: 4, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 7, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 8, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdatePromptRequest {

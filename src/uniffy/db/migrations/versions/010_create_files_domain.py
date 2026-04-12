@@ -25,12 +25,21 @@ down_revision: str | None = "009"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
     create_type=False,
 )
 _extraction_status_enum = postgresql.ENUM(
@@ -54,9 +63,6 @@ _upload_status_enum = postgresql.ENUM(
 
 def upgrade() -> None:
     """Create files domain tables."""
-    # Add FOLDER to contenttype enum
-    op.execute("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'FOLDER'")
-
     # Create new enums
     postgresql.ENUM(
         "PENDING",
@@ -80,7 +86,10 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column(
+            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
+        ),
+        sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
         sa.Column("parent_id", sa.Uuid(), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="false"),
@@ -94,7 +103,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_files_folders_organization_id", "files_folders", ["organization_id"])
     op.create_index("ix_files_folders_owner_id", "files_folders", ["owner_id"])
-    op.create_index("ix_files_folders_visibility", "files_folders", ["visibility"])
+    op.create_index("ix_files_folders_access_mode", "files_folders", ["access_mode"])
     op.create_index("ix_files_folders_parent_id", "files_folders", ["parent_id"])
 
     # Create file versions table (files references it for current_version_id)
@@ -121,7 +130,10 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column(
+            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
+        ),
+        sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("filename", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
         sa.Column("original_filename", sqlmodel.sql.sqltypes.AutoString(length=500), nullable=False),
         sa.Column("mime_type", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
@@ -152,7 +164,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_files_files_organization_id", "files_files", ["organization_id"])
     op.create_index("ix_files_files_owner_id", "files_files", ["owner_id"])
-    op.create_index("ix_files_files_visibility", "files_files", ["visibility"])
+    op.create_index("ix_files_files_access_mode", "files_files", ["access_mode"])
     op.create_index("ix_files_files_folder_id", "files_files", ["folder_id"])
 
     # Add FK from file_versions to files now that files table exists
@@ -179,7 +191,10 @@ def upgrade() -> None:
         sa.Column("total_chunks", sa.Integer(), nullable=False),
         sa.Column("chunk_size", sa.Integer(), nullable=False),
         sa.Column("folder_id", sa.Uuid(), nullable=True),
-        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column(
+            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
+        ),
+        sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("status", _upload_status_enum, nullable=False, server_default="ACTIVE"),
         sa.Column("parts_completed", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
@@ -241,5 +256,3 @@ def downgrade() -> None:
     # Drop enums
     op.execute("DROP TYPE IF EXISTS uploadstatus")
     op.execute("DROP TYPE IF EXISTS extractionstatus")
-
-    # Note: FOLDER enum value cannot be removed from contenttype without recreating the type

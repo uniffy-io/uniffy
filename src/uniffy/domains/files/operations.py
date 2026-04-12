@@ -9,17 +9,29 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from uniffy.core.auth.permissions import (
+    PermissionChecker,
+    resolve_content_defaults,
+)
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.content.members import register_content_loader
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
+from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.storage import get_s3_client
-from uniffy.core.types import ContentType, VisibilityScope, generate_id
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    ContentType,
+    SubjectType,
+    generate_id,
+)
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
 
 # Chunk size constants (in bytes)
@@ -174,12 +186,15 @@ class FileOperations(BaseContentOperations[File]):
         mime_type: str,
         total_size: int,
         folder_id: UUID | None = None,
-        visibility: VisibilityScope = VisibilityScope.PRIVATE,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
     ) -> MultipartUpload:
         """
         Initiate a new file upload.
 
-        Creates a MultipartUpload record and initiates S3 multipart upload.
+        Creates a :class:`MultipartUpload` record (with the access policy
+        the resulting :class:`File` will inherit) and starts the S3
+        multipart upload.
 
         Parameters
         ----------
@@ -195,8 +210,11 @@ class FileOperations(BaseContentOperations[File]):
             Expected total size in bytes.
         folder_id : UUID | None
             Target folder ID (None for root).
-        visibility : VisibilityScope
-            Target visibility for the file.
+        access_mode : AccessMode | None
+            Access mode the resulting file should use. If ``None``, the
+            org default for ``ContentType.FILE`` is resolved.
+        baseline_role : ContentRole | None
+            Baseline role when ``access_mode == OPEN_TO_ORG``.
 
         Returns
         -------
@@ -204,20 +222,38 @@ class FileOperations(BaseContentOperations[File]):
             The created upload record with S3 upload ID.
 
         """
-        # Generate storage key
+        # Resolve access policy for the new file
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, ContentType.FILE
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
+
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+        else:
+            baseline_role = None
+
         storage_key = f"{organization_id}/{user_id}/{generate_id()}/{filename}"
 
-        # Initiate S3 multipart upload
         s3_upload_id = await self.s3.create_multipart_upload(
             key=storage_key,
             content_type=mime_type,
         )
 
-        # Calculate chunks with adaptive sizing based on file size
         chunk_size = calculate_chunk_size(total_size)
         total_chunks = (total_size + chunk_size - 1) // chunk_size
 
-        # Create upload record
         upload = MultipartUpload(
             organization_id=organization_id,
             user_id=user_id,
@@ -230,7 +266,8 @@ class FileOperations(BaseContentOperations[File]):
             total_chunks=total_chunks,
             chunk_size=chunk_size,
             folder_id=folder_id,
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
             status=UploadStatus.ACTIVE,
             parts_completed=[],
             expires_at=datetime.now(UTC) + timedelta(hours=DEFAULT_UPLOAD_EXPIRY_HOURS),
@@ -346,7 +383,8 @@ class FileOperations(BaseContentOperations[File]):
         file = File(
             organization_id=upload.organization_id,
             owner_id=upload.user_id,
-            visibility=upload.visibility,
+            access_mode=upload.access_mode,
+            baseline_role=upload.baseline_role,
             filename=upload.filename,
             original_filename=upload.filename,
             mime_type=upload.mime_type,
@@ -375,14 +413,21 @@ class FileOperations(BaseContentOperations[File]):
         # Update file with current version
         file.current_version_id = version.id
 
-        # Create group links if visibility is GROUP
-        if upload.visibility == VisibilityScope.GROUP and group_ids:
-            await self._create_group_links(
-                content_id=file.id,
-                organization_id=upload.organization_id,
-                user_id=user_id,
-                group_ids=group_ids,
-            )
+        # Optional convenience: add explicit group ContentMember rows.
+        # Canonical path is the MembersService AddMember RPC.
+        if group_ids:
+            for gid in group_ids:
+                self.session.add(
+                    ContentMember(
+                        organization_id=upload.organization_id,
+                        content_type=ContentType.FILE,
+                        content_id=file.id,
+                        subject_type=SubjectType.GROUP,
+                        subject_id=gid,
+                        role=ContentRole.VIEWER,
+                        added_by_user_id=user_id,
+                    )
+                )
 
         # Mark upload as completed
         upload.status = UploadStatus.COMPLETED
@@ -394,7 +439,7 @@ class FileOperations(BaseContentOperations[File]):
         # Index for search
         await self._index_for_search(
             model=file,
-            group_ids=group_ids if upload.visibility == VisibilityScope.GROUP else None,
+            skip_member_lookup=not group_ids,
         )
         await self.session.commit()
 
@@ -511,11 +556,12 @@ class FileOperations(BaseContentOperations[File]):
         filename: str | None = None,
         tags: list[str] | None = None,
         description: str | None = None,
-        visibility: VisibilityScope | None = None,
-        target_group_ids: list[UUID] | None = None,
     ) -> File:
         """
         Update file metadata.
+
+        Access policy changes (access mode, baseline role, members) go
+        through the MembersService, not this method.
 
         Parameters
         ----------
@@ -531,10 +577,6 @@ class FileOperations(BaseContentOperations[File]):
             New tags.
         description : str | None
             New description.
-        visibility : VisibilityScope | None
-            New visibility.
-        target_group_ids : list[UUID] | None
-            Groups to share with (required if visibility is GROUP).
 
         Returns
         -------
@@ -556,49 +598,13 @@ class FileOperations(BaseContentOperations[File]):
         if description is not None:
             file.description = description
 
-        # Handle visibility change with proper group link management
-        old_visibility = file.visibility
-        if visibility is not None and visibility != old_visibility:
-            # Only owner can change visibility scope
-            if file.owner_id != user_id:
-                raise PermissionDeniedError("change_visibility", "file")
-
-            file.visibility = visibility
-
-            # Handle group links based on new visibility
-            if visibility == VisibilityScope.GROUP:
-                if not target_group_ids:
-                    from uniffy.core.errors import ValidationError
-
-                    raise ValidationError("group_ids required for GROUP visibility")
-
-                # Remove old group links
-                await self._remove_group_links(file.id)
-
-                # Create new group links
-                await self._create_group_links(
-                    content_id=file.id,
-                    group_ids=target_group_ids,
-                    user_id=user_id,
-                    organization_id=organization_id,
-                )
-            elif old_visibility == VisibilityScope.GROUP:
-                # Moving away from GROUP visibility - remove all group links
-                await self._remove_group_links(file.id)
-
         file.version += 1
         file.updated_at = datetime.now(UTC)
 
         await self.session.commit()
         await self.session.refresh(file)
 
-        # Update search index with current group IDs
-        new_group_ids = (
-            target_group_ids
-            if visibility == VisibilityScope.GROUP
-            else await self._get_content_group_ids(file.id)
-        )
-        await self._index_for_search(model=file, group_ids=new_group_ids)
+        await self._index_for_search(model=file)
         await self.session.commit()
 
         # Propagate filename change to mention labels in referencing content
@@ -714,8 +720,7 @@ class FileOperations(BaseContentOperations[File]):
         await self.session.refresh(file)
 
         # Re-index for search
-        group_ids = await self._get_content_group_ids(file.id)
-        await self._index_for_search(model=file, group_ids=group_ids)
+        await self._index_for_search(model=file)
         await self.session.commit()
 
         return file
@@ -725,7 +730,7 @@ class FileOperations(BaseContentOperations[File]):
         user_id: UUID,
         organization_id: UUID,
         folder_id: UUID | None | str = None,
-        visibility: VisibilityScope | None = None,
+        access_mode: AccessMode | None = None,
         group_id: UUID | None = None,
         personal_only: bool = False,
         shared_only: bool = False,
@@ -747,14 +752,15 @@ class FileOperations(BaseContentOperations[File]):
             Organization ID.
         folder_id : UUID | None | str
             Folder filter (None=root, "all"=all files, UUID=specific folder).
-        visibility : VisibilityScope | None
-            Filter by visibility.
+        access_mode : AccessMode | None
+            Optional access-mode filter.
         group_id : UUID | None
-            Filter by group.
+            Filter to files where the given group is an explicit member.
         personal_only : bool
-            Only personal files.
+            Only files owned by the requester.
         shared_only : bool
-            Only files shared with user (not owned by user).
+            Only files the requester does not own but has access to via
+            an explicit ContentMember row (any non-blocked role).
         include_deleted : bool
             Include trash.
         tags : list[str] | None
@@ -776,78 +782,108 @@ class FileOperations(BaseContentOperations[File]):
         """
         query = select(File).where(File.organization_id == organization_id)
 
-        # Apply visibility/access filter
         if personal_only:
-            personal_filter = self.access_query.build_personal_filter(
-                user_id=user_id,
-                owner_id_column=File.owner_id,
-                visibility_column=File.visibility,
-            )
-            query = query.where(personal_filter)
+            query = query.where(File.owner_id == user_id)
         elif shared_only:
-            shared_filter = self.access_query.build_shared_with_me_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=File.id,
-                owner_id_column=File.owner_id,
-                visibility_column=File.visibility,
+            from sqlalchemy import and_
+
+            from uniffy.core.models.login.group_member import GroupMember
+
+            now = datetime.now(UTC)
+            user_groups_subq = (
+                select(GroupMember.group_id)
+                .where(
+                    GroupMember.user_id == user_id,
+                    GroupMember.is_active == True,  # noqa: E712
+                )
             )
-            query = query.where(shared_filter)
-        elif group_id:
-            group_filter = self.access_query.build_group_filter(
-                group_id=group_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=File.id,
-                visibility_column=File.visibility,
+            shared_subq = (
+                select(ContentMember.content_id)
+                .where(
+                    ContentMember.organization_id == organization_id,
+                    ContentMember.content_type == self.content_type,
+                    ContentMember.role != ContentRole.BLOCKED,
+                    or_(
+                        ContentMember.expires_at.is_(None),
+                        ContentMember.expires_at > now,
+                    ),
+                    or_(
+                        and_(
+                            ContentMember.subject_type == SubjectType.USER,
+                            ContentMember.subject_id == user_id,
+                        ),
+                        and_(
+                            ContentMember.subject_type == SubjectType.GROUP,
+                            ContentMember.subject_id.in_(user_groups_subq),
+                        ),
+                    ),
+                )
             )
-            query = query.where(group_filter)
+            query = query.where(File.owner_id != user_id, File.id.in_(shared_subq))
         else:
-            access_filter = self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=File.id,
-                owner_id_column=File.owner_id,
-                visibility_column=File.visibility,
+            is_org_admin = await self.permission_checker.is_org_admin(
+                user_id, organization_id
             )
-            query = query.where(access_filter)
+            is_domain_admin = await self.permission_checker.is_domain_admin(
+                user_id, organization_id, self.content_type
+            )
+            if not (is_org_admin or is_domain_admin):
+                access_filter = self.access_query.build_accessible_filter(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=self.content_type,
+                    content_id_column=File.id,
+                    owner_id_column=File.owner_id,
+                    access_mode_column=File.access_mode,
+                    baseline_role_column=File.baseline_role,
+                )
+                query = query.where(access_filter)
+
+        if group_id is not None:
+            now = datetime.now(UTC)
+            group_member_subq = (
+                select(ContentMember.content_id).where(
+                    ContentMember.organization_id == organization_id,
+                    ContentMember.content_type == self.content_type,
+                    ContentMember.subject_type == SubjectType.GROUP,
+                    ContentMember.subject_id == group_id,
+                    ContentMember.role != ContentRole.BLOCKED,
+                    or_(
+                        ContentMember.expires_at.is_(None),
+                        ContentMember.expires_at > now,
+                    ),
+                )
+            )
+            query = query.where(File.id.in_(group_member_subq))
 
         # Folder filter with parent access check
         if folder_id is None:
-            # Show only root-level files (no folder)
             query = query.where(File.folder_id.is_(None))
         elif folder_id != "all":
-            # Show files in specific folder
             query = query.where(File.folder_id == folder_id)
         else:
-            # folder_id == "all" - enforce parent folder access
-            # Build subquery for accessible folder IDs
             folder_access_filter = self.access_query.build_accessible_filter(
                 user_id=user_id,
                 organization_id=organization_id,
                 content_type=ContentType.FOLDER,
                 content_id_column=Folder.id,
                 owner_id_column=Folder.owner_id,
-                visibility_column=Folder.visibility,
+                access_mode_column=Folder.access_mode,
+                baseline_role_column=Folder.baseline_role,
             )
-
             accessible_folders_query = select(Folder.id).where(
                 Folder.organization_id == organization_id,
                 folder_access_filter,
             )
-
-            # Only show files in accessible folders OR root-level files
             query = query.where(
                 or_(
-                    File.folder_id.is_(None),  # Root-level files
-                    File.folder_id.in_(accessible_folders_query),  # Files in accessible folders
+                    File.folder_id.is_(None),
+                    File.folder_id.in_(accessible_folders_query),
                 )
             )
 
-        if visibility:
-            query = query.where(File.visibility == visibility)
+        if access_mode is not None:
+            query = query.where(File.access_mode == access_mode)
 
         if not include_deleted:
             query = query.where(File.is_deleted == False)  # noqa: E712
@@ -856,21 +892,16 @@ class FileOperations(BaseContentOperations[File]):
             for tag in tags:
                 query = query.where(File.tags.contains([tag]))
 
-        # Count total
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
-        # Sort
         sort_col = getattr(File, sort_by, File.updated_at)
         if sort_order == "asc":
             query = query.order_by(sort_col.asc())
         else:
             query = query.order_by(sort_col.desc())
 
-        # Paginate
         query = query.offset((page - 1) * page_size).limit(page_size)
-
-        # Eager-load media_info for converter
         query = query.options(selectinload(File.media_info))
 
         result = await self.session.execute(query)
@@ -975,11 +1006,12 @@ class FileOperations(BaseContentOperations[File]):
 
 
 class FolderOperations:
-    """
-    Folder CRUD operations.
+    """Folder CRUD operations.
 
-    Folders don't extend BaseContentOperations because they're
-    not searchable, but they do use the permission system.
+    Folders are not searchable but they participate in the permission
+    system through the same generic ``ContentMember`` table. Most access
+    checks are delegated to :class:`PermissionChecker` directly so folders
+    don't pull in the full :class:`BaseContentOperations` machinery.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -987,6 +1019,7 @@ class FolderOperations:
         self.session = session
         self.content_type = ContentType.FOLDER
         self.access_query = ContentAccessQuery(session)
+        self.permission_checker = PermissionChecker(session)
 
     async def create(
         self,
@@ -994,36 +1027,38 @@ class FolderOperations:
         organization_id: UUID,
         name: str,
         parent_id: UUID | None = None,
-        visibility: VisibilityScope = VisibilityScope.PRIVATE,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
     ) -> Folder:
-        """
-        Create a new folder.
+        """Create a new folder."""
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, ContentType.FOLDER
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
 
-        Parameters
-        ----------
-        user_id : UUID
-            User creating the folder.
-        organization_id : UUID
-            Organization ID.
-        name : str
-            Folder name.
-        parent_id : UUID | None
-            Parent folder ID.
-        visibility : VisibilityScope
-            Folder visibility.
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+        else:
+            baseline_role = None
 
-        Returns
-        -------
-        Folder
-            Created folder.
-
-        """
         folder = Folder(
             organization_id=organization_id,
             owner_id=user_id,
             name=name,
             parent_id=parent_id,
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
         )
 
         self.session.add(folder)
@@ -1053,41 +1088,30 @@ class FolderOperations:
         folder_id: UUID,
         name: str | None = None,
         parent_id: UUID | None | str = None,
-        visibility: VisibilityScope | None = None,
-        target_group_ids: list[UUID] | None = None,
     ) -> Folder:
-        """
-        Update a folder.
+        """Update a folder's metadata.
 
-        Parameters
-        ----------
-        user_id : UUID
-            User performing update.
-        organization_id : UUID
-            Organization ID.
-        folder_id : UUID
-            Folder to update.
-        name : str | None
-            New name.
-        parent_id : UUID | None | str
-            New parent ("" to move to root).
-        visibility : VisibilityScope | None
-            New visibility.
-        target_group_ids : list[UUID] | None
-            Groups to share with (required if visibility is GROUP).
-
-        Returns
-        -------
-        Folder
-            Updated folder.
-
+        Access policy changes (access mode, members) go through the
+        MembersService, not this method.
         """
         folder = await self.get_by_id(folder_id, organization_id)
         if not folder:
             raise NotFoundError("Folder", folder_id)
 
         if folder.owner_id != user_id:
-            raise PermissionDeniedError("edit", "folder")
+            role = await self.permission_checker.effective_role(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id=folder.id,
+                owner_id=folder.owner_id,
+                access_mode=folder.access_mode,
+                baseline_role=folder.baseline_role,
+            )
+            from uniffy.core.auth.permissions import role_can_edit
+
+            if not role_can_edit(role):
+                raise PermissionDeniedError("edit", "folder")
 
         if name is not None:
             folder.name = name
@@ -1095,54 +1119,6 @@ class FolderOperations:
             folder.parent_id = None
         elif parent_id is not None:
             folder.parent_id = parent_id
-
-        # Handle visibility change with proper group link management
-        old_visibility = folder.visibility
-        if visibility is not None and visibility != old_visibility:
-            folder.visibility = visibility
-
-            # Handle group links based on new visibility
-            if visibility == VisibilityScope.GROUP:
-                if not target_group_ids:
-                    from uniffy.core.errors import ValidationError
-
-                    raise ValidationError("group_ids required for GROUP visibility")
-
-                # Remove old group links (folders don't extend BaseContentOperations
-                # so we do it directly)
-                from sqlalchemy import delete
-
-                from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-
-                await self.session.execute(
-                    delete(ContentGroupLink).where(
-                        ContentGroupLink.content_id == folder.id,
-                        ContentGroupLink.content_type == ContentType.FILE,
-                    )
-                )
-
-                # Create new group links
-                for group_id in target_group_ids:
-                    link = ContentGroupLink(
-                        organization_id=organization_id,
-                        content_type=ContentType.FILE,
-                        content_id=folder.id,
-                        group_id=group_id,
-                        linked_by_user_id=user_id,
-                    )
-                    self.session.add(link)
-            elif old_visibility == VisibilityScope.GROUP:
-                # Moving away from GROUP visibility - remove all group links
-                from sqlalchemy import delete
-
-                from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-
-                await self.session.execute(
-                    delete(ContentGroupLink).where(
-                        ContentGroupLink.content_id == folder.id,
-                        ContentGroupLink.content_type == ContentType.FILE,
-                    )
-                )
 
         folder.updated_at = datetime.now(UTC)
 
@@ -1298,66 +1274,40 @@ class FolderOperations:
         parent_id: UUID | None = None,
         include_deleted: bool = False,
         personal_only: bool = False,
-        visibility: VisibilityScope | None = None,
+        access_mode: AccessMode | None = None,
     ) -> list[Folder]:
-        """
-        List folders in a parent folder with permission filtering.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting list.
-        organization_id : UUID
-            Organization ID.
-        parent_id : UUID | None
-            Parent folder ID (None for root).
-        include_deleted : bool
-            Include deleted folders.
-        personal_only : bool
-            Only show user's PRIVATE folders.
-        visibility : VisibilityScope | None
-            Filter by visibility scope.
-
-        Returns
-        -------
-        list[Folder]
-            List of folders user has access to.
-
-        """
+        """List folders with permission filtering."""
         query = select(Folder).where(Folder.organization_id == organization_id)
 
-        # Apply permission filtering
         if personal_only:
-            # Show only user's PRIVATE folders
-            personal_filter = self.access_query.build_personal_filter(
-                user_id=user_id,
-                owner_id_column=Folder.owner_id,
-                visibility_column=Folder.visibility,
-            )
-            query = query.where(personal_filter)
+            query = query.where(Folder.owner_id == user_id)
         else:
-            # Show all accessible folders (PRIVATE owned by user, GROUP where member, ORGANIZATION)
-            access_filter = self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Folder.id,
-                owner_id_column=Folder.owner_id,
-                visibility_column=Folder.visibility,
+            is_org_admin = await self.permission_checker.is_org_admin(
+                user_id, organization_id
             )
-            query = query.where(access_filter)
+            is_domain_admin = await self.permission_checker.is_domain_admin(
+                user_id, organization_id, self.content_type
+            )
+            if not (is_org_admin or is_domain_admin):
+                access_filter = self.access_query.build_accessible_filter(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=self.content_type,
+                    content_id_column=Folder.id,
+                    owner_id_column=Folder.owner_id,
+                    access_mode_column=Folder.access_mode,
+                    baseline_role_column=Folder.baseline_role,
+                )
+                query = query.where(access_filter)
 
-        # Apply parent folder filter
         if parent_id is None:
             query = query.where(Folder.parent_id.is_(None))
         else:
             query = query.where(Folder.parent_id == parent_id)
 
-        # Apply visibility filter if specified
-        if visibility:
-            query = query.where(Folder.visibility == visibility)
+        if access_mode is not None:
+            query = query.where(Folder.access_mode == access_mode)
 
-        # Filter deleted folders
         if not include_deleted:
             query = query.where(Folder.is_deleted == False)  # noqa: E712
 
@@ -1365,3 +1315,40 @@ class FolderOperations:
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+
+# Content loader registration for ContentMembersOperations
+
+
+async def _load_file(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_id: UUID,
+) -> File | None:
+    """Loader for ``ContentMembersOperations`` to fetch a file row."""
+    result = await session.execute(
+        select(File).where(
+            File.id == content_id,
+            File.organization_id == organization_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _load_folder(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_id: UUID,
+) -> Folder | None:
+    """Loader for ``ContentMembersOperations`` to fetch a folder row."""
+    result = await session.execute(
+        select(Folder).where(
+            Folder.id == content_id,
+            Folder.organization_id == organization_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+register_content_loader(ContentType.FILE, _load_file)
+register_content_loader(ContentType.FOLDER, _load_folder)

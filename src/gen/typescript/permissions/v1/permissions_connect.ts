@@ -3,79 +3,76 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetMyPermissionRequest, GrantPermissionRequest, ListContentPermissionsRequest, PermissionInfo, PermissionListResponse, RevokePermissionRequest, RevokePermissionResponse, SearchShareTargetsRequest, ShareTargetsResponse, UpdatePermissionRequest } from "./permissions_pb.js";
+import { AccessModeResponse, AddMemberRequest, ListMemberEventsRequest, ListMemberEventsResponse, ListMembersRequest, ListMembersResponse, MemberResponse, RemoveMemberRequest, RemoveMemberResponse, SetAccessModeRequest, TransferOwnershipRequest, TransferOwnershipResponse, UpdateMemberRoleRequest } from "./permissions_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
- * @generated from service permissions.v1.PermissionsService
+ * @generated from service permissions.v1.MembersService
  */
-export const PermissionsService = {
-  typeName: "permissions.v1.PermissionsService",
+export const MembersService = {
+  typeName: "permissions.v1.MembersService",
   methods: {
     /**
-     * Grant permission to a user or group on content
-     *
-     * @generated from rpc permissions.v1.PermissionsService.GrantPermission
+     * @generated from rpc permissions.v1.MembersService.ListMembers
      */
-    grantPermission: {
-      name: "GrantPermission",
-      I: GrantPermissionRequest,
-      O: PermissionInfo,
+    listMembers: {
+      name: "ListMembers",
+      I: ListMembersRequest,
+      O: ListMembersResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * Revoke permission from a user or group on content
-     *
-     * @generated from rpc permissions.v1.PermissionsService.RevokePermission
+     * @generated from rpc permissions.v1.MembersService.AddMember
      */
-    revokePermission: {
-      name: "RevokePermission",
-      I: RevokePermissionRequest,
-      O: RevokePermissionResponse,
+    addMember: {
+      name: "AddMember",
+      I: AddMemberRequest,
+      O: MemberResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * Update an existing permission
-     *
-     * @generated from rpc permissions.v1.PermissionsService.UpdatePermission
+     * @generated from rpc permissions.v1.MembersService.UpdateMemberRole
      */
-    updatePermission: {
-      name: "UpdatePermission",
-      I: UpdatePermissionRequest,
-      O: PermissionInfo,
+    updateMemberRole: {
+      name: "UpdateMemberRole",
+      I: UpdateMemberRoleRequest,
+      O: MemberResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * List all permissions for a piece of content
-     *
-     * @generated from rpc permissions.v1.PermissionsService.ListContentPermissions
+     * @generated from rpc permissions.v1.MembersService.RemoveMember
      */
-    listContentPermissions: {
-      name: "ListContentPermissions",
-      I: ListContentPermissionsRequest,
-      O: PermissionListResponse,
+    removeMember: {
+      name: "RemoveMember",
+      I: RemoveMemberRequest,
+      O: RemoveMemberResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * Get the current user's permission on content
-     *
-     * @generated from rpc permissions.v1.PermissionsService.GetMyPermission
+     * @generated from rpc permissions.v1.MembersService.SetAccessMode
      */
-    getMyPermission: {
-      name: "GetMyPermission",
-      I: GetMyPermissionRequest,
-      O: PermissionInfo,
+    setAccessMode: {
+      name: "SetAccessMode",
+      I: SetAccessModeRequest,
+      O: AccessModeResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * Search for users and groups to share with
-     *
-     * @generated from rpc permissions.v1.PermissionsService.SearchShareTargets
+     * @generated from rpc permissions.v1.MembersService.TransferOwnership
      */
-    searchShareTargets: {
-      name: "SearchShareTargets",
-      I: SearchShareTargetsRequest,
-      O: ShareTargetsResponse,
+    transferOwnership: {
+      name: "TransferOwnership",
+      I: TransferOwnershipRequest,
+      O: TransferOwnershipResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc permissions.v1.MembersService.ListMemberEvents
+     */
+    listMemberEvents: {
+      name: "ListMemberEvents",
+      I: ListMemberEventsRequest,
+      O: ListMemberEventsResponse,
       kind: MethodKind.Unary,
     },
   }

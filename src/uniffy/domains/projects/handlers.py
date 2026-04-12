@@ -1,4 +1,4 @@
-"""Projects RPC handlers - thin layer delegating to operations."""
+"""Projects RPC handlers."""
 
 import json
 import secrets
@@ -64,13 +64,14 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     ViewResponse,
 )
 
-from uniffy.core.auth.permissions.checker import PermissionChecker
-from uniffy.core.converters.common_proto import visibility_from_proto
+from uniffy.core.converters.common_proto import (
+    access_mode_from_proto,
+    content_role_from_proto,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.view_config import ViewConfig
-from uniffy.core.types import ContentType as DomainContentType
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.converters import (
@@ -91,12 +92,28 @@ from uniffy.domains.projects.operations import (
 )
 
 
-class ProjectsHandlers:
-    """Projects RPC handlers."""
+def _parse_uuid(value: str, field: str) -> UUID:
+    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
-    # =========================================================================
-    # Project handlers
-    # =========================================================================
+
+def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Translate a domain exception into the matching ``ConnectError``."""
+    if isinstance(exc, NotFoundError):
+        return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
+    if isinstance(exc, ValidationError):
+        return ConnectError(Code.FAILED_PRECONDITION, str(exc))
+    if isinstance(exc, PermissionDeniedError):
+        return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    return ConnectError(Code.INTERNAL, "Internal server error")
+
+
+class ProjectsHandlers:
+    """RPC handlers for ``projects.v1.ProjectsService``."""
 
     async def create_project(
         self,
@@ -104,24 +121,22 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ProjectResponse:
         """Create a new project."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
+        )
+        baseline_role = (
+            content_role_from_proto(request.baseline_role)
+            if request.baseline_role
+            else None
+        )
+        slug = request.slug if request.HasField("slug") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProjectOperations(session)
-
-                # Parse optional visibility
-                visibility = None
-                if request.HasField("visibility"):
-                    visibility = visibility_from_proto(request.visibility)
-
-                slug = request.slug if request.HasField("slug") else None
-
                 project = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -129,21 +144,17 @@ class ProjectsHandlers:
                     description=request.description if request.HasField("description") else "",
                     icon=request.icon if request.HasField("icon") else "folder",
                     color=request.color if request.HasField("color") else "#3b82f6",
-                    visibility=visibility,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
                     slug=slug,
                 )
-
-                # Fetch fields and views for response
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
-
                 return ProjectResponse(project=project_to_proto(project, fields, views))
-
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error creating project")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("create_project", exc) from exc
 
     async def get_project(
         self,
@@ -151,45 +162,26 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ProjectResponse:
         """Get a project by ID."""
-        try:
-            project_id = UUID(request.project_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProjectOperations(session)
                 project = await ops.get_by_id(user_id, organization_id, project_id)
+                user_role = await ops._resolve_role(user_id, organization_id, project)
 
-                # Compute user's permission level
-                checker = PermissionChecker(session)
-                perm_level = await checker.get_user_permission_level(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=DomainContentType.PROJECT,
-                    content_id=project.id,
-                    content_owner_id=project.owner_id,
-                    content_visibility=project.visibility,
-                )
-
-                # Fetch fields and views
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
 
-                return ProjectResponse(project=project_to_proto(project, fields, views, perm_level))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+                return ProjectResponse(
+                    project=project_to_proto(project, fields, views, user_role)
+                )
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error getting project")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_project", exc) from exc
 
     async def update_project(
         self,
@@ -197,68 +189,50 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ProjectResponse:
         """Update an existing project."""
-        try:
-            project_id = UUID(request.project_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
+
+        updates: dict = {}
+        if request.HasField("name"):
+            updates["name"] = request.name
+        if request.HasField("description"):
+            updates["description"] = request.description
+        if request.HasField("icon"):
+            updates["icon"] = request.icon
+        if request.HasField("color"):
+            updates["color"] = request.color
+        if request.HasField("default_view_id"):
+            updates["default_view_id"] = request.default_view_id
+        if request.HasField("slug"):
+            updates["slug"] = request.slug
+        if request.type_field_schemas:
+            updates["type_field_schemas"] = {
+                type_name: {
+                    "shown_field_ids": list(schema.shown_field_ids),
+                    "required_field_ids": list(schema.required_field_ids),
+                }
+                for type_name, schema in request.type_field_schemas.items()
+            }
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProjectOperations(session)
-
-                # Build update kwargs
-                updates = {}
-                if request.HasField("name"):
-                    updates["name"] = request.name
-                if request.HasField("description"):
-                    updates["description"] = request.description
-                if request.HasField("icon"):
-                    updates["icon"] = request.icon
-                if request.HasField("color"):
-                    updates["color"] = request.color
-                if request.HasField("visibility"):
-                    updates["visibility"] = visibility_from_proto(request.visibility)
-                if request.member_ids:
-                    updates["member_ids"] = list(request.member_ids)
-                if request.HasField("default_view_id"):
-                    updates["default_view_id"] = request.default_view_id
-                if request.HasField("slug"):
-                    updates["slug"] = request.slug
-                if request.type_field_schemas:
-                    updates["type_field_schemas"] = {
-                        type_name: {
-                            "shown_field_ids": list(schema.shown_field_ids),
-                            "required_field_ids": list(schema.required_field_ids),
-                        }
-                        for type_name, schema in request.type_field_schemas.items()
-                    }
-
                 try:
                     project = await ops.update(user_id, organization_id, project_id, **updates)
-                except IntegrityError:
+                except IntegrityError as exc:
                     raise ConnectError(
                         Code.ALREADY_EXISTS,
                         "A project with that slug already exists",
-                    )
+                    ) from exc
 
-                # Fetch fields and views
                 fields = await queries.get_fields_for_project(session, project.id)
                 views = await queries.get_views_for_project(session, project.id)
-
                 return ProjectResponse(project=project_to_proto(project, fields, views))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error updating project")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_project", exc) from exc
 
     async def delete_project(
         self,
@@ -266,78 +240,62 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> DeleteProjectResponse:
         """Delete a project."""
-        try:
-            project_id = UUID(request.project_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProjectOperations(session)
-                await ops.delete(user_id, organization_id, project_id, permanent=request.permanent)
-
-                return DeleteProjectResponse(
-                    success=True,
-                    message="Project deleted successfully",
+                await ops.delete(
+                    user_id, organization_id, project_id, permanent=request.permanent
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+                return DeleteProjectResponse(
+                    success=True, message="Project deleted successfully"
+                )
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error deleting project")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_project", exc) from exc
 
     async def list_projects(
         self,
         request: ListProjectsRequest,
         ctx: RequestContext,
     ) -> ListProjectsResponse:
-        """List projects."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
+        """List projects the user can access."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        page = 1
+        page_size = 50
+        if request.HasField("pagination"):
+            page = request.pagination.page if request.pagination.page > 0 else 1
+            page_size = min(
+                request.pagination.page_size if request.pagination.page_size > 0 else 50,
+                100,
+            )
+
+        access_mode = (
+            access_mode_from_proto(request.access_mode) if request.access_mode else None
+        )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ProjectOperations(session)
-
-                # Parse pagination
-                page = 1
-                page_size = 50
-                if request.HasField("pagination"):
-                    page = request.pagination.page if request.pagination.page > 0 else 1
-                    page_size = min(
-                        request.pagination.page_size if request.pagination.page_size > 0 else 50,
-                        100,
-                    )
-
-                # Parse visibility filter
-                visibility = None
-                if request.HasField("visibility"):
-                    visibility = visibility_from_proto(request.visibility)
-
                 projects, total = await ops.list_projects(
                     user_id=user_id,
                     organization_id=organization_id,
-                    visibility=visibility,
-                    include_deleted=request.include_deleted
-                    if request.HasField("include_deleted")
-                    else False,
+                    access_mode=access_mode,
+                    include_deleted=(
+                        request.include_deleted
+                        if request.HasField("include_deleted")
+                        else False
+                    ),
                     page=page,
                     page_size=page_size,
                 )
 
-                # Batch-load fields and views for all projects
                 project_ids = [p.id for p in projects]
                 fields_map = await queries.get_fields_for_projects(session, project_ids)
                 views_map = await queries.get_views_for_projects(session, project_ids)
@@ -359,16 +317,10 @@ class ProjectsHandlers:
                         total_pages=total_pages,
                     ),
                 )
-
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error listing projects")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    # =========================================================================
-    # Task handlers
-    # =========================================================================
+        except Exception as exc:
+            raise _map_domain_error("list_projects", exc) from exc
 
     async def create_task(
         self,
@@ -376,65 +328,53 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> TaskResponse:
         """Create a new task."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
+
+        kwargs: dict = {
+            "description": request.description if request.HasField("description") else "",
+            "status": request.status if request.HasField("status") else "status_todo",
+            "priority": (
+                request.priority if request.HasField("priority") else "priority_medium"
+            ),
+            "task_type": request.task_type if request.HasField("task_type") else "task",
+        }
+
+        if request.assignee_ids:
+            kwargs["assignee_ids"] = list(request.assignee_ids)
+        if request.HasField("start_date"):
+            kwargs["start_date"] = request.start_date
+        if request.HasField("due_date"):
+            kwargs["due_date"] = request.due_date
+        if request.HasField("parent_id"):
+            kwargs["parent_id"] = _parse_uuid(request.parent_id, "parent_id")
+        if request.blocked_by_task_ids:
+            kwargs["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
+        if request.HasField("is_milestone"):
+            kwargs["is_milestone"] = request.is_milestone
+        if request.HasField("recurrence_rule"):
+            kwargs["recurrence_rule"] = request.recurrence_rule
+        if request.HasField("sprint_id"):
+            kwargs["sprint_id"] = (
+                _parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
+            )
+        if request.HasField("estimated_minutes"):
+            kwargs["estimated_minutes"] = request.estimated_minutes or None
+        if request.HasField("time_spent_minutes"):
+            kwargs["time_spent_minutes"] = request.time_spent_minutes or None
+        if request.field_values:
+            field_values: dict = {}
+            for key, value in request.field_values.items():
+                try:
+                    field_values[key] = json.loads(value)
+                except (json.JSONDecodeError, ValueError):
+                    field_values[key] = value
+            kwargs["field_values"] = field_values
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
-
-                # Build kwargs for optional fields
-                kwargs = {
-                    "description": request.description if request.HasField("description") else "",
-                    "status": request.status if request.HasField("status") else "status_todo",
-                    "priority": request.priority
-                    if request.HasField("priority")
-                    else "priority_medium",
-                    "task_type": request.task_type if request.HasField("task_type") else "task",
-                }
-
-                if request.assignee_ids:
-                    kwargs["assignee_ids"] = list(request.assignee_ids)
-                if request.HasField("start_date"):
-                    kwargs["start_date"] = request.start_date
-                if request.HasField("due_date"):
-                    kwargs["due_date"] = request.due_date
-                if request.HasField("parent_id"):
-                    try:
-                        kwargs["parent_id"] = UUID(request.parent_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
-                if request.blocked_by_task_ids:
-                    kwargs["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
-                if request.HasField("is_milestone"):
-                    kwargs["is_milestone"] = request.is_milestone
-                if request.HasField("recurrence_rule"):
-                    kwargs["recurrence_rule"] = request.recurrence_rule
-                if request.HasField("sprint_id"):
-                    try:
-                        kwargs["sprint_id"] = UUID(request.sprint_id) if request.sprint_id else None
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
-                if request.HasField("estimated_minutes"):
-                    kwargs["estimated_minutes"] = request.estimated_minutes or None
-                if request.HasField("time_spent_minutes"):
-                    kwargs["time_spent_minutes"] = request.time_spent_minutes or None
-                if request.field_values:
-                    # Convert proto map to dict, decoding JSON strings
-                    field_values = {}
-                    for key, value in request.field_values.items():
-                        # Try to decode as JSON, fallback to string
-                        try:
-                            field_values[key] = json.loads(value)
-                        except (json.JSONDecodeError, ValueError):
-                            field_values[key] = value
-                    kwargs["field_values"] = field_values
-
                 task = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -444,7 +384,6 @@ class ProjectsHandlers:
                     **kwargs,
                 )
 
-                # If subtask, load parent with updated counts
                 updated_parent_proto = None
                 if task.parent_id:
                     parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
@@ -458,18 +397,10 @@ class ProjectsHandlers:
                     task=task_to_proto(task),
                     updated_parent=updated_parent_proto,
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ValidationError as e:
-            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error creating task")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("create_task", exc) from exc
 
     async def get_task(
         self,
@@ -477,49 +408,26 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> TaskResponse:
         """Get a task by ID."""
-        try:
-            task_id = UUID(request.task_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
                 task = await ops.get_by_id(user_id, organization_id, task_id)
+                user_role = await ops._resolve_role(user_id, organization_id, task)
 
-                # Compute user's permission level on the parent project
-                project_ops = ProjectOperations(session)
-                project = await project_ops.get_by_id(user_id, organization_id, task.project_id)
-                checker = PermissionChecker(session)
-                perm_level = await checker.get_user_permission_level(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=DomainContentType.PROJECT,
-                    content_id=project.id,
-                    content_owner_id=project.owner_id,
-                    content_visibility=project.visibility,
-                )
-
-                # Load subtask counts
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
 
                 return TaskResponse(
-                    task=task_to_proto(task, perm_level, st_total, st_done)
+                    task=task_to_proto(task, user_role, st_total, st_done)
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error getting task")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("get_task", exc) from exc
 
     async def update_task(
         self,
@@ -527,77 +435,64 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> TaskResponse:
         """Update an existing task."""
-        try:
-            task_id = UUID(request.task_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
+
+        updates: dict = {}
+        if request.HasField("title"):
+            updates["title"] = request.title
+        if request.HasField("description"):
+            updates["description"] = request.description
+        if request.HasField("status"):
+            updates["status"] = request.status
+        if request.HasField("priority"):
+            updates["priority"] = request.priority
+        if request.assignee_ids:
+            updates["assignee_ids"] = list(request.assignee_ids)
+        if request.HasField("start_date"):
+            updates["start_date"] = request.start_date or None
+        if request.HasField("due_date"):
+            updates["due_date"] = request.due_date or None
+        if request.HasField("parent_id"):
+            updates["parent_id"] = _parse_uuid(request.parent_id, "parent_id")
+        if request.blocked_by_task_ids:
+            updates["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
+        if request.HasField("is_milestone"):
+            updates["is_milestone"] = request.is_milestone
+        if request.HasField("recurrence_rule"):
+            updates["recurrence_rule"] = request.recurrence_rule
+        if request.HasField("sort_order"):
+            updates["sort_order"] = request.sort_order
+        if request.HasField("task_type"):
+            updates["task_type"] = request.task_type
+        if request.HasField("sprint_id"):
+            updates["sprint_id"] = (
+                _parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
+            )
+        if request.HasField("estimated_minutes"):
+            updates["estimated_minutes"] = request.estimated_minutes or None
+        if request.HasField("time_spent_minutes"):
+            updates["time_spent_minutes"] = request.time_spent_minutes or None
+        if request.field_values:
+            field_values: dict = {}
+            for key, value in request.field_values.items():
+                try:
+                    field_values[key] = json.loads(value)
+                except (json.JSONDecodeError, ValueError):
+                    field_values[key] = value
+            updates["field_values"] = field_values
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
-
-                # Build update kwargs
-                updates = {}
-                if request.HasField("title"):
-                    updates["title"] = request.title
-                if request.HasField("description"):
-                    updates["description"] = request.description
-                if request.HasField("status"):
-                    updates["status"] = request.status
-                if request.HasField("priority"):
-                    updates["priority"] = request.priority
-                if request.assignee_ids:
-                    updates["assignee_ids"] = list(request.assignee_ids)
-                if request.HasField("start_date"):
-                    updates["start_date"] = request.start_date or None
-                if request.HasField("due_date"):
-                    updates["due_date"] = request.due_date or None
-                if request.HasField("parent_id"):
-                    try:
-                        updates["parent_id"] = UUID(request.parent_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
-                if request.blocked_by_task_ids:
-                    updates["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
-                if request.HasField("is_milestone"):
-                    updates["is_milestone"] = request.is_milestone
-                if request.HasField("recurrence_rule"):
-                    updates["recurrence_rule"] = request.recurrence_rule
-                if request.HasField("sort_order"):
-                    updates["sort_order"] = request.sort_order
-                if request.HasField("task_type"):
-                    updates["task_type"] = request.task_type
-                if request.HasField("sprint_id"):
-                    try:
-                        updates["sprint_id"] = UUID(request.sprint_id) if request.sprint_id else None
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
-                if request.HasField("estimated_minutes"):
-                    updates["estimated_minutes"] = request.estimated_minutes or None
-                if request.HasField("time_spent_minutes"):
-                    updates["time_spent_minutes"] = request.time_spent_minutes or None
-                if request.field_values:
-                    # Convert proto map to dict, decoding JSON strings
-                    field_values = {}
-                    for key, value in request.field_values.items():
-                        try:
-                            field_values[key] = json.loads(value)
-                        except (json.JSONDecodeError, ValueError):
-                            field_values[key] = value
-                    updates["field_values"] = field_values
-
                 task, spawned_task = await ops.update(
                     user_id, organization_id, task_id, **updates
                 )
 
-                # Load subtask counts for the updated task itself
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
 
-                # If this is a subtask, load updated parent with fresh counts
                 updated_parent_proto = None
                 if task.parent_id:
                     parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
@@ -607,30 +502,17 @@ class ProjectsHandlers:
                         parent, subtask_total=p_total, subtask_completed=p_done
                     )
 
-                # If a recurring task spawned a new instance, include it
-                spawned_proto = None
-                if spawned_task:
-                    spawned_proto = task_to_proto(spawned_task)
+                spawned_proto = task_to_proto(spawned_task) if spawned_task else None
 
                 return TaskResponse(
-                    task=task_to_proto(
-                        task, subtask_total=st_total, subtask_completed=st_done
-                    ),
+                    task=task_to_proto(task, subtask_total=st_total, subtask_completed=st_done),
                     updated_parent=updated_parent_proto,
                     spawned_task=spawned_proto,
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ValidationError as e:
-            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error updating task")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_task", exc) from exc
 
     async def move_task(
         self,
@@ -638,16 +520,12 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> TaskResponse:
         """Move a task (board drag-and-drop)."""
-        try:
-            task_id = UUID(request.task_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
                 task, spawned_task = await ops.move(
                     user_id,
@@ -657,11 +535,9 @@ class ProjectsHandlers:
                     request.sort_order,
                 )
 
-                # Load subtask counts for the moved task
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
 
-                # If subtask, load parent with fresh counts
                 updated_parent_proto = None
                 if task.parent_id:
                     parent = await ops.get_by_id(user_id, organization_id, task.parent_id)
@@ -671,86 +547,56 @@ class ProjectsHandlers:
                         parent, subtask_total=p_total, subtask_completed=p_done
                     )
 
-                spawned_proto = None
-                if spawned_task:
-                    spawned_proto = task_to_proto(spawned_task)
+                spawned_proto = task_to_proto(spawned_task) if spawned_task else None
 
                 return TaskResponse(
-                    task=task_to_proto(
-                        task, subtask_total=st_total, subtask_completed=st_done
-                    ),
+                    task=task_to_proto(task, subtask_total=st_total, subtask_completed=st_done),
                     updated_parent=updated_parent_proto,
                     spawned_task=spawned_proto,
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ValidationError as e:
-            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error moving task")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("move_task", exc) from exc
 
     async def bulk_update_tasks(
         self,
         request: BulkUpdateTasksRequest,
         ctx: RequestContext,
     ) -> BulkUpdateTasksResponse:
-        """Update multiple tasks at once."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
+        """Update multiple tasks in one call."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        changes: dict = {}
+        if request.HasField("status"):
+            changes["status"] = request.status
+        if request.HasField("priority"):
+            changes["priority"] = request.priority
+        if request.assignee_ids:
+            changes["assignee_ids"] = list(request.assignee_ids)
+        if request.HasField("sprint_id"):
+            changes["sprint_id"] = (
+                _parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
+            )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
-
-                # Build changes dict
-                changes = {}
-                if request.HasField("status"):
-                    changes["status"] = request.status
-                if request.HasField("priority"):
-                    changes["priority"] = request.priority
-                if request.assignee_ids:
-                    changes["assignee_ids"] = list(request.assignee_ids)
-                if request.HasField("sprint_id"):
-                    try:
-                        changes["sprint_id"] = (
-                            UUID(request.sprint_id) if request.sprint_id else None
-                        )
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
-
                 tasks = await ops.bulk_update(
                     user_id,
                     organization_id,
                     list(request.task_ids),
                     **changes,
                 )
-
                 return BulkUpdateTasksResponse(
                     tasks=[task_to_proto(t) for t in tasks],
                     updated_count=len(tasks),
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ValidationError as e:
-            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error bulk updating tasks")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("bulk_update_tasks", exc) from exc
 
     async def delete_task(
         self,
@@ -758,51 +604,32 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> DeleteTaskResponse:
         """Delete a task."""
-        try:
-            task_id = UUID(request.task_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
                 await ops.delete(user_id, organization_id, task_id, permanent=request.permanent)
-
-                return DeleteTaskResponse(
-                    success=True,
-                    message="Task deleted successfully",
-                )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+                return DeleteTaskResponse(success=True, message="Task deleted successfully")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error deleting task")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_task", exc) from exc
 
     async def delete_tasks(
         self,
         request: DeleteTasksRequest,
         ctx: RequestContext,
     ) -> DeleteTasksResponse:
-        """Delete multiple tasks."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
+        """Delete multiple tasks (skipping any that fail)."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
-
                 count = 0
                 for task_id_str in request.task_ids:
                     try:
@@ -811,20 +638,13 @@ class ProjectsHandlers:
                             user_id, organization_id, task_id, permanent=request.permanent
                         )
                         count += 1
-                    except (NotFoundError, PermissionDeniedError):
-                        # Skip tasks that can't be deleted
+                    except (NotFoundError, PermissionDeniedError, ValueError):
                         continue
-
-                return DeleteTasksResponse(
-                    success=True,
-                    deleted_count=count,
-                )
-
+                return DeleteTasksResponse(success=True, deleted_count=count)
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error deleting tasks")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_tasks", exc) from exc
 
     async def list_tasks(
         self,
@@ -832,56 +652,44 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ListTasksResponse:
         """List tasks for a project."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
+
+        page = 1
+        page_size = 500
+        if request.HasField("pagination"):
+            page = request.pagination.page if request.pagination.page > 0 else 1
+            page_size = min(
+                request.pagination.page_size if request.pagination.page_size > 0 else 500,
+                1000,
+            )
+
+        parent_id: UUID | str | None = None
+        if request.HasField("parent_id"):
+            if request.parent_id == "root":
+                parent_id = "root"
+            elif request.parent_id:
+                parent_id = _parse_uuid(request.parent_id, "parent_id")
+
+        sprint_id_filter = None
+        if request.HasField("sprint_id"):
+            sprint_id_filter = _parse_uuid(request.sprint_id, "sprint_id")
+
+        backlog_only = request.backlog_only if request.HasField("backlog_only") else False
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = TaskOperations(session)
-
-                # Parse pagination
-                page = 1
-                page_size = 500
-                if request.HasField("pagination"):
-                    page = request.pagination.page if request.pagination.page > 0 else 1
-                    page_size = min(
-                        request.pagination.page_size if request.pagination.page_size > 0 else 500,
-                        1000,
-                    )
-
-                # Parse parent_id
-                parent_id = None
-                if request.HasField("parent_id"):
-                    if request.parent_id == "root":
-                        parent_id = "root"
-                    elif request.parent_id:
-                        try:
-                            parent_id = UUID(request.parent_id)
-                        except ValueError:
-                            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid parent_id")
-
-                # Parse sprint filter
-                sprint_id_filter = None
-                if request.HasField("sprint_id"):
-                    try:
-                        sprint_id_filter = UUID(request.sprint_id)
-                    except ValueError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid sprint_id")
-
-                backlog_only = request.backlog_only if request.HasField("backlog_only") else False
-
                 tasks, total = await ops.list_tasks(
                     user_id=user_id,
                     organization_id=organization_id,
                     project_id=project_id,
-                    include_deleted=request.include_deleted
-                    if request.HasField("include_deleted")
-                    else False,
+                    include_deleted=(
+                        request.include_deleted
+                        if request.HasField("include_deleted")
+                        else False
+                    ),
                     parent_id=parent_id,
                     sprint_id=sprint_id_filter,
                     backlog_only=backlog_only,
@@ -891,7 +699,6 @@ class ProjectsHandlers:
 
                 total_pages = (total + page_size - 1) // page_size
 
-                # Batch-load subtask counts for all tasks
                 task_ids = [t.id for t in tasks]
                 subtask_counts = await queries.get_subtask_counts(session, task_ids)
 
@@ -911,60 +718,43 @@ class ProjectsHandlers:
                         total_pages=total_pages,
                     ),
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error listing tasks")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    # =========================================================================
-    # Field handlers
-    # =========================================================================
+        except Exception as exc:
+            raise _map_domain_error("list_tasks", exc) from exc
 
     async def create_field(
         self,
         request: CreateFieldRequest,
         ctx: RequestContext,
     ) -> FieldResponse:
-        """Create a field definition."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Create a custom field definition."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
+
+        config: dict = {}
+        if request.HasField("config_json"):
+            try:
+                config = json.loads(request.config_json)
+            except json.JSONDecodeError as exc:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
 
         try:
-            async for session in get_async_session():
-                # Verify project access (requires ADMIN permission)
+            async with open_session() as session:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_admin(user_id, organization_id, project)
-
-                # Parse config if provided
-                config = {}
-                if request.HasField("config_json"):
-                    try:
-                        config = json.loads(request.config_json)
-                    except json.JSONDecodeError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json")
-
-                # Generate field ID
+                await project_ops._require_manage(user_id, organization_id, project)
 
                 field_id = f"field_{secrets.token_hex(8)}"
-
                 field = FieldDefinition(
                     id=field_id,
                     project_id=project_id,
                     name=request.name,
                     type=field_type_from_proto(request.type),
-                    is_required=request.is_required if request.HasField("is_required") else False,
+                    is_required=(
+                        request.is_required if request.HasField("is_required") else False
+                    ),
                     is_system=False,
                     sort_order=request.sort_order if request.HasField("sort_order") else 999,
                     config=config if config else None,
@@ -974,39 +764,27 @@ class ProjectsHandlers:
                 await session.refresh(field)
 
                 return FieldResponse(field=field_to_proto(field))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error creating field")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("create_field", exc) from exc
 
     async def update_field(
         self,
         request: UpdateFieldRequest,
         ctx: RequestContext,
     ) -> FieldResponse:
-        """Update a field definition."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Update a custom field definition."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
-                # Verify project access (requires ADMIN permission)
+            async with open_session() as session:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_admin(user_id, organization_id, project)
+                await project_ops._require_manage(user_id, organization_id, project)
 
-                # Fetch field
                 result = await session.execute(
                     select(FieldDefinition).where(
                         FieldDefinition.id == request.field_id,
@@ -1017,7 +795,6 @@ class ProjectsHandlers:
                 if not field:
                     raise NotFoundError("Field", request.field_id)
 
-                # Apply updates
                 if request.HasField("name"):
                     field.name = request.name
                 if request.HasField("is_required"):
@@ -1027,11 +804,10 @@ class ProjectsHandlers:
                 if request.HasField("config_json"):
                     try:
                         field.config = json.loads(request.config_json)
-                    except json.JSONDecodeError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json")
-
-                # Explicitly flag modified for JSON fields to ensure change detection
-                if request.HasField("config_json"):
+                    except json.JSONDecodeError as exc:
+                        raise ConnectError(
+                            Code.INVALID_ARGUMENT, "Invalid config_json"
+                        ) from exc
                     flag_modified(field, "config")
 
                 field.updated_at = datetime.now(UTC)
@@ -1039,39 +815,27 @@ class ProjectsHandlers:
                 await session.refresh(field)
 
                 return FieldResponse(field=field_to_proto(field))
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error updating field")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_field", exc) from exc
 
     async def delete_field(
         self,
         request: DeleteFieldRequest,
         ctx: RequestContext,
     ) -> DeleteFieldResponse:
-        """Delete a field definition."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Delete a custom field definition."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
-                # Verify project access (requires ADMIN permission)
+            async with open_session() as session:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_admin(user_id, organization_id, project)
+                await project_ops._require_manage(user_id, organization_id, project)
 
-                # Fetch field
                 result = await session.execute(
                     select(FieldDefinition).where(
                         FieldDefinition.id == request.field_id,
@@ -1082,7 +846,6 @@ class ProjectsHandlers:
                 if not field:
                     raise NotFoundError("Field", request.field_id)
 
-                # Cannot delete system fields
                 if field.is_system:
                     raise ValidationError("field", "Cannot delete system field")
 
@@ -1090,22 +853,10 @@ class ProjectsHandlers:
                 await session.commit()
 
                 return DeleteFieldResponse(success=True)
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error deleting field")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    # =========================================================================
-    # View handlers
-    # =========================================================================
+        except Exception as exc:
+            raise _map_domain_error("delete_field", exc) from exc
 
     async def create_view(
         self,
@@ -1113,32 +864,24 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ViewResponse:
         """Create a view configuration."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
+
+        config: dict = {}
+        if request.HasField("config_json"):
+            try:
+                config = json.loads(request.config_json)
+            except json.JSONDecodeError as exc:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
 
         try:
-            async for session in get_async_session():
-                # Verify project access (requires ADMIN permission)
+            async with open_session() as session:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_admin(user_id, organization_id, project)
+                await project_ops._require_manage(user_id, organization_id, project)
 
-                # Parse config
-                config = {}
-                if request.HasField("config_json"):
-                    try:
-                        config = json.loads(request.config_json)
-                    except json.JSONDecodeError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json")
-
-                # Generate view ID
                 view_id = f"view_{secrets.token_hex(8)}"
-
                 view = ViewConfig(
                     id=view_id,
                     project_id=project_id,
@@ -1152,16 +895,10 @@ class ProjectsHandlers:
                 await session.refresh(view)
 
                 return ViewResponse(view=view_to_proto(view))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error creating view")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("create_view", exc) from exc
 
     async def update_view(
         self,
@@ -1169,22 +906,16 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ViewResponse:
         """Update a view configuration."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
-                # Verify project access (requires ADMIN permission)
+            async with open_session() as session:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_admin(user_id, organization_id, project)
+                await project_ops._require_manage(user_id, organization_id, project)
 
-                # Fetch view
                 result = await session.execute(
                     select(ViewConfig).where(
                         ViewConfig.id == request.view_id,
@@ -1195,7 +926,6 @@ class ProjectsHandlers:
                 if not view:
                     raise NotFoundError("View", request.view_id)
 
-                # Apply updates
                 if request.HasField("name"):
                     view.name = request.name
                 if request.HasField("is_default"):
@@ -1203,24 +933,20 @@ class ProjectsHandlers:
                 if request.HasField("config_json"):
                     try:
                         view.config = json.loads(request.config_json)
-                    except json.JSONDecodeError:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json")
+                    except json.JSONDecodeError as exc:
+                        raise ConnectError(
+                            Code.INVALID_ARGUMENT, "Invalid config_json"
+                        ) from exc
 
                 view.updated_at = datetime.now(UTC)
                 await session.commit()
                 await session.refresh(view)
 
                 return ViewResponse(view=view_to_proto(view))
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error updating view")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_view", exc) from exc
 
     async def delete_view(
         self,
@@ -1228,22 +954,15 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> DeleteViewResponse:
         """Delete a view configuration."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
-                # Verify project access (requires ADMIN permission)
+            async with open_session() as session:
                 project_ops = ProjectOperations(session)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_admin(user_id, organization_id, project)
-
-                # Fetch view
+                await project_ops._require_manage(user_id, organization_id, project)
 
                 result = await session.execute(
                     select(ViewConfig).where(
@@ -1259,20 +978,10 @@ class ProjectsHandlers:
                 await session.commit()
 
                 return DeleteViewResponse(success=True)
-
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error deleting view")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    # =========================================================================
-    # Activity handlers
-    # =========================================================================
+        except Exception as exc:
+            raise _map_domain_error("delete_view", exc) from exc
 
     async def list_activities(
         self,
@@ -1280,29 +989,23 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ListActivitiesResponse:
         """List activities for a task."""
-        try:
-            organization_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
+
+        page = 1
+        page_size = 50
+        if request.HasField("pagination"):
+            page = request.pagination.page if request.pagination.page > 0 else 1
+            if request.pagination.page_size > 0:
+                page_size = min(request.pagination.page_size, 200)
+            else:
+                page_size = 50
 
         try:
-            async for session in get_async_session():
-                # Verify task access (requires VIEW permission on project)
+            async with open_session() as session:
                 task_ops = TaskOperations(session)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
-
-                # Parse pagination
-                page = 1
-                page_size = 50
-                if request.HasField("pagination"):
-                    page = request.pagination.page if request.pagination.page > 0 else 1
-                    if request.pagination.page_size > 0:
-                        page_size = min(request.pagination.page_size, 200)
-                    else:
-                        page_size = 50
 
                 activities, total = await queries.get_activities_for_task(
                     session,
@@ -1322,16 +1025,10 @@ class ProjectsHandlers:
                         total_pages=total_pages,
                     ),
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error listing activities")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_activities", exc) from exc
 
 
 class SprintHandlers:
@@ -1343,16 +1040,12 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> SprintResponse:
         """Create a new sprint."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SprintOperations(session)
                 sprint = await ops.create(
                     user_id=user_id,
@@ -1364,16 +1057,10 @@ class SprintHandlers:
                     end_date=request.end_date if request.HasField("end_date") else None,
                 )
                 return SprintResponse(sprint=sprint_to_proto(sprint))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error creating sprint")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("create_sprint", exc) from exc
 
     async def update_sprint(
         self,
@@ -1381,16 +1068,12 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> SprintResponse:
         """Update a sprint."""
-        try:
-            organization_id = UUID(request.organization_id)
-            sprint_id = UUID(request.sprint_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SprintOperations(session)
                 sprint = await ops.update(
                     user_id=user_id,
@@ -1402,16 +1085,10 @@ class SprintHandlers:
                     end_date=request.end_date if request.HasField("end_date") else None,
                 )
                 return SprintResponse(sprint=sprint_to_proto(sprint))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error updating sprint")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("update_sprint", exc) from exc
 
     async def start_sprint(
         self,
@@ -1419,16 +1096,12 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> SprintResponse:
         """Start a sprint (make it active)."""
-        try:
-            organization_id = UUID(request.organization_id)
-            sprint_id = UUID(request.sprint_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SprintOperations(session)
                 sprint = await ops.start(
                     user_id=user_id,
@@ -1438,18 +1111,10 @@ class SprintHandlers:
                     end_date=request.end_date if request.HasField("end_date") else None,
                 )
                 return SprintResponse(sprint=sprint_to_proto(sprint))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ValidationError as e:
-            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error starting sprint")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("start_sprint", exc) from exc
 
     async def complete_sprint(
         self,
@@ -1457,16 +1122,12 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> SprintResponse:
         """Complete a sprint."""
-        try:
-            organization_id = UUID(request.organization_id)
-            sprint_id = UUID(request.sprint_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SprintOperations(session)
                 sprint = await ops.complete(
                     user_id=user_id,
@@ -1474,33 +1135,23 @@ class SprintHandlers:
                     sprint_id=sprint_id,
                 )
                 return SprintResponse(sprint=sprint_to_proto(sprint))
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error completing sprint")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("complete_sprint", exc) from exc
 
     async def delete_sprint(
         self,
         request: DeleteSprintRequest,
         ctx: RequestContext,
     ) -> DeleteSprintResponse:
-        """Delete a sprint and move its tasks to backlog."""
-        try:
-            organization_id = UUID(request.organization_id)
-            sprint_id = UUID(request.sprint_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
+        """Delete a sprint (tasks move back to backlog)."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SprintOperations(session)
                 await ops.delete(
                     user_id=user_id,
@@ -1508,16 +1159,10 @@ class SprintHandlers:
                     sprint_id=sprint_id,
                 )
                 return DeleteSprintResponse(success=True)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Sprint not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error deleting sprint")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("delete_sprint", exc) from exc
 
     async def list_sprints(
         self,
@@ -1525,16 +1170,12 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> ListSprintsResponse:
         """List sprints for a project."""
-        try:
-            organization_id = UUID(request.organization_id)
-            project_id = UUID(request.project_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SprintOperations(session)
                 include_closed = (
                     request.include_closed if request.HasField("include_closed") else False
@@ -1546,7 +1187,6 @@ class SprintHandlers:
                     include_closed=include_closed,
                 )
 
-                # Batch-load task counts
                 sprint_ids = [s.id for s in sprints]
                 counts = await ops.get_task_counts(sprint_ids)
 
@@ -1556,16 +1196,10 @@ class SprintHandlers:
                     sprint_protos.append(sprint_to_proto(sprint, total, completed))
 
                 return ListSprintsResponse(sprints=sprint_protos)
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Project not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error("Error listing sprints")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_sprints", exc) from exc
 
 
 class WatcherHandlers:
@@ -1577,44 +1211,23 @@ class WatcherHandlers:
         ctx: RequestContext,
     ) -> ToggleTaskWatcherResponse:
         """Toggle watch state for a task."""
-        try:
-            organization_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            async for session in get_async_session():
-                # Verify task access
+            async with open_session() as session:
                 task_ops = TaskOperations(session)
-                await task_ops.get_by_id(
-                    user_id, organization_id, task_id
-                )
+                await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)
-                is_watching, _ = await ops.toggle(
-                    user_id, organization_id, task_id
-                )
+                is_watching, _ = await ops.toggle(user_id, organization_id, task_id)
 
-                return ToggleTaskWatcherResponse(
-                    is_watching=is_watching
-                )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(
-                Code.PERMISSION_DENIED, "Access denied"
-            )
+                return ToggleTaskWatcherResponse(is_watching=is_watching)
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error(
-                "Error toggling task watcher"
-            )
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("toggle_task_watcher", exc) from exc
 
     async def list_task_watchers(
         self,
@@ -1622,21 +1235,14 @@ class WatcherHandlers:
         ctx: RequestContext,
     ) -> ListTaskWatchersResponse:
         """List watchers for a task."""
-        try:
-            organization_id = UUID(request.organization_id)
-            task_id = UUID(request.task_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
-            async for session in get_async_session():
-                # Verify task access
+            async with open_session() as session:
                 task_ops = TaskOperations(session)
-                await task_ops.get_by_id(
-                    user_id, organization_id, task_id
-                )
+                await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)
                 watcher_ids = await ops.get_watcher_user_ids(task_id)
@@ -1646,20 +1252,10 @@ class WatcherHandlers:
                     watcher_user_ids=[str(w) for w in watcher_ids],
                     watcher_count=count,
                 )
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Task not found")
-        except PermissionDeniedError:
-            raise ConnectError(
-                Code.PERMISSION_DENIED, "Access denied"
-            )
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error(
-                "Error listing task watchers"
-            )
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("list_task_watchers", exc) from exc
 
     async def bulk_check_task_watchers(
         self,
@@ -1667,30 +1263,15 @@ class WatcherHandlers:
         ctx: RequestContext,
     ) -> BulkCheckTaskWatchersResponse:
         """Check watch status for multiple tasks."""
-        try:
-            UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(
-                Code.INVALID_ARGUMENT, "Invalid organization_id"
-            )
-
         user_id = get_user_id_from_context(ctx)
+        _parse_uuid(request.organization_id, "organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = WatcherOperations(session)
-                result = await ops.bulk_check(
-                    user_id, list(request.task_ids)
-                )
-
-                return BulkCheckTaskWatchersResponse(
-                    watched_tasks=result
-                )
-
+                result = await ops.bulk_check(user_id, list(request.task_ids))
+                return BulkCheckTaskWatchersResponse(watched_tasks=result)
         except ConnectError:
             raise
-        except Exception:
-            logger.opt(exception=True).error(
-                "Error bulk checking task watchers"
-            )
-            raise ConnectError(Code.INTERNAL, "Internal server error")
+        except Exception as exc:
+            raise _map_domain_error("bulk_check_task_watchers", exc) from exc

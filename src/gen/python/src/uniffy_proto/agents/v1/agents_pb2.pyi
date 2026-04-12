@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AgentInfo(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "soul_prompt", "primary_model", "fallback_models", "enabled_tools", "avatar_emoji", "theme_color", "is_default", "created_at", "updated_at", "enabled_skills", "visibility", "avatar_key", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "soul_prompt", "primary_model", "fallback_models", "enabled_tools", "avatar_emoji", "theme_color", "is_default", "created_at", "updated_at", "enabled_skills", "access_mode", "avatar_key", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id", "baseline_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -26,12 +26,13 @@ class AgentInfo(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     ENABLED_SKILLS_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     AVATAR_KEY_FIELD_NUMBER: _ClassVar[int]
     IMAGE_MODEL_FIELD_NUMBER: _ClassVar[int]
     PRIMARY_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
     IMAGE_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -46,16 +47,17 @@ class AgentInfo(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     enabled_skills: _containers.RepeatedScalarFieldContainer[str]
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     avatar_key: str
     image_model: str
     primary_provider_key_id: str
     image_provider_key_id: str
     prompt_id: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., enabled_tools: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., avatar_key: _Optional[str] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., enabled_tools: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., avatar_key: _Optional[str] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class CreateAgentRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "soul_prompt", "primary_model", "fallback_models", "avatar_emoji", "theme_color", "is_default", "enabled_skills", "visibility", "group_ids", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id")
+    __slots__ = ("organization_id", "name", "soul_prompt", "primary_model", "fallback_models", "avatar_emoji", "theme_color", "is_default", "enabled_skills", "access_mode", "group_ids", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     SOUL_PROMPT_FIELD_NUMBER: _ClassVar[int]
@@ -65,12 +67,13 @@ class CreateAgentRequest(_message.Message):
     THEME_COLOR_FIELD_NUMBER: _ClassVar[int]
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
     ENABLED_SKILLS_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
     IMAGE_MODEL_FIELD_NUMBER: _ClassVar[int]
     PRIMARY_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
     IMAGE_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     soul_prompt: str
@@ -80,13 +83,14 @@ class CreateAgentRequest(_message.Message):
     theme_color: str
     is_default: bool
     enabled_skills: _containers.RepeatedScalarFieldContainer[str]
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     group_ids: _containers.RepeatedScalarFieldContainer[str]
     image_model: str
     primary_provider_key_id: str
     image_provider_key_id: str
     prompt_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class AgentResponse(_message.Message):
     __slots__ = ("agent",)
@@ -103,18 +107,18 @@ class GetAgentRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
 
 class ListAgentsRequest(_message.Message):
-    __slots__ = ("organization_id", "pagination", "visibility", "personal_only", "group_id")
+    __slots__ = ("organization_id", "pagination", "access_mode", "personal_only", "group_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PAGINATION_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     PERSONAL_ONLY_FIELD_NUMBER: _ClassVar[int]
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     pagination: _common_pb2.PaginationRequest
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     personal_only: bool
     group_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., personal_only: _Optional[bool] = ..., group_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., personal_only: _Optional[bool] = ..., group_id: _Optional[str] = ...) -> None: ...
 
 class ListAgentsResponse(_message.Message):
     __slots__ = ("agents", "pagination")
@@ -125,7 +129,7 @@ class ListAgentsResponse(_message.Message):
     def __init__(self, agents: _Optional[_Iterable[_Union[AgentInfo, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class UpdateAgentRequest(_message.Message):
-    __slots__ = ("organization_id", "agent_id", "name", "soul_prompt", "primary_model", "fallback_models", "avatar_emoji", "theme_color", "is_default", "enabled_skills", "visibility", "group_ids", "enabled_tools", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id", "clear_prompt")
+    __slots__ = ("organization_id", "agent_id", "name", "soul_prompt", "primary_model", "fallback_models", "avatar_emoji", "theme_color", "is_default", "enabled_skills", "access_mode", "group_ids", "enabled_tools", "image_model", "primary_provider_key_id", "image_provider_key_id", "prompt_id", "clear_prompt", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -136,7 +140,7 @@ class UpdateAgentRequest(_message.Message):
     THEME_COLOR_FIELD_NUMBER: _ClassVar[int]
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
     ENABLED_SKILLS_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     GROUP_IDS_FIELD_NUMBER: _ClassVar[int]
     ENABLED_TOOLS_FIELD_NUMBER: _ClassVar[int]
     IMAGE_MODEL_FIELD_NUMBER: _ClassVar[int]
@@ -144,6 +148,7 @@ class UpdateAgentRequest(_message.Message):
     IMAGE_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
     CLEAR_PROMPT_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     agent_id: str
     name: str
@@ -154,7 +159,7 @@ class UpdateAgentRequest(_message.Message):
     theme_color: str
     is_default: bool
     enabled_skills: _containers.RepeatedScalarFieldContainer[str]
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     group_ids: _containers.RepeatedScalarFieldContainer[str]
     enabled_tools: _containers.RepeatedScalarFieldContainer[str]
     image_model: str
@@ -162,7 +167,8 @@ class UpdateAgentRequest(_message.Message):
     image_provider_key_id: str
     prompt_id: str
     clear_prompt: bool
-    def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., enabled_tools: _Optional[_Iterable[str]] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., clear_prompt: _Optional[bool] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., name: _Optional[str] = ..., soul_prompt: _Optional[str] = ..., primary_model: _Optional[str] = ..., fallback_models: _Optional[_Iterable[str]] = ..., avatar_emoji: _Optional[str] = ..., theme_color: _Optional[str] = ..., is_default: _Optional[bool] = ..., enabled_skills: _Optional[_Iterable[str]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., group_ids: _Optional[_Iterable[str]] = ..., enabled_tools: _Optional[_Iterable[str]] = ..., image_model: _Optional[str] = ..., primary_provider_key_id: _Optional[str] = ..., image_provider_key_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., clear_prompt: _Optional[bool] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class DeleteAgentRequest(_message.Message):
     __slots__ = ("organization_id", "agent_id")

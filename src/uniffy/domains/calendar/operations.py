@@ -1,4 +1,4 @@
-"""Calendar operations extending BaseContentOperations."""
+"""Calendar operations."""
 
 import copy
 from datetime import UTC, date, datetime, timedelta
@@ -9,11 +9,24 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from uniffy.core.auth.permissions import resolve_content_defaults
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
+from uniffy.core.content.members import (
+    ContentMembersOperations,
+    register_content_loader,
+)
 from uniffy.core.content.references import extract_all_outgoing_references
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.events import NotificationEvent, emit_notification, extract_mentioned_user_ids
+from uniffy.core.errors import (
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
+from uniffy.core.events import (
+    NotificationEvent,
+    emit_notification,
+    extract_mentioned_user_ids,
+)
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -21,27 +34,24 @@ from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.login.organization_member import OrganizationMember
-from uniffy.core.models.shared import (
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import (
+    AccessMode,
     AttendeeRole,
     AttendeeStatus,
+    ContentRole,
+    ContentType,
     NotificationType,
     RecurrencePattern,
-    VisibilityScope,
+    SubjectType,
 )
-from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import ContentType
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.recurrence import expand_recurrence
 
 
 class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
-    """
-    Calendar event CRUD operations with permissions and search.
-
-    Extends BaseContentOperations to provide event-specific functionality
-    including attendee management, recurrence, and date range queries.
-    """
+    """Calendar event CRUD with permissions, search, and attendees."""
 
     content_type = ContentType.CALENDAR_EVENT
     model_class = CalendarEvent
@@ -51,11 +61,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         super().__init__(session)
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
-        """
-        Build search keywords from event content.
-
-        Tags are prefixed with 'tag:' to enable filtered search queries.
-        """
+        """Aggregate searchable text for an event."""
         parts = [model.title]
         if model.tags:
             parts.extend(f"tag:{tag}" for tag in model.tags)
@@ -66,25 +72,25 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         return " ".join(parts)
 
     def _get_search_title(self, model: CalendarEvent) -> str:
-        """Get event title for search."""
+        """Return event title for the search index."""
         return model.title
 
     def _get_url_path(self, model: CalendarEvent) -> str:
-        """Get URL path for event."""
+        """Return the frontend route for this event."""
         return f"/calendar?event={model.id}"
 
     def _get_search_description(self, model: CalendarEvent) -> str | None:
-        """Get search description from event."""
+        """Return a short description snippet."""
         if model.description:
             return model.description[:200]
         return None
 
     def _get_search_tags(self, model: CalendarEvent) -> list[str] | None:
-        """Get tags for search index."""
+        """Return tags for the search index."""
         return model.tags if model.tags else None
 
     def _get_search_metadata(self, model: CalendarEvent) -> dict[str, str] | None:
-        """Get event details metadata for search index."""
+        """Return event details metadata for search."""
         metadata: dict[str, str] = {}
         if model.start_time:
             metadata["start_time"] = model.start_time.isoformat()
@@ -98,146 +104,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         return metadata if metadata else None
 
     def _get_owner_id_column(self) -> InstrumentedAttribute:
-        """Get the organizer_id column (owner equivalent for events)."""
+        """Events use ``organizer_id`` instead of ``owner_id``."""
         return CalendarEvent.organizer_id
 
-    # ─────────────────────────────────────────────────────────────
-    # Reminder helpers
-    # ─────────────────────────────────────────────────────────────
-
-    async def _create_reminder_rows(
-        self,
-        event_id: UUID,
-        user_ids: list[UUID],
-        intervals: list[int],
-        start_time: datetime,
-    ) -> None:
-        """
-        Create EventReminder rows for each user/interval combination.
-
-        Skips reminders that would be scheduled in the past.
-
-        Parameters
-        ----------
-        event_id : UUID
-            The event to create reminders for.
-        user_ids : list[UUID]
-            Users who should receive reminders.
-        intervals : list[int]
-            Minutes-before values (e.g., [15, 30]).
-        start_time : datetime
-            Event start time for computing scheduled_at.
-
-        """
-        now = datetime.now(UTC)
-        for user_id in user_ids:
-            for minutes in intervals:
-                scheduled_at = start_time - timedelta(minutes=minutes)
-                if scheduled_at <= now:
-                    continue
-                reminder = EventReminder(
-                    event_id=event_id,
-                    user_id=user_id,
-                    minutes_before=minutes,
-                    scheduled_at=scheduled_at,
-                )
-                self.session.add(reminder)
-
-    async def _delete_reminder_rows(
-        self,
-        event_id: UUID,
-        user_ids: list[UUID] | None = None,
-    ) -> None:
-        """
-        Delete unsent reminders for an event.
-
-        Parameters
-        ----------
-        event_id : UUID
-            The event whose reminders to delete.
-        user_ids : list[UUID] | None
-            If provided, only delete reminders for these users.
-
-        """
-        stmt = delete(EventReminder).where(
-            and_(
-                EventReminder.event_id == event_id,
-                EventReminder.sent_at.is_(None),
-            )
-        )
-        if user_ids is not None:
-            stmt = stmt.where(EventReminder.user_id.in_(user_ids))
-        await self.session.execute(stmt)
-
-    # ─────────────────────────────────────────────────────────────
-    # Group expansion
-    # ─────────────────────────────────────────────────────────────
-
-    async def _expand_group_attendees(
-        self,
-        attendee_ids: list[UUID],
-    ) -> list[UUID]:
-        """
-        Expand any group IDs in the attendee list to individual user IDs.
-
-        IDs that match a group in login_groups are replaced with the group's
-        active member user IDs. IDs that are not groups are kept as-is.
-        Duplicates are removed while preserving order.
-
-        Parameters
-        ----------
-        attendee_ids : list[UUID]
-            Mixed list of user and/or group IDs.
-
-        Returns
-        -------
-        list[UUID]
-            Flat list of unique user IDs.
-
-        """
-        if not attendee_ids:
-            return []
-
-        from uniffy.core.models.login.group import Group
-        from uniffy.core.models.login.group_member import GroupMember
-
-        # Check which IDs are groups
-        result = await self.session.execute(select(Group.id).where(Group.id.in_(attendee_ids)))
-        group_ids = {row[0] for row in result.all()}
-
-        if not group_ids:
-            return attendee_ids
-
-        # Fetch active members for all matched groups
-        result = await self.session.execute(
-            select(GroupMember.user_id).where(
-                and_(
-                    GroupMember.group_id.in_(group_ids),
-                    GroupMember.is_active.is_(True),
-                )
-            )
-        )
-        group_member_ids = [row[0] for row in result.all()]
-
-        # Build final list: non-group IDs + expanded group member IDs
-        seen: set[UUID] = set()
-        resolved: list[UUID] = []
-        for uid in attendee_ids:
-            if uid in group_ids:
-                continue  # Skip the group ID itself
-            if uid not in seen:
-                seen.add(uid)
-                resolved.append(uid)
-        for uid in group_member_ids:
-            if uid not in seen:
-                seen.add(uid)
-                resolved.append(uid)
-
-        return resolved
-
-    # ─────────────────────────────────────────────────────────────
-    # Event-specific operations
-    # ─────────────────────────────────────────────────────────────
+    # Event CRUD
 
     async def create(
         self,
@@ -259,81 +129,32 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         is_focus_time: bool = False,
         tags: list[str] | None = None,
         linked_resources: list[dict] | None = None,
-        visibility: VisibilityScope = VisibilityScope.PRIVATE,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
         group_ids: list[UUID] | None = None,
         reminders: list[int] | None = None,
         room_id: UUID | None = None,
     ) -> CalendarEvent:
+        """Create a new calendar event.
+
+        ``access_mode`` and ``baseline_role`` default to the org defaults
+        for ``ContentType.CALENDAR_EVENT``. ``group_ids`` is a convenience
+        for adding initial VIEWER group members atomically through
+        :class:`ContentMembersOperations`.
         """
-        Create a new calendar event.
+        access_mode, baseline_role = await self._resolve_access_policy(
+            organization_id, access_mode, baseline_role
+        )
 
-        Parameters
-        ----------
-        user_id : UUID
-            Organizer user ID.
-        organization_id : UUID
-            Organization ID.
-        title : str
-            Event title.
-        start_time : datetime
-            Event start time.
-        end_time : datetime
-            Event end time.
-        calendar_id : UUID
-            Calendar to place event in.
-        description : str
-            Event description in markdown.
-        is_all_day : bool
-            Whether this is an all-day event.
-        timezone : str
-            Timezone identifier.
-        location : str
-            Event location.
-        meeting_url : str | None
-            Meeting URL.
-        category_id : UUID | None
-            Category for color coding.
-        attendee_ids : list[UUID] | None
-            User IDs to invite.
-        recurrence_pattern : RecurrencePattern
-            Recurrence type.
-        recurrence_config : dict | None
-            Recurrence configuration.
-        is_focus_time : bool
-            Whether this is focus/deep work time.
-        tags : list[str] | None
-            List of tags.
-        linked_resources : list[dict] | None
-            Linked resources (notes, files, chats).
-        visibility : VisibilityScope
-            Who can access this event.
-        group_ids : list[UUID] | None
-            Groups to share with (for GROUP visibility).
-        room_id : UUID | None
-            Optional room to book for this event.
-
-        Returns
-        -------
-        CalendarEvent
-            Created event.
-
-        """
-        # Expand any group IDs to individual user IDs
         if attendee_ids:
             attendee_ids = await self._expand_group_attendees(attendee_ids)
 
-        # Extract URN references and inline file refs from description
         outgoing_refs = (
-            extract_all_outgoing_references(description, organization_id) if description else None
+            extract_all_outgoing_references(description, organization_id)
+            if description
+            else None
         )
 
-        # Resolve reminder intervals (use user defaults if not specified)
-        if reminders is None:
-            from uniffy.domains.settings.defaults import DEFAULT_REMINDER_INTERVALS
-
-            reminders = list(DEFAULT_REMINDER_INTERVALS)
-
-        # Resolve reminder intervals (use user defaults if not specified)
         if reminders is None:
             from uniffy.domains.settings.defaults import DEFAULT_REMINDER_INTERVALS
 
@@ -352,7 +173,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             location=location,
             meeting_url=meeting_url,
             category_id=category_id,
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
             is_focus_time=is_focus_time,
             recurrence_pattern=recurrence_pattern,
             recurrence_config=recurrence_config,
@@ -364,7 +186,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         self.session.add(event)
         await self.session.flush()
 
-        # Add organizer as attendee
         organizer_attendee = EventAttendee(
             event_id=event.id,
             user_id=user_id,
@@ -374,10 +195,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         self.session.add(organizer_attendee)
 
-        # Add other attendees
         if attendee_ids:
             for attendee_id in attendee_ids:
-                if attendee_id != user_id:  # Don't duplicate organizer
+                if attendee_id != user_id:
                     attendee = EventAttendee(
                         event_id=event.id,
                         user_id=attendee_id,
@@ -386,16 +206,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     )
                     self.session.add(attendee)
 
-        # Create group links if visibility is GROUP
-        if visibility == VisibilityScope.GROUP and group_ids:
-            await self._create_group_links(
-                content_id=event.id,
-                organization_id=organization_id,
-                user_id=user_id,
-                group_ids=group_ids,
-            )
-
-        # Create reminder rows for organizer + attendees
         if reminders:
             reminder_user_ids = [user_id]
             if attendee_ids:
@@ -410,14 +220,22 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self.session.commit()
         await self.session.refresh(event)
 
-        # Index for search
-        await self._index_for_search(
-            model=event,
-            group_ids=group_ids if visibility == VisibilityScope.GROUP else None,
-        )
+        if group_ids:
+            members_ops = ContentMembersOperations(self.session)
+            for gid in group_ids:
+                await members_ops.add_member(
+                    actor_user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=self.content_type,
+                    content_id=event.id,
+                    subject_type=SubjectType.GROUP,
+                    subject_id=gid,
+                    role=ContentRole.VIEWER,
+                )
+
+        await self._index_for_search(event, skip_member_lookup=not group_ids)
         await self.session.commit()
 
-        # Notify invited attendees
         if attendee_ids:
             invited = [aid for aid in attendee_ids if aid != user_id]
             if invited:
@@ -427,12 +245,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         organization_id=organization_id,
                         actor_id=user_id,
                         title=f"Invited to: {event.title}",
-                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                        source_urn=build_content_urn(
+                            ContentType.CALENDAR_EVENT, event.id
+                        ),
                         target_user_ids=invited,
                     )
                 )
 
-        # Notify mentioned users (excluding attendees who get CALENDAR_INVITE)
         mentioned_ids = extract_mentioned_user_ids(outgoing_refs)
         mentioned_ids.discard(user_id)
         if attendee_ids:
@@ -449,7 +268,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
             )
 
-        # Book room if requested
         if room_id:
             from uniffy.domains.rooms.operations import BookingOperations
 
@@ -486,38 +304,18 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         tags: list[str] | None = None,
         linked_resources: list[dict] | None = None,
         attendee_ids: list[UUID] | None = None,
-        visibility: VisibilityScope | None = None,
         reminders: list[int] | None = None,
         recurrence_edit_scope: str | None = None,
         occurrence_date: date | None = None,
         room_id: str | None = None,
     ) -> CalendarEvent:
+        """Update an existing event.
+
+        Access-policy changes (access mode, baseline role, members) go
+        through ``permissions.v1.MembersService``, never this method.
         """
-        Update an existing event.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing update.
-        organization_id : UUID
-            Organization ID.
-        event_id : UUID
-            Event to update.
-        ... : (other parameters)
-            Fields to update (None = no change).
-        attendee_ids : list[UUID] | None
-            New list of attendees (replaces existing).
-
-        Returns
-        -------
-        CalendarEvent
-            Updated event.
-
-        """
-        # Dispatch to scope-specific methods for recurring events
         if recurrence_edit_scope and occurrence_date:
             if recurrence_edit_scope == "this_event":
-                # Parse the real master event ID from synthetic ID if needed
                 real_event_id = self._parse_master_event_id(event_id)
                 updates = self._collect_update_kwargs(
                     title=title, description=description, start_time=start_time,
@@ -539,7 +337,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 return await self.edit_this_and_following(
                     user_id, organization_id, real_event_id, occurrence_date, **updates,
                 )
-            # "all_events" falls through to normal update on the master
 
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
@@ -547,19 +344,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_edit(user_id, organization_id, event)
 
-        # Snapshot fields for mention state change detection
         old_title = event.title
         old_start_time = event.start_time
         old_end_time = event.end_time
 
         title_changed = title is not None and title != event.title
 
-        # Snapshot old mentions before description update for diff
         old_mentioned: set[UUID] = set()
         if description is not None:
             old_mentioned = extract_mentioned_user_ids(event.outgoing_references)
 
-        # Apply updates
         if title is not None:
             event.title = title
         if description is not None:
@@ -593,21 +387,18 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.tags = tags
         if linked_resources is not None:
             event.linked_resources = linked_resources
-        if visibility is not None:
-            event.visibility = visibility
         if reminders is not None:
             event.reminders = reminders
 
-        # Recalculate reminders if intervals or start_time changed
         reminders_changed = reminders is not None
         start_changed = start_time is not None
         if reminders_changed or start_changed:
             effective_start = start_time if start_time is not None else event.start_time
-            effective_reminders = reminders if reminders is not None else (event.reminders or [])
-            # Delete unsent reminders and recreate
+            effective_reminders = (
+                reminders if reminders is not None else (event.reminders or [])
+            )
             await self._delete_reminder_rows(event.id)
             if effective_reminders:
-                # Get all current attendee user IDs
                 stmt = select(EventAttendee.user_id).where(
                     and_(
                         EventAttendee.event_id == event.id,
@@ -624,28 +415,22 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         start_time=effective_start,
                     )
 
-        # Update attendees
         newly_invited_ids: list[UUID] = []
         if attendee_ids is not None:
-            # Expand any group IDs to individual user IDs
             attendee_ids = await self._expand_group_attendees(attendee_ids)
-            # Fetch existing attendees
             stmt = select(EventAttendee).where(EventAttendee.event_id == event.id)
             result = await self.session.execute(stmt)
             existing_attendees = result.scalars().all()
             existing_map = {a.user_id: a for a in existing_attendees}
 
-            # Identify current and new sets
             current_ids = set(existing_map.keys())
             new_ids = set(attendee_ids)
 
-            # Remove attendees not in new list (organizer cannot be removed)
             for uid in current_ids - new_ids:
                 attendee = existing_map[uid]
                 if attendee.user_id != event.organizer_id:
                     await self.session.delete(attendee)
 
-            # Add new attendees
             for uid in new_ids - current_ids:
                 if uid != event.organizer_id:
                     attendee = EventAttendee(
@@ -662,12 +447,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self.session.commit()
         await self.session.refresh(event)
 
-        # Update search index
-        group_ids = await self._get_content_group_ids(event.id)
-        await self._index_for_search(model=event, group_ids=group_ids)
+        await self._index_for_search(event)
         await self.session.commit()
 
-        # Propagate title change to mention labels in referencing content
         if title_changed:
             try:
                 event_urn = build_content_urn(ContentType.CALENDAR_EVENT, event.id)
@@ -685,7 +467,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     exc_info=True,
                 )
 
-        # Notify newly invited attendees
         if newly_invited_ids:
             await emit_notification(
                 NotificationEvent(
@@ -698,15 +479,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
             )
 
-        # Notify newly mentioned users (excluding attendees)
         if description is not None:
             new_mentioned = extract_mentioned_user_ids(event.outgoing_references)
             new_mentioned.discard(user_id)
-            # Exclude current attendees from mention notifications
             if attendee_ids is not None:
                 new_mentioned -= set(attendee_ids)
             else:
-                stmt = select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
+                stmt = select(EventAttendee.user_id).where(
+                    EventAttendee.event_id == event.id
+                )
                 result = await self.session.execute(stmt)
                 new_mentioned -= set(result.scalars().all())
             newly_mentioned = new_mentioned - old_mentioned
@@ -717,12 +498,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         organization_id=organization_id,
                         actor_id=user_id,
                         title=f"Mentioned you in: {event.title}",
-                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                        source_urn=build_content_urn(
+                            ContentType.CALENDAR_EVENT, event.id
+                        ),
                         target_user_ids=list(newly_mentioned),
                     )
                 )
 
-        # Publish mention state changes for real-time mention updates
         mention_changes: dict[str, str] = {}
         if event.title != old_title:
             mention_changes["title"] = event.title
@@ -746,14 +528,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     exc_info=True,
                 )
 
-        # Handle room booking changes
         if room_id is not None:
             from uniffy.domains.rooms.operations import BookingOperations
 
             booking_ops = BookingOperations(self.session)
-            # Cancel any existing booking for this event
             await booking_ops.cancel_booking_for_event(event_id)
-            # Create new booking if room_id is not empty
             if room_id:
                 room_uuid = UUID(room_id) if isinstance(room_id, str) else room_id
                 final_start = start_time or event.start_time
@@ -779,31 +558,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         recurrence_edit_scope: str | None = None,
         occurrence_date: date | None = None,
     ) -> bool:
-        """
-        Delete an event (soft or permanent).
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing delete.
-        organization_id : UUID
-            Organization ID.
-        event_id : UUID
-            Event to delete.
-        permanent : bool
-            If True, permanently delete.
-        recurrence_edit_scope : str | None
-            Scope for recurring event deletion.
-        occurrence_date : date | None
-            Occurrence date for single-occurrence deletion.
-
-        Returns
-        -------
-        bool
-            True if deleted successfully.
-
-        """
-        # Handle recurring event scoped deletion
+        """Delete an event (soft by default, handles recurrences)."""
         if recurrence_edit_scope and occurrence_date:
             if recurrence_edit_scope == "this_event":
                 real_event_id = self._parse_master_event_id(event_id)
@@ -817,7 +572,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 if not master:
                     raise NotFoundError("CalendarEvent", real_event_id)
                 await self._require_delete(user_id, organization_id, master)
-                # Truncate series to end before this occurrence
                 config = dict(master.recurrence_config or {})
                 end_dt = datetime(
                     occurrence_date.year,
@@ -830,7 +584,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 master.updated_at = datetime.now(UTC)
                 await self.session.commit()
                 return True
-            # "all_events" falls through to normal delete
 
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
@@ -838,10 +591,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_delete(user_id, organization_id, event)
 
-        # Delete all reminder rows for this event
-        await self.session.execute(delete(EventReminder).where(EventReminder.event_id == event_id))
+        await self.session.execute(
+            delete(EventReminder).where(EventReminder.event_id == event_id)
+        )
 
-        # Cancel any room booking linked to this event
         from uniffy.domains.rooms.operations import BookingOperations
 
         booking_ops = BookingOperations(self.session)
@@ -852,7 +605,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         else:
             await queries.soft_delete_event(self.session, event)
 
-        # Remove from search index
         await self.search_indexer.remove(build_content_urn(self.content_type, event_id))
         await self.session.commit()
 
@@ -867,44 +619,19 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         calendar_ids: list[UUID] | None = None,
         category_ids: list[UUID] | None = None,
     ) -> list[CalendarEvent]:
+        """Get events in a date range the user can access.
+
+        Combines the canonical accessible-filter with an attendee-based
+        bypass (users always see events they're invited to).
         """
-        Get events in a date range with permission filtering.
-
-        Returns all events the user can access based on:
-        - Events they own (organizer)
-        - Events with ORGANIZATION visibility
-        - Events with GROUP visibility where user is a member
-        - Events where user is an attendee (not DECLINED)
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting events.
-        organization_id : UUID
-            Organization ID.
-        start_date : datetime
-            Start of range.
-        end_date : datetime
-            End of range.
-        calendar_ids : list[UUID] | None
-            Filter by calendars (optional, returns all accessible if not specified).
-        category_ids : list[UUID] | None
-            Filter by categories.
-
-        Returns
-        -------
-        list[CalendarEvent]
-            Events the user can access.
-
-        """
-        # Access filter (owner, org visibility, group visibility)
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
             content_id_column=CalendarEvent.id,
             owner_id_column=CalendarEvent.organizer_id,
-            visibility_column=CalendarEvent.visibility,
+            access_mode_column=CalendarEvent.access_mode,
+            baseline_role_column=CalendarEvent.baseline_role,
         )
         attendee_subquery = select(EventAttendee.event_id).where(
             EventAttendee.user_id == user_id,
@@ -912,7 +639,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         attendee_filter = CalendarEvent.id.in_(attendee_subquery)
         permission_filter = or_(access_filter, attendee_filter)
 
-        # Base filters shared by both queries
         base_filters = [
             CalendarEvent.organization_id == organization_id,
             CalendarEvent.is_deleted == False,  # noqa: E712
@@ -923,7 +649,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if category_ids:
             base_filters.append(CalendarEvent.category_id.in_(category_ids))
 
-        # Query 1: non-recurring events (and overrides) in the date range
         query = (
             select(CalendarEvent)
             .where(
@@ -939,10 +664,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         db_events = list(result.scalars().all())
         seen_ids = {e.id for e in db_events}
 
-        # Query 2: recurring master events that started before the range
-        # but could have occurrences within it. These are events with a
-        # recurrence pattern that started before end_date (could produce
-        # occurrences in range) and are not overrides themselves.
         recurring_query = (
             select(CalendarEvent)
             .where(
@@ -960,12 +681,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 db_events.append(event)
                 seen_ids.add(event.id)
 
-        # Expand recurring events into virtual instances
         return await self._expand_recurring_events(db_events, start_date, end_date)
 
     @staticmethod
     def _parse_master_event_id(event_id: UUID | str) -> UUID:
-        """Extract the real master event UUID from a potentially synthetic ID."""
+        """Extract the real master event UUID from a (possibly synthetic) id."""
         event_id_str = str(event_id)
         if "__occurrence__" in event_id_str:
             return UUID(event_id_str.split("__occurrence__")[0])
@@ -982,19 +702,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         range_start: datetime,
         range_end: datetime,
     ) -> list[CalendarEvent]:
-        """
-        Expand recurring events into virtual instances within the range.
-
-        Non-recurring events and override events pass through unchanged.
-        Recurring master events generate virtual copies for each occurrence.
-        """
+        """Expand recurring masters into virtual occurrences in the range."""
         recurring_ids = [
             e.id
             for e in events
             if e.recurrence_pattern != RecurrencePattern.NONE and e.recurrence_id is None
         ]
 
-        # Batch-fetch all exceptions for recurring events in this range
         exceptions_by_event: dict[UUID, dict[date, RecurrenceException]] = {}
         if recurring_ids:
             exc_result = await self.session.execute(
@@ -1005,7 +719,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             for exc in exc_result.scalars().all():
                 exceptions_by_event.setdefault(exc.event_id, {})[exc.original_date] = exc
 
-            # Also fetch override events (real events linked to the series)
             override_result = await self.session.execute(
                 select(CalendarEvent).where(
                     and_(
@@ -1029,21 +742,17 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
             if not is_recurring_master:
-                # Non-recurring event or override event - pass through
                 result.append(event)
                 continue
 
-            # The master event itself: include it only if its original date falls in range
             master_start = event.start_time
             master_end = event.end_time
             if master_start < range_end and master_end > range_start:
                 result.append(event)
 
-            # Get exceptions for this master event
             event_exceptions = exceptions_by_event.get(event.id, {})
             exception_dates = set(event_exceptions.keys())
 
-            # Expand into virtual instances
             occurrences = expand_recurrence(
                 start_time=event.start_time,
                 end_time=event.end_time,
@@ -1056,20 +765,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
             for occ in occurrences:
-                # Create a shallow copy of the master event with modified times
                 virtual = copy.copy(event)
                 virtual.start_time = occ.start_time
                 virtual.end_time = occ.end_time
-                # Set a synthetic ID and occurrence_date for the frontend
                 synthetic_id = f"{event.id}__occurrence__{occ.occurrence_date.isoformat()}"
                 virtual.id = synthetic_id  # type: ignore[assignment]
                 virtual._occurrence_date = occ.occurrence_date.isoformat()  # type: ignore[attr-defined]
                 result.append(virtual)
 
-        # Add override events
         result.extend(override_events)
-
-        # Sort by start_time
         result.sort(key=lambda e: e.start_time)
         return result
 
@@ -1080,11 +784,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         event_id: UUID,
         occurrence_date: date,
     ) -> None:
-        """
-        Cancel a single occurrence of a recurring event.
-
-        Creates a RecurrenceException with is_cancelled=True.
-        """
+        """Cancel a single occurrence of a recurring event."""
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
@@ -1110,12 +810,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         occurrence_date: date,
         **updates: object,
     ) -> CalendarEvent:
-        """
-        Edit a single occurrence by creating an override event.
-
-        Creates a new standalone CalendarEvent with recurrence_id pointing
-        to the master event, and a RecurrenceException linking them.
-        """
+        """Edit a single occurrence by materializing an override event."""
         master = await self._fetch_by_id(event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
@@ -1125,7 +820,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
 
-        # Compute default start/end for this occurrence
         duration = master.end_time - master.start_time
         occ_start = datetime(
             occurrence_date.year,
@@ -1138,7 +832,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         occ_end = occ_start + duration
 
-        # Create override event with master's fields, then apply updates
         override = CalendarEvent(
             organization_id=master.organization_id,
             organizer_id=master.organizer_id,
@@ -1152,7 +845,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             timezone=master.timezone,
             location=master.location,
             meeting_url=master.meeting_url,
-            visibility=master.visibility,
+            access_mode=master.access_mode,
+            baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
             tags=master.tags,
             linked_resources=master.linked_resources,
@@ -1161,7 +855,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             reminders=master.reminders,
         )
 
-        # Apply provided updates
         for field, value in updates.items():
             if value is not None and hasattr(override, field):
                 setattr(override, field, value)
@@ -1169,7 +862,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         self.session.add(override)
         await self.session.flush()
 
-        # Create exception record linking to the override
         exception = RecurrenceException(
             event_id=event_id,
             original_date=occurrence_date,
@@ -1178,7 +870,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         self.session.add(exception)
 
-        # Copy attendees from master
         att_result = await self.session.execute(
             select(EventAttendee).where(EventAttendee.event_id == master.id)
         )
@@ -1192,8 +883,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
             self.session.add(new_att)
 
-        # Index for search
-        await self._index_for_search(model=override, group_ids=[])
+        await self._index_for_search(override, skip_member_lookup=True)
         await self.session.commit()
 
         return override
@@ -1206,12 +896,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         occurrence_date: date,
         **updates: object,
     ) -> CalendarEvent:
-        """
-        Edit this occurrence and all following by splitting the series.
-
-        Truncates the master event's recurrence to end before occurrence_date,
-        and creates a new recurring event starting from occurrence_date.
-        """
+        """Split a recurring series at ``occurrence_date`` and apply updates."""
         master = await self._fetch_by_id(event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
@@ -1221,7 +906,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
 
-        # Truncate master series: set end_date to day before occurrence_date
         config = dict(master.recurrence_config or {})
         end_dt = datetime(
             occurrence_date.year,
@@ -1233,7 +917,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         master.recurrence_config = config
         master.updated_at = datetime.now(UTC)
 
-        # Compute start/end for the new series
         duration = master.end_time - master.start_time
         new_start = datetime(
             occurrence_date.year,
@@ -1246,10 +929,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         new_end = new_start + duration
 
-        # Create new recurring event
         new_config = dict(master.recurrence_config or {})
-        # Remove the end_date we just set on the master - the new series
-        # inherits the original end_date if there was one, otherwise none
         original_end = (master.recurrence_config or {}).get("end_date")
         if original_end and original_end != config["end_date"]:
             new_config["end_date"] = original_end
@@ -1269,7 +949,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             timezone=master.timezone,
             location=master.location,
             meeting_url=master.meeting_url,
-            visibility=master.visibility,
+            access_mode=master.access_mode,
+            baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
             tags=master.tags,
             linked_resources=master.linked_resources,
@@ -1278,7 +959,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             reminders=master.reminders,
         )
 
-        # Apply provided updates
         for field, value in updates.items():
             if value is not None and hasattr(new_event, field):
                 setattr(new_event, field, value)
@@ -1286,7 +966,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         self.session.add(new_event)
         await self.session.flush()
 
-        # Copy attendees from master
         att_result = await self.session.execute(
             select(EventAttendee).where(EventAttendee.event_id == master.id)
         )
@@ -1300,8 +979,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
             self.session.add(new_att)
 
-        # Index for search
-        await self._index_for_search(model=new_event, group_ids=[])
+        await self._index_for_search(new_event, skip_member_lookup=True)
         await self.session.commit()
 
         return new_event
@@ -1321,93 +999,51 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         sort_by: str = "start_time",
         sort_order: str = "asc",
     ) -> tuple[list[CalendarEvent], int]:
-        """
-        List events with filters and pagination.
+        """List events the user can access with filters/pagination."""
+        query = select(CalendarEvent).where(
+            CalendarEvent.organization_id == organization_id
+        )
 
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting list.
-        organization_id : UUID
-            Organization ID.
-        calendar_id : UUID | None
-            Filter by calendar.
-        category_id : UUID | None
-            Filter by category.
-        start_date : datetime | None
-            Filter by start date.
-        end_date : datetime | None
-            Filter by end date.
-        include_deleted : bool
-            Include soft-deleted events.
-        tags : list[str] | None
-            Filter by tags.
-        page : int
-            Page number.
-        page_size : int
-            Items per page.
-        sort_by : str
-            Sort column.
-        sort_order : str
-            Sort direction.
-
-        Returns
-        -------
-        tuple[list[CalendarEvent], int]
-            Events and total count.
-
-        """
-        query = select(CalendarEvent).where(CalendarEvent.organization_id == organization_id)
-
-        # Apply access filter
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
             content_id_column=CalendarEvent.id,
             owner_id_column=CalendarEvent.organizer_id,
-            visibility_column=CalendarEvent.visibility,
+            access_mode_column=CalendarEvent.access_mode,
+            baseline_role_column=CalendarEvent.baseline_role,
         )
 
-        # Also include events where user is an attendee (including declined)
-        attendee_subquery = select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
+        attendee_subquery = select(EventAttendee.event_id).where(
+            EventAttendee.user_id == user_id
+        )
         attendee_filter = CalendarEvent.id.in_(attendee_subquery)
 
-        # Combine access filter with attendee filter
         query = query.where(or_(access_filter, attendee_filter))
 
-        # Apply filters
         if calendar_id:
             query = query.where(CalendarEvent.calendar_id == calendar_id)
-
         if category_id:
             query = query.where(CalendarEvent.category_id == category_id)
-
         if start_date:
             query = query.where(CalendarEvent.start_time >= start_date)
-
         if end_date:
             query = query.where(CalendarEvent.end_time <= end_date)
-
         if not include_deleted:
             query = query.where(CalendarEvent.is_deleted == False)  # noqa: E712
-
         if tags:
             for tag in tags:
                 query = query.where(CalendarEvent.tags.contains([tag]))
 
-        # Count total
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
-        # Sort
         sort_col = getattr(CalendarEvent, sort_by, CalendarEvent.start_time)
         if sort_order == "desc":
             query = query.order_by(sort_col.desc())
         else:
             query = query.order_by(sort_col.asc())
 
-        # Paginate
         query = query.offset((page - 1) * page_size).limit(page_size)
 
         result = await self.session.execute(query)
@@ -1421,24 +1057,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         organization_id: UUID,
         event_id: UUID,
     ) -> tuple[CalendarEvent, list[tuple[EventAttendee, dict]]]:
-        """
-        Get event with attendee details.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting event.
-        organization_id : UUID
-            Organization ID.
-        event_id : UUID
-            Event ID.
-
-        Returns
-        -------
-        tuple[CalendarEvent, list[tuple[EventAttendee, dict]]]
-            Event and attendee list.
-
-        """
+        """Get an event and its attendees (view-access required)."""
         event = await self.get_by_id(user_id, organization_id, event_id)
         attendees = await queries.get_event_attendees(self.session, event_id)
         return event, attendees
@@ -1451,44 +1070,20 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         attendee_ids: list[UUID],
         role: AttendeeRole = AttendeeRole.REQUIRED,
     ) -> CalendarEvent:
-        """
-        Add attendees to an event.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing action.
-        organization_id : UUID
-            Organization ID.
-        event_id : UUID
-            Event ID.
-        attendee_ids : list[UUID]
-            User IDs to add.
-        role : AttendeeRole
-            Role for new attendees.
-
-        Returns
-        -------
-        CalendarEvent
-            Updated event.
-
-        """
+        """Add attendees to an existing event."""
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
         await self._require_edit(user_id, organization_id, event)
 
-        # Expand any group IDs to individual user IDs
         attendee_ids = await self._expand_group_attendees(attendee_ids)
 
-        # Get existing attendee IDs
         result = await self.session.execute(
             select(EventAttendee.user_id).where(EventAttendee.event_id == event_id)
         )
         existing_ids = {row[0] for row in result.all()}
 
-        # Add new attendees
         added_ids: list[UUID] = []
         for attendee_id in attendee_ids:
             if attendee_id not in existing_ids:
@@ -1501,7 +1096,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 self.session.add(attendee)
                 added_ids.append(attendee_id)
 
-        # Create reminder rows for newly added attendees
         if added_ids and event.reminders:
             await self._create_reminder_rows(
                 event_id=event_id,
@@ -1514,7 +1108,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self.session.commit()
         await self.session.refresh(event)
 
-        # Notify newly added attendees
         if added_ids:
             await emit_notification(
                 NotificationEvent(
@@ -1536,37 +1129,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         event_id: UUID,
         attendee_ids: list[UUID],
     ) -> CalendarEvent:
-        """
-        Remove attendees from an event.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing action.
-        organization_id : UUID
-            Organization ID.
-        event_id : UUID
-            Event ID.
-        attendee_ids : list[UUID]
-            User IDs to remove.
-
-        Returns
-        -------
-        CalendarEvent
-            Updated event.
-
-        """
+        """Remove attendees from an event."""
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
         await self._require_edit(user_id, organization_id, event)
 
-        # Cannot remove organizer
         if event.organizer_id in attendee_ids:
             raise PermissionDeniedError("remove", "event organizer")
 
-        # Remove attendees
         result = await self.session.execute(
             select(EventAttendee).where(
                 and_(
@@ -1578,7 +1150,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         for attendee in result.scalars().all():
             await self.session.delete(attendee)
 
-        # Delete unsent reminders for removed attendees
         await self._delete_reminder_rows(event_id, user_ids=attendee_ids)
 
         event.updated_at = datetime.now(UTC)
@@ -1594,31 +1165,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         event_id: UUID,
         status: AttendeeStatus,
     ) -> bool:
-        """
-        Update the current user's attendee status for an event.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User updating their status.
-        organization_id : UUID
-            Organization ID.
-        event_id : UUID
-            Event ID.
-        status : AttendeeStatus
-            New status.
-
-        Returns
-        -------
-        bool
-            True if updated successfully.
-
-        """
+        """Update the current user's attendee status for an event."""
         event = await self._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
-        # Find user's attendee record
         result = await self.session.execute(
             select(EventAttendee).where(
                 and_(
@@ -1636,16 +1187,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         attendee.responded_at = datetime.now(UTC)
         attendee.updated_at = datetime.now(UTC)
 
-        # Handle reminder rows based on status change
         if status == AttendeeStatus.DECLINED:
-            # Delete user's unsent reminders when they decline
             await self._delete_reminder_rows(event_id, user_ids=[user_id])
         elif (
             old_status == AttendeeStatus.DECLINED
             and status in (AttendeeStatus.ACCEPTED, AttendeeStatus.TENTATIVE)
             and event.reminders
         ):
-            # Recreate reminders when un-declining
             await self._create_reminder_rows(
                 event_id=event_id,
                 user_ids=[user_id],
@@ -1655,7 +1203,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self.session.commit()
 
-        # Notify organizer of RSVP response
         if event.organizer_id != user_id:
             status_label = status.value.lower()
             await emit_notification(
@@ -1672,12 +1219,120 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         return True
 
 
-class CategoryOperations:
-    """
-    Category CRUD operations.
+    async def _resolve_access_policy(
+        self,
+        organization_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Fill in defaults and validate an (access_mode, baseline) pair."""
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, self.content_type
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
 
-    Categories are organization-wide and require org membership verification.
-    """
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+            return access_mode, baseline_role
+
+        return access_mode, None
+
+    async def _create_reminder_rows(
+        self,
+        event_id: UUID,
+        user_ids: list[UUID],
+        intervals: list[int],
+        start_time: datetime,
+    ) -> None:
+        """Create ``EventReminder`` rows for each (user, interval) pair."""
+        now = datetime.now(UTC)
+        for user_id in user_ids:
+            for minutes in intervals:
+                scheduled_at = start_time - timedelta(minutes=minutes)
+                if scheduled_at <= now:
+                    continue
+                reminder = EventReminder(
+                    event_id=event_id,
+                    user_id=user_id,
+                    minutes_before=minutes,
+                    scheduled_at=scheduled_at,
+                )
+                self.session.add(reminder)
+
+    async def _delete_reminder_rows(
+        self,
+        event_id: UUID,
+        user_ids: list[UUID] | None = None,
+    ) -> None:
+        """Delete unsent reminders, optionally scoped to a list of users."""
+        stmt = delete(EventReminder).where(
+            and_(
+                EventReminder.event_id == event_id,
+                EventReminder.sent_at.is_(None),
+            )
+        )
+        if user_ids is not None:
+            stmt = stmt.where(EventReminder.user_id.in_(user_ids))
+        await self.session.execute(stmt)
+
+    async def _expand_group_attendees(
+        self,
+        attendee_ids: list[UUID],
+    ) -> list[UUID]:
+        """Expand group IDs in the attendee list to individual users."""
+        if not attendee_ids:
+            return []
+
+        from uniffy.core.models.login.group import Group
+        from uniffy.core.models.login.group_member import GroupMember
+
+        result = await self.session.execute(
+            select(Group.id).where(Group.id.in_(attendee_ids))
+        )
+        group_ids = {row[0] for row in result.all()}
+
+        if not group_ids:
+            return attendee_ids
+
+        result = await self.session.execute(
+            select(GroupMember.user_id).where(
+                and_(
+                    GroupMember.group_id.in_(group_ids),
+                    GroupMember.is_active.is_(True),
+                )
+            )
+        )
+        group_member_ids = [row[0] for row in result.all()]
+
+        seen: set[UUID] = set()
+        resolved: list[UUID] = []
+        for uid in attendee_ids:
+            if uid in group_ids:
+                continue
+            if uid not in seen:
+                seen.add(uid)
+                resolved.append(uid)
+        for uid in group_member_ids:
+            if uid not in seen:
+                seen.add(uid)
+                resolved.append(uid)
+
+        return resolved
+
+
+class CategoryOperations:
+    """Category CRUD (no permission system; org-wide)."""
 
     def __init__(self, session: AsyncSession) -> None:
         """Initialize category operations."""
@@ -1688,22 +1343,7 @@ class CategoryOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """
-        Verify user is an active member of the organization.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID to verify.
-        organization_id : UUID
-            Organization ID to check membership for.
-
-        Raises
-        ------
-        PermissionDeniedError
-            If user is not an active member of the organization.
-
-        """
+        """Verify the user is an active org member."""
         result = await self.session.execute(
             select(OrganizationMember).where(
                 and_(
@@ -1729,9 +1369,10 @@ class CategoryOperations:
         """Create a new category."""
         await self._verify_org_membership(user_id, organization_id)
 
-        # Get next sort order
         result = await self.session.execute(
-            select(func.max(Category.sort_order)).where(Category.organization_id == organization_id)
+            select(func.max(Category.sort_order)).where(
+                Category.organization_id == organization_id
+            )
         )
         max_order = result.scalar() or 0
 
@@ -1754,7 +1395,7 @@ class CategoryOperations:
         category_id: UUID,
         organization_id: UUID,
     ) -> Category:
-        """Get category by ID."""
+        """Get a category by ID."""
         await self._verify_org_membership(user_id, organization_id)
 
         result = await self.session.execute(
@@ -1805,12 +1446,11 @@ class CategoryOperations:
         category_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Delete a category."""
+        """Delete a category (default categories cannot be deleted)."""
         await self._verify_org_membership(user_id, organization_id)
 
         category = await self.get_by_id(user_id, category_id, organization_id)
 
-        # Don't allow deleting default categories
         if category.is_default:
             raise PermissionDeniedError("delete", "default category")
 
@@ -1823,7 +1463,7 @@ class CategoryOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> list[Category]:
-        """List all categories for an organization."""
+        """List categories for the given organization."""
         await self._verify_org_membership(user_id, organization_id)
         return await queries.get_categories(self.session, organization_id)
 
@@ -1832,16 +1472,16 @@ class CategoryOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> list[Category]:
-        """Ensure organization has default categories."""
+        """Ensure the org has default categories."""
         await self._verify_org_membership(user_id, organization_id)
         return await queries.ensure_default_categories(self.session, organization_id)
 
 
 class EventTemplateOperations:
-    """
-    EventTemplate CRUD operations.
+    """EventTemplate CRUD (access_mode/baseline_role based).
 
-    Templates are organization-wide or private.
+    Templates are org-scoped and use the same access model as other
+    content. They do not participate in search or notifications.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -1853,9 +1493,7 @@ class EventTemplateOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """
-        Verify user is an active member of the organization.
-        """
+        """Verify the user is an active org member."""
         result = await self.session.execute(
             select(OrganizationMember).where(
                 and_(
@@ -1870,6 +1508,35 @@ class EventTemplateOperations:
         if not membership:
             raise PermissionDeniedError("access", "organization")
 
+    async def _resolve_access_policy(
+        self,
+        organization_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Fill in defaults and validate an (access_mode, baseline) pair."""
+        if access_mode is None:
+            access_mode, default_baseline = await resolve_content_defaults(
+                self.session, organization_id, ContentType.CALENDAR_EVENT
+            )
+            if baseline_role is None:
+                baseline_role = default_baseline
+
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            if baseline_role is None:
+                raise ValidationError(
+                    "baseline_role",
+                    "baseline_role is required when access_mode is OPEN_TO_ORG",
+                )
+            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
+                raise ValidationError(
+                    "baseline_role",
+                    f"{baseline_role.value} is not a valid baseline role",
+                )
+            return access_mode, baseline_role
+
+        return access_mode, None
+
     async def create(
         self,
         user_id: UUID,
@@ -1881,9 +1548,15 @@ class EventTemplateOperations:
         meeting_url: str | None = None,
         category_id: UUID | None = None,
         tags: list[str] | None = None,
-        visibility: VisibilityScope = VisibilityScope.PRIVATE,
+        access_mode: AccessMode | None = None,
+        baseline_role: ContentRole | None = None,
     ) -> EventTemplate:
+        """Create an event template."""
         await self._verify_org_membership(user_id, organization_id)
+
+        access_mode, baseline_role = await self._resolve_access_policy(
+            organization_id, access_mode, baseline_role
+        )
 
         template = EventTemplate(
             organization_id=organization_id,
@@ -1894,7 +1567,8 @@ class EventTemplateOperations:
             meeting_url=meeting_url,
             category_id=category_id,
             tags=tags or [],
-            visibility=visibility,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
             created_by=user_id,
         )
         self.session.add(template)
@@ -1908,6 +1582,7 @@ class EventTemplateOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> EventTemplate:
+        """Get a template by ID, enforcing access policy."""
         await self._verify_org_membership(user_id, organization_id)
 
         query = select(EventTemplate).where(
@@ -1920,10 +1595,12 @@ class EventTemplateOperations:
         template = result.scalar_one_or_none()
 
         if not template:
-            raise NotFoundError(EventTemplate, template_id)
+            raise NotFoundError("EventTemplate", template_id)
 
-        # Check visibility
-        if template.visibility == VisibilityScope.PRIVATE and template.created_by != user_id:
+        if (
+            template.access_mode == AccessMode.OWNER_ONLY
+            and template.created_by != user_id
+        ):
             raise PermissionDeniedError("read", "event template")
 
         return template
@@ -1935,9 +1612,9 @@ class EventTemplateOperations:
         user_id: UUID,
         **kwargs,
     ) -> EventTemplate:
+        """Update a template (creator only)."""
         template = await self.get_by_id(template_id, organization_id, user_id)
 
-        # Only creator can edit
         if template.created_by != user_id:
             raise PermissionDeniedError("update", "event template")
 
@@ -1955,6 +1632,7 @@ class EventTemplateOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> bool:
+        """Delete a template (creator only)."""
         template = await self.get_by_id(template_id, organization_id, user_id)
 
         if template.created_by != user_id:
@@ -1969,17 +1647,42 @@ class EventTemplateOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> list[EventTemplate]:
+        """List templates visible to the user.
+
+        Shows all non-OWNER_ONLY templates plus the user's own.
+        """
         await self._verify_org_membership(user_id, organization_id)
 
         query = select(EventTemplate).where(
             and_(
                 EventTemplate.organization_id == organization_id,
                 or_(
-                    EventTemplate.visibility != VisibilityScope.PRIVATE,
+                    EventTemplate.access_mode != AccessMode.OWNER_ONLY,
                     EventTemplate.created_by == user_id,
                 ),
             )
         )
 
         result = await self.session.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
+
+
+# Content loader registration
+
+
+async def _load_calendar_event(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_id: UUID,
+) -> CalendarEvent | None:
+    """Loader used by ``ContentMembersOperations`` to fetch an event row."""
+    result = await session.execute(
+        select(CalendarEvent).where(
+            CalendarEvent.id == content_id,
+            CalendarEvent.organization_id == organization_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+register_content_loader(ContentType.CALENDAR_EVENT, _load_calendar_event)

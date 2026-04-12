@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildContentDisposition, parseRangeRequest, MAX_INITIAL_CHUNK_SIZE } from '../mediaStreamUtils';
 
-// ---------------------------------------------------------------------------
 // buildContentDisposition
-// ---------------------------------------------------------------------------
 
 describe('buildContentDisposition', () => {
     it('returns simple header for ASCII-only filename', () => {
@@ -65,9 +63,7 @@ describe('buildContentDisposition', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // parseRangeRequest
-// ---------------------------------------------------------------------------
 
 describe('parseRangeRequest', () => {
     describe('without Range header', () => {

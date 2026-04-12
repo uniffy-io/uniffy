@@ -15,90 +15,103 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, En
 import permissions.v1.permissions_pb2 as permissions_dot_v1_dot_permissions__pb2
 
 
-class PermissionsService(Protocol):
-    async def grant_permission(self, request: permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+class MembersService(Protocol):
+    async def list_members(self, request: permissions_dot_v1_dot_permissions__pb2.ListMembersRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def revoke_permission(self, request: permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse:
+    async def add_member(self, request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_permission(self, request: permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    async def update_member_role(self, request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_content_permissions(self, request: permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionListResponse:
+    async def remove_member(self, request: permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_my_permission(self, request: permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    async def set_access_mode(self, request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def search_share_targets(self, request: permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse:
+    async def transfer_ownership(self, request: permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_member_events(self, request: permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
-class PermissionsServiceASGIApplication(ConnectASGIApplication[PermissionsService]):
-    def __init__(self, service: PermissionsService | AsyncGenerator[PermissionsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
+    def __init__(self, service: MembersService | AsyncGenerator[MembersService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
-                "/permissions.v1.PermissionsService/GrantPermission": Endpoint.unary(
+                "/permissions.v1.MembersService/ListMembers": Endpoint.unary(
                     method=MethodInfo(
-                        name="GrantPermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                        name="ListMembers",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.ListMembersRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.ListMembersResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=svc.grant_permission,
+                    function=svc.list_members,
                 ),
-                "/permissions.v1.PermissionsService/RevokePermission": Endpoint.unary(
+                "/permissions.v1.MembersService/AddMember": Endpoint.unary(
                     method=MethodInfo(
-                        name="RevokePermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse,
+                        name="AddMember",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=svc.revoke_permission,
+                    function=svc.add_member,
                 ),
-                "/permissions.v1.PermissionsService/UpdatePermission": Endpoint.unary(
+                "/permissions.v1.MembersService/UpdateMemberRole": Endpoint.unary(
                     method=MethodInfo(
-                        name="UpdatePermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                        name="UpdateMemberRole",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=svc.update_permission,
+                    function=svc.update_member_role,
                 ),
-                "/permissions.v1.PermissionsService/ListContentPermissions": Endpoint.unary(
+                "/permissions.v1.MembersService/RemoveMember": Endpoint.unary(
                     method=MethodInfo(
-                        name="ListContentPermissions",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionListResponse,
+                        name="RemoveMember",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=svc.list_content_permissions,
+                    function=svc.remove_member,
                 ),
-                "/permissions.v1.PermissionsService/GetMyPermission": Endpoint.unary(
+                "/permissions.v1.MembersService/SetAccessMode": Endpoint.unary(
                     method=MethodInfo(
-                        name="GetMyPermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                        name="SetAccessMode",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=svc.get_my_permission,
+                    function=svc.set_access_mode,
                 ),
-                "/permissions.v1.PermissionsService/SearchShareTargets": Endpoint.unary(
+                "/permissions.v1.MembersService/TransferOwnership": Endpoint.unary(
                     method=MethodInfo(
-                        name="SearchShareTargets",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse,
+                        name="TransferOwnership",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=svc.search_share_targets,
+                    function=svc.transfer_ownership,
+                ),
+                "/permissions.v1.MembersService/ListMemberEvents": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListMemberEvents",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_member_events,
                 ),
             },
             interceptors=interceptors,
@@ -108,124 +121,144 @@ class PermissionsServiceASGIApplication(ConnectASGIApplication[PermissionsServic
     @property
     def path(self) -> str:
         """Returns the URL path to mount the application to when serving multiple applications."""
-        return "/permissions.v1.PermissionsService"
+        return "/permissions.v1.MembersService"
 
 
-class PermissionsServiceClient(ConnectClient):
-    async def grant_permission(
+class MembersServiceClient(ConnectClient):
+    async def list_members(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.ListMembersRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    ) -> permissions_dot_v1_dot_permissions__pb2.ListMembersResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="GrantPermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                name="ListMembers",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.ListMembersRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.ListMembersResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    async def revoke_permission(
+    async def add_member(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="RevokePermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse,
+                name="AddMember",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    async def update_permission(
+    async def update_member_role(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="UpdatePermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                name="UpdateMemberRole",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    async def list_content_permissions(
+    async def remove_member(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionListResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="ListContentPermissions",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionListResponse,
+                name="RemoveMember",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    async def get_my_permission(
+    async def set_access_mode(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    ) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="GetMyPermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                name="SetAccessMode",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    async def search_share_targets(
+    async def transfer_ownership(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="SearchShareTargets",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse,
+                name="TransferOwnership",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_member_events(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListMemberEvents",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -233,84 +266,96 @@ class PermissionsServiceClient(ConnectClient):
         )
 
 
-class PermissionsServiceSync(Protocol):
-    def grant_permission(self, request: permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+class MembersServiceSync(Protocol):
+    def list_members(self, request: permissions_dot_v1_dot_permissions__pb2.ListMembersRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMembersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def revoke_permission(self, request: permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse:
+    def add_member(self, request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_permission(self, request: permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    def update_member_role(self, request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_content_permissions(self, request: permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionListResponse:
+    def remove_member(self, request: permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_my_permission(self, request: permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    def set_access_mode(self, request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def search_share_targets(self, request: permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse:
+    def transfer_ownership(self, request: permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_member_events(self, request: permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
-class PermissionsServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: PermissionsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+class MembersServiceWSGIApplication(ConnectWSGIApplication):
+    def __init__(self, service: MembersServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
         super().__init__(
             endpoints={
-                "/permissions.v1.PermissionsService/GrantPermission": EndpointSync.unary(
+                "/permissions.v1.MembersService/ListMembers": EndpointSync.unary(
                     method=MethodInfo(
-                        name="GrantPermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                        name="ListMembers",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.ListMembersRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.ListMembersResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=service.grant_permission,
+                    function=service.list_members,
                 ),
-                "/permissions.v1.PermissionsService/RevokePermission": EndpointSync.unary(
+                "/permissions.v1.MembersService/AddMember": EndpointSync.unary(
                     method=MethodInfo(
-                        name="RevokePermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse,
+                        name="AddMember",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=service.revoke_permission,
+                    function=service.add_member,
                 ),
-                "/permissions.v1.PermissionsService/UpdatePermission": EndpointSync.unary(
+                "/permissions.v1.MembersService/UpdateMemberRole": EndpointSync.unary(
                     method=MethodInfo(
-                        name="UpdatePermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                        name="UpdateMemberRole",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=service.update_permission,
+                    function=service.update_member_role,
                 ),
-                "/permissions.v1.PermissionsService/ListContentPermissions": EndpointSync.unary(
+                "/permissions.v1.MembersService/RemoveMember": EndpointSync.unary(
                     method=MethodInfo(
-                        name="ListContentPermissions",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionListResponse,
+                        name="RemoveMember",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=service.list_content_permissions,
+                    function=service.remove_member,
                 ),
-                "/permissions.v1.PermissionsService/GetMyPermission": EndpointSync.unary(
+                "/permissions.v1.MembersService/SetAccessMode": EndpointSync.unary(
                     method=MethodInfo(
-                        name="GetMyPermission",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                        name="SetAccessMode",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=service.get_my_permission,
+                    function=service.set_access_mode,
                 ),
-                "/permissions.v1.PermissionsService/SearchShareTargets": EndpointSync.unary(
+                "/permissions.v1.MembersService/TransferOwnership": EndpointSync.unary(
                     method=MethodInfo(
-                        name="SearchShareTargets",
-                        service_name="permissions.v1.PermissionsService",
-                        input=permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest,
-                        output=permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse,
+                        name="TransferOwnership",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=service.search_share_targets,
+                    function=service.transfer_ownership,
+                ),
+                "/permissions.v1.MembersService/ListMemberEvents": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListMemberEvents",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_member_events,
                 ),
             },
             interceptors=interceptors,
@@ -320,124 +365,144 @@ class PermissionsServiceWSGIApplication(ConnectWSGIApplication):
     @property
     def path(self) -> str:
         """Returns the URL path to mount the application to when serving multiple applications."""
-        return "/permissions.v1.PermissionsService"
+        return "/permissions.v1.MembersService"
 
 
-class PermissionsServiceClientSync(ConnectClientSync):
-    def grant_permission(
+class MembersServiceClientSync(ConnectClientSync):
+    def list_members(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.ListMembersRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    ) -> permissions_dot_v1_dot_permissions__pb2.ListMembersResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="GrantPermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.GrantPermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                name="ListMembers",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.ListMembersRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.ListMembersResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    def revoke_permission(
+    def add_member(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="RevokePermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.RevokePermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.RevokePermissionResponse,
+                name="AddMember",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.AddMemberRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    def update_permission(
+    def update_member_role(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    ) -> permissions_dot_v1_dot_permissions__pb2.MemberResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="UpdatePermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.UpdatePermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                name="UpdateMemberRole",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.UpdateMemberRoleRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.MemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    def list_content_permissions(
+    def remove_member(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionListResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="ListContentPermissions",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.ListContentPermissionsRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionListResponse,
+                name="RemoveMember",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.RemoveMemberRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.RemoveMemberResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    def get_my_permission(
+    def set_access_mode(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.PermissionInfo:
+    ) -> permissions_dot_v1_dot_permissions__pb2.AccessModeResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="GetMyPermission",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.GetMyPermissionRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.PermissionInfo,
+                name="SetAccessMode",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.SetAccessModeRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.AccessModeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
             timeout_ms=timeout_ms,
         )
 
-    def search_share_targets(
+    def transfer_ownership(
         self,
-        request: permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest,
+        request: permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse:
+    ) -> permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="SearchShareTargets",
-                service_name="permissions.v1.PermissionsService",
-                input=permissions_dot_v1_dot_permissions__pb2.SearchShareTargetsRequest,
-                output=permissions_dot_v1_dot_permissions__pb2.ShareTargetsResponse,
+                name="TransferOwnership",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_member_events(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListMemberEvents",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

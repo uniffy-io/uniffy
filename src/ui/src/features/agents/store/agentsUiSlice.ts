@@ -74,7 +74,6 @@ export const agentsUiSlice = createSlice({
   },
 });
 
-// Actions
 export const {
   setActiveTab,
   toggleSidebar,
@@ -89,7 +88,6 @@ export const {
   resetState,
 } = agentsUiSlice.actions;
 
-// Selectors
 export const selectActiveTab = (state: RootState) => state.agentsUi.activeTab;
 export const selectSidebarCollapsed = (state: RootState) => state.agentsUi.sidebarCollapsed;
 export const selectAgentsSidebarCollapsed = (state: RootState) => state.agentsUi.agentsSidebarCollapsed;

@@ -93,10 +93,8 @@ export {
   setEventScope,
 } from '@/features/calendar/store';
 
-// API
 export { calendarApi } from '@/features/calendar/api/calendarApi';
 
-// Thunks
 export {
   fetchEventsInRange,
   fetchEvent,
@@ -144,7 +142,6 @@ export {
   getPositionedEventsForWeek,
 } from '@/features/calendar/utils';
 
-// Constants
 export {
   CATEGORY_COLORS,
   DEFAULT_CATEGORIES,
@@ -158,7 +155,6 @@ export {
   DEFAULT_TEMPLATES,
 } from '@/features/calendar/constants';
 
-// Types
 export type {
   CalendarEvent,
   Category,

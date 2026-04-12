@@ -1208,16 +1208,17 @@ func (x *PermissionDefaultsResponse) GetDefaults() []*ContentTypeDefaults {
 }
 
 type UpdatePermissionDefaultsRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId    string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	ContentType       v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
-	DefaultVisibility *v1.VisibilityScope    `protobuf:"varint,3,opt,name=default_visibility,json=defaultVisibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"default_visibility,omitempty"`
-	MembersCanView    *bool                  `protobuf:"varint,4,opt,name=members_can_view,json=membersCanView,proto3,oneof" json:"members_can_view,omitempty"`
-	MembersCanEdit    *bool                  `protobuf:"varint,5,opt,name=members_can_edit,json=membersCanEdit,proto3,oneof" json:"members_can_edit,omitempty"`
-	MembersCanDelete  *bool                  `protobuf:"varint,6,opt,name=members_can_delete,json=membersCanDelete,proto3,oneof" json:"members_can_delete,omitempty"`
-	MembersCanShare   *bool                  `protobuf:"varint,7,opt,name=members_can_share,json=membersCanShare,proto3,oneof" json:"members_can_share,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId      string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType         v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	DefaultAccessMode   *v1.AccessMode         `protobuf:"varint,3,opt,name=default_access_mode,json=defaultAccessMode,proto3,enum=common.v1.AccessMode,oneof" json:"default_access_mode,omitempty"`
+	MembersCanView      *bool                  `protobuf:"varint,4,opt,name=members_can_view,json=membersCanView,proto3,oneof" json:"members_can_view,omitempty"`
+	MembersCanEdit      *bool                  `protobuf:"varint,5,opt,name=members_can_edit,json=membersCanEdit,proto3,oneof" json:"members_can_edit,omitempty"`
+	MembersCanDelete    *bool                  `protobuf:"varint,6,opt,name=members_can_delete,json=membersCanDelete,proto3,oneof" json:"members_can_delete,omitempty"`
+	MembersCanShare     *bool                  `protobuf:"varint,7,opt,name=members_can_share,json=membersCanShare,proto3,oneof" json:"members_can_share,omitempty"`
+	DefaultBaselineRole *v1.ContentRole        `protobuf:"varint,8,opt,name=default_baseline_role,json=defaultBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"default_baseline_role,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *UpdatePermissionDefaultsRequest) Reset() {
@@ -1264,11 +1265,11 @@ func (x *UpdatePermissionDefaultsRequest) GetContentType() v1.ContentType {
 	return v1.ContentType(0)
 }
 
-func (x *UpdatePermissionDefaultsRequest) GetDefaultVisibility() v1.VisibilityScope {
-	if x != nil && x.DefaultVisibility != nil {
-		return *x.DefaultVisibility
+func (x *UpdatePermissionDefaultsRequest) GetDefaultAccessMode() v1.AccessMode {
+	if x != nil && x.DefaultAccessMode != nil {
+		return *x.DefaultAccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *UpdatePermissionDefaultsRequest) GetMembersCanView() bool {
@@ -1299,17 +1300,25 @@ func (x *UpdatePermissionDefaultsRequest) GetMembersCanShare() bool {
 	return false
 }
 
+func (x *UpdatePermissionDefaultsRequest) GetDefaultBaselineRole() v1.ContentRole {
+	if x != nil && x.DefaultBaselineRole != nil {
+		return *x.DefaultBaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 type ContentTypeDefaults struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	ContentType       v1.ContentType         `protobuf:"varint,1,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
-	DefaultVisibility v1.VisibilityScope     `protobuf:"varint,2,opt,name=default_visibility,json=defaultVisibility,proto3,enum=common.v1.VisibilityScope" json:"default_visibility,omitempty"`
-	MembersCanView    bool                   `protobuf:"varint,3,opt,name=members_can_view,json=membersCanView,proto3" json:"members_can_view,omitempty"`
-	MembersCanEdit    bool                   `protobuf:"varint,4,opt,name=members_can_edit,json=membersCanEdit,proto3" json:"members_can_edit,omitempty"`
-	MembersCanDelete  bool                   `protobuf:"varint,5,opt,name=members_can_delete,json=membersCanDelete,proto3" json:"members_can_delete,omitempty"`
-	MembersCanShare   bool                   `protobuf:"varint,6,opt,name=members_can_share,json=membersCanShare,proto3" json:"members_can_share,omitempty"`
-	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ContentType         v1.ContentType         `protobuf:"varint,1,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	DefaultAccessMode   v1.AccessMode          `protobuf:"varint,2,opt,name=default_access_mode,json=defaultAccessMode,proto3,enum=common.v1.AccessMode" json:"default_access_mode,omitempty"`
+	MembersCanView      bool                   `protobuf:"varint,3,opt,name=members_can_view,json=membersCanView,proto3" json:"members_can_view,omitempty"`
+	MembersCanEdit      bool                   `protobuf:"varint,4,opt,name=members_can_edit,json=membersCanEdit,proto3" json:"members_can_edit,omitempty"`
+	MembersCanDelete    bool                   `protobuf:"varint,5,opt,name=members_can_delete,json=membersCanDelete,proto3" json:"members_can_delete,omitempty"`
+	MembersCanShare     bool                   `protobuf:"varint,6,opt,name=members_can_share,json=membersCanShare,proto3" json:"members_can_share,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DefaultBaselineRole *v1.ContentRole        `protobuf:"varint,8,opt,name=default_baseline_role,json=defaultBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"default_baseline_role,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ContentTypeDefaults) Reset() {
@@ -1349,11 +1358,11 @@ func (x *ContentTypeDefaults) GetContentType() v1.ContentType {
 	return v1.ContentType(0)
 }
 
-func (x *ContentTypeDefaults) GetDefaultVisibility() v1.VisibilityScope {
+func (x *ContentTypeDefaults) GetDefaultAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.DefaultVisibility
+		return x.DefaultAccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *ContentTypeDefaults) GetMembersCanView() bool {
@@ -1389,6 +1398,13 @@ func (x *ContentTypeDefaults) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *ContentTypeDefaults) GetDefaultBaselineRole() v1.ContentRole {
+	if x != nil && x.DefaultBaselineRole != nil {
+		return *x.DefaultBaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type GrantDomainAdminRequest struct {
@@ -1864,29 +1880,33 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x1cGetPermissionDefaultsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"_\n" +
 	"\x1aPermissionDefaultsResponse\x12A\n" +
-	"\bdefaults\x18\x01 \x03(\v2%.organizations.v1.ContentTypeDefaultsR\bdefaults\"\x85\x04\n" +
+	"\bdefaults\x18\x01 \x03(\v2%.organizations.v1.ContentTypeDefaultsR\bdefaults\"\xed\x04\n" +
 	"\x1fUpdatePermissionDefaultsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
-	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12N\n" +
-	"\x12default_visibility\x18\x03 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x00R\x11defaultVisibility\x88\x01\x01\x12-\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12J\n" +
+	"\x13default_access_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\x11defaultAccessMode\x88\x01\x01\x12-\n" +
 	"\x10members_can_view\x18\x04 \x01(\bH\x01R\x0emembersCanView\x88\x01\x01\x12-\n" +
 	"\x10members_can_edit\x18\x05 \x01(\bH\x02R\x0emembersCanEdit\x88\x01\x01\x121\n" +
 	"\x12members_can_delete\x18\x06 \x01(\bH\x03R\x10membersCanDelete\x88\x01\x01\x12/\n" +
-	"\x11members_can_share\x18\a \x01(\bH\x04R\x0fmembersCanShare\x88\x01\x01B\x15\n" +
-	"\x13_default_visibilityB\x13\n" +
+	"\x11members_can_share\x18\a \x01(\bH\x04R\x0fmembersCanShare\x88\x01\x01\x12O\n" +
+	"\x15default_baseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x05R\x13defaultBaselineRole\x88\x01\x01B\x16\n" +
+	"\x14_default_access_modeB\x13\n" +
 	"\x11_members_can_viewB\x13\n" +
 	"\x11_members_can_editB\x15\n" +
 	"\x13_members_can_deleteB\x14\n" +
-	"\x12_members_can_share\"\x84\x03\n" +
+	"\x12_members_can_shareB\x18\n" +
+	"\x16_default_baseline_role\"\xeb\x03\n" +
 	"\x13ContentTypeDefaults\x129\n" +
-	"\fcontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12I\n" +
-	"\x12default_visibility\x18\x02 \x01(\x0e2\x1a.common.v1.VisibilityScopeR\x11defaultVisibility\x12(\n" +
+	"\fcontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12E\n" +
+	"\x13default_access_mode\x18\x02 \x01(\x0e2\x15.common.v1.AccessModeR\x11defaultAccessMode\x12(\n" +
 	"\x10members_can_view\x18\x03 \x01(\bR\x0emembersCanView\x12(\n" +
 	"\x10members_can_edit\x18\x04 \x01(\bR\x0emembersCanEdit\x12,\n" +
 	"\x12members_can_delete\x18\x05 \x01(\bR\x10membersCanDelete\x12*\n" +
 	"\x11members_can_share\x18\x06 \x01(\bR\x0fmembersCanShare\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8a\x01\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12O\n" +
+	"\x15default_baseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x13defaultBaselineRole\x88\x01\x01B\x18\n" +
+	"\x16_default_baseline_role\"\x8a\x01\n" +
 	"\x17GrantDomainAdminRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12-\n" +
@@ -1987,9 +2007,10 @@ var file_organizations_v1_organizations_proto_goTypes = []any{
 	(*v1.PaginationResponse)(nil),           // 35: common.v1.PaginationResponse
 	(v1.ContentType)(0),                     // 36: common.v1.ContentType
 	(*v1.MemberInfo)(nil),                   // 37: common.v1.MemberInfo
-	(v1.VisibilityScope)(0),                 // 38: common.v1.VisibilityScope
-	(v1.DomainType)(0),                      // 39: common.v1.DomainType
-	(*v1.DomainAdminInfo)(nil),              // 40: common.v1.DomainAdminInfo
+	(v1.AccessMode)(0),                      // 38: common.v1.AccessMode
+	(v1.ContentRole)(0),                     // 39: common.v1.ContentRole
+	(v1.DomainType)(0),                      // 40: common.v1.DomainType
+	(*v1.DomainAdminInfo)(nil),              // 41: common.v1.DomainAdminInfo
 }
 var file_organizations_v1_organizations_proto_depIdxs = []int32{
 	2,  // 0: organizations.v1.ListMyOrganizationsResponse.organizations:type_name -> organizations.v1.MyOrganization
@@ -2011,56 +2032,58 @@ var file_organizations_v1_organizations_proto_depIdxs = []int32{
 	32, // 16: organizations.v1.UpdateMemberRoleRequest.role:type_name -> common.v1.OrganizationRole
 	23, // 17: organizations.v1.PermissionDefaultsResponse.defaults:type_name -> organizations.v1.ContentTypeDefaults
 	36, // 18: organizations.v1.UpdatePermissionDefaultsRequest.content_type:type_name -> common.v1.ContentType
-	38, // 19: organizations.v1.UpdatePermissionDefaultsRequest.default_visibility:type_name -> common.v1.VisibilityScope
-	36, // 20: organizations.v1.ContentTypeDefaults.content_type:type_name -> common.v1.ContentType
-	38, // 21: organizations.v1.ContentTypeDefaults.default_visibility:type_name -> common.v1.VisibilityScope
-	33, // 22: organizations.v1.ContentTypeDefaults.updated_at:type_name -> google.protobuf.Timestamp
-	39, // 23: organizations.v1.GrantDomainAdminRequest.domain:type_name -> common.v1.DomainType
-	39, // 24: organizations.v1.RevokeDomainAdminRequest.domain:type_name -> common.v1.DomainType
-	39, // 25: organizations.v1.ListDomainAdminsRequest.domain_filter:type_name -> common.v1.DomainType
-	34, // 26: organizations.v1.ListDomainAdminsRequest.pagination:type_name -> common.v1.PaginationRequest
-	40, // 27: organizations.v1.ListDomainAdminsResponse.domain_admins:type_name -> common.v1.DomainAdminInfo
-	35, // 28: organizations.v1.ListDomainAdminsResponse.pagination:type_name -> common.v1.PaginationResponse
-	39, // 29: organizations.v1.GetUserDomainAdminsResponse.domains:type_name -> common.v1.DomainType
-	0,  // 30: organizations.v1.OrganizationsService.ListMyOrganizations:input_type -> organizations.v1.ListMyOrganizationsRequest
-	3,  // 31: organizations.v1.OrganizationsService.ListOrganizations:input_type -> organizations.v1.ListOrganizationsRequest
-	6,  // 32: organizations.v1.OrganizationsService.GetOrganization:input_type -> organizations.v1.GetOrganizationRequest
-	7,  // 33: organizations.v1.OrganizationsService.CreateOrganization:input_type -> organizations.v1.CreateOrganizationRequest
-	8,  // 34: organizations.v1.OrganizationsService.UpdateOrganization:input_type -> organizations.v1.UpdateOrganizationRequest
-	9,  // 35: organizations.v1.OrganizationsService.DeleteOrganization:input_type -> organizations.v1.DeleteOrganizationRequest
-	11, // 36: organizations.v1.OrganizationsService.GetOrganizationOverview:input_type -> organizations.v1.GetOrganizationOverviewRequest
-	14, // 37: organizations.v1.OrganizationsService.ListMembers:input_type -> organizations.v1.ListMembersRequest
-	16, // 38: organizations.v1.OrganizationsService.AddMember:input_type -> organizations.v1.AddMemberRequest
-	17, // 39: organizations.v1.OrganizationsService.UpdateMemberRole:input_type -> organizations.v1.UpdateMemberRoleRequest
-	18, // 40: organizations.v1.OrganizationsService.RemoveMember:input_type -> organizations.v1.RemoveMemberRequest
-	20, // 41: organizations.v1.OrganizationsService.GetPermissionDefaults:input_type -> organizations.v1.GetPermissionDefaultsRequest
-	22, // 42: organizations.v1.OrganizationsService.UpdatePermissionDefaults:input_type -> organizations.v1.UpdatePermissionDefaultsRequest
-	24, // 43: organizations.v1.OrganizationsService.GrantDomainAdmin:input_type -> organizations.v1.GrantDomainAdminRequest
-	25, // 44: organizations.v1.OrganizationsService.RevokeDomainAdmin:input_type -> organizations.v1.RevokeDomainAdminRequest
-	27, // 45: organizations.v1.OrganizationsService.ListDomainAdmins:input_type -> organizations.v1.ListDomainAdminsRequest
-	29, // 46: organizations.v1.OrganizationsService.GetUserDomainAdmins:input_type -> organizations.v1.GetUserDomainAdminsRequest
-	1,  // 47: organizations.v1.OrganizationsService.ListMyOrganizations:output_type -> organizations.v1.ListMyOrganizationsResponse
-	4,  // 48: organizations.v1.OrganizationsService.ListOrganizations:output_type -> organizations.v1.ListOrganizationsResponse
-	5,  // 49: organizations.v1.OrganizationsService.GetOrganization:output_type -> organizations.v1.OrganizationDetail
-	31, // 50: organizations.v1.OrganizationsService.CreateOrganization:output_type -> common.v1.OrganizationInfo
-	31, // 51: organizations.v1.OrganizationsService.UpdateOrganization:output_type -> common.v1.OrganizationInfo
-	10, // 52: organizations.v1.OrganizationsService.DeleteOrganization:output_type -> organizations.v1.DeleteOrganizationResponse
-	12, // 53: organizations.v1.OrganizationsService.GetOrganizationOverview:output_type -> organizations.v1.OrganizationOverview
-	15, // 54: organizations.v1.OrganizationsService.ListMembers:output_type -> organizations.v1.ListMembersResponse
-	37, // 55: organizations.v1.OrganizationsService.AddMember:output_type -> common.v1.MemberInfo
-	37, // 56: organizations.v1.OrganizationsService.UpdateMemberRole:output_type -> common.v1.MemberInfo
-	19, // 57: organizations.v1.OrganizationsService.RemoveMember:output_type -> organizations.v1.RemoveMemberResponse
-	21, // 58: organizations.v1.OrganizationsService.GetPermissionDefaults:output_type -> organizations.v1.PermissionDefaultsResponse
-	23, // 59: organizations.v1.OrganizationsService.UpdatePermissionDefaults:output_type -> organizations.v1.ContentTypeDefaults
-	40, // 60: organizations.v1.OrganizationsService.GrantDomainAdmin:output_type -> common.v1.DomainAdminInfo
-	26, // 61: organizations.v1.OrganizationsService.RevokeDomainAdmin:output_type -> organizations.v1.RevokeDomainAdminResponse
-	28, // 62: organizations.v1.OrganizationsService.ListDomainAdmins:output_type -> organizations.v1.ListDomainAdminsResponse
-	30, // 63: organizations.v1.OrganizationsService.GetUserDomainAdmins:output_type -> organizations.v1.GetUserDomainAdminsResponse
-	47, // [47:64] is the sub-list for method output_type
-	30, // [30:47] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	38, // 19: organizations.v1.UpdatePermissionDefaultsRequest.default_access_mode:type_name -> common.v1.AccessMode
+	39, // 20: organizations.v1.UpdatePermissionDefaultsRequest.default_baseline_role:type_name -> common.v1.ContentRole
+	36, // 21: organizations.v1.ContentTypeDefaults.content_type:type_name -> common.v1.ContentType
+	38, // 22: organizations.v1.ContentTypeDefaults.default_access_mode:type_name -> common.v1.AccessMode
+	33, // 23: organizations.v1.ContentTypeDefaults.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 24: organizations.v1.ContentTypeDefaults.default_baseline_role:type_name -> common.v1.ContentRole
+	40, // 25: organizations.v1.GrantDomainAdminRequest.domain:type_name -> common.v1.DomainType
+	40, // 26: organizations.v1.RevokeDomainAdminRequest.domain:type_name -> common.v1.DomainType
+	40, // 27: organizations.v1.ListDomainAdminsRequest.domain_filter:type_name -> common.v1.DomainType
+	34, // 28: organizations.v1.ListDomainAdminsRequest.pagination:type_name -> common.v1.PaginationRequest
+	41, // 29: organizations.v1.ListDomainAdminsResponse.domain_admins:type_name -> common.v1.DomainAdminInfo
+	35, // 30: organizations.v1.ListDomainAdminsResponse.pagination:type_name -> common.v1.PaginationResponse
+	40, // 31: organizations.v1.GetUserDomainAdminsResponse.domains:type_name -> common.v1.DomainType
+	0,  // 32: organizations.v1.OrganizationsService.ListMyOrganizations:input_type -> organizations.v1.ListMyOrganizationsRequest
+	3,  // 33: organizations.v1.OrganizationsService.ListOrganizations:input_type -> organizations.v1.ListOrganizationsRequest
+	6,  // 34: organizations.v1.OrganizationsService.GetOrganization:input_type -> organizations.v1.GetOrganizationRequest
+	7,  // 35: organizations.v1.OrganizationsService.CreateOrganization:input_type -> organizations.v1.CreateOrganizationRequest
+	8,  // 36: organizations.v1.OrganizationsService.UpdateOrganization:input_type -> organizations.v1.UpdateOrganizationRequest
+	9,  // 37: organizations.v1.OrganizationsService.DeleteOrganization:input_type -> organizations.v1.DeleteOrganizationRequest
+	11, // 38: organizations.v1.OrganizationsService.GetOrganizationOverview:input_type -> organizations.v1.GetOrganizationOverviewRequest
+	14, // 39: organizations.v1.OrganizationsService.ListMembers:input_type -> organizations.v1.ListMembersRequest
+	16, // 40: organizations.v1.OrganizationsService.AddMember:input_type -> organizations.v1.AddMemberRequest
+	17, // 41: organizations.v1.OrganizationsService.UpdateMemberRole:input_type -> organizations.v1.UpdateMemberRoleRequest
+	18, // 42: organizations.v1.OrganizationsService.RemoveMember:input_type -> organizations.v1.RemoveMemberRequest
+	20, // 43: organizations.v1.OrganizationsService.GetPermissionDefaults:input_type -> organizations.v1.GetPermissionDefaultsRequest
+	22, // 44: organizations.v1.OrganizationsService.UpdatePermissionDefaults:input_type -> organizations.v1.UpdatePermissionDefaultsRequest
+	24, // 45: organizations.v1.OrganizationsService.GrantDomainAdmin:input_type -> organizations.v1.GrantDomainAdminRequest
+	25, // 46: organizations.v1.OrganizationsService.RevokeDomainAdmin:input_type -> organizations.v1.RevokeDomainAdminRequest
+	27, // 47: organizations.v1.OrganizationsService.ListDomainAdmins:input_type -> organizations.v1.ListDomainAdminsRequest
+	29, // 48: organizations.v1.OrganizationsService.GetUserDomainAdmins:input_type -> organizations.v1.GetUserDomainAdminsRequest
+	1,  // 49: organizations.v1.OrganizationsService.ListMyOrganizations:output_type -> organizations.v1.ListMyOrganizationsResponse
+	4,  // 50: organizations.v1.OrganizationsService.ListOrganizations:output_type -> organizations.v1.ListOrganizationsResponse
+	5,  // 51: organizations.v1.OrganizationsService.GetOrganization:output_type -> organizations.v1.OrganizationDetail
+	31, // 52: organizations.v1.OrganizationsService.CreateOrganization:output_type -> common.v1.OrganizationInfo
+	31, // 53: organizations.v1.OrganizationsService.UpdateOrganization:output_type -> common.v1.OrganizationInfo
+	10, // 54: organizations.v1.OrganizationsService.DeleteOrganization:output_type -> organizations.v1.DeleteOrganizationResponse
+	12, // 55: organizations.v1.OrganizationsService.GetOrganizationOverview:output_type -> organizations.v1.OrganizationOverview
+	15, // 56: organizations.v1.OrganizationsService.ListMembers:output_type -> organizations.v1.ListMembersResponse
+	37, // 57: organizations.v1.OrganizationsService.AddMember:output_type -> common.v1.MemberInfo
+	37, // 58: organizations.v1.OrganizationsService.UpdateMemberRole:output_type -> common.v1.MemberInfo
+	19, // 59: organizations.v1.OrganizationsService.RemoveMember:output_type -> organizations.v1.RemoveMemberResponse
+	21, // 60: organizations.v1.OrganizationsService.GetPermissionDefaults:output_type -> organizations.v1.PermissionDefaultsResponse
+	23, // 61: organizations.v1.OrganizationsService.UpdatePermissionDefaults:output_type -> organizations.v1.ContentTypeDefaults
+	41, // 62: organizations.v1.OrganizationsService.GrantDomainAdmin:output_type -> common.v1.DomainAdminInfo
+	26, // 63: organizations.v1.OrganizationsService.RevokeDomainAdmin:output_type -> organizations.v1.RevokeDomainAdminResponse
+	28, // 64: organizations.v1.OrganizationsService.ListDomainAdmins:output_type -> organizations.v1.ListDomainAdminsResponse
+	30, // 65: organizations.v1.OrganizationsService.GetUserDomainAdmins:output_type -> organizations.v1.GetUserDomainAdminsResponse
+	49, // [49:66] is the sub-list for method output_type
+	32, // [32:49] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_organizations_v1_organizations_proto_init() }
@@ -2075,6 +2098,7 @@ func file_organizations_v1_organizations_proto_init() {
 	file_organizations_v1_organizations_proto_msgTypes[14].OneofWrappers = []any{}
 	file_organizations_v1_organizations_proto_msgTypes[15].OneofWrappers = []any{}
 	file_organizations_v1_organizations_proto_msgTypes[22].OneofWrappers = []any{}
+	file_organizations_v1_organizations_proto_msgTypes[23].OneofWrappers = []any{}
 	file_organizations_v1_organizations_proto_msgTypes[27].OneofWrappers = []any{}
 	file_organizations_v1_organizations_proto_msgTypes[28].OneofWrappers = []any{}
 	type x struct{}

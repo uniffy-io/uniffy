@@ -28,9 +28,7 @@ from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.models.shared import BookingStatus, RoomStatus, RoomType, VisibilityScope
 
-# ---------------------------------------------------------------------------
 # Enum mapping dicts (bidirectional)
-# ---------------------------------------------------------------------------
 
 ROOM_TYPE_TO_PROTO: dict[RoomType, ProtoRoomType.ValueType] = {
     RoomType.MEETING_ROOM: ProtoRoomType.ROOM_TYPE_MEETING_ROOM,
@@ -87,9 +85,7 @@ VISIBILITY_FROM_PROTO: dict[ProtoVisibilityScope.ValueType, VisibilityScope] = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Conversion functions
-# ---------------------------------------------------------------------------
 
 
 def room_type_from_proto(proto_type: ProtoRoomType.ValueType) -> RoomType:

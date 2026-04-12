@@ -26,7 +26,7 @@ from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__
 from common.v1 import common_pb2 as common_dot_v1_dot_common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x61gents/v1/prompts.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16\x63ommon/v1/common.proto\"\x80\x04\n\nPromptInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12,\n\x0forganization_id\x18\x02 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12!\n\x0c\x64isplay_name\x18\x04 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x05 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x06 \x01(\tR\x07\x63ontent\x12/\n\x06source\x18\x07 \x01(\x0e\x32\x17.agents.v1.PromptSourceR\x06source\x12\x1e\n\x08owner_id\x18\x08 \x01(\tH\x01R\x07ownerId\x88\x01\x01\x12\x39\n\ncreated_at\x18\t \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x39\n\nupdated_at\x18\n \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tupdatedAt\x12:\n\nvisibility\x18\x0b \x01(\x0e\x32\x1a.common.v1.VisibilityScopeR\nvisibility\x12\x1d\n\ncreated_by\x18\x0c \x01(\tR\tcreatedByB\x12\n\x10_organization_idB\x0b\n\t_owner_id\"\xbc\x02\n\x13\x43reatePromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12!\n\x0c\x64isplay_name\x18\x03 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x04 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x05 \x01(\tR\x07\x63ontent\x12\x1e\n\x08owner_id\x18\x06 \x01(\tH\x01R\x07ownerId\x88\x01\x01\x12?\n\nvisibility\x18\x07 \x01(\x0e\x32\x1a.common.v1.VisibilityScopeH\x02R\nvisibility\x88\x01\x01\x42\x07\n\x05_nameB\x0b\n\t_owner_idB\r\n\x0b_visibility\"?\n\x0ePromptResponse\x12-\n\x06prompt\x18\x01 \x01(\x0b\x32\x15.agents.v1.PromptInfoR\x06prompt\"X\n\x10GetPromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tprompt_id\x18\x02 \x01(\tR\x08promptId\"\x8f\x01\n\x12ListPromptsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x41\n\npagination\x18\x02 \x01(\x0b\x32\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x42\r\n\x0b_pagination\"\x85\x01\n\x13ListPromptsResponse\x12/\n\x07prompts\x18\x01 \x03(\x0b\x32\x15.agents.v1.PromptInfoR\x07prompts\x12=\n\npagination\x18\x02 \x01(\x0b\x32\x1d.common.v1.PaginationResponseR\npagination\"\xe8\x02\n\x13UpdatePromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tprompt_id\x18\x02 \x01(\tR\x08promptId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12&\n\x0c\x64isplay_name\x18\x04 \x01(\tH\x01R\x0b\x64isplayName\x88\x01\x01\x12%\n\x0b\x64\x65scription\x18\x05 \x01(\tH\x02R\x0b\x64\x65scription\x88\x01\x01\x12\x1d\n\x07\x63ontent\x18\x06 \x01(\tH\x03R\x07\x63ontent\x88\x01\x01\x12?\n\nvisibility\x18\x07 \x01(\x0e\x32\x1a.common.v1.VisibilityScopeH\x04R\nvisibility\x88\x01\x01\x42\x07\n\x05_nameB\x0f\n\r_display_nameB\x0e\n\x0c_descriptionB\n\n\x08_contentB\r\n\x0b_visibility\"[\n\x13\x44\x65letePromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tprompt_id\x18\x02 \x01(\tR\x08promptId\"0\n\x14\x44\x65letePromptResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success*\x84\x01\n\x0cPromptSource\x12\x1d\n\x19PROMPT_SOURCE_UNSPECIFIED\x10\x00\x12\x19\n\x15PROMPT_SOURCE_BUNDLED\x10\x01\x12\x1e\n\x1aPROMPT_SOURCE_ORGANIZATION\x10\x02\x12\x1a\n\x16PROMPT_SOURCE_PERSONAL\x10\x03\x32\x94\x03\n\x0ePromptsService\x12K\n\x0c\x43reatePrompt\x12\x1e.agents.v1.CreatePromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12\x45\n\tGetPrompt\x12\x1b.agents.v1.GetPromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12N\n\x0bListPrompts\x12\x1d.agents.v1.ListPromptsRequest\x1a\x1e.agents.v1.ListPromptsResponse\"\x00\x12K\n\x0cUpdatePrompt\x12\x1e.agents.v1.UpdatePromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12Q\n\x0c\x44\x65letePrompt\x12\x1e.agents.v1.DeletePromptRequest\x1a\x1f.agents.v1.DeletePromptResponse\"\x00\x42;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x61gents/v1/prompts.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16\x63ommon/v1/common.proto\"\xd0\x04\n\nPromptInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12,\n\x0forganization_id\x18\x02 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12!\n\x0c\x64isplay_name\x18\x04 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x05 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x06 \x01(\tR\x07\x63ontent\x12/\n\x06source\x18\x07 \x01(\x0e\x32\x17.agents.v1.PromptSourceR\x06source\x12\x1e\n\x08owner_id\x18\x08 \x01(\tH\x01R\x07ownerId\x88\x01\x01\x12\x39\n\ncreated_at\x18\t \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x39\n\nupdated_at\x18\n \x01(\x0b\x32\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x36\n\x0b\x61\x63\x63\x65ss_mode\x18\x0b \x01(\x0e\x32\x15.common.v1.AccessModeR\naccessMode\x12\x1d\n\ncreated_by\x18\x0c \x01(\tR\tcreatedBy\x12@\n\rbaseline_role\x18\r \x01(\x0e\x32\x16.common.v1.ContentRoleH\x02R\x0c\x62\x61selineRole\x88\x01\x01\x42\x12\n\x10_organization_idB\x0b\n\t_owner_idB\x10\n\x0e_baseline_role\"\x8d\x03\n\x13\x43reatePromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12!\n\x0c\x64isplay_name\x18\x03 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x04 \x01(\tR\x0b\x64\x65scription\x12\x18\n\x07\x63ontent\x18\x05 \x01(\tR\x07\x63ontent\x12\x1e\n\x08owner_id\x18\x06 \x01(\tH\x01R\x07ownerId\x88\x01\x01\x12;\n\x0b\x61\x63\x63\x65ss_mode\x18\x07 \x01(\x0e\x32\x15.common.v1.AccessModeH\x02R\naccessMode\x88\x01\x01\x12@\n\rbaseline_role\x18\x08 \x01(\x0e\x32\x16.common.v1.ContentRoleH\x03R\x0c\x62\x61selineRole\x88\x01\x01\x42\x07\n\x05_nameB\x0b\n\t_owner_idB\x0e\n\x0c_access_modeB\x10\n\x0e_baseline_role\"?\n\x0ePromptResponse\x12-\n\x06prompt\x18\x01 \x01(\x0b\x32\x15.agents.v1.PromptInfoR\x06prompt\"X\n\x10GetPromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tprompt_id\x18\x02 \x01(\tR\x08promptId\"\x8f\x01\n\x12ListPromptsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x41\n\npagination\x18\x02 \x01(\x0b\x32\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x42\r\n\x0b_pagination\"\x85\x01\n\x13ListPromptsResponse\x12/\n\x07prompts\x18\x01 \x03(\x0b\x32\x15.agents.v1.PromptInfoR\x07prompts\x12=\n\npagination\x18\x02 \x01(\x0b\x32\x1d.common.v1.PaginationResponseR\npagination\"\xb9\x03\n\x13UpdatePromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tprompt_id\x18\x02 \x01(\tR\x08promptId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12&\n\x0c\x64isplay_name\x18\x04 \x01(\tH\x01R\x0b\x64isplayName\x88\x01\x01\x12%\n\x0b\x64\x65scription\x18\x05 \x01(\tH\x02R\x0b\x64\x65scription\x88\x01\x01\x12\x1d\n\x07\x63ontent\x18\x06 \x01(\tH\x03R\x07\x63ontent\x88\x01\x01\x12;\n\x0b\x61\x63\x63\x65ss_mode\x18\x07 \x01(\x0e\x32\x15.common.v1.AccessModeH\x04R\naccessMode\x88\x01\x01\x12@\n\rbaseline_role\x18\x08 \x01(\x0e\x32\x16.common.v1.ContentRoleH\x05R\x0c\x62\x61selineRole\x88\x01\x01\x42\x07\n\x05_nameB\x0f\n\r_display_nameB\x0e\n\x0c_descriptionB\n\n\x08_contentB\x0e\n\x0c_access_modeB\x10\n\x0e_baseline_role\"[\n\x13\x44\x65letePromptRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tprompt_id\x18\x02 \x01(\tR\x08promptId\"0\n\x14\x44\x65letePromptResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success*\x84\x01\n\x0cPromptSource\x12\x1d\n\x19PROMPT_SOURCE_UNSPECIFIED\x10\x00\x12\x19\n\x15PROMPT_SOURCE_BUNDLED\x10\x01\x12\x1e\n\x1aPROMPT_SOURCE_ORGANIZATION\x10\x02\x12\x1a\n\x16PROMPT_SOURCE_PERSONAL\x10\x03\x32\x94\x03\n\x0ePromptsService\x12K\n\x0c\x43reatePrompt\x12\x1e.agents.v1.CreatePromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12\x45\n\tGetPrompt\x12\x1b.agents.v1.GetPromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12N\n\x0bListPrompts\x12\x1d.agents.v1.ListPromptsRequest\x1a\x1e.agents.v1.ListPromptsResponse\"\x00\x12K\n\x0cUpdatePrompt\x12\x1e.agents.v1.UpdatePromptRequest\x1a\x19.agents.v1.PromptResponse\"\x00\x12Q\n\x0c\x44\x65letePrompt\x12\x1e.agents.v1.DeletePromptRequest\x1a\x1f.agents.v1.DeletePromptResponse\"\x00\x42;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,26 +34,26 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agents.v1.prompts_pb2', _gl
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1'
-  _globals['_PROMPTSOURCE']._serialized_start=1873
-  _globals['_PROMPTSOURCE']._serialized_end=2005
+  _globals['_PROMPTSOURCE']._serialized_start=2115
+  _globals['_PROMPTSOURCE']._serialized_end=2247
   _globals['_PROMPTINFO']._serialized_start=96
-  _globals['_PROMPTINFO']._serialized_end=608
-  _globals['_CREATEPROMPTREQUEST']._serialized_start=611
-  _globals['_CREATEPROMPTREQUEST']._serialized_end=927
-  _globals['_PROMPTRESPONSE']._serialized_start=929
-  _globals['_PROMPTRESPONSE']._serialized_end=992
-  _globals['_GETPROMPTREQUEST']._serialized_start=994
-  _globals['_GETPROMPTREQUEST']._serialized_end=1082
-  _globals['_LISTPROMPTSREQUEST']._serialized_start=1085
-  _globals['_LISTPROMPTSREQUEST']._serialized_end=1228
-  _globals['_LISTPROMPTSRESPONSE']._serialized_start=1231
-  _globals['_LISTPROMPTSRESPONSE']._serialized_end=1364
-  _globals['_UPDATEPROMPTREQUEST']._serialized_start=1367
-  _globals['_UPDATEPROMPTREQUEST']._serialized_end=1727
-  _globals['_DELETEPROMPTREQUEST']._serialized_start=1729
-  _globals['_DELETEPROMPTREQUEST']._serialized_end=1820
-  _globals['_DELETEPROMPTRESPONSE']._serialized_start=1822
-  _globals['_DELETEPROMPTRESPONSE']._serialized_end=1870
-  _globals['_PROMPTSSERVICE']._serialized_start=2008
-  _globals['_PROMPTSSERVICE']._serialized_end=2412
+  _globals['_PROMPTINFO']._serialized_end=688
+  _globals['_CREATEPROMPTREQUEST']._serialized_start=691
+  _globals['_CREATEPROMPTREQUEST']._serialized_end=1088
+  _globals['_PROMPTRESPONSE']._serialized_start=1090
+  _globals['_PROMPTRESPONSE']._serialized_end=1153
+  _globals['_GETPROMPTREQUEST']._serialized_start=1155
+  _globals['_GETPROMPTREQUEST']._serialized_end=1243
+  _globals['_LISTPROMPTSREQUEST']._serialized_start=1246
+  _globals['_LISTPROMPTSREQUEST']._serialized_end=1389
+  _globals['_LISTPROMPTSRESPONSE']._serialized_start=1392
+  _globals['_LISTPROMPTSRESPONSE']._serialized_end=1525
+  _globals['_UPDATEPROMPTREQUEST']._serialized_start=1528
+  _globals['_UPDATEPROMPTREQUEST']._serialized_end=1969
+  _globals['_DELETEPROMPTREQUEST']._serialized_start=1971
+  _globals['_DELETEPROMPTREQUEST']._serialized_end=2062
+  _globals['_DELETEPROMPTRESPONSE']._serialized_start=2064
+  _globals['_DELETEPROMPTRESPONSE']._serialized_end=2112
+  _globals['_PROMPTSSERVICE']._serialized_start=2250
+  _globals['_PROMPTSSERVICE']._serialized_end=2654
 # @@protoc_insertion_point(module_scope)

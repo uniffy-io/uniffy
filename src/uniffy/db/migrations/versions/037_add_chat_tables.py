@@ -22,15 +22,6 @@ _now = sa.text("now()")
 _false = sa.text("false")
 _tz = sa.DateTime(timezone=True)
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
-    create_type=False,
-)
-
 _channel_type_enum = postgresql.ENUM(
     "PUBLIC",
     "PRIVATE",
@@ -79,6 +70,7 @@ _content_type_enum = postgresql.ENUM(
     "PROMPT",
     "AGENT_CRON_TASK",
     "CHAT",
+    "ROOM",
     name="contenttype",
     create_type=False,
 )
@@ -86,8 +78,6 @@ _content_type_enum = postgresql.ENUM(
 
 def upgrade() -> None:
     """Create all chat domain tables."""
-    op.execute(sa.text("ALTER TYPE contenttype ADD VALUE IF NOT EXISTS 'CHAT'"))
-
     postgresql.ENUM(
         "PUBLIC",
         "PRIVATE",
@@ -151,12 +141,6 @@ def upgrade() -> None:
         sa.Column("slug", sa.String(200), nullable=False),
         sa.Column("description", sa.Text(), nullable=False, server_default=""),
         sa.Column("channel_type", _channel_type_enum, nullable=False),
-        sa.Column(
-            "visibility",
-            _visibility_enum,
-            nullable=False,
-            server_default="PRIVATE",
-        ),
         sa.Column("is_encrypted", sa.Boolean(), nullable=False, server_default=_false),
         sa.Column("is_archived", sa.Boolean(), nullable=False, server_default=_false),
         sa.Column("is_default", sa.Boolean(), nullable=False, server_default=_false),

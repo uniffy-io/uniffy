@@ -24,9 +24,18 @@ depends_on: str | Sequence[str] | None = None
 _content_type_enum = postgresql.ENUM(
     "NOTE",
     "FILE",
+    "FOLDER",
     "CALENDAR_EVENT",
     "CHAT_MESSAGE",
     "USER",
+    "PROJECT",
+    "TASK",
+    "AGENT",
+    "PROVIDER_KEY",
+    "PROMPT",
+    "AGENT_CRON_TASK",
+    "CHAT",
+    "ROOM",
     name="contenttype",
     create_type=False,
 )

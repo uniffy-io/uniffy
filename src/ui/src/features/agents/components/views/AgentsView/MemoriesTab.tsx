@@ -30,9 +30,6 @@ import type { SerializedMemory } from "@/features/agents/store/agentMemoriesThun
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { MemoryCategory } from "@uniffy/proto/agents/v1/memories_pb";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 const CATEGORY_LABELS: Record<number, string> = {
     [MemoryCategory.UNSPECIFIED]: "Unspecified",
@@ -81,9 +78,7 @@ function formatTimestamp(ts?: { seconds: number; nanos: number }): string {
     return formatRelativeTime(date.toISOString());
 }
 
-// ---------------------------------------------------------------------------
 // Importance bar
-// ---------------------------------------------------------------------------
 
 function ImportanceBar({ value }: { value: number }) {
     const segments = 10;
@@ -104,9 +99,7 @@ function ImportanceBar({ value }: { value: number }) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Edit form
-// ---------------------------------------------------------------------------
 
 interface EditState {
     content: string;
@@ -191,9 +184,7 @@ function MemoryEditForm({
     );
 }
 
-// ---------------------------------------------------------------------------
 // New memory form
-// ---------------------------------------------------------------------------
 
 interface NewMemoryState {
     key: string;
@@ -311,9 +302,7 @@ function NewMemoryForm({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Memory row
-// ---------------------------------------------------------------------------
 
 function MemoryRow({
     memory,
@@ -410,9 +399,7 @@ function MemoryRow({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Main tab component
-// ---------------------------------------------------------------------------
 
 export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();

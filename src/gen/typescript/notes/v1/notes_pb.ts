@@ -5,102 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-
-/**
- * Visibility scope for content
- *
- * @generated from enum notes.v1.VisibilityScope
- */
-export enum VisibilityScope {
-  /**
-   * @generated from enum value: VISIBILITY_SCOPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * Personal space - only owner can access
-   *
-   * @generated from enum value: VISIBILITY_SCOPE_PRIVATE = 1;
-   */
-  PRIVATE = 1,
-
-  /**
-   * Group space - accessible to group members
-   *
-   * @generated from enum value: VISIBILITY_SCOPE_GROUP = 2;
-   */
-  GROUP = 2,
-
-  /**
-   * Organization space - accessible to all org members
-   *
-   * @generated from enum value: VISIBILITY_SCOPE_ORGANIZATION = 3;
-   */
-  ORGANIZATION = 3,
-
-  /**
-   * Public - accessible externally (future)
-   *
-   * @generated from enum value: VISIBILITY_SCOPE_PUBLIC = 4;
-   */
-  PUBLIC = 4,
-}
-// Retrieve enum metadata with: proto3.getEnumType(VisibilityScope)
-proto3.util.setEnumType(VisibilityScope, "notes.v1.VisibilityScope", [
-  { no: 0, name: "VISIBILITY_SCOPE_UNSPECIFIED" },
-  { no: 1, name: "VISIBILITY_SCOPE_PRIVATE" },
-  { no: 2, name: "VISIBILITY_SCOPE_GROUP" },
-  { no: 3, name: "VISIBILITY_SCOPE_ORGANIZATION" },
-  { no: 4, name: "VISIBILITY_SCOPE_PUBLIC" },
-]);
-
-/**
- * Permission levels for content access
- *
- * @generated from enum notes.v1.PermissionLevel
- */
-export enum PermissionLevel {
-  /**
-   * @generated from enum value: PERMISSION_LEVEL_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * Can view content
-   *
-   * @generated from enum value: PERMISSION_LEVEL_VIEW = 1;
-   */
-  VIEW = 1,
-
-  /**
-   * Can view and edit content
-   *
-   * @generated from enum value: PERMISSION_LEVEL_EDIT = 2;
-   */
-  EDIT = 2,
-
-  /**
-   * Can view, edit, delete, and share
-   *
-   * @generated from enum value: PERMISSION_LEVEL_ADMIN = 3;
-   */
-  ADMIN = 3,
-
-  /**
-   * Full control including ownership transfer
-   *
-   * @generated from enum value: PERMISSION_LEVEL_OWNER = 4;
-   */
-  OWNER = 4,
-}
-// Retrieve enum metadata with: proto3.getEnumType(PermissionLevel)
-proto3.util.setEnumType(PermissionLevel, "notes.v1.PermissionLevel", [
-  { no: 0, name: "PERMISSION_LEVEL_UNSPECIFIED" },
-  { no: 1, name: "PERMISSION_LEVEL_VIEW" },
-  { no: 2, name: "PERMISSION_LEVEL_EDIT" },
-  { no: 3, name: "PERMISSION_LEVEL_ADMIN" },
-  { no: 4, name: "PERMISSION_LEVEL_OWNER" },
-]);
+import { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
 
 /**
  * Node type for notes hierarchy
@@ -206,14 +111,14 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
   metadata: { [key: string]: string } = {};
 
   /**
-   * Visibility scope (defaults to PRIVATE)
+   * Access mode (defaults to OWNER_ONLY)
    *
-   * @generated from field: optional notes.v1.VisibilityScope visibility = 8;
+   * @generated from field: optional common.v1.AccessMode access_mode = 8;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
-   * Optional group ID(s) if visibility is GROUP
+   * Optional group ID(s) if using group-based membership
    *
    * @generated from field: repeated string group_ids = 9;
    */
@@ -233,6 +138,13 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
    */
   icon?: NoteIcon;
 
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 12;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<CreateNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -248,10 +160,11 @@ export class CreateNoteRequest extends Message<CreateNoteRequest> {
     { no: 5, name: "parent_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 8, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 8, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 9, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 10, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType), opt: true },
     { no: 11, name: "icon", kind: "message", T: NoteIcon, opt: true },
+    { no: 12, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNoteRequest {
@@ -635,11 +548,11 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
   sortOrder = "";
 
   /**
-   * Optional visibility filter
+   * Optional access mode filter
    *
-   * @generated from field: optional notes.v1.VisibilityScope visibility = 10;
+   * @generated from field: optional common.v1.AccessMode access_mode = 10;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * Optional group ID filter (for group-scoped notes)
@@ -678,7 +591,7 @@ export class ListNotesRequest extends Message<ListNotesRequest> {
     { no: 7, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 8, name: "sort_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "sort_order", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 10, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 11, name: "group_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 12, name: "personal_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "exclude_content", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
@@ -1372,11 +1285,11 @@ export class Note extends Message<Note> {
   ownerId = "";
 
   /**
-   * Visibility scope
+   * Access mode
    *
-   * @generated from field: notes.v1.VisibilityScope visibility = 4;
+   * @generated from field: common.v1.AccessMode access_mode = 4;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * Node type (note, folder, template)
@@ -1477,11 +1390,11 @@ export class Note extends Message<Note> {
   groupIds: string[] = [];
 
   /**
-   * User's permission level on this note
+   * User's role on this note
    *
-   * @generated from field: notes.v1.PermissionLevel user_permission = 19;
+   * @generated from field: common.v1.ContentRole user_role = 19;
    */
-  userPermission = PermissionLevel.UNSPECIFIED;
+  userRole = ContentRole.UNSPECIFIED;
 
   /**
    * URNs referenced in this note's content (outgoing links)
@@ -1511,6 +1424,13 @@ export class Note extends Message<Note> {
    */
   sharedWith: NoteShareTarget[] = [];
 
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 25;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<Note>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1522,7 +1442,7 @@ export class Note extends Message<Note> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 4, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 5, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType) },
     { no: 6, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -1537,11 +1457,12 @@ export class Note extends Message<Note> {
     { no: 16, name: "updated_at", kind: "message", T: Timestamp },
     { no: 17, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 18, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 19, name: "user_permission", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 19, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
     { no: 20, name: "outgoing_references", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 21, name: "icon", kind: "message", T: NoteIcon, opt: true },
     { no: 22, name: "owner_info", kind: "message", T: NoteOwner, opt: true },
     { no: 23, name: "shared_with", kind: "message", T: NoteShareTarget, repeated: true },
+    { no: 25, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Note {
@@ -1603,11 +1524,11 @@ export class NoteReference extends Message<NoteReference> {
   updatedAt?: Timestamp;
 
   /**
-   * Visibility scope
+   * Access mode
    *
-   * @generated from field: notes.v1.VisibilityScope visibility = 6;
+   * @generated from field: common.v1.AccessMode access_mode = 6;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * Node type
@@ -1615,6 +1536,13 @@ export class NoteReference extends Message<NoteReference> {
    * @generated from field: notes.v1.NodeType node_type = 7;
    */
   nodeType = NodeType.UNSPECIFIED;
+
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 8;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<NoteReference>) {
     super();
@@ -1629,8 +1557,9 @@ export class NoteReference extends Message<NoteReference> {
     { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "updated_at", kind: "message", T: Timestamp },
-    { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 7, name: "node_type", kind: "enum", T: proto3.getEnumType(NodeType) },
+    { no: 8, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteReference {
@@ -1671,18 +1600,25 @@ export class MoveNoteRequest extends Message<MoveNoteRequest> {
   organizationId = "";
 
   /**
-   * Target visibility scope
+   * Target access mode
    *
-   * @generated from field: notes.v1.VisibilityScope target_visibility = 3;
+   * @generated from field: common.v1.AccessMode target_access_mode = 3;
    */
-  targetVisibility = VisibilityScope.UNSPECIFIED;
+  targetAccessMode = AccessMode.UNSPECIFIED;
 
   /**
-   * Target group ID(s) if moving to GROUP visibility
+   * Target group ID(s) if using group-based membership
    *
    * @generated from field: repeated string target_group_ids = 4;
    */
   targetGroupIds: string[] = [];
+
+  /**
+   * Target baseline role granted by access mode
+   *
+   * @generated from field: optional common.v1.ContentRole target_baseline_role = 5;
+   */
+  targetBaselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<MoveNoteRequest>) {
     super();
@@ -1694,8 +1630,9 @@ export class MoveNoteRequest extends Message<MoveNoteRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "target_visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 3, name: "target_access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 4, name: "target_group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "target_baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveNoteRequest {
@@ -1736,14 +1673,14 @@ export class CopyNoteRequest extends Message<CopyNoteRequest> {
   organizationId = "";
 
   /**
-   * Target visibility scope
+   * Target access mode
    *
-   * @generated from field: notes.v1.VisibilityScope target_visibility = 3;
+   * @generated from field: common.v1.AccessMode target_access_mode = 3;
    */
-  targetVisibility = VisibilityScope.UNSPECIFIED;
+  targetAccessMode = AccessMode.UNSPECIFIED;
 
   /**
-   * Target group ID(s) if copying to GROUP visibility
+   * Target group ID(s) if using group-based membership
    *
    * @generated from field: repeated string target_group_ids = 4;
    */
@@ -1756,6 +1693,13 @@ export class CopyNoteRequest extends Message<CopyNoteRequest> {
    */
   title?: string;
 
+  /**
+   * Target baseline role granted by access mode
+   *
+   * @generated from field: optional common.v1.ContentRole target_baseline_role = 6;
+   */
+  targetBaselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<CopyNoteRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1766,9 +1710,10 @@ export class CopyNoteRequest extends Message<CopyNoteRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "target_visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 3, name: "target_access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 4, name: "target_group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "target_baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CopyNoteRequest {
@@ -2015,11 +1960,11 @@ export class GetNoteSharingRequest extends Message<GetNoteSharingRequest> {
  */
 export class NoteSharingResponse extends Message<NoteSharingResponse> {
   /**
-   * Note visibility
+   * Note access mode
    *
-   * @generated from field: notes.v1.VisibilityScope visibility = 1;
+   * @generated from field: common.v1.AccessMode access_mode = 1;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * Owner user ID
@@ -2042,6 +1987,13 @@ export class NoteSharingResponse extends Message<NoteSharingResponse> {
    */
   permissions: ContentPermission[] = [];
 
+  /**
+   * Baseline role granted by access mode (when applicable)
+   *
+   * @generated from field: optional common.v1.ContentRole baseline_role = 5;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<NoteSharingResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2050,10 +2002,11 @@ export class NoteSharingResponse extends Message<NoteSharingResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "notes.v1.NoteSharingResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 1, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 2, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "group_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "permissions", kind: "message", T: ContentPermission, repeated: true },
+    { no: 5, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteSharingResponse {
@@ -2108,11 +2061,11 @@ export class GrantPermissionRequest extends Message<GrantPermissionRequest> {
   subjectId = "";
 
   /**
-   * Permission level
+   * Role to grant
    *
-   * @generated from field: notes.v1.PermissionLevel permission_level = 5;
+   * @generated from field: common.v1.ContentRole role = 5;
    */
-  permissionLevel = PermissionLevel.UNSPECIFIED;
+  role = ContentRole.UNSPECIFIED;
 
   /**
    * Optional: fine-grained permissions
@@ -2153,7 +2106,7 @@ export class GrantPermissionRequest extends Message<GrantPermissionRequest> {
     { no: 2, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "subject_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 5, name: "role", kind: "enum", T: proto3.getEnumType(ContentRole) },
     { no: 6, name: "can_view", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "can_edit", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 8, name: "can_delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
@@ -2320,11 +2273,11 @@ export class ContentPermission extends Message<ContentPermission> {
   subjectId = "";
 
   /**
-   * Permission level
+   * Role granted
    *
-   * @generated from field: notes.v1.PermissionLevel permission_level = 4;
+   * @generated from field: common.v1.ContentRole role = 4;
    */
-  permissionLevel = PermissionLevel.UNSPECIFIED;
+  role = ContentRole.UNSPECIFIED;
 
   /**
    * Fine-grained permissions
@@ -2385,7 +2338,7 @@ export class ContentPermission extends Message<ContentPermission> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "subject_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 4, name: "role", kind: "enum", T: proto3.getEnumType(ContentRole) },
     { no: 5, name: "can_view", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "can_edit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "can_delete", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
@@ -2512,11 +2465,11 @@ export class NoteShareTarget extends Message<NoteShareTarget> {
   memberCount = 0;
 
   /**
-   * Permission level: "view", "edit", "admin"
+   * Role granted
    *
-   * @generated from field: string permission_level = 6;
+   * @generated from field: common.v1.ContentRole role = 6;
    */
-  permissionLevel = "";
+  role = ContentRole.UNSPECIFIED;
 
   constructor(data?: PartialMessage<NoteShareTarget>) {
     super();
@@ -2531,7 +2484,7 @@ export class NoteShareTarget extends Message<NoteShareTarget> {
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 6, name: "permission_level", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "role", kind: "enum", T: proto3.getEnumType(ContentRole) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteShareTarget {

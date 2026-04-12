@@ -1,11 +1,14 @@
 """Create organization permission defaults table.
 
-Revision ID: 006
-Revises: 005
+Revision ID: 007
+Revises: 006
 Create Date: 2026-01-24
 
-This migration creates the permissions_org_defaults table for storing
-default permission settings per content type within each organization.
+Creates ``permissions_org_defaults``: templates for new content per
+content type. When a user creates a note, project, etc., the backend
+reads the row for that (organization, content_type) and applies the
+stored ``default_access_mode`` and ``default_baseline_role`` to the new
+item.
 
 """
 
@@ -23,21 +26,36 @@ depends_on: str | Sequence[str] | None = None
 _content_type_enum = postgresql.ENUM(
     "NOTE",
     "FILE",
+    "FOLDER",
     "CALENDAR_EVENT",
-    "BOOK",
-    "PASSWORD",
-    "WORKFLOW",
     "CHAT_MESSAGE",
-    "SPACE",
+    "USER",
+    "PROJECT",
+    "TASK",
+    "AGENT",
+    "PROVIDER_KEY",
+    "PROMPT",
+    "AGENT_CRON_TASK",
+    "CHAT",
+    "ROOM",
     name="contenttype",
     create_type=False,
 )
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
+    create_type=False,
+)
+_content_role_enum = postgresql.ENUM(
+    "OWNER",
+    "ADMIN",
+    "EDITOR",
+    "COMMENTER",
+    "VIEWER",
+    "BLOCKED",
+    name="contentrole",
     create_type=False,
 )
 
@@ -49,19 +67,22 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("content_type", _content_type_enum, nullable=False),
-        sa.Column("default_visibility", _visibility_enum, nullable=False, server_default="PRIVATE"),
-        sa.Column("members_can_view", sa.Boolean(), nullable=False, server_default="true"),
-        sa.Column("members_can_edit", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("members_can_delete", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("members_can_share", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "default_access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OWNER_ONLY",
+        ),
+        sa.Column("default_baseline_role", _content_role_enum, nullable=True),
         sa.Column("updated_by_user_id", sa.Uuid(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["updated_by_user_id"], ["login_users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("organization_id", "content_type", name="uq_org_content_type"),
     )
-
     op.create_index(
         "ix_permissions_org_defaults_organization_id",
         "permissions_org_defaults",

@@ -30,9 +30,6 @@ import type {
 } from '@/features/rooms/types';
 import { DEFAULT_PAGE_SIZE } from '@/features/rooms/constants';
 
-// ============================================================================
-// Helpers
-// ============================================================================
 
 /**
  * Convert proto timestamp to ISO string.
@@ -54,9 +51,7 @@ const isoToTimestamp = (iso: string): Timestamp => {
   });
 };
 
-// ============================================================================
 // Enum Converters
-// ============================================================================
 
 const ROOM_TYPE_FROM_PROTO: Record<ProtoRoomType, RoomType> = {
   [ProtoRoomType.UNSPECIFIED]: 'meeting_room',
@@ -112,9 +107,7 @@ const VISIBILITY_FROM_PROTO: Record<ProtoVisibilityScope, string> = {
   [ProtoVisibilityScope.PUBLIC]: 'organization',
 };
 
-// ============================================================================
 // Proto to Domain Converters
-// ============================================================================
 
 /**
  * Convert proto room to domain room.
@@ -170,9 +163,7 @@ const timeSlotFromProto = (proto: ProtoTimeSlot): TimeSlot => ({
   bookerName: proto.bookerName,
 });
 
-// ============================================================================
 // Room Thunks
-// ============================================================================
 
 /**
  * Fetch rooms with optional filters.
@@ -425,9 +416,7 @@ export const deleteRoom = createAsyncThunk<
   }
 });
 
-// ============================================================================
 // Booking Thunks
-// ============================================================================
 
 /**
  * Create a new booking.
@@ -526,9 +515,7 @@ export const fetchBookings = createAsyncThunk<
   }
 });
 
-// ============================================================================
 // Availability Thunks
-// ============================================================================
 
 /**
  * Check availability for a specific room over a date range.

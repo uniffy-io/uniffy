@@ -29,9 +29,7 @@ import { TypingIndicator } from '@/features/chat/components/channel/TypingIndica
 import { NewMessagesPill } from '@/features/chat/components/channel/NewMessagesPill';
 import type { ChatMessage } from '@/features/chat/types';
 
-// ---------------------------------------------------------------
 // Grouping logic
-// ---------------------------------------------------------------
 
 const GROUPING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -88,9 +86,7 @@ function groupMessages(messages: ChatMessage[]): GroupedMessage[] {
   return result;
 }
 
-// ---------------------------------------------------------------
 // Sub-components
-// ---------------------------------------------------------------
 
 function DateSeparator({ label }: { label: string }) {
   return (
@@ -136,9 +132,7 @@ function ChannelEmptyState({ channelName, description, isPrivate }: {
   );
 }
 
-// ---------------------------------------------------------------
 // MessageList component
-// ---------------------------------------------------------------
 
 const SCROLL_THRESHOLD = 100;
 

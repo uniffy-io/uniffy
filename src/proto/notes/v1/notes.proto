@@ -5,32 +5,7 @@ package notes.v1;
 option go_package = "github.com/uniffy-io/uniffy-proto-go/notes/v1;notesv1";
 
 import "google/protobuf/timestamp.proto";
-
-// Visibility scope for content
-enum VisibilityScope {
-  VISIBILITY_SCOPE_UNSPECIFIED = 0;
-  // Personal space - only owner can access
-  VISIBILITY_SCOPE_PRIVATE = 1;
-  // Group space - accessible to group members
-  VISIBILITY_SCOPE_GROUP = 2;
-  // Organization space - accessible to all org members
-  VISIBILITY_SCOPE_ORGANIZATION = 3;
-  // Public - accessible externally (future)
-  VISIBILITY_SCOPE_PUBLIC = 4;
-}
-
-// Permission levels for content access
-enum PermissionLevel {
-  PERMISSION_LEVEL_UNSPECIFIED = 0;
-  // Can view content
-  PERMISSION_LEVEL_VIEW = 1;
-  // Can view and edit content
-  PERMISSION_LEVEL_EDIT = 2;
-  // Can view, edit, delete, and share
-  PERMISSION_LEVEL_ADMIN = 3;
-  // Full control including ownership transfer
-  PERMISSION_LEVEL_OWNER = 4;
-}
+import "common/v1/common.proto";
 
 // Node type for notes hierarchy
 enum NodeType {
@@ -115,14 +90,16 @@ message CreateNoteRequest {
   repeated string tags = 6;
   // Optional metadata
   map<string, string> metadata = 7;
-  // Visibility scope (defaults to PRIVATE)
-  optional VisibilityScope visibility = 8;
-  // Optional group ID(s) if visibility is GROUP
+  // Access mode (defaults to OWNER_ONLY)
+  optional common.v1.AccessMode access_mode = 8;
+  // Optional group ID(s) if using group-based membership
   repeated string group_ids = 9;
   // Node type (defaults to NOTE)
   optional NodeType node_type = 10;
   // Optional custom icon
   optional NoteIcon icon = 11;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 12;
 }
 
 // Request to get a note
@@ -200,8 +177,8 @@ message ListNotesRequest {
   string sort_by = 8;
   // Sort order (asc, desc)
   string sort_order = 9;
-  // Optional visibility filter
-  optional VisibilityScope visibility = 10;
+  // Optional access mode filter
+  optional common.v1.AccessMode access_mode = 10;
   // Optional group ID filter (for group-scoped notes)
   optional string group_id = 11;
   // Show only my personal notes
@@ -332,8 +309,8 @@ message Note {
   string organization_id = 2;
   // Owner user ID (who owns the note)
   string owner_id = 3;
-  // Visibility scope
-  VisibilityScope visibility = 4;
+  // Access mode
+  common.v1.AccessMode access_mode = 4;
   // Node type (note, folder, template)
   NodeType node_type = 5;
   // Note title
@@ -365,8 +342,8 @@ message Note {
   optional google.protobuf.Timestamp deleted_at = 17;
   // Group IDs if shared with groups
   repeated string group_ids = 18;
-  // User's permission level on this note
-  PermissionLevel user_permission = 19;
+  // User's role on this note
+  common.v1.ContentRole user_role = 19;
   // URNs referenced in this note's content (outgoing links)
   repeated string outgoing_references = 20;
   // Custom icon for the note (optional)
@@ -377,6 +354,9 @@ message Note {
 
   // Users/groups this note is shared with (only populated for owner)
   repeated NoteShareTarget shared_with = 23;
+
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 25;
 }
 
 // Note reference (lightweight representation for backlinks)
@@ -391,10 +371,12 @@ message NoteReference {
   string owner_id = 4;
   // Updated timestamp
   google.protobuf.Timestamp updated_at = 5;
-  // Visibility scope
-  VisibilityScope visibility = 6;
+  // Access mode
+  common.v1.AccessMode access_mode = 6;
   // Node type
   NodeType node_type = 7;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 8;
 }
 
 // Request to move note between spaces
@@ -403,10 +385,12 @@ message MoveNoteRequest {
   string note_id = 1;
   // Organization ID for access control
   string organization_id = 2;
-  // Target visibility scope
-  VisibilityScope target_visibility = 3;
-  // Target group ID(s) if moving to GROUP visibility
+  // Target access mode
+  common.v1.AccessMode target_access_mode = 3;
+  // Target group ID(s) if using group-based membership
   repeated string target_group_ids = 4;
+  // Target baseline role granted by access mode
+  optional common.v1.ContentRole target_baseline_role = 5;
 }
 
 // Request to copy note to another space
@@ -415,12 +399,14 @@ message CopyNoteRequest {
   string note_id = 1;
   // Organization ID for access control
   string organization_id = 2;
-  // Target visibility scope
-  VisibilityScope target_visibility = 3;
-  // Target group ID(s) if copying to GROUP visibility
+  // Target access mode
+  common.v1.AccessMode target_access_mode = 3;
+  // Target group ID(s) if using group-based membership
   repeated string target_group_ids = 4;
   // Optional: new title for the copy
   optional string title = 5;
+  // Target baseline role granted by access mode
+  optional common.v1.ContentRole target_baseline_role = 6;
 }
 
 // Request to share note with group
@@ -463,14 +449,16 @@ message GetNoteSharingRequest {
 
 // Response with note sharing information
 message NoteSharingResponse {
-  // Note visibility
-  VisibilityScope visibility = 1;
+  // Note access mode
+  common.v1.AccessMode access_mode = 1;
   // Owner user ID
   string owner_id = 2;
   // Group IDs if shared with groups
   repeated string group_ids = 3;
   // Explicit permissions granted
   repeated ContentPermission permissions = 4;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 5;
 }
 
 // Request to grant permission
@@ -483,8 +471,8 @@ message GrantPermissionRequest {
   string subject_type = 3;
   // Subject ID (user or group ID)
   string subject_id = 4;
-  // Permission level
-  PermissionLevel permission_level = 5;
+  // Role to grant
+  common.v1.ContentRole role = 5;
   // Optional: fine-grained permissions
   optional bool can_view = 6;
   optional bool can_edit = 7;
@@ -521,8 +509,8 @@ message ContentPermission {
   string subject_type = 2;
   // Subject ID
   string subject_id = 3;
-  // Permission level
-  PermissionLevel permission_level = 4;
+  // Role granted
+  common.v1.ContentRole role = 4;
   // Fine-grained permissions
   bool can_view = 5;
   bool can_edit = 6;
@@ -559,6 +547,6 @@ message NoteShareTarget {
   string email = 4;
   // Member count (only for groups)
   int32 member_count = 5;
-  // Permission level: "view", "edit", "admin"
-  string permission_level = 6;
+  // Role granted
+  common.v1.ContentRole role = 6;
 }

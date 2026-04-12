@@ -52,7 +52,7 @@ message AgentInfo {
   google.protobuf.Timestamp created_at = 14;
   google.protobuf.Timestamp updated_at = 15;
   repeated string enabled_skills = 16;
-  common.v1.VisibilityScope visibility = 17;
+  common.v1.AccessMode access_mode = 17;
   reserved 18;
   // S3 key prefix for avatar images (empty string if none)
   string avatar_key = 19;
@@ -65,6 +65,8 @@ message AgentInfo {
   string image_provider_key_id = 23;
   // Prompt template ID (empty = no template, uses soul_prompt directly)
   string prompt_id = 24;
+  // Baseline role granted by access mode (when applicable)
+  optional common.v1.ContentRole baseline_role = 25;
 }
 
 // --- Requests and Responses ---
@@ -81,7 +83,7 @@ message CreateAgentRequest {
   optional string theme_color = 9;
   optional bool is_default = 10;
   repeated string enabled_skills = 11;
-  optional common.v1.VisibilityScope visibility = 12;
+  optional common.v1.AccessMode access_mode = 12;
   repeated string group_ids = 13;
   reserved 14;
   reserved 15;
@@ -94,6 +96,7 @@ message CreateAgentRequest {
   optional string image_provider_key_id = 19;
   // Prompt template ID
   optional string prompt_id = 20;
+  optional common.v1.ContentRole baseline_role = 21;
 }
 
 message AgentResponse {
@@ -108,7 +111,7 @@ message GetAgentRequest {
 message ListAgentsRequest {
   string organization_id = 1;
   optional common.v1.PaginationRequest pagination = 2;
-  optional common.v1.VisibilityScope visibility = 3;
+  optional common.v1.AccessMode access_mode = 3;
   optional bool personal_only = 4;
   optional string group_id = 5;
 }
@@ -131,7 +134,7 @@ message UpdateAgentRequest {
   optional string theme_color = 10;
   optional bool is_default = 11;
   repeated string enabled_skills = 12;
-  optional common.v1.VisibilityScope visibility = 13;
+  optional common.v1.AccessMode access_mode = 13;
   repeated string group_ids = 14;
   repeated string enabled_tools = 15;
   reserved 16;
@@ -146,6 +149,7 @@ message UpdateAgentRequest {
   optional string prompt_id = 21;
   // Clear the prompt template (set to null)
   optional bool clear_prompt = 22;
+  optional common.v1.ContentRole baseline_role = 23;
 }
 
 message DeleteAgentRequest {

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { PaginationRequest, PaginationResponse, PermissionLevel, VisibilityScope } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentRole, PaginationRequest, PaginationResponse } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from enum projects.v1.FieldType
@@ -203,9 +203,9 @@ export class Project extends Message<Project> {
   color = "";
 
   /**
-   * @generated from field: common.v1.VisibilityScope visibility = 8;
+   * @generated from field: common.v1.AccessMode access_mode = 8;
    */
-  visibility = VisibilityScope.UNSPECIFIED;
+  accessMode = AccessMode.UNSPECIFIED;
 
   /**
    * @generated from field: repeated projects.v1.FieldDefinition field_definitions = 9;
@@ -221,11 +221,6 @@ export class Project extends Message<Project> {
    * @generated from field: string default_view_id = 11;
    */
   defaultViewId = "";
-
-  /**
-   * @generated from field: repeated string member_ids = 12;
-   */
-  memberIds: string[] = [];
 
   /**
    * @generated from field: google.protobuf.Timestamp created_at = 13;
@@ -248,9 +243,9 @@ export class Project extends Message<Project> {
   urn = "";
 
   /**
-   * @generated from field: common.v1.PermissionLevel user_permission_level = 17;
+   * @generated from field: common.v1.ContentRole user_role = 17;
    */
-  userPermissionLevel = PermissionLevel.UNSPECIFIED;
+  userRole = ContentRole.UNSPECIFIED;
 
   /**
    * @generated from field: string slug = 18;
@@ -261,6 +256,11 @@ export class Project extends Message<Project> {
    * @generated from field: map<string, projects.v1.TypeFieldSchema> type_field_schemas = 19;
    */
   typeFieldSchemas: { [key: string]: TypeFieldSchema } = {};
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 20;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<Project>) {
     super();
@@ -277,18 +277,18 @@ export class Project extends Message<Project> {
     { no: 5, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "icon", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "color", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope) },
+    { no: 8, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
     { no: 9, name: "field_definitions", kind: "message", T: FieldDefinition, repeated: true },
     { no: 10, name: "views", kind: "message", T: ViewConfig, repeated: true },
     { no: 11, name: "default_view_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 12, name: "member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 13, name: "created_at", kind: "message", T: Timestamp },
     { no: 14, name: "updated_at", kind: "message", T: Timestamp },
     { no: 15, name: "deleted_at", kind: "message", T: Timestamp, opt: true },
     { no: 16, name: "urn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 17, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 17, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
     { no: 18, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 19, name: "type_field_schemas", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TypeFieldSchema} },
+    { no: 20, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Project {
@@ -443,9 +443,9 @@ export class Task extends Message<Task> {
   sprintId?: string;
 
   /**
-   * @generated from field: common.v1.PermissionLevel user_permission_level = 27;
+   * @generated from field: common.v1.ContentRole user_role = 27;
    */
-  userPermissionLevel = PermissionLevel.UNSPECIFIED;
+  userRole = ContentRole.UNSPECIFIED;
 
   /**
    * @generated from field: int32 subtask_total = 28;
@@ -501,7 +501,7 @@ export class Task extends Message<Task> {
     { no: 24, name: "number", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 25, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 26, name: "sprint_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 27, name: "user_permission_level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 27, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
     { no: 28, name: "subtask_total", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 29, name: "subtask_completed", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 30, name: "estimated_minutes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
@@ -1011,14 +1011,19 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
   color?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 6;
+   * @generated from field: optional common.v1.AccessMode access_mode = 6;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: optional string slug = 7;
    */
   slug?: string;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 8;
+   */
+  baselineRole?: ContentRole;
 
   constructor(data?: PartialMessage<CreateProjectRequest>) {
     super();
@@ -1033,8 +1038,9 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
     { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "icon", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 6, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 7, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProjectRequest {
@@ -1132,14 +1138,9 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
   color?: string;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 7;
+   * @generated from field: optional common.v1.AccessMode access_mode = 7;
    */
-  visibility?: VisibilityScope;
-
-  /**
-   * @generated from field: repeated string member_ids = 8;
-   */
-  memberIds: string[] = [];
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: optional string default_view_id = 9;
@@ -1156,6 +1157,11 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
    */
   typeFieldSchemas: { [key: string]: TypeFieldSchema } = {};
 
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 12;
+   */
+  baselineRole?: ContentRole;
+
   constructor(data?: PartialMessage<UpdateProjectRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1170,11 +1176,11 @@ export class UpdateProjectRequest extends Message<UpdateProjectRequest> {
     { no: 4, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "icon", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
-    { no: 8, name: "member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 9, name: "default_view_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "type_field_schemas", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TypeFieldSchema} },
+    { no: 12, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProjectRequest {
@@ -1258,9 +1264,9 @@ export class ListProjectsRequest extends Message<ListProjectsRequest> {
   pagination?: PaginationRequest;
 
   /**
-   * @generated from field: optional common.v1.VisibilityScope visibility = 3;
+   * @generated from field: optional common.v1.AccessMode access_mode = 3;
    */
-  visibility?: VisibilityScope;
+  accessMode?: AccessMode;
 
   /**
    * @generated from field: optional bool include_deleted = 4;
@@ -1277,7 +1283,7 @@ export class ListProjectsRequest extends Message<ListProjectsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "pagination", kind: "message", T: PaginationRequest, opt: true },
-    { no: 3, name: "visibility", kind: "enum", T: proto3.getEnumType(VisibilityScope), opt: true },
+    { no: 3, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
     { no: 4, name: "include_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 

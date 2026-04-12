@@ -7,10 +7,8 @@
 // Main component
 export { IconPicker } from '@/components/icon-picker/IconPicker';
 
-// Types
 export type { IconValue, NoteIcon } from '@/components/icon-picker/iconConstants';
 
-// Constants
 export {
     ICON_COMPONENTS,
     CURATED_ICONS,

@@ -5,14 +5,371 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { ContentType, PermissionLevel, SubjectType } from "../../common/v1/common_pb.js";
+import { AccessMode, ContentMemberAction, ContentRole, ContentType, OrganizationRole, PaginationRequest, PaginationResponse, SubjectType } from "../../common/v1/common_pb.js";
 
 /**
- * Request to grant permission
+ * A single member row on a piece of content.
  *
- * @generated from message permissions.v1.GrantPermissionRequest
+ * @generated from message permissions.v1.ContentMember
  */
-export class GrantPermissionRequest extends Message<GrantPermissionRequest> {
+export class ContentMember extends Message<ContentMember> {
+  /**
+   * @generated from field: common.v1.SubjectType subject_type = 1;
+   */
+  subjectType = SubjectType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string subject_id = 2;
+   */
+  subjectId = "";
+
+  /**
+   * @generated from field: common.v1.ContentRole role = 3;
+   */
+  role = ContentRole.UNSPECIFIED;
+
+  /**
+   * @generated from field: string added_by_user_id = 4;
+   */
+  addedByUserId = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp added_at = 5;
+   */
+  addedAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 6;
+   */
+  updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp expires_at = 7;
+   */
+  expiresAt?: Timestamp;
+
+  constructor(data?: PartialMessage<ContentMember>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.ContentMember";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subject_type", kind: "enum", T: proto3.getEnumType(SubjectType) },
+    { no: 2, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "role", kind: "enum", T: proto3.getEnumType(ContentRole) },
+    { no: 4, name: "added_by_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "added_at", kind: "message", T: Timestamp },
+    { no: 6, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 7, name: "expires_at", kind: "message", T: Timestamp, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ContentMember {
+    return new ContentMember().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ContentMember {
+    return new ContentMember().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ContentMember {
+    return new ContentMember().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ContentMember | PlainMessage<ContentMember> | undefined, b: ContentMember | PlainMessage<ContentMember> | undefined): boolean {
+    return proto3.util.equals(ContentMember, a, b);
+  }
+}
+
+/**
+ * The access policy for a piece of content (owner + baseline access).
+ *
+ * @generated from message permissions.v1.ContentAccessPolicy
+ */
+export class ContentAccessPolicy extends Message<ContentAccessPolicy> {
+  /**
+   * @generated from field: string owner_id = 1;
+   */
+  ownerId = "";
+
+  /**
+   * @generated from field: common.v1.AccessMode access_mode = 2;
+   */
+  accessMode = AccessMode.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 3;
+   */
+  baselineRole?: ContentRole;
+
+  constructor(data?: PartialMessage<ContentAccessPolicy>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.ContentAccessPolicy";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 3, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ContentAccessPolicy {
+    return new ContentAccessPolicy().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ContentAccessPolicy {
+    return new ContentAccessPolicy().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ContentAccessPolicy {
+    return new ContentAccessPolicy().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ContentAccessPolicy | PlainMessage<ContentAccessPolicy> | undefined, b: ContentAccessPolicy | PlainMessage<ContentAccessPolicy> | undefined): boolean {
+    return proto3.util.equals(ContentAccessPolicy, a, b);
+  }
+}
+
+/**
+ * Audit log entry for a content member change.
+ *
+ * @generated from message permissions.v1.ContentMemberEvent
+ */
+export class ContentMemberEvent extends Message<ContentMemberEvent> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: common.v1.ContentType content_type = 2;
+   */
+  contentType = ContentType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string content_id = 3;
+   */
+  contentId = "";
+
+  /**
+   * @generated from field: common.v1.ContentMemberAction action = 4;
+   */
+  action = ContentMemberAction.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional common.v1.SubjectType subject_type = 5;
+   */
+  subjectType?: SubjectType;
+
+  /**
+   * @generated from field: optional string subject_id = 6;
+   */
+  subjectId?: string;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole previous_role = 7;
+   */
+  previousRole?: ContentRole;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole new_role = 8;
+   */
+  newRole?: ContentRole;
+
+  /**
+   * @generated from field: optional common.v1.AccessMode previous_access_mode = 9;
+   */
+  previousAccessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.AccessMode new_access_mode = 10;
+   */
+  newAccessMode?: AccessMode;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole previous_baseline_role = 11;
+   */
+  previousBaselineRole?: ContentRole;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole new_baseline_role = 12;
+   */
+  newBaselineRole?: ContentRole;
+
+  /**
+   * @generated from field: optional string previous_owner_id = 13;
+   */
+  previousOwnerId?: string;
+
+  /**
+   * @generated from field: optional string new_owner_id = 14;
+   */
+  newOwnerId?: string;
+
+  /**
+   * @generated from field: string actor_user_id = 15;
+   */
+  actorUserId = "";
+
+  /**
+   * @generated from field: common.v1.OrganizationRole actor_org_role = 16;
+   */
+  actorOrgRole = OrganizationRole.UNSPECIFIED;
+
+  /**
+   * @generated from field: string note = 17;
+   */
+  note = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 18;
+   */
+  occurredAt?: Timestamp;
+
+  constructor(data?: PartialMessage<ContentMemberEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.ContentMemberEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
+    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "action", kind: "enum", T: proto3.getEnumType(ContentMemberAction) },
+    { no: 5, name: "subject_type", kind: "enum", T: proto3.getEnumType(SubjectType), opt: true },
+    { no: 6, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "previous_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 8, name: "new_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 9, name: "previous_access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 10, name: "new_access_mode", kind: "enum", T: proto3.getEnumType(AccessMode), opt: true },
+    { no: 11, name: "previous_baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 12, name: "new_baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 13, name: "previous_owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 14, name: "new_owner_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 15, name: "actor_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 16, name: "actor_org_role", kind: "enum", T: proto3.getEnumType(OrganizationRole) },
+    { no: 17, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 18, name: "occurred_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ContentMemberEvent {
+    return new ContentMemberEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ContentMemberEvent {
+    return new ContentMemberEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ContentMemberEvent {
+    return new ContentMemberEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ContentMemberEvent | PlainMessage<ContentMemberEvent> | undefined, b: ContentMemberEvent | PlainMessage<ContentMemberEvent> | undefined): boolean {
+    return proto3.util.equals(ContentMemberEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.ListMembersRequest
+ */
+export class ListMembersRequest extends Message<ListMembersRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: common.v1.ContentType content_type = 2;
+   */
+  contentType = ContentType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string content_id = 3;
+   */
+  contentId = "";
+
+  constructor(data?: PartialMessage<ListMembersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.ListMembersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
+    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListMembersRequest {
+    return new ListMembersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListMembersRequest {
+    return new ListMembersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListMembersRequest {
+    return new ListMembersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListMembersRequest | PlainMessage<ListMembersRequest> | undefined, b: ListMembersRequest | PlainMessage<ListMembersRequest> | undefined): boolean {
+    return proto3.util.equals(ListMembersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.ListMembersResponse
+ */
+export class ListMembersResponse extends Message<ListMembersResponse> {
+  /**
+   * @generated from field: permissions.v1.ContentAccessPolicy policy = 1;
+   */
+  policy?: ContentAccessPolicy;
+
+  /**
+   * @generated from field: repeated permissions.v1.ContentMember members = 2;
+   */
+  members: ContentMember[] = [];
+
+  constructor(data?: PartialMessage<ListMembersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.ListMembersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "policy", kind: "message", T: ContentAccessPolicy },
+    { no: 2, name: "members", kind: "message", T: ContentMember, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListMembersResponse {
+    return new ListMembersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListMembersResponse {
+    return new ListMembersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListMembersResponse {
+    return new ListMembersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListMembersResponse | PlainMessage<ListMembersResponse> | undefined, b: ListMembersResponse | PlainMessage<ListMembersResponse> | undefined): boolean {
+    return proto3.util.equals(ListMembersResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.AddMemberRequest
+ */
+export class AddMemberRequest extends Message<AddMemberRequest> {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -39,455 +396,63 @@ export class GrantPermissionRequest extends Message<GrantPermissionRequest> {
   subjectId = "";
 
   /**
-   * @generated from field: common.v1.PermissionLevel level = 6;
+   * @generated from field: common.v1.ContentRole role = 6;
    */
-  level = PermissionLevel.UNSPECIFIED;
+  role = ContentRole.UNSPECIFIED;
 
   /**
    * @generated from field: optional google.protobuf.Timestamp expires_at = 7;
    */
   expiresAt?: Timestamp;
 
-  constructor(data?: PartialMessage<GrantPermissionRequest>) {
+  /**
+   * @generated from field: string note = 8;
+   */
+  note = "";
+
+  constructor(data?: PartialMessage<AddMemberRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.GrantPermissionRequest";
+  static readonly typeName = "permissions.v1.AddMemberRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
     { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subject_type", kind: "enum", T: proto3.getEnumType(SubjectType) },
     { no: 5, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
+    { no: 6, name: "role", kind: "enum", T: proto3.getEnumType(ContentRole) },
     { no: 7, name: "expires_at", kind: "message", T: Timestamp, opt: true },
+    { no: 8, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GrantPermissionRequest {
-    return new GrantPermissionRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddMemberRequest {
+    return new AddMemberRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GrantPermissionRequest {
-    return new GrantPermissionRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddMemberRequest {
+    return new AddMemberRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GrantPermissionRequest {
-    return new GrantPermissionRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddMemberRequest {
+    return new AddMemberRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GrantPermissionRequest | PlainMessage<GrantPermissionRequest> | undefined, b: GrantPermissionRequest | PlainMessage<GrantPermissionRequest> | undefined): boolean {
-    return proto3.util.equals(GrantPermissionRequest, a, b);
+  static equals(a: AddMemberRequest | PlainMessage<AddMemberRequest> | undefined, b: AddMemberRequest | PlainMessage<AddMemberRequest> | undefined): boolean {
+    return proto3.util.equals(AddMemberRequest, a, b);
   }
 }
 
 /**
- * Request to revoke permission
- *
- * @generated from message permissions.v1.RevokePermissionRequest
+ * @generated from message permissions.v1.UpdateMemberRoleRequest
  */
-export class RevokePermissionRequest extends Message<RevokePermissionRequest> {
+export class UpdateMemberRoleRequest extends Message<UpdateMemberRoleRequest> {
   /**
    * @generated from field: string organization_id = 1;
    */
   organizationId = "";
-
-  /**
-   * @generated from field: string permission_id = 2;
-   */
-  permissionId = "";
-
-  constructor(data?: PartialMessage<RevokePermissionRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.RevokePermissionRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "permission_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokePermissionRequest {
-    return new RevokePermissionRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokePermissionRequest {
-    return new RevokePermissionRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokePermissionRequest {
-    return new RevokePermissionRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RevokePermissionRequest | PlainMessage<RevokePermissionRequest> | undefined, b: RevokePermissionRequest | PlainMessage<RevokePermissionRequest> | undefined): boolean {
-    return proto3.util.equals(RevokePermissionRequest, a, b);
-  }
-}
-
-/**
- * Request to update permission
- *
- * @generated from message permissions.v1.UpdatePermissionRequest
- */
-export class UpdatePermissionRequest extends Message<UpdatePermissionRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string permission_id = 2;
-   */
-  permissionId = "";
-
-  /**
-   * @generated from field: optional common.v1.PermissionLevel level = 3;
-   */
-  level?: PermissionLevel;
-
-  /**
-   * @generated from field: optional google.protobuf.Timestamp expires_at = 4;
-   */
-  expiresAt?: Timestamp;
-
-  /**
-   * @generated from field: bool clear_expiration = 5;
-   */
-  clearExpiration = false;
-
-  constructor(data?: PartialMessage<UpdatePermissionRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.UpdatePermissionRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "permission_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "level", kind: "enum", T: proto3.getEnumType(PermissionLevel), opt: true },
-    { no: 4, name: "expires_at", kind: "message", T: Timestamp, opt: true },
-    { no: 5, name: "clear_expiration", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdatePermissionRequest {
-    return new UpdatePermissionRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdatePermissionRequest {
-    return new UpdatePermissionRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdatePermissionRequest {
-    return new UpdatePermissionRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: UpdatePermissionRequest | PlainMessage<UpdatePermissionRequest> | undefined, b: UpdatePermissionRequest | PlainMessage<UpdatePermissionRequest> | undefined): boolean {
-    return proto3.util.equals(UpdatePermissionRequest, a, b);
-  }
-}
-
-/**
- * Request to list permissions for content
- *
- * @generated from message permissions.v1.ListContentPermissionsRequest
- */
-export class ListContentPermissionsRequest extends Message<ListContentPermissionsRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: common.v1.ContentType content_type = 2;
-   */
-  contentType = ContentType.UNSPECIFIED;
-
-  /**
-   * @generated from field: string content_id = 3;
-   */
-  contentId = "";
-
-  constructor(data?: PartialMessage<ListContentPermissionsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.ListContentPermissionsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
-    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListContentPermissionsRequest {
-    return new ListContentPermissionsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListContentPermissionsRequest {
-    return new ListContentPermissionsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListContentPermissionsRequest {
-    return new ListContentPermissionsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ListContentPermissionsRequest | PlainMessage<ListContentPermissionsRequest> | undefined, b: ListContentPermissionsRequest | PlainMessage<ListContentPermissionsRequest> | undefined): boolean {
-    return proto3.util.equals(ListContentPermissionsRequest, a, b);
-  }
-}
-
-/**
- * Request to get current user's permission
- *
- * @generated from message permissions.v1.GetMyPermissionRequest
- */
-export class GetMyPermissionRequest extends Message<GetMyPermissionRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: common.v1.ContentType content_type = 2;
-   */
-  contentType = ContentType.UNSPECIFIED;
-
-  /**
-   * @generated from field: string content_id = 3;
-   */
-  contentId = "";
-
-  constructor(data?: PartialMessage<GetMyPermissionRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.GetMyPermissionRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
-    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMyPermissionRequest {
-    return new GetMyPermissionRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetMyPermissionRequest {
-    return new GetMyPermissionRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetMyPermissionRequest {
-    return new GetMyPermissionRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetMyPermissionRequest | PlainMessage<GetMyPermissionRequest> | undefined, b: GetMyPermissionRequest | PlainMessage<GetMyPermissionRequest> | undefined): boolean {
-    return proto3.util.equals(GetMyPermissionRequest, a, b);
-  }
-}
-
-/**
- * Request to search for share targets
- *
- * @generated from message permissions.v1.SearchShareTargetsRequest
- */
-export class SearchShareTargetsRequest extends Message<SearchShareTargetsRequest> {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId = "";
-
-  /**
-   * @generated from field: string query = 2;
-   */
-  query = "";
-
-  /**
-   * @generated from field: int32 limit = 3;
-   */
-  limit = 0;
-
-  /**
-   * @generated from field: bool include_users = 4;
-   */
-  includeUsers = false;
-
-  /**
-   * @generated from field: bool include_groups = 5;
-   */
-  includeGroups = false;
-
-  constructor(data?: PartialMessage<SearchShareTargetsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.SearchShareTargetsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "include_users", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "include_groups", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchShareTargetsRequest {
-    return new SearchShareTargetsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SearchShareTargetsRequest {
-    return new SearchShareTargetsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SearchShareTargetsRequest {
-    return new SearchShareTargetsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SearchShareTargetsRequest | PlainMessage<SearchShareTargetsRequest> | undefined, b: SearchShareTargetsRequest | PlainMessage<SearchShareTargetsRequest> | undefined): boolean {
-    return proto3.util.equals(SearchShareTargetsRequest, a, b);
-  }
-}
-
-/**
- * Response for revoke operation
- *
- * @generated from message permissions.v1.RevokePermissionResponse
- */
-export class RevokePermissionResponse extends Message<RevokePermissionResponse> {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success = false;
-
-  constructor(data?: PartialMessage<RevokePermissionResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.RevokePermissionResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RevokePermissionResponse {
-    return new RevokePermissionResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RevokePermissionResponse {
-    return new RevokePermissionResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RevokePermissionResponse {
-    return new RevokePermissionResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RevokePermissionResponse | PlainMessage<RevokePermissionResponse> | undefined, b: RevokePermissionResponse | PlainMessage<RevokePermissionResponse> | undefined): boolean {
-    return proto3.util.equals(RevokePermissionResponse, a, b);
-  }
-}
-
-/**
- * Response for listing permissions
- *
- * @generated from message permissions.v1.PermissionListResponse
- */
-export class PermissionListResponse extends Message<PermissionListResponse> {
-  /**
-   * @generated from field: repeated permissions.v1.PermissionInfo permissions = 1;
-   */
-  permissions: PermissionInfo[] = [];
-
-  /**
-   * @generated from field: permissions.v1.ShareTarget owner = 2;
-   */
-  owner?: ShareTarget;
-
-  constructor(data?: PartialMessage<PermissionListResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.PermissionListResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "permissions", kind: "message", T: PermissionInfo, repeated: true },
-    { no: 2, name: "owner", kind: "message", T: ShareTarget },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PermissionListResponse {
-    return new PermissionListResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PermissionListResponse {
-    return new PermissionListResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PermissionListResponse {
-    return new PermissionListResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PermissionListResponse | PlainMessage<PermissionListResponse> | undefined, b: PermissionListResponse | PlainMessage<PermissionListResponse> | undefined): boolean {
-    return proto3.util.equals(PermissionListResponse, a, b);
-  }
-}
-
-/**
- * Response for search share targets
- *
- * @generated from message permissions.v1.ShareTargetsResponse
- */
-export class ShareTargetsResponse extends Message<ShareTargetsResponse> {
-  /**
-   * @generated from field: repeated permissions.v1.ShareTarget targets = 1;
-   */
-  targets: ShareTarget[] = [];
-
-  constructor(data?: PartialMessage<ShareTargetsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.ShareTargetsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "targets", kind: "message", T: ShareTarget, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ShareTargetsResponse {
-    return new ShareTargetsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ShareTargetsResponse {
-    return new ShareTargetsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ShareTargetsResponse {
-    return new ShareTargetsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ShareTargetsResponse | PlainMessage<ShareTargetsResponse> | undefined, b: ShareTargetsResponse | PlainMessage<ShareTargetsResponse> | undefined): boolean {
-    return proto3.util.equals(ShareTargetsResponse, a, b);
-  }
-}
-
-/**
- * Permission information
- *
- * @generated from message permissions.v1.PermissionInfo
- */
-export class PermissionInfo extends Message<PermissionInfo> {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id = "";
 
   /**
    * @generated from field: common.v1.ContentType content_type = 2;
@@ -505,176 +470,522 @@ export class PermissionInfo extends Message<PermissionInfo> {
   subjectType = SubjectType.UNSPECIFIED;
 
   /**
-   * @generated from field: permissions.v1.ShareTarget subject = 5;
+   * @generated from field: string subject_id = 5;
    */
-  subject?: ShareTarget;
+  subjectId = "";
 
   /**
-   * @generated from field: common.v1.PermissionLevel level = 6;
+   * @generated from field: common.v1.ContentRole new_role = 6;
    */
-  level = PermissionLevel.UNSPECIFIED;
+  newRole = ContentRole.UNSPECIFIED;
 
   /**
-   * Fine-grained permissions
-   *
-   * @generated from field: bool can_view = 7;
+   * @generated from field: string note = 7;
    */
-  canView = false;
+  note = "";
 
-  /**
-   * @generated from field: bool can_edit = 8;
-   */
-  canEdit = false;
-
-  /**
-   * @generated from field: bool can_delete = 9;
-   */
-  canDelete = false;
-
-  /**
-   * @generated from field: bool can_share = 10;
-   */
-  canShare = false;
-
-  /**
-   * @generated from field: bool can_move = 11;
-   */
-  canMove = false;
-
-  /**
-   * Audit fields
-   *
-   * @generated from field: permissions.v1.ShareTarget granted_by = 12;
-   */
-  grantedBy?: ShareTarget;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp granted_at = 13;
-   */
-  grantedAt?: Timestamp;
-
-  /**
-   * @generated from field: optional google.protobuf.Timestamp expires_at = 14;
-   */
-  expiresAt?: Timestamp;
-
-  /**
-   * True if the subject is the actual content owner (not just an admin)
-   *
-   * @generated from field: bool is_owner = 15;
-   */
-  isOwner = false;
-
-  constructor(data?: PartialMessage<PermissionInfo>) {
+  constructor(data?: PartialMessage<UpdateMemberRoleRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.PermissionInfo";
+  static readonly typeName = "permissions.v1.UpdateMemberRoleRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
     { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subject_type", kind: "enum", T: proto3.getEnumType(SubjectType) },
-    { no: 5, name: "subject", kind: "message", T: ShareTarget },
-    { no: 6, name: "level", kind: "enum", T: proto3.getEnumType(PermissionLevel) },
-    { no: 7, name: "can_view", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 8, name: "can_edit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 9, name: "can_delete", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 10, name: "can_share", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 11, name: "can_move", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 12, name: "granted_by", kind: "message", T: ShareTarget },
-    { no: 13, name: "granted_at", kind: "message", T: Timestamp },
-    { no: 14, name: "expires_at", kind: "message", T: Timestamp, opt: true },
-    { no: 15, name: "is_owner", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "new_role", kind: "enum", T: proto3.getEnumType(ContentRole) },
+    { no: 7, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PermissionInfo {
-    return new PermissionInfo().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateMemberRoleRequest {
+    return new UpdateMemberRoleRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PermissionInfo {
-    return new PermissionInfo().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateMemberRoleRequest {
+    return new UpdateMemberRoleRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PermissionInfo {
-    return new PermissionInfo().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateMemberRoleRequest {
+    return new UpdateMemberRoleRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: PermissionInfo | PlainMessage<PermissionInfo> | undefined, b: PermissionInfo | PlainMessage<PermissionInfo> | undefined): boolean {
-    return proto3.util.equals(PermissionInfo, a, b);
+  static equals(a: UpdateMemberRoleRequest | PlainMessage<UpdateMemberRoleRequest> | undefined, b: UpdateMemberRoleRequest | PlainMessage<UpdateMemberRoleRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateMemberRoleRequest, a, b);
   }
 }
 
 /**
- * Share target (user or group)
- *
- * @generated from message permissions.v1.ShareTarget
+ * @generated from message permissions.v1.RemoveMemberRequest
  */
-export class ShareTarget extends Message<ShareTarget> {
+export class RemoveMemberRequest extends Message<RemoveMemberRequest> {
   /**
-   * @generated from field: string id = 1;
+   * @generated from field: string organization_id = 1;
    */
-  id = "";
+  organizationId = "";
 
   /**
-   * @generated from field: common.v1.SubjectType type = 2;
+   * @generated from field: common.v1.ContentType content_type = 2;
    */
-  type = SubjectType.UNSPECIFIED;
+  contentType = ContentType.UNSPECIFIED;
 
   /**
-   * @generated from field: string name = 3;
+   * @generated from field: string content_id = 3;
    */
-  name = "";
+  contentId = "";
 
   /**
-   * @generated from field: string email = 4;
+   * @generated from field: common.v1.SubjectType subject_type = 4;
    */
-  email = "";
+  subjectType = SubjectType.UNSPECIFIED;
 
   /**
-   * @generated from field: string avatar_url = 5;
+   * @generated from field: string subject_id = 5;
    */
-  avatarUrl = "";
+  subjectId = "";
 
   /**
-   * For groups
-   *
-   * @generated from field: int32 member_count = 6;
+   * @generated from field: string note = 6;
    */
-  memberCount = 0;
+  note = "";
 
-  constructor(data?: PartialMessage<ShareTarget>) {
+  constructor(data?: PartialMessage<RemoveMemberRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "permissions.v1.ShareTarget";
+  static readonly typeName = "permissions.v1.RemoveMemberRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(SubjectType) },
-    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
+    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "subject_type", kind: "enum", T: proto3.getEnumType(SubjectType) },
+    { no: 5, name: "subject_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ShareTarget {
-    return new ShareTarget().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveMemberRequest {
+    return new RemoveMemberRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ShareTarget {
-    return new ShareTarget().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveMemberRequest {
+    return new RemoveMemberRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ShareTarget {
-    return new ShareTarget().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveMemberRequest {
+    return new RemoveMemberRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ShareTarget | PlainMessage<ShareTarget> | undefined, b: ShareTarget | PlainMessage<ShareTarget> | undefined): boolean {
-    return proto3.util.equals(ShareTarget, a, b);
+  static equals(a: RemoveMemberRequest | PlainMessage<RemoveMemberRequest> | undefined, b: RemoveMemberRequest | PlainMessage<RemoveMemberRequest> | undefined): boolean {
+    return proto3.util.equals(RemoveMemberRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.RemoveMemberResponse
+ */
+export class RemoveMemberResponse extends Message<RemoveMemberResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  constructor(data?: PartialMessage<RemoveMemberResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.RemoveMemberResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveMemberResponse {
+    return new RemoveMemberResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveMemberResponse {
+    return new RemoveMemberResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveMemberResponse {
+    return new RemoveMemberResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveMemberResponse | PlainMessage<RemoveMemberResponse> | undefined, b: RemoveMemberResponse | PlainMessage<RemoveMemberResponse> | undefined): boolean {
+    return proto3.util.equals(RemoveMemberResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.SetAccessModeRequest
+ */
+export class SetAccessModeRequest extends Message<SetAccessModeRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: common.v1.ContentType content_type = 2;
+   */
+  contentType = ContentType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string content_id = 3;
+   */
+  contentId = "";
+
+  /**
+   * @generated from field: common.v1.AccessMode access_mode = 4;
+   */
+  accessMode = AccessMode.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole baseline_role = 5;
+   */
+  baselineRole?: ContentRole;
+
+  /**
+   * @generated from field: bool remove_members_on_narrow = 6;
+   */
+  removeMembersOnNarrow = false;
+
+  /**
+   * @generated from field: string note = 7;
+   */
+  note = "";
+
+  constructor(data?: PartialMessage<SetAccessModeRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.SetAccessModeRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
+    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "access_mode", kind: "enum", T: proto3.getEnumType(AccessMode) },
+    { no: 5, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 6, name: "remove_members_on_narrow", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetAccessModeRequest {
+    return new SetAccessModeRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetAccessModeRequest {
+    return new SetAccessModeRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetAccessModeRequest {
+    return new SetAccessModeRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetAccessModeRequest | PlainMessage<SetAccessModeRequest> | undefined, b: SetAccessModeRequest | PlainMessage<SetAccessModeRequest> | undefined): boolean {
+    return proto3.util.equals(SetAccessModeRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.AccessModeResponse
+ */
+export class AccessModeResponse extends Message<AccessModeResponse> {
+  /**
+   * @generated from field: permissions.v1.ContentAccessPolicy policy = 1;
+   */
+  policy?: ContentAccessPolicy;
+
+  constructor(data?: PartialMessage<AccessModeResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.AccessModeResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "policy", kind: "message", T: ContentAccessPolicy },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AccessModeResponse {
+    return new AccessModeResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AccessModeResponse {
+    return new AccessModeResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AccessModeResponse {
+    return new AccessModeResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AccessModeResponse | PlainMessage<AccessModeResponse> | undefined, b: AccessModeResponse | PlainMessage<AccessModeResponse> | undefined): boolean {
+    return proto3.util.equals(AccessModeResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.TransferOwnershipRequest
+ */
+export class TransferOwnershipRequest extends Message<TransferOwnershipRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: common.v1.ContentType content_type = 2;
+   */
+  contentType = ContentType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string content_id = 3;
+   */
+  contentId = "";
+
+  /**
+   * @generated from field: string new_owner_user_id = 4;
+   */
+  newOwnerUserId = "";
+
+  /**
+   * @generated from field: string note = 5;
+   */
+  note = "";
+
+  constructor(data?: PartialMessage<TransferOwnershipRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.TransferOwnershipRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
+    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "new_owner_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "note", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TransferOwnershipRequest {
+    return new TransferOwnershipRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TransferOwnershipRequest {
+    return new TransferOwnershipRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TransferOwnershipRequest {
+    return new TransferOwnershipRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TransferOwnershipRequest | PlainMessage<TransferOwnershipRequest> | undefined, b: TransferOwnershipRequest | PlainMessage<TransferOwnershipRequest> | undefined): boolean {
+    return proto3.util.equals(TransferOwnershipRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.TransferOwnershipResponse
+ */
+export class TransferOwnershipResponse extends Message<TransferOwnershipResponse> {
+  /**
+   * @generated from field: permissions.v1.ContentAccessPolicy policy = 1;
+   */
+  policy?: ContentAccessPolicy;
+
+  constructor(data?: PartialMessage<TransferOwnershipResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.TransferOwnershipResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "policy", kind: "message", T: ContentAccessPolicy },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TransferOwnershipResponse {
+    return new TransferOwnershipResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TransferOwnershipResponse {
+    return new TransferOwnershipResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TransferOwnershipResponse {
+    return new TransferOwnershipResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TransferOwnershipResponse | PlainMessage<TransferOwnershipResponse> | undefined, b: TransferOwnershipResponse | PlainMessage<TransferOwnershipResponse> | undefined): boolean {
+    return proto3.util.equals(TransferOwnershipResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.MemberResponse
+ */
+export class MemberResponse extends Message<MemberResponse> {
+  /**
+   * @generated from field: permissions.v1.ContentMember member = 1;
+   */
+  member?: ContentMember;
+
+  constructor(data?: PartialMessage<MemberResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.MemberResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "member", kind: "message", T: ContentMember },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberResponse {
+    return new MemberResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MemberResponse {
+    return new MemberResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MemberResponse {
+    return new MemberResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MemberResponse | PlainMessage<MemberResponse> | undefined, b: MemberResponse | PlainMessage<MemberResponse> | undefined): boolean {
+    return proto3.util.equals(MemberResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.ListMemberEventsRequest
+ */
+export class ListMemberEventsRequest extends Message<ListMemberEventsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: common.v1.ContentType content_type = 2;
+   */
+  contentType = ContentType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string content_id = 3;
+   */
+  contentId = "";
+
+  /**
+   * @generated from field: optional common.v1.PaginationRequest pagination = 4;
+   */
+  pagination?: PaginationRequest;
+
+  /**
+   * @generated from field: optional string actor_user_id = 5;
+   */
+  actorUserId?: string;
+
+  /**
+   * @generated from field: optional common.v1.ContentMemberAction action = 6;
+   */
+  action?: ContentMemberAction;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp after = 7;
+   */
+  after?: Timestamp;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp before = 8;
+   */
+  before?: Timestamp;
+
+  constructor(data?: PartialMessage<ListMemberEventsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.ListMemberEventsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_type", kind: "enum", T: proto3.getEnumType(ContentType) },
+    { no: 3, name: "content_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "pagination", kind: "message", T: PaginationRequest, opt: true },
+    { no: 5, name: "actor_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "action", kind: "enum", T: proto3.getEnumType(ContentMemberAction), opt: true },
+    { no: 7, name: "after", kind: "message", T: Timestamp, opt: true },
+    { no: 8, name: "before", kind: "message", T: Timestamp, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListMemberEventsRequest {
+    return new ListMemberEventsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListMemberEventsRequest {
+    return new ListMemberEventsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListMemberEventsRequest {
+    return new ListMemberEventsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListMemberEventsRequest | PlainMessage<ListMemberEventsRequest> | undefined, b: ListMemberEventsRequest | PlainMessage<ListMemberEventsRequest> | undefined): boolean {
+    return proto3.util.equals(ListMemberEventsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message permissions.v1.ListMemberEventsResponse
+ */
+export class ListMemberEventsResponse extends Message<ListMemberEventsResponse> {
+  /**
+   * @generated from field: repeated permissions.v1.ContentMemberEvent events = 1;
+   */
+  events: ContentMemberEvent[] = [];
+
+  /**
+   * @generated from field: common.v1.PaginationResponse pagination = 2;
+   */
+  pagination?: PaginationResponse;
+
+  constructor(data?: PartialMessage<ListMemberEventsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "permissions.v1.ListMemberEventsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "events", kind: "message", T: ContentMemberEvent, repeated: true },
+    { no: 2, name: "pagination", kind: "message", T: PaginationResponse },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListMemberEventsResponse {
+    return new ListMemberEventsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListMemberEventsResponse {
+    return new ListMemberEventsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListMemberEventsResponse {
+    return new ListMemberEventsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListMemberEventsResponse | PlainMessage<ListMemberEventsResponse> | undefined, b: ListMemberEventsResponse | PlainMessage<ListMemberEventsResponse> | undefined): boolean {
+    return proto3.util.equals(ListMemberEventsResponse, a, b);
   }
 }
 

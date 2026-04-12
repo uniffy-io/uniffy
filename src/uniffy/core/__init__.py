@@ -6,7 +6,7 @@ that is used across all domain modules.
 
 Submodules
 ----------
-types : Shared enums (VisibilityScope, ContentType, etc.)
+types : Shared enums (ContentRole, AccessMode, ContentType, etc.)
 errors : Custom exception classes
 auth : Authentication, authorization, and permissions
 search : Unified search indexing
@@ -23,20 +23,22 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.types import (
+    AccessMode,
+    ContentMemberAction,
+    ContentRole,
     ContentType,
     NodeType,
-    PermissionLevel,
     SubjectType,
-    VisibilityScope,
 )
 
 __all__ = [
     # Enums
+    "AccessMode",
+    "ContentMemberAction",
+    "ContentRole",
     "ContentType",
     "NodeType",
-    "PermissionLevel",
     "SubjectType",
-    "VisibilityScope",
     # Errors
     "AuthenticationError",
     "ConflictError",

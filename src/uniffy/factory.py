@@ -36,7 +36,7 @@ from uniffy_proto.groups.v1.groups_connect import GroupsServiceASGIApplication
 from uniffy_proto.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy_proto.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
 from uniffy_proto.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
-from uniffy_proto.permissions.v1.permissions_connect import PermissionsServiceASGIApplication
+from uniffy_proto.permissions.v1.permissions_connect import MembersServiceASGIApplication
 from uniffy_proto.presence.v1.presence_connect import PresenceServiceASGIApplication
 from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplication
 from uniffy_proto.rooms.v1.rooms_connect import RoomsServiceASGIApplication
@@ -71,7 +71,7 @@ from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
-from uniffy.domains.permissions.service import PermissionsServiceImpl
+from uniffy.domains.permissions.service import MembersServiceImpl
 from uniffy.domains.presence.service import PresenceServiceImpl
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.rooms.service import RoomsServiceImpl
@@ -330,9 +330,9 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         ),
     )
     dispatcher.add_service(
-        "/permissions.v1.PermissionsService",
-        PermissionsServiceASGIApplication(
-            PermissionsServiceImpl(), interceptors=[logging_interceptor]
+        "/permissions.v1.MembersService",
+        MembersServiceASGIApplication(
+            MembersServiceImpl(), interceptors=[logging_interceptor]
         ),
     )
     dispatcher.add_service(

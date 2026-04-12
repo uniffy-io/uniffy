@@ -4,11 +4,10 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum, Integer
+from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import VisibilityScope
 from uniffy.core.types import generate_id
 
 
@@ -26,8 +25,6 @@ class Task(SQLModel, table=True):
         Organization scope.
     owner_id : UUID
         User who created the task.
-    visibility : VisibilityScope
-        Inherited from project (denormalized for permission queries).
     title : str
         Task title (max 500 chars).
     description : str
@@ -83,19 +80,6 @@ class Task(SQLModel, table=True):
     project_id: UUID = Field(foreign_key="projects_projects.id", nullable=False, index=True)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
-        sa_column=Column(
-            Enum(
-                VisibilityScope,
-                name="visibilityscope",
-                values_callable=lambda x: [e.value for e in x],
-                create_type=False,
-            ),
-            nullable=False,
-            index=True,
-        ),
-    )
     title: str = Field(max_length=500, nullable=False)
     description: str = Field(default="", nullable=False)
     status: str = Field(default="status_todo", max_length=100, nullable=False, index=True)

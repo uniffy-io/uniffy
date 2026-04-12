@@ -81,10 +81,13 @@ INDEX_SETTINGS = MeilisearchSettings(
         "urn",  # For batch URN lookups (mention previews)
         "organization_id",
         "entity_type",
-        "visibility",
+        "access_mode",
+        "baseline_role",
         "owner_id",
-        "shared_group_ids",
         "shared_user_ids",
+        "shared_group_ids",
+        "blocked_user_ids",
+        "blocked_group_ids",
         "tags",
         "updated_at",  # Time-bounded searches (e.g., "modified this week")
     ],
@@ -272,18 +275,20 @@ class MeilisearchClient:
         title: str,
         entity_type: str,
         url_path: str,
-        visibility: str,
         owner_id: UUID,
+        access_mode: str,
+        baseline_role: str | None,
         content: str | None = None,
         description: str | None = None,
-        shared_group_ids: list[UUID] | None = None,
         shared_user_ids: list[UUID] | None = None,
+        shared_group_ids: list[UUID] | None = None,
+        blocked_user_ids: list[UUID] | None = None,
+        blocked_group_ids: list[UUID] | None = None,
         tags: list[str] | None = None,
         rank_score: float = 1.0,
         metadata: dict[str, str] | None = None,
     ) -> None:
-        """
-        Index or update a document in Meilisearch.
+        """Index or update a document in Meilisearch.
 
         Parameters
         ----------
@@ -294,21 +299,28 @@ class MeilisearchClient:
         title : str
             Document title (primary search field).
         entity_type : str
-            Type of content ('note', 'file', 'user', etc).
+            Type of content (``note``, ``file``, ``project``, ...).
         url_path : str
             Frontend route to navigate to.
-        visibility : str
-            Visibility scope ('PRIVATE', 'GROUP', 'ORGANIZATION').
         owner_id : UUID
             Owner of the content.
+        access_mode : str
+            Access mode (``OWNER_ONLY`` / ``EXPLICIT_MEMBERS`` /
+            ``OPEN_TO_ORG``).
+        baseline_role : str | None
+            Baseline role for OPEN_TO_ORG, otherwise None.
         content : str | None
             Full searchable content.
         description : str | None
             Short preview snippet.
-        shared_group_ids : list[UUID] | None
-            Groups this content is shared with.
         shared_user_ids : list[UUID] | None
-            Users this content is shared with.
+            User subjects with a non-BLOCKED ContentMember row.
+        shared_group_ids : list[UUID] | None
+            Group subjects with a non-BLOCKED ContentMember row.
+        blocked_user_ids : list[UUID] | None
+            User subjects with a BLOCKED ContentMember row.
+        blocked_group_ids : list[UUID] | None
+            Group subjects with a BLOCKED ContentMember row.
         tags : list[str] | None
             Content tags.
         rank_score : float
@@ -328,10 +340,13 @@ class MeilisearchClient:
             "description": description or "",
             "entity_type": entity_type,
             "url_path": url_path,
-            "visibility": visibility,
+            "access_mode": access_mode,
+            "baseline_role": baseline_role,
             "owner_id": str(owner_id),
-            "shared_group_ids": [str(gid) for gid in (shared_group_ids or [])],
             "shared_user_ids": [str(uid) for uid in (shared_user_ids or [])],
+            "shared_group_ids": [str(gid) for gid in (shared_group_ids or [])],
+            "blocked_user_ids": [str(uid) for uid in (blocked_user_ids or [])],
+            "blocked_group_ids": [str(gid) for gid in (blocked_group_ids or [])],
             "tags": tags or [],
             "rank_score": rank_score,
             "metadata": metadata or {},
@@ -529,33 +544,22 @@ class MeilisearchClient:
         my_content_only: bool = False,
         owner_filter: UUID | None = None,
     ) -> str:
-        """
-        Build Meilisearch filter for permission checking.
+        """Build a Meilisearch filter that mirrors ``effective_role``.
 
-        User can see content if:
-        1. Visibility is ORGANIZATION (all org members can see)
-        2. They own it
-        3. Visibility is GROUP and they're in a shared group
-        4. They're explicitly in shared_user_ids
+        A user sees a document iff:
 
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization to filter by.
-        user_id : UUID
-            User performing the search.
-        user_group_ids : list[UUID] | None
-            Groups the user belongs to.
-        my_content_only : bool
-            Only return user's own content.
-        owner_filter : UUID | None
-            Filter by specific owner.
+        - it belongs to their organization, AND
+        - they are NOT in ``blocked_user_ids``, AND
+        - NONE of their groups are in ``blocked_group_ids``, AND
+        - at least one of the following is true:
+          - they are the owner,
+          - their id is in ``shared_user_ids``,
+          - one of their groups is in ``shared_group_ids``,
+          - the document has ``access_mode = OPEN_TO_ORG`` with a
+            non-null ``baseline_role``.
 
-        Returns
-        -------
-        str
-            Meilisearch filter expression.
-
+        ``my_content_only`` and ``owner_filter`` short-circuit the
+        permission branch to just an ownership check.
         """
         org_filter = f'organization_id = "{organization_id}"'
 
@@ -565,23 +569,28 @@ class MeilisearchClient:
         if owner_filter:
             return f'{org_filter} AND owner_id = "{owner_filter}"'
 
-        # Build permission conditions
+        # Permission conditions (allow when any of these is true)
         permission_conditions = [
-            # ORGANIZATION visibility - everyone in org can see
-            'visibility = "ORGANIZATION"',
-            # Owner can always see their content
             f'owner_id = "{user_id}"',
-            # Explicitly shared with user
             f'shared_user_ids = "{user_id}"',
+            '(access_mode = "OPEN_TO_ORG" AND baseline_role EXISTS)',
         ]
-
-        # GROUP visibility - user must be in a shared group
         if user_group_ids:
-            group_conditions = " OR ".join(f'shared_group_ids = "{gid}"' for gid in user_group_ids)
-            permission_conditions.append(f'(visibility = "GROUP" AND ({group_conditions}))')
-
+            group_allow = " OR ".join(
+                f'shared_group_ids = "{gid}"' for gid in user_group_ids
+            )
+            permission_conditions.append(f"({group_allow})")
         permission_filter = " OR ".join(permission_conditions)
-        return f"{org_filter} AND ({permission_filter})"
+
+        # Block conditions (deny when any of these is true)
+        block_conditions = [f'NOT blocked_user_ids = "{user_id}"']
+        if user_group_ids:
+            block_conditions.extend(
+                f'NOT blocked_group_ids = "{gid}"' for gid in user_group_ids
+            )
+        block_filter = " AND ".join(block_conditions)
+
+        return f"{org_filter} AND ({block_filter}) AND ({permission_filter})"
 
     async def update_document_sharing(
         self,
@@ -589,12 +598,13 @@ class MeilisearchClient:
         organization_id: UUID,
         shared_user_ids: list[UUID],
         shared_group_ids: list[UUID],
+        blocked_user_ids: list[UUID] | None = None,
+        blocked_group_ids: list[UUID] | None = None,
     ) -> None:
-        """
-        Partial update of sharing metadata on an existing document.
+        """Partial update of membership metadata on an existing document.
 
-        Uses Meilisearch's update_documents which merges fields into
-        the existing document without replacing other fields.
+        Uses Meilisearch's update_documents which merges fields into the
+        existing document without replacing other fields.
 
         Parameters
         ----------
@@ -603,9 +613,13 @@ class MeilisearchClient:
         organization_id : UUID
             Organization ID.
         shared_user_ids : list[UUID]
-            Current list of user IDs this content is shared with.
+            Current list of user subjects with a non-BLOCKED grant.
         shared_group_ids : list[UUID]
-            Current list of group IDs this content is shared with.
+            Current list of group subjects with a non-BLOCKED grant.
+        blocked_user_ids : list[UUID] | None
+            Current list of user subjects with a BLOCKED grant.
+        blocked_group_ids : list[UUID] | None
+            Current list of group subjects with a BLOCKED grant.
 
         """
         doc_id = build_document_id(urn, organization_id)
@@ -613,6 +627,8 @@ class MeilisearchClient:
             "id": doc_id,
             "shared_user_ids": [str(uid) for uid in shared_user_ids],
             "shared_group_ids": [str(gid) for gid in shared_group_ids],
+            "blocked_user_ids": [str(uid) for uid in (blocked_user_ids or [])],
+            "blocked_group_ids": [str(gid) for gid in (blocked_group_ids or [])],
         }
 
         start = time.perf_counter()
@@ -623,7 +639,40 @@ class MeilisearchClient:
         SEARCH_OPERATION_DURATION.labels(operation="update_sharing").observe(elapsed_ms / 1000)
         logger.info(
             "Meilisearch: update_sharing "
-            f"users={len(shared_user_ids)} groups={len(shared_group_ids)}",
+            f"users={len(shared_user_ids)} groups={len(shared_group_ids)} "
+            f"blocked_users={len(blocked_user_ids or [])} "
+            f"blocked_groups={len(blocked_group_ids or [])}",
+            ms=f"{elapsed_ms:.1f}",
+            urn=urn,
+        )
+
+    async def update_document_access_policy(
+        self,
+        urn: str,
+        organization_id: UUID,
+        access_mode: str,
+        baseline_role: str | None,
+        owner_id: UUID,
+    ) -> None:
+        """Partial update of the access policy fields on a document."""
+        doc_id = build_document_id(urn, organization_id)
+        partial = {
+            "id": doc_id,
+            "access_mode": access_mode,
+            "baseline_role": baseline_role,
+            "owner_id": str(owner_id),
+        }
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        await index.update_documents([partial])
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_access_policy").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="update_access_policy").observe(
+            elapsed_ms / 1000
+        )
+        logger.info(
+            f"Meilisearch: update_access_policy mode={access_mode} baseline={baseline_role}",
             ms=f"{elapsed_ms:.1f}",
             urn=urn,
         )

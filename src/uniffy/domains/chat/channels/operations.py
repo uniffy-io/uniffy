@@ -42,9 +42,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         super().__init__(session)
         self.access = access or ChatAccessChecker(session)
 
-    # ---------------------------------------------------------------
     # Abstract method implementations (required by BaseContentOperations)
-    # ---------------------------------------------------------------
 
     def _build_search_keywords(self, model: ChatChannel) -> str:
         return f"{model.name} {model.description}"
@@ -58,9 +56,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
     def _get_search_description(self, model: ChatChannel) -> str | None:
         return model.description[:200] if model.description else None
 
-    # ---------------------------------------------------------------
     # Permission override - membership-based access
-    # ---------------------------------------------------------------
 
     async def _require_access(
         self,
@@ -101,9 +97,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if not member or member.role != ChannelRole.OWNER:
             raise PermissionDeniedError("delete", "channel")
 
-    # ---------------------------------------------------------------
     # Search index override - derive access from membership
-    # ---------------------------------------------------------------
 
     async def _index_for_search(
         self,
@@ -139,9 +133,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             shared_user_ids=shared_user_ids,
         )
 
-    # ---------------------------------------------------------------
     # Channel CRUD
-    # ---------------------------------------------------------------
 
     async def create_channel(
         self,
@@ -567,9 +559,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         """Verify user can send messages. Returns membership for role checks."""
         return await self.access.require_send(user_id, channel)
 
-    # ---------------------------------------------------------------
     # Internal helpers
-    # ---------------------------------------------------------------
 
     async def _get_all_member_ids(self, channel_id: UUID) -> list[UUID]:
         """Get all member user IDs for a channel."""

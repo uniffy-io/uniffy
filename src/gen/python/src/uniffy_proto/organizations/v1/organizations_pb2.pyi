@@ -197,40 +197,44 @@ class PermissionDefaultsResponse(_message.Message):
     def __init__(self, defaults: _Optional[_Iterable[_Union[ContentTypeDefaults, _Mapping]]] = ...) -> None: ...
 
 class UpdatePermissionDefaultsRequest(_message.Message):
-    __slots__ = ("organization_id", "content_type", "default_visibility", "members_can_view", "members_can_edit", "members_can_delete", "members_can_share")
+    __slots__ = ("organization_id", "content_type", "default_access_mode", "members_can_view", "members_can_edit", "members_can_delete", "members_can_share", "default_baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
-    DEFAULT_VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_VIEW_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_EDIT_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_DELETE_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_SHARE_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     content_type: _common_pb2.ContentType
-    default_visibility: _common_pb2.VisibilityScope
+    default_access_mode: _common_pb2.AccessMode
     members_can_view: bool
     members_can_edit: bool
     members_can_delete: bool
     members_can_share: bool
-    def __init__(self, organization_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., default_visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., members_can_view: _Optional[bool] = ..., members_can_edit: _Optional[bool] = ..., members_can_delete: _Optional[bool] = ..., members_can_share: _Optional[bool] = ...) -> None: ...
+    default_baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., default_access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., members_can_view: _Optional[bool] = ..., members_can_edit: _Optional[bool] = ..., members_can_delete: _Optional[bool] = ..., members_can_share: _Optional[bool] = ..., default_baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class ContentTypeDefaults(_message.Message):
-    __slots__ = ("content_type", "default_visibility", "members_can_view", "members_can_edit", "members_can_delete", "members_can_share", "updated_at")
+    __slots__ = ("content_type", "default_access_mode", "members_can_view", "members_can_edit", "members_can_delete", "members_can_share", "updated_at", "default_baseline_role")
     CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
-    DEFAULT_VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_VIEW_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_EDIT_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_DELETE_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_CAN_SHARE_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     content_type: _common_pb2.ContentType
-    default_visibility: _common_pb2.VisibilityScope
+    default_access_mode: _common_pb2.AccessMode
     members_can_view: bool
     members_can_edit: bool
     members_can_delete: bool
     members_can_share: bool
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., default_visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., members_can_view: _Optional[bool] = ..., members_can_edit: _Optional[bool] = ..., members_can_delete: _Optional[bool] = ..., members_can_share: _Optional[bool] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    default_baseline_role: _common_pb2.ContentRole
+    def __init__(self, content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., default_access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., members_can_view: _Optional[bool] = ..., members_can_edit: _Optional[bool] = ..., members_can_delete: _Optional[bool] = ..., members_can_share: _Optional[bool] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., default_baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class GrantDomainAdminRequest(_message.Message):
     __slots__ = ("organization_id", "user_id", "domain")

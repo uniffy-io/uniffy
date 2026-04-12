@@ -23,7 +23,7 @@ PROMPT_SOURCE_ORGANIZATION: PromptSource
 PROMPT_SOURCE_PERSONAL: PromptSource
 
 class PromptInfo(_message.Message):
-    __slots__ = ("id", "organization_id", "name", "display_name", "description", "content", "source", "owner_id", "created_at", "updated_at", "visibility", "created_by")
+    __slots__ = ("id", "organization_id", "name", "display_name", "description", "content", "source", "owner_id", "created_at", "updated_at", "access_mode", "created_by", "baseline_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -34,8 +34,9 @@ class PromptInfo(_message.Message):
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     CREATED_BY_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     name: str
@@ -46,27 +47,30 @@ class PromptInfo(_message.Message):
     owner_id: str
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    visibility: _common_pb2.VisibilityScope
+    access_mode: _common_pb2.AccessMode
     created_by: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., source: _Optional[_Union[PromptSource, str]] = ..., owner_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ..., created_by: _Optional[str] = ...) -> None: ...
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., source: _Optional[_Union[PromptSource, str]] = ..., owner_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_by: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class CreatePromptRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "display_name", "description", "content", "owner_id", "visibility")
+    __slots__ = ("organization_id", "name", "display_name", "description", "content", "owner_id", "access_mode", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     display_name: str
     description: str
     content: str
     owner_id: str
-    visibility: _common_pb2.VisibilityScope
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+    access_mode: _common_pb2.AccessMode
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class PromptResponse(_message.Message):
     __slots__ = ("prompt",)
@@ -99,22 +103,24 @@ class ListPromptsResponse(_message.Message):
     def __init__(self, prompts: _Optional[_Iterable[_Union[PromptInfo, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class UpdatePromptRequest(_message.Message):
-    __slots__ = ("organization_id", "prompt_id", "name", "display_name", "description", "content", "visibility")
+    __slots__ = ("organization_id", "prompt_id", "name", "display_name", "description", "content", "access_mode", "baseline_role")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
-    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     prompt_id: str
     name: str
     display_name: str
     description: str
     content: str
-    visibility: _common_pb2.VisibilityScope
-    def __init__(self, organization_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., visibility: _Optional[_Union[_common_pb2.VisibilityScope, str]] = ...) -> None: ...
+    access_mode: _common_pb2.AccessMode
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., prompt_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class DeletePromptRequest(_message.Message):
     __slots__ = ("organization_id", "prompt_id")

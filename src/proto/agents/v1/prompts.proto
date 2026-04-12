@@ -47,8 +47,9 @@ message PromptInfo {
   optional string owner_id = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
-  common.v1.VisibilityScope visibility = 11;
+  common.v1.AccessMode access_mode = 11;
   string created_by = 12;
+  optional common.v1.ContentRole baseline_role = 13;
 }
 
 // --- Requests and Responses ---
@@ -61,7 +62,8 @@ message CreatePromptRequest {
   string content = 5;
   // Owner user ID for personal prompts
   optional string owner_id = 6;
-  optional common.v1.VisibilityScope visibility = 7;
+  optional common.v1.AccessMode access_mode = 7;
+  optional common.v1.ContentRole baseline_role = 8;
 }
 
 message PromptResponse {
@@ -90,7 +92,8 @@ message UpdatePromptRequest {
   optional string display_name = 4;
   optional string description = 5;
   optional string content = 6;
-  optional common.v1.VisibilityScope visibility = 7;
+  optional common.v1.AccessMode access_mode = 7;
+  optional common.v1.ContentRole baseline_role = 8;
 }
 
 message DeletePromptRequest {

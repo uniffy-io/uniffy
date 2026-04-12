@@ -103,18 +103,20 @@ message Project {
   string                             description           = 5;
   string                             icon                  = 6;
   string                             color                 = 7;
-  common.v1.VisibilityScope          visibility            = 8;
+  common.v1.AccessMode               access_mode           = 8;
   repeated FieldDefinition           field_definitions     = 9;
   repeated ViewConfig                views                 = 10;
   string                             default_view_id       = 11;
-  repeated string                    member_ids            = 12;
+  reserved 12;
+  reserved "member_ids";
   google.protobuf.Timestamp          created_at            = 13;
   google.protobuf.Timestamp          updated_at            = 14;
   optional google.protobuf.Timestamp deleted_at            = 15;
   string                             urn                   = 16;
-  common.v1.PermissionLevel          user_permission_level = 17;
+  common.v1.ContentRole              user_role             = 17;
   string                             slug                  = 18;
   map<string, TypeFieldSchema>       type_field_schemas    = 19;
+  optional common.v1.ContentRole     baseline_role         = 20;
 }
 
 message Task {
@@ -144,7 +146,7 @@ message Task {
   int32                              number                = 24;
   string                             task_type             = 25;
   optional string                    sprint_id             = 26;
-  common.v1.PermissionLevel          user_permission_level = 27;
+  common.v1.ContentRole              user_role             = 27;
   int32                              subtask_total         = 28;
   int32                              subtask_completed     = 29;
   optional int32                     estimated_minutes     = 30;
@@ -225,8 +227,9 @@ message CreateProjectRequest {
   optional string                    description     = 3;
   optional string                    icon            = 4;
   optional string                    color           = 5;
-  optional common.v1.VisibilityScope visibility      = 6;
+  optional common.v1.AccessMode      access_mode     = 6;
   optional string                    slug            = 7;
+  optional common.v1.ContentRole     baseline_role   = 8;
 }
 
 message GetProjectRequest {
@@ -241,11 +244,13 @@ message UpdateProjectRequest {
   optional string                    description        = 4;
   optional string                    icon               = 5;
   optional string                    color              = 6;
-  optional common.v1.VisibilityScope visibility         = 7;
-  repeated string                    member_ids         = 8;
+  optional common.v1.AccessMode      access_mode        = 7;
+  reserved 8;
+  reserved "member_ids";
   optional string                    default_view_id    = 9;
   optional string                    slug               = 10;
   map<string, TypeFieldSchema>       type_field_schemas  = 11;
+  optional common.v1.ContentRole     baseline_role      = 12;
 }
 
 message DeleteProjectRequest {
@@ -257,7 +262,7 @@ message DeleteProjectRequest {
 message ListProjectsRequest {
   string                               organization_id = 1;
   optional common.v1.PaginationRequest pagination      = 2;
-  optional common.v1.VisibilityScope   visibility      = 3;
+  optional common.v1.AccessMode        access_mode     = 3;
   optional bool                        include_deleted = 4;
 }
 

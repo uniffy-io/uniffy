@@ -32,9 +32,7 @@ const roomsClient = createClient(RoomsService, transport);
  * Rooms API service with typed methods.
  */
 export const roomsApi = {
-  // ========================================================================
   // Room Operations
-  // ========================================================================
 
   /**
    * Create a new room.
@@ -71,9 +69,7 @@ export const roomsApi = {
     return roomsClient.listRooms(request);
   },
 
-  // ========================================================================
   // Booking Operations
-  // ========================================================================
 
   /**
    * Create a new booking.
@@ -103,9 +99,7 @@ export const roomsApi = {
     return roomsClient.listBookings(request);
   },
 
-  // ========================================================================
   // Availability Operations
-  // ========================================================================
 
   /**
    * Check availability for a specific room and time range.

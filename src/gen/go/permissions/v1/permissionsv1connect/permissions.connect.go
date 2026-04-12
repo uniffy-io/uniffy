@@ -21,8 +21,8 @@ import (
 const _ = connect.IsAtLeastVersion1_13_0
 
 const (
-	// PermissionsServiceName is the fully-qualified name of the PermissionsService service.
-	PermissionsServiceName = "permissions.v1.PermissionsService"
+	// MembersServiceName is the fully-qualified name of the MembersService service.
+	MembersServiceName = "permissions.v1.MembersService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -33,234 +33,251 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// PermissionsServiceGrantPermissionProcedure is the fully-qualified name of the
-	// PermissionsService's GrantPermission RPC.
-	PermissionsServiceGrantPermissionProcedure = "/permissions.v1.PermissionsService/GrantPermission"
-	// PermissionsServiceRevokePermissionProcedure is the fully-qualified name of the
-	// PermissionsService's RevokePermission RPC.
-	PermissionsServiceRevokePermissionProcedure = "/permissions.v1.PermissionsService/RevokePermission"
-	// PermissionsServiceUpdatePermissionProcedure is the fully-qualified name of the
-	// PermissionsService's UpdatePermission RPC.
-	PermissionsServiceUpdatePermissionProcedure = "/permissions.v1.PermissionsService/UpdatePermission"
-	// PermissionsServiceListContentPermissionsProcedure is the fully-qualified name of the
-	// PermissionsService's ListContentPermissions RPC.
-	PermissionsServiceListContentPermissionsProcedure = "/permissions.v1.PermissionsService/ListContentPermissions"
-	// PermissionsServiceGetMyPermissionProcedure is the fully-qualified name of the
-	// PermissionsService's GetMyPermission RPC.
-	PermissionsServiceGetMyPermissionProcedure = "/permissions.v1.PermissionsService/GetMyPermission"
-	// PermissionsServiceSearchShareTargetsProcedure is the fully-qualified name of the
-	// PermissionsService's SearchShareTargets RPC.
-	PermissionsServiceSearchShareTargetsProcedure = "/permissions.v1.PermissionsService/SearchShareTargets"
+	// MembersServiceListMembersProcedure is the fully-qualified name of the MembersService's
+	// ListMembers RPC.
+	MembersServiceListMembersProcedure = "/permissions.v1.MembersService/ListMembers"
+	// MembersServiceAddMemberProcedure is the fully-qualified name of the MembersService's AddMember
+	// RPC.
+	MembersServiceAddMemberProcedure = "/permissions.v1.MembersService/AddMember"
+	// MembersServiceUpdateMemberRoleProcedure is the fully-qualified name of the MembersService's
+	// UpdateMemberRole RPC.
+	MembersServiceUpdateMemberRoleProcedure = "/permissions.v1.MembersService/UpdateMemberRole"
+	// MembersServiceRemoveMemberProcedure is the fully-qualified name of the MembersService's
+	// RemoveMember RPC.
+	MembersServiceRemoveMemberProcedure = "/permissions.v1.MembersService/RemoveMember"
+	// MembersServiceSetAccessModeProcedure is the fully-qualified name of the MembersService's
+	// SetAccessMode RPC.
+	MembersServiceSetAccessModeProcedure = "/permissions.v1.MembersService/SetAccessMode"
+	// MembersServiceTransferOwnershipProcedure is the fully-qualified name of the MembersService's
+	// TransferOwnership RPC.
+	MembersServiceTransferOwnershipProcedure = "/permissions.v1.MembersService/TransferOwnership"
+	// MembersServiceListMemberEventsProcedure is the fully-qualified name of the MembersService's
+	// ListMemberEvents RPC.
+	MembersServiceListMemberEventsProcedure = "/permissions.v1.MembersService/ListMemberEvents"
 )
 
-// PermissionsServiceClient is a client for the permissions.v1.PermissionsService service.
-type PermissionsServiceClient interface {
-	// Grant permission to a user or group on content
-	GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionInfo], error)
-	// Revoke permission from a user or group on content
-	RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error)
-	// Update an existing permission
-	UpdatePermission(context.Context, *connect.Request[v1.UpdatePermissionRequest]) (*connect.Response[v1.PermissionInfo], error)
-	// List all permissions for a piece of content
-	ListContentPermissions(context.Context, *connect.Request[v1.ListContentPermissionsRequest]) (*connect.Response[v1.PermissionListResponse], error)
-	// Get the current user's permission on content
-	GetMyPermission(context.Context, *connect.Request[v1.GetMyPermissionRequest]) (*connect.Response[v1.PermissionInfo], error)
-	// Search for users and groups to share with
-	SearchShareTargets(context.Context, *connect.Request[v1.SearchShareTargetsRequest]) (*connect.Response[v1.ShareTargetsResponse], error)
+// MembersServiceClient is a client for the permissions.v1.MembersService service.
+type MembersServiceClient interface {
+	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
+	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error)
+	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error)
+	RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error)
+	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error)
+	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
+	ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error)
 }
 
-// NewPermissionsServiceClient constructs a client for the permissions.v1.PermissionsService
-// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
-// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
-// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+// NewMembersServiceClient constructs a client for the permissions.v1.MembersService service. By
+// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
+// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
+// connect.WithGRPC() or connect.WithGRPCWeb() options.
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewPermissionsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) PermissionsServiceClient {
+func NewMembersServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) MembersServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	permissionsServiceMethods := v1.File_permissions_v1_permissions_proto.Services().ByName("PermissionsService").Methods()
-	return &permissionsServiceClient{
-		grantPermission: connect.NewClient[v1.GrantPermissionRequest, v1.PermissionInfo](
+	membersServiceMethods := v1.File_permissions_v1_permissions_proto.Services().ByName("MembersService").Methods()
+	return &membersServiceClient{
+		listMembers: connect.NewClient[v1.ListMembersRequest, v1.ListMembersResponse](
 			httpClient,
-			baseURL+PermissionsServiceGrantPermissionProcedure,
-			connect.WithSchema(permissionsServiceMethods.ByName("GrantPermission")),
+			baseURL+MembersServiceListMembersProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("ListMembers")),
 			connect.WithClientOptions(opts...),
 		),
-		revokePermission: connect.NewClient[v1.RevokePermissionRequest, v1.RevokePermissionResponse](
+		addMember: connect.NewClient[v1.AddMemberRequest, v1.MemberResponse](
 			httpClient,
-			baseURL+PermissionsServiceRevokePermissionProcedure,
-			connect.WithSchema(permissionsServiceMethods.ByName("RevokePermission")),
+			baseURL+MembersServiceAddMemberProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("AddMember")),
 			connect.WithClientOptions(opts...),
 		),
-		updatePermission: connect.NewClient[v1.UpdatePermissionRequest, v1.PermissionInfo](
+		updateMemberRole: connect.NewClient[v1.UpdateMemberRoleRequest, v1.MemberResponse](
 			httpClient,
-			baseURL+PermissionsServiceUpdatePermissionProcedure,
-			connect.WithSchema(permissionsServiceMethods.ByName("UpdatePermission")),
+			baseURL+MembersServiceUpdateMemberRoleProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("UpdateMemberRole")),
 			connect.WithClientOptions(opts...),
 		),
-		listContentPermissions: connect.NewClient[v1.ListContentPermissionsRequest, v1.PermissionListResponse](
+		removeMember: connect.NewClient[v1.RemoveMemberRequest, v1.RemoveMemberResponse](
 			httpClient,
-			baseURL+PermissionsServiceListContentPermissionsProcedure,
-			connect.WithSchema(permissionsServiceMethods.ByName("ListContentPermissions")),
+			baseURL+MembersServiceRemoveMemberProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("RemoveMember")),
 			connect.WithClientOptions(opts...),
 		),
-		getMyPermission: connect.NewClient[v1.GetMyPermissionRequest, v1.PermissionInfo](
+		setAccessMode: connect.NewClient[v1.SetAccessModeRequest, v1.AccessModeResponse](
 			httpClient,
-			baseURL+PermissionsServiceGetMyPermissionProcedure,
-			connect.WithSchema(permissionsServiceMethods.ByName("GetMyPermission")),
+			baseURL+MembersServiceSetAccessModeProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("SetAccessMode")),
 			connect.WithClientOptions(opts...),
 		),
-		searchShareTargets: connect.NewClient[v1.SearchShareTargetsRequest, v1.ShareTargetsResponse](
+		transferOwnership: connect.NewClient[v1.TransferOwnershipRequest, v1.TransferOwnershipResponse](
 			httpClient,
-			baseURL+PermissionsServiceSearchShareTargetsProcedure,
-			connect.WithSchema(permissionsServiceMethods.ByName("SearchShareTargets")),
+			baseURL+MembersServiceTransferOwnershipProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("TransferOwnership")),
+			connect.WithClientOptions(opts...),
+		),
+		listMemberEvents: connect.NewClient[v1.ListMemberEventsRequest, v1.ListMemberEventsResponse](
+			httpClient,
+			baseURL+MembersServiceListMemberEventsProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("ListMemberEvents")),
 			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
-// permissionsServiceClient implements PermissionsServiceClient.
-type permissionsServiceClient struct {
-	grantPermission        *connect.Client[v1.GrantPermissionRequest, v1.PermissionInfo]
-	revokePermission       *connect.Client[v1.RevokePermissionRequest, v1.RevokePermissionResponse]
-	updatePermission       *connect.Client[v1.UpdatePermissionRequest, v1.PermissionInfo]
-	listContentPermissions *connect.Client[v1.ListContentPermissionsRequest, v1.PermissionListResponse]
-	getMyPermission        *connect.Client[v1.GetMyPermissionRequest, v1.PermissionInfo]
-	searchShareTargets     *connect.Client[v1.SearchShareTargetsRequest, v1.ShareTargetsResponse]
+// membersServiceClient implements MembersServiceClient.
+type membersServiceClient struct {
+	listMembers       *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	addMember         *connect.Client[v1.AddMemberRequest, v1.MemberResponse]
+	updateMemberRole  *connect.Client[v1.UpdateMemberRoleRequest, v1.MemberResponse]
+	removeMember      *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
+	setAccessMode     *connect.Client[v1.SetAccessModeRequest, v1.AccessModeResponse]
+	transferOwnership *connect.Client[v1.TransferOwnershipRequest, v1.TransferOwnershipResponse]
+	listMemberEvents  *connect.Client[v1.ListMemberEventsRequest, v1.ListMemberEventsResponse]
 }
 
-// GrantPermission calls permissions.v1.PermissionsService.GrantPermission.
-func (c *permissionsServiceClient) GrantPermission(ctx context.Context, req *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionInfo], error) {
-	return c.grantPermission.CallUnary(ctx, req)
+// ListMembers calls permissions.v1.MembersService.ListMembers.
+func (c *membersServiceClient) ListMembers(ctx context.Context, req *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
+	return c.listMembers.CallUnary(ctx, req)
 }
 
-// RevokePermission calls permissions.v1.PermissionsService.RevokePermission.
-func (c *permissionsServiceClient) RevokePermission(ctx context.Context, req *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error) {
-	return c.revokePermission.CallUnary(ctx, req)
+// AddMember calls permissions.v1.MembersService.AddMember.
+func (c *membersServiceClient) AddMember(ctx context.Context, req *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error) {
+	return c.addMember.CallUnary(ctx, req)
 }
 
-// UpdatePermission calls permissions.v1.PermissionsService.UpdatePermission.
-func (c *permissionsServiceClient) UpdatePermission(ctx context.Context, req *connect.Request[v1.UpdatePermissionRequest]) (*connect.Response[v1.PermissionInfo], error) {
-	return c.updatePermission.CallUnary(ctx, req)
+// UpdateMemberRole calls permissions.v1.MembersService.UpdateMemberRole.
+func (c *membersServiceClient) UpdateMemberRole(ctx context.Context, req *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error) {
+	return c.updateMemberRole.CallUnary(ctx, req)
 }
 
-// ListContentPermissions calls permissions.v1.PermissionsService.ListContentPermissions.
-func (c *permissionsServiceClient) ListContentPermissions(ctx context.Context, req *connect.Request[v1.ListContentPermissionsRequest]) (*connect.Response[v1.PermissionListResponse], error) {
-	return c.listContentPermissions.CallUnary(ctx, req)
+// RemoveMember calls permissions.v1.MembersService.RemoveMember.
+func (c *membersServiceClient) RemoveMember(ctx context.Context, req *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error) {
+	return c.removeMember.CallUnary(ctx, req)
 }
 
-// GetMyPermission calls permissions.v1.PermissionsService.GetMyPermission.
-func (c *permissionsServiceClient) GetMyPermission(ctx context.Context, req *connect.Request[v1.GetMyPermissionRequest]) (*connect.Response[v1.PermissionInfo], error) {
-	return c.getMyPermission.CallUnary(ctx, req)
+// SetAccessMode calls permissions.v1.MembersService.SetAccessMode.
+func (c *membersServiceClient) SetAccessMode(ctx context.Context, req *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error) {
+	return c.setAccessMode.CallUnary(ctx, req)
 }
 
-// SearchShareTargets calls permissions.v1.PermissionsService.SearchShareTargets.
-func (c *permissionsServiceClient) SearchShareTargets(ctx context.Context, req *connect.Request[v1.SearchShareTargetsRequest]) (*connect.Response[v1.ShareTargetsResponse], error) {
-	return c.searchShareTargets.CallUnary(ctx, req)
+// TransferOwnership calls permissions.v1.MembersService.TransferOwnership.
+func (c *membersServiceClient) TransferOwnership(ctx context.Context, req *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error) {
+	return c.transferOwnership.CallUnary(ctx, req)
 }
 
-// PermissionsServiceHandler is an implementation of the permissions.v1.PermissionsService service.
-type PermissionsServiceHandler interface {
-	// Grant permission to a user or group on content
-	GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionInfo], error)
-	// Revoke permission from a user or group on content
-	RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error)
-	// Update an existing permission
-	UpdatePermission(context.Context, *connect.Request[v1.UpdatePermissionRequest]) (*connect.Response[v1.PermissionInfo], error)
-	// List all permissions for a piece of content
-	ListContentPermissions(context.Context, *connect.Request[v1.ListContentPermissionsRequest]) (*connect.Response[v1.PermissionListResponse], error)
-	// Get the current user's permission on content
-	GetMyPermission(context.Context, *connect.Request[v1.GetMyPermissionRequest]) (*connect.Response[v1.PermissionInfo], error)
-	// Search for users and groups to share with
-	SearchShareTargets(context.Context, *connect.Request[v1.SearchShareTargetsRequest]) (*connect.Response[v1.ShareTargetsResponse], error)
+// ListMemberEvents calls permissions.v1.MembersService.ListMemberEvents.
+func (c *membersServiceClient) ListMemberEvents(ctx context.Context, req *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error) {
+	return c.listMemberEvents.CallUnary(ctx, req)
 }
 
-// NewPermissionsServiceHandler builds an HTTP handler from the service implementation. It returns
-// the path on which to mount the handler and the handler itself.
+// MembersServiceHandler is an implementation of the permissions.v1.MembersService service.
+type MembersServiceHandler interface {
+	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
+	AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error)
+	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error)
+	RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error)
+	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error)
+	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
+	ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error)
+}
+
+// NewMembersServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewPermissionsServiceHandler(svc PermissionsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	permissionsServiceMethods := v1.File_permissions_v1_permissions_proto.Services().ByName("PermissionsService").Methods()
-	permissionsServiceGrantPermissionHandler := connect.NewUnaryHandler(
-		PermissionsServiceGrantPermissionProcedure,
-		svc.GrantPermission,
-		connect.WithSchema(permissionsServiceMethods.ByName("GrantPermission")),
+func NewMembersServiceHandler(svc MembersServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	membersServiceMethods := v1.File_permissions_v1_permissions_proto.Services().ByName("MembersService").Methods()
+	membersServiceListMembersHandler := connect.NewUnaryHandler(
+		MembersServiceListMembersProcedure,
+		svc.ListMembers,
+		connect.WithSchema(membersServiceMethods.ByName("ListMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
-	permissionsServiceRevokePermissionHandler := connect.NewUnaryHandler(
-		PermissionsServiceRevokePermissionProcedure,
-		svc.RevokePermission,
-		connect.WithSchema(permissionsServiceMethods.ByName("RevokePermission")),
+	membersServiceAddMemberHandler := connect.NewUnaryHandler(
+		MembersServiceAddMemberProcedure,
+		svc.AddMember,
+		connect.WithSchema(membersServiceMethods.ByName("AddMember")),
 		connect.WithHandlerOptions(opts...),
 	)
-	permissionsServiceUpdatePermissionHandler := connect.NewUnaryHandler(
-		PermissionsServiceUpdatePermissionProcedure,
-		svc.UpdatePermission,
-		connect.WithSchema(permissionsServiceMethods.ByName("UpdatePermission")),
+	membersServiceUpdateMemberRoleHandler := connect.NewUnaryHandler(
+		MembersServiceUpdateMemberRoleProcedure,
+		svc.UpdateMemberRole,
+		connect.WithSchema(membersServiceMethods.ByName("UpdateMemberRole")),
 		connect.WithHandlerOptions(opts...),
 	)
-	permissionsServiceListContentPermissionsHandler := connect.NewUnaryHandler(
-		PermissionsServiceListContentPermissionsProcedure,
-		svc.ListContentPermissions,
-		connect.WithSchema(permissionsServiceMethods.ByName("ListContentPermissions")),
+	membersServiceRemoveMemberHandler := connect.NewUnaryHandler(
+		MembersServiceRemoveMemberProcedure,
+		svc.RemoveMember,
+		connect.WithSchema(membersServiceMethods.ByName("RemoveMember")),
 		connect.WithHandlerOptions(opts...),
 	)
-	permissionsServiceGetMyPermissionHandler := connect.NewUnaryHandler(
-		PermissionsServiceGetMyPermissionProcedure,
-		svc.GetMyPermission,
-		connect.WithSchema(permissionsServiceMethods.ByName("GetMyPermission")),
+	membersServiceSetAccessModeHandler := connect.NewUnaryHandler(
+		MembersServiceSetAccessModeProcedure,
+		svc.SetAccessMode,
+		connect.WithSchema(membersServiceMethods.ByName("SetAccessMode")),
 		connect.WithHandlerOptions(opts...),
 	)
-	permissionsServiceSearchShareTargetsHandler := connect.NewUnaryHandler(
-		PermissionsServiceSearchShareTargetsProcedure,
-		svc.SearchShareTargets,
-		connect.WithSchema(permissionsServiceMethods.ByName("SearchShareTargets")),
+	membersServiceTransferOwnershipHandler := connect.NewUnaryHandler(
+		MembersServiceTransferOwnershipProcedure,
+		svc.TransferOwnership,
+		connect.WithSchema(membersServiceMethods.ByName("TransferOwnership")),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/permissions.v1.PermissionsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	membersServiceListMemberEventsHandler := connect.NewUnaryHandler(
+		MembersServiceListMemberEventsProcedure,
+		svc.ListMemberEvents,
+		connect.WithSchema(membersServiceMethods.ByName("ListMemberEvents")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/permissions.v1.MembersService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case PermissionsServiceGrantPermissionProcedure:
-			permissionsServiceGrantPermissionHandler.ServeHTTP(w, r)
-		case PermissionsServiceRevokePermissionProcedure:
-			permissionsServiceRevokePermissionHandler.ServeHTTP(w, r)
-		case PermissionsServiceUpdatePermissionProcedure:
-			permissionsServiceUpdatePermissionHandler.ServeHTTP(w, r)
-		case PermissionsServiceListContentPermissionsProcedure:
-			permissionsServiceListContentPermissionsHandler.ServeHTTP(w, r)
-		case PermissionsServiceGetMyPermissionProcedure:
-			permissionsServiceGetMyPermissionHandler.ServeHTTP(w, r)
-		case PermissionsServiceSearchShareTargetsProcedure:
-			permissionsServiceSearchShareTargetsHandler.ServeHTTP(w, r)
+		case MembersServiceListMembersProcedure:
+			membersServiceListMembersHandler.ServeHTTP(w, r)
+		case MembersServiceAddMemberProcedure:
+			membersServiceAddMemberHandler.ServeHTTP(w, r)
+		case MembersServiceUpdateMemberRoleProcedure:
+			membersServiceUpdateMemberRoleHandler.ServeHTTP(w, r)
+		case MembersServiceRemoveMemberProcedure:
+			membersServiceRemoveMemberHandler.ServeHTTP(w, r)
+		case MembersServiceSetAccessModeProcedure:
+			membersServiceSetAccessModeHandler.ServeHTTP(w, r)
+		case MembersServiceTransferOwnershipProcedure:
+			membersServiceTransferOwnershipHandler.ServeHTTP(w, r)
+		case MembersServiceListMemberEventsProcedure:
+			membersServiceListMemberEventsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
 	})
 }
 
-// UnimplementedPermissionsServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedPermissionsServiceHandler struct{}
+// UnimplementedMembersServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedMembersServiceHandler struct{}
 
-func (UnimplementedPermissionsServiceHandler) GrantPermission(context.Context, *connect.Request[v1.GrantPermissionRequest]) (*connect.Response[v1.PermissionInfo], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.PermissionsService.GrantPermission is not implemented"))
+func (UnimplementedMembersServiceHandler) ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.ListMembers is not implemented"))
 }
 
-func (UnimplementedPermissionsServiceHandler) RevokePermission(context.Context, *connect.Request[v1.RevokePermissionRequest]) (*connect.Response[v1.RevokePermissionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.PermissionsService.RevokePermission is not implemented"))
+func (UnimplementedMembersServiceHandler) AddMember(context.Context, *connect.Request[v1.AddMemberRequest]) (*connect.Response[v1.MemberResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.AddMember is not implemented"))
 }
 
-func (UnimplementedPermissionsServiceHandler) UpdatePermission(context.Context, *connect.Request[v1.UpdatePermissionRequest]) (*connect.Response[v1.PermissionInfo], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.PermissionsService.UpdatePermission is not implemented"))
+func (UnimplementedMembersServiceHandler) UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.MemberResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.UpdateMemberRole is not implemented"))
 }
 
-func (UnimplementedPermissionsServiceHandler) ListContentPermissions(context.Context, *connect.Request[v1.ListContentPermissionsRequest]) (*connect.Response[v1.PermissionListResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.PermissionsService.ListContentPermissions is not implemented"))
+func (UnimplementedMembersServiceHandler) RemoveMember(context.Context, *connect.Request[v1.RemoveMemberRequest]) (*connect.Response[v1.RemoveMemberResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.RemoveMember is not implemented"))
 }
 
-func (UnimplementedPermissionsServiceHandler) GetMyPermission(context.Context, *connect.Request[v1.GetMyPermissionRequest]) (*connect.Response[v1.PermissionInfo], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.PermissionsService.GetMyPermission is not implemented"))
+func (UnimplementedMembersServiceHandler) SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.AccessModeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.SetAccessMode is not implemented"))
 }
 
-func (UnimplementedPermissionsServiceHandler) SearchShareTargets(context.Context, *connect.Request[v1.SearchShareTargetsRequest]) (*connect.Response[v1.ShareTargetsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.PermissionsService.SearchShareTargets is not implemented"))
+func (UnimplementedMembersServiceHandler) TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.TransferOwnership is not implemented"))
+}
+
+func (UnimplementedMembersServiceHandler) ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.ListMemberEvents is not implemented"))
 }

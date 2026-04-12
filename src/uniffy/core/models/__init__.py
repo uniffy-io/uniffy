@@ -51,8 +51,8 @@ from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
-from uniffy.core.models.permissions.content_group_link import ContentGroupLink
-from uniffy.core.models.permissions.content_permission import ContentPermission
+from uniffy.core.models.permissions.content_member import ContentMember
+from uniffy.core.models.permissions.content_member_event import ContentMemberEvent
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.projects.activity import TaskActivity
@@ -62,18 +62,19 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.models.shared import (
+    AccessMode,
     AttendeeRole,
     AttendeeStatus,
     CalendarType,
+    ContentMemberAction,
+    ContentRole,
     ContentType,
     DayOfWeek,
     DomainType,
     NotificationType,
-    PermissionLevel,
     RecurrencePattern,
     ResourceType,
     SubjectType,
-    VisibilityScope,
 )
 
 __all__ = [
@@ -133,14 +134,15 @@ __all__ = [
     "EventAttendee",
     "EventReminder",
     # Permission models
-    "ContentGroupLink",
-    "ContentPermission",
+    "ContentMember",
+    "ContentMemberEvent",
     "DomainAdmin",
     "OrganizationPermissionDefaults",
     "DomainType",
-    "VisibilityScope",
+    "AccessMode",
+    "ContentMemberAction",
+    "ContentRole",
     "ContentType",
-    "PermissionLevel",
     "SubjectType",
     "RecurrencePattern",
     "DayOfWeek",

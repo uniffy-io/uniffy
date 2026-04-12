@@ -1,4 +1,4 @@
-"""Proto <-> domain converters for calendar domain."""
+"""Proto <-> domain converters for the calendar domain."""
 
 from datetime import datetime
 
@@ -38,38 +38,25 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
 from uniffy_proto.cal.v1.calendar_pb2 import (
     ResourceType as ProtoResourceType,
 )
-from uniffy_proto.common.v1.common_pb2 import (
-    VisibilityScope as ProtoVisibilityScope,
-)
 
+from uniffy.core.converters.common_proto import (
+    access_mode_to_proto,
+    content_role_to_proto,
+)
 from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.template import EventTemplate
-from uniffy.core.models.shared import (
+from uniffy.core.types import (
     AttendeeRole,
     AttendeeStatus,
     RecurrencePattern,
     ResourceType,
-    VisibilityScope,
 )
 
-VISIBILITY_TO_PROTO = {
-    VisibilityScope.PRIVATE: ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    VisibilityScope.GROUP: ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP,
-    VisibilityScope.ORGANIZATION: ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION,
-    VisibilityScope.PUBLIC: ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC,
-}
-
-VISIBILITY_FROM_PROTO = {
-    ProtoVisibilityScope.VISIBILITY_SCOPE_UNSPECIFIED: VisibilityScope.PRIVATE,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE: VisibilityScope.PRIVATE,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_GROUP: VisibilityScope.GROUP,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_ORGANIZATION: VisibilityScope.ORGANIZATION,
-    ProtoVisibilityScope.VISIBILITY_SCOPE_PUBLIC: VisibilityScope.PUBLIC,
-}
-
+# Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
+# across every domain so they live in ``core.converters.common_proto``.
 RECURRENCE_TO_PROTO = {
     RecurrencePattern.NONE: ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
     RecurrencePattern.DAILY: ProtoRecurrencePattern.RECURRENCE_PATTERN_DAILY,
@@ -150,33 +137,28 @@ RECURRENCE_EDIT_SCOPE_FROM_PROTO = {
 }
 
 
-def visibility_from_proto(proto_visibility: ProtoVisibilityScope) -> VisibilityScope:
-    """Convert proto VisibilityScope to model."""
-    return VISIBILITY_FROM_PROTO.get(proto_visibility, VisibilityScope.PRIVATE)
-
-
 def recurrence_from_proto(proto_recurrence: ProtoRecurrencePattern) -> RecurrencePattern:
-    """Convert proto RecurrencePattern to model."""
+    """Convert proto RecurrencePattern to the domain enum."""
     return RECURRENCE_FROM_PROTO.get(proto_recurrence, RecurrencePattern.NONE)
 
 
 def attendee_status_from_proto(proto_status: ProtoAttendeeStatus) -> AttendeeStatus:
-    """Convert proto AttendeeStatus to model."""
+    """Convert proto AttendeeStatus to the domain enum."""
     return ATTENDEE_STATUS_FROM_PROTO.get(proto_status, AttendeeStatus.PENDING)
 
 
 def attendee_role_from_proto(proto_role: ProtoAttendeeRole) -> AttendeeRole:
-    """Convert proto AttendeeRole to model."""
+    """Convert proto AttendeeRole to the domain enum."""
     return ATTENDEE_ROLE_FROM_PROTO.get(proto_role, AttendeeRole.REQUIRED)
 
 
 def resource_type_from_proto(proto_type: ProtoResourceType) -> ResourceType:
-    """Convert proto ResourceType to model."""
+    """Convert proto ResourceType to the domain enum."""
     return RESOURCE_TYPE_FROM_PROTO.get(proto_type, ResourceType.NOTE)
 
 
 def recurrence_edit_scope_from_proto(proto_scope: ProtoRecurrenceEditScope.ValueType) -> str:
-    """Convert proto RecurrenceEditScope to string."""
+    """Convert proto RecurrenceEditScope to a string code."""
     return RECURRENCE_EDIT_SCOPE_FROM_PROTO.get(proto_scope, "all_events")
 
 
@@ -189,36 +171,17 @@ def event_to_proto(
     room_capacity: int = 0,
     room_amenities: list[str] | None = None,
 ) -> ProtoCalendarEvent:
-    """
-    Convert CalendarEvent model to proto CalendarEvent.
+    """Convert a :class:`CalendarEvent` row to its proto representation.
 
     Parameters
     ----------
     event : CalendarEvent
-        Event model instance.
+        Event row.
     attendees : list[tuple[EventAttendee, dict]] | None
         List of (EventAttendee, user_info) tuples for attendee details.
-    room_id : str | None
-        Optional booked room ID.
-    room_name : str | None
-        Optional booked room name.
-    room_location : str | None
-        Optional booked room location.
-    room_capacity : int
-        Optional room capacity.
-    room_amenities : list[str] | None
-        Optional room amenities list.
-
-    Returns
-    -------
-    ProtoCalendarEvent
-        Proto message.
-
+    room_id, room_name, room_location, room_capacity, room_amenities
+        Optional room booking info for the event.
     """
-    proto_visibility = VISIBILITY_TO_PROTO.get(
-        event.visibility,
-        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    )
     proto_recurrence = RECURRENCE_TO_PROTO.get(
         event.recurrence_pattern,
         ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
@@ -238,7 +201,7 @@ def event_to_proto(
         category_id=str(event.category_id) if event.category_id else "",
         organizer_id=str(event.organizer_id),
         is_focus_time=event.is_focus_time,
-        visibility=proto_visibility,
+        access_mode=access_mode_to_proto(event.access_mode),
         is_deleted=event.is_deleted,
         tags=event.tags or [],
         outgoing_references=event.outgoing_references or [],
@@ -246,14 +209,14 @@ def event_to_proto(
         updated_at=datetime_to_timestamp(event.updated_at),
     )
 
-    # Set recurring flag
+    if event.baseline_role is not None:
+        proto_event.baseline_role = content_role_to_proto(event.baseline_role)
+
     proto_event.is_recurring = event.recurrence_pattern != RecurrencePattern.NONE
 
-    # Set recurrence_id if this is an override instance
     if event.recurrence_id:
         proto_event.recurrence_id = str(event.recurrence_id)
 
-    # Set occurrence_date if present (set dynamically on expanded instances)
     occurrence_date = getattr(event, "_occurrence_date", None)
     if occurrence_date:
         proto_event.occurrence_date = occurrence_date
@@ -267,7 +230,6 @@ def event_to_proto(
     if event.deleted_at:
         proto_event.deleted_at.CopyFrom(datetime_to_timestamp(event.deleted_at))
 
-    # Add linked resources
     if event.linked_resources:
         for resource in event.linked_resources:
             proto_resource = ProtoLinkedResource(
@@ -282,7 +244,6 @@ def event_to_proto(
                 proto_resource.url = resource["url"]
             proto_event.linked_resources.append(proto_resource)
 
-    # Add recurrence config
     if event.recurrence_config:
         config = event.recurrence_config
         proto_recurrence_config = ProtoRecurrenceConfig(
@@ -304,7 +265,6 @@ def event_to_proto(
             proto_recurrence_config.max_occurrences = config["max_occurrences"]
         proto_event.recurrence.CopyFrom(proto_recurrence_config)
 
-    # Add attendees
     if attendees:
         for attendee, user_info in attendees:
             proto_attendee = ProtoAttendee(
@@ -327,7 +287,6 @@ def event_to_proto(
                 proto_attendee.timezone = user_info["timezone"]
             proto_event.attendees.append(proto_attendee)
 
-    # Add room booking info
     if room_id:
         proto_event.room_id = room_id
     if room_name:
@@ -343,20 +302,7 @@ def event_to_proto(
 
 
 def category_to_proto(category: Category) -> ProtoCategory:
-    """
-    Convert Category model to proto Category.
-
-    Parameters
-    ----------
-    category : Category
-        Category model instance.
-
-    Returns
-    -------
-    ProtoCategory
-        Proto message.
-
-    """
+    """Convert a :class:`Category` row to its proto representation."""
     proto_category = ProtoCategory(
         id=str(category.id),
         organization_id=str(category.organization_id),
@@ -375,20 +321,7 @@ def category_to_proto(category: Category) -> ProtoCategory:
 
 
 def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
-    """
-    Convert proto RecurrenceConfig to dict for storage.
-
-    Parameters
-    ----------
-    proto_config : ProtoRecurrenceConfig
-        Proto recurrence config.
-
-    Returns
-    -------
-    dict
-        Recurrence config dict for JSONB storage.
-
-    """
+    """Convert a proto RecurrenceConfig to a JSONB-serializable dict."""
     config = {
         "pattern": RECURRENCE_FROM_PROTO.get(
             proto_config.pattern,
@@ -415,13 +348,8 @@ def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
 
 
 def template_to_proto(template: EventTemplate) -> ProtoEventTemplate:
-    """Convert EventTemplate model to proto."""
-    proto_visibility = VISIBILITY_TO_PROTO.get(
-        template.visibility,
-        ProtoVisibilityScope.VISIBILITY_SCOPE_PRIVATE,
-    )
-
-    return ProtoEventTemplate(
+    """Convert an :class:`EventTemplate` row to its proto representation."""
+    proto = ProtoEventTemplate(
         id=str(template.id),
         organization_id=str(template.organization_id),
         title=template.title,
@@ -431,8 +359,11 @@ def template_to_proto(template: EventTemplate) -> ProtoEventTemplate:
         meeting_url=template.meeting_url,
         category_id=str(template.category_id) if template.category_id else None,
         tags=template.tags or [],
-        visibility=proto_visibility,
+        access_mode=access_mode_to_proto(template.access_mode),
         created_by=str(template.created_by),
         created_at=datetime_to_timestamp(template.created_at),
         updated_at=datetime_to_timestamp(template.updated_at),
     )
+    if template.baseline_role is not None:
+        proto.baseline_role = content_role_to_proto(template.baseline_role)
+    return proto

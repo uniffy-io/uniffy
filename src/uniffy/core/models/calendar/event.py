@@ -8,8 +8,7 @@ from sqlalchemy import Column, DateTime, Enum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import RecurrencePattern, VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, RecurrencePattern, generate_id
 
 
 class CalendarEvent(SQLModel, table=True):
@@ -47,8 +46,10 @@ class CalendarEvent(SQLModel, table=True):
         Event location (physical or virtual).
     meeting_url : str | None
         Meeting URL (Zoom, Google Meet, etc.).
-    visibility : VisibilityScope
-        Who can access this event.
+    access_mode : AccessMode
+        How access to this event is governed.
+    baseline_role : ContentRole | None
+        Default role granted by the access mode.
     is_focus_time : bool
         Whether this event is marked as focus/deep work time.
     is_deleted : bool
@@ -89,17 +90,29 @@ class CalendarEvent(SQLModel, table=True):
     timezone: str = Field(max_length=100, default="UTC", nullable=False)
     location: str = Field(default="", max_length=500, nullable=False)
     meeting_url: str | None = Field(default=None, max_length=2000)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OPEN_TO_ORG,
         sa_column=Column(
             Enum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
-                create_type=False,  # Reuse existing enum from notes
+                create_type=False,
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=ContentRole.VIEWER,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     is_focus_time: bool = Field(default=False, nullable=False)

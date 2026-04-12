@@ -50,9 +50,7 @@ function formatTime(ts?: { seconds: number; nanos: number }): string {
     });
 }
 
-// ---------------------------------------------------------------------------
 // Chat Bubble
-// ---------------------------------------------------------------------------
 
 function ChatBubble({
     message,
@@ -106,9 +104,7 @@ function ChatBubble({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Thinking Indicator
-// ---------------------------------------------------------------------------
 
 const THINKING_PHASES = [
     "Understanding your request",
@@ -152,9 +148,7 @@ function ThinkingIndicator() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Prompt Builder Drawer (slide-over panel)
-// ---------------------------------------------------------------------------
 
 function PromptBuilderDrawer({
     agent,
@@ -357,9 +351,7 @@ function PromptBuilderDrawer({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Assembled Prompt Preview
-// ---------------------------------------------------------------------------
 
 function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
@@ -471,9 +463,7 @@ function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Soul Prompt Editor (main editor area)
-// ---------------------------------------------------------------------------
 
 function SoulPromptEditor({
     agent,
@@ -524,9 +514,7 @@ function SoulPromptEditor({
     );
 }
 
-// ---------------------------------------------------------------------------
 // Main InstructionsTab
-// ---------------------------------------------------------------------------
 
 export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();

@@ -23,34 +23,34 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Request to grant permission
-type GrantPermissionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
-	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
-	SubjectType    v1.SubjectType         `protobuf:"varint,4,opt,name=subject_type,json=subjectType,proto3,enum=common.v1.SubjectType" json:"subject_type,omitempty"`
-	SubjectId      string                 `protobuf:"bytes,5,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	Level          v1.PermissionLevel     `protobuf:"varint,6,opt,name=level,proto3,enum=common.v1.PermissionLevel" json:"level,omitempty"`
-	ExpiresAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+// A single member row on a piece of content.
+type ContentMember struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubjectType   v1.SubjectType         `protobuf:"varint,1,opt,name=subject_type,json=subjectType,proto3,enum=common.v1.SubjectType" json:"subject_type,omitempty"`
+	SubjectId     string                 `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	Role          v1.ContentRole         `protobuf:"varint,3,opt,name=role,proto3,enum=common.v1.ContentRole" json:"role,omitempty"`
+	AddedByUserId string                 `protobuf:"bytes,4,opt,name=added_by_user_id,json=addedByUserId,proto3" json:"added_by_user_id,omitempty"`
+	AddedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=added_at,json=addedAt,proto3" json:"added_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GrantPermissionRequest) Reset() {
-	*x = GrantPermissionRequest{}
+func (x *ContentMember) Reset() {
+	*x = ContentMember{}
 	mi := &file_permissions_v1_permissions_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GrantPermissionRequest) String() string {
+func (x *ContentMember) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GrantPermissionRequest) ProtoMessage() {}
+func (*ContentMember) ProtoMessage() {}
 
-func (x *GrantPermissionRequest) ProtoReflect() protoreflect.Message {
+func (x *ContentMember) ProtoReflect() protoreflect.Message {
 	mi := &file_permissions_v1_permissions_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -62,83 +62,84 @@ func (x *GrantPermissionRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GrantPermissionRequest.ProtoReflect.Descriptor instead.
-func (*GrantPermissionRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ContentMember.ProtoReflect.Descriptor instead.
+func (*ContentMember) Descriptor() ([]byte, []int) {
 	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GrantPermissionRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *GrantPermissionRequest) GetContentType() v1.ContentType {
-	if x != nil {
-		return x.ContentType
-	}
-	return v1.ContentType(0)
-}
-
-func (x *GrantPermissionRequest) GetContentId() string {
-	if x != nil {
-		return x.ContentId
-	}
-	return ""
-}
-
-func (x *GrantPermissionRequest) GetSubjectType() v1.SubjectType {
+func (x *ContentMember) GetSubjectType() v1.SubjectType {
 	if x != nil {
 		return x.SubjectType
 	}
 	return v1.SubjectType(0)
 }
 
-func (x *GrantPermissionRequest) GetSubjectId() string {
+func (x *ContentMember) GetSubjectId() string {
 	if x != nil {
 		return x.SubjectId
 	}
 	return ""
 }
 
-func (x *GrantPermissionRequest) GetLevel() v1.PermissionLevel {
+func (x *ContentMember) GetRole() v1.ContentRole {
 	if x != nil {
-		return x.Level
+		return x.Role
 	}
-	return v1.PermissionLevel(0)
+	return v1.ContentRole(0)
 }
 
-func (x *GrantPermissionRequest) GetExpiresAt() *timestamppb.Timestamp {
+func (x *ContentMember) GetAddedByUserId() string {
+	if x != nil {
+		return x.AddedByUserId
+	}
+	return ""
+}
+
+func (x *ContentMember) GetAddedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AddedAt
+	}
+	return nil
+}
+
+func (x *ContentMember) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *ContentMember) GetExpiresAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.ExpiresAt
 	}
 	return nil
 }
 
-// Request to revoke permission
-type RevokePermissionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	PermissionId   string                 `protobuf:"bytes,2,opt,name=permission_id,json=permissionId,proto3" json:"permission_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+// The access policy for a piece of content (owner + baseline access).
+type ContentAccessPolicy struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OwnerId       string                 `protobuf:"bytes,1,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	AccessMode    v1.AccessMode          `protobuf:"varint,2,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	BaselineRole  *v1.ContentRole        `protobuf:"varint,3,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RevokePermissionRequest) Reset() {
-	*x = RevokePermissionRequest{}
+func (x *ContentAccessPolicy) Reset() {
+	*x = ContentAccessPolicy{}
 	mi := &file_permissions_v1_permissions_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RevokePermissionRequest) String() string {
+func (x *ContentAccessPolicy) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RevokePermissionRequest) ProtoMessage() {}
+func (*ContentAccessPolicy) ProtoMessage() {}
 
-func (x *RevokePermissionRequest) ProtoReflect() protoreflect.Message {
+func (x *ContentAccessPolicy) ProtoReflect() protoreflect.Message {
 	mi := &file_permissions_v1_permissions_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -150,51 +151,71 @@ func (x *RevokePermissionRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RevokePermissionRequest.ProtoReflect.Descriptor instead.
-func (*RevokePermissionRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ContentAccessPolicy.ProtoReflect.Descriptor instead.
+func (*ContentAccessPolicy) Descriptor() ([]byte, []int) {
 	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *RevokePermissionRequest) GetOrganizationId() string {
+func (x *ContentAccessPolicy) GetOwnerId() string {
 	if x != nil {
-		return x.OrganizationId
+		return x.OwnerId
 	}
 	return ""
 }
 
-func (x *RevokePermissionRequest) GetPermissionId() string {
+func (x *ContentAccessPolicy) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.PermissionId
+		return x.AccessMode
 	}
-	return ""
+	return v1.AccessMode(0)
 }
 
-// Request to update permission
-type UpdatePermissionRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId  string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	PermissionId    string                 `protobuf:"bytes,2,opt,name=permission_id,json=permissionId,proto3" json:"permission_id,omitempty"`
-	Level           *v1.PermissionLevel    `protobuf:"varint,3,opt,name=level,proto3,enum=common.v1.PermissionLevel,oneof" json:"level,omitempty"`
-	ExpiresAt       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
-	ClearExpiration bool                   `protobuf:"varint,5,opt,name=clear_expiration,json=clearExpiration,proto3" json:"clear_expiration,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+func (x *ContentAccessPolicy) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
-func (x *UpdatePermissionRequest) Reset() {
-	*x = UpdatePermissionRequest{}
+// Audit log entry for a content member change.
+type ContentMemberEvent struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ContentType          v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId            string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	Action               v1.ContentMemberAction `protobuf:"varint,4,opt,name=action,proto3,enum=common.v1.ContentMemberAction" json:"action,omitempty"`
+	SubjectType          *v1.SubjectType        `protobuf:"varint,5,opt,name=subject_type,json=subjectType,proto3,enum=common.v1.SubjectType,oneof" json:"subject_type,omitempty"`
+	SubjectId            *string                `protobuf:"bytes,6,opt,name=subject_id,json=subjectId,proto3,oneof" json:"subject_id,omitempty"`
+	PreviousRole         *v1.ContentRole        `protobuf:"varint,7,opt,name=previous_role,json=previousRole,proto3,enum=common.v1.ContentRole,oneof" json:"previous_role,omitempty"`
+	NewRole              *v1.ContentRole        `protobuf:"varint,8,opt,name=new_role,json=newRole,proto3,enum=common.v1.ContentRole,oneof" json:"new_role,omitempty"`
+	PreviousAccessMode   *v1.AccessMode         `protobuf:"varint,9,opt,name=previous_access_mode,json=previousAccessMode,proto3,enum=common.v1.AccessMode,oneof" json:"previous_access_mode,omitempty"`
+	NewAccessMode        *v1.AccessMode         `protobuf:"varint,10,opt,name=new_access_mode,json=newAccessMode,proto3,enum=common.v1.AccessMode,oneof" json:"new_access_mode,omitempty"`
+	PreviousBaselineRole *v1.ContentRole        `protobuf:"varint,11,opt,name=previous_baseline_role,json=previousBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"previous_baseline_role,omitempty"`
+	NewBaselineRole      *v1.ContentRole        `protobuf:"varint,12,opt,name=new_baseline_role,json=newBaselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"new_baseline_role,omitempty"`
+	PreviousOwnerId      *string                `protobuf:"bytes,13,opt,name=previous_owner_id,json=previousOwnerId,proto3,oneof" json:"previous_owner_id,omitempty"`
+	NewOwnerId           *string                `protobuf:"bytes,14,opt,name=new_owner_id,json=newOwnerId,proto3,oneof" json:"new_owner_id,omitempty"`
+	ActorUserId          string                 `protobuf:"bytes,15,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
+	ActorOrgRole         v1.OrganizationRole    `protobuf:"varint,16,opt,name=actor_org_role,json=actorOrgRole,proto3,enum=common.v1.OrganizationRole" json:"actor_org_role,omitempty"`
+	Note                 string                 `protobuf:"bytes,17,opt,name=note,proto3" json:"note,omitempty"`
+	OccurredAt           *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ContentMemberEvent) Reset() {
+	*x = ContentMemberEvent{}
 	mi := &file_permissions_v1_permissions_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdatePermissionRequest) String() string {
+func (x *ContentMemberEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdatePermissionRequest) ProtoMessage() {}
+func (*ContentMemberEvent) ProtoMessage() {}
 
-func (x *UpdatePermissionRequest) ProtoReflect() protoreflect.Message {
+func (x *ContentMemberEvent) ProtoReflect() protoreflect.Message {
 	mi := &file_permissions_v1_permissions_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -206,575 +227,682 @@ func (x *UpdatePermissionRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdatePermissionRequest.ProtoReflect.Descriptor instead.
-func (*UpdatePermissionRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ContentMemberEvent.ProtoReflect.Descriptor instead.
+func (*ContentMemberEvent) Descriptor() ([]byte, []int) {
 	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *UpdatePermissionRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *UpdatePermissionRequest) GetPermissionId() string {
-	if x != nil {
-		return x.PermissionId
-	}
-	return ""
-}
-
-func (x *UpdatePermissionRequest) GetLevel() v1.PermissionLevel {
-	if x != nil && x.Level != nil {
-		return *x.Level
-	}
-	return v1.PermissionLevel(0)
-}
-
-func (x *UpdatePermissionRequest) GetExpiresAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ExpiresAt
-	}
-	return nil
-}
-
-func (x *UpdatePermissionRequest) GetClearExpiration() bool {
-	if x != nil {
-		return x.ClearExpiration
-	}
-	return false
-}
-
-// Request to list permissions for content
-type ListContentPermissionsRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
-	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ListContentPermissionsRequest) Reset() {
-	*x = ListContentPermissionsRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListContentPermissionsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListContentPermissionsRequest) ProtoMessage() {}
-
-func (x *ListContentPermissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListContentPermissionsRequest.ProtoReflect.Descriptor instead.
-func (*ListContentPermissionsRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ListContentPermissionsRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *ListContentPermissionsRequest) GetContentType() v1.ContentType {
-	if x != nil {
-		return x.ContentType
-	}
-	return v1.ContentType(0)
-}
-
-func (x *ListContentPermissionsRequest) GetContentId() string {
-	if x != nil {
-		return x.ContentId
-	}
-	return ""
-}
-
-// Request to get current user's permission
-type GetMyPermissionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
-	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *GetMyPermissionRequest) Reset() {
-	*x = GetMyPermissionRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetMyPermissionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetMyPermissionRequest) ProtoMessage() {}
-
-func (x *GetMyPermissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetMyPermissionRequest.ProtoReflect.Descriptor instead.
-func (*GetMyPermissionRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *GetMyPermissionRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *GetMyPermissionRequest) GetContentType() v1.ContentType {
-	if x != nil {
-		return x.ContentType
-	}
-	return v1.ContentType(0)
-}
-
-func (x *GetMyPermissionRequest) GetContentId() string {
-	if x != nil {
-		return x.ContentId
-	}
-	return ""
-}
-
-// Request to search for share targets
-type SearchShareTargetsRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	Query          string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
-	Limit          int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	IncludeUsers   bool                   `protobuf:"varint,4,opt,name=include_users,json=includeUsers,proto3" json:"include_users,omitempty"`
-	IncludeGroups  bool                   `protobuf:"varint,5,opt,name=include_groups,json=includeGroups,proto3" json:"include_groups,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *SearchShareTargetsRequest) Reset() {
-	*x = SearchShareTargetsRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SearchShareTargetsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SearchShareTargetsRequest) ProtoMessage() {}
-
-func (x *SearchShareTargetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SearchShareTargetsRequest.ProtoReflect.Descriptor instead.
-func (*SearchShareTargetsRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *SearchShareTargetsRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *SearchShareTargetsRequest) GetQuery() string {
-	if x != nil {
-		return x.Query
-	}
-	return ""
-}
-
-func (x *SearchShareTargetsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *SearchShareTargetsRequest) GetIncludeUsers() bool {
-	if x != nil {
-		return x.IncludeUsers
-	}
-	return false
-}
-
-func (x *SearchShareTargetsRequest) GetIncludeGroups() bool {
-	if x != nil {
-		return x.IncludeGroups
-	}
-	return false
-}
-
-// Response for revoke operation
-type RevokePermissionResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RevokePermissionResponse) Reset() {
-	*x = RevokePermissionResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RevokePermissionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RevokePermissionResponse) ProtoMessage() {}
-
-func (x *RevokePermissionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RevokePermissionResponse.ProtoReflect.Descriptor instead.
-func (*RevokePermissionResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *RevokePermissionResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-// Response for listing permissions
-type PermissionListResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Permissions   []*PermissionInfo      `protobuf:"bytes,1,rep,name=permissions,proto3" json:"permissions,omitempty"`
-	Owner         *ShareTarget           `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PermissionListResponse) Reset() {
-	*x = PermissionListResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PermissionListResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PermissionListResponse) ProtoMessage() {}
-
-func (x *PermissionListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PermissionListResponse.ProtoReflect.Descriptor instead.
-func (*PermissionListResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *PermissionListResponse) GetPermissions() []*PermissionInfo {
-	if x != nil {
-		return x.Permissions
-	}
-	return nil
-}
-
-func (x *PermissionListResponse) GetOwner() *ShareTarget {
-	if x != nil {
-		return x.Owner
-	}
-	return nil
-}
-
-// Response for search share targets
-type ShareTargetsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Targets       []*ShareTarget         `protobuf:"bytes,1,rep,name=targets,proto3" json:"targets,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ShareTargetsResponse) Reset() {
-	*x = ShareTargetsResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ShareTargetsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ShareTargetsResponse) ProtoMessage() {}
-
-func (x *ShareTargetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ShareTargetsResponse.ProtoReflect.Descriptor instead.
-func (*ShareTargetsResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ShareTargetsResponse) GetTargets() []*ShareTarget {
-	if x != nil {
-		return x.Targets
-	}
-	return nil
-}
-
-// Permission information
-type PermissionInfo struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ContentType v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
-	ContentId   string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
-	SubjectType v1.SubjectType         `protobuf:"varint,4,opt,name=subject_type,json=subjectType,proto3,enum=common.v1.SubjectType" json:"subject_type,omitempty"`
-	Subject     *ShareTarget           `protobuf:"bytes,5,opt,name=subject,proto3" json:"subject,omitempty"`
-	Level       v1.PermissionLevel     `protobuf:"varint,6,opt,name=level,proto3,enum=common.v1.PermissionLevel" json:"level,omitempty"`
-	// Fine-grained permissions
-	CanView   bool `protobuf:"varint,7,opt,name=can_view,json=canView,proto3" json:"can_view,omitempty"`
-	CanEdit   bool `protobuf:"varint,8,opt,name=can_edit,json=canEdit,proto3" json:"can_edit,omitempty"`
-	CanDelete bool `protobuf:"varint,9,opt,name=can_delete,json=canDelete,proto3" json:"can_delete,omitempty"`
-	CanShare  bool `protobuf:"varint,10,opt,name=can_share,json=canShare,proto3" json:"can_share,omitempty"`
-	CanMove   bool `protobuf:"varint,11,opt,name=can_move,json=canMove,proto3" json:"can_move,omitempty"`
-	// Audit fields
-	GrantedBy *ShareTarget           `protobuf:"bytes,12,opt,name=granted_by,json=grantedBy,proto3" json:"granted_by,omitempty"`
-	GrantedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=granted_at,json=grantedAt,proto3" json:"granted_at,omitempty"`
-	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
-	// True if the subject is the actual content owner (not just an admin)
-	IsOwner       bool `protobuf:"varint,15,opt,name=is_owner,json=isOwner,proto3" json:"is_owner,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PermissionInfo) Reset() {
-	*x = PermissionInfo{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PermissionInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PermissionInfo) ProtoMessage() {}
-
-func (x *PermissionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PermissionInfo.ProtoReflect.Descriptor instead.
-func (*PermissionInfo) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *PermissionInfo) GetId() string {
+func (x *ContentMemberEvent) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *PermissionInfo) GetContentType() v1.ContentType {
+func (x *ContentMemberEvent) GetContentType() v1.ContentType {
 	if x != nil {
 		return x.ContentType
 	}
 	return v1.ContentType(0)
 }
 
-func (x *PermissionInfo) GetContentId() string {
+func (x *ContentMemberEvent) GetContentId() string {
 	if x != nil {
 		return x.ContentId
 	}
 	return ""
 }
 
-func (x *PermissionInfo) GetSubjectType() v1.SubjectType {
+func (x *ContentMemberEvent) GetAction() v1.ContentMemberAction {
+	if x != nil {
+		return x.Action
+	}
+	return v1.ContentMemberAction(0)
+}
+
+func (x *ContentMemberEvent) GetSubjectType() v1.SubjectType {
+	if x != nil && x.SubjectType != nil {
+		return *x.SubjectType
+	}
+	return v1.SubjectType(0)
+}
+
+func (x *ContentMemberEvent) GetSubjectId() string {
+	if x != nil && x.SubjectId != nil {
+		return *x.SubjectId
+	}
+	return ""
+}
+
+func (x *ContentMemberEvent) GetPreviousRole() v1.ContentRole {
+	if x != nil && x.PreviousRole != nil {
+		return *x.PreviousRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *ContentMemberEvent) GetNewRole() v1.ContentRole {
+	if x != nil && x.NewRole != nil {
+		return *x.NewRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *ContentMemberEvent) GetPreviousAccessMode() v1.AccessMode {
+	if x != nil && x.PreviousAccessMode != nil {
+		return *x.PreviousAccessMode
+	}
+	return v1.AccessMode(0)
+}
+
+func (x *ContentMemberEvent) GetNewAccessMode() v1.AccessMode {
+	if x != nil && x.NewAccessMode != nil {
+		return *x.NewAccessMode
+	}
+	return v1.AccessMode(0)
+}
+
+func (x *ContentMemberEvent) GetPreviousBaselineRole() v1.ContentRole {
+	if x != nil && x.PreviousBaselineRole != nil {
+		return *x.PreviousBaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *ContentMemberEvent) GetNewBaselineRole() v1.ContentRole {
+	if x != nil && x.NewBaselineRole != nil {
+		return *x.NewBaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *ContentMemberEvent) GetPreviousOwnerId() string {
+	if x != nil && x.PreviousOwnerId != nil {
+		return *x.PreviousOwnerId
+	}
+	return ""
+}
+
+func (x *ContentMemberEvent) GetNewOwnerId() string {
+	if x != nil && x.NewOwnerId != nil {
+		return *x.NewOwnerId
+	}
+	return ""
+}
+
+func (x *ContentMemberEvent) GetActorUserId() string {
+	if x != nil {
+		return x.ActorUserId
+	}
+	return ""
+}
+
+func (x *ContentMemberEvent) GetActorOrgRole() v1.OrganizationRole {
+	if x != nil {
+		return x.ActorOrgRole
+	}
+	return v1.OrganizationRole(0)
+}
+
+func (x *ContentMemberEvent) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *ContentMemberEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+type ListMembersRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListMembersRequest) Reset() {
+	*x = ListMembersRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMembersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMembersRequest) ProtoMessage() {}
+
+func (x *ListMembersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMembersRequest.ProtoReflect.Descriptor instead.
+func (*ListMembersRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListMembersRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ListMembersRequest) GetContentType() v1.ContentType {
+	if x != nil {
+		return x.ContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *ListMembersRequest) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+type ListMembersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Policy        *ContentAccessPolicy   `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	Members       []*ContentMember       `protobuf:"bytes,2,rep,name=members,proto3" json:"members,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMembersResponse) Reset() {
+	*x = ListMembersResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMembersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMembersResponse) ProtoMessage() {}
+
+func (x *ListMembersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMembersResponse.ProtoReflect.Descriptor instead.
+func (*ListMembersResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListMembersResponse) GetPolicy() *ContentAccessPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
+func (x *ListMembersResponse) GetMembers() []*ContentMember {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+type AddMemberRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	SubjectType    v1.SubjectType         `protobuf:"varint,4,opt,name=subject_type,json=subjectType,proto3,enum=common.v1.SubjectType" json:"subject_type,omitempty"`
+	SubjectId      string                 `protobuf:"bytes,5,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	Role           v1.ContentRole         `protobuf:"varint,6,opt,name=role,proto3,enum=common.v1.ContentRole" json:"role,omitempty"`
+	ExpiresAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
+	Note           string                 `protobuf:"bytes,8,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AddMemberRequest) Reset() {
+	*x = AddMemberRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddMemberRequest) ProtoMessage() {}
+
+func (x *AddMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddMemberRequest.ProtoReflect.Descriptor instead.
+func (*AddMemberRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AddMemberRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *AddMemberRequest) GetContentType() v1.ContentType {
+	if x != nil {
+		return x.ContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *AddMemberRequest) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+func (x *AddMemberRequest) GetSubjectType() v1.SubjectType {
 	if x != nil {
 		return x.SubjectType
 	}
 	return v1.SubjectType(0)
 }
 
-func (x *PermissionInfo) GetSubject() *ShareTarget {
+func (x *AddMemberRequest) GetSubjectId() string {
 	if x != nil {
-		return x.Subject
+		return x.SubjectId
 	}
-	return nil
+	return ""
 }
 
-func (x *PermissionInfo) GetLevel() v1.PermissionLevel {
+func (x *AddMemberRequest) GetRole() v1.ContentRole {
 	if x != nil {
-		return x.Level
+		return x.Role
 	}
-	return v1.PermissionLevel(0)
+	return v1.ContentRole(0)
 }
 
-func (x *PermissionInfo) GetCanView() bool {
-	if x != nil {
-		return x.CanView
-	}
-	return false
-}
-
-func (x *PermissionInfo) GetCanEdit() bool {
-	if x != nil {
-		return x.CanEdit
-	}
-	return false
-}
-
-func (x *PermissionInfo) GetCanDelete() bool {
-	if x != nil {
-		return x.CanDelete
-	}
-	return false
-}
-
-func (x *PermissionInfo) GetCanShare() bool {
-	if x != nil {
-		return x.CanShare
-	}
-	return false
-}
-
-func (x *PermissionInfo) GetCanMove() bool {
-	if x != nil {
-		return x.CanMove
-	}
-	return false
-}
-
-func (x *PermissionInfo) GetGrantedBy() *ShareTarget {
-	if x != nil {
-		return x.GrantedBy
-	}
-	return nil
-}
-
-func (x *PermissionInfo) GetGrantedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.GrantedAt
-	}
-	return nil
-}
-
-func (x *PermissionInfo) GetExpiresAt() *timestamppb.Timestamp {
+func (x *AddMemberRequest) GetExpiresAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.ExpiresAt
 	}
 	return nil
 }
 
-func (x *PermissionInfo) GetIsOwner() bool {
+func (x *AddMemberRequest) GetNote() string {
 	if x != nil {
-		return x.IsOwner
+		return x.Note
 	}
-	return false
+	return ""
 }
 
-// Share target (user or group)
-type ShareTarget struct {
+type UpdateMemberRoleRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	SubjectType    v1.SubjectType         `protobuf:"varint,4,opt,name=subject_type,json=subjectType,proto3,enum=common.v1.SubjectType" json:"subject_type,omitempty"`
+	SubjectId      string                 `protobuf:"bytes,5,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	NewRole        v1.ContentRole         `protobuf:"varint,6,opt,name=new_role,json=newRole,proto3,enum=common.v1.ContentRole" json:"new_role,omitempty"`
+	Note           string                 `protobuf:"bytes,7,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UpdateMemberRoleRequest) Reset() {
+	*x = UpdateMemberRoleRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMemberRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMemberRoleRequest) ProtoMessage() {}
+
+func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMemberRoleRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMemberRoleRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateMemberRoleRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *UpdateMemberRoleRequest) GetContentType() v1.ContentType {
+	if x != nil {
+		return x.ContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *UpdateMemberRoleRequest) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+func (x *UpdateMemberRoleRequest) GetSubjectType() v1.SubjectType {
+	if x != nil {
+		return x.SubjectType
+	}
+	return v1.SubjectType(0)
+}
+
+func (x *UpdateMemberRoleRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *UpdateMemberRoleRequest) GetNewRole() v1.ContentRole {
+	if x != nil {
+		return x.NewRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *UpdateMemberRoleRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+type RemoveMemberRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	SubjectType    v1.SubjectType         `protobuf:"varint,4,opt,name=subject_type,json=subjectType,proto3,enum=common.v1.SubjectType" json:"subject_type,omitempty"`
+	SubjectId      string                 `protobuf:"bytes,5,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	Note           string                 `protobuf:"bytes,6,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RemoveMemberRequest) Reset() {
+	*x = RemoveMemberRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveMemberRequest) ProtoMessage() {}
+
+func (x *RemoveMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveMemberRequest.ProtoReflect.Descriptor instead.
+func (*RemoveMemberRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RemoveMemberRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RemoveMemberRequest) GetContentType() v1.ContentType {
+	if x != nil {
+		return x.ContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *RemoveMemberRequest) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+func (x *RemoveMemberRequest) GetSubjectType() v1.SubjectType {
+	if x != nil {
+		return x.SubjectType
+	}
+	return v1.SubjectType(0)
+}
+
+func (x *RemoveMemberRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *RemoveMemberRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+type RemoveMemberResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type          v1.SubjectType         `protobuf:"varint,2,opt,name=type,proto3,enum=common.v1.SubjectType" json:"type,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Email         string                 `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	MemberCount   int32                  `protobuf:"varint,6,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"` // For groups
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ShareTarget) Reset() {
-	*x = ShareTarget{}
+func (x *RemoveMemberResponse) Reset() {
+	*x = RemoveMemberResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveMemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveMemberResponse) ProtoMessage() {}
+
+func (x *RemoveMemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveMemberResponse.ProtoReflect.Descriptor instead.
+func (*RemoveMemberResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RemoveMemberResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type SetAccessModeRequest struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId        string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType           v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId             string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	AccessMode            v1.AccessMode          `protobuf:"varint,4,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	BaselineRole          *v1.ContentRole        `protobuf:"varint,5,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	RemoveMembersOnNarrow bool                   `protobuf:"varint,6,opt,name=remove_members_on_narrow,json=removeMembersOnNarrow,proto3" json:"remove_members_on_narrow,omitempty"`
+	Note                  string                 `protobuf:"bytes,7,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *SetAccessModeRequest) Reset() {
+	*x = SetAccessModeRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAccessModeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAccessModeRequest) ProtoMessage() {}
+
+func (x *SetAccessModeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAccessModeRequest.ProtoReflect.Descriptor instead.
+func (*SetAccessModeRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SetAccessModeRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetAccessModeRequest) GetContentType() v1.ContentType {
+	if x != nil {
+		return x.ContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *SetAccessModeRequest) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+func (x *SetAccessModeRequest) GetAccessMode() v1.AccessMode {
+	if x != nil {
+		return x.AccessMode
+	}
+	return v1.AccessMode(0)
+}
+
+func (x *SetAccessModeRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *SetAccessModeRequest) GetRemoveMembersOnNarrow() bool {
+	if x != nil {
+		return x.RemoveMembersOnNarrow
+	}
+	return false
+}
+
+func (x *SetAccessModeRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+type AccessModeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Policy        *ContentAccessPolicy   `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccessModeResponse) Reset() {
+	*x = AccessModeResponse{}
 	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ShareTarget) String() string {
+func (x *AccessModeResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ShareTarget) ProtoMessage() {}
+func (*AccessModeResponse) ProtoMessage() {}
 
-func (x *ShareTarget) ProtoReflect() protoreflect.Message {
+func (x *AccessModeResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -786,143 +914,487 @@ func (x *ShareTarget) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ShareTarget.ProtoReflect.Descriptor instead.
-func (*ShareTarget) Descriptor() ([]byte, []int) {
+// Deprecated: Use AccessModeResponse.ProtoReflect.Descriptor instead.
+func (*AccessModeResponse) Descriptor() ([]byte, []int) {
 	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *ShareTarget) GetId() string {
+func (x *AccessModeResponse) GetPolicy() *ContentAccessPolicy {
 	if x != nil {
-		return x.Id
+		return x.Policy
+	}
+	return nil
+}
+
+type TransferOwnershipRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType    v1.ContentType         `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId      string                 `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	NewOwnerUserId string                 `protobuf:"bytes,4,opt,name=new_owner_user_id,json=newOwnerUserId,proto3" json:"new_owner_user_id,omitempty"`
+	Note           string                 `protobuf:"bytes,5,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *TransferOwnershipRequest) Reset() {
+	*x = TransferOwnershipRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferOwnershipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferOwnershipRequest) ProtoMessage() {}
+
+func (x *TransferOwnershipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferOwnershipRequest.ProtoReflect.Descriptor instead.
+func (*TransferOwnershipRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *TransferOwnershipRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *ShareTarget) GetType() v1.SubjectType {
+func (x *TransferOwnershipRequest) GetContentType() v1.ContentType {
 	if x != nil {
-		return x.Type
+		return x.ContentType
 	}
-	return v1.SubjectType(0)
+	return v1.ContentType(0)
 }
 
-func (x *ShareTarget) GetName() string {
+func (x *TransferOwnershipRequest) GetContentId() string {
 	if x != nil {
-		return x.Name
+		return x.ContentId
 	}
 	return ""
 }
 
-func (x *ShareTarget) GetEmail() string {
+func (x *TransferOwnershipRequest) GetNewOwnerUserId() string {
 	if x != nil {
-		return x.Email
+		return x.NewOwnerUserId
 	}
 	return ""
 }
 
-func (x *ShareTarget) GetAvatarUrl() string {
+func (x *TransferOwnershipRequest) GetNote() string {
 	if x != nil {
-		return x.AvatarUrl
+		return x.Note
 	}
 	return ""
 }
 
-func (x *ShareTarget) GetMemberCount() int32 {
+type TransferOwnershipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Policy        *ContentAccessPolicy   `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferOwnershipResponse) Reset() {
+	*x = TransferOwnershipResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferOwnershipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferOwnershipResponse) ProtoMessage() {}
+
+func (x *TransferOwnershipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[12]
 	if x != nil {
-		return x.MemberCount
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
 	}
-	return 0
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferOwnershipResponse.ProtoReflect.Descriptor instead.
+func (*TransferOwnershipResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *TransferOwnershipResponse) GetPolicy() *ContentAccessPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
+type MemberResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Member        *ContentMember         `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MemberResponse) Reset() {
+	*x = MemberResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MemberResponse) ProtoMessage() {}
+
+func (x *MemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MemberResponse.ProtoReflect.Descriptor instead.
+func (*MemberResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *MemberResponse) GetMember() *ContentMember {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
+type ListMemberEventsRequest struct {
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	OrganizationId string                  `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentType    v1.ContentType          `protobuf:"varint,2,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
+	ContentId      string                  `protobuf:"bytes,3,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	Pagination     *v1.PaginationRequest   `protobuf:"bytes,4,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
+	ActorUserId    *string                 `protobuf:"bytes,5,opt,name=actor_user_id,json=actorUserId,proto3,oneof" json:"actor_user_id,omitempty"`
+	Action         *v1.ContentMemberAction `protobuf:"varint,6,opt,name=action,proto3,enum=common.v1.ContentMemberAction,oneof" json:"action,omitempty"`
+	After          *timestamppb.Timestamp  `protobuf:"bytes,7,opt,name=after,proto3,oneof" json:"after,omitempty"`
+	Before         *timestamppb.Timestamp  `protobuf:"bytes,8,opt,name=before,proto3,oneof" json:"before,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListMemberEventsRequest) Reset() {
+	*x = ListMemberEventsRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMemberEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMemberEventsRequest) ProtoMessage() {}
+
+func (x *ListMemberEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMemberEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListMemberEventsRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ListMemberEventsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ListMemberEventsRequest) GetContentType() v1.ContentType {
+	if x != nil {
+		return x.ContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *ListMemberEventsRequest) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+func (x *ListMemberEventsRequest) GetPagination() *v1.PaginationRequest {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+func (x *ListMemberEventsRequest) GetActorUserId() string {
+	if x != nil && x.ActorUserId != nil {
+		return *x.ActorUserId
+	}
+	return ""
+}
+
+func (x *ListMemberEventsRequest) GetAction() v1.ContentMemberAction {
+	if x != nil && x.Action != nil {
+		return *x.Action
+	}
+	return v1.ContentMemberAction(0)
+}
+
+func (x *ListMemberEventsRequest) GetAfter() *timestamppb.Timestamp {
+	if x != nil {
+		return x.After
+	}
+	return nil
+}
+
+func (x *ListMemberEventsRequest) GetBefore() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Before
+	}
+	return nil
+}
+
+type ListMemberEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Events        []*ContentMemberEvent  `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	Pagination    *v1.PaginationResponse `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMemberEventsResponse) Reset() {
+	*x = ListMemberEventsResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMemberEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMemberEventsResponse) ProtoMessage() {}
+
+func (x *ListMemberEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMemberEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListMemberEventsResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ListMemberEventsResponse) GetEvents() []*ContentMemberEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+func (x *ListMemberEventsResponse) GetPagination() *v1.PaginationResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
 }
 
 var File_permissions_v1_permissions_proto protoreflect.FileDescriptor
 
 const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\n" +
-	" permissions/v1/permissions.proto\x12\x0epermissions.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf6\x02\n" +
-	"\x16GrantPermissionRequest\x12'\n" +
+	" permissions/v1/permissions.proto\x12\x0epermissions.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xff\x02\n" +
+	"\rContentMember\x129\n" +
+	"\fsubject_type\x18\x01 \x01(\x0e2\x16.common.v1.SubjectTypeR\vsubjectType\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12*\n" +
+	"\x04role\x18\x03 \x01(\x0e2\x16.common.v1.ContentRoleR\x04role\x12'\n" +
+	"\x10added_by_user_id\x18\x04 \x01(\tR\raddedByUserId\x125\n" +
+	"\badded_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\aaddedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
+	"\n" +
+	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x00R\texpiresAt\x88\x01\x01B\r\n" +
+	"\v_expires_at\"\xbc\x01\n" +
+	"\x13ContentAccessPolicy\x12\x19\n" +
+	"\bowner_id\x18\x01 \x01(\tR\aownerId\x126\n" +
+	"\vaccess_mode\x18\x02 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12@\n" +
+	"\rbaseline_role\x18\x03 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01B\x10\n" +
+	"\x0e_baseline_role\"\x96\t\n" +
+	"\x12ContentMemberEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x129\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
+	"\n" +
+	"content_id\x18\x03 \x01(\tR\tcontentId\x126\n" +
+	"\x06action\x18\x04 \x01(\x0e2\x1e.common.v1.ContentMemberActionR\x06action\x12>\n" +
+	"\fsubject_type\x18\x05 \x01(\x0e2\x16.common.v1.SubjectTypeH\x00R\vsubjectType\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"subject_id\x18\x06 \x01(\tH\x01R\tsubjectId\x88\x01\x01\x12@\n" +
+	"\rprevious_role\x18\a \x01(\x0e2\x16.common.v1.ContentRoleH\x02R\fpreviousRole\x88\x01\x01\x126\n" +
+	"\bnew_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\anewRole\x88\x01\x01\x12L\n" +
+	"\x14previous_access_mode\x18\t \x01(\x0e2\x15.common.v1.AccessModeH\x04R\x12previousAccessMode\x88\x01\x01\x12B\n" +
+	"\x0fnew_access_mode\x18\n" +
+	" \x01(\x0e2\x15.common.v1.AccessModeH\x05R\rnewAccessMode\x88\x01\x01\x12Q\n" +
+	"\x16previous_baseline_role\x18\v \x01(\x0e2\x16.common.v1.ContentRoleH\x06R\x14previousBaselineRole\x88\x01\x01\x12G\n" +
+	"\x11new_baseline_role\x18\f \x01(\x0e2\x16.common.v1.ContentRoleH\aR\x0fnewBaselineRole\x88\x01\x01\x12/\n" +
+	"\x11previous_owner_id\x18\r \x01(\tH\bR\x0fpreviousOwnerId\x88\x01\x01\x12%\n" +
+	"\fnew_owner_id\x18\x0e \x01(\tH\tR\n" +
+	"newOwnerId\x88\x01\x01\x12\"\n" +
+	"\ractor_user_id\x18\x0f \x01(\tR\vactorUserId\x12A\n" +
+	"\x0eactor_org_role\x18\x10 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\factorOrgRole\x12\x12\n" +
+	"\x04note\x18\x11 \x01(\tR\x04note\x12;\n" +
+	"\voccurred_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAtB\x0f\n" +
+	"\r_subject_typeB\r\n" +
+	"\v_subject_idB\x10\n" +
+	"\x0e_previous_roleB\v\n" +
+	"\t_new_roleB\x17\n" +
+	"\x15_previous_access_modeB\x12\n" +
+	"\x10_new_access_modeB\x19\n" +
+	"\x17_previous_baseline_roleB\x14\n" +
+	"\x12_new_baseline_roleB\x14\n" +
+	"\x12_previous_owner_idB\x0f\n" +
+	"\r_new_owner_id\"\x97\x01\n" +
+	"\x12ListMembersRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
+	"\n" +
+	"content_id\x18\x03 \x01(\tR\tcontentId\"\x8b\x01\n" +
+	"\x13ListMembersResponse\x12;\n" +
+	"\x06policy\x18\x01 \x01(\v2#.permissions.v1.ContentAccessPolicyR\x06policy\x127\n" +
+	"\amembers\x18\x02 \x03(\v2\x1d.permissions.v1.ContentMemberR\amembers\"\xfe\x02\n" +
+	"\x10AddMemberRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
 	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
 	"\n" +
 	"content_id\x18\x03 \x01(\tR\tcontentId\x129\n" +
 	"\fsubject_type\x18\x04 \x01(\x0e2\x16.common.v1.SubjectTypeR\vsubjectType\x12\x1d\n" +
 	"\n" +
-	"subject_id\x18\x05 \x01(\tR\tsubjectId\x120\n" +
-	"\x05level\x18\x06 \x01(\x0e2\x1a.common.v1.PermissionLevelR\x05level\x12>\n" +
+	"subject_id\x18\x05 \x01(\tR\tsubjectId\x12*\n" +
+	"\x04role\x18\x06 \x01(\x0e2\x16.common.v1.ContentRoleR\x04role\x12>\n" +
 	"\n" +
-	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x00R\texpiresAt\x88\x01\x01B\r\n" +
-	"\v_expires_at\"g\n" +
-	"\x17RevokePermissionRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
-	"\rpermission_id\x18\x02 \x01(\tR\fpermissionId\"\xa2\x02\n" +
-	"\x17UpdatePermissionRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
-	"\rpermission_id\x18\x02 \x01(\tR\fpermissionId\x125\n" +
-	"\x05level\x18\x03 \x01(\x0e2\x1a.common.v1.PermissionLevelH\x00R\x05level\x88\x01\x01\x12>\n" +
-	"\n" +
-	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\texpiresAt\x88\x01\x01\x12)\n" +
-	"\x10clear_expiration\x18\x05 \x01(\bR\x0fclearExpirationB\b\n" +
-	"\x06_levelB\r\n" +
-	"\v_expires_at\"\xa2\x01\n" +
-	"\x1dListContentPermissionsRequest\x12'\n" +
+	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x00R\texpiresAt\x88\x01\x01\x12\x12\n" +
+	"\x04note\x18\b \x01(\tR\x04noteB\r\n" +
+	"\v_expires_at\"\xbd\x02\n" +
+	"\x17UpdateMemberRoleRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
-	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
-	"\n" +
-	"content_id\x18\x03 \x01(\tR\tcontentId\"\x9b\x01\n" +
-	"\x16GetMyPermissionRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
-	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
-	"\n" +
-	"content_id\x18\x03 \x01(\tR\tcontentId\"\xbc\x01\n" +
-	"\x19SearchShareTargetsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
-	"\x05query\x18\x02 \x01(\tR\x05query\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12#\n" +
-	"\rinclude_users\x18\x04 \x01(\bR\fincludeUsers\x12%\n" +
-	"\x0einclude_groups\x18\x05 \x01(\bR\rincludeGroups\"4\n" +
-	"\x18RevokePermissionResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x8d\x01\n" +
-	"\x16PermissionListResponse\x12@\n" +
-	"\vpermissions\x18\x01 \x03(\v2\x1e.permissions.v1.PermissionInfoR\vpermissions\x121\n" +
-	"\x05owner\x18\x02 \x01(\v2\x1b.permissions.v1.ShareTargetR\x05owner\"M\n" +
-	"\x14ShareTargetsResponse\x125\n" +
-	"\atargets\x18\x01 \x03(\v2\x1b.permissions.v1.ShareTargetR\atargets\"\x8c\x05\n" +
-	"\x0ePermissionInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x129\n" +
 	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
 	"\n" +
 	"content_id\x18\x03 \x01(\tR\tcontentId\x129\n" +
-	"\fsubject_type\x18\x04 \x01(\x0e2\x16.common.v1.SubjectTypeR\vsubjectType\x125\n" +
-	"\asubject\x18\x05 \x01(\v2\x1b.permissions.v1.ShareTargetR\asubject\x120\n" +
-	"\x05level\x18\x06 \x01(\x0e2\x1a.common.v1.PermissionLevelR\x05level\x12\x19\n" +
-	"\bcan_view\x18\a \x01(\bR\acanView\x12\x19\n" +
-	"\bcan_edit\x18\b \x01(\bR\acanEdit\x12\x1d\n" +
+	"\fsubject_type\x18\x04 \x01(\x0e2\x16.common.v1.SubjectTypeR\vsubjectType\x12\x1d\n" +
 	"\n" +
-	"can_delete\x18\t \x01(\bR\tcanDelete\x12\x1b\n" +
-	"\tcan_share\x18\n" +
-	" \x01(\bR\bcanShare\x12\x19\n" +
-	"\bcan_move\x18\v \x01(\bR\acanMove\x12:\n" +
+	"subject_id\x18\x05 \x01(\tR\tsubjectId\x121\n" +
+	"\bnew_role\x18\x06 \x01(\x0e2\x16.common.v1.ContentRoleR\anewRole\x12\x12\n" +
+	"\x04note\x18\a \x01(\tR\x04note\"\x86\x02\n" +
+	"\x13RemoveMemberRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
 	"\n" +
-	"granted_by\x18\f \x01(\v2\x1b.permissions.v1.ShareTargetR\tgrantedBy\x129\n" +
+	"content_id\x18\x03 \x01(\tR\tcontentId\x129\n" +
+	"\fsubject_type\x18\x04 \x01(\x0e2\x16.common.v1.SubjectTypeR\vsubjectType\x12\x1d\n" +
 	"\n" +
-	"granted_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tgrantedAt\x12>\n" +
+	"subject_id\x18\x05 \x01(\tR\tsubjectId\x12\x12\n" +
+	"\x04note\x18\x06 \x01(\tR\x04note\"0\n" +
+	"\x14RemoveMemberResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xf2\x02\n" +
+	"\x14SetAccessModeRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
 	"\n" +
-	"expires_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampH\x00R\texpiresAt\x88\x01\x01\x12\x19\n" +
-	"\bis_owner\x18\x0f \x01(\bR\aisOwnerB\r\n" +
-	"\v_expires_at\"\xb5\x01\n" +
-	"\vShareTarget\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x16.common.v1.SubjectTypeR\x04type\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
-	"\x05email\x18\x04 \x01(\tR\x05email\x12\x1d\n" +
+	"content_id\x18\x03 \x01(\tR\tcontentId\x126\n" +
+	"\vaccess_mode\x18\x04 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12@\n" +
+	"\rbaseline_role\x18\x05 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x127\n" +
+	"\x18remove_members_on_narrow\x18\x06 \x01(\bR\x15removeMembersOnNarrow\x12\x12\n" +
+	"\x04note\x18\a \x01(\tR\x04noteB\x10\n" +
+	"\x0e_baseline_role\"Q\n" +
+	"\x12AccessModeResponse\x12;\n" +
+	"\x06policy\x18\x01 \x01(\v2#.permissions.v1.ContentAccessPolicyR\x06policy\"\xdc\x01\n" +
+	"\x18TransferOwnershipRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x12!\n" +
-	"\fmember_count\x18\x06 \x01(\x05R\vmemberCount2\xe6\x04\n" +
-	"\x12PermissionsService\x12Y\n" +
-	"\x0fGrantPermission\x12&.permissions.v1.GrantPermissionRequest\x1a\x1e.permissions.v1.PermissionInfo\x12e\n" +
-	"\x10RevokePermission\x12'.permissions.v1.RevokePermissionRequest\x1a(.permissions.v1.RevokePermissionResponse\x12[\n" +
-	"\x10UpdatePermission\x12'.permissions.v1.UpdatePermissionRequest\x1a\x1e.permissions.v1.PermissionInfo\x12o\n" +
-	"\x16ListContentPermissions\x12-.permissions.v1.ListContentPermissionsRequest\x1a&.permissions.v1.PermissionListResponse\x12Y\n" +
-	"\x0fGetMyPermission\x12&.permissions.v1.GetMyPermissionRequest\x1a\x1e.permissions.v1.PermissionInfo\x12e\n" +
-	"\x12SearchShareTargets\x12).permissions.v1.SearchShareTargetsRequest\x1a$.permissions.v1.ShareTargetsResponseBEZCgithub.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1b\x06proto3"
+	"content_id\x18\x03 \x01(\tR\tcontentId\x12)\n" +
+	"\x11new_owner_user_id\x18\x04 \x01(\tR\x0enewOwnerUserId\x12\x12\n" +
+	"\x04note\x18\x05 \x01(\tR\x04note\"X\n" +
+	"\x19TransferOwnershipResponse\x12;\n" +
+	"\x06policy\x18\x01 \x01(\v2#.permissions.v1.ContentAccessPolicyR\x06policy\"G\n" +
+	"\x0eMemberResponse\x125\n" +
+	"\x06member\x18\x01 \x01(\v2\x1d.permissions.v1.ContentMemberR\x06member\"\xf6\x03\n" +
+	"\x17ListMemberEventsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
+	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
+	"\n" +
+	"content_id\x18\x03 \x01(\tR\tcontentId\x12A\n" +
+	"\n" +
+	"pagination\x18\x04 \x01(\v2\x1c.common.v1.PaginationRequestH\x00R\n" +
+	"pagination\x88\x01\x01\x12'\n" +
+	"\ractor_user_id\x18\x05 \x01(\tH\x01R\vactorUserId\x88\x01\x01\x12;\n" +
+	"\x06action\x18\x06 \x01(\x0e2\x1e.common.v1.ContentMemberActionH\x02R\x06action\x88\x01\x01\x125\n" +
+	"\x05after\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x03R\x05after\x88\x01\x01\x127\n" +
+	"\x06before\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x06before\x88\x01\x01B\r\n" +
+	"\v_paginationB\x10\n" +
+	"\x0e_actor_user_idB\t\n" +
+	"\a_actionB\b\n" +
+	"\x06_afterB\t\n" +
+	"\a_before\"\x95\x01\n" +
+	"\x18ListMemberEventsResponse\x12:\n" +
+	"\x06events\x18\x01 \x03(\v2\".permissions.v1.ContentMemberEventR\x06events\x12=\n" +
+	"\n" +
+	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
+	"pagination2\x9b\x05\n" +
+	"\x0eMembersService\x12V\n" +
+	"\vListMembers\x12\".permissions.v1.ListMembersRequest\x1a#.permissions.v1.ListMembersResponse\x12M\n" +
+	"\tAddMember\x12 .permissions.v1.AddMemberRequest\x1a\x1e.permissions.v1.MemberResponse\x12[\n" +
+	"\x10UpdateMemberRole\x12'.permissions.v1.UpdateMemberRoleRequest\x1a\x1e.permissions.v1.MemberResponse\x12Y\n" +
+	"\fRemoveMember\x12#.permissions.v1.RemoveMemberRequest\x1a$.permissions.v1.RemoveMemberResponse\x12Y\n" +
+	"\rSetAccessMode\x12$.permissions.v1.SetAccessModeRequest\x1a\".permissions.v1.AccessModeResponse\x12h\n" +
+	"\x11TransferOwnership\x12(.permissions.v1.TransferOwnershipRequest\x1a).permissions.v1.TransferOwnershipResponse\x12e\n" +
+	"\x10ListMemberEvents\x12'.permissions.v1.ListMemberEventsRequest\x1a(.permissions.v1.ListMemberEventsResponseBEZCgithub.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1b\x06proto3"
 
 var (
 	file_permissions_v1_permissions_proto_rawDescOnce sync.Once
@@ -936,61 +1408,98 @@ func file_permissions_v1_permissions_proto_rawDescGZIP() []byte {
 	return file_permissions_v1_permissions_proto_rawDescData
 }
 
-var file_permissions_v1_permissions_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_permissions_v1_permissions_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_permissions_v1_permissions_proto_goTypes = []any{
-	(*GrantPermissionRequest)(nil),        // 0: permissions.v1.GrantPermissionRequest
-	(*RevokePermissionRequest)(nil),       // 1: permissions.v1.RevokePermissionRequest
-	(*UpdatePermissionRequest)(nil),       // 2: permissions.v1.UpdatePermissionRequest
-	(*ListContentPermissionsRequest)(nil), // 3: permissions.v1.ListContentPermissionsRequest
-	(*GetMyPermissionRequest)(nil),        // 4: permissions.v1.GetMyPermissionRequest
-	(*SearchShareTargetsRequest)(nil),     // 5: permissions.v1.SearchShareTargetsRequest
-	(*RevokePermissionResponse)(nil),      // 6: permissions.v1.RevokePermissionResponse
-	(*PermissionListResponse)(nil),        // 7: permissions.v1.PermissionListResponse
-	(*ShareTargetsResponse)(nil),          // 8: permissions.v1.ShareTargetsResponse
-	(*PermissionInfo)(nil),                // 9: permissions.v1.PermissionInfo
-	(*ShareTarget)(nil),                   // 10: permissions.v1.ShareTarget
-	(v1.ContentType)(0),                   // 11: common.v1.ContentType
-	(v1.SubjectType)(0),                   // 12: common.v1.SubjectType
-	(v1.PermissionLevel)(0),               // 13: common.v1.PermissionLevel
-	(*timestamppb.Timestamp)(nil),         // 14: google.protobuf.Timestamp
+	(*ContentMember)(nil),             // 0: permissions.v1.ContentMember
+	(*ContentAccessPolicy)(nil),       // 1: permissions.v1.ContentAccessPolicy
+	(*ContentMemberEvent)(nil),        // 2: permissions.v1.ContentMemberEvent
+	(*ListMembersRequest)(nil),        // 3: permissions.v1.ListMembersRequest
+	(*ListMembersResponse)(nil),       // 4: permissions.v1.ListMembersResponse
+	(*AddMemberRequest)(nil),          // 5: permissions.v1.AddMemberRequest
+	(*UpdateMemberRoleRequest)(nil),   // 6: permissions.v1.UpdateMemberRoleRequest
+	(*RemoveMemberRequest)(nil),       // 7: permissions.v1.RemoveMemberRequest
+	(*RemoveMemberResponse)(nil),      // 8: permissions.v1.RemoveMemberResponse
+	(*SetAccessModeRequest)(nil),      // 9: permissions.v1.SetAccessModeRequest
+	(*AccessModeResponse)(nil),        // 10: permissions.v1.AccessModeResponse
+	(*TransferOwnershipRequest)(nil),  // 11: permissions.v1.TransferOwnershipRequest
+	(*TransferOwnershipResponse)(nil), // 12: permissions.v1.TransferOwnershipResponse
+	(*MemberResponse)(nil),            // 13: permissions.v1.MemberResponse
+	(*ListMemberEventsRequest)(nil),   // 14: permissions.v1.ListMemberEventsRequest
+	(*ListMemberEventsResponse)(nil),  // 15: permissions.v1.ListMemberEventsResponse
+	(v1.SubjectType)(0),               // 16: common.v1.SubjectType
+	(v1.ContentRole)(0),               // 17: common.v1.ContentRole
+	(*timestamppb.Timestamp)(nil),     // 18: google.protobuf.Timestamp
+	(v1.AccessMode)(0),                // 19: common.v1.AccessMode
+	(v1.ContentType)(0),               // 20: common.v1.ContentType
+	(v1.ContentMemberAction)(0),       // 21: common.v1.ContentMemberAction
+	(v1.OrganizationRole)(0),          // 22: common.v1.OrganizationRole
+	(*v1.PaginationRequest)(nil),      // 23: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),     // 24: common.v1.PaginationResponse
 }
 var file_permissions_v1_permissions_proto_depIdxs = []int32{
-	11, // 0: permissions.v1.GrantPermissionRequest.content_type:type_name -> common.v1.ContentType
-	12, // 1: permissions.v1.GrantPermissionRequest.subject_type:type_name -> common.v1.SubjectType
-	13, // 2: permissions.v1.GrantPermissionRequest.level:type_name -> common.v1.PermissionLevel
-	14, // 3: permissions.v1.GrantPermissionRequest.expires_at:type_name -> google.protobuf.Timestamp
-	13, // 4: permissions.v1.UpdatePermissionRequest.level:type_name -> common.v1.PermissionLevel
-	14, // 5: permissions.v1.UpdatePermissionRequest.expires_at:type_name -> google.protobuf.Timestamp
-	11, // 6: permissions.v1.ListContentPermissionsRequest.content_type:type_name -> common.v1.ContentType
-	11, // 7: permissions.v1.GetMyPermissionRequest.content_type:type_name -> common.v1.ContentType
-	9,  // 8: permissions.v1.PermissionListResponse.permissions:type_name -> permissions.v1.PermissionInfo
-	10, // 9: permissions.v1.PermissionListResponse.owner:type_name -> permissions.v1.ShareTarget
-	10, // 10: permissions.v1.ShareTargetsResponse.targets:type_name -> permissions.v1.ShareTarget
-	11, // 11: permissions.v1.PermissionInfo.content_type:type_name -> common.v1.ContentType
-	12, // 12: permissions.v1.PermissionInfo.subject_type:type_name -> common.v1.SubjectType
-	10, // 13: permissions.v1.PermissionInfo.subject:type_name -> permissions.v1.ShareTarget
-	13, // 14: permissions.v1.PermissionInfo.level:type_name -> common.v1.PermissionLevel
-	10, // 15: permissions.v1.PermissionInfo.granted_by:type_name -> permissions.v1.ShareTarget
-	14, // 16: permissions.v1.PermissionInfo.granted_at:type_name -> google.protobuf.Timestamp
-	14, // 17: permissions.v1.PermissionInfo.expires_at:type_name -> google.protobuf.Timestamp
-	12, // 18: permissions.v1.ShareTarget.type:type_name -> common.v1.SubjectType
-	0,  // 19: permissions.v1.PermissionsService.GrantPermission:input_type -> permissions.v1.GrantPermissionRequest
-	1,  // 20: permissions.v1.PermissionsService.RevokePermission:input_type -> permissions.v1.RevokePermissionRequest
-	2,  // 21: permissions.v1.PermissionsService.UpdatePermission:input_type -> permissions.v1.UpdatePermissionRequest
-	3,  // 22: permissions.v1.PermissionsService.ListContentPermissions:input_type -> permissions.v1.ListContentPermissionsRequest
-	4,  // 23: permissions.v1.PermissionsService.GetMyPermission:input_type -> permissions.v1.GetMyPermissionRequest
-	5,  // 24: permissions.v1.PermissionsService.SearchShareTargets:input_type -> permissions.v1.SearchShareTargetsRequest
-	9,  // 25: permissions.v1.PermissionsService.GrantPermission:output_type -> permissions.v1.PermissionInfo
-	6,  // 26: permissions.v1.PermissionsService.RevokePermission:output_type -> permissions.v1.RevokePermissionResponse
-	9,  // 27: permissions.v1.PermissionsService.UpdatePermission:output_type -> permissions.v1.PermissionInfo
-	7,  // 28: permissions.v1.PermissionsService.ListContentPermissions:output_type -> permissions.v1.PermissionListResponse
-	9,  // 29: permissions.v1.PermissionsService.GetMyPermission:output_type -> permissions.v1.PermissionInfo
-	8,  // 30: permissions.v1.PermissionsService.SearchShareTargets:output_type -> permissions.v1.ShareTargetsResponse
-	25, // [25:31] is the sub-list for method output_type
-	19, // [19:25] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	16, // 0: permissions.v1.ContentMember.subject_type:type_name -> common.v1.SubjectType
+	17, // 1: permissions.v1.ContentMember.role:type_name -> common.v1.ContentRole
+	18, // 2: permissions.v1.ContentMember.added_at:type_name -> google.protobuf.Timestamp
+	18, // 3: permissions.v1.ContentMember.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 4: permissions.v1.ContentMember.expires_at:type_name -> google.protobuf.Timestamp
+	19, // 5: permissions.v1.ContentAccessPolicy.access_mode:type_name -> common.v1.AccessMode
+	17, // 6: permissions.v1.ContentAccessPolicy.baseline_role:type_name -> common.v1.ContentRole
+	20, // 7: permissions.v1.ContentMemberEvent.content_type:type_name -> common.v1.ContentType
+	21, // 8: permissions.v1.ContentMemberEvent.action:type_name -> common.v1.ContentMemberAction
+	16, // 9: permissions.v1.ContentMemberEvent.subject_type:type_name -> common.v1.SubjectType
+	17, // 10: permissions.v1.ContentMemberEvent.previous_role:type_name -> common.v1.ContentRole
+	17, // 11: permissions.v1.ContentMemberEvent.new_role:type_name -> common.v1.ContentRole
+	19, // 12: permissions.v1.ContentMemberEvent.previous_access_mode:type_name -> common.v1.AccessMode
+	19, // 13: permissions.v1.ContentMemberEvent.new_access_mode:type_name -> common.v1.AccessMode
+	17, // 14: permissions.v1.ContentMemberEvent.previous_baseline_role:type_name -> common.v1.ContentRole
+	17, // 15: permissions.v1.ContentMemberEvent.new_baseline_role:type_name -> common.v1.ContentRole
+	22, // 16: permissions.v1.ContentMemberEvent.actor_org_role:type_name -> common.v1.OrganizationRole
+	18, // 17: permissions.v1.ContentMemberEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	20, // 18: permissions.v1.ListMembersRequest.content_type:type_name -> common.v1.ContentType
+	1,  // 19: permissions.v1.ListMembersResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	0,  // 20: permissions.v1.ListMembersResponse.members:type_name -> permissions.v1.ContentMember
+	20, // 21: permissions.v1.AddMemberRequest.content_type:type_name -> common.v1.ContentType
+	16, // 22: permissions.v1.AddMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	17, // 23: permissions.v1.AddMemberRequest.role:type_name -> common.v1.ContentRole
+	18, // 24: permissions.v1.AddMemberRequest.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 25: permissions.v1.UpdateMemberRoleRequest.content_type:type_name -> common.v1.ContentType
+	16, // 26: permissions.v1.UpdateMemberRoleRequest.subject_type:type_name -> common.v1.SubjectType
+	17, // 27: permissions.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ContentRole
+	20, // 28: permissions.v1.RemoveMemberRequest.content_type:type_name -> common.v1.ContentType
+	16, // 29: permissions.v1.RemoveMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	20, // 30: permissions.v1.SetAccessModeRequest.content_type:type_name -> common.v1.ContentType
+	19, // 31: permissions.v1.SetAccessModeRequest.access_mode:type_name -> common.v1.AccessMode
+	17, // 32: permissions.v1.SetAccessModeRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 33: permissions.v1.AccessModeResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	20, // 34: permissions.v1.TransferOwnershipRequest.content_type:type_name -> common.v1.ContentType
+	1,  // 35: permissions.v1.TransferOwnershipResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	0,  // 36: permissions.v1.MemberResponse.member:type_name -> permissions.v1.ContentMember
+	20, // 37: permissions.v1.ListMemberEventsRequest.content_type:type_name -> common.v1.ContentType
+	23, // 38: permissions.v1.ListMemberEventsRequest.pagination:type_name -> common.v1.PaginationRequest
+	21, // 39: permissions.v1.ListMemberEventsRequest.action:type_name -> common.v1.ContentMemberAction
+	18, // 40: permissions.v1.ListMemberEventsRequest.after:type_name -> google.protobuf.Timestamp
+	18, // 41: permissions.v1.ListMemberEventsRequest.before:type_name -> google.protobuf.Timestamp
+	2,  // 42: permissions.v1.ListMemberEventsResponse.events:type_name -> permissions.v1.ContentMemberEvent
+	24, // 43: permissions.v1.ListMemberEventsResponse.pagination:type_name -> common.v1.PaginationResponse
+	3,  // 44: permissions.v1.MembersService.ListMembers:input_type -> permissions.v1.ListMembersRequest
+	5,  // 45: permissions.v1.MembersService.AddMember:input_type -> permissions.v1.AddMemberRequest
+	6,  // 46: permissions.v1.MembersService.UpdateMemberRole:input_type -> permissions.v1.UpdateMemberRoleRequest
+	7,  // 47: permissions.v1.MembersService.RemoveMember:input_type -> permissions.v1.RemoveMemberRequest
+	9,  // 48: permissions.v1.MembersService.SetAccessMode:input_type -> permissions.v1.SetAccessModeRequest
+	11, // 49: permissions.v1.MembersService.TransferOwnership:input_type -> permissions.v1.TransferOwnershipRequest
+	14, // 50: permissions.v1.MembersService.ListMemberEvents:input_type -> permissions.v1.ListMemberEventsRequest
+	4,  // 51: permissions.v1.MembersService.ListMembers:output_type -> permissions.v1.ListMembersResponse
+	13, // 52: permissions.v1.MembersService.AddMember:output_type -> permissions.v1.MemberResponse
+	13, // 53: permissions.v1.MembersService.UpdateMemberRole:output_type -> permissions.v1.MemberResponse
+	8,  // 54: permissions.v1.MembersService.RemoveMember:output_type -> permissions.v1.RemoveMemberResponse
+	10, // 55: permissions.v1.MembersService.SetAccessMode:output_type -> permissions.v1.AccessModeResponse
+	12, // 56: permissions.v1.MembersService.TransferOwnership:output_type -> permissions.v1.TransferOwnershipResponse
+	15, // 57: permissions.v1.MembersService.ListMemberEvents:output_type -> permissions.v1.ListMemberEventsResponse
+	51, // [51:58] is the sub-list for method output_type
+	44, // [44:51] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_permissions_v1_permissions_proto_init() }
@@ -999,15 +1508,18 @@ func file_permissions_v1_permissions_proto_init() {
 		return
 	}
 	file_permissions_v1_permissions_proto_msgTypes[0].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[1].OneofWrappers = []any{}
 	file_permissions_v1_permissions_proto_msgTypes[2].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[5].OneofWrappers = []any{}
 	file_permissions_v1_permissions_proto_msgTypes[9].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_permissions_v1_permissions_proto_rawDesc), len(file_permissions_v1_permissions_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

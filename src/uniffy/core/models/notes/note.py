@@ -8,8 +8,7 @@ from sqlalchemy import Column, DateTime, Enum, text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.models.shared import NodeType, VisibilityScope
-from uniffy.core.types import generate_id
+from uniffy.core.types import AccessMode, ContentRole, NodeType, generate_id
 
 
 class Note(SQLModel, table=True):
@@ -19,12 +18,6 @@ class Note(SQLModel, table=True):
     Notes are organization-scoped and can be linked to other notes using wiki-links.
     Supports markdown content, backlinks, and full-text search.
 
-    Content Visibility:
-    - PRIVATE: Personal space - only owner can access
-    - GROUP: Shared with specific group(s) via ContentGroupLink
-    - ORGANIZATION: Accessible to all organization members
-    - PUBLIC: Accessible externally (future feature)
-
     Attributes
     ----------
     id : UUID
@@ -33,8 +26,10 @@ class Note(SQLModel, table=True):
         Organization this note belongs to (foreign key).
     owner_id : UUID
         User who owns the note (foreign key to login_users).
-    visibility : VisibilityScope
-        Who can access this note (PRIVATE, GROUP, ORGANIZATION, PUBLIC).
+    access_mode : AccessMode
+        How access to this note is governed (OWNER_ONLY, OPEN_TO_ORG, MEMBERS_ONLY).
+    baseline_role : ContentRole | None
+        Default role granted by the access mode (e.g. VIEWER, EDITOR).
     node_type : NodeType
         Type of node (NOTE, FOLDER, TEMPLATE).
     title : str
@@ -75,16 +70,29 @@ class Note(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    visibility: VisibilityScope = Field(
-        default=VisibilityScope.PRIVATE,
+    access_mode: AccessMode = Field(
+        default=AccessMode.OWNER_ONLY,
         sa_column=Column(
             Enum(
-                VisibilityScope,
-                name="visibilityscope",
+                AccessMode,
+                name="accessmode",
                 values_callable=lambda x: [e.value for e in x],
+                create_type=False,
             ),
             nullable=False,
             index=True,
+        ),
+    )
+    baseline_role: ContentRole | None = Field(
+        default=None,
+        sa_column=Column(
+            Enum(
+                ContentRole,
+                name="contentrole",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=True,
         ),
     )
     node_type: NodeType = Field(
@@ -128,5 +136,5 @@ class Note(SQLModel, table=True):
         """Return string representation of Note."""
         return (
             f"<Note(id={self.id}, title={self.title!r}, "
-            f"visibility={self.visibility}, organization_id={self.organization_id})>"
+            f"access_mode={self.access_mode}, organization_id={self.organization_id})>"
         )

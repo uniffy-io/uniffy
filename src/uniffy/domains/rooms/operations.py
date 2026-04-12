@@ -40,9 +40,7 @@ class RoomOperations(BaseContentOperations[Room]):
         """Initialize room operations."""
         super().__init__(session)
 
-    # -----------------------------------------------------------------
     # Search index hooks
-    # -----------------------------------------------------------------
 
     def _build_search_keywords(self, model: Room) -> str:
         """
@@ -129,9 +127,7 @@ class RoomOperations(BaseContentOperations[Room]):
             metadata["building"] = model.building
         return metadata
 
-    # -----------------------------------------------------------------
     # Room CRUD
-    # -----------------------------------------------------------------
 
     async def create_room(
         self,

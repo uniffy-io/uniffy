@@ -210,28 +210,28 @@ func (ActivityAction) EnumDescriptor() ([]byte, []int) {
 }
 
 type Project struct {
-	state               protoimpl.MessageState      `protogen:"open.v1"`
-	Id                  string                      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrganizationId      string                      `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	OwnerId             string                      `protobuf:"bytes,3,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Name                string                      `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Description         string                      `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	Icon                string                      `protobuf:"bytes,6,opt,name=icon,proto3" json:"icon,omitempty"`
-	Color               string                      `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`
-	Visibility          v1.VisibilityScope          `protobuf:"varint,8,opt,name=visibility,proto3,enum=common.v1.VisibilityScope" json:"visibility,omitempty"`
-	FieldDefinitions    []*FieldDefinition          `protobuf:"bytes,9,rep,name=field_definitions,json=fieldDefinitions,proto3" json:"field_definitions,omitempty"`
-	Views               []*ViewConfig               `protobuf:"bytes,10,rep,name=views,proto3" json:"views,omitempty"`
-	DefaultViewId       string                      `protobuf:"bytes,11,opt,name=default_view_id,json=defaultViewId,proto3" json:"default_view_id,omitempty"`
-	MemberIds           []string                    `protobuf:"bytes,12,rep,name=member_ids,json=memberIds,proto3" json:"member_ids,omitempty"`
-	CreatedAt           *timestamppb.Timestamp      `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp      `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DeletedAt           *timestamppb.Timestamp      `protobuf:"bytes,15,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
-	Urn                 string                      `protobuf:"bytes,16,opt,name=urn,proto3" json:"urn,omitempty"`
-	UserPermissionLevel v1.PermissionLevel          `protobuf:"varint,17,opt,name=user_permission_level,json=userPermissionLevel,proto3,enum=common.v1.PermissionLevel" json:"user_permission_level,omitempty"`
-	Slug                string                      `protobuf:"bytes,18,opt,name=slug,proto3" json:"slug,omitempty"`
-	TypeFieldSchemas    map[string]*TypeFieldSchema `protobuf:"bytes,19,rep,name=type_field_schemas,json=typeFieldSchemas,proto3" json:"type_field_schemas,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state            protoimpl.MessageState      `protogen:"open.v1"`
+	Id               string                      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationId   string                      `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	OwnerId          string                      `protobuf:"bytes,3,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	Name             string                      `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Description      string                      `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	Icon             string                      `protobuf:"bytes,6,opt,name=icon,proto3" json:"icon,omitempty"`
+	Color            string                      `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`
+	AccessMode       v1.AccessMode               `protobuf:"varint,8,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	FieldDefinitions []*FieldDefinition          `protobuf:"bytes,9,rep,name=field_definitions,json=fieldDefinitions,proto3" json:"field_definitions,omitempty"`
+	Views            []*ViewConfig               `protobuf:"bytes,10,rep,name=views,proto3" json:"views,omitempty"`
+	DefaultViewId    string                      `protobuf:"bytes,11,opt,name=default_view_id,json=defaultViewId,proto3" json:"default_view_id,omitempty"`
+	CreatedAt        *timestamppb.Timestamp      `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp      `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DeletedAt        *timestamppb.Timestamp      `protobuf:"bytes,15,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
+	Urn              string                      `protobuf:"bytes,16,opt,name=urn,proto3" json:"urn,omitempty"`
+	UserRole         v1.ContentRole              `protobuf:"varint,17,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	Slug             string                      `protobuf:"bytes,18,opt,name=slug,proto3" json:"slug,omitempty"`
+	TypeFieldSchemas map[string]*TypeFieldSchema `protobuf:"bytes,19,rep,name=type_field_schemas,json=typeFieldSchemas,proto3" json:"type_field_schemas,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	BaselineRole     *v1.ContentRole             `protobuf:"varint,20,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Project) Reset() {
@@ -313,11 +313,11 @@ func (x *Project) GetColor() string {
 	return ""
 }
 
-func (x *Project) GetVisibility() v1.VisibilityScope {
+func (x *Project) GetAccessMode() v1.AccessMode {
 	if x != nil {
-		return x.Visibility
+		return x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *Project) GetFieldDefinitions() []*FieldDefinition {
@@ -339,13 +339,6 @@ func (x *Project) GetDefaultViewId() string {
 		return x.DefaultViewId
 	}
 	return ""
-}
-
-func (x *Project) GetMemberIds() []string {
-	if x != nil {
-		return x.MemberIds
-	}
-	return nil
 }
 
 func (x *Project) GetCreatedAt() *timestamppb.Timestamp {
@@ -376,11 +369,11 @@ func (x *Project) GetUrn() string {
 	return ""
 }
 
-func (x *Project) GetUserPermissionLevel() v1.PermissionLevel {
+func (x *Project) GetUserRole() v1.ContentRole {
 	if x != nil {
-		return x.UserPermissionLevel
+		return x.UserRole
 	}
-	return v1.PermissionLevel(0)
+	return v1.ContentRole(0)
 }
 
 func (x *Project) GetSlug() string {
@@ -397,41 +390,48 @@ func (x *Project) GetTypeFieldSchemas() map[string]*TypeFieldSchema {
 	return nil
 }
 
+func (x *Project) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
 type Task struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ProjectId           string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	OrganizationId      string                 `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	OwnerId             string                 `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Title               string                 `protobuf:"bytes,5,opt,name=title,proto3" json:"title,omitempty"`
-	Description         string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
-	Status              string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
-	Priority            string                 `protobuf:"bytes,8,opt,name=priority,proto3" json:"priority,omitempty"`
-	AssigneeIds         []string               `protobuf:"bytes,9,rep,name=assignee_ids,json=assigneeIds,proto3" json:"assignee_ids,omitempty"`
-	StartDate           *string                `protobuf:"bytes,10,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
-	DueDate             *string                `protobuf:"bytes,11,opt,name=due_date,json=dueDate,proto3,oneof" json:"due_date,omitempty"`
-	CompletedAt         *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	ParentId            *string                `protobuf:"bytes,13,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
-	BlockedByTaskIds    []string               `protobuf:"bytes,14,rep,name=blocked_by_task_ids,json=blockedByTaskIds,proto3" json:"blocked_by_task_ids,omitempty"`
-	IsMilestone         bool                   `protobuf:"varint,15,opt,name=is_milestone,json=isMilestone,proto3" json:"is_milestone,omitempty"`
-	RecurrenceRule      *string                `protobuf:"bytes,16,opt,name=recurrence_rule,json=recurrenceRule,proto3,oneof" json:"recurrence_rule,omitempty"`
-	SortOrder           int32                  `protobuf:"varint,17,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	FieldValues         map[string]string      `protobuf:"bytes,18,rep,name=field_values,json=fieldValues,proto3" json:"field_values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	OutgoingReferences  []string               `protobuf:"bytes,19,rep,name=outgoing_references,json=outgoingReferences,proto3" json:"outgoing_references,omitempty"`
-	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DeletedAt           *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
-	Urn                 string                 `protobuf:"bytes,23,opt,name=urn,proto3" json:"urn,omitempty"`
-	Number              int32                  `protobuf:"varint,24,opt,name=number,proto3" json:"number,omitempty"`
-	TaskType            string                 `protobuf:"bytes,25,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
-	SprintId            *string                `protobuf:"bytes,26,opt,name=sprint_id,json=sprintId,proto3,oneof" json:"sprint_id,omitempty"`
-	UserPermissionLevel v1.PermissionLevel     `protobuf:"varint,27,opt,name=user_permission_level,json=userPermissionLevel,proto3,enum=common.v1.PermissionLevel" json:"user_permission_level,omitempty"`
-	SubtaskTotal        int32                  `protobuf:"varint,28,opt,name=subtask_total,json=subtaskTotal,proto3" json:"subtask_total,omitempty"`
-	SubtaskCompleted    int32                  `protobuf:"varint,29,opt,name=subtask_completed,json=subtaskCompleted,proto3" json:"subtask_completed,omitempty"`
-	EstimatedMinutes    *int32                 `protobuf:"varint,30,opt,name=estimated_minutes,json=estimatedMinutes,proto3,oneof" json:"estimated_minutes,omitempty"`
-	TimeSpentMinutes    *int32                 `protobuf:"varint,31,opt,name=time_spent_minutes,json=timeSpentMinutes,proto3,oneof" json:"time_spent_minutes,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ProjectId          string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	OrganizationId     string                 `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	OwnerId            string                 `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	Title              string                 `protobuf:"bytes,5,opt,name=title,proto3" json:"title,omitempty"`
+	Description        string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	Status             string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	Priority           string                 `protobuf:"bytes,8,opt,name=priority,proto3" json:"priority,omitempty"`
+	AssigneeIds        []string               `protobuf:"bytes,9,rep,name=assignee_ids,json=assigneeIds,proto3" json:"assignee_ids,omitempty"`
+	StartDate          *string                `protobuf:"bytes,10,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
+	DueDate            *string                `protobuf:"bytes,11,opt,name=due_date,json=dueDate,proto3,oneof" json:"due_date,omitempty"`
+	CompletedAt        *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	ParentId           *string                `protobuf:"bytes,13,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
+	BlockedByTaskIds   []string               `protobuf:"bytes,14,rep,name=blocked_by_task_ids,json=blockedByTaskIds,proto3" json:"blocked_by_task_ids,omitempty"`
+	IsMilestone        bool                   `protobuf:"varint,15,opt,name=is_milestone,json=isMilestone,proto3" json:"is_milestone,omitempty"`
+	RecurrenceRule     *string                `protobuf:"bytes,16,opt,name=recurrence_rule,json=recurrenceRule,proto3,oneof" json:"recurrence_rule,omitempty"`
+	SortOrder          int32                  `protobuf:"varint,17,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	FieldValues        map[string]string      `protobuf:"bytes,18,rep,name=field_values,json=fieldValues,proto3" json:"field_values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	OutgoingReferences []string               `protobuf:"bytes,19,rep,name=outgoing_references,json=outgoingReferences,proto3" json:"outgoing_references,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DeletedAt          *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
+	Urn                string                 `protobuf:"bytes,23,opt,name=urn,proto3" json:"urn,omitempty"`
+	Number             int32                  `protobuf:"varint,24,opt,name=number,proto3" json:"number,omitempty"`
+	TaskType           string                 `protobuf:"bytes,25,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	SprintId           *string                `protobuf:"bytes,26,opt,name=sprint_id,json=sprintId,proto3,oneof" json:"sprint_id,omitempty"`
+	UserRole           v1.ContentRole         `protobuf:"varint,27,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	SubtaskTotal       int32                  `protobuf:"varint,28,opt,name=subtask_total,json=subtaskTotal,proto3" json:"subtask_total,omitempty"`
+	SubtaskCompleted   int32                  `protobuf:"varint,29,opt,name=subtask_completed,json=subtaskCompleted,proto3" json:"subtask_completed,omitempty"`
+	EstimatedMinutes   *int32                 `protobuf:"varint,30,opt,name=estimated_minutes,json=estimatedMinutes,proto3,oneof" json:"estimated_minutes,omitempty"`
+	TimeSpentMinutes   *int32                 `protobuf:"varint,31,opt,name=time_spent_minutes,json=timeSpentMinutes,proto3,oneof" json:"time_spent_minutes,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Task) Reset() {
@@ -646,11 +646,11 @@ func (x *Task) GetSprintId() string {
 	return ""
 }
 
-func (x *Task) GetUserPermissionLevel() v1.PermissionLevel {
+func (x *Task) GetUserRole() v1.ContentRole {
 	if x != nil {
-		return x.UserPermissionLevel
+		return x.UserRole
 	}
-	return v1.PermissionLevel(0)
+	return v1.ContentRole(0)
 }
 
 func (x *Task) GetSubtaskTotal() int32 {
@@ -1264,8 +1264,9 @@ type CreateProjectRequest struct {
 	Description    *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	Icon           *string                `protobuf:"bytes,4,opt,name=icon,proto3,oneof" json:"icon,omitempty"`
 	Color          *string                `protobuf:"bytes,5,opt,name=color,proto3,oneof" json:"color,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,6,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	Slug           *string                `protobuf:"bytes,7,opt,name=slug,proto3,oneof" json:"slug,omitempty"`
+	BaselineRole   *v1.ContentRole        `protobuf:"varint,8,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1335,11 +1336,11 @@ func (x *CreateProjectRequest) GetColor() string {
 	return ""
 }
 
-func (x *CreateProjectRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *CreateProjectRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *CreateProjectRequest) GetSlug() string {
@@ -1347,6 +1348,13 @@ func (x *CreateProjectRequest) GetSlug() string {
 		return *x.Slug
 	}
 	return ""
+}
+
+func (x *CreateProjectRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type GetProjectRequest struct {
@@ -1409,11 +1417,11 @@ type UpdateProjectRequest struct {
 	Description      *string                     `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	Icon             *string                     `protobuf:"bytes,5,opt,name=icon,proto3,oneof" json:"icon,omitempty"`
 	Color            *string                     `protobuf:"bytes,6,opt,name=color,proto3,oneof" json:"color,omitempty"`
-	Visibility       *v1.VisibilityScope         `protobuf:"varint,7,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
-	MemberIds        []string                    `protobuf:"bytes,8,rep,name=member_ids,json=memberIds,proto3" json:"member_ids,omitempty"`
+	AccessMode       *v1.AccessMode              `protobuf:"varint,7,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	DefaultViewId    *string                     `protobuf:"bytes,9,opt,name=default_view_id,json=defaultViewId,proto3,oneof" json:"default_view_id,omitempty"`
 	Slug             *string                     `protobuf:"bytes,10,opt,name=slug,proto3,oneof" json:"slug,omitempty"`
 	TypeFieldSchemas map[string]*TypeFieldSchema `protobuf:"bytes,11,rep,name=type_field_schemas,json=typeFieldSchemas,proto3" json:"type_field_schemas,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	BaselineRole     *v1.ContentRole             `protobuf:"varint,12,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1490,18 +1498,11 @@ func (x *UpdateProjectRequest) GetColor() string {
 	return ""
 }
 
-func (x *UpdateProjectRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *UpdateProjectRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
-}
-
-func (x *UpdateProjectRequest) GetMemberIds() []string {
-	if x != nil {
-		return x.MemberIds
-	}
-	return nil
+	return v1.AccessMode(0)
 }
 
 func (x *UpdateProjectRequest) GetDefaultViewId() string {
@@ -1523,6 +1524,13 @@ func (x *UpdateProjectRequest) GetTypeFieldSchemas() map[string]*TypeFieldSchema
 		return x.TypeFieldSchemas
 	}
 	return nil
+}
+
+func (x *UpdateProjectRequest) GetBaselineRole() v1.ContentRole {
+	if x != nil && x.BaselineRole != nil {
+		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
 }
 
 type DeleteProjectRequest struct {
@@ -1589,7 +1597,7 @@ type ListProjectsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Pagination     *v1.PaginationRequest  `protobuf:"bytes,2,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
-	Visibility     *v1.VisibilityScope    `protobuf:"varint,3,opt,name=visibility,proto3,enum=common.v1.VisibilityScope,oneof" json:"visibility,omitempty"`
+	AccessMode     *v1.AccessMode         `protobuf:"varint,3,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	IncludeDeleted *bool                  `protobuf:"varint,4,opt,name=include_deleted,json=includeDeleted,proto3,oneof" json:"include_deleted,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -1639,11 +1647,11 @@ func (x *ListProjectsRequest) GetPagination() *v1.PaginationRequest {
 	return nil
 }
 
-func (x *ListProjectsRequest) GetVisibility() v1.VisibilityScope {
-	if x != nil && x.Visibility != nil {
-		return *x.Visibility
+func (x *ListProjectsRequest) GetAccessMode() v1.AccessMode {
+	if x != nil && x.AccessMode != nil {
+		return *x.AccessMode
 	}
-	return v1.VisibilityScope(0)
+	return v1.AccessMode(0)
 }
 
 func (x *ListProjectsRequest) GetIncludeDeleted() bool {
@@ -4445,7 +4453,7 @@ var File_projects_v1_projects_proto protoreflect.FileDescriptor
 
 const file_projects_v1_projects_proto_rawDesc = "" +
 	"\n" +
-	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xb2\a\n" +
+	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xda\a\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -4453,30 +4461,30 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x12\n" +
 	"\x04icon\x18\x06 \x01(\tR\x04icon\x12\x14\n" +
-	"\x05color\x18\a \x01(\tR\x05color\x12:\n" +
-	"\n" +
-	"visibility\x18\b \x01(\x0e2\x1a.common.v1.VisibilityScopeR\n" +
-	"visibility\x12I\n" +
+	"\x05color\x18\a \x01(\tR\x05color\x126\n" +
+	"\vaccess_mode\x18\b \x01(\x0e2\x15.common.v1.AccessModeR\n" +
+	"accessMode\x12I\n" +
 	"\x11field_definitions\x18\t \x03(\v2\x1c.projects.v1.FieldDefinitionR\x10fieldDefinitions\x12-\n" +
 	"\x05views\x18\n" +
 	" \x03(\v2\x17.projects.v1.ViewConfigR\x05views\x12&\n" +
-	"\x0fdefault_view_id\x18\v \x01(\tR\rdefaultViewId\x12\x1d\n" +
-	"\n" +
-	"member_ids\x18\f \x03(\tR\tmemberIds\x129\n" +
+	"\x0fdefault_view_id\x18\v \x01(\tR\rdefaultViewId\x129\n" +
 	"\n" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
 	"\n" +
 	"deleted_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tdeletedAt\x88\x01\x01\x12\x10\n" +
-	"\x03urn\x18\x10 \x01(\tR\x03urn\x12N\n" +
-	"\x15user_permission_level\x18\x11 \x01(\x0e2\x1a.common.v1.PermissionLevelR\x13userPermissionLevel\x12\x12\n" +
+	"\x03urn\x18\x10 \x01(\tR\x03urn\x123\n" +
+	"\tuser_role\x18\x11 \x01(\x0e2\x16.common.v1.ContentRoleR\buserRole\x12\x12\n" +
 	"\x04slug\x18\x12 \x01(\tR\x04slug\x12X\n" +
-	"\x12type_field_schemas\x18\x13 \x03(\v2*.projects.v1.Project.TypeFieldSchemasEntryR\x10typeFieldSchemas\x1aa\n" +
+	"\x12type_field_schemas\x18\x13 \x03(\v2*.projects.v1.Project.TypeFieldSchemasEntryR\x10typeFieldSchemas\x12@\n" +
+	"\rbaseline_role\x18\x14 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01\x1aa\n" +
 	"\x15TypeFieldSchemasEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
 	"\x05value\x18\x02 \x01(\v2\x1c.projects.v1.TypeFieldSchemaR\x05value:\x028\x01B\r\n" +
-	"\v_deleted_at\"\xc8\v\n" +
+	"\v_deleted_atB\x10\n" +
+	"\x0e_baseline_roleJ\x04\b\f\x10\rR\n" +
+	"member_ids\"\xad\v\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -4510,8 +4518,8 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x03urn\x18\x17 \x01(\tR\x03urn\x12\x16\n" +
 	"\x06number\x18\x18 \x01(\x05R\x06number\x12\x1b\n" +
 	"\ttask_type\x18\x19 \x01(\tR\btaskType\x12 \n" +
-	"\tsprint_id\x18\x1a \x01(\tH\x06R\bsprintId\x88\x01\x01\x12N\n" +
-	"\x15user_permission_level\x18\x1b \x01(\x0e2\x1a.common.v1.PermissionLevelR\x13userPermissionLevel\x12#\n" +
+	"\tsprint_id\x18\x1a \x01(\tH\x06R\bsprintId\x88\x01\x01\x123\n" +
+	"\tuser_role\x18\x1b \x01(\x0e2\x16.common.v1.ContentRoleR\buserRole\x12#\n" +
 	"\rsubtask_total\x18\x1c \x01(\x05R\fsubtaskTotal\x12+\n" +
 	"\x11subtask_completed\x18\x1d \x01(\x05R\x10subtaskCompleted\x120\n" +
 	"\x11estimated_minutes\x18\x1e \x01(\x05H\aR\x10estimatedMinutes\x88\x01\x01\x121\n" +
@@ -4608,26 +4616,27 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_date\"\xc3\x02\n" +
+	"\t_end_date\"\x94\x03\n" +
 	"\x14CreateProjectRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x17\n" +
 	"\x04icon\x18\x04 \x01(\tH\x01R\x04icon\x88\x01\x01\x12\x19\n" +
-	"\x05color\x18\x05 \x01(\tH\x02R\x05color\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\x06 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x03R\n" +
-	"visibility\x88\x01\x01\x12\x17\n" +
-	"\x04slug\x18\a \x01(\tH\x04R\x04slug\x88\x01\x01B\x0e\n" +
+	"\x05color\x18\x05 \x01(\tH\x02R\x05color\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeH\x03R\n" +
+	"accessMode\x88\x01\x01\x12\x17\n" +
+	"\x04slug\x18\a \x01(\tH\x04R\x04slug\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\b \x01(\x0e2\x16.common.v1.ContentRoleH\x05R\fbaselineRole\x88\x01\x01B\x0e\n" +
 	"\f_descriptionB\a\n" +
 	"\x05_iconB\b\n" +
-	"\x06_colorB\r\n" +
-	"\v_visibilityB\a\n" +
-	"\x05_slug\"[\n" +
+	"\x06_colorB\x0e\n" +
+	"\f_access_modeB\a\n" +
+	"\x05_slugB\x10\n" +
+	"\x0e_baseline_role\"[\n" +
 	"\x11GetProjectRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId\"\x9a\x05\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\"\xde\x05\n" +
 	"\x14UpdateProjectRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -4635,42 +4644,41 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x04 \x01(\tH\x01R\vdescription\x88\x01\x01\x12\x17\n" +
 	"\x04icon\x18\x05 \x01(\tH\x02R\x04icon\x88\x01\x01\x12\x19\n" +
-	"\x05color\x18\x06 \x01(\tH\x03R\x05color\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\a \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x04R\n" +
-	"visibility\x88\x01\x01\x12\x1d\n" +
-	"\n" +
-	"member_ids\x18\b \x03(\tR\tmemberIds\x12+\n" +
+	"\x05color\x18\x06 \x01(\tH\x03R\x05color\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\a \x01(\x0e2\x15.common.v1.AccessModeH\x04R\n" +
+	"accessMode\x88\x01\x01\x12+\n" +
 	"\x0fdefault_view_id\x18\t \x01(\tH\x05R\rdefaultViewId\x88\x01\x01\x12\x17\n" +
 	"\x04slug\x18\n" +
 	" \x01(\tH\x06R\x04slug\x88\x01\x01\x12e\n" +
-	"\x12type_field_schemas\x18\v \x03(\v27.projects.v1.UpdateProjectRequest.TypeFieldSchemasEntryR\x10typeFieldSchemas\x1aa\n" +
+	"\x12type_field_schemas\x18\v \x03(\v27.projects.v1.UpdateProjectRequest.TypeFieldSchemasEntryR\x10typeFieldSchemas\x12@\n" +
+	"\rbaseline_role\x18\f \x01(\x0e2\x16.common.v1.ContentRoleH\aR\fbaselineRole\x88\x01\x01\x1aa\n" +
 	"\x15TypeFieldSchemasEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
 	"\x05value\x18\x02 \x01(\v2\x1c.projects.v1.TypeFieldSchemaR\x05value:\x028\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_descriptionB\a\n" +
 	"\x05_iconB\b\n" +
-	"\x06_colorB\r\n" +
-	"\v_visibilityB\x12\n" +
+	"\x06_colorB\x0e\n" +
+	"\f_access_modeB\x12\n" +
 	"\x10_default_view_idB\a\n" +
-	"\x05_slug\"|\n" +
+	"\x05_slugB\x10\n" +
+	"\x0e_baseline_roleJ\x04\b\b\x10\tR\n" +
+	"member_ids\"|\n" +
 	"\x14DeleteProjectRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x1c\n" +
-	"\tpermanent\x18\x03 \x01(\bR\tpermanent\"\xa2\x02\n" +
+	"\tpermanent\x18\x03 \x01(\bR\tpermanent\"\x9f\x02\n" +
 	"\x13ListProjectsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1c.common.v1.PaginationRequestH\x00R\n" +
-	"pagination\x88\x01\x01\x12?\n" +
-	"\n" +
-	"visibility\x18\x03 \x01(\x0e2\x1a.common.v1.VisibilityScopeH\x01R\n" +
-	"visibility\x88\x01\x01\x12,\n" +
+	"pagination\x88\x01\x01\x12;\n" +
+	"\vaccess_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x01R\n" +
+	"accessMode\x88\x01\x01\x12,\n" +
 	"\x0finclude_deleted\x18\x04 \x01(\bH\x02R\x0eincludeDeleted\x88\x01\x01B\r\n" +
-	"\v_paginationB\r\n" +
-	"\v_visibilityB\x12\n" +
+	"\v_paginationB\x0e\n" +
+	"\f_access_modeB\x12\n" +
 	"\x10_include_deleted\"A\n" +
 	"\x0fProjectResponse\x12.\n" +
 	"\aproject\x18\x01 \x01(\v2\x14.projects.v1.ProjectR\aproject\"K\n" +
@@ -5134,129 +5142,132 @@ var file_projects_v1_projects_proto_goTypes = []any{
 	nil,                                   // 62: projects.v1.CreateTaskRequest.FieldValuesEntry
 	nil,                                   // 63: projects.v1.UpdateTaskRequest.FieldValuesEntry
 	nil,                                   // 64: projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
-	(v1.VisibilityScope)(0),               // 65: common.v1.VisibilityScope
+	(v1.AccessMode)(0),                    // 65: common.v1.AccessMode
 	(*timestamppb.Timestamp)(nil),         // 66: google.protobuf.Timestamp
-	(v1.PermissionLevel)(0),               // 67: common.v1.PermissionLevel
+	(v1.ContentRole)(0),                   // 67: common.v1.ContentRole
 	(*v1.PaginationRequest)(nil),          // 68: common.v1.PaginationRequest
 	(*v1.PaginationResponse)(nil),         // 69: common.v1.PaginationResponse
 }
 var file_projects_v1_projects_proto_depIdxs = []int32{
-	65, // 0: projects.v1.Project.visibility:type_name -> common.v1.VisibilityScope
+	65, // 0: projects.v1.Project.access_mode:type_name -> common.v1.AccessMode
 	5,  // 1: projects.v1.Project.field_definitions:type_name -> projects.v1.FieldDefinition
 	7,  // 2: projects.v1.Project.views:type_name -> projects.v1.ViewConfig
 	66, // 3: projects.v1.Project.created_at:type_name -> google.protobuf.Timestamp
 	66, // 4: projects.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
 	66, // 5: projects.v1.Project.deleted_at:type_name -> google.protobuf.Timestamp
-	67, // 6: projects.v1.Project.user_permission_level:type_name -> common.v1.PermissionLevel
+	67, // 6: projects.v1.Project.user_role:type_name -> common.v1.ContentRole
 	59, // 7: projects.v1.Project.type_field_schemas:type_name -> projects.v1.Project.TypeFieldSchemasEntry
-	66, // 8: projects.v1.Task.completed_at:type_name -> google.protobuf.Timestamp
-	60, // 9: projects.v1.Task.field_values:type_name -> projects.v1.Task.FieldValuesEntry
-	66, // 10: projects.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	66, // 11: projects.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
-	66, // 12: projects.v1.Task.deleted_at:type_name -> google.protobuf.Timestamp
-	67, // 13: projects.v1.Task.user_permission_level:type_name -> common.v1.PermissionLevel
-	0,  // 14: projects.v1.FieldDefinition.type:type_name -> projects.v1.FieldType
-	66, // 15: projects.v1.FieldDefinition.created_at:type_name -> google.protobuf.Timestamp
-	66, // 16: projects.v1.FieldDefinition.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 17: projects.v1.ViewConfig.type:type_name -> projects.v1.ViewType
-	66, // 18: projects.v1.ViewConfig.created_at:type_name -> google.protobuf.Timestamp
-	66, // 19: projects.v1.ViewConfig.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 20: projects.v1.TaskActivity.action:type_name -> projects.v1.ActivityAction
-	66, // 21: projects.v1.TaskActivity.timestamp:type_name -> google.protobuf.Timestamp
-	66, // 22: projects.v1.Sprint.created_at:type_name -> google.protobuf.Timestamp
-	66, // 23: projects.v1.Sprint.updated_at:type_name -> google.protobuf.Timestamp
-	65, // 24: projects.v1.CreateProjectRequest.visibility:type_name -> common.v1.VisibilityScope
-	65, // 25: projects.v1.UpdateProjectRequest.visibility:type_name -> common.v1.VisibilityScope
-	61, // 26: projects.v1.UpdateProjectRequest.type_field_schemas:type_name -> projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
-	68, // 27: projects.v1.ListProjectsRequest.pagination:type_name -> common.v1.PaginationRequest
-	65, // 28: projects.v1.ListProjectsRequest.visibility:type_name -> common.v1.VisibilityScope
-	3,  // 29: projects.v1.ProjectResponse.project:type_name -> projects.v1.Project
-	3,  // 30: projects.v1.ListProjectsResponse.projects:type_name -> projects.v1.Project
-	69, // 31: projects.v1.ListProjectsResponse.pagination:type_name -> common.v1.PaginationResponse
-	62, // 32: projects.v1.CreateTaskRequest.field_values:type_name -> projects.v1.CreateTaskRequest.FieldValuesEntry
-	63, // 33: projects.v1.UpdateTaskRequest.field_values:type_name -> projects.v1.UpdateTaskRequest.FieldValuesEntry
-	68, // 34: projects.v1.ListTasksRequest.pagination:type_name -> common.v1.PaginationRequest
-	4,  // 35: projects.v1.TaskResponse.task:type_name -> projects.v1.Task
-	4,  // 36: projects.v1.TaskResponse.updated_parent:type_name -> projects.v1.Task
-	4,  // 37: projects.v1.TaskResponse.spawned_task:type_name -> projects.v1.Task
-	4,  // 38: projects.v1.BulkUpdateTasksResponse.tasks:type_name -> projects.v1.Task
-	4,  // 39: projects.v1.ListTasksResponse.tasks:type_name -> projects.v1.Task
-	69, // 40: projects.v1.ListTasksResponse.pagination:type_name -> common.v1.PaginationResponse
-	0,  // 41: projects.v1.CreateFieldRequest.type:type_name -> projects.v1.FieldType
-	5,  // 42: projects.v1.FieldResponse.field:type_name -> projects.v1.FieldDefinition
-	1,  // 43: projects.v1.CreateViewRequest.type:type_name -> projects.v1.ViewType
-	7,  // 44: projects.v1.ViewResponse.view:type_name -> projects.v1.ViewConfig
-	10, // 45: projects.v1.SprintResponse.sprint:type_name -> projects.v1.Sprint
-	10, // 46: projects.v1.ListSprintsResponse.sprints:type_name -> projects.v1.Sprint
-	68, // 47: projects.v1.ListActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
-	8,  // 48: projects.v1.ListActivitiesResponse.activities:type_name -> projects.v1.TaskActivity
-	69, // 49: projects.v1.ListActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
-	64, // 50: projects.v1.BulkCheckTaskWatchersResponse.watched_tasks:type_name -> projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
-	6,  // 51: projects.v1.Project.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
-	6,  // 52: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
-	11, // 53: projects.v1.ProjectsService.CreateProject:input_type -> projects.v1.CreateProjectRequest
-	12, // 54: projects.v1.ProjectsService.GetProject:input_type -> projects.v1.GetProjectRequest
-	13, // 55: projects.v1.ProjectsService.UpdateProject:input_type -> projects.v1.UpdateProjectRequest
-	14, // 56: projects.v1.ProjectsService.DeleteProject:input_type -> projects.v1.DeleteProjectRequest
-	15, // 57: projects.v1.ProjectsService.ListProjects:input_type -> projects.v1.ListProjectsRequest
-	19, // 58: projects.v1.ProjectsService.CreateTask:input_type -> projects.v1.CreateTaskRequest
-	20, // 59: projects.v1.ProjectsService.GetTask:input_type -> projects.v1.GetTaskRequest
-	21, // 60: projects.v1.ProjectsService.UpdateTask:input_type -> projects.v1.UpdateTaskRequest
-	24, // 61: projects.v1.ProjectsService.DeleteTask:input_type -> projects.v1.DeleteTaskRequest
-	26, // 62: projects.v1.ProjectsService.ListTasks:input_type -> projects.v1.ListTasksRequest
-	22, // 63: projects.v1.ProjectsService.MoveTask:input_type -> projects.v1.MoveTaskRequest
-	23, // 64: projects.v1.ProjectsService.BulkUpdateTasks:input_type -> projects.v1.BulkUpdateTasksRequest
-	25, // 65: projects.v1.ProjectsService.DeleteTasks:input_type -> projects.v1.DeleteTasksRequest
-	32, // 66: projects.v1.ProjectsService.CreateField:input_type -> projects.v1.CreateFieldRequest
-	33, // 67: projects.v1.ProjectsService.UpdateField:input_type -> projects.v1.UpdateFieldRequest
-	34, // 68: projects.v1.ProjectsService.DeleteField:input_type -> projects.v1.DeleteFieldRequest
-	37, // 69: projects.v1.ProjectsService.CreateView:input_type -> projects.v1.CreateViewRequest
-	38, // 70: projects.v1.ProjectsService.UpdateView:input_type -> projects.v1.UpdateViewRequest
-	39, // 71: projects.v1.ProjectsService.DeleteView:input_type -> projects.v1.DeleteViewRequest
-	51, // 72: projects.v1.ProjectsService.ListActivities:input_type -> projects.v1.ListActivitiesRequest
-	42, // 73: projects.v1.ProjectsService.CreateSprint:input_type -> projects.v1.CreateSprintRequest
-	43, // 74: projects.v1.ProjectsService.UpdateSprint:input_type -> projects.v1.UpdateSprintRequest
-	44, // 75: projects.v1.ProjectsService.StartSprint:input_type -> projects.v1.StartSprintRequest
-	45, // 76: projects.v1.ProjectsService.CompleteSprint:input_type -> projects.v1.CompleteSprintRequest
-	46, // 77: projects.v1.ProjectsService.DeleteSprint:input_type -> projects.v1.DeleteSprintRequest
-	47, // 78: projects.v1.ProjectsService.ListSprints:input_type -> projects.v1.ListSprintsRequest
-	53, // 79: projects.v1.ProjectsService.ToggleTaskWatcher:input_type -> projects.v1.ToggleTaskWatcherRequest
-	55, // 80: projects.v1.ProjectsService.ListTaskWatchers:input_type -> projects.v1.ListTaskWatchersRequest
-	57, // 81: projects.v1.ProjectsService.BulkCheckTaskWatchers:input_type -> projects.v1.BulkCheckTaskWatchersRequest
-	16, // 82: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.ProjectResponse
-	16, // 83: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.ProjectResponse
-	16, // 84: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.ProjectResponse
-	17, // 85: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
-	18, // 86: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
-	27, // 87: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.TaskResponse
-	27, // 88: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.TaskResponse
-	27, // 89: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.TaskResponse
-	28, // 90: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
-	31, // 91: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
-	27, // 92: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.TaskResponse
-	30, // 93: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
-	29, // 94: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
-	35, // 95: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.FieldResponse
-	35, // 96: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.FieldResponse
-	36, // 97: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
-	40, // 98: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.ViewResponse
-	40, // 99: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.ViewResponse
-	41, // 100: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
-	52, // 101: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
-	48, // 102: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.SprintResponse
-	48, // 103: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.SprintResponse
-	48, // 104: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.SprintResponse
-	48, // 105: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.SprintResponse
-	49, // 106: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
-	50, // 107: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
-	54, // 108: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
-	56, // 109: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
-	58, // 110: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
-	82, // [82:111] is the sub-list for method output_type
-	53, // [53:82] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	67, // 8: projects.v1.Project.baseline_role:type_name -> common.v1.ContentRole
+	66, // 9: projects.v1.Task.completed_at:type_name -> google.protobuf.Timestamp
+	60, // 10: projects.v1.Task.field_values:type_name -> projects.v1.Task.FieldValuesEntry
+	66, // 11: projects.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	66, // 12: projects.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	66, // 13: projects.v1.Task.deleted_at:type_name -> google.protobuf.Timestamp
+	67, // 14: projects.v1.Task.user_role:type_name -> common.v1.ContentRole
+	0,  // 15: projects.v1.FieldDefinition.type:type_name -> projects.v1.FieldType
+	66, // 16: projects.v1.FieldDefinition.created_at:type_name -> google.protobuf.Timestamp
+	66, // 17: projects.v1.FieldDefinition.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 18: projects.v1.ViewConfig.type:type_name -> projects.v1.ViewType
+	66, // 19: projects.v1.ViewConfig.created_at:type_name -> google.protobuf.Timestamp
+	66, // 20: projects.v1.ViewConfig.updated_at:type_name -> google.protobuf.Timestamp
+	2,  // 21: projects.v1.TaskActivity.action:type_name -> projects.v1.ActivityAction
+	66, // 22: projects.v1.TaskActivity.timestamp:type_name -> google.protobuf.Timestamp
+	66, // 23: projects.v1.Sprint.created_at:type_name -> google.protobuf.Timestamp
+	66, // 24: projects.v1.Sprint.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 25: projects.v1.CreateProjectRequest.access_mode:type_name -> common.v1.AccessMode
+	67, // 26: projects.v1.CreateProjectRequest.baseline_role:type_name -> common.v1.ContentRole
+	65, // 27: projects.v1.UpdateProjectRequest.access_mode:type_name -> common.v1.AccessMode
+	61, // 28: projects.v1.UpdateProjectRequest.type_field_schemas:type_name -> projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
+	67, // 29: projects.v1.UpdateProjectRequest.baseline_role:type_name -> common.v1.ContentRole
+	68, // 30: projects.v1.ListProjectsRequest.pagination:type_name -> common.v1.PaginationRequest
+	65, // 31: projects.v1.ListProjectsRequest.access_mode:type_name -> common.v1.AccessMode
+	3,  // 32: projects.v1.ProjectResponse.project:type_name -> projects.v1.Project
+	3,  // 33: projects.v1.ListProjectsResponse.projects:type_name -> projects.v1.Project
+	69, // 34: projects.v1.ListProjectsResponse.pagination:type_name -> common.v1.PaginationResponse
+	62, // 35: projects.v1.CreateTaskRequest.field_values:type_name -> projects.v1.CreateTaskRequest.FieldValuesEntry
+	63, // 36: projects.v1.UpdateTaskRequest.field_values:type_name -> projects.v1.UpdateTaskRequest.FieldValuesEntry
+	68, // 37: projects.v1.ListTasksRequest.pagination:type_name -> common.v1.PaginationRequest
+	4,  // 38: projects.v1.TaskResponse.task:type_name -> projects.v1.Task
+	4,  // 39: projects.v1.TaskResponse.updated_parent:type_name -> projects.v1.Task
+	4,  // 40: projects.v1.TaskResponse.spawned_task:type_name -> projects.v1.Task
+	4,  // 41: projects.v1.BulkUpdateTasksResponse.tasks:type_name -> projects.v1.Task
+	4,  // 42: projects.v1.ListTasksResponse.tasks:type_name -> projects.v1.Task
+	69, // 43: projects.v1.ListTasksResponse.pagination:type_name -> common.v1.PaginationResponse
+	0,  // 44: projects.v1.CreateFieldRequest.type:type_name -> projects.v1.FieldType
+	5,  // 45: projects.v1.FieldResponse.field:type_name -> projects.v1.FieldDefinition
+	1,  // 46: projects.v1.CreateViewRequest.type:type_name -> projects.v1.ViewType
+	7,  // 47: projects.v1.ViewResponse.view:type_name -> projects.v1.ViewConfig
+	10, // 48: projects.v1.SprintResponse.sprint:type_name -> projects.v1.Sprint
+	10, // 49: projects.v1.ListSprintsResponse.sprints:type_name -> projects.v1.Sprint
+	68, // 50: projects.v1.ListActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
+	8,  // 51: projects.v1.ListActivitiesResponse.activities:type_name -> projects.v1.TaskActivity
+	69, // 52: projects.v1.ListActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
+	64, // 53: projects.v1.BulkCheckTaskWatchersResponse.watched_tasks:type_name -> projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
+	6,  // 54: projects.v1.Project.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
+	6,  // 55: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
+	11, // 56: projects.v1.ProjectsService.CreateProject:input_type -> projects.v1.CreateProjectRequest
+	12, // 57: projects.v1.ProjectsService.GetProject:input_type -> projects.v1.GetProjectRequest
+	13, // 58: projects.v1.ProjectsService.UpdateProject:input_type -> projects.v1.UpdateProjectRequest
+	14, // 59: projects.v1.ProjectsService.DeleteProject:input_type -> projects.v1.DeleteProjectRequest
+	15, // 60: projects.v1.ProjectsService.ListProjects:input_type -> projects.v1.ListProjectsRequest
+	19, // 61: projects.v1.ProjectsService.CreateTask:input_type -> projects.v1.CreateTaskRequest
+	20, // 62: projects.v1.ProjectsService.GetTask:input_type -> projects.v1.GetTaskRequest
+	21, // 63: projects.v1.ProjectsService.UpdateTask:input_type -> projects.v1.UpdateTaskRequest
+	24, // 64: projects.v1.ProjectsService.DeleteTask:input_type -> projects.v1.DeleteTaskRequest
+	26, // 65: projects.v1.ProjectsService.ListTasks:input_type -> projects.v1.ListTasksRequest
+	22, // 66: projects.v1.ProjectsService.MoveTask:input_type -> projects.v1.MoveTaskRequest
+	23, // 67: projects.v1.ProjectsService.BulkUpdateTasks:input_type -> projects.v1.BulkUpdateTasksRequest
+	25, // 68: projects.v1.ProjectsService.DeleteTasks:input_type -> projects.v1.DeleteTasksRequest
+	32, // 69: projects.v1.ProjectsService.CreateField:input_type -> projects.v1.CreateFieldRequest
+	33, // 70: projects.v1.ProjectsService.UpdateField:input_type -> projects.v1.UpdateFieldRequest
+	34, // 71: projects.v1.ProjectsService.DeleteField:input_type -> projects.v1.DeleteFieldRequest
+	37, // 72: projects.v1.ProjectsService.CreateView:input_type -> projects.v1.CreateViewRequest
+	38, // 73: projects.v1.ProjectsService.UpdateView:input_type -> projects.v1.UpdateViewRequest
+	39, // 74: projects.v1.ProjectsService.DeleteView:input_type -> projects.v1.DeleteViewRequest
+	51, // 75: projects.v1.ProjectsService.ListActivities:input_type -> projects.v1.ListActivitiesRequest
+	42, // 76: projects.v1.ProjectsService.CreateSprint:input_type -> projects.v1.CreateSprintRequest
+	43, // 77: projects.v1.ProjectsService.UpdateSprint:input_type -> projects.v1.UpdateSprintRequest
+	44, // 78: projects.v1.ProjectsService.StartSprint:input_type -> projects.v1.StartSprintRequest
+	45, // 79: projects.v1.ProjectsService.CompleteSprint:input_type -> projects.v1.CompleteSprintRequest
+	46, // 80: projects.v1.ProjectsService.DeleteSprint:input_type -> projects.v1.DeleteSprintRequest
+	47, // 81: projects.v1.ProjectsService.ListSprints:input_type -> projects.v1.ListSprintsRequest
+	53, // 82: projects.v1.ProjectsService.ToggleTaskWatcher:input_type -> projects.v1.ToggleTaskWatcherRequest
+	55, // 83: projects.v1.ProjectsService.ListTaskWatchers:input_type -> projects.v1.ListTaskWatchersRequest
+	57, // 84: projects.v1.ProjectsService.BulkCheckTaskWatchers:input_type -> projects.v1.BulkCheckTaskWatchersRequest
+	16, // 85: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.ProjectResponse
+	16, // 86: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.ProjectResponse
+	16, // 87: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.ProjectResponse
+	17, // 88: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
+	18, // 89: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
+	27, // 90: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.TaskResponse
+	27, // 91: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.TaskResponse
+	27, // 92: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.TaskResponse
+	28, // 93: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
+	31, // 94: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
+	27, // 95: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.TaskResponse
+	30, // 96: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
+	29, // 97: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
+	35, // 98: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.FieldResponse
+	35, // 99: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.FieldResponse
+	36, // 100: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
+	40, // 101: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.ViewResponse
+	40, // 102: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.ViewResponse
+	41, // 103: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
+	52, // 104: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
+	48, // 105: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.SprintResponse
+	48, // 106: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.SprintResponse
+	48, // 107: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.SprintResponse
+	48, // 108: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.SprintResponse
+	49, // 109: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
+	50, // 110: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
+	54, // 111: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
+	56, // 112: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
+	58, // 113: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
+	85, // [85:114] is the sub-list for method output_type
+	56, // [56:85] is the sub-list for method input_type
+	56, // [56:56] is the sub-list for extension type_name
+	56, // [56:56] is the sub-list for extension extendee
+	0,  // [0:56] is the sub-list for field type_name
 }
 
 func init() { file_projects_v1_projects_proto_init() }

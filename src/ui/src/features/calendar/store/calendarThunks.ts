@@ -45,9 +45,6 @@ import {
     RecurrenceEditScope as ProtoRecurrenceEditScope,
 } from '@uniffy/proto/cal/v1/calendar_pb';
 
-// ============================================================================
-// Helpers
-// ============================================================================
 
 /**
  * Get organization ID from state.
@@ -80,9 +77,7 @@ const isoToTimestamp = (iso: string): Timestamp => {
     });
 };
 
-// ============================================================================
 // Enum Converters
-// ============================================================================
 
 const RECURRENCE_FROM_PROTO: Record<ProtoRecurrencePattern, RecurrencePattern> = {
     [ProtoRecurrencePattern.UNSPECIFIED]: 'none',
@@ -180,9 +175,7 @@ const PROTO_TO_VISIBILITY: Record<ProtoVisibilityScope, 'private' | 'organizatio
     [ProtoVisibilityScope.PUBLIC]: 'organization',
 };
 
-// ============================================================================
 // Proto to Domain Converters
-// ============================================================================
 
 /**
  * Convert proto attendee to domain attendee.
@@ -294,9 +287,7 @@ const templateFromProto = (proto: ProtoEventTemplate): EventTemplate => ({
     updatedAt: proto.updatedAt?.toDate() || new Date(),
 });
 
-// ============================================================================
 // Event Thunks
-// ============================================================================
 
 /**
  * Fetch events in a date range.
@@ -565,9 +556,7 @@ export const deleteEvent = createAsyncThunk<
     }
 });
 
-// ============================================================================
 // Category Thunks
-// ============================================================================
 
 /**
  * Fetch all categories for the current organization.
@@ -673,9 +662,7 @@ export const deleteCategory = createAsyncThunk<
     }
 });
 
-// ============================================================================
 // Attendee Thunks
-// ============================================================================
 
 /**
  * Update attendee status for an event.
@@ -765,9 +752,7 @@ export const removeAttendees = createAsyncThunk<
     }
 });
 
-// ============================================================================
 // Template Thunks
-// ============================================================================
 
 export const createEventTemplate = createAsyncThunk<
     EventTemplate,

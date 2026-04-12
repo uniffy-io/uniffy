@@ -77,9 +77,10 @@ message Room {
   string location = 11;
   repeated string amenities = 12;
   optional string image_file_id = 13;
-  common.v1.VisibilityScope visibility = 14;
+  common.v1.AccessMode access_mode = 14;
   google.protobuf.Timestamp created_at = 15;
   google.protobuf.Timestamp updated_at = 16;
+  optional common.v1.ContentRole baseline_role = 17;
 }
 
 // A booking record linking a room to a time slot
@@ -126,8 +127,9 @@ message CreateRoomRequest {
   optional string location = 8;
   repeated string amenities = 9;
   optional string image_file_id = 10;
-  optional common.v1.VisibilityScope visibility = 11;
+  optional common.v1.AccessMode access_mode = 11;
   repeated string group_ids = 12;
+  optional common.v1.ContentRole baseline_role = 13;
 }
 
 message GetRoomRequest {
@@ -148,9 +150,10 @@ message UpdateRoomRequest {
   optional string location = 10;
   repeated string amenities = 11;
   optional string image_file_id = 12;
-  optional common.v1.VisibilityScope visibility = 13;
+  optional common.v1.AccessMode access_mode = 13;
   // Whether amenities list should replace existing (true) or be ignored if empty (false)
   bool replace_amenities = 14;
+  optional common.v1.ContentRole baseline_role = 15;
 }
 
 message DeleteRoomRequest {
