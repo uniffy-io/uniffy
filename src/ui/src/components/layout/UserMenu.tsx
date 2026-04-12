@@ -18,7 +18,7 @@ import { clearBookmarks } from '@/features/bookmarks';
 import { clearNotifications } from '@/features/notifications';
 import { clearPresence, useCustomStatus } from '@/features/presence';
 import { CustomStatusPicker } from '@/features/presence/components/CustomStatusPicker';
-import { clearSharing } from '@/features/sharing';
+import { clearPermissions } from '@/features/permissions';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
 import { clearComments } from '@/features/comments';
@@ -88,7 +88,7 @@ export function UserMenu() {
         dispatch(clearBookmarks());
         dispatch(clearNotifications());
         dispatch(clearPresence());
-        dispatch(clearSharing());
+        dispatch(clearPermissions());
         dispatch(clearAdmin());
         dispatch(clearComments());
         // Clear IndexedDB cache (async, fire and forget)

@@ -20,7 +20,9 @@ const fileToPlain = (file: File): SerializedFile => ({
     urn: file.urn,
     organizationId: file.organizationId,
     ownerId: file.ownerId,
-    visibility: file.visibility,
+    accessMode: file.accessMode,
+    baselineRole: file.baselineRole ?? null,
+    userRole: file.userRole,
     filename: file.filename,
     originalFilename: file.originalFilename,
     mimeType: file.mimeType,
@@ -44,7 +46,6 @@ const fileToPlain = (file: File): SerializedFile => ({
         nanos: typeof file.deletedAt.nanos === 'bigint' ? Number(file.deletedAt.nanos) : file.deletedAt.nanos,
     } : undefined,
     groupIds: [...file.groupIds],
-    userPermission: file.userPermission,
     ownerInfo: file.ownerInfo ? {
         id: file.ownerInfo.id,
         name: file.ownerInfo.name,

@@ -10,7 +10,7 @@ import { notesReducer } from '@/features/notes/store/notesSlice';
 import { notesTreeReducer } from '@/features/notes/store/notesTreeSlice';
 import { editorReducer } from '@/features/notes/store/editorSlice';
 import { settingsReducer } from '@/features/settings/store/settingsSlice';
-import { sharingReducer } from '@/features/sharing/store/sharingSlice';
+import { permissionsReducer } from '@/features/permissions';
 import { adminReducer } from '@/features/admin/store/adminSlice';
 import { setStoreRef } from '@/app/storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
@@ -160,7 +160,7 @@ const rootReducer = combineReducers({
   notesTree: notesTreeReducer,
   editor: editorReducer,
   settings: settingsReducer,
-  sharing: sharingReducer,
+  permissions: permissionsReducer,
   admin: adminReducer,
   calendar: calendarReducer,
   calendarUi: calendarUiReducer,

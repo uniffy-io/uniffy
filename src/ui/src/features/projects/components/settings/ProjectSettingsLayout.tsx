@@ -15,28 +15,43 @@ import {
   Lightning,
   Warning,
   ArrowLeft,
+  Users,
+  ClockCounterClockwise,
 } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { roleCanManage } from "@/shared/utils/contentRoles";
 import { GeneralSection } from "@/features/projects/components/settings/GeneralSection";
 import { StatusesSection } from "@/features/projects/components/settings/StatusesSection";
 import { CustomFieldsSection } from "@/features/projects/components/settings/CustomFieldsSection";
 import { TaskTypesSection } from "@/features/projects/components/settings/TaskTypesSection";
 import { SprintsSection } from "@/features/projects/components/settings/SprintsSection";
+import { MembersSection } from "@/features/projects/components/settings/MembersSection";
 import { DangerZoneSection } from "@/features/projects/components/settings/DangerZoneSection";
+import { AuditLogSection } from "@/features/projects/components/settings/AuditLogSection";
 import type { Project } from "@/features/projects/types";
 
-type SettingsSection = "general" | "statuses" | "fields" | "types" | "sprints" | "danger";
+type SettingsSection = "general" | "members" | "statuses" | "fields" | "types" | "sprints" | "audit" | "danger";
 
-const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType; danger?: boolean }[] = [
+interface SectionDef {
+  id: SettingsSection;
+  label: string;
+  icon: React.ElementType;
+  danger?: boolean;
+  adminOnly?: boolean;
+}
+
+const SECTIONS: SectionDef[] = [
   { id: "general", label: "General", icon: Gear },
+  { id: "members", label: "Access & Members", icon: Users },
   { id: "statuses", label: "Statuses", icon: CirclesThree },
   { id: "fields", label: "Custom Fields", icon: Columns },
   { id: "types", label: "Task Types", icon: StackSimple },
   { id: "sprints", label: "Sprints", icon: Lightning },
+  { id: "audit", label: "Access History", icon: ClockCounterClockwise, adminOnly: true },
   { id: "danger", label: "Danger Zone", icon: Warning, danger: true },
 ];
 
-const VALID_SECTIONS = new Set<string>(SECTIONS.map((s) => s.id));
+const ALL_SECTION_IDS = new Set<string>(SECTIONS.map((s) => s.id));
 
 interface ProjectSettingsLayoutProps {
   project: Project;
@@ -45,11 +60,14 @@ interface ProjectSettingsLayoutProps {
 export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState<SettingsSection>("general");
+  const canManage = roleCanManage(project.userRole);
+
+  const visibleSections = SECTIONS.filter((s) => !s.adminOnly || canManage);
 
   // Sync URL param to state
   useEffect(() => {
     const section = searchParams.get("section");
-    if (section && VALID_SECTIONS.has(section)) {
+    if (section && ALL_SECTION_IDS.has(section)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing URL search param to local state on navigation
       setActiveSection(section as SettingsSection);
     }
@@ -64,6 +82,8 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
     switch (activeSection) {
       case "general":
         return <GeneralSection project={project} />;
+      case "members":
+        return <MembersSection project={project} />;
       case "statuses":
         return <StatusesSection project={project} />;
       case "fields":
@@ -72,6 +92,8 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
         return <TaskTypesSection project={project} />;
       case "sprints":
         return <SprintsSection project={project} />;
+      case "audit":
+        return <AuditLogSection project={project} />;
       case "danger":
         return <DangerZoneSection project={project} />;
     }
@@ -98,7 +120,7 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
 
           {/* Section nav buttons */}
           <div className="flex md:flex-col gap-1 shrink-0">
-            {SECTIONS.map(({ id, label, icon: Icon, danger }) => (
+            {visibleSections.map(({ id, label, icon: Icon, danger }) => (
               <button
                 key={id}
                 type="button"

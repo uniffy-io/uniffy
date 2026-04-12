@@ -57,10 +57,11 @@ import { setSelectedFolder, deleteFolder, updateFolder, fetchFilesTree } from '@
 import { selectSubfoldersForCurrentFolder } from '@/features/files/store/selectors';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import type { SerializedTreeNode, SerializedFolder } from '@/features/files/store/filesTreeThunks';
-import { useSharingDialog, useMyPermission } from '@/features/sharing';
+import { useAccessPolicyDialog } from '@/features/permissions';
 import { toggleBookmark } from '@/features/bookmarks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { ContentType, VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { ContentType, AccessMode } from '@uniffy/proto/common/v1/common_pb';
+import { bucketForContent } from '@/shared/utils/contentRoles';
 import type { FileDownloadItem } from '@/features/files/utils/archiveDownload';
 import { collectAllDownloadFiles, createFileInfoArray } from '@/features/files/utils/folderDownload';
 import { FolderCard } from '@/features/files/components/list/FolderCard';
@@ -176,17 +177,11 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     const [moveFileIds, setMoveFileIds] = useState<string[]>([]);
     const [moveFolderIds, setMoveFolderIds] = useState<string[]>([]);
     const [moveItemName, setMoveItemName] = useState<string | undefined>();
-    const [moveCurrentVisibility, setMoveCurrentVisibility] = useState<VisibilityScope | undefined>();
+    const [moveCurrentAccessMode, setMoveCurrentAccessMode] = useState<AccessMode | undefined>();
     const [moveCurrentFolderId, setMoveCurrentFolderId] = useState<string | null | undefined>();
 
-    // Sharing dialog
-    const { open: openSharingDialog } = useSharingDialog();
-
-    // Check if current user can share the selected file
-    const { permission: filePermission } = useMyPermission(
-        ContentType.FILE,
-        currentFile?.id ?? null
-    );
+    // Access policy dialog
+    const { openFor } = useAccessPolicyDialog();
 
     // Close context menu on outside click
     useEffect(() => {
@@ -253,84 +248,34 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
 
     // Filter files by view scope
     const scopedFiles = useMemo(() => {
-        console.log('[FilesList] Filtering files', {
-            viewScope,
-            userId,
-            totalFiles: activeFiles.length,
-            filesWithVisibility: activeFiles.map(f => ({ name: f.filename, visibility: f.visibility, ownerId: f.ownerId }))
+        if (viewScope === 'all' || !userId) {
+            return activeFiles;
+        }
+
+        return activeFiles.filter(f => {
+            const bucket = bucketForContent({
+                ownerId: f.ownerId,
+                accessMode: f.accessMode,
+                currentUserId: userId,
+            });
+            return bucket === viewScope;
         });
-
-        if (viewScope === 'all') {
-            return activeFiles;
-        }
-
-        if (viewScope === 'personal') {
-            const filtered = activeFiles.filter(f =>
-                f.visibility === VisibilityScope.PRIVATE &&
-                f.ownerId === userId
-            );
-            console.log('[FilesList] Personal filter result:', filtered.length, 'files');
-            return filtered;
-        }
-
-        if (viewScope === 'shared') {
-            // Selector already filters for shared files (not owned by user, not org-wide)
-            // No additional filtering needed here
-            console.log('[FilesList] Shared filter result:', activeFiles.length, 'files');
-            return activeFiles;
-        }
-
-        if (viewScope === 'organization') {
-            const filtered = activeFiles.filter(f =>
-                f.visibility === VisibilityScope.ORGANIZATION
-            );
-            console.log('[FilesList] Organization filter result:', filtered.length, 'files');
-            return filtered;
-        }
-
-        return activeFiles;
     }, [activeFiles, viewScope, userId]);
 
     // Filter subfolders by view scope
     const scopedSubfolders = useMemo(() => {
-        console.log('[FilesList] Filtering subfolders', {
-            viewScope,
-            userId,
-            totalSubfolders: subfolders.length,
-            subfoldersWithVisibility: subfolders.map(f => ({ name: f.name, visibility: f.visibility }))
-        });
-
-        if (viewScope === 'all') {
+        if (viewScope === 'all' || !userId) {
             return subfolders;
         }
 
-        if (viewScope === 'personal') {
-            const filtered = subfolders.filter(f =>
-                f.visibility === VisibilityScope.PRIVATE
-            );
-            console.log('[FilesList] Personal subfolders result:', filtered.length);
-            return filtered;
-        }
-
-        if (viewScope === 'shared') {
-            // For shared view, only show folders with GROUP visibility
-            // (ORGANIZATION folders are in org view, PRIVATE folders are personal)
-            const filtered = subfolders.filter(f =>
-                f.visibility === VisibilityScope.GROUP
-            );
-            console.log('[FilesList] Shared subfolders result:', filtered.length);
-            return filtered;
-        }
-
-        if (viewScope === 'organization') {
-            const filtered = subfolders.filter(f =>
-                f.visibility === VisibilityScope.ORGANIZATION
-            );
-            console.log('[FilesList] Organization subfolders result:', filtered.length);
-            return filtered;
-        }
-
-        return subfolders;
+        return subfolders.filter(f => {
+            const bucket = bucketForContent({
+                ownerId: f.ownerId,
+                accessMode: f.accessMode,
+                currentUserId: userId,
+            });
+            return bucket === viewScope;
+        });
     }, [subfolders, viewScope, userId]);
 
     // Single click - just select the file (for details panel)
@@ -368,9 +313,9 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
 
     const handleShare = useCallback(
         (fileId: string, filename: string) => {
-            openSharingDialog(ContentType.FILE, fileId, filename);
+            openFor(ContentType.FILE, fileId, filename);
         },
-        [openSharingDialog]
+        [openFor]
     );
 
     const handleRenameFile = useCallback(
@@ -388,7 +333,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                 setMoveFileIds([fileId]);
                 setMoveFolderIds([]);
                 setMoveItemName(file.filename);
-                setMoveCurrentVisibility(file.visibility as VisibilityScope);
+                setMoveCurrentAccessMode(file.accessMode as AccessMode);
                 setMoveCurrentFolderId(file.folderId ?? null);
                 setMoveDialogOpen(true);
             }
@@ -421,7 +366,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                 setMoveFileIds([]);
                 setMoveFolderIds([folderId]);
                 setMoveItemName(folder.name);
-                setMoveCurrentVisibility(folder.visibility as VisibilityScope);
+                setMoveCurrentAccessMode(folder.accessMode as AccessMode);
                 setMoveCurrentFolderId(folder.parentId ?? null);
                 setMoveDialogOpen(true);
             }
@@ -434,7 +379,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         setMoveFileIds([...selectedFileIds]);
         setMoveFolderIds([...selectedFolderIds]);
         setMoveItemName(undefined);
-        setMoveCurrentVisibility(undefined);
+        setMoveCurrentAccessMode(undefined);
         setMoveCurrentFolderId(undefined);
         setMoveDialogOpen(true);
     }, [selectedFileIds, selectedFolderIds]);
@@ -445,7 +390,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
         setMoveFileIds([]);
         setMoveFolderIds([]);
         setMoveItemName(undefined);
-        setMoveCurrentVisibility(undefined);
+        setMoveCurrentAccessMode(undefined);
         setMoveCurrentFolderId(undefined);
         // Clear selection after successful move
         dispatch(clearSelection());
@@ -670,9 +615,9 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
 
     const handleShareFolder = useCallback(
         (folderId: string, folderName: string) => {
-            openSharingDialog(ContentType.FOLDER, folderId, folderName);
+            openFor(ContentType.FILE, folderId, folderName);
         },
-        [openSharingDialog]
+        [openFor]
     );
 
     const handleRenameFolder = useCallback(
@@ -910,8 +855,8 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 </div>
                             )}
 
-                            {/* Share button (visible when a file is selected and user can share) */}
-                            {currentFile && filePermission?.canShare && (
+                            {/* Share button (visible when a file is selected) */}
+                            {currentFile && (
                                 <>
                                     <div className="h-6 w-px bg-border" />
                                     <button
@@ -1156,7 +1101,7 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                 onClose={handleCloseMoveDialog}
                 fileIds={moveFileIds}
                 folderIds={moveFolderIds}
-                currentVisibility={moveCurrentVisibility}
+                currentAccessMode={moveCurrentAccessMode}
                 currentFolderId={moveCurrentFolderId}
                 itemName={moveItemName}
             />

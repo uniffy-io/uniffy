@@ -30,11 +30,11 @@ import type { EditorMode } from '@/features/notes/store/editorSlice';
 import { TagInput } from '@/features/notes/components/editor/TagInput';
 import { IconPicker } from '@/features/notes/components/editor/IconPicker';
 import { useBookmarkToggle } from '@/features/bookmarks';
-import { useSharingDialog } from '@/features/sharing';
+import { useAccessPolicyDialog } from '@/features/permissions';
 import { cn } from '@/shared/utils/cn';
 import { formatProtoDate } from '@/shared/utils/dateFormatting';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 interface EditorHeaderProps {
   note: SerializedNote;
@@ -51,12 +51,14 @@ interface EditorHeaderProps {
  */
 interface CollapsibleBreadcrumbProps {
   items: BreadcrumbItem[];
-  noteVisibility?: VisibilityScope;
+  noteAccessMode?: number;
+  noteOwnerId?: string;
 }
 
-function CollapsibleBreadcrumb({ items, noteVisibility }: CollapsibleBreadcrumbProps) {
+function CollapsibleBreadcrumb({ items, noteAccessMode, noteOwnerId }: CollapsibleBreadcrumbProps) {
   const dispatch = useAppDispatch();
   const isSidebarOpen = useAppSelector((state) => state.editor.isSidebarOpen);
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -84,11 +86,10 @@ function CollapsibleBreadcrumb({ items, noteVisibility }: CollapsibleBreadcrumbP
       dispatch(setSidebarOpen(true));
     }
 
-    // Expand the section containing these notes based on visibility
-    const sectionId = noteVisibility === VisibilityScope.ORGANIZATION
+    const sectionId = noteAccessMode === AccessMode.OPEN_TO_ORG
       ? 'organization'
-      : noteVisibility === VisibilityScope.GROUP
-        ? 'shared' // Group notes appear in shared section for non-owners
+      : noteOwnerId !== currentUserId
+        ? 'shared'
         : 'personal';
     dispatch(expandNode(sectionId));
 
@@ -109,7 +110,7 @@ function CollapsibleBreadcrumb({ items, noteVisibility }: CollapsibleBreadcrumbP
         folderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 100);
-  }, [dispatch, items, isSidebarOpen, noteVisibility]);
+  }, [dispatch, items, isSidebarOpen, noteAccessMode, noteOwnerId, currentUserId]);
 
   // If 3 or fewer items, show all
   if (items.length <= 3) {
@@ -221,8 +222,8 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
   const noteUrn = `urn:uniffy:content:NOTE:${note.id}`;
   const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } = useBookmarkToggle(noteUrn);
 
-  // Sharing dialog
-  const { open: openSharingDialog } = useSharingDialog();
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
+  const { openFor: openAccessDialog } = useAccessPolicyDialog();
 
   // Track local edits separately from note title
   const [localTitle, setLocalTitle] = useState<string | null>(null);
@@ -264,7 +265,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
   };
 
   const handleShare = () => {
-    openSharingDialog(ContentType.NOTE, note.id, note.title || 'Untitled');
+    openAccessDialog(ContentType.NOTE, note.id, note.title || 'Untitled');
   };
 
   const handleTagClick = useCallback((tag: string) => {
@@ -294,7 +295,7 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
         {/* Left: Sidebar Toggle + Breadcrumb */}
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
           {/* Breadcrumb */}
-          <CollapsibleBreadcrumb items={breadcrumb} noteVisibility={note.visibility} />
+          <CollapsibleBreadcrumb items={breadcrumb} noteAccessMode={note.accessMode} noteOwnerId={note.ownerId} />
 
           {/* Save Status */}
           <div className="flex items-center gap-1.5 ml-2 md:ml-4 text-xs">
@@ -467,11 +468,11 @@ export function EditorHeader({ note, canEdit = true, canShare = false, isCanvas 
                   </>
                 )}
                 {/* Sharing info: show owner for shared notes (but not org-wide notes) */}
-                {note.ownerInfo && note.visibility !== VisibilityScope.ORGANIZATION && (
+                {note.accessMode !== AccessMode.OPEN_TO_ORG && note.ownerId && note.ownerId !== currentUserId && (
                   <>
                     <span>·</span>
                     <span className="text-blue-500">
-                      Shared by {note.ownerInfo.name}
+                      Shared with you
                     </span>
                   </>
                 )}

@@ -2,7 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { promptsApi } from '@/features/agents/api/promptsApi';
 import type { RootState } from '@/app/store';
 import type { PromptInfo } from '@uniffy/proto/agents/v1/prompts_pb';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -27,7 +27,8 @@ export const promptToPlain = (prompt: PromptInfo) => ({
     content: prompt.content,
     source: prompt.source,
     ownerId: prompt.ownerId,
-    visibility: prompt.visibility,
+    accessMode: prompt.accessMode,
+    baselineRole: prompt.baselineRole,
     createdBy: prompt.createdBy,
     createdAt: timestampToPlain(prompt.createdAt),
     updatedAt: timestampToPlain(prompt.updatedAt),
@@ -51,13 +52,13 @@ export const fetchPrompts = createAsyncThunk<
 
 export const createPrompt = createAsyncThunk<
     SerializedPrompt,
-    { displayName: string; description: string; content: string; visibility?: number },
+    { displayName: string; description: string; content: string; accessMode?: number; baselineRole?: number },
     { state: RootState; rejectValue: string }
 >('agentPrompts/createPrompt', async (params, { getState, rejectWithValue }) => {
     try {
         const state = getState();
         const organizationId = getOrganizationId(state);
-        const isPersonal = !params.visibility || params.visibility === VisibilityScope.PRIVATE;
+        const isPersonal = !params.accessMode || params.accessMode === AccessMode.OWNER_ONLY;
         const ownerId = isPersonal ? state.auth.user?.id : undefined;
         const response = await promptsApi.createPrompt({
             organizationId,
@@ -73,7 +74,7 @@ export const createPrompt = createAsyncThunk<
 
 export const updatePrompt = createAsyncThunk<
     SerializedPrompt,
-    { promptId: string; displayName?: string; description?: string; content?: string; name?: string; visibility?: number },
+    { promptId: string; displayName?: string; description?: string; content?: string; name?: string; accessMode?: number; baselineRole?: number },
     { state: RootState; rejectValue: string }
 >('agentPrompts/updatePrompt', async (params, { getState, rejectWithValue }) => {
     try {

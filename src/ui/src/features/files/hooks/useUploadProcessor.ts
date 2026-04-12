@@ -22,7 +22,6 @@ import {
 } from '@/features/files/store/uploadSlice';
 import { setFile } from '@/features/files/store/filesSlice';
 import type { UploadItem } from '@/features/files/store/uploadSlice';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Process a single file upload using Web Worker for chunking.
@@ -46,7 +45,6 @@ async function processUpload(
             mimeType: item.mimeType,
             totalSize: BigInt(item.totalSize),
             folderId: item.folderId,
-            visibility: item.visibility ?? VisibilityScope.PRIVATE,
         });
         console.log('[Upload] Initiated:', initResponse);
     } catch (error) {
@@ -124,7 +122,9 @@ async function processUpload(
             urn: protoFile.urn,
             organizationId: protoFile.organizationId,
             ownerId: protoFile.ownerId,
-            visibility: protoFile.visibility,
+            accessMode: protoFile.accessMode,
+            baselineRole: protoFile.baselineRole ?? null,
+            userRole: protoFile.userRole,
             filename: protoFile.filename,
             originalFilename: protoFile.originalFilename,
             mimeType: protoFile.mimeType,
@@ -139,7 +139,6 @@ async function processUpload(
             updatedAt: serializeTimestamp(protoFile.updatedAt),
             deletedAt: serializeTimestamp(protoFile.deletedAt),
             groupIds: [...protoFile.groupIds],
-            userPermission: protoFile.userPermission,
             ownerInfo: protoFile.ownerInfo ? {
                 id: protoFile.ownerInfo.id,
                 name: protoFile.ownerInfo.name,

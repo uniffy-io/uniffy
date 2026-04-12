@@ -4,5 +4,7 @@ export { StatusesSection } from "./StatusesSection";
 export { CustomFieldsSection } from "./CustomFieldsSection";
 export { TaskTypesSection } from "./TaskTypesSection";
 export { SprintsSection } from "./SprintsSection";
+export { MembersSection } from "./MembersSection";
+export { AuditLogSection } from "./AuditLogSection";
 export { DangerZoneSection } from "./DangerZoneSection";
 export { TypeFieldSchemasSection } from "./TypeFieldSchemasSection";

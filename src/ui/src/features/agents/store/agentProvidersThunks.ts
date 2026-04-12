@@ -32,7 +32,8 @@ export const providerKeyToPlain = (key: ProviderKeyInfo) => ({
     createdAt: timestampToPlain(key.createdAt),
     updatedAt: timestampToPlain(key.updatedAt),
     createdBy: key.createdBy,
-    visibility: key.visibility,
+    accessMode: key.accessMode,
+    baselineRole: key.baselineRole,
 });
 
 export type SerializedProviderKey = ReturnType<typeof providerKeyToPlain>;
@@ -65,7 +66,7 @@ export const fetchProviderKeys = createAsyncThunk<
 
 export const addProviderKey = createAsyncThunk<
     SerializedProviderKey,
-    { provider: string; credentialType: CredentialType; label: string; credential: string; visibility?: number },
+    { provider: string; credentialType: CredentialType; label: string; credential: string; accessMode?: number; baselineRole?: number },
     { state: RootState; rejectValue: string }
 >('agentProviders/addProviderKey', async (params, { getState, rejectWithValue }) => {
     try {

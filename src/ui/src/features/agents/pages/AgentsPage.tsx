@@ -4,7 +4,6 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AgentsLayout } from "@/features/agents/components/layout/AgentsLayout";
-import { SharingDialog } from "@/features/sharing";
 import {
   setActiveTab,
   setSelectedAgent,
@@ -68,7 +67,6 @@ export function AgentsPage() {
     <>
       <AppHeader />
       <AgentsLayout />
-      <SharingDialog />
     </>
   );
 }

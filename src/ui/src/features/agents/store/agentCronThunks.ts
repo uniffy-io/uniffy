@@ -37,7 +37,8 @@ export const cronTaskToPlain = (task: CronTaskInfo) => ({
     runCount: task.runCount,
     consecutiveFailures: task.consecutiveFailures,
     maxConsecutiveFailures: task.maxConsecutiveFailures,
-    visibility: task.visibility,
+    accessMode: task.accessMode,
+    baselineRole: task.baselineRole,
     createdAt: timestampToPlain(task.createdAt),
     updatedAt: timestampToPlain(task.updatedAt),
     agentName: task.agentName || "",
@@ -89,7 +90,8 @@ export const createCronTask = createAsyncThunk<
         cronExpression: string;
         timezone?: string;
         description?: string;
-        visibility?: number;
+        accessMode?: number;
+        baselineRole?: number;
     },
     { state: RootState; rejectValue: string }
 >('agentCron/createCronTask', async (params, { getState, rejectWithValue }) => {
@@ -103,7 +105,8 @@ export const createCronTask = createAsyncThunk<
             cronExpression: params.cronExpression,
             timezone: params.timezone,
             description: params.description,
-            visibility: params.visibility,
+            accessMode: params.accessMode,
+            baselineRole: params.baselineRole,
         });
         if (!response.task) throw new Error('No task returned');
         return cronTaskToPlain(response.task);

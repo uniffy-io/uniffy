@@ -9,8 +9,9 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { notesApi } from '@/features/notes/api/notesApi';
 import type { RootState } from '@/app/store';
 import type { Note } from '@uniffy/proto/notes/v1/notes_pb';
-import { NodeType, type VisibilityScope } from '@uniffy/proto/notes/v1/notes_pb';
-import { organizeNotesByVisibility, type OrganizedNotes } from '@/features/notes/utils/notesTreeUtils';
+import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
+import type { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
+import { organizeNotesBySection, type OrganizedNotes } from '@/features/notes/utils/notesTreeUtils';
 import {
     getCachedNotes,
     setCachedNotes,
@@ -39,7 +40,9 @@ const noteToPlain = (note: Note) => ({
     id: note.id,
     organizationId: note.organizationId,
     ownerId: note.ownerId,
-    visibility: note.visibility,
+    accessMode: note.accessMode,
+    baselineRole: note.baselineRole ?? null,
+    userRole: note.userRole,
     nodeType: note.nodeType,
     title: note.title,
     content: note.content,
@@ -62,29 +65,11 @@ const noteToPlain = (note: Note) => ({
         seconds: typeof note.deletedAt.seconds === 'bigint' ? Number(note.deletedAt.seconds) : note.deletedAt.seconds,
         nanos: typeof note.deletedAt.nanos === 'bigint' ? Number(note.deletedAt.nanos) : note.deletedAt.nanos
     } : undefined,
-    groupIds: [...note.groupIds],
-    userPermission: note.userPermission,
     outgoingReferences: [...note.outgoingReferences],
-    // Custom icon (heroicon name or emoji)
     icon: note.icon ? {
         type: note.icon.iconType as 'icon' | 'emoji',
         value: note.icon.value,
     } : undefined,
-    // Owner info for notes shared with current user
-    ownerInfo: note.ownerInfo ? {
-        id: note.ownerInfo.id,
-        name: note.ownerInfo.name,
-        email: note.ownerInfo.email,
-    } : undefined,
-    // Users/groups this note is shared with (only for owner)
-    sharedWith: note.sharedWith.length > 0 ? note.sharedWith.map(target => ({
-        id: target.id,
-        type: target.type as 'user' | 'group',
-        name: target.name,
-        email: target.email || undefined,
-        memberCount: target.memberCount || undefined,
-        permissionLevel: target.permissionLevel,
-    })) : undefined,
 });
 
 /** Serialized note type for Redux storage (bigints converted to numbers) */
@@ -106,7 +91,7 @@ export const fetchNotes = createAsyncThunk<
         page?: number;
         pageSize?: number;
         parentId?: string;
-        visibility?: VisibilityScope;
+        accessMode?: AccessMode;
         personalOnly?: boolean;
         includeDeleted?: boolean;
         groupId?: string;
@@ -129,7 +114,7 @@ export const fetchNotes = createAsyncThunk<
             page: params?.page ?? 1,
             pageSize,
             parentId: params?.parentId,
-            visibility: params?.visibility,
+            accessMode: params?.accessMode,
             personalOnly: params?.personalOnly ?? false,
             includeDeleted: params?.includeDeleted ?? true,
             groupId: params?.groupId,
@@ -164,7 +149,7 @@ export const fetchNotes = createAsyncThunk<
                     page,
                     pageSize,
                     parentId: params?.parentId,
-                    visibility: params?.visibility,
+                    accessMode: params?.accessMode,
                     personalOnly: params?.personalOnly ?? false,
                     includeDeleted: params?.includeDeleted ?? true,
                     groupId: params?.groupId,
@@ -245,10 +230,10 @@ export const createNote = createAsyncThunk<
     {
         title: string;
         content?: string;
-        visibility?: VisibilityScope;
+        accessMode?: AccessMode;
+        baselineRole?: ContentRole;
         parentId?: string;
         tags?: string[];
-        groupIds?: string[];
         nodeType?: NodeType;
     },
     { state: RootState; rejectValue: string }
@@ -259,10 +244,10 @@ export const createNote = createAsyncThunk<
             organizationId,
             title: params.title,
             content: params.content ?? '',
-            visibility: params.visibility,
+            accessMode: params.accessMode,
+            baselineRole: params.baselineRole,
             parentId: params.parentId,
             tags: params.tags ?? [],
-            groupIds: params.groupIds ?? [],
             nodeType: params.nodeType ?? NodeType.NOTE,
         });
         if (!response.note) {
@@ -478,7 +463,7 @@ export const fetchBacklinks = createAsyncThunk<
  */
 export const moveNote = createAsyncThunk<
     SerializedNote,
-    { noteId: string; targetVisibility: VisibilityScope; targetGroupIds?: string[] },
+    { noteId: string; targetAccessMode: AccessMode; targetBaselineRole?: ContentRole },
     { state: RootState; rejectValue: string }
 >('notes/moveNote', async (params, { getState, rejectWithValue }) => {
     try {
@@ -486,8 +471,8 @@ export const moveNote = createAsyncThunk<
         const response = await notesApi.moveNote({
             noteId: params.noteId,
             organizationId,
-            targetVisibility: params.targetVisibility,
-            targetGroupIds: params.targetGroupIds ?? [],
+            targetAccessMode: params.targetAccessMode,
+            targetBaselineRole: params.targetBaselineRole,
         });
         if (!response.note) {
             return rejectWithValue('Failed to move note');
@@ -503,7 +488,7 @@ export const moveNote = createAsyncThunk<
  */
 export const copyNote = createAsyncThunk<
     SerializedNote,
-    { noteId: string; targetVisibility: VisibilityScope; targetGroupIds?: string[]; title?: string },
+    { noteId: string; targetAccessMode: AccessMode; targetBaselineRole?: ContentRole; title?: string },
     { state: RootState; rejectValue: string }
 >('notes/copyNote', async (params, { getState, rejectWithValue }) => {
     try {
@@ -511,8 +496,8 @@ export const copyNote = createAsyncThunk<
         const response = await notesApi.copyNote({
             noteId: params.noteId,
             organizationId,
-            targetVisibility: params.targetVisibility,
-            targetGroupIds: params.targetGroupIds ?? [],
+            targetAccessMode: params.targetAccessMode,
+            targetBaselineRole: params.targetBaselineRole,
             title: params.title,
         });
         if (!response.note) {
@@ -531,7 +516,6 @@ export const copyNote = createAsyncThunk<
 async function fetchAllNotesFromAPI(
     organizationId: string,
     currentUserId: string,
-    userGroups: Array<{ groupId: string; groupName: string }>
 ): Promise<{
     notes: SerializedNote[];
     tree: OrganizedNotes;
@@ -578,7 +562,7 @@ async function fetchAllNotesFromAPI(
     const serializedNotes = allNotes.map(noteToPlain);
 
     // Organize into tree structure
-    const tree = organizeNotesByVisibility(serializedNotes, currentUserId, userGroups);
+    const tree = organizeNotesBySection(serializedNotes, currentUserId);
 
     return {
         notes: serializedNotes,
@@ -606,7 +590,6 @@ export const initializeNotesData = createAsyncThunk<
         fromCache?: boolean;
     },
     {
-        userGroups?: Array<{ groupId: string; groupName: string }>;
         /** Force API fetch even if cache is fresh */
         forceRefresh?: boolean;
     } | void,
@@ -621,7 +604,6 @@ export const initializeNotesData = createAsyncThunk<
             return rejectWithValue('No organization selected');
         }
 
-        const userGroups = params?.userGroups ?? [];
         const forceRefresh = params?.forceRefresh ?? false;
 
         // Check if we already have notes loaded (prevent unnecessary fetches)
@@ -629,7 +611,7 @@ export const initializeNotesData = createAsyncThunk<
         if (existingNotesCount > 0 && !forceRefresh) {
             // Notes already loaded, just reorganize tree if needed
             const existingNotes = Object.values(state.notes.notes);
-            const tree = organizeNotesByVisibility(existingNotes, currentUserId, userGroups);
+            const tree = organizeNotesBySection(existingNotes, currentUserId);
             return {
                 notes: existingNotes,
                 tree,
@@ -652,7 +634,7 @@ export const initializeNotesData = createAsyncThunk<
             if (cached) {
                 // Start background revalidation (fire and forget)
                 // This runs regardless of cache freshness - ensures shared notes appear quickly
-                fetchAllNotesFromAPI(organizationId, currentUserId, userGroups)
+                fetchAllNotesFromAPI(organizationId, currentUserId)
                     .then((freshData) => {
                         // Update cache
                         setCachedNotes(
@@ -683,7 +665,7 @@ export const initializeNotesData = createAsyncThunk<
         }
 
         // No cache - fetch from API with deduplication
-        initializeRequestPromise = fetchAllNotesFromAPI(organizationId, currentUserId, userGroups);
+        initializeRequestPromise = fetchAllNotesFromAPI(organizationId, currentUserId);
 
         try {
             const result = await initializeRequestPromise;

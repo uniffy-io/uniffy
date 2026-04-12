@@ -40,7 +40,6 @@ export {
     setError,
     clearError,
     setSearchQuery,
-    setVisibilityFilter,
     setSortBy,
     setSortOrder,
     setShowDeleted,
@@ -52,7 +51,6 @@ export {
     setTree,
     setPersonalNodes,
     setSharedNodes,
-    setGroupSections,
     setOrganizationNodes,
     setTrashNodes,
     addNodeToSection,
@@ -171,6 +169,6 @@ export {
     clearTreeState,
 } from '@/features/notes/utils/treeStateStorage';
 
-export type { TreeNode, GroupTreeSection } from '@/features/notes/store/notesTreeSlice';
+export type { TreeNode } from '@/features/notes/store/notesTreeSlice';
 export type { EditorMode, MetadataPanelTab } from '@/features/notes/store/editorSlice';
 export type { GraphNode, GraphLink, GraphData } from '@/features/notes/utils/notesGraphUtils';

@@ -39,7 +39,8 @@ import {
     setSelectedNode,
 } from '@/features/notes/store/notesTreeSlice';
 import type { TreeNode } from '@/features/notes/store/notesTreeSlice';
-import { VisibilityScope, NodeType } from '@uniffy/proto/notes/v1/notes_pb';
+import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useBookmarks } from '@/features/bookmarks';
 import { cn } from '@/shared/utils/cn';
@@ -57,14 +58,14 @@ interface SectionConfig {
     id: 'bookmarked' | 'personal' | 'shared' | 'organization' | 'trash';
     name: string;
     icon: typeof LockSimple;
-    scope?: VisibilityScope;
+    scope?: number;
 }
 
 const SECTIONS: SectionConfig[] = [
     { id: 'bookmarked', name: 'Bookmarks', icon: BookmarkSimpleIcon },
-    { id: 'personal', name: 'Personal Space', icon: LockSimple, scope: VisibilityScope.PRIVATE },
+    { id: 'personal', name: 'Personal Space', icon: LockSimple, scope: AccessMode.OWNER_ONLY },
     { id: 'shared', name: 'Shared With Me', icon: UsersThree },
-    { id: 'organization', name: 'Organization', icon: Buildings, scope: VisibilityScope.ORGANIZATION },
+    { id: 'organization', name: 'Organization', icon: Buildings, scope: AccessMode.OPEN_TO_ORG },
 ];
 
 /**
@@ -111,7 +112,6 @@ export function NotesSidebar() {
             ...tree.personal,
             ...tree.shared,
             ...tree.organization,
-            ...tree.groups.flatMap(g => g.nodes),
         ];
 
         const bookmarkedNodes: TreeNode[] = bookmarkedNoteIds
@@ -119,7 +119,7 @@ export function NotesSidebar() {
             .filter((node): node is TreeNode => node !== null);
 
         dispatch(setBookmarkedNodes(bookmarkedNodes));
-    }, [bookmarkedUrns, tree.personal, tree.shared, tree.organization, tree.groups, dispatch]);
+    }, [bookmarkedUrns, tree.personal, tree.shared, tree.organization, dispatch]);
 
     // Local UI state
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -129,11 +129,9 @@ export function NotesSidebar() {
     const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null);
     const [pendingOrgMove, setPendingOrgMove] = useState<{
         noteId: string;
-        targetVisibility: VisibilityScope;
+        targetAccessMode: number;
         targetFolderId: string | null;
     } | null>(null);
-
-    // --- Helpers ---
 
     const isExpanded = useCallback(
         (id: string) => expandedNodes.includes(id),
@@ -155,19 +153,15 @@ export function NotesSidebar() {
     );
 
     const findNodeVisibility = useCallback(
-        (nodeId: string): VisibilityScope => {
-            if (findNodeRecursively(tree.personal, nodeId)) return VisibilityScope.PRIVATE;
-            if (findNodeRecursively(tree.organization, nodeId)) return VisibilityScope.ORGANIZATION;
-            if (findNodeRecursively(tree.shared, nodeId)) return VisibilityScope.PRIVATE;
-
-            for (const group of tree.groups) {
-                if (findNodeRecursively(group.nodes, nodeId)) return VisibilityScope.GROUP;
-            }
+        (nodeId: string): number => {
+            if (findNodeRecursively(tree.personal, nodeId)) return AccessMode.OWNER_ONLY;
+            if (findNodeRecursively(tree.organization, nodeId)) return AccessMode.OPEN_TO_ORG;
+            if (findNodeRecursively(tree.shared, nodeId)) return AccessMode.OWNER_ONLY;
 
             const inBookmarked = findNodeRecursively(tree.bookmarked, nodeId);
-            if (inBookmarked) return inBookmarked.visibility || VisibilityScope.PRIVATE;
+            if (inBookmarked) return inBookmarked.accessMode || AccessMode.OWNER_ONLY;
 
-            return VisibilityScope.PRIVATE;
+            return AccessMode.OWNER_ONLY;
         },
         [tree, findNodeRecursively]
     );
@@ -185,8 +179,6 @@ export function NotesSidebar() {
         },
         []
     );
-
-    // --- Handlers ---
 
     const handleToggle = useCallback(
         (id: string) => { dispatch(toggleNodeExpanded(id)); },
@@ -208,7 +200,7 @@ export function NotesSidebar() {
     );
 
     const handleNewNote = useCallback(
-        async (visibility: VisibilityScope = VisibilityScope.PRIVATE) => {
+        async (visibility: number = AccessMode.OWNER_ONLY) => {
             try {
                 const result = await dispatch(
                     createNote({
@@ -228,7 +220,7 @@ export function NotesSidebar() {
     );
 
     const handleNewCanvas = useCallback(
-        async (visibility: VisibilityScope = VisibilityScope.PRIVATE) => {
+        async (visibility: number = AccessMode.OWNER_ONLY) => {
             try {
                 const { createEmptyCanvas, serializeCanvas } = await import('@/features/notes/canvas/types');
                 const result = await dispatch(
@@ -249,7 +241,7 @@ export function NotesSidebar() {
     );
 
     const handleNewFolder = useCallback(
-        async (visibility: VisibilityScope = VisibilityScope.PRIVATE, parentId?: string) => {
+        async (visibility: number = AccessMode.OWNER_ONLY, parentId?: string) => {
             try {
                 const result = await dispatch(
                     createNote({
@@ -356,8 +348,7 @@ export function NotesSidebar() {
         async (noteId: string) => {
             const visibility = findNodeVisibility(noteId);
             const allNodes = [
-                ...tree.personal, ...tree.shared, ...tree.organization,
-                ...tree.groups.flatMap(g => g.nodes), ...tree.bookmarked,
+                ...tree.personal, ...tree.shared, ...tree.organization, ...tree.bookmarked,
             ];
             const node = findNodeRecursively(allNodes, noteId);
             const title = node ? `Copy of ${node.title}` : 'Copy';
@@ -365,7 +356,7 @@ export function NotesSidebar() {
             try {
                 const result = await dispatch(copyNote({
                     noteId,
-                    targetVisibility: visibility,
+                    targetAccessMode: visibility,
                     title,
                 })).unwrap();
                 dispatch(initializeNotesData({ forceRefresh: true }));
@@ -381,8 +372,7 @@ export function NotesSidebar() {
         (nodeId: string) => {
             const visibility = findNodeVisibility(nodeId);
             const allNodes = [
-                ...tree.personal, ...tree.shared, ...tree.organization,
-                ...tree.groups.flatMap(g => g.nodes), ...tree.bookmarked,
+                ...tree.personal, ...tree.shared, ...tree.organization, ...tree.bookmarked,
             ];
             const node = findNodeRecursively(allNodes, nodeId);
             const parentId = findNodeParentId(
@@ -393,14 +383,12 @@ export function NotesSidebar() {
             setMoveTarget({
                 noteId: nodeId,
                 noteTitle: node?.title ?? 'Note',
-                currentVisibility: visibility,
+                currentAccessMode: visibility,
                 currentParentId: parentId,
             });
         },
         [findNodeVisibility, findNodeRecursively, findNodeParentId, tree]
     );
-
-    // --- Drag & Drop ---
 
     const handleDrop = useCallback(
         async (targetFolderId: string, droppedNodeId: string) => {
@@ -409,15 +397,15 @@ export function NotesSidebar() {
             const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
             const targetFolderVisibility = findNodeVisibility(targetFolderId);
 
-            if (targetFolderVisibility === VisibilityScope.ORGANIZATION &&
-                droppedNodeVisibility !== VisibilityScope.ORGANIZATION) {
-                setPendingOrgMove({ noteId: droppedNodeId, targetVisibility: targetFolderVisibility, targetFolderId });
+            if (targetFolderVisibility === AccessMode.OPEN_TO_ORG &&
+                droppedNodeVisibility !== AccessMode.OPEN_TO_ORG) {
+                setPendingOrgMove({ noteId: droppedNodeId, targetAccessMode: targetFolderVisibility, targetFolderId });
                 return;
             }
 
             try {
                 if (droppedNodeVisibility !== targetFolderVisibility) {
-                    await dispatch(moveNote({ noteId: droppedNodeId, targetVisibility: targetFolderVisibility })).unwrap();
+                    await dispatch(moveNote({ noteId: droppedNodeId, targetAccessMode: targetFolderVisibility })).unwrap();
                 }
                 await dispatch(updateNote({ noteId: droppedNodeId, parentId: targetFolderId })).unwrap();
                 dispatch(initializeNotesData({ forceRefresh: true }));
@@ -430,20 +418,20 @@ export function NotesSidebar() {
     );
 
     const handleDropOnSection = useCallback(
-        async (targetVisibility: VisibilityScope, droppedNodeId: string) => {
+        async (targetAccessMode: number, droppedNodeId: string) => {
             if (!organizationId) return;
 
             const droppedNodeVisibility = findNodeVisibility(droppedNodeId);
 
-            if (targetVisibility === VisibilityScope.ORGANIZATION &&
-                droppedNodeVisibility !== VisibilityScope.ORGANIZATION) {
-                setPendingOrgMove({ noteId: droppedNodeId, targetVisibility, targetFolderId: null });
+            if (targetAccessMode === AccessMode.OPEN_TO_ORG &&
+                droppedNodeVisibility !== AccessMode.OPEN_TO_ORG) {
+                setPendingOrgMove({ noteId: droppedNodeId, targetAccessMode, targetFolderId: null });
                 return;
             }
 
             try {
-                if (droppedNodeVisibility !== targetVisibility) {
-                    await dispatch(moveNote({ noteId: droppedNodeId, targetVisibility })).unwrap();
+                if (droppedNodeVisibility !== targetAccessMode) {
+                    await dispatch(moveNote({ noteId: droppedNodeId, targetAccessMode })).unwrap();
                 }
                 await dispatch(updateNote({ noteId: droppedNodeId, parentId: '' })).unwrap();
                 dispatch(initializeNotesData({ forceRefresh: true }));
@@ -457,10 +445,10 @@ export function NotesSidebar() {
 
     const handleOrgMoveConfirm = useCallback(async () => {
         if (!pendingOrgMove || !organizationId) return;
-        const { noteId, targetVisibility, targetFolderId } = pendingOrgMove;
+        const { noteId, targetAccessMode, targetFolderId } = pendingOrgMove;
 
         try {
-            await dispatch(moveNote({ noteId, targetVisibility })).unwrap();
+            await dispatch(moveNote({ noteId, targetAccessMode })).unwrap();
             await dispatch(updateNote({ noteId, parentId: targetFolderId ?? '' })).unwrap();
             dispatch(initializeNotesData({ forceRefresh: true }));
         } catch (err) {
@@ -470,8 +458,6 @@ export function NotesSidebar() {
             setPendingOrgMove(null);
         }
     }, [pendingOrgMove, organizationId, dispatch]);
-
-    // --- Menu ---
 
     const handleOpenMenu = useCallback(
         (nodeId: string, nodeType: 'note' | 'folder' | 'canvas', position: { x: number; y: number }) => {
@@ -491,8 +477,6 @@ export function NotesSidebar() {
     const handleMenuMove = useCallback((nodeId: string) => {
         handleOpenMoveDialog(nodeId);
     }, [handleOpenMoveDialog]);
-
-    // --- Memoized grouped props for TreeNodeItem ---
 
     const treeActions = useMemo(() => ({
         onToggle: handleToggle,
@@ -522,8 +506,6 @@ export function NotesSidebar() {
     const handleRefresh = useCallback(() => {
         dispatch(initializeNotesData({ forceRefresh: true }));
     }, [dispatch]);
-
-    // --- Section Renderers ---
 
     const renderSection = (config: SectionConfig) => {
         const nodes = tree[config.id];
@@ -605,60 +587,6 @@ export function NotesSidebar() {
         );
     };
 
-    const renderGroups = () => {
-        if (tree.groups.length === 0) return null;
-
-        return (
-            <div className="mt-2 pt-2 border-t border-border">
-                <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Groups
-                </p>
-                {tree.groups.map((group) => {
-                    const groupExpanded = isExpanded(`group-${group.groupId}`);
-
-                    return (
-                        <div key={group.groupId}>
-                            <button
-                                onClick={() => handleToggle(`group-${group.groupId}`)}
-                                className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group"
-                            >
-                                {groupExpanded ? (
-                                    <CaretDown size={16} weight="bold" className="text-muted-foreground" />
-                                ) : (
-                                    <CaretRight size={16} weight="bold" className="text-muted-foreground" />
-                                )}
-                                <UsersThree size={16} weight="duotone" className="text-muted-foreground" />
-                                <span className="flex-1">{group.groupName}</span>
-                            </button>
-
-                            {groupExpanded && group.nodes.length > 0 && (
-                                <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
-                                    {group.nodes.map((node) => (
-                                        <TreeNodeItem
-                                            key={node.id}
-                                            node={node}
-                                            isExpanded={isExpanded(node.id)}
-                                            isSelected={currentNoteId === node.id}
-                                            actions={treeActions}
-                                            drag={treeDrag}
-                                            editing={treeEditing}
-                                            isNodeExpanded={isExpanded}
-                                            isNodeSelected={isNodeSelected}
-                                            onOpenMenu={handleOpenMenu}
-                                            onCreateNote={handleCreateNoteInFolder}
-                                            onCreateCanvas={handleCreateCanvasInFolder}
-                                            onCreateFolder={handleCreateSubfolder}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        );
-    };
-
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
@@ -702,7 +630,6 @@ export function NotesSidebar() {
                     ) : (
                         <>
                             {SECTIONS.map(renderSection)}
-                            {renderGroups()}
                         </>
                     )}
                     <TrashSection

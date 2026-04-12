@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.users.avatars import get_avatar_url
 
 
@@ -83,7 +84,8 @@ class UserSearchIndexer:
             title=user.full_name or user.username,
             entity_type="user",
             url_path=url_path,
-            visibility="ORGANIZATION",  # Users are visible to org members
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
             owner_id=user.id,
             keywords=keywords,
             description=user.email,

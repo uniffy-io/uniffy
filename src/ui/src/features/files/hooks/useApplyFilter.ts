@@ -9,7 +9,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '@/app/hooks';
 import {
     setSearchQuery,
-    setVisibilityFilter,
     setSortBy,
     setSortOrder,
     setFolderId,
@@ -17,7 +16,6 @@ import {
     clearActiveFilter,
 } from '@/features/files/store/filesSlice';
 import type { SerializedSavedFilter, SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 
 /**
  * Hook for applying a saved filter to the files list.
@@ -75,13 +73,6 @@ export function useApplyFilter() {
                 criteria: filter.criteria,
             }));
 
-            // Apply visibility filter if specified
-            if (filter.criteria.visibility !== undefined) {
-                dispatch(setVisibilityFilter(filter.criteria.visibility));
-            } else {
-                dispatch(setVisibilityFilter('all'));
-            }
-
             // Apply sort settings
             if (filter.sortBy) {
                 const sortBy = filter.sortBy as 'filename' | 'updated_at' | 'created_at' | 'size_bytes';
@@ -104,12 +95,6 @@ export function useApplyFilter() {
             const searchQuery = buildSearchQuery(criteria);
             dispatch(setSearchQuery(searchQuery));
 
-            if (criteria.visibility !== undefined) {
-                dispatch(setVisibilityFilter(criteria.visibility));
-            } else {
-                dispatch(setVisibilityFilter('all'));
-            }
-
             if (options?.sortBy) {
                 const sortBy = options.sortBy as 'filename' | 'updated_at' | 'created_at' | 'size_bytes';
                 dispatch(setSortBy(sortBy));
@@ -129,7 +114,6 @@ export function useApplyFilter() {
     const clearFilters = useCallback(() => {
         dispatch(setSearchQuery(''));
         dispatch(clearActiveFilter());
-        dispatch(setVisibilityFilter('all'));
         dispatch(setSortBy('updated_at'));
         dispatch(setSortOrder('desc'));
         dispatch(setFolderId(null));
@@ -159,20 +143,3 @@ function formatBytes(bytes: number): string {
     return `${bytes}b`;
 }
 
-/**
- * Parse a visibility scope enum to display string.
- */
-export function getVisibilityLabel(visibility: VisibilityScope | undefined): string {
-    switch (visibility) {
-        case VisibilityScope.PRIVATE:
-            return 'Private';
-        case VisibilityScope.GROUP:
-            return 'Group';
-        case VisibilityScope.ORGANIZATION:
-            return 'Organization';
-        case VisibilityScope.PUBLIC:
-            return 'Public';
-        default:
-            return 'All';
-    }
-}

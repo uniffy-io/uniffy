@@ -6,7 +6,6 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
 import {
     fetchFiles,
     fetchFile,
@@ -123,7 +122,6 @@ interface FilesState {
     // Filters
     filters: {
         searchQuery: string;
-        visibility: VisibilityScope | 'all';
         sortBy: 'filename' | 'updated_at' | 'created_at' | 'size_bytes';
         sortOrder: 'asc' | 'desc';
         showDeleted: boolean;
@@ -178,7 +176,6 @@ const initialState: FilesState = {
     error: null,
     filters: {
         searchQuery: '',
-        visibility: 'all',
         sortBy: persistedViewSettings.sortBy,
         sortOrder: persistedViewSettings.sortOrder,
         showDeleted: false,
@@ -367,10 +364,6 @@ export const filesSlice = createSlice({
         // Filters
         setSearchQuery: (state, action: PayloadAction<string>) => {
             state.filters.searchQuery = action.payload;
-        },
-
-        setVisibilityFilter: (state, action: PayloadAction<VisibilityScope | 'all'>) => {
-            state.filters.visibility = action.payload;
         },
 
         setSortBy: (state, action: PayloadAction<'filename' | 'updated_at' | 'created_at' | 'size_bytes'>) => {
@@ -594,7 +587,6 @@ export const {
     setError,
     clearError,
     setSearchQuery,
-    setVisibilityFilter,
     setSortBy,
     setSortOrder,
     setShowDeleted,

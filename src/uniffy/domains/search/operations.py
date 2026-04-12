@@ -20,7 +20,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import SearchIndexer
-from uniffy.core.types import ContentType
+from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.search.queries import SearchResult, execute_search, get_documents_by_urns
 
 
@@ -122,8 +122,8 @@ class SearchOperations:
         entity_type: str,
         title: str,
         url_path: str,
-        access_mode: str,
-        baseline_role: str | None,
+        access_mode: AccessMode,
+        baseline_role: ContentRole | None,
         owner_id: UUID,
         keywords: str | None = None,
         description: str | None = None,

@@ -43,8 +43,9 @@ import {
 } from "@/features/agents/store/agentProvidersThunks";
 import type { SerializedProviderKey } from "@/features/agents/store/agentProvidersThunks";
 import { CredentialType } from "@uniffy/proto/agents/v1/providers_pb";
-import { ContentType, VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
-import { ShareButton } from "@/features/sharing";
+import { ContentType, AccessMode } from "@uniffy/proto/common/v1/common_pb";
+import { useAccessPolicyDialog } from "@/features/permissions";
+import { accessModeIcon } from "@/shared/utils/contentRoles";
 
 const PROVIDER_OPTIONS = [
     { value: "anthropic", label: "Anthropic" },
@@ -69,11 +70,6 @@ const SIDEBAR_SECTIONS: KeySectionConfig[] = [
     { id: "organization", name: "Organization", icon: Buildings },
 ];
 
-const VISIBILITY_ICON: Record<number, React.ElementType> = {
-    [VisibilityScope.PRIVATE]: LockSimple,
-    [VisibilityScope.GROUP]: UsersThree,
-    [VisibilityScope.ORGANIZATION]: Buildings,
-};
 
 function protoTimestampToDateStr(ts?: { seconds: number; nanos: number }): string | undefined {
     if (!ts) return undefined;
@@ -166,7 +162,7 @@ function AddKeyForm({ onSubmit }: { onSubmit: () => void }) {
     );
     const [label, setLabel] = useState("");
     const [credential, setCredential] = useState("");
-    const [visibility, setVisibility] = useState<number>(VisibilityScope.ORGANIZATION);
+    const [accessMode, setAccessMode] = useState<number>(AccessMode.OPEN_TO_ORG);
     const [submitting, setSubmitting] = useState(false);
 
     const canSubmit = provider && label.trim() && credential.trim() && !submitting;
@@ -183,7 +179,7 @@ function AddKeyForm({ onSubmit }: { onSubmit: () => void }) {
                     credentialType,
                     label: label.trim(),
                     credential: credential.trim(),
-                    visibility,
+                    accessMode,
                 }),
             ).unwrap();
             setLabel("");
@@ -224,16 +220,16 @@ function AddKeyForm({ onSubmit }: { onSubmit: () => void }) {
                 </label>
                 <div className="space-y-1.5">
                     {([
-                        { value: VisibilityScope.PRIVATE, label: "Private", desc: "Only you can use this key", icon: LockSimple },
-                        { value: VisibilityScope.ORGANIZATION, label: "Organization", desc: "All organization members", icon: Buildings },
+                        { value: AccessMode.OWNER_ONLY, label: "Private", desc: "Only you can use this key", icon: LockSimple },
+                        { value: AccessMode.OPEN_TO_ORG, label: "Organization", desc: "All organization members", icon: Buildings },
                     ] as const).map((opt) => {
                         const Icon = opt.icon;
-                        const isActive = visibility === opt.value;
+                        const isActive = accessMode === opt.value;
                         return (
                             <button
                                 key={opt.value}
                                 type="button"
-                                onClick={() => setVisibility(opt.value)}
+                                onClick={() => setAccessMode(opt.value)}
                                 className={cn(
                                     "w-full px-3 py-2 rounded-lg border text-left text-sm transition-colors flex items-center gap-3",
                                     isActive
@@ -289,6 +285,7 @@ function AddKeyForm({ onSubmit }: { onSubmit: () => void }) {
 
 export function ConfigView() {
     const dispatch = useAppDispatch();
+    const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
     const navigate = useNavigate();
     const { subId } = useParams<{ subId?: string }>();
     const { isOrgAdmin } = useAdminAccess();
@@ -322,7 +319,7 @@ export function ConfigView() {
             organization: [],
         };
         for (const key of providerKeys) {
-            if (key.visibility === VisibilityScope.ORGANIZATION) {
+            if (key.accessMode === AccessMode.OPEN_TO_ORG) {
                 result.organization.push(key);
             } else if (key.createdBy === currentUserId) {
                 result.personal.push(key);
@@ -465,7 +462,7 @@ export function ConfigView() {
                                 </button>
                                 {!isCollapsed && sectionKeys.map((key) => {
                                     const isSelected = key.id === selectedKeyId;
-                                    const VisIcon = VISIBILITY_ICON[key.visibility] || LockSimple;
+                                    const VisIcon = accessModeIcon(key.accessMode);
                                     return (
                                         <button
                                             key={key.id}
@@ -569,14 +566,20 @@ export function ConfigView() {
                                             />
                                         </button>
                                     )}
-                                    {selectedKey.visibility === VisibilityScope.PRIVATE &&
+                                    {selectedKey.accessMode === AccessMode.OWNER_ONLY &&
                                         selectedKey.createdBy === currentUserId && (
-                                        <ShareButton
-                                            contentType={ContentType.PROVIDER_KEY}
-                                            contentId={selectedKey.id}
-                                            contentTitle={selectedKey.label}
-                                            iconOnly
-                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openAccessPolicyDialog(
+                                                ContentType.PROVIDER_KEY,
+                                                selectedKey.id,
+                                                selectedKey.label,
+                                            )}
+                                            title="Share"
+                                        >
+                                            <UsersThree size={18} />
+                                        </Button>
                                     )}
                                     <Button
                                         variant="ghost"

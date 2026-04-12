@@ -17,8 +17,6 @@ export {
     getInitials,
     memberToSubject,
     groupToSubject,
-    shareTargetToSubject,
-    subjectToShareTarget,
     isUserSubject,
     isGroupSubject,
 } from '@/components/subject/utils';

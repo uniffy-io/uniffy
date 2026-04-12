@@ -21,7 +21,6 @@ export {
     useGroups,
     useGroupMembers,
     getContentTypeLabel,
-    getVisibilityScopeLabel,
     getOrgRoleLabel,
     isOrgAdmin,
     useDomainAdmins,

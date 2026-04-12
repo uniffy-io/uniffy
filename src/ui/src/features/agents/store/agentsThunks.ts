@@ -31,7 +31,8 @@ export const agentToPlain = (agent: AgentInfo) => ({
     themeColor: agent.themeColor,
     isDefault: agent.isDefault,
     enabledSkills: [...agent.enabledSkills],
-    visibility: agent.visibility,
+    accessMode: agent.accessMode,
+    baselineRole: agent.baselineRole,
     imageModel: agent.imageModel,
     promptId: agent.promptId || "",
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
@@ -44,14 +45,14 @@ export type SerializedAgent = ReturnType<typeof agentToPlain>;
 
 export const fetchAgents = createAsyncThunk<
     SerializedAgent[],
-    { visibility?: number; personalOnly?: boolean; groupId?: string } | void,
+    { accessMode?: number; personalOnly?: boolean; groupId?: string } | void,
     { state: RootState; rejectValue: string }
 >('agents/fetchAgents', async (params, { getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await agentsApi.listAgents({
             organizationId,
-            visibility: params?.visibility,
+            accessMode: params?.accessMode,
             personalOnly: params?.personalOnly,
             groupId: params?.groupId,
         });
@@ -67,7 +68,8 @@ export const createAgent = createAsyncThunk<
         name: string;
         primaryModel?: string;
         soulPrompt?: string;
-        visibility?: number;
+        accessMode?: number;
+        baselineRole?: number;
         groupIds?: string[];
         imageModel?: string;
         primaryProviderKeyId?: string;
@@ -83,7 +85,8 @@ export const createAgent = createAsyncThunk<
             name: params.name,
             primaryModel: params.primaryModel,
             soulPrompt: params.soulPrompt,
-            visibility: params.visibility,
+            accessMode: params.accessMode,
+            baselineRole: params.baselineRole,
             groupIds: params.groupIds ?? [],
             imageModel: params.imageModel,
             primaryProviderKeyId: params.primaryProviderKeyId,
@@ -109,7 +112,8 @@ export const updateAgent = createAsyncThunk<
         soulPrompt?: string;
         avatarEmoji?: string;
         isDefault?: boolean;
-        visibility?: number;
+        accessMode?: number;
+        baselineRole?: number;
         groupIds?: string[];
         imageModel?: string;
         primaryProviderKeyId?: string;
@@ -162,7 +166,8 @@ export const cloneAgent = createAsyncThunk<
             avatarEmoji: source.avatarEmoji,
             themeColor: source.themeColor,
             enabledSkills: source.enabledSkills,
-            visibility: source.visibility,
+            accessMode: source.accessMode,
+            baselineRole: source.baselineRole,
             imageModel: source.imageModel,
             primaryProviderKeyId: source.primaryProviderKeyId || undefined,
             imageProviderKeyId: source.imageProviderKeyId || undefined,

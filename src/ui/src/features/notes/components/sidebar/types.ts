@@ -33,7 +33,7 @@ export interface ActiveMenuState {
 export interface MoveTarget {
     noteId: string;
     noteTitle: string;
-    currentVisibility: number;
+    currentAccessMode: number;
     currentParentId: string | null;
 }
 

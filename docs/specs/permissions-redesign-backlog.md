@@ -406,7 +406,7 @@ Completed and set as the canonical reference. See the "REFERENCE IMPLEMENTATION"
 - [x] `src/uniffy/domains/projects/handlers.py` -- rewritten with `_parse_uuid` / `_map_domain_error` / `open_session`. Field / view / sprint handlers use `_require_manage` on the parent project.
 - [x] `src/uniffy/domains/projects/converters.py` -- `project_to_proto` / `task_to_proto` emit `access_mode` / `baseline_role` / `user_role`. `PROJECT` and `TASK` loaders registered at module level.
 
-### 1.5 Agents
+### 1.5 Agents - DONe
 
 - [ ] `src/uniffy/core/models/agents/agent.py` -- remove visibility
 - [ ] `src/uniffy/core/models/agents/provider_key.py` -- same
@@ -419,28 +419,28 @@ Completed and set as the canonical reference. See the "REFERENCE IMPLEMENTATION"
 - [ ] Same for handlers and converters in each sub-domain
 - [ ] `src/uniffy/domains/agents/tools/builtin/*.py` -- audit for `visibility` references (agent tools that pass visibility through)
 
-### 1.6 Rooms
+### 1.6 Rooms - DONe
 
 - [ ] `src/uniffy/core/models/rooms/room.py` -- remove visibility
 - [ ] `src/uniffy/domains/rooms/operations.py` -- update
 - [ ] `src/uniffy/domains/rooms/handlers.py` -- update
 - [ ] `src/uniffy/domains/rooms/converters.py` -- update
 
-### 1.7 Comments
+### 1.7 Comments - DONe
 
 - [ ] `src/uniffy/domains/comments/operations.py` -- audit for visibility/ContentPermission references; comments delegate to parent content access
 
-### 1.8 Attachments
+### 1.8 Attachments - DONe
 
 - [ ] `src/uniffy/domains/attachments/operations.py` -- audit; delegates to parent content
 
-### 1.9 Chat
+### 1.9 Chat - DONe
 
 - [ ] `src/uniffy/core/models/chat/channel.py` -- remove the `visibility` field entirely (unused; `channel_type` covers it)
 - [ ] `src/uniffy/domains/chat/channels/operations.py` -- audit for visibility references, remove them. ChatAccessChecker logic stays intact.
 - [ ] `src/uniffy/domains/chat/messages/operations.py` -- audit
 
-### 1.10 Organizations
+### 1.10 Organizations - DONe
 
 - [ ] `src/uniffy/domains/organizations/operations.py` -- update any permission_defaults creation paths to use new fields
 - [ ] `src/uniffy/domains/organizations/handlers.py` -- update

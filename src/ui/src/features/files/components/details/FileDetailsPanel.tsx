@@ -13,19 +13,12 @@ import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize } from '@/features/files/components/list/utils';
 import { formatProtoDateTime, formatMediaTime } from '@/shared/utils/dateFormatting';
 import { ThumbnailImage } from '@/features/files/components/list/ThumbnailImage';
-import {
-    useContentPermissions,
-    getPermissionLevelLabel,
-    isUserPermission,
-    isGroupPermission,
-} from '@/features/sharing';
-import { ContentType, VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import { useAccessPolicyDialog } from '@/features/permissions';
+import { accessModeLabel, accessModeDescription, accessModeIcon, roleCanManage } from '@/shared/utils/contentRoles';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import {
     Info,
     Camera,
-    Lock,
-    Globe,
-    Users,
     Calendar,
     HardDrive,
     ImageSquare,
@@ -36,30 +29,17 @@ import {
     Aperture,
     Timer,
     File as FileIcon,
-    CircleNotch,
     Waveform,
     SpeakerHigh,
+    Lock,
     X,
 } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';
 
 interface FileDetailsPanelProps {
     file: SerializedFile | null;
-}
-
-/** Get visibility label and icon */
-function getVisibilityInfo(visibility: VisibilityScope) {
-    switch (visibility) {
-        case VisibilityScope.PRIVATE:
-            return { label: 'Private', icon: Lock, className: 'text-muted-foreground' };
-        case VisibilityScope.GROUP:
-            return { label: 'Shared with groups', icon: Users, className: 'text-blue-500' };
-        case VisibilityScope.ORGANIZATION:
-            return { label: 'Organization', icon: Globe, className: 'text-green-500' };
-        default:
-            return { label: 'Unknown', icon: Lock, className: 'text-muted-foreground' };
-    }
 }
 
 /** Map common EXIF tag names to readable labels */
@@ -140,12 +120,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
     const { isMobileOrTablet } = useBreakpoint();
     const detailsPanelTab = useAppSelector((state) => state.files.detailsPanelTab);
     const currentUser = useAppSelector((state) => state.auth.user);
-
-    // Fetch permissions for the file (only when file exists)
-    const {
-        permissions,
-        loading: permissionsLoading,
-    } = useContentPermissions(ContentType.FILE, file?.id ?? '');
+    const { openFor: openAccessPolicy } = useAccessPolicyDialog();
 
     if (!file) {
         return (
@@ -156,15 +131,11 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
         );
     }
 
-    // Filter permissions to get users and groups
-    const userPermissions = permissions.filter(isUserPermission);
-    const groupPermissions = permissions.filter(isGroupPermission);
-
     const isOwner = currentUser && file.ownerId === currentUser.id;
     const ownerName = file.ownerInfo?.name || (isOwner ? (currentUser.fullName || currentUser.username || 'You') : 'Unknown');
     const ownerInitials = getInitials(ownerName);
-    const visibilityInfo = getVisibilityInfo(file.visibility);
-    const VisibilityIcon = visibilityInfo.icon;
+    const AccessModeIcon = accessModeIcon(file.accessMode);
+    const canManage = roleCanManage(file.userRole);
 
     const tabs: Array<{ id: DetailsPanelTab; label: string; icon: typeof Info }> = [
         { id: 'info', label: 'Info', icon: Info },
@@ -432,17 +403,15 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
 
     const renderPermissionsTab = () => (
         <div className="space-y-4">
-            {/* Visibility */}
+            {/* Access mode */}
             <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Visibility</label>
-                <div className={cn('flex items-center gap-2 p-2 rounded-md bg-muted/50', visibilityInfo.className)}>
-                    <VisibilityIcon size={16} weight="duotone" />
-                    <span className="text-sm">{visibilityInfo.label}</span>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Access mode</label>
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                    <AccessModeIcon size={16} weight="duotone" className="text-muted-foreground" />
+                    <span className="text-sm">{accessModeLabel(file.accessMode)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                    {file.visibility === VisibilityScope.PRIVATE && 'Only you can access this file'}
-                    {file.visibility === VisibilityScope.GROUP && 'Shared with specific groups'}
-                    {file.visibility === VisibilityScope.ORGANIZATION && 'Everyone in your organization can access'}
+                    {accessModeDescription(file.accessMode)}
                 </p>
             </div>
 
@@ -460,87 +429,21 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                 </div>
             </div>
 
-            {/* Shared with users */}
-            {permissionsLoading ? (
-                <div className="flex items-center justify-center py-4">
-                    <CircleNotch size={20} weight="bold" className="animate-spin text-muted-foreground" />
-                </div>
-            ) : userPermissions.length > 0 && (
-                <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-2">
-                        Shared with ({userPermissions.length})
-                    </label>
-                    <div className="space-y-2">
-                        {userPermissions.map((perm) => {
-                            const subject = perm.subject;
-                            if (!subject) return null;
-                            const initials = getInitials(subject.name || subject.email || 'U');
-                            const isCurrentUser = currentUser && subject.id === currentUser.id;
-                            return (
-                                <div
-                                    key={perm.id}
-                                    className="flex items-center justify-between p-2 rounded-md bg-muted/50"
-                                >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs text-white font-medium shrink-0">
-                                            {initials}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm truncate">
-                                                {subject.name || subject.email}
-                                                {isCurrentUser && <span className="text-muted-foreground ml-1">(you)</span>}
-                                            </p>
-                                            {subject.email && subject.name && (
-                                                <p className="text-xs text-muted-foreground truncate">{subject.email}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                                        {getPermissionLevelLabel(perm.level)}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Shared with groups */}
-            {!permissionsLoading && groupPermissions.length > 0 && (
-                <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-2">
-                        Groups ({groupPermissions.length})
-                    </label>
-                    <div className="space-y-2">
-                        {groupPermissions.map((perm) => {
-                            const subject = perm.subject;
-                            if (!subject) return null;
-                            return (
-                                <div
-                                    key={perm.id}
-                                    className="flex items-center justify-between p-2 rounded-md bg-muted/50"
-                                >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center shrink-0">
-                                            <Users size={14} weight="bold" className="text-white" />
-                                        </div>
-                                        <p className="text-sm truncate">{subject.name}</p>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                                        {getPermissionLevelLabel(perm.level)}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* No sharing info */}
-            {!permissionsLoading && userPermissions.length === 0 && groupPermissions.length === 0 && (
-                <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">Not shared with anyone</p>
-                </div>
+            {/* Manage access button */}
+            {canManage && (
+                <Button
+                    variant="outline"
+                    size="md"
+                    className="w-full"
+                    onClick={() => openAccessPolicy(
+                        ContentType.FILE,
+                        file.id,
+                        file.filename,
+                        file.userRole,
+                    )}
+                >
+                    Manage access
+                </Button>
             )}
         </div>
     );

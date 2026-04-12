@@ -6,8 +6,7 @@
  */
 
 import type { SerializedMemberInfo, SerializedGroupInfo } from '@/features/admin/store/adminSlice';
-import type { SerializedShareTarget } from '@/features/sharing/store/sharingSlice';
-import { SUBJECT_TYPE, type Subject, type SubjectTypeValue } from '@/components/subject/types';
+import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
 
 /**
  * Extract initials from a display name.
@@ -39,30 +38,6 @@ export function groupToSubject(g: SerializedGroupInfo): Subject {
         type: SUBJECT_TYPE.GROUP,
         name: g.name,
         memberCount: g.memberCount,
-    };
-}
-
-/** Convert a serialized share target to a Subject. */
-export function shareTargetToSubject(t: SerializedShareTarget): Subject {
-    return {
-        id: t.id,
-        type: t.type as SubjectTypeValue,
-        name: t.name,
-        email: t.email || undefined,
-        avatarUrl: t.avatarUrl || undefined,
-        memberCount: t.memberCount,
-    };
-}
-
-/** Convert a Subject back to a SerializedShareTarget for compatibility. */
-export function subjectToShareTarget(s: Subject): SerializedShareTarget {
-    return {
-        id: s.id,
-        type: s.type,
-        name: s.name,
-        email: s.email || '',
-        avatarUrl: s.avatarUrl || '',
-        memberCount: s.memberCount || 0,
     };
 }
 

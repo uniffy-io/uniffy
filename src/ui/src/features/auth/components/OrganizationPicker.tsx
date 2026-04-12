@@ -13,7 +13,7 @@ import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree as clearNotesTree } from "@/features/notes/store/notesTreeSlice";
 import { clearBookmarks } from "@/features/bookmarks";
 import { clearPresence } from "@/features/presence";
-import { clearSharing } from "@/features/sharing";
+import { clearPermissions } from "@/features/permissions";
 import { clearAdmin } from "@/features/admin";
 import {
     clearBlobCache,
@@ -181,7 +181,7 @@ export function OrganizationPicker() {
     // Clear other state
     dispatch(clearBookmarks());
     dispatch(clearPresence());
-    dispatch(clearSharing());
+    dispatch(clearPermissions());
     dispatch(clearAdmin());
     // Clear file blob cache
     clearBlobCache();

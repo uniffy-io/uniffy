@@ -30,7 +30,6 @@ export interface UploadItem {
 
     // Target location
     folderId?: string;
-    visibility?: number;
 
     // Error info
     error?: string;
@@ -333,10 +332,6 @@ export const uploadSlice = createSlice({
             state.totalQueuedSize = 0;
             state.totalUploadedSize = 0;
         },
-
-        // ─────────────────────────────────────────────────────────────
-        // Download actions
-        // ─────────────────────────────────────────────────────────────
 
         // Start a download (single or archive)
         startDownload: (state, action: PayloadAction<{ id: string; filename: string; fileCount: number }>) => {

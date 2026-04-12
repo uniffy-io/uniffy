@@ -22,6 +22,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.models.permissions.content_member_event import ContentMemberEvent
 from uniffy.core.types import (
     AccessMode,
     ContentMemberAction,
@@ -32,7 +33,6 @@ from uniffy.core.types import (
 
 if TYPE_CHECKING:
     from uniffy.core.models.login.organization_member import OrganizationRole
-    from uniffy.core.models.permissions.content_member_event import ContentMemberEvent
 
 
 async def record_member_added(

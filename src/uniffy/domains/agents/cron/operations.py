@@ -22,6 +22,7 @@ from uniffy.core.errors import (
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.valkey import get_queue
@@ -379,10 +380,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
 
         org_ops = OrganizationOperations(self.session)
         membership = await org_ops.require_org_member(admin_user_id, organization_id)
-        role_value = (
-            membership.role.value if hasattr(membership.role, "value") else str(membership.role)
-        )
-        if role_value not in ("ADMIN", "OWNER"):
+        if membership.role not in (OrganizationRole.ADMIN, OrganizationRole.OWNER):
             raise PermissionDeniedError("transfer_ownership", "AGENT_CRON_TASK")
 
         result = await self.session.execute(

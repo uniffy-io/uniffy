@@ -2,8 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import { CaretDown, CaretRight, WarningCircle } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { useMyPermission } from "@/features/sharing";
+import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { TOOL_SECTIONS } from "@/features/agents/config/toolCatalog";
 import type { ToolGroup, ToolCategorySection } from "@/features/agents/config/toolCatalog";
 import { updateAgent } from "@/features/agents/store/agentsThunks";
@@ -174,8 +175,8 @@ function CategorySection({
 
 export function ToolsTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
-    const { permission } = useMyPermission(ContentType.AGENT, agent.id);
-    const canEdit = permission?.canEdit ?? permission?.isOwner ?? true;
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const canEdit = roleCanEdit(myRole);
 
     const enabledTools = useMemo(
         () => new Set(agent.enabledTools),

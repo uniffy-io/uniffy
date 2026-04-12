@@ -354,6 +354,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
 
+        # Publish MEMBER_JOINED event to existing members
+        await self._publish_member_event(channel_id, user_id, joined=True)
+
         # Post a system message announcing the join
         await self._post_join_system_message(user_id, organization_id, channel)
 
@@ -426,6 +429,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
 
+        # Publish MEMBER_LEFT event to remaining members
+        await self._publish_member_event(channel_id, user_id, joined=False)
+
     async def add_members(
         self,
         user_id: UUID,
@@ -472,6 +478,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 )
             )
             await self.session.commit()
+
+            # Publish MEMBER_JOINED events for each added member
+            for m in added:
+                await self._publish_member_event(channel_id, m.user_id, joined=True)
 
             # Re-index search for private channels (shared_user_ids changed)
             if channel.channel_type != ChannelType.PUBLIC:
@@ -528,6 +538,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
             await self.session.commit()
 
+            # Publish MEMBER_LEFT events for each removed member
+            for rid in removable_ids:
+                await self._publish_member_event(channel_id, rid, joined=False)
+
             if channel.channel_type != ChannelType.PUBLIC:
                 try:
                     await self._index_for_search(channel)
@@ -561,6 +575,43 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         return await self.access.require_send(user_id, channel)
 
     # Internal helpers
+
+    async def _publish_member_event(
+        self,
+        channel_id: UUID,
+        member_user_id: UUID,
+        *,
+        joined: bool,
+    ) -> None:
+        """Publish a MEMBER_JOINED or MEMBER_LEFT event to channel members."""
+        try:
+            from uniffy.domains.chat.streaming.events import (
+                MEMBER_JOINED,
+                MEMBER_LEFT,
+                build_member_payload,
+            )
+            from uniffy.domains.chat.streaming.publisher import (
+                publish_channel_event_to_members,
+            )
+
+            user = await self.session.get(User, member_user_id)
+            display_name = user.full_name if user else ""
+
+            member_ids = await self._get_all_member_ids(channel_id)
+            await publish_channel_event_to_members(
+                member_ids,
+                MEMBER_JOINED if joined else MEMBER_LEFT,
+                build_member_payload(
+                    user_id=member_user_id,
+                    display_name=display_name,
+                    role="MEMBER",
+                ),
+                channel_id=channel_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                f"Failed to publish member event for channel {channel_id}: {exc}"
+            )
 
     async def _get_all_member_ids(self, channel_id: UUID) -> list[UUID]:
         """Get all member user IDs for a channel."""

@@ -25,8 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ShareButton, useMyPermission } from "@/features/sharing";
-import { ContentType, VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
+import { useAccessPolicyDialog, useMyContentRole } from "@/features/permissions";
+import { ContentType, AccessMode } from "@uniffy/proto/common/v1/common_pb";
+import { bucketForContent, accessModeIcon, roleCanManage } from "@/shared/utils/contentRoles";
 import {
     selectSelectedAgentId,
     selectAgentsPanel,
@@ -77,11 +78,6 @@ const SIDEBAR_SECTIONS: AgentSectionConfig[] = [
     { id: "organization", name: "Organization", icon: Buildings },
 ];
 
-const VISIBILITY_ICON: Record<number, React.ElementType> = {
-    [VisibilityScope.PRIVATE]: LockSimple,
-    [VisibilityScope.GROUP]: UsersThree,
-    [VisibilityScope.ORGANIZATION]: Buildings,
-};
 
 function PlaceholderPanel({ panelKey }: { panelKey: string }) {
     const Icon = PANEL_ICONS[panelKey];
@@ -112,7 +108,7 @@ export function AgentsView() {
     const currentUserId = useAppSelector((state) => state.auth.user?.id);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newAgentName, setNewAgentName] = useState("");
-    const [newAgentVisibility, setNewAgentVisibility] = useState<number>(VisibilityScope.PRIVATE);
+    const [newAgentAccessMode, setNewAgentAccessMode] = useState<number>(AccessMode.OWNER_ONLY);
     const [creating, setCreating] = useState(false);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
@@ -125,13 +121,12 @@ export function AgentsView() {
             organization: [],
         };
         for (const agent of agents) {
-            if (agent.visibility === VisibilityScope.ORGANIZATION) {
-                result.organization.push(agent);
-            } else if (agent.ownerId === currentUserId) {
-                result.personal.push(agent);
-            } else {
-                result.shared.push(agent);
-            }
+            const bucket = bucketForContent({
+                ownerId: agent.ownerId,
+                accessMode: agent.accessMode,
+                currentUserId: currentUserId ?? "",
+            });
+            result[bucket].push(agent);
         }
         return result;
     }, [agents, currentUserId]);
@@ -146,11 +141,9 @@ export function AgentsView() {
         [selectedAgentId, agentsMap]
     );
 
-    const { permission: selectedAgentPermission } = useMyPermission(
-        ContentType.AGENT,
-        selectedAgentId ?? null,
-    );
-    const canShareSelectedAgent = selectedAgentPermission?.canShare ?? selectedAgentPermission?.isOwner ?? false;
+    const selectedAgentRole = useMyContentRole(ContentType.AGENT, selectedAgentId ?? "");
+    const canShareSelectedAgent = roleCanManage(selectedAgentRole);
+    const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
 
     // No auto-select - URL drives selection. If no agent in URL, show empty state.
 
@@ -162,12 +155,12 @@ export function AgentsView() {
             const result = await dispatch(
                 createAgent({
                     name,
-                    visibility: newAgentVisibility,
+                    accessMode: newAgentAccessMode,
                 })
             ).unwrap();
             navigate(`/agents/agents/${result.id}`);
             setNewAgentName("");
-            setNewAgentVisibility(VisibilityScope.PRIVATE);
+            setNewAgentAccessMode(AccessMode.OWNER_ONLY);
             setShowCreateForm(false);
         } finally {
             setCreating(false);
@@ -181,10 +174,8 @@ export function AgentsView() {
     };
 
     const isPersonalAgent = selectedAgent?.ownerId === currentUserId
-        && selectedAgent?.visibility !== VisibilityScope.ORGANIZATION;
-    const canMoveToOrg = isPersonalAgent && (
-        selectedAgentPermission?.isOwner ?? false
-    );
+        && selectedAgent?.accessMode !== AccessMode.OPEN_TO_ORG;
+    const canMoveToOrg = isPersonalAgent && roleCanManage(selectedAgentRole);
 
     const [showMoveToOrgConfirm, setShowMoveToOrgConfirm] = useState(false);
     const [movingToOrg, setMovingToOrg] = useState(false);
@@ -195,7 +186,7 @@ export function AgentsView() {
         try {
             await dispatch(updateAgent({
                 agentId: selectedAgentId,
-                visibility: VisibilityScope.ORGANIZATION,
+                accessMode: AccessMode.OPEN_TO_ORG,
             })).unwrap();
             setShowMoveToOrgConfirm(false);
         } finally {
@@ -279,16 +270,16 @@ export function AgentsView() {
                         />
                         <div className="space-y-1">
                             {([
-                                { value: VisibilityScope.PRIVATE, label: "Private", desc: "Only you can use this agent" },
-                                { value: VisibilityScope.ORGANIZATION, label: "Organization", desc: "All members can use this agent" },
+                                { value: AccessMode.OWNER_ONLY, label: "Private", desc: "Only you can use this agent" },
+                                { value: AccessMode.OPEN_TO_ORG, label: "Organization", desc: "All members can use this agent" },
                             ] as const).map((opt) => (
                                 <button
                                     key={opt.value}
                                     type="button"
-                                    onClick={() => setNewAgentVisibility(opt.value)}
+                                    onClick={() => setNewAgentAccessMode(opt.value)}
                                     className={cn(
                                         "w-full px-2.5 py-1.5 rounded-lg border text-left text-xs transition-colors",
-                                        newAgentVisibility === opt.value
+                                        newAgentAccessMode === opt.value
                                             ? "bg-primary/10 border-primary text-foreground"
                                             : "bg-muted border-border text-muted-foreground hover:text-foreground"
                                     )}
@@ -329,7 +320,7 @@ export function AgentsView() {
                                 </button>
                                 {!isCollapsed && sectionAgents.map((agent) => {
                                     const isSelected = agent.id === selectedAgentId;
-                                    const VisIcon = VISIBILITY_ICON[agent.visibility] || LockSimple;
+                                    const VisIcon = accessModeIcon(agent.accessMode);
                                     return (
                                         <button
                                             key={agent.id}
@@ -413,12 +404,18 @@ export function AgentsView() {
                                     </Button>
                                 )}
                                 {canShareSelectedAgent && (
-                                    <ShareButton
-                                        contentType={ContentType.AGENT}
-                                        contentId={selectedAgent.id}
-                                        contentTitle={selectedAgent.name}
-                                        iconOnly
-                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => openAccessPolicyDialog(
+                                            ContentType.AGENT,
+                                            selectedAgent.id,
+                                            selectedAgent.name,
+                                        )}
+                                        title="Share"
+                                    >
+                                        <UsersThree size={18} />
+                                    </Button>
                                 )}
                             </div>
                         </div>

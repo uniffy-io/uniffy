@@ -14,7 +14,7 @@ expression at query time.
 
 from uuid import UUID
 
-from uniffy.core.types import ContentType
+from uniffy.core.types import AccessMode, ContentRole, ContentType
 
 
 class SearchIndexer:
@@ -48,8 +48,8 @@ class SearchIndexer:
         entity_type: str,
         url_path: str,
         owner_id: UUID,
-        access_mode: str,
-        baseline_role: str | None,
+        access_mode: AccessMode,
+        baseline_role: ContentRole | None,
         keywords: str | None = None,
         description: str | None = None,
         shared_user_ids: list[UUID] | None = None,
@@ -76,10 +76,9 @@ class SearchIndexer:
             Frontend route to navigate to.
         owner_id : UUID
             Owner of the content.
-        access_mode : str
-            Access mode value (``OWNER_ONLY`` / ``EXPLICIT_MEMBERS`` /
-            ``OPEN_TO_ORG``).
-        baseline_role : str | None
+        access_mode : AccessMode
+            Access mode value.
+        baseline_role : ContentRole | None
             Baseline role for OPEN_TO_ORG mode, otherwise None.
         keywords : str | None
             Aggregated full-text content.
@@ -154,7 +153,7 @@ class SearchIndexer:
                     "description": item.get("description", ""),
                     "entity_type": item.get("entity_type", ""),
                     "url_path": item.get("url_path", ""),
-                    "access_mode": item.get("access_mode", "OWNER_ONLY"),
+                    "access_mode": item.get("access_mode", AccessMode.OWNER_ONLY),
                     "baseline_role": item.get("baseline_role"),
                     "owner_id": str(item.get("owner_id", "")),
                     "shared_user_ids": [
@@ -209,8 +208,8 @@ class SearchIndexer:
         self,
         urn: str,
         organization_id: UUID,
-        access_mode: str,
-        baseline_role: str | None,
+        access_mode: AccessMode,
+        baseline_role: ContentRole | None,
         owner_id: UUID,
     ) -> None:
         """Partial update of the access policy fields on a document."""

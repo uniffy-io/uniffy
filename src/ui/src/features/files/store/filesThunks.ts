@@ -9,7 +9,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
 import type { RootState } from '@/app/store';
 import type { File } from '@uniffy/proto/files/v1/files_pb';
-import { VisibilityScope } from '@uniffy/proto/common/v1/common_pb';
+import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 // Helper to get organization ID from state
 const getOrganizationId = (state: RootState): string => {
@@ -26,7 +26,9 @@ const fileToPlain = (file: File) => ({
     urn: file.urn,
     organizationId: file.organizationId,
     ownerId: file.ownerId,
-    visibility: file.visibility,
+    accessMode: file.accessMode,
+    baselineRole: file.baselineRole ?? null,
+    userRole: file.userRole,
     filename: file.filename,
     originalFilename: file.originalFilename,
     mimeType: file.mimeType,
@@ -50,7 +52,6 @@ const fileToPlain = (file: File) => ({
         nanos: typeof file.deletedAt.nanos === 'bigint' ? Number(file.deletedAt.nanos) : file.deletedAt.nanos,
     } : undefined,
     groupIds: [...file.groupIds],
-    userPermission: file.userPermission,
     ownerInfo: file.ownerInfo ? {
         id: file.ownerInfo.id,
         name: file.ownerInfo.name,
@@ -90,7 +91,7 @@ export const fetchFiles = createAsyncThunk<
         page?: number;
         pageSize?: number;
         folderId?: string | null;
-        visibility?: VisibilityScope;
+        accessMode?: AccessMode;
         personalOnly?: boolean;
         sharedOnly?: boolean;
         includeDeleted?: boolean;
@@ -109,7 +110,7 @@ export const fetchFiles = createAsyncThunk<
             page: params?.page ?? 1,
             pageSize: params?.pageSize ?? 50,
             folderId: params?.folderId ?? undefined,
-            visibility: params?.visibility,
+            accessMode: params?.accessMode,
             personalOnly: params?.personalOnly ?? false,
             sharedOnly: params?.sharedOnly ?? false,
             includeDeleted: params?.includeDeleted ?? false,
@@ -164,7 +165,6 @@ export const updateFile = createAsyncThunk<
         filename?: string;
         tags?: string[];
         description?: string;
-        visibility?: VisibilityScope;
     },
     { state: RootState; rejectValue: string }
 >('files/updateFile', async (params, { getState, rejectWithValue }) => {
@@ -176,7 +176,6 @@ export const updateFile = createAsyncThunk<
             filename: params.filename,
             tags: params.tags,
             description: params.description,
-            visibility: params.visibility,
         });
         if (!response.file) {
             return rejectWithValue('Failed to update file');
@@ -248,7 +247,7 @@ export const moveItems = createAsyncThunk<
         fileIds?: string[];
         folderIds?: string[];
         targetFolderId?: string | null;
-        targetVisibility?: VisibilityScope;
+        targetAccessMode?: AccessMode;
     },
     { state: RootState; rejectValue: string }
 >('files/moveItems', async (params, { getState, rejectWithValue }) => {
@@ -260,7 +259,7 @@ export const moveItems = createAsyncThunk<
             fileIds: params.fileIds ?? [],
             folderIds: params.folderIds ?? [],
             targetFolderId: params.targetFolderId ?? undefined,
-            targetVisibility: params.targetVisibility,
+            targetAccessMode: params.targetAccessMode,
         });
 
         return {

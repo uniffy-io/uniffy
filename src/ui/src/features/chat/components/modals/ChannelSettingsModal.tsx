@@ -33,6 +33,8 @@ import { SubjectAvatarById } from '@/components/subject/SubjectAvatar';
 import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
 import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
 import { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';
+import { SUBJECT_TYPE } from '@/components/subject/types';
+import { adminApi } from '@/features/admin/api/adminApi';
 import { cn } from '@/shared/utils/cn';
 import { selectActiveChannel, selectChannelMembers, selectCategories } from '@/features/chat/store/chatChannelsSlice';
 import { closeChannelSettingsModal, selectChannelSettingsModalTab } from '@/features/chat/store/chatUiSlice';
@@ -71,6 +73,7 @@ export function ChannelSettingsModal() {
   const initialTab = useAppSelector(selectChannelSettingsModalTab);
   const categories = useAppSelector(selectCategories);
   const currentUserId = useAppSelector((s) => s.auth.user?.id);
+  const currentOrgId = useAppSelector((s) => s.auth.currentOrganizationId);
   const { canManageChat } = useChatPermissions();
 
   const channelId = activeChannel?.id ?? '';
@@ -158,7 +161,7 @@ export function ChannelSettingsModal() {
 
   // Subject search for adding members
   const { results: searchResults, loading: searchLoading, search } = useSubjectSearch({
-    subjectTypes: 'users',
+    subjectTypes: 'all',
     excludeIds: existingMemberIds,
   });
 
@@ -189,10 +192,24 @@ export function ChannelSettingsModal() {
     }
   };
 
-  const handleAddMember = async (userId: string) => {
+  const handleAddSubject = async (subject: { id: string; type: number }) => {
     setIsAddingMembers(true);
     try {
-      await dispatch(addMembersThunk({ channelId, userIds: [userId] })).unwrap();
+      let userIds: string[];
+      if (subject.type === SUBJECT_TYPE.GROUP) {
+        const res = await adminApi.listGroupMembers({
+          organizationId: currentOrgId ?? '',
+          groupId: subject.id,
+        });
+        userIds = (res.members ?? [])
+          .map((m) => m.userId)
+          .filter((uid): uid is string => !!uid && !existingMemberIds.includes(uid));
+      } else {
+        userIds = [subject.id];
+      }
+      if (userIds.length > 0) {
+        await dispatch(addMembersThunk({ channelId, userIds })).unwrap();
+      }
       setAddMemberQuery('');
       addInputRef.current?.focus();
     } finally {
@@ -427,7 +444,7 @@ export function ChannelSettingsModal() {
                           if (!showAddMember) setShowAddMember(true);
                         }}
                         onFocus={() => setShowAddMember(true)}
-                        placeholder="Search people to add..."
+                        placeholder="Search people or groups to add..."
                         disabled={isAddingMembers}
                         className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                       />
@@ -442,7 +459,7 @@ export function ChannelSettingsModal() {
                           </div>
                         ) : searchResults.length === 0 ? (
                           <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                            No users found
+                            No results found
                           </div>
                         ) : (
                           <div className="py-1">
@@ -450,7 +467,7 @@ export function ChannelSettingsModal() {
                               <button
                                 key={subject.id}
                                 type="button"
-                                onClick={() => handleAddMember(subject.id)}
+                                onClick={() => handleAddSubject(subject)}
                                 disabled={isAddingMembers}
                                 className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
                               >
@@ -459,11 +476,15 @@ export function ChannelSettingsModal() {
                                   <p className="text-sm font-medium text-foreground truncate">
                                     {subject.name}
                                   </p>
-                                  {subject.email && (
+                                  {subject.type === SUBJECT_TYPE.GROUP ? (
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      Group{subject.memberCount ? ` (${subject.memberCount} members)` : ''}
+                                    </p>
+                                  ) : subject.email ? (
                                     <p className="text-xs text-muted-foreground truncate">
                                       {subject.email}
                                     </p>
-                                  )}
+                                  ) : null}
                                 </div>
                                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
                                   <UserPlus size={12} weight="bold" />

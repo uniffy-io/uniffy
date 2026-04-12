@@ -9,7 +9,8 @@ import { CanvasEditor } from '@/features/notes/canvas/CanvasEditor';
 import { parseCanvasContent, serializeCanvas } from '@/features/notes/canvas/types';
 import type { CanvasState } from '@/features/notes/canvas/types';
 import { useAutosave } from '@/features/notes/hooks/useNotesHooks';
-import { useMyPermission } from '@/features/sharing';
+import { useMyContentRole } from '@/features/permissions';
+import { roleCanEdit, roleCanManage } from '@/shared/utils/contentRoles';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 
@@ -58,15 +59,12 @@ export function NotesEditor() {
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
 
-  // Check user's permission on the current note
-  const { permission } = useMyPermission(
-    ContentType.NOTE,
-    currentNoteId
-  );
+  // Check user's role on the current note
+  const role = useMyContentRole(ContentType.NOTE, currentNoteId);
 
   // Force readonly mode if user doesn't have edit permission
-  const canEdit = permission?.canEdit ?? true; // Default to true while loading
-  const canShare = permission?.canShare ?? false; // Only admin/owner can share
+  const canEdit = role === null ? true : roleCanEdit(role); // Default to true while loading
+  const canShare = roleCanManage(role);
   const editorMode = canEdit ? userSelectedMode : 'readonly';
 
   // Autosave hook - handles debounced saving

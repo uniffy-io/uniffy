@@ -43,11 +43,6 @@ export interface StartSprintRequest {
 }
 
 /**
- * Visibility scope for projects (matches existing pattern)
- */
-export type VisibilityScope = "PRIVATE" | "GROUP" | "ORGANIZATION" | "PUBLIC";
-
-/**
  * Per-type field schema defining which fields are shown and required
  */
 export interface TypeFieldSchema {
@@ -66,16 +61,16 @@ export interface Project {
   description: string;
   icon: string;
   color: string;
-  visibility: VisibilityScope;
+  accessMode: number;
+  baselineRole: number | null;
+  userRole: number;
   fieldDefinitions: FieldDefinition[];
   views: ViewConfig[];
   defaultViewId: string;
-  memberIds: string[];
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
   urn: string;
-  userPermissionLevel: number;
   slug: string;
   typeFieldSchemas: Record<string, TypeFieldSchema>;
 }
@@ -110,7 +105,7 @@ export interface Task {
   updatedAt: string;
   deletedAt: string | null;
   urn: string;
-  userPermissionLevel: number;
+  userRole: number;
   number: number;
   taskType: string;
   sprintId: string | null;
@@ -140,7 +135,8 @@ export interface CreateProjectRequest {
   description?: string;
   icon?: string;
   color?: string;
-  visibility?: VisibilityScope;
+  accessMode?: number;
+  baselineRole?: number | null;
   slug?: string;
 }
 
@@ -150,7 +146,6 @@ export interface UpdateProjectRequest {
   description?: string;
   icon?: string;
   color?: string;
-  visibility?: VisibilityScope;
   slug?: string;
   typeFieldSchemas?: Record<string, TypeFieldSchema>;
 }

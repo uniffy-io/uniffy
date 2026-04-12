@@ -14,6 +14,7 @@ from uniffy.core.content.members import (
     register_content_loader,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
@@ -425,7 +426,7 @@ class BookingOperations:
         if booking.user_id != user_id:
             org_ops = OrganizationOperations(self.session)
             membership = await org_ops.require_org_member(user_id, organization_id)
-            if membership.role not in ("ADMIN", "OWNER"):
+            if membership.role not in (OrganizationRole.ADMIN, OrganizationRole.OWNER):
                 raise PermissionDeniedError("cancel", "room booking")
 
         booking.status = BookingStatus.CANCELLED
