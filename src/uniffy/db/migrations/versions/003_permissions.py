@@ -1,9 +1,13 @@
-"""Create content access tables: content_members and content_member_events.
+"""Create permissions tables: content members, member events, org defaults, domain admins.
 
 Revision ID: 003
 Revises: 002
 Create Date: 2026-01-20
 
+Consolidates (original dates):
+  - content_members + member events (2026-01-20)
+  - org_defaults (2026-01-24)
+  - domain_admins (2026-04-01)
 """
 
 from collections.abc import Sequence
@@ -16,7 +20,6 @@ revision: str = "003"
 down_revision: str | None = "002"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
-
 
 _content_type_enum = postgresql.ENUM(
     "NOTE",
@@ -36,8 +39,8 @@ _content_type_enum = postgresql.ENUM(
     name="contenttype",
     create_type=False,
 )
-_subject_type_enum = postgresql.ENUM(
-    "USER", "GROUP", "ORGANIZATION", name="subjecttype", create_type=False
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG", name="accessmode", create_type=False
 )
 _content_role_enum = postgresql.ENUM(
     "OWNER",
@@ -47,13 +50,6 @@ _content_role_enum = postgresql.ENUM(
     "VIEWER",
     "BLOCKED",
     name="contentrole",
-    create_type=False,
-)
-_access_mode_enum = postgresql.ENUM(
-    "OWNER_ONLY",
-    "EXPLICIT_MEMBERS",
-    "OPEN_TO_ORG",
-    name="accessmode",
     create_type=False,
 )
 _content_member_action_enum = postgresql.ENUM(
@@ -66,14 +62,26 @@ _content_member_action_enum = postgresql.ENUM(
     name="contentmemberaction",
     create_type=False,
 )
+_subject_type_enum = postgresql.ENUM(
+    "USER", "GROUP", "ORGANIZATION", "AGENT", name="subjecttype", create_type=False
+)
 _organization_role_enum = postgresql.ENUM(
     "OWNER", "ADMIN", "MEMBER", name="organizationrole", create_type=False
+)
+_domain_type_enum = postgresql.ENUM(
+    "CHAT",
+    "FILES",
+    "NOTES",
+    "CALENDAR",
+    "PROJECTS",
+    "AGENTS",
+    name="domaintype",
+    create_type=False,
 )
 
 
 def upgrade() -> None:
-    """Create content member and audit log tables."""
-    # permissions_content_members: explicit subject-role grants per content
+    """Create permissions domain tables."""
     op.create_table(
         "permissions_content_members",
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
@@ -84,22 +92,10 @@ def upgrade() -> None:
         sa.Column("subject_id", sa.Uuid(), nullable=False),
         sa.Column("role", _content_role_enum, nullable=False),
         sa.Column("added_by_user_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "added_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("now()"),
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("now()"),
-        ),
+        sa.Column("added_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
         sa.ForeignKeyConstraint(["added_by_user_id"], ["login_users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -108,7 +104,7 @@ def upgrade() -> None:
             "content_id",
             "subject_type",
             "subject_id",
-            name="uq_content_member",
+            name="uq_content_member_unique",
         ),
     )
     op.create_index(
@@ -127,8 +123,6 @@ def upgrade() -> None:
         ["organization_id"],
     )
 
-    # permissions_content_member_events: append-only audit log of access
-    # policy changes and member mutations.
     op.create_table(
         "permissions_content_member_events",
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
@@ -148,16 +142,9 @@ def upgrade() -> None:
         sa.Column("new_owner_id", sa.Uuid(), nullable=True),
         sa.Column("actor_user_id", sa.Uuid(), nullable=False),
         sa.Column("actor_org_role", _organization_role_enum, nullable=False),
-        sa.Column("note", sa.String(length=500), nullable=False, server_default=""),
-        sa.Column(
-            "occurred_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("now()"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.Column("note", sa.String(500), nullable=False, server_default=""),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -176,15 +163,66 @@ def upgrade() -> None:
         ["organization_id", "occurred_at"],
     )
 
+    op.create_table(
+        "permissions_org_defaults",
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
+        sa.Column("organization_id", sa.Uuid(), nullable=False),
+        sa.Column("content_type", _content_type_enum, nullable=False),
+        sa.Column(
+            "default_access_mode",
+            _access_mode_enum,
+            nullable=False,
+            server_default="OWNER_ONLY",
+        ),
+        sa.Column("default_baseline_role", _content_role_enum, nullable=True),
+        sa.Column("updated_by_user_id", sa.Uuid(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["updated_by_user_id"], ["login_users.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("organization_id", "content_type", name="uq_org_content_type"),
+    )
+    op.create_index(
+        "ix_permissions_org_defaults_organization_id",
+        "permissions_org_defaults",
+        ["organization_id"],
+    )
+
+    op.create_table(
+        "permissions_domain_admins",
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("organization_id", sa.Uuid(), nullable=False),
+        sa.Column("domain", _domain_type_enum, nullable=False),
+        sa.Column("granted_by", sa.Uuid(), nullable=False),
+        sa.Column("granted_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["granted_by"], ["login_users.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "user_id", "organization_id", "domain", name="uq_domain_admin_user_org_domain"
+        ),
+    )
+    op.create_index(
+        "ix_permissions_domain_admins_user_id",
+        "permissions_domain_admins",
+        ["user_id"],
+    )
+    op.create_index(
+        "ix_permissions_domain_admins_organization_id",
+        "permissions_domain_admins",
+        ["organization_id"],
+    )
+
 
 def downgrade() -> None:
-    """Drop content access tables."""
-    op.drop_index("ix_cme_org", table_name="permissions_content_member_events")
-    op.drop_index("ix_cme_actor", table_name="permissions_content_member_events")
-    op.drop_index("ix_cme_content", table_name="permissions_content_member_events")
+    """Drop permissions domain tables."""
+    op.drop_table("permissions_domain_admins")
+    op.drop_table("permissions_org_defaults")
     op.drop_table("permissions_content_member_events")
-
-    op.drop_index("ix_content_member_org", table_name="permissions_content_members")
-    op.drop_index("ix_content_member_subject", table_name="permissions_content_members")
-    op.drop_index("ix_content_member_content", table_name="permissions_content_members")
     op.drop_table("permissions_content_members")

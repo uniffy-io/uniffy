@@ -1,15 +1,18 @@
 """Database session management and initialization."""
 
 import os
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from alembic import command
 from alembic.config import Config
 from loguru import logger
+from sqlalchemy import exc as sa_exc
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from sqlalchemy.sql import text
+
+from uniffy.observability.metrics import DB_POOL_TIMEOUT_TOTAL
 
 # Global engine and session maker
 _engine: AsyncEngine | None = None
@@ -172,52 +175,38 @@ async def init_db(*, skip_migrations: bool = False) -> None:
     logger.info("Database initialized successfully")
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession]:
-    """
-    Get an async database session (async generator form).
-
-    Yields
-    ------
-    AsyncSession
-        An async SQLAlchemy session.
-
-    """
-    if _async_session_maker is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
-
-    async with _async_session_maker() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-
 @asynccontextmanager
 async def open_session() -> AsyncIterator[AsyncSession]:
     """
     Open an async database session as a context manager.
 
-    Use this instead of ``get_async_session`` in RPC handlers so the
-    type checker can prove that the ``async with`` body always executes
-    and the ``return`` inside it is guaranteed reachable::
+    Always use this to acquire a DB session in handlers, workers, and
+    scripts::
 
         async with open_session() as session:
             ops = NoteOperations(session)
             note = await ops.create(...)
             return NoteResponse(note=note_to_proto(note))
 
-    ``get_async_session`` is kept for FastAPI ``Depends`` callers and for
-    background tasks that iterate explicitly; new handler code should
-    prefer ``open_session``.
+    Context-manager cleanup (``__aexit__``) is awaited deterministically,
+    so the pooled connection is always returned. The older
+    ``async for session in get_async_session(): ...`` form has been removed
+    because ``return`` / ``break`` inside the loop did not call ``aclose()``
+    on the generator, leaving connections to be reclaimed by the garbage
+    collector and triggering SAWarnings about non-checked-in connections.
     """
     if _async_session_maker is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
 
-    async with _async_session_maker() as session:
-        try:
+    try:
+        async with _async_session_maker() as session:
             yield session
-        finally:
-            await session.close()
+    except sa_exc.TimeoutError:
+        # Pool checkout exceeded DB_POOL_TIMEOUT. Re-raise so the caller
+        # still surfaces the failure; the counter lets us alert on the
+        # event as soon as it shows up on /metrics.
+        DB_POOL_TIMEOUT_TOTAL.inc()
+        raise
 
 
 async def close_db() -> None:
