@@ -192,6 +192,51 @@ message PaginationResponse { page, page_size, total_count, total_pages }
 - Users are global, memberships are org-scoped
 - Always verify user has access to organization before accessing resources
 
+## Performance-Critical Domains
+
+`domains/chat/` and `domains/agents/` carry the bulk of user traffic. Every change in these two domains is held to a higher bar than the rest of the codebase. The rules below are non-negotiable when working anywhere under those trees, and apply transitively to anything they call into (`core/auth/`, `core/content/`, `core/valkey/`, `core/users/`, `core/llm_providers/`).
+
+**MUST** when touching chat or agents code:
+
+| Rule | Why |
+|---|---|
+| Hot reads go through Valkey before PG. | Channel rows, channel members, effective role, user/agent profiles, agent config, agent skills, agent prompt, provider-key metadata, pinned-message ids, DM peer lists, channel-resources head all have cache helpers in `domains/{x}/cache.py` or `core/{x}/cache.py`. Reach for the helper, not raw PG. |
+| Mutations invalidate caches in the same commit. | Every write that changes something a cache mirrors must drop the matching key (or tag) before the request returns. Stale cache > no cache. |
+| Fan-out callers fetch dependencies once and thread them through. | The send pipeline fetches member ids once and passes the list into publisher / indexer / notifier. Same shape for reactions, member events. Never let a downstream helper re-fetch. |
+| Never `LIKE` on text columns for indexed lookups. | Mention counting goes through `mentioned_urns @> ARRAY[...]` against the partial GIN index. New search-by-content patterns require an index design discussion before merging. |
+| Pagination caps on every list endpoint that can grow unbounded. | Default page size 200, max 500. Opaque base64-url cursor tuples for keyset pagination. Internal callers that legitimately need every row get a separate lean ID-only method (e.g. `list_user_channel_ids`). No `limit=None` back-doors. |
+| No LLM / external HTTP / unbounded loop in the request thread. | Compaction, summarisation, and slow tool work go to ARQ. The user request returns within milliseconds; background work catches up via the worker fleet. Idempotency on every job (Valkey `SET NX` lock keyed by the natural identifier). |
+| Single-query aggregates over UNION-per-N. | Multi-channel unread counts, sender resolution, profile lookups all use one query with `unnest(...)` joins or batch IN clauses. Per-channel UNION patterns are rejected. |
+| Batch INSERTs / UPSERTs / DELETEs. | Loop-based DB writes are rejected. Use `pg_insert.values([...]).on_conflict_do_nothing().returning(...)` and tuple-IN DELETEs. |
+| Optimistic counters on hot rows. | Counter UPDATEs gate with `WHERE current < new_value` (or equivalent) so concurrent writers race deterministically. Lost updates are observable bugs. |
+| Per-call deadline on every Valkey call. | The 150ms `ops_call` guard is mandatory. A slow Valkey returns `CACHE_MISS` / no-op; the caller falls through to PG. Never wrap a cache call in code that retries. |
+| Fix root causes, not symptoms. | If a query is slow, do not paper over it with caching alone. Add the missing index, reshape the query, or both. Caching covers spikes; structurally O(N) queries on hot paths are bugs. |
+
+If a change in chat or agents adds a new hot read path, a new write path, or a new fan-out, treat the cache adoption + invalidation hooks as part of the change, not as follow-up work. Backlog promises rot.
+
+## Valkey Cache Layer
+
+Three physical clients per process, each tuned for its access pattern. Importing the wrong one is a code-review block.
+
+| Tier | Module | Purpose | Resilience |
+|---|---|---|---|
+| Pubsub | `core/valkey/pubsub.py` | Long-lived publisher + per-call subscribers. PUBLISH / SUBSCRIBE / PSUBSCRIBE only -- pub/sub connections enter a special mode and cannot run regular commands. | 5s socket timeout, retry on transient errors, 30s health check. Connections are long-lived; reconnect is normal. |
+| Ops | `core/valkey/ops.py` | Cache, presence, rate-limit, mention-state. Regular commands. | 200ms connect, 100ms read, **zero retries**, no health-check sweeps. A 150ms `ops_call` deadline guard wraps every public entry. |
+| Queue | `core/valkey/queue.py` | ARQ pool for background jobs. | 10s timeout, 5 retries, 1s delay. Job dequeue tolerates retries. |
+
+`ValkeyConfig.from_env()` reads only host / port / password / database. Per-tier timeouts are constants in code, surfaced via `to_pubsub_kwargs()` / `to_ops_kwargs()` / `to_arq_redis_settings()`. Do not introduce new env vars per tier; one dial per tier in code.
+
+**Cache helper conventions:**
+
+- Domain-shaped helpers live in `domains/{domain}/cache.py` (chat, agents). Cross-cutting helpers live in `core/{x}/cache.py` (auth, users, llm_providers).
+- Key naming: `{namespace}:{scope}:{id}[:subkind]`. The first segment is the metrics namespace (used by `uniffy_cache_hit_total{namespace}` etc).
+- Tag-based bulk invalidation via Valkey sets keyed `tag:{name}` -- callers add tags on `cache_set` and call `cache_invalidate_by_tag` on writes whose blast radius isn't enumerable cheaply (BLOCKED grants, group-targeted permissions, skill row mutations).
+- Stampede control via `cache_get_or_set_locked` on the hottest helpers (perm, channel metadata, agent config). Lock losers poll the cache key for the lock TTL and fall through to running their own loader if the owner crashed -- a Valkey hiccup must never propagate.
+- Per-namespace kill-switch via `CACHE_DISABLED_NAMESPACES` env var. Disabled namespaces still bump miss counters so dashboards stay populated.
+- Soft-deleted rows are NOT seeded into caches that the read path filters on `is_deleted=false`. Otherwise a brief delete window leaves the cache serving phantom rows.
+
+**The fail-fast contract is real**, not aspirational. A cache call returns within ~150ms or returns `CACHE_MISS`. Any code path that holds a request thread waiting on Valkey beyond that budget is a bug.
+
 ## Authentication System
 
 JWT-based authentication with access/refresh token pattern. Users authenticate globally, then select an organization context.

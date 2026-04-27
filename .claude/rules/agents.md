@@ -90,6 +90,24 @@ All 5 services are mounted in `factory.py`.
 
 ---
 
+## Performance-Critical: Always Apply
+
+The agent runtime is one of the two highest-traffic paths in the system. Every change here is held to the bar described in the backend rules' "Performance-Critical Domains" section. The agent-specific MUSTs:
+
+| Rule | Why |
+|---|---|
+| Never block the request thread on an LLM call. | Compaction, summarisation, and any future "let's send this to the model briefly" pattern goes to ARQ with a Valkey idempotency lock. The request thread enqueues and returns. |
+| Pre-flight reads go through the agent caches. | `fetch_agent_row`, `fetch_agent_skills`, `fetch_agent_prompt`, `get_provider_for_key`, the user/agent profile cache via `SenderResolver`. New runtime reads add a cache helper before they ship. |
+| Agent / skill / prompt mutations invalidate the dependent agent caches in the same commit. | Reverse-index sets `tag:skill:{skill_id}` and `tag:prompt:{prompt_id}` hold the agent ids that reference each shared row. Skill / prompt update / delete = SMEMBERS the set, bulk wipe the dependent agent caches, drop the set on delete. Agent.enabled_skills / prompt_id changes diff old vs new and SREM / SADD the matching tag sets. |
+| Tool calls within a single LLM turn are partitioned read / write. | Read-only tools fan out concurrently against per-tool sessions; writes run sequentially on the runtime session. New tools default to `read_only=False` -- flipping to True is a deliberate annotation, not the default. |
+| Per-tool `timeout_seconds`. | Default 15s. Long-running tools opt up explicitly with a clear reason in the `ToolDefinition`. Tools that have no upper bound on duration (open-ended search, image gen against a slow provider) live with 30-60s ceilings; if they exceed that, the LLM sees a structured timeout error and recovers, not a stuck event loop. |
+| Hot-row counter UPDATEs gate on the prior value. | `agent_channel_bindings.last_active_token_estimate` and any future "biggest wins" counter use `WHERE current < new_value` (or `IS NULL`) so concurrent agents in the same channel race deterministically. |
+| `agents_messages.token_estimate` is populated at INSERT, never at read time. | Every writer (runtime add_message, summary insert, consolidated summary, chat-channel writer) computes the estimate via `_estimate_message_tokens` and stores it. The window-function context loader assumes the column is populated. |
+| ApprovalStore is in-process and ephemeral. | TTL sweep on every `register` evicts entries older than `APPROVAL_TTL_SECONDS + 60s` and releases their waiters. Pod restarts drop pending approvals -- never assume durability. |
+| New agent-runtime metrics get a label. | LRU hit ratio, compaction lag, tool timeout count, parallel-tool concurrency. Without metrics a regression is invisible. |
+
+---
+
 ## Message Execution Flow
 
 When a user sends a message to an agent, the following happens. This applies to both `send_message` (blocking) and `stream_send_message` (streaming). The streaming path yields events at each stage.
@@ -111,7 +129,7 @@ Inside `RuntimeOperations`:
 
 3. **Load agent config**: `AgentOperations.get_by_id(user_id, org_id, agent_id)` -- runs the canonical permission check via `BaseContentOperations._require_view` (admin bypass, ownership, BLOCKED-wins, explicit `ContentMember` rows, and `OPEN_TO_ORG` baseline).
 
-4. **Get LLM provider**: `ProviderOperations.get_active_provider(org_id)` -- finds the first `ProviderKey` where `is_valid=True` and `is_enabled=True`, decrypts the Fernet-encrypted credential, returns an `AnthropicProvider` (or OpenAI/Google) instance.
+4. **Get LLM provider**: `ProviderOperations.get_provider_for_key(...)` or `get_provider_for_model(...)` -- consults the in-process `ProviderClientLRU` first (decrypted credential + constructed SDK client cached for 1 hour, 256-entry cap), falls through to PG + Fernet decrypt + SDK construction on miss, writes back to the LRU. Cross-pod invalidation flows through the `provider_keys:invalidate:{key_id}` pubsub channel (every pod's subscriber drops the matching LRU entry on receipt). The non-secret routing metadata (provider, credential_type, is_valid, is_enabled, model ids) is also Valkey-cached at `provider:key:{key_id}` so multi-key fan-out for `get_provider_for_model` skips the catalog round-trip.
 
 ### Phase 2: Prompt Assembly
 
@@ -136,9 +154,11 @@ Inside `RuntimeOperations`:
 
 ### Phase 3: Context Window Management
 
-10. **Session compaction**: If `message_count > 40` non-compacted messages, the oldest 30 are summarized by an LLM call into a single `role="summary"` message. The 30 originals are marked `is_compacted=True`.
+10. **Compaction is async**: a cheap `SUM(token_estimate)` probe on `agents_messages` runs at request time. On overage the runtime enqueues an ARQ `compact_session(session_id)` job -- it never blocks on the LLM summarisation call. The worker is idempotent via a Valkey `SET NX compaction_lock:{session_id}` lock with a 5-min TTL; concurrent enqueues are no-ops.
 
-11. **Load conversation context**: Up to 50 messages -- summaries first, then recent non-compacted. Converted to Anthropic message format, reconstructing `tool_use`/`tool_result` pairs.
+11. **Load conversation context**: a single window-function query (`SUM(coalesce(token_estimate, 0)) OVER (ORDER BY created_at DESC)`) returns the most recent rows whose cumulative token count fits the budget, plus the absolute latest row as a guaranteed inclusion. Summaries come first under a 20% budget cap. No Python token estimation at read time -- `token_estimate` is computed once at INSERT and stored on the row.
+
+12. **Emergency truncation**: if the worker hasn't caught up and the loaded context is still over budget, `apply_emergency_truncation` drops the oldest `role="tool"` rows in-memory until under budget. Orphan `tool_use` blocks left on assistant messages are tolerated -- `_build_llm_messages` synthesises an "interrupted" tool_result for any unmatched id.
 
 ### Phase 4: LLM Call + Tool Execution
 
@@ -222,15 +242,18 @@ If the resulting role does not satisfy `role_can_view`, `PermissionDeniedError` 
 
 ### Tool Loop
 
-The tool loop runs up to `MAX_TOOL_ITERATIONS = 10` times per message:
+The tool loop runs up to `MAX_TOOL_ITERATIONS = 10` times per message. Within a single LLM turn the calls are split into read-only and write groups:
 
 1. LLM returns `stop_reason="tool_use"` with one or more tool calls.
-2. Each tool call is executed via `ToolExecutor.execute(tool_call)`.
-3. Tool results are stored in `agents_messages` with `role="tool"`.
-4. Tool results are appended to `llm_messages` and the LLM is re-invoked.
-5. If LLM returns more tool calls, loop continues.
-6. If LLM returns `stop_reason != "tool_use"`, loop exits with the final response.
-7. If 10 iterations are exceeded, `ValidationError` is raised.
+2. Tool calls are partitioned by `ToolDefinition.read_only`. Read-only tools fan out concurrently via `asyncio.gather(return_exceptions=True)` against fresh per-tool `AsyncSession`s acquired from a small per-turn pool (`READ_TOOL_POOL_SIZE=5`); each task commits its own session. Write tools run sequentially on the runtime's own session so transaction boundaries hold.
+3. Every tool call has a wall-clock cap. `ToolDefinition.timeout_seconds` (default 15s; 30s for search and file reads; 60s for image generation) wraps the executor in `asyncio.wait_for`. On `TimeoutError` the result is a structured `ToolResult(success=False, error="Tool {name} exceeded {n}s timeout")`.
+4. Tool results are stored in `agents_messages` with `role="tool"`, in the original tool-call order, regardless of read-group concurrency.
+5. Tool results are appended to `llm_messages` and the LLM is re-invoked.
+6. If LLM returns more tool calls, the loop continues.
+7. If LLM returns `stop_reason != "tool_use"`, the loop exits with the final response.
+8. If 10 iterations are exceeded, `ValidationError` is raised.
+
+A read-only tool MAY perform side-effect writes on its own per-tool session (e.g. `memory.recall` bumps `access_count`); the per-tool session commit makes this safe under concurrency. The `read_only` flag is a parallelism hint, not a "no writes" promise -- it means "no transaction-shared writes against the runtime session."
 
 ---
 
@@ -350,6 +373,29 @@ Their `content` field (markdown text) is concatenated and injected into the syst
 
 ---
 
+## Agent Runtime Caching
+
+Domain helpers in `domains/agents/cache.py` cache the read-heavy pieces of the runtime pre-flight phase. All entries flow through the fail-fast Valkey ops client and inherit its 150ms deadline guard.
+
+| Key | Contents | TTL |
+|---|---|---|
+| `agent:{agent_id}` | Serialised Agent row (every column the runtime reads) | 900s |
+| `agent:{agent_id}:skills` | Resolved skill list (id, name, content, description, scope), ordered | 900s |
+| `agent:{agent_id}:prompt` | Resolved prompt content (after `_resolve_prompt_content`) | 900s |
+| `provider:key:{key_id}` | Non-secret provider routing metadata (provider, credential_type, is_valid, is_enabled, model ids) | 3600s |
+| `tag:skill:{skill_id}` | Reverse-index Valkey set of agent ids that reference this skill | -- |
+| `tag:prompt:{prompt_id}` | Reverse-index Valkey set of agent ids that reference this prompt | -- |
+
+**Reverse-index discipline**: `Agent.enabled_skills` writes diff old vs new and SREM / SADD against `tag:skill:{sid}` so the set always reflects current dependencies. Same for `agent.prompt_id` against `tag:prompt:{pid}`. Skill or prompt mutations SMEMBERS the tag set, bulk-invalidate the dependent agent skill / prompt caches, and DEL the tag set on delete. The reverse-index sets share the `tag:` namespace with `cache_invalidate_by_tag`-style entries but contain agent ids, not cache keys -- helpers do the SMEMBERS + bulk DEL by hand.
+
+**Soft-deleted agents are not seeded** into the cache. The runtime read path filters on `is_deleted=false` and a soft-deleted entry would be served as if present.
+
+**Decrypted credentials never enter Valkey.** The in-process `ProviderClientLRU` is the only place a decrypted credential lives; its lifecycle is bounded by the pubsub invalidation channel described under "Active Provider Resolution".
+
+---
+
+---
+
 ## Provider System
 
 ### Provider Key Model
@@ -363,7 +409,14 @@ Provider keys are Fernet-encrypted at rest in `agents_provider_keys`. Fields:
 
 ### Active Provider Resolution
 
-`ProviderOperations.get_active_provider(org_id)` finds the first provider key where `is_valid=True AND is_enabled=True`, decrypts the credential, and creates the appropriate provider instance.
+`ProviderOperations.get_provider_for_key(...)` and `get_provider_for_model(...)` consult two cache tiers before touching PG:
+
+1. **In-process LRU** (`core/llm_providers/cache.py::ProviderClientLRU`): process singleton, `OrderedDict`-backed, 1-hour TTL, 256-entry cap. Holds the decrypted credential AND the constructed provider client so the SDK's httpx connection pool is reused across requests.
+2. **Valkey metadata cache** (`provider:key:{key_id}`, TTL 3600s): non-secret routing data only -- provider, credential_type, is_valid, is_enabled, available model ids. The encrypted credential is never written to Valkey.
+
+Cross-pod invalidation: any mutation that changes a provider key publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey metadata entry. A long-lived `PSUBSCRIBE provider_keys:invalidate:*` listener (started in the FastAPI app lifespan and the worker `on_startup`) drops the matching LRU entry on receipt. Cache and pubsub are in lockstep -- one signal, both tiers drop.
+
+`get_provider_for_model` iterates active keys and uses the cached model-id list to skip decrypt + construction for any key that doesn't own the requested model. Only the matching key gets decrypted.
 
 ### Model Resolution Priority
 
@@ -389,14 +442,22 @@ Temperature is forced to 1 when thinking is enabled (Anthropic API requirement).
 
 ## Session Compaction
 
-When `non_compacted_message_count > 40`:
+Compaction runs in the background, never on the request path.
 
-1. Fetch the oldest 30 non-summary, non-compacted messages.
-2. Build conversation text and send to LLM with a summarization prompt.
-3. Create a new `role="summary"` message.
-4. Mark the 30 original messages as `is_compacted=True`.
+**Trigger** (request thread, sub-millisecond): a `SUM(token_estimate)` probe over non-compacted, non-summary rows. On overage the runtime enqueues `compact_session(session_id)` via the ARQ pool and returns immediately.
 
-`get_session_context()` always returns summaries first, then the most recent non-compacted messages (up to 50 total).
+**Worker** (`workers/tasks/agent_compaction.py`): acquires a Valkey `SET NX compaction_lock:{session_id}` lock with a 5-min TTL. Lock-loss is a no-op (another worker is handling it). On lock acquisition the worker opens a fresh session, loads the agent + provider, drives `SessionOperations.compact_session_if_needed`:
+
+1. Fetch the oldest non-summary, non-compacted messages until cumulative `token_estimate` reaches a target reduction.
+2. Send the slice to the LLM with a summarisation prompt.
+3. Create a new `role="summary"` message; populate its `token_estimate`.
+4. Mark the originals `is_compacted=True` in a single batched UPDATE.
+
+**Emergency truncation** (`apply_emergency_truncation` in `domains/agents/sessions/operations.py`): if the worker hasn't caught up by the time the next request loads context, the runtime drops the oldest `role="tool"` rows in-memory until the active window fits the budget. Orphaned `tool_use` blocks are reconciled by `_build_llm_messages` injecting synthetic interrupted tool_results.
+
+**Token estimate column**: `agents_messages.token_estimate` is computed by `_estimate_message_tokens` at INSERT time (every writer that adds a row populates it). The read path never re-estimates. `get_session_context` is one window-function query that returns the most recent rows whose cumulative token total fits the budget, with a guaranteed inclusion of the absolute latest row.
+
+**Channel-scoped agent compaction** is a separate path (`domains/agents/chat_integration/context.py::ChatAgentContextOperations.compact`) that writes a `sender_type=AGENT, metadata.kind='summary'` chat message and updates `agent_channel_bindings.compaction_summary_msg_ids`. The runtime's `compact_if_needed` writer is a no-op for chat destinations -- the chat-side compaction has its own trigger and worker path.
 
 ---
 
