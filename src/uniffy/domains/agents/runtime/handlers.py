@@ -28,7 +28,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.converters import (
     runtime_stream_event_to_proto,
@@ -132,7 +132,7 @@ class RuntimeHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Message content cannot be empty")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = RuntimeOperations(session)
                 files = None
                 if request.file_ids:
@@ -206,7 +206,7 @@ class RuntimeHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Message content cannot be empty")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = RuntimeOperations(session)
                 files = None
                 if request.file_ids:
@@ -275,7 +275,7 @@ class RuntimeHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "tool_call_id is required")
 
         store = get_approval_store()
-        accepted = store.respond(session_id, request.tool_call_id, request.approved)
+        accepted = await store.respond(session_id, request.tool_call_id, request.approved)
 
         return ConfirmationResponseAck(accepted=accepted)
 
@@ -314,7 +314,7 @@ class RuntimeHandlers:
         interval = request.interval if request.interval else "1d"
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 # Determine whether user can see org-wide usage
                 org_ops = OrganizationOperations(session)
                 membership = await org_ops.require_org_member(user_id, org_id)

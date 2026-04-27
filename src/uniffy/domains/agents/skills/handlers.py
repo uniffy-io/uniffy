@@ -19,7 +19,7 @@ from uniffy_proto.agents.v1.skills_pb2 import (
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.skills.converters import skill_to_proto
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.auth.context import get_user_id_from_context
@@ -64,7 +64,7 @@ class SkillsHandlers:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid owner ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SkillOperations(session)
                 skill = await ops.create_skill(
                     user_id=user_id,
@@ -117,7 +117,7 @@ class SkillsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SkillOperations(session)
                 skill = await ops.get_skill(
                     user_id=user_id,
@@ -173,7 +173,7 @@ class SkillsHandlers:
             )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SkillOperations(session)
                 skills, total = await ops.list_skills(
                     user_id=user_id,
@@ -235,7 +235,7 @@ class SkillsHandlers:
         always_active = request.always_active if request.HasField("always_active") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SkillOperations(session)
                 skill = await ops.update_skill(
                     user_id=user_id,
@@ -290,7 +290,7 @@ class SkillsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SkillOperations(session)
                 await ops.delete_skill(
                     user_id=user_id,

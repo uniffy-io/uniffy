@@ -17,10 +17,7 @@ def _parse_access_mode(args: dict, kwargs: dict) -> str | None:
         kwargs["access_mode"] = AccessMode(args["access_mode"])
         return None
     except ValueError:
-        return (
-            f"Invalid access_mode: {args['access_mode']}. "
-            f"Must be one of: {VALID_ACCESS_MODES}"
-        )
+        return f"Invalid access_mode: {args['access_mode']}. Must be one of: {VALID_ACCESS_MODES}"
 
 
 async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
@@ -411,7 +408,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
         )
 
     ops = TaskOperations(ctx.session)
-    task = await ops.update(
+    task, _ = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         task_id=task_id,
@@ -536,7 +533,7 @@ async def _execute_move_task(ctx: ToolContext, args: dict) -> ToolResult:
     sort_order = args.get("sort_order", 0)
 
     ops = TaskOperations(ctx.session)
-    task = await ops.move(
+    task, _ = await ops.move(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         task_id=task_id,
@@ -626,6 +623,7 @@ list_projects = ToolDefinition(
     description="List all projects in the organization.",
     parameter_schema={"type": "object", "properties": {}},
     executor=_execute_list_projects,
+    read_only=True,
 )
 
 create_task = ToolDefinition(
@@ -801,6 +799,7 @@ list_tasks = ToolDefinition(
         "required": ["project_id"],
     },
     executor=_execute_list_tasks,
+    read_only=True,
 )
 
 move_task = ToolDefinition(

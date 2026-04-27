@@ -21,7 +21,7 @@ from uniffy_proto.search.v1.search_pb2 import (
 )
 
 from uniffy.core.types import AccessMode, ContentRole
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.search.converters import (
     proto_to_entity_type,
@@ -119,8 +119,13 @@ class SearchHandlers:
         # Set limit with bounds
         limit = min(max(request.limit or 20, 1), 100)
 
+        # Metadata filters (e.g., channel_id, sender_id for chat)
+        metadata_filters: dict[str, str] | None = None
+        if request.metadata_filters:
+            metadata_filters = dict(request.metadata_filters)
+
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SearchOperations(session)
                 results, _total = await ops.search(
                     user_id=user_id,
@@ -131,6 +136,7 @@ class SearchHandlers:
                     tag_filters=tag_filters if tag_filters else None,
                     my_content_only=my_content_only,
                     owner_filter=owner_filter,
+                    metadata_filters=metadata_filters,
                     limit=limit,
                 )
 
@@ -185,7 +191,7 @@ class SearchHandlers:
             baseline_role_str = request.metadata.get("baseline_role") or None
             baseline_role = ContentRole(baseline_role_str) if baseline_role_str else None
 
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SearchOperations(session)
                 await ops.index_item(
                     organization_id=organization_id,
@@ -223,7 +229,7 @@ class SearchHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "URN is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SearchOperations(session)
                 await ops.delete_item(request.urn)
 
@@ -267,7 +273,7 @@ class SearchHandlers:
         limit = min(max(request.limit or 50, 1), 100)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SearchOperations(session)
                 results, total = await ops.get_references(
                     user_id=user_id,
@@ -314,7 +320,7 @@ class SearchHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SearchOperations(session)
                 results = await ops.resolve_urns(
                     user_id=user_id,

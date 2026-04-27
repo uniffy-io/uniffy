@@ -172,8 +172,13 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
         "title": note.title,
         "content": note_content,
         "tags": note.tags or [],
-        "visibility": (
-            note.visibility.value if hasattr(note.visibility, "value") else str(note.visibility)
+        "access_mode": (
+            note.access_mode.value if hasattr(note.access_mode, "value") else str(note.access_mode)
+        ),
+        "baseline_role": (
+            note.baseline_role.value
+            if note.baseline_role and hasattr(note.baseline_role, "value")
+            else (str(note.baseline_role) if note.baseline_role else None)
         ),
         "created_at": note.created_at.isoformat() if note.created_at else None,
         "updated_at": note.updated_at.isoformat() if note.updated_at else None,
@@ -278,6 +283,7 @@ search_notes = ToolDefinition(
         "required": ["query"],
     },
     executor=_execute_search_notes,
+    read_only=True,
 )
 
 list_notes = ToolDefinition(
@@ -300,6 +306,7 @@ list_notes = ToolDefinition(
         },
     },
     executor=_execute_list_notes,
+    read_only=True,
 )
 
 read_note = ToolDefinition(
@@ -316,6 +323,7 @@ read_note = ToolDefinition(
         "required": ["note_id"],
     },
     executor=_execute_read_note,
+    read_only=True,
 )
 
 create_note = ToolDefinition(

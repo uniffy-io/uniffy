@@ -80,13 +80,9 @@ class AgentsHandlers:
         theme_color = request.theme_color if request.HasField("theme_color") else ""
         is_default = request.is_default if request.HasField("is_default") else False
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
-            content_role_from_proto(request.baseline_role)
-            if request.baseline_role
-            else None
+            content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
 
         group_ids = (
@@ -133,7 +129,8 @@ class AgentsHandlers:
                     image_provider_key_id=image_provider_key_id,
                     prompt_id=prompt_id,
                 )
-                return AgentResponse(agent=agent_to_proto(agent))
+                user_role = await ops.resolve_role(user_id, org_id, agent)
+                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
         except ConnectError:
             raise
         except Exception as exc:
@@ -153,7 +150,8 @@ class AgentsHandlers:
             async with open_session() as session:
                 ops = AgentOperations(session)
                 agent = await ops.get_by_id(user_id, org_id, agent_id)
-                return AgentResponse(agent=agent_to_proto(agent))
+                user_role = await ops.resolve_role(user_id, org_id, agent)
+                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
         except ConnectError:
             raise
         except Exception as exc:
@@ -168,14 +166,10 @@ class AgentsHandlers:
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         personal_only = request.personal_only if request.HasField("personal_only") else False
         group_id = (
-            _parse_uuid(request.group_id, "group_id")
-            if request.HasField("group_id")
-            else None
+            _parse_uuid(request.group_id, "group_id") if request.HasField("group_id") else None
         )
 
         page = 1
@@ -197,8 +191,11 @@ class AgentsHandlers:
                     page_size=page_size,
                 )
                 total_pages = (total + page_size - 1) // page_size if page_size else 1
+                roles = [await ops.resolve_role(user_id, org_id, a) for a in agents]
                 return ListAgentsResponse(
-                    agents=[agent_to_proto(a) for a in agents],
+                    agents=[
+                        agent_to_proto(a, user_role=r) for a, r in zip(agents, roles, strict=True)
+                    ],
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -287,7 +284,8 @@ class AgentsHandlers:
                     prompt_id=prompt_id,
                     clear_prompt=clear_prompt,
                 )
-                return AgentResponse(agent=agent_to_proto(agent))
+                user_role = await ops.resolve_role(user_id, org_id, agent)
+                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
         except ConnectError:
             raise
         except Exception as exc:
@@ -343,7 +341,8 @@ class AgentsHandlers:
                     image_data=request.image_data,
                     filename=request.filename,
                 )
-                return AgentResponse(agent=agent_to_proto(agent))
+                user_role = await ops.resolve_role(user_id, org_id, agent)
+                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
         except ValueError as exc:
             raise ConnectError(Code.INVALID_ARGUMENT, str(exc)) from exc
         except ConnectError:
@@ -369,7 +368,8 @@ class AgentsHandlers:
                     organization_id=org_id,
                     agent_id=agent_id,
                 )
-                return AgentResponse(agent=agent_to_proto(agent))
+                user_role = await ops.resolve_role(user_id, org_id, agent)
+                return AgentResponse(agent=agent_to_proto(agent, user_role=user_role))
         except ConnectError:
             raise
         except Exception as exc:

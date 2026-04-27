@@ -11,6 +11,10 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.domains.agents.audit import create_audit_log
+from uniffy.domains.agents.cache import (
+    invalidate_agents_using_skill,
+    invalidate_org_always_active_skills,
+)
 from uniffy.domains.agents.content_policy import check_admin_content
 from uniffy.domains.organizations.operations import OrganizationOperations
 
@@ -309,6 +313,8 @@ class SkillOperations:
                 raise PermissionDeniedError("update", "Cannot update bundled skills")
             raise NotFoundError("AgentSkill", str(skill_id))
 
+        was_always_active = skill.always_active
+
         if name is not None:
             if not name.strip():
                 raise ValidationError("name", "Skill name cannot be empty")
@@ -370,6 +376,11 @@ class SkillOperations:
                 details={"changes": audit_changes},
             )
             await self._session.commit()
+
+        await invalidate_agents_using_skill(skill_id)
+
+        if was_always_active or skill.always_active:
+            await invalidate_org_always_active_skills(organization_id)
 
         return skill
 
@@ -435,6 +446,7 @@ class SkillOperations:
             agent.enabled_skills = [sid for sid in agent.enabled_skills if sid != skill_id_str]
 
         skill_name = skill.name
+        was_always_active = skill.always_active
         await self._session.delete(skill)
         await create_audit_log(
             self._session,
@@ -446,6 +458,11 @@ class SkillOperations:
             details={"name": skill_name},
         )
         await self._session.commit()
+
+        await invalidate_agents_using_skill(skill_id, drop_tag_set=True)
+
+        if was_always_active:
+            await invalidate_org_always_active_skills(organization_id)
 
     async def get_skills_for_agent(
         self,

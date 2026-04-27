@@ -6,8 +6,9 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from uniffy_proto.chat.v1.chat_pb2 import (
+    ChatMessage as ProtoChatMessage,
+)
 from uniffy_proto.chat.v1.chat_pb2 import (
     FollowThreadRequest,
     FollowThreadResponse,
@@ -24,11 +25,12 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.login.user import User
-from uniffy.db import get_async_session
+from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.chat.messages.converters import message_to_proto
-from uniffy.domains.chat.threads.operations import ChatThreadOperations
+from uniffy.domains.chat.messages.converters import SENDER_TYPE_TO_PROTO, message_to_proto
+from uniffy.domains.chat.sender_resolver import SenderResolver
+from uniffy.domains.chat.threads.operations import ChatThreadOperations, ThreadInboxRow
 
 
 def _handle_error(e: Exception) -> None:
@@ -41,34 +43,9 @@ def _handle_error(e: Exception) -> None:
     raise ConnectError(Code.INTERNAL, "Internal error")
 
 
-async def _get_sender_info(
-    session: AsyncSession,
-    sender_id: UUID,
-) -> tuple[str, str | None]:
-    """Fetch display name and avatar for a single sender."""
-    result = await session.execute(
-        select(User.full_name, User.avatar_key).where(User.id == sender_id)
-    )
-    row = result.one_or_none()
-    if row:
-        return (row[0] or "Unknown", row[1])
-    return ("Unknown", None)
-
-
-async def _batch_get_sender_info(
-    session: AsyncSession,
-    sender_ids: list[UUID],
-) -> dict[UUID, tuple[str, str | None]]:
-    """Batch fetch display names and avatars for multiple senders."""
-    if not sender_ids:
-        return {}
-    unique_ids = list(set(sender_ids))
-    result = await session.execute(
-        select(User.id, User.full_name, User.avatar_key).where(
-            User.id.in_(unique_ids)
-        )
-    )
-    return {row[0]: (row[1] or "Unknown", row[2]) for row in result.all()}
+def _sender_ref(msg: ChatMessage) -> tuple[SenderType, UUID]:
+    """Pack (sender_type, sender_id) for SenderResolver inputs."""
+    return (msg.sender_type, msg.sender_id)
 
 
 class ThreadHandlers:
@@ -89,31 +66,31 @@ class ThreadHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatThreadOperations(session)
-                root_msg, stats, participants, is_following = (
-                    await ops.get_thread(
-                        user_id, org_id, channel_id, root_id
-                    )
-                )
+                (
+                    root_msg,
+                    stats,
+                    participants,
+                    total_participants,
+                    is_following,
+                ) = await ops.get_thread(user_id, org_id, channel_id, root_id)
 
-                sender_name, sender_avatar = await _get_sender_info(
-                    session, root_msg.sender_id
-                )
+                resolver = SenderResolver(session)
+                info = await resolver.resolve_one(root_msg.sender_type, root_msg.sender_id)
                 resp = GetThreadResponse(
                     root_message=message_to_proto(
                         root_msg,
-                        sender_name=sender_name,
-                        sender_avatar_url=sender_avatar,
+                        sender_name=info.display_name,
+                        sender_avatar_url=info.avatar_key,
                     ),
                     reply_count=stats.reply_count if stats else 0,
                     participant_ids=[str(p) for p in participants],
+                    total_participants=total_participants,
                     is_following=is_following,
                 )
                 if stats and stats.last_reply_at:
-                    resp.last_reply_at.CopyFrom(
-                        datetime_to_timestamp(stats.last_reply_at)
-                    )
+                    resp.last_reply_at.CopyFrom(datetime_to_timestamp(stats.last_reply_at))
                 return resp
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
@@ -140,24 +117,34 @@ class ThreadHandlers:
             after_id = UUID(request.after_id)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatThreadOperations(session)
                 messages, has_more = await ops.get_thread_messages(
-                    user_id, org_id, channel_id, root_id,
+                    user_id,
+                    org_id,
+                    channel_id,
+                    root_id,
                     before_id=before_id,
                     after_id=after_id,
                     limit=request.limit or 50,
                 )
 
-                sender_map = await _batch_get_sender_info(
-                    session, [m.sender_id for m in messages]
-                )
+                resolver = SenderResolver(session)
+                sender_map = await resolver.resolve_many([_sender_ref(m) for m in messages])
                 return GetThreadMessagesResponse(
                     messages=[
                         message_to_proto(
                             m,
-                            sender_name=sender_map.get(m.sender_id, ("Unknown", None))[0],
-                            sender_avatar_url=sender_map.get(m.sender_id, ("Unknown", None))[1],
+                            sender_name=(
+                                sender_map[m.sender_id].display_name
+                                if m.sender_id in sender_map
+                                else "Unknown"
+                            ),
+                            sender_avatar_url=(
+                                sender_map[m.sender_id].avatar_key
+                                if m.sender_id in sender_map
+                                else None
+                            ),
                         )
                         for m in messages
                     ],
@@ -179,37 +166,23 @@ class ThreadHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatThreadOperations(session)
                 rows = await ops.get_threads_inbox(
-                    user_id, org_id,
+                    user_id,
+                    org_id,
                     unread_only=request.unread_only,
                     limit=request.limit or 20,
                 )
 
-                # Batch fetch sender info for all root messages
-                inbox_sender_ids = list({root_msg.sender_id for _, _, root_msg, _ in rows})
-                inbox_sender_map = await _batch_get_sender_info(session, inbox_sender_ids)
+                resolver = SenderResolver(session)
+                inbox_sender_map = await resolver.resolve_many([
+                    (row.sender_type, row.sender_id) for row in rows
+                ])
 
-                items = []
-                for thread, stats, root_msg, channel in rows:
-                    s = inbox_sender_map.get(root_msg.sender_id, ("Unknown", None))
-                    item = ThreadInboxItem(
-                        root_message_id=str(thread.root_message_id),
-                        channel_id=str(thread.channel_id),
-                        channel_name=channel.name,
-                        root_message=message_to_proto(
-                            root_msg,
-                            sender_name=s[0],
-                            sender_avatar_url=s[1],
-                        ),
-                        reply_count=stats.reply_count,
-                    )
-                    if stats.last_reply_at:
-                        item.last_reply_at.CopyFrom(
-                            datetime_to_timestamp(stats.last_reply_at)
-                        )
-                    items.append(item)
+                items = [
+                    self._build_inbox_item(row, inbox_sender_map) for row in rows
+                ]
 
                 return GetThreadsInboxResponse(
                     threads=items,
@@ -217,6 +190,44 @@ class ThreadHandlers:
                 )
         except Exception as e:
             _handle_error(e)
+
+    @staticmethod
+    def _build_inbox_item(row: ThreadInboxRow, sender_map: dict) -> ThreadInboxItem:
+        """Materialize a ``ThreadInboxItem`` from the preview-only row.
+
+        The root message proto is hand-built from the preview columns so
+        the inbox endpoint never pays the cost of fetching the full
+        ``chat_messages`` row (TOAST detoast, mention arrays, metadata).
+        Frontend only renders sender + a head-of-content blurb here; users
+        click through to load the full thread.
+        """
+        info = sender_map.get(row.sender_id)
+        sender_name = info.display_name if info else "Unknown"
+        sender_avatar = info.avatar_key if info else None
+
+        root_proto = ProtoChatMessage(
+            id=str(row.root_message_id),
+            channel_id=str(row.thread.channel_id),
+            sender_id=str(row.sender_id),
+            sender_type=SENDER_TYPE_TO_PROTO.get(row.sender_type),
+            content=row.content_preview,
+            sender_name=sender_name,
+        )
+        if sender_avatar:
+            root_proto.sender_avatar_url = sender_avatar
+        if row.created_at:
+            root_proto.created_at.CopyFrom(datetime_to_timestamp(row.created_at))
+
+        item = ThreadInboxItem(
+            root_message_id=str(row.thread.root_message_id),
+            channel_id=str(row.thread.channel_id),
+            channel_name=row.channel.name,
+            root_message=root_proto,
+            reply_count=row.stats.reply_count,
+        )
+        if row.stats.last_reply_at:
+            item.last_reply_at.CopyFrom(datetime_to_timestamp(row.stats.last_reply_at))
+        return item
 
     async def follow_thread(
         self,
@@ -232,7 +243,7 @@ class ThreadHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = ChatThreadOperations(session)
                 await ops.follow_thread(user_id, org_id, root_id)
                 return FollowThreadResponse()
@@ -252,7 +263,7 @@ class ThreadHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = ChatThreadOperations(session)
             await ops.unfollow_thread(user_id, org_id, root_id)
             return UnfollowThreadResponse()

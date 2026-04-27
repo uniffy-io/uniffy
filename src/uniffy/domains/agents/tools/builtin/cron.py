@@ -261,6 +261,7 @@ cron_list = ToolDefinition(
         },
     },
     executor=_execute_cron_list,
+    read_only=True,
 )
 
 cron_update = ToolDefinition(
@@ -341,6 +342,7 @@ cron_get_runs = ToolDefinition(
         "required": ["task_id"],
     },
     executor=_execute_cron_get_runs,
+    read_only=True,
 )
 
 CRON_TOOLS: list[ToolDefinition] = [

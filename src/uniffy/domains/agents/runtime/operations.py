@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import time
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from loguru import logger
@@ -16,8 +17,17 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.run_log import AgentRunLog
+from uniffy.core.models.chat.channel import ChatChannel
+from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.models.chat.message import SenderType as ChatSenderType
+from uniffy.core.types import SubjectType
 from uniffy.core.valkey.rate_limit import check_agent_rate_limits
+from uniffy.db.session import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
+from uniffy.domains.agents.cache import (
+    fetch_agent_prompt,
+    fetch_agent_skills,
+)
 from uniffy.domains.agents.content_policy import check_user_message
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
@@ -29,8 +39,16 @@ from uniffy.domains.agents.providers.base import (
 )
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.approvals import get_approval_store
+from uniffy.domains.agents.runtime.destinations import (
+    ChatDestination,
+    RuntimeDestination,
+    SessionDestination,
+)
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
-from uniffy.domains.agents.runtime.prompt import build_system_prompt
+from uniffy.domains.agents.runtime.prompt import (
+    build_chat_context_section,
+    build_system_prompt,
+)
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeConfirmationRequiredEvent,
     RuntimeDoneEvent,
@@ -41,15 +59,94 @@ from uniffy.domains.agents.runtime.stream_events import (
     RuntimeToolCallEvent,
     RuntimeToolResultEvent,
 )
-from uniffy.domains.agents.sessions.operations import FALLBACK_CONTEXT_WINDOW, SessionOperations
+from uniffy.domains.agents.runtime.writers import (
+    ChatChannelMessageWriter,
+    MessageWriter,
+    SessionMessageWriter,
+)
+from uniffy.domains.agents.sessions.operations import (
+    FALLBACK_CONTEXT_WINDOW,
+    SessionOperations,
+    apply_emergency_truncation,
+)
 from uniffy.domains.agents.skills.operations import SkillOperations
-from uniffy.domains.agents.tools.definitions import ToolContext
+from uniffy.domains.agents.tools.definitions import ToolContext, ToolResult
 from uniffy.domains.agents.tools.executor import ToolExecutor
-from uniffy.domains.agents.tools.registry import get_tool_registry, to_api_name
+from uniffy.domains.agents.tools.registry import ToolRegistry, get_tool_registry, to_api_name
+from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
 MAX_TOOL_ITERATIONS = 10
+READ_TOOL_POOL_SIZE = 5
+
+
+def _split_read_write(
+    registry: ToolRegistry,
+    tool_calls: list,
+) -> tuple[list, list]:
+    """Partition a turn's tool_calls into ``(reads, writes)``.
+
+    Read-only tools (``ToolDefinition.read_only=True``) can fan out
+    concurrently against fresh per-tool sessions. Everything else --
+    including unknown / unregistered tools -- runs sequentially on the
+    runtime's own session so transaction semantics are preserved.
+    """
+    reads: list = []
+    writes: list = []
+    for tc in tool_calls:
+        td = registry.get(tc.name)
+        if td is not None and td.read_only:
+            reads.append(tc)
+        else:
+            writes.append(tc)
+    return reads, writes
+
+
+async def _execute_read_tool_isolated(
+    registry: ToolRegistry,
+    base_ctx: ToolContext,
+    tc,
+    semaphore: asyncio.Semaphore,
+) -> ToolResult:
+    """Run one read-only tool against a fresh ``AsyncSession``.
+
+    Concurrent SQL on a single ``AsyncSession`` is unsafe (asyncpg
+    serialises through one connection); so each task acquires its own
+    session via ``open_session`` for the duration of the call. The
+    semaphore caps in-flight session count per turn.
+    """
+    async with semaphore, open_session() as fresh_session:
+        new_ctx = replace(base_ctx, session=fresh_session)
+        executor = ToolExecutor(registry, new_ctx)
+        return await executor.execute(tc)
+
+
+async def _gather_read_tool_results(
+    registry: ToolRegistry,
+    base_ctx: ToolContext,
+    read_calls: list,
+) -> dict[str, ToolResult]:
+    """Run read-only tool calls concurrently and key results by tool_use id."""
+    if not read_calls:
+        return {}
+    semaphore = asyncio.Semaphore(READ_TOOL_POOL_SIZE)
+    tasks = [
+        _execute_read_tool_isolated(registry, base_ctx, tc, semaphore)
+        for tc in read_calls
+    ]
+    raw = await asyncio.gather(*tasks, return_exceptions=True)
+    results: dict[str, ToolResult] = {}
+    for tc, res in zip(read_calls, raw, strict=True):
+        if isinstance(res, BaseException):
+            results[tc.id] = ToolResult(
+                success=False,
+                data="",
+                error=f"Internal error executing {tc.name}: {res}",
+            )
+        else:
+            results[tc.id] = res
+    return results
 
 
 @dataclass
@@ -392,8 +489,8 @@ class RuntimeOperations:
             session_id=session_id,
         )
 
-        # 3. Get agent config
-        agent = await self._agent_ops.get_by_id(
+        # 3. Get agent config (Valkey-cached, perm-checked)
+        agent = await self._agent_ops.get_for_runtime(
             user_id,
             organization_id,
             agent_session.agent_id,
@@ -426,8 +523,10 @@ class RuntimeOperations:
         registry = get_tool_registry()
         tool_schemas = registry.get_anthropic_schemas(enabled_tools) or None
 
-        # 6b. Fetch skill contents for the agent
-        skills = await self._skill_ops.get_skills_for_agent(
+        # 6b. Fetch skill contents for the agent (Valkey-cached)
+        skills = await fetch_agent_skills(
+            self._skill_ops,
+            agent_id=agent.id,
             organization_id=organization_id,
             enabled_skill_ids=agent.enabled_skills or [],
         )
@@ -440,8 +539,12 @@ class RuntimeOperations:
             organization_id=organization_id,
         )
 
-        # 6d. Resolve prompt template if set on agent
-        prompt_content = await self._resolve_prompt_content(agent.prompt_id)
+        # 6d. Resolve prompt template if set on agent (Valkey-cached)
+        prompt_content = await fetch_agent_prompt(
+            self._session,
+            agent_id=agent.id,
+            prompt_id=agent.prompt_id,
+        )
 
         # 7. Build system prompt (includes tool descriptions when tools enabled)
         system_prompt = build_system_prompt(
@@ -469,23 +572,21 @@ class RuntimeOperations:
         context_window_tokens = await _get_model_context_window(provider, model)
         token_budget = int(context_window_tokens * 0.65)
 
-        # 8c. Compact session if estimated token usage exceeds budget
-        await self._session_ops.compact_session_if_needed(
-            user_id=user_id,
-            organization_id=organization_id,
+        # 8c. Schedule async compaction when over budget (no LLM call here).
+        await self._session_ops.enqueue_compaction_if_needed(
             session_id=session_id,
-            provider=provider,
-            model=model,
-            context_window_tokens=context_window_tokens,
+            token_budget=token_budget,
         )
 
-        # 9. Get session context (existing messages, after compaction)
+        # 9. Load context, then apply emergency truncation when the worker
+        # has not caught up and the active window is still over budget.
         context_messages, _ = await self._session_ops.get_session_context(
             user_id=user_id,
             organization_id=organization_id,
             session_id=session_id,
             token_budget=token_budget,
         )
+        context_messages = apply_emergency_truncation(context_messages, token_budget)
 
         # 10. Content policy check (warn-only, never blocks)
         injection_flags = check_user_message(content)
@@ -714,12 +815,21 @@ class RuntimeOperations:
                 if run_tool_calls is not None:
                     run_tool_calls.append({"name": tc.name, "call_id": tc.id})
 
-            # Execute each tool call and collect results
+            # Read-only tools fan out concurrently against fresh
+            # AsyncSessions; write tools run sequentially on the
+            # runtime's session to preserve transaction semantics.
+            registry = executor.registry
+            base_ctx = executor.context
+            read_calls, write_calls = _split_read_write(registry, result.tool_calls)
+            tool_results: dict[str, ToolResult] = await _gather_read_tool_results(
+                registry, base_ctx, read_calls
+            )
+            for tc in write_calls:
+                tool_results[tc.id] = await executor.execute(tc)
+
             tool_result_blocks: list[dict] = []
             for tc in result.tool_calls:
-                tool_result = await executor.execute(tc)
-
-                # Build content string for the tool result
+                tool_result = tool_results[tc.id]
                 if tool_result.success:
                     result_content = tool_result.data
                 else:
@@ -732,7 +842,6 @@ class RuntimeOperations:
                     "content": result_content,
                 })
 
-                # Store tool result message in the database
                 await self._session_ops.add_message(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -917,7 +1026,8 @@ class RuntimeOperations:
         *,
         user_id: UUID,
         organization_id: UUID,
-        session_id: UUID,
+        session_id: UUID | None = None,
+        destination: RuntimeDestination | None = None,
         content: str,
         files: list[FileContext] | None = None,
         user_timezone: str | None = None,
@@ -928,14 +1038,21 @@ class RuntimeOperations:
         tools, prompt, context, resolve model) but yields streaming events
         as the LLM generates tokens and executes tools.
 
+        Either `session_id` (legacy session-backed path) or `destination`
+        (explicit `SessionDestination` / `ChatDestination`) must be supplied.
+        When both are omitted a ValidationError is raised.
+
         Parameters
         ----------
         user_id : UUID
             The user sending the message.
         organization_id : UUID
             Organization context.
-        session_id : UUID
-            Session to send message in.
+        session_id : UUID | None
+            Legacy session id. Wrapped in `SessionDestination` when no
+            explicit `destination` is provided.
+        destination : RuntimeDestination | None
+            Explicit destination. Used by chat-triggered invocations.
         content : str
             The user's message content.
 
@@ -955,6 +1072,40 @@ class RuntimeOperations:
             If no model can be resolved or tool loop exceeds max iterations.
 
         """
+        if destination is None:
+            if session_id is None:
+                raise ValidationError(
+                    "destination",
+                    "Either session_id or destination must be provided",
+                )
+            destination = SessionDestination(session_id=session_id)
+
+        writer: MessageWriter
+        agent_session = None
+        model_override: str | None = None
+
+        channel_id: UUID | None = None
+        if isinstance(destination, SessionDestination):
+            session_id = destination.session_id
+            writer = SessionMessageWriter(
+                session_ops=self._session_ops,
+                user_id=user_id,
+                organization_id=organization_id,
+                session_id=session_id,
+            )
+        else:
+            session_id = None
+            channel_id = destination.channel_id
+            writer = ChatChannelMessageWriter(
+                session=self._session,
+                user_id=user_id,
+                organization_id=organization_id,
+                channel_id=destination.channel_id,
+                agent_id=destination.agent_id,
+                trigger_message_id=destination.trigger_message_id,
+                thread_root_id=destination.thread_root_id,
+            )
+
         # 1-10: Same setup as send_message
         membership = await self._org_ops.require_org_member(user_id, organization_id)
 
@@ -964,16 +1115,21 @@ class RuntimeOperations:
             organization_id=str(organization_id),
         )
 
-        agent_session = await self._session_ops.get_session(
-            user_id=user_id,
-            organization_id=organization_id,
-            session_id=session_id,
-        )
+        if isinstance(destination, SessionDestination):
+            agent_session = await self._session_ops.get_session(
+                user_id=user_id,
+                organization_id=organization_id,
+                session_id=destination.session_id,
+            )
+            agent_id = agent_session.agent_id
+            model_override = agent_session.model_override
+        else:
+            agent_id = destination.agent_id
 
-        agent = await self._agent_ops.get_by_id(
+        agent = await self._agent_ops.get_for_runtime(
             user_id,
             organization_id,
-            agent_session.agent_id,
+            agent_id,
         )
 
         org = await self._org_ops.get_by_id(organization_id)
@@ -981,7 +1137,7 @@ class RuntimeOperations:
         role = membership.role
         user_role = role.value if hasattr(role, "value") else str(role)
 
-        target_model = agent_session.model_override or agent.primary_model
+        target_model = model_override or agent.primary_model
         provider_key_id: UUID | None = None
 
         if agent.primary_provider_key_id:
@@ -1000,19 +1156,33 @@ class RuntimeOperations:
         registry = get_tool_registry()
         tool_schemas = registry.get_anthropic_schemas(enabled_tools) or None
 
-        skills = await self._skill_ops.get_skills_for_agent(
+        skills = await fetch_agent_skills(
+            self._skill_ops,
+            agent_id=agent.id,
             organization_id=organization_id,
             enabled_skill_ids=agent.enabled_skills or [],
         )
         skill_contents = [s.content for s in skills if s.content]
 
         memory_context = await self._fetch_memory_context(
-            agent_id=agent_session.agent_id,
+            agent_id=agent_id,
             user_id=user_id,
             organization_id=organization_id,
         )
 
-        prompt_content = await self._resolve_prompt_content(agent.prompt_id)
+        prompt_content = await fetch_agent_prompt(
+            self._session,
+            agent_id=agent.id,
+            prompt_id=agent.prompt_id,
+        )
+
+        chat_context_block: str | None = None
+        if isinstance(destination, ChatDestination):
+            chat_context_block = await self._build_chat_context_for_destination(
+                destination=destination,
+                trigger_user_name=user.full_name or user.username or "",
+                current_agent_name=agent.name,
+            )
 
         system_prompt = build_system_prompt(
             agent_name=agent.name,
@@ -1025,10 +1195,11 @@ class RuntimeOperations:
             memory_context=memory_context or None,
             prompt_content=prompt_content,
             user_timezone=user_timezone,
+            chat_context=chat_context_block,
         )
 
         model = await resolve_model(
-            session_model_override=agent_session.model_override,
+            session_model_override=model_override,
             agent_primary_model=agent.primary_model,
             agent_fallback_models=agent.fallback_models or [],
             provider=provider,
@@ -1038,22 +1209,13 @@ class RuntimeOperations:
         context_window_tokens = await _get_model_context_window(provider, model)
         token_budget = int(context_window_tokens * 0.65)
 
-        # Compact session if estimated token usage exceeds budget
-        await self._session_ops.compact_session_if_needed(
-            user_id=user_id,
-            organization_id=organization_id,
-            session_id=session_id,
-            provider=provider,
-            model=model,
-            context_window_tokens=context_window_tokens,
-        )
+        # Schedule async compaction when over budget (no LLM call here).
+        await writer.compact_if_needed(token_budget=token_budget)
 
-        context_messages, _ = await self._session_ops.get_session_context(
-            user_id=user_id,
-            organization_id=organization_id,
-            session_id=session_id,
+        context_messages, _ = await writer.load_context_messages(
             token_budget=token_budget,
         )
+        context_messages = apply_emergency_truncation(context_messages, token_budget)
 
         # 10b. Content policy check (warn-only, never blocks)
         injection_flags = check_user_message(content)
@@ -1073,10 +1235,7 @@ class RuntimeOperations:
         # 11. Store user message with enriched content (file text baked in
         # so the LLM retains file context on subsequent turns).
         stored_content = _build_stored_content(content, files)
-        user_message = await self._session_ops.add_message(
-            user_id=user_id,
-            organization_id=organization_id,
-            session_id=session_id,
+        user_message = await writer.add_message(
             role="user",
             content=stored_content,
             file_ids=[f.file_id for f in files] if files else None,
@@ -1096,18 +1255,22 @@ class RuntimeOperations:
             stream=True,
         )
 
-        # Forward tokens in real-time as they arrive from the provider
-        stream_result: _StreamResult | None = None
-        async for event in self._forward_provider_stream(stream_iter):
-            if isinstance(event, _StreamResult):
+        # Forward tokens in real-time as they arrive from the provider.
+        # `_stream_segment` lazily reserves a chat placeholder row on the
+        # first token and tags every token with its message_id, letting
+        # the chat translator publish AGENT_TOKEN_DELTA events.
+        stream_result: _StreamSegmentResult | None = None
+        async for event in self._stream_segment(stream_iter, writer):
+            if isinstance(event, _StreamSegmentResult):
                 stream_result = event
             else:
-                yield event  # RuntimeTokenEvent forwarded immediately
+                yield event  # RuntimeTokenEvent / RuntimeMessageStoredEvent
 
         if stream_result is None or (stream_result.completion is None and not stream_result.error):
             await self._create_run_log(
                 session_id=session_id,
-                agent_id=agent_session.agent_id,
+                channel_id=channel_id,
+                agent_id=agent_id,
                 user_id=user_id,
                 organization_id=organization_id,
                 model=model,
@@ -1126,7 +1289,8 @@ class RuntimeOperations:
         if stream_result.error:
             await self._create_run_log(
                 session_id=session_id,
-                agent_id=agent_session.agent_id,
+                channel_id=channel_id,
+                agent_id=agent_id,
                 user_id=user_id,
                 organization_id=organization_id,
                 model=model,
@@ -1149,20 +1313,31 @@ class RuntimeOperations:
             tool_schemas and completion.stop_reason == "tool_use" and completion.tool_calls
         )
         if has_tool_use:
+            # Stream produced tool_use; the placeholder we reserved (if
+            # any) holds the model's narration text. Settle it in place
+            # so its `streaming` flag clears -- it stays in the channel
+            # as the "let me check..." preamble before the tool cards.
+            if stream_result.placeholder_id is not None:
+                await writer.finalize_assistant_placeholder(
+                    message_id=stream_result.placeholder_id,
+                    content=completion.content or "",
+                    input_tokens=completion.input_tokens,
+                    output_tokens=completion.output_tokens,
+                    model=completion.model,
+                )
+
             tool_ctx = ToolContext(
                 session=self._session,
                 user_id=user_id,
                 organization_id=organization_id,
-                agent_id=agent_session.agent_id,
+                agent_id=agent_id,
                 session_id=session_id,
                 user_timezone=user_timezone,
             )
             executor = ToolExecutor(registry, tool_ctx)
 
             async for event in self._stream_tool_loop(
-                user_id=user_id,
-                organization_id=organization_id,
-                session_id=session_id,
+                writer=writer,
                 provider=provider,
                 model=model,
                 system_prompt=system_prompt,
@@ -1179,7 +1354,8 @@ class RuntimeOperations:
                     msg = event.assistant_message
                     await self._create_run_log(
                         session_id=session_id,
-                        agent_id=agent_session.agent_id,
+                        channel_id=channel_id,
+                        agent_id=agent_id,
                         user_id=user_id,
                         organization_id=organization_id,
                         model=event.model_used,
@@ -1199,22 +1375,34 @@ class RuntimeOperations:
             # If we got here, the tool loop raised ValidationError (max iterations)
             return
 
-        # 14. Store final assistant message (no tool use)
-        assistant_message = await self._session_ops.add_message(
-            user_id=user_id,
-            organization_id=organization_id,
-            session_id=session_id,
-            role="assistant",
-            content=completion.content,
-            input_tokens=completion.input_tokens,
-            output_tokens=completion.output_tokens,
-            model=completion.model,
-        )
+        # 14. Store final assistant message (no tool use). When the chat
+        # writer reserved a placeholder during streaming we finalize it
+        # in place so the row id stays stable; otherwise fall back to a
+        # fresh insert (legacy session path / empty stream).
+        if stream_result.placeholder_id is not None:
+            assistant_message = await writer.finalize_assistant_placeholder(
+                message_id=stream_result.placeholder_id,
+                content=completion.content or "",
+                input_tokens=completion.input_tokens,
+                output_tokens=completion.output_tokens,
+                model=completion.model,
+            )
+        else:
+            assistant_message = await writer.add_message(
+                role="assistant",
+                content=completion.content,
+                input_tokens=completion.input_tokens,
+                output_tokens=completion.output_tokens,
+                model=completion.model,
+            )
 
-        # 15. Create run log for non-tool-use path
+        # 15. Create run log for non-tool-use path. Both session and chat
+        # destinations are logged; the writer's destination is recorded
+        # via either `session_id` or `channel_id`.
         await self._create_run_log(
             session_id=session_id,
-            agent_id=agent_session.agent_id,
+            channel_id=channel_id,
+            agent_id=agent_id,
             user_id=user_id,
             organization_id=organization_id,
             model=completion.model,
@@ -1236,9 +1424,7 @@ class RuntimeOperations:
     async def _stream_tool_loop(
         self,
         *,
-        user_id: UUID,
-        organization_id: UUID,
-        session_id: UUID,
+        writer: MessageWriter,
         provider,
         model: str,
         system_prompt: str,
@@ -1251,16 +1437,13 @@ class RuntimeOperations:
         """Run the streaming tool-use loop until the LLM produces a final response.
 
         Same logic as _run_tool_loop but yields streaming events and uses
-        streaming LLM calls for each re-invocation.
+        streaming LLM calls for each re-invocation. Message persistence and
+        approval keying both go through the supplied `MessageWriter`.
 
         Parameters
         ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session for storing messages.
+        writer : MessageWriter
+            Destination-aware persistence shim.
         provider : LLMProvider
             The LLM provider to call.
         model : str
@@ -1316,11 +1499,9 @@ class RuntimeOperations:
             })
 
             # Store the assistant tool-call message(s) and yield tool call events
+            tool_call_message_ids: dict[str, UUID] = {}
             for tc in result.tool_calls:
-                await self._session_ops.add_message(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    session_id=session_id,
+                stored = await writer.add_message(
                     role="assistant",
                     content=result.content,
                     tool_name=tc.name,
@@ -1330,6 +1511,7 @@ class RuntimeOperations:
                     output_tokens=result.output_tokens,
                     model=result.model,
                 )
+                tool_call_message_ids[tc.id] = stored.id
                 # Track tool calls for run log
                 if run_tool_calls is not None:
                     run_tool_calls.append({"name": tc.name, "call_id": tc.id})
@@ -1337,93 +1519,118 @@ class RuntimeOperations:
                     tool_call_id=tc.id,
                     tool_name=tc.name,
                     tool_args=tc.input,
+                    message_id=stored.id,
                 )
 
-            # Execute each tool call, yield results, and collect for LLM
-            tool_result_blocks: list[dict] = []
             approval_store = get_approval_store()
             tool_registry = get_tool_registry()
+            registry = executor.registry
+            base_ctx = executor.context
 
-            for tc in result.tool_calls:
-                # Check if this tool is destructive and needs confirmation
+            read_calls, write_calls = _split_read_write(registry, result.tool_calls)
+            read_results = await _gather_read_tool_results(
+                registry, base_ctx, read_calls
+            )
+
+            results_content: dict[str, str] = {}
+            results_success: dict[str, bool] = {}
+
+            for tc in read_calls:
+                res = read_results[tc.id]
+                content = res.data if res.success else f"Error: {res.error}"
+                stored_result = await writer.add_message(
+                    role="tool",
+                    content=content,
+                    tool_name=tc.name,
+                    tool_call_id=tc.id,
+                    tool_result=content,
+                )
+                yield RuntimeToolResultEvent(
+                    tool_call_id=tc.id,
+                    tool_name=tc.name,
+                    success=res.success,
+                    result=content,
+                    message_id=stored_result.id,
+                )
+                results_content[tc.id] = content
+                results_success[tc.id] = res.success
+
+            for tc in write_calls:
                 if tool_registry.is_destructive(tc.name):
-                    # Register pending approval and yield confirmation event
-                    approval_store.register(session_id, tc.id)
+                    await approval_store.register(
+                        writer.approval_scope_id,
+                        tc.id,
+                        tool_name=tc.name,
+                        tool_args=tc.input,
+                        actor_user_id=writer.approval_actor_user_id,
+                        agent_id=writer.approval_agent_id,
+                        channel_id=writer.approval_channel_id,
+                        message_id=tool_call_message_ids.get(tc.id),
+                    )
                     desc = f"The agent wants to perform a destructive action: {tc.name}"
                     yield RuntimeConfirmationRequiredEvent(
                         tool_call_id=tc.id,
                         tool_name=tc.name,
                         tool_args=tc.input,
                         description=desc,
+                        message_id=tool_call_message_ids.get(tc.id),
                     )
-
-                    # Wait for user response (timeout: 120s)
                     approved = await approval_store.wait_for_response(
-                        session_id,
+                        writer.approval_scope_id,
                         tc.id,
                         timeout=120.0,
                     )
-
                     if not approved:
-                        result_content = "Action was rejected by the user or timed out."
-                        tool_result_blocks.append({
-                            "type": "tool_result",
-                            "tool_use_id": tc.id,
-                            "tool_name": tc.name,
-                            "content": result_content,
-                        })
-                        await self._session_ops.add_message(
-                            user_id=user_id,
-                            organization_id=organization_id,
-                            session_id=session_id,
+                        rejection = "Action was rejected by the user or timed out."
+                        stored_result = await writer.add_message(
                             role="tool",
-                            content=result_content,
+                            content=rejection,
                             tool_name=tc.name,
                             tool_call_id=tc.id,
-                            tool_result=result_content,
+                            tool_result=rejection,
                         )
                         yield RuntimeToolResultEvent(
                             tool_call_id=tc.id,
                             tool_name=tc.name,
                             success=False,
-                            result=result_content,
+                            result=rejection,
+                            message_id=stored_result.id,
                         )
+                        results_content[tc.id] = rejection
+                        results_success[tc.id] = False
                         continue
 
                 tool_result = await executor.execute(tc)
-
-                if tool_result.success:
-                    result_content = tool_result.data
-                else:
-                    result_content = f"Error: {tool_result.error}"
-
-                tool_result_blocks.append({
-                    "type": "tool_result",
-                    "tool_use_id": tc.id,
-                    "tool_name": tc.name,
-                    "content": result_content,
-                })
-
-                # Store tool result message
-                await self._session_ops.add_message(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    session_id=session_id,
+                content = (
+                    tool_result.data if tool_result.success
+                    else f"Error: {tool_result.error}"
+                )
+                stored_result = await writer.add_message(
                     role="tool",
-                    content=result_content,
+                    content=content,
                     tool_name=tc.name,
                     tool_call_id=tc.id,
-                    tool_result=result_content,
+                    tool_result=content,
                 )
-
                 yield RuntimeToolResultEvent(
                     tool_call_id=tc.id,
                     tool_name=tc.name,
                     success=tool_result.success,
-                    result=result_content,
+                    result=content,
+                    message_id=stored_result.id,
                 )
+                results_content[tc.id] = content
+                results_success[tc.id] = tool_result.success
 
-            # Append tool results as a user message (Anthropic API format)
+            tool_result_blocks: list[dict] = [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tc.id,
+                    "tool_name": tc.name,
+                    "content": results_content[tc.id],
+                }
+                for tc in result.tool_calls
+            ]
             llm_messages.append({
                 "role": "user",
                 "content": tool_result_blocks,
@@ -1438,12 +1645,12 @@ class RuntimeOperations:
                 stream=True,
             )
 
-            stream_result: _StreamResult | None = None
-            async for event in self._forward_provider_stream(stream_iter):
-                if isinstance(event, _StreamResult):
+            stream_result: _StreamSegmentResult | None = None
+            async for event in self._stream_segment(stream_iter, writer):
+                if isinstance(event, _StreamSegmentResult):
                     stream_result = event
                 else:
-                    yield event  # Forward tokens in real-time
+                    yield event  # Forward tokens (with placeholder id) + RuntimeMessageStoredEvent
 
             if stream_result is None or (
                 stream_result.completion is None and not stream_result.error
@@ -1457,27 +1664,102 @@ class RuntimeOperations:
 
             result = stream_result.completion
 
-            # If the LLM is done (no more tool calls), store and yield final
+            # If the LLM is done (no more tool calls), settle the placeholder
+            # (or write a fresh row when no streaming was used) and yield final.
             if result.stop_reason != "tool_use" or not result.tool_calls:
-                assistant_message = await self._session_ops.add_message(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    session_id=session_id,
-                    role="assistant",
-                    content=result.content,
-                    input_tokens=result.input_tokens,
-                    output_tokens=result.output_tokens,
-                    model=result.model,
-                )
+                if stream_result.placeholder_id is not None:
+                    assistant_message = await writer.finalize_assistant_placeholder(
+                        message_id=stream_result.placeholder_id,
+                        content=result.content or "",
+                        input_tokens=result.input_tokens,
+                        output_tokens=result.output_tokens,
+                        model=result.model,
+                    )
+                else:
+                    assistant_message = await writer.add_message(
+                        role="assistant",
+                        content=result.content,
+                        input_tokens=result.input_tokens,
+                        output_tokens=result.output_tokens,
+                        model=result.model,
+                    )
                 yield RuntimeDoneEvent(
                     assistant_message=assistant_message,
                     model_used=result.model,
                 )
                 return
 
+            # Stream produced more tool_use after some narration. Settle the
+            # placeholder so its `streaming` flag clears before the next
+            # iteration's tool-call rows land underneath it.
+            if stream_result.placeholder_id is not None:
+                await writer.finalize_assistant_placeholder(
+                    message_id=stream_result.placeholder_id,
+                    content=result.content or "",
+                    input_tokens=result.input_tokens,
+                    output_tokens=result.output_tokens,
+                    model=result.model,
+                )
+
         raise ValidationError(
             "tool_loop",
             f"Agent exceeded maximum tool iterations ({MAX_TOOL_ITERATIONS})",
+        )
+
+    async def _stream_segment(
+        self,
+        stream_iter: AsyncIterator[StreamEvent],
+        writer: MessageWriter,
+    ) -> AsyncIterator[RuntimeStreamEvent | _StreamSegmentResult]:
+        """Forward provider stream and lazily reserve an assistant placeholder.
+
+        On the first non-empty token, asks the writer for an in-flight
+        assistant row (`reserve_assistant_placeholder`). If the writer
+        supports it (chat destination), every subsequent
+        `RuntimeTokenEvent` carries that placeholder's `message_id` plus
+        a monotonic `sequence` so the chat translator can publish
+        `AGENT_TOKEN_DELTA` events keyed to a real DB row. The
+        placeholder envelope is also yielded as a
+        `RuntimeMessageStoredEvent` so the translator can fan an
+        empty-content `MESSAGE_CREATED` to clients before the deltas
+        arrive.
+
+        At the end yields a `_StreamSegmentResult` sentinel carrying the
+        completion / error and the placeholder id (if one was reserved)
+        so the caller can finalize.
+        """
+        completion: CompletionResult | None = None
+        error: str | None = None
+        placeholder_id: UUID | None = None
+        sequence = 0
+
+        async for event in self._forward_provider_stream(stream_iter):
+            if isinstance(event, _StreamResult):
+                completion = event.completion
+                error = event.error
+                continue
+
+            if isinstance(event, RuntimeTokenEvent) and event.text:
+                if placeholder_id is None:
+                    placeholder = await writer.reserve_assistant_placeholder()
+                    if placeholder is not None:
+                        placeholder_id = placeholder.id
+                        yield RuntimeMessageStoredEvent(message=placeholder)
+                if placeholder_id is not None:
+                    sequence += 1
+                    yield RuntimeTokenEvent(
+                        text=event.text,
+                        message_id=placeholder_id,
+                        sequence=sequence,
+                    )
+                    continue
+
+            yield event
+
+        yield _StreamSegmentResult(
+            completion=completion,
+            error=error,
+            placeholder_id=placeholder_id,
         )
 
     async def _forward_provider_stream(
@@ -1571,40 +1853,86 @@ class RuntimeOperations:
             logger.warning("Failed to fetch memory context", exc_info=True)
             return []
 
-    async def _resolve_prompt_content(
+    async def _build_chat_context_for_destination(
         self,
-        prompt_id: UUID | None,
+        *,
+        destination: ChatDestination,
+        trigger_user_name: str,
+        current_agent_name: str,
     ) -> str | None:
-        """Resolve prompt template content for an agent.
+        """Assemble the chat-channel orientation block.
 
-        Parameters
-        ----------
-        prompt_id : UUID | None
-            The prompt template ID from the agent config.
-
-        Returns
-        -------
-        str | None
-            Prompt content if a template is set, None otherwise.
-
+        Loads channel metadata, channel members, and resolves user/agent
+        display names into two name lists that feed `build_chat_context_section`.
+        Returns None on any failure; the prompt still builds without the
+        block rather than hard-erroring in production.
         """
-        if not prompt_id:
-            return None
         try:
-            from uniffy.domains.agents.prompts.operations import PromptOperations
+            channel = await self._session.get(ChatChannel, destination.channel_id)
+            if channel is None:
+                return None
 
-            prompt_ops = PromptOperations(self._session)
-            prompt = await prompt_ops.get_prompt_by_id(prompt_id)
-            if prompt and prompt.content:
-                return prompt.content
+            member_rows = (
+                (
+                    await self._session.execute(
+                        select(ChatChannelMember).where(
+                            ChatChannelMember.channel_id == destination.channel_id,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
+            resolver = SenderResolver(self._session)
+            refs: list[tuple[ChatSenderType, UUID]] = []
+            for m in member_rows:
+                if m.subject_type == SubjectType.USER:
+                    refs.append((ChatSenderType.USER, m.subject_id))
+                elif m.subject_type == SubjectType.AGENT:
+                    refs.append((ChatSenderType.AGENT, m.subject_id))
+            resolved = await resolver.resolve_many(refs) if refs else {}
+
+            user_names: list[str] = []
+            agent_names: list[str] = []
+            for m in member_rows:
+                info = resolved.get(m.subject_id)
+                if not info:
+                    continue
+                if m.subject_type == SubjectType.USER:
+                    user_names.append(info.display_name)
+                elif m.subject_type == SubjectType.AGENT:
+                    if info.id == destination.agent_id:
+                        continue
+                    agent_names.append(info.display_name)
+
+            channel_type_value = (
+                channel.channel_type.value
+                if hasattr(channel.channel_type, "value")
+                else str(channel.channel_type)
+            )
+
+            return build_chat_context_section(
+                channel_type=channel_type_value,
+                channel_name=channel.name or "",
+                channel_description=channel.description or None,
+                participant_users=user_names,
+                participant_agents=agent_names,
+                trigger_user_name=trigger_user_name or "the requester",
+                trigger_rule=destination.trigger_rule,
+                in_thread=destination.thread_root_id is not None,
+            )
         except Exception:
-            logger.warning("Failed to resolve prompt template", exc_info=True)
-        return None
+            logger.warning(
+                "Failed to build chat_context block; continuing without it",
+                exc_info=True,
+            )
+            return None
 
     async def _create_run_log(
         self,
         *,
-        session_id: UUID,
+        session_id: UUID | None,
         agent_id: UUID,
         user_id: UUID,
         organization_id: UUID,
@@ -1617,42 +1945,18 @@ class RuntimeOperations:
         status: str,
         error: str | None,
         provider_key_id: UUID | None = None,
+        channel_id: UUID | None = None,
     ) -> None:
         """Create an AgentRunLog entry for observability.
 
-        Parameters
-        ----------
-        session_id : UUID
-            Session this run belongs to.
-        agent_id : UUID
-            Agent that processed this run.
-        user_id : UUID
-            User who initiated the run.
-        organization_id : UUID
-            Organization context.
-        model : str
-            Model identifier used.
-        input_tokens : int
-            Total input tokens consumed.
-        output_tokens : int
-            Total output tokens produced.
-        tool_calls : list[dict] | None
-            List of tool calls made.
-        tool_iterations : int
-            Number of tool loop iterations.
-        duration_ms : int
-            Total duration in milliseconds.
-        status : str
-            Run outcome: "success", "error", or "timeout".
-        error : str | None
-            Error message if status is "error".
-        provider_key_id : UUID | None
-            Provider key used for this run.
-
+        Either `session_id` (legacy session-backed runs) or `channel_id`
+        (chat-triggered runs) is set; both populate the same usage
+        analytics aggregation. The chat path leaves `session_id` NULL.
         """
         try:
             run_log = AgentRunLog(
                 session_id=session_id,
+                channel_id=channel_id,
                 agent_id=agent_id,
                 user_id=user_id,
                 organization_id=organization_id,
@@ -1683,3 +1987,18 @@ class _StreamResult:
 
     completion: CompletionResult | None
     error: str | None
+
+
+@dataclass
+class _StreamSegmentResult:
+    """Sentinel for `_stream_segment`. Adds the in-flight placeholder id.
+
+    `placeholder_id` is set when the writer supplied a chat-row anchor
+    for AGENT_TOKEN_DELTA fan-out. The caller uses it to call
+    `writer.finalize_assistant_placeholder` once the stop reason is
+    known.
+    """
+
+    completion: CompletionResult | None
+    error: str | None
+    placeholder_id: UUID | None

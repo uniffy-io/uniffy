@@ -1,5 +1,6 @@
 """Tool executor for agent runtime."""
 
+import asyncio
 import re
 
 from loguru import logger
@@ -92,6 +93,16 @@ class ToolExecutor:
         self._registry = registry
         self._context = context
 
+    @property
+    def registry(self) -> ToolRegistry:
+        """Tool registry the executor consults for definitions."""
+        return self._registry
+
+    @property
+    def context(self) -> ToolContext:
+        """Per-call tool context (session, user, org, agent ids)."""
+        return self._context
+
     async def execute(self, tool_call: ToolCall) -> ToolResult:
         """Execute a single tool call.
 
@@ -120,7 +131,10 @@ class ToolExecutor:
             )
 
         try:
-            result = await tool_def.executor(self._context, tool_call.input)
+            result = await asyncio.wait_for(
+                tool_def.executor(self._context, tool_call.input),
+                timeout=tool_def.timeout_seconds,
+            )
             if result.success and result.data:
                 result = ToolResult(
                     success=result.success,
@@ -128,6 +142,20 @@ class ToolExecutor:
                     error=result.error,
                 )
             return result
+        except TimeoutError:
+            logger.warning(
+                "Tool execution timed out",
+                tool=tool_call.name,
+                timeout_seconds=tool_def.timeout_seconds,
+            )
+            return ToolResult(
+                success=False,
+                data="",
+                error=(
+                    f"Tool {tool_call.name} exceeded "
+                    f"{tool_def.timeout_seconds}s timeout"
+                ),
+            )
         except NotFoundError as exc:
             logger.warning(
                 "Tool returned not-found",

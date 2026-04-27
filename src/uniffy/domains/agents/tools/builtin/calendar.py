@@ -754,6 +754,7 @@ list_events = ToolDefinition(
         "required": ["start_date", "end_date"],
     },
     executor=_execute_list_events,
+    read_only=True,
 )
 
 read_event = ToolDefinition(
@@ -770,6 +771,7 @@ read_event = ToolDefinition(
         "required": ["event_id"],
     },
     executor=_execute_read_event,
+    read_only=True,
 )
 
 create_event = ToolDefinition(
@@ -994,6 +996,7 @@ list_categories = ToolDefinition(
         "properties": {},
     },
     executor=_execute_list_categories,
+    read_only=True,
 )
 
 CALENDAR_TOOLS: list[ToolDefinition] = [

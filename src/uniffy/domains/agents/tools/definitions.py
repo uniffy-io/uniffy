@@ -71,6 +71,16 @@ class ToolDefinition:
     destructive : bool
         Whether this tool performs destructive operations that
         require user confirmation before execution.
+    read_only : bool
+        Whether the tool only reads data. Read-only tools may run
+        concurrently within the same assistant turn against private
+        per-tool sessions; write tools always run sequentially against
+        the runtime's own session so transaction boundaries hold.
+    timeout_seconds : int
+        Per-tool wall-clock cap. ``ToolExecutor.execute`` wraps the
+        executor in ``asyncio.wait_for(..., timeout=timeout_seconds)``
+        and returns a structured timeout failure when the ceiling is
+        exceeded.
 
     """
 
@@ -81,3 +91,5 @@ class ToolDefinition:
         default=None  # type: ignore[assignment]
     )
     destructive: bool = False
+    read_only: bool = False
+    timeout_seconds: int = 15

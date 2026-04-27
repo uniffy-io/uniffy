@@ -117,8 +117,15 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
             "size_bytes": file.size_bytes,
             "tags": file.tags or [],
             "description": file.description,
-            "visibility": (
-                file.visibility.value if hasattr(file.visibility, "value") else str(file.visibility)
+            "access_mode": (
+                file.access_mode.value
+                if hasattr(file.access_mode, "value")
+                else str(file.access_mode)
+            ),
+            "baseline_role": (
+                file.baseline_role.value
+                if file.baseline_role and hasattr(file.baseline_role, "value")
+                else (str(file.baseline_role) if file.baseline_role else None)
             ),
             "urn": file.urn,
             "created_at": file.created_at.isoformat() if file.created_at else None,
@@ -301,6 +308,7 @@ search_files = ToolDefinition(
         "required": ["query"],
     },
     executor=_execute_search_files,
+    read_only=True,
 )
 
 list_files = ToolDefinition(
@@ -327,6 +335,7 @@ list_files = ToolDefinition(
         },
     },
     executor=_execute_list_files,
+    read_only=True,
 )
 
 get_file_info = ToolDefinition(
@@ -346,6 +355,7 @@ get_file_info = ToolDefinition(
         "required": ["file_id"],
     },
     executor=_execute_get_file_info,
+    read_only=True,
 )
 
 read_file_content = ToolDefinition(
@@ -374,6 +384,8 @@ read_file_content = ToolDefinition(
         "required": ["file_id"],
     },
     executor=_execute_read_file_content,
+    read_only=True,
+    timeout_seconds=30,
 )
 
 update_file = ToolDefinition(

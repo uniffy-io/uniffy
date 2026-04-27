@@ -9,6 +9,7 @@ Channel events are fanned out at publish time to each member's
 is needed. The frontend filters by channel_id.
 """
 
+import json
 import time
 from collections.abc import AsyncIterator
 from contextlib import aclosing
@@ -17,6 +18,10 @@ from datetime import UTC, datetime
 from connectrpc.request import RequestContext
 from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
+from uniffy_proto.chat.v1.chat_pb2 import AgentConfirmationDecision
+from uniffy_proto.chat.v1.chat_pb2 import (
+    ChatChannel as ProtoChatChannel,
+)
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatMessage as ProtoChatMessage,
 )
@@ -24,9 +29,15 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     SenderType as ProtoSenderType,
 )
 from uniffy_proto.chat.v1.chat_stream_pb2 import (
+    AgentConfirmationRequestedPayload,
+    AgentConfirmationResolvedPayload,
+    AgentTokenDeltaPayload,
+    AgentToolCallPayload,
+    AgentTypingPayload,
     ChatEvent,
     ChatEventType,
     MemberPayload,
+    MembersChangedPayload,
     MentionReceivedPayload,
     MessageDeletedPayload,
     ReactionPayload,
@@ -150,6 +161,26 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             ),
         )
 
+    if event_type == evt.MEMBERS_ADDED:
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_MEMBERS_ADDED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            members_changed=MembersChangedPayload(
+                user_ids=payload.get("user_ids", []),
+            ),
+        )
+
+    if event_type == evt.MEMBERS_REMOVED:
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_MEMBERS_REMOVED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            members_changed=MembersChangedPayload(
+                user_ids=payload.get("user_ids", []),
+            ),
+        )
+
     if event_type == evt.THREAD_UPDATED:
         event = ChatEvent(
             event_type=ChatEventType.CHAT_EVENT_TYPE_THREAD_UPDATED,
@@ -165,6 +196,114 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             ts = Timestamp()
             ts.FromDatetime(datetime.fromisoformat(payload["last_reply_at"]))
             event.thread_updated.last_reply_at.CopyFrom(ts)
+        return event
+
+    if event_type == evt.CHANNEL_UPDATED:
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_CHANNEL_UPDATED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            channel_updated=ProtoChatChannel(
+                id=cid,
+                is_archived=payload.get("is_archived", False),
+            ),
+        )
+
+    if event_type == evt.AGENT_TYPING:
+        typing_msg = AgentTypingPayload(
+            agent_id=payload.get("agent_id", ""),
+            display_name=payload.get("display_name", ""),
+            started=payload.get("started", True),
+        )
+        if payload.get("root_id"):
+            typing_msg.root_id = payload["root_id"]
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_AGENT_TYPING,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            agent_typing=typing_msg,
+        )
+
+    if event_type == evt.AGENT_TOKEN_DELTA:
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            agent_token_delta=AgentTokenDeltaPayload(
+                message_id=payload.get("message_id", ""),
+                agent_id=payload.get("agent_id", ""),
+                delta=payload.get("delta", ""),
+                sequence=int(payload.get("sequence", 0)),
+                final=bool(payload.get("final", False)),
+            ),
+        )
+
+    if event_type == evt.AGENT_TOOL_CALL:
+        status_str = payload.get("status", "STARTED")
+        status_map = {
+            "STARTED": AgentToolCallPayload.STATUS_STARTED,
+            "COMPLETED": AgentToolCallPayload.STATUS_COMPLETED,
+            "FAILED": AgentToolCallPayload.STATUS_FAILED,
+        }
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_AGENT_TOOL_CALL,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            agent_tool_call=AgentToolCallPayload(
+                message_id=payload.get("message_id", ""),
+                agent_id=payload.get("agent_id", ""),
+                tool_name=payload.get("tool_name", ""),
+                tool_call_id=payload.get("tool_call_id", ""),
+                status=status_map.get(status_str, AgentToolCallPayload.STATUS_UNSPECIFIED),
+                preview=payload.get("preview") or "",
+                error_message=payload.get("error_message") or "",
+            ),
+        )
+
+    if event_type == evt.AGENT_CONFIRMATION_REQUESTED:
+        event = ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            agent_confirmation_requested=AgentConfirmationRequestedPayload(
+                message_id=payload.get("message_id", ""),
+                agent_id=payload.get("agent_id", ""),
+                request_id=payload.get("request_id", ""),
+                tool_name=payload.get("tool_name", ""),
+                args_preview=payload.get("args_preview", ""),
+                actor_user_id=payload.get("actor_user_id", ""),
+            ),
+        )
+        if payload.get("expires_at"):
+            ts = Timestamp()
+            ts.FromDatetime(datetime.fromisoformat(payload["expires_at"]))
+            event.agent_confirmation_requested.expires_at.CopyFrom(ts)
+        return event
+
+    if event_type == evt.AGENT_CONFIRMATION_RESOLVED:
+        decision_str = payload.get("decision", "approved")
+        decision_map = {
+            "approved": AgentConfirmationDecision.AGENT_CONFIRMATION_DECISION_APPROVE,
+            "denied": AgentConfirmationDecision.AGENT_CONFIRMATION_DECISION_DENY,
+        }
+        event = ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            agent_confirmation_resolved=AgentConfirmationResolvedPayload(
+                message_id=payload.get("message_id", ""),
+                request_id=payload.get("request_id", ""),
+                decision=decision_map.get(
+                    decision_str,
+                    AgentConfirmationDecision.AGENT_CONFIRMATION_DECISION_UNSPECIFIED,
+                ),
+                decided_by_user_id=payload.get("decided_by_user_id", ""),
+            ),
+        )
+        if payload.get("decided_at"):
+            ts = Timestamp()
+            ts.FromDatetime(datetime.fromisoformat(payload["decided_at"]))
+            event.agent_confirmation_resolved.decided_at.CopyFrom(ts)
         return event
 
     return None
@@ -200,11 +339,13 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
         from uniffy_proto.chat.v1.chat_pb2 import ReplyContext as ProtoReplyContext
 
         rc = payload["reply_context"]
-        msg.reply_context.CopyFrom(ProtoReplyContext(
-            id=rc.get("id", ""),
-            sender_name=rc.get("sender_name", ""),
-            content_preview=rc.get("content_preview", ""),
-        ))
+        msg.reply_context.CopyFrom(
+            ProtoReplyContext(
+                id=rc.get("id", ""),
+                sender_name=rc.get("sender_name", ""),
+                content_preview=rc.get("content_preview", ""),
+            )
+        )
     if payload.get("sender_name"):
         msg.sender_name = payload["sender_name"]
     if payload.get("sender_avatar_url"):
@@ -217,6 +358,18 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
         ts = Timestamp()
         ts.FromDatetime(datetime.fromisoformat(payload["edited_at"]))
         msg.edited_at.CopyFrom(ts)
+
+    # Copy metadata (map<string, string>) so agent `kind` dispatch works on
+    # the first MESSAGE_CREATED event. Dropping it here caused agent tool
+    # calls / tool results / summaries to transiently render as plain
+    # markdown until a subsequent GetMessages refetch pulled metadata from
+    # the DB. Values are stringified since the proto map only accepts
+    # strings; the frontend renderer already treats them as opaque.
+    meta = payload.get("metadata")
+    if isinstance(meta, dict):
+        for k, v in meta.items():
+            msg.metadata[str(k)] = v if isinstance(v, str) else json.dumps(v, default=str)
+
     return msg
 
 
@@ -280,8 +433,15 @@ _CHANNEL_EVENT_TYPES = {
     evt.TYPING_STOPPED,
     evt.MEMBER_JOINED,
     evt.MEMBER_LEFT,
+    evt.MEMBERS_ADDED,
+    evt.MEMBERS_REMOVED,
     evt.CHANNEL_UPDATED,
     evt.THREAD_UPDATED,
+    evt.AGENT_TYPING,
+    evt.AGENT_TOKEN_DELTA,
+    evt.AGENT_TOOL_CALL,
+    evt.AGENT_CONFIRMATION_REQUESTED,
+    evt.AGENT_CONFIRMATION_RESOLVED,
 }
 
 
@@ -311,9 +471,7 @@ class ChatStreamHandlers:
         disconnect = get_disconnect_event()
 
         try:
-            async with aclosing(
-                subscribe_channels(f"chat:user:{user_id}")
-            ) as subscriber:
+            async with aclosing(subscribe_channels(f"chat:user:{user_id}")) as subscriber:
                 last_send = time.monotonic()
 
                 async for payload in subscriber:

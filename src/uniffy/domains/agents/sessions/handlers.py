@@ -30,7 +30,7 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
@@ -82,7 +82,7 @@ class SessionsHandlers:
         model_override = request.model_override if request.HasField("model_override") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 agent_session = await ops.create_session(
                     user_id=user_id,
@@ -133,7 +133,7 @@ class SessionsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 agent_session = await ops.get_session(
                     user_id=user_id,
@@ -205,7 +205,7 @@ class SessionsHandlers:
             is_archived = request.is_archived
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 sessions, total = await ops.list_sessions(
                     user_id=user_id,
@@ -267,7 +267,7 @@ class SessionsHandlers:
         model_override = request.model_override if request.HasField("model_override") else None
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 agent_session = await ops.update_session(
                     user_id=user_id,
@@ -319,7 +319,7 @@ class SessionsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 await ops.archive_session(
                     user_id=user_id,
@@ -381,7 +381,7 @@ class SessionsHandlers:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid tool_args_json format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 message = await ops.add_message(
                     user_id=user_id,
@@ -455,7 +455,7 @@ class SessionsHandlers:
         )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 messages, total = await ops.list_messages(
                     user_id=user_id,
@@ -514,16 +514,13 @@ class SessionsHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        max_messages = request.max_messages if request.HasField("max_messages") else None
-
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
                 messages, total = await ops.get_session_context(
                     user_id=user_id,
                     organization_id=org_id,
                     session_id=session_id,
-                    max_messages=max_messages,
                 )
                 return GetSessionContextResponse(
                     messages=[message_to_proto(m) for m in messages],
@@ -569,7 +566,7 @@ class SessionsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
 
                 # Resolve model context window from the session's agent config
@@ -661,7 +658,7 @@ class SessionsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SessionOperations(session)
 
                 # Get session to find agent

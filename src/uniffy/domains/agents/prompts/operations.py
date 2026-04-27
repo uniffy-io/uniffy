@@ -6,13 +6,14 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import resolve_content_defaults
+from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.prompt import AgentPrompt
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, slugify
+from uniffy.domains.agents.cache import invalidate_agents_using_prompt
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
@@ -44,8 +45,12 @@ class PromptOperations:
         Personal prompts (``owner_id`` set) only need org membership.
         Organization prompts require org admin.
         """
-        access_mode, baseline_role = await self._resolve_access_policy(
-            organization_id, access_mode, baseline_role
+        access_mode, baseline_role = await resolve_access_policy(
+            self._session,
+            organization_id,
+            ContentType.PROMPT,
+            access_mode,
+            baseline_role,
         )
 
         if owner_id:
@@ -136,9 +141,7 @@ class PromptOperations:
         prompt_id: UUID,
     ) -> AgentPrompt | None:
         """Fetch a prompt by ID without permission checks (runtime only)."""
-        result = await self._session.execute(
-            select(AgentPrompt).where(AgentPrompt.id == prompt_id)
-        )
+        result = await self._session.execute(select(AgentPrompt).where(AgentPrompt.id == prompt_id))
         return result.scalar_one_or_none()
 
     async def list_prompts(
@@ -255,6 +258,7 @@ class PromptOperations:
         await self._session.commit()
         await self._session.refresh(prompt)
         await self._index_prompt(prompt)
+        await invalidate_agents_using_prompt(prompt_id)
         return prompt
 
     async def delete_prompt(
@@ -293,35 +297,7 @@ class PromptOperations:
         await self._session.delete(prompt)
         await self._session.commit()
         await self._search.remove(urn, organization_id)
-
-    async def _resolve_access_policy(
-        self,
-        organization_id: UUID,
-        access_mode: AccessMode | None,
-        baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Fill in defaults and validate an (access_mode, baseline) pair."""
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self._session, organization_id, ContentType.PROMPT
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-            return access_mode, baseline_role
-
-        return access_mode, None
+        await invalidate_agents_using_prompt(prompt_id, drop_tag_set=True)
 
     async def _index_prompt(self, prompt: AgentPrompt) -> None:
         """Index a prompt for search (bundled prompts are skipped)."""
@@ -341,9 +317,7 @@ class PromptOperations:
             entity_type=ContentType.PROMPT.value,
             url_path=f"/agents/prompts/{prompt.id}",
             access_mode=prompt.access_mode.value,
-            baseline_role=(
-                prompt.baseline_role.value if prompt.baseline_role is not None else None
-            ),
+            baseline_role=(prompt.baseline_role.value if prompt.baseline_role is not None else None),
             owner_id=prompt.owner_id or prompt.created_by,
             keywords=" ".join(keywords_parts),
             description=prompt.description or None,

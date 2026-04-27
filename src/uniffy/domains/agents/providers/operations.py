@@ -3,13 +3,19 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import resolve_content_defaults
+from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.crypto import decrypt_value, encrypt_value
 from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
+from uniffy.core.llm_providers.cache import (
+    get_provider_lru,
+    record_lru_hit,
+    record_lru_miss,
+)
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -20,6 +26,11 @@ from uniffy.core.types import (
     SubjectType,
 )
 from uniffy.domains.agents.audit import create_audit_log
+from uniffy.domains.agents.cache import (
+    get_cached_provider_metadata,
+    invalidate_provider_metadata,
+    set_cached_provider_metadata,
+)
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo
 from uniffy.domains.agents.providers.registry import get_provider_registry
 from uniffy.domains.agents.providers.utils import build_key_hint
@@ -47,8 +58,12 @@ class ProviderOperations:
         baseline_role: ContentRole | None = None,
     ) -> ProviderKey:
         """Add a new provider key (encrypted at rest)."""
-        access_mode, baseline_role = await self._resolve_access_policy(
-            organization_id, access_mode, baseline_role
+        access_mode, baseline_role = await resolve_access_policy(
+            self._session,
+            organization_id,
+            ContentType.PROVIDER_KEY,
+            access_mode,
+            baseline_role,
         )
 
         if access_mode == AccessMode.OWNER_ONLY:
@@ -124,6 +139,8 @@ class ProviderOperations:
         )
         await self._session.commit()
 
+        await invalidate_provider_metadata(key.id)
+
         return key
 
     async def list_keys(
@@ -148,27 +165,24 @@ class ProviderOperations:
             GroupMember.user_id == user_id,
             GroupMember.is_active == True,  # noqa: E712
         )
-        shared_key_ids_subq = (
-            select(ContentMember.content_id)
-            .where(
-                ContentMember.organization_id == organization_id,
-                ContentMember.content_type == ContentType.PROVIDER_KEY,
-                ContentMember.role != ContentRole.BLOCKED,
-                or_(
-                    ContentMember.expires_at.is_(None),
-                    ContentMember.expires_at > now,
+        shared_key_ids_subq = select(ContentMember.content_id).where(
+            ContentMember.organization_id == organization_id,
+            ContentMember.content_type == ContentType.PROVIDER_KEY,
+            ContentMember.role != ContentRole.BLOCKED,
+            or_(
+                ContentMember.expires_at.is_(None),
+                ContentMember.expires_at > now,
+            ),
+            or_(
+                and_(
+                    ContentMember.subject_type == SubjectType.USER,
+                    ContentMember.subject_id == user_id,
                 ),
-                or_(
-                    and_(
-                        ContentMember.subject_type == SubjectType.USER,
-                        ContentMember.subject_id == user_id,
-                    ),
-                    and_(
-                        ContentMember.subject_type == SubjectType.GROUP,
-                        ContentMember.subject_id.in_(user_groups_subq),
-                    ),
+                and_(
+                    ContentMember.subject_type == SubjectType.GROUP,
+                    ContentMember.subject_id.in_(user_groups_subq),
                 ),
-            )
+            ),
         )
 
         stmt = select(ProviderKey).where(
@@ -221,6 +235,8 @@ class ProviderOperations:
         )
         await self._session.commit()
 
+        await invalidate_provider_metadata(key_id)
+
     async def validate_key(
         self,
         *,
@@ -242,9 +258,7 @@ class ProviderOperations:
             raise NotFoundError("ProviderKey", str(key_id))
 
         credential = decrypt_value(key.encrypted_credential)
-        llm = get_provider_registry().create_provider(
-            key.provider, credential, key.credential_type
-        )
+        llm = get_provider_registry().create_provider(key.provider, credential, key.credential_type)
         is_valid, error = await llm.validate()
 
         key.is_valid = is_valid
@@ -253,6 +267,7 @@ class ProviderOperations:
         key.updated_at = datetime.now(UTC)
 
         await self._session.commit()
+        await invalidate_provider_metadata(key_id)
         return is_valid, error
 
     async def list_available_models(
@@ -331,9 +346,7 @@ class ProviderOperations:
         key.last_used_at = datetime.now(UTC)
         await self._session.commit()
 
-        return get_provider_registry().create_provider(
-            provider, credential, key.credential_type
-        )
+        return get_provider_registry().create_provider(provider, credential, key.credential_type)
 
     async def get_provider_for_model(
         self,
@@ -341,7 +354,14 @@ class ProviderOperations:
         organization_id: UUID,
         model_id: str,
     ) -> LLMProvider:
-        """Return the provider that serves a specific ``model_id``."""
+        """Return the provider that serves a specific ``model_id``.
+
+        Routing metadata is read from Valkey when available so we can
+        skip the per-key decrypt + provider catalog round-trip until we
+        find the key that actually owns ``model_id``. The in-process
+        LRU caches the decrypted credential + constructed client so a
+        match against the same key reuses the warm httpx pool.
+        """
         result = await self._session.execute(
             select(ProviderKey)
             .where(
@@ -355,15 +375,33 @@ class ProviderOperations:
 
         seen_providers: set[str] = set()
         registry = get_provider_registry()
+        lru = get_provider_lru()
 
         for key in keys:
             if key.provider in seen_providers:
                 continue
             seen_providers.add(key.provider)
 
-            credential = decrypt_value(key.encrypted_credential)
-            llm = registry.create_provider(key.provider, credential, key.credential_type)
+            metadata = await get_cached_provider_metadata(key.id)
+            if metadata is not None:
+                cached_models = metadata.get("model_ids") or []
+                if model_id not in cached_models:
+                    continue
+                llm = await self._resolve_or_build_provider(lru, key, registry)
+                key.last_used_at = datetime.now(UTC)
+                await self._session.commit()
+                return llm
+
+            llm = await self._resolve_or_build_provider(lru, key, registry)
             models = await llm.get_available_models()
+            await set_cached_provider_metadata(
+                key.id,
+                provider=key.provider,
+                credential_type=key.credential_type,
+                is_valid=key.is_valid,
+                is_enabled=key.is_enabled,
+                model_ids=[m.id for m in models],
+            )
 
             if any(m.id == model_id for m in models):
                 key.last_used_at = datetime.now(UTC)
@@ -375,13 +413,44 @@ class ProviderOperations:
             f"No configured provider has model '{model_id}' available",
         )
 
+    async def _resolve_or_build_provider(
+        self,
+        lru,
+        key: ProviderKey,
+        registry,
+    ) -> LLMProvider:
+        """LRU-aware provider construction.
+
+        On hit: skip the Fernet decrypt and the SDK constructor, return
+        the cached client. On miss: decrypt, construct, populate cache.
+        """
+        cached = await lru.get(key.id)
+        if cached is not None:
+            record_lru_hit()
+            _credential, provider = cached
+            return provider
+
+        record_lru_miss()
+        credential = decrypt_value(key.encrypted_credential)
+        provider = registry.create_provider(
+            key.provider, credential, key.credential_type
+        )
+        await lru.set(key.id, credential, provider)
+        return provider
+
     async def get_provider_for_key(
         self,
         *,
         organization_id: UUID,
         key_id: UUID,
     ) -> tuple[LLMProvider, ProviderKey]:
-        """Return a configured provider for a specific key."""
+        """Return a configured provider for a specific key.
+
+        The encrypted credential lives in PG so the row SELECT is still
+        required (also drives ``last_used_at`` tracking). The in-process
+        LRU short-circuits the Fernet decrypt and the SDK construction
+        once the key has been seen this hour.
+        """
         result = await self._session.execute(
             select(ProviderKey).where(
                 ProviderKey.id == key_id,
@@ -397,15 +466,28 @@ class ProviderOperations:
                 f"Provider key '{key_id}' not found, invalid, or disabled",
             )
 
-        credential = decrypt_value(key.encrypted_credential)
+        provider = await self._resolve_or_build_provider(
+            get_provider_lru(), key, get_provider_registry()
+        )
         key.last_used_at = datetime.now(UTC)
         await self._session.commit()
 
-        provider = get_provider_registry().create_provider(
-            key.provider,
-            credential,
-            key.credential_type,
-        )
+        if await get_cached_provider_metadata(key.id) is None:
+            try:
+                models = await provider.get_available_models()
+                await set_cached_provider_metadata(
+                    key.id,
+                    provider=key.provider,
+                    credential_type=key.credential_type,
+                    is_valid=key.is_valid,
+                    is_enabled=key.is_enabled,
+                    model_ids=[m.id for m in models],
+                )
+            except Exception:
+                logger.warning(
+                    f"Failed to populate provider metadata cache for {key.id}",
+                )
+
         return provider, key
 
     async def list_models_for_key(
@@ -471,36 +553,8 @@ class ProviderOperations:
         )
         await self._session.commit()
         await self._session.refresh(key)
+        await invalidate_provider_metadata(key_id)
         return key
-
-    async def _resolve_access_policy(
-        self,
-        organization_id: UUID,
-        access_mode: AccessMode | None,
-        baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Fill in defaults and validate an (access_mode, baseline) pair."""
-        if access_mode is None:
-            access_mode, default_baseline = await resolve_content_defaults(
-                self._session, organization_id, ContentType.PROVIDER_KEY
-            )
-            if baseline_role is None:
-                baseline_role = default_baseline
-
-        if access_mode == AccessMode.OPEN_TO_ORG:
-            if baseline_role is None:
-                raise ValidationError(
-                    "baseline_role",
-                    "baseline_role is required when access_mode is OPEN_TO_ORG",
-                )
-            if baseline_role in (ContentRole.OWNER, ContentRole.BLOCKED):
-                raise ValidationError(
-                    "baseline_role",
-                    f"{baseline_role.value} is not a valid baseline role",
-                )
-            return access_mode, baseline_role
-
-        return access_mode, None
 
 
 # Content loader registration

@@ -7,7 +7,7 @@ to get a ready-to-use provider.
 
 from uuid import UUID
 
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.agents.providers.base import LLMProvider
 from uniffy.domains.agents.providers.operations import ProviderOperations
 
@@ -40,7 +40,7 @@ async def get_provider_for_org(
         If no valid key is found for the provider in the organization.
 
     """
-    async for session in get_async_session():
+    async with open_session() as session:
         ops = ProviderOperations(session)
         return await ops.get_active_provider(
             organization_id=organization_id,

@@ -14,18 +14,25 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.core.valkey.pubsub import _publisher
+from uniffy.core.valkey import pubsub
 
 LOGGER_COMPONENT = "chat.publisher"
 
 
 async def _publish_to_channel(channel_name: str, payload: str) -> None:
     """Publish a pre-serialized JSON string to a Valkey channel."""
-    if _publisher is None:
+    # Read through the module every time so `init_pubsub` rebinding
+    # `pubsub._pubsub_client` after this module has been imported is
+    # picked up. A captured-at-import-time reference would freeze the
+    # pre-init ``None`` value and silently drop every publish when the
+    # worker (which imports chat_integration eagerly) loaded publisher
+    # before init_pubsub ran.
+    publisher = pubsub._pubsub_client
+    if publisher is None:
         return
 
     try:
-        await _publisher.publish(channel_name, payload)
+        await publisher.publish(channel_name, payload)
     except Exception:
         logger.warning(
             f"Failed to publish to {channel_name}",
@@ -42,9 +49,10 @@ async def publish_channel_event_to_members(
 ) -> None:
     """Fan out a channel event to all members' user channels.
 
-    Serializes the payload once, then publishes to each member's
-    `chat:user:{user_id}` channel. Skips `exclude_user_id` if set
-    (e.g. skip the sender for typing events).
+    Serializes the payload once, then PUBLISHes to each member's
+    `chat:user:{user_id}` channel inside a single redis pipeline so the
+    whole fan-out costs one round-trip instead of N. Skips
+    ``exclude_user_id`` if set (e.g. skip the sender for typing events).
 
     Parameters
     ----------
@@ -61,7 +69,8 @@ async def publish_channel_event_to_members(
         User ID to exclude from fan-out (e.g. the sender).
 
     """
-    if _publisher is None:
+    publisher = pubsub._pubsub_client
+    if publisher is None:
         return
 
     data: dict[str, Any] = {"_type": event_type, **payload}
@@ -69,10 +78,20 @@ async def publish_channel_event_to_members(
         data["channel_id"] = str(channel_id)
     message = json.dumps(data, default=str)
 
-    for uid in member_ids:
-        if exclude_user_id and uid == exclude_user_id:
-            continue
-        await _publish_to_channel(f"chat:user:{uid}", message)
+    targets = [uid for uid in member_ids if uid != exclude_user_id]
+    if not targets:
+        return
+
+    try:
+        async with publisher.pipeline(transaction=False) as pipe:
+            for uid in targets:
+                pipe.publish(f"chat:user:{uid}", message)
+            await pipe.execute()
+    except Exception:
+        logger.warning(
+            f"Pipelined fan-out failed for {event_type} to {len(targets)} members",
+            component=LOGGER_COMPONENT,
+        )
 
 
 async def publish_user_chat_event(
@@ -84,7 +103,7 @@ async def publish_user_chat_event(
 
     Used for events that target a specific user (unread counts, mentions).
     """
-    if _publisher is None:
+    if pubsub._pubsub_client is None:
         return
 
     data = {

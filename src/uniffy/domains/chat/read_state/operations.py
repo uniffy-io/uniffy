@@ -9,12 +9,13 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
+
+_EPOCH = datetime(1, 1, 1, tzinfo=UTC)
 
 LOGGER_COMPONENT = "chat.read_state"
 
@@ -29,10 +30,10 @@ _READ_CURSOR_TTL = 7 * 24 * 3600
 
 
 def _get_valkey_client():
-    """Get the Valkey client (shared publisher connection)."""
-    from uniffy.core.valkey.pubsub import _publisher
+    """Get the Valkey ops client used for cursor SET / dirty-set adds."""
+    from uniffy.core.valkey.ops import _get_ops_client
 
-    return _publisher
+    return _get_ops_client()
 
 
 class ChatReadStateOperations:
@@ -54,9 +55,7 @@ class ChatReadStateOperations:
         """
         now = datetime.now(UTC)
         value = f"{last_read_message_id}:{now.isoformat()}"
-        key = _CHANNEL_READ_KEY.format(
-            user_id=user_id, channel_id=channel_id
-        )
+        key = _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=channel_id)
 
         client = _get_valkey_client()
         if client is not None:
@@ -74,9 +73,7 @@ class ChatReadStateOperations:
                 )
 
         # Fallback: write directly to PG
-        await self._upsert_channel_cursor_pg(
-            user_id, channel_id, last_read_message_id, now
-        )
+        await self._upsert_channel_cursor_pg(user_id, channel_id, last_read_message_id, now)
 
     async def mark_thread_read(
         self,
@@ -85,9 +82,7 @@ class ChatReadStateOperations:
     ) -> None:
         """Mark a thread as read."""
         now = datetime.now(UTC)
-        key = _THREAD_READ_KEY.format(
-            user_id=user_id, root_message_id=root_message_id
-        )
+        key = _THREAD_READ_KEY.format(user_id=user_id, root_message_id=root_message_id)
 
         client = _get_valkey_client()
         if client is not None:
@@ -116,9 +111,7 @@ class ChatReadStateOperations:
 
         Checks Valkey first, falls back to PG on miss.
         """
-        key = _CHANNEL_READ_KEY.format(
-            user_id=user_id, channel_id=channel_id
-        )
+        key = _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=channel_id)
 
         client = _get_valkey_client()
         if client is not None:
@@ -175,10 +168,7 @@ class ChatReadStateOperations:
 
         client = _get_valkey_client()
         if client is not None:
-            keys = [
-                _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=cid)
-                for cid in channel_ids
-            ]
+            keys = [_CHANNEL_READ_KEY.format(user_id=user_id, channel_id=cid) for cid in channel_ids]
             try:
                 values = await client.mget(*keys)
                 for i, raw in enumerate(values):
@@ -218,103 +208,137 @@ class ChatReadStateOperations:
                     cur = cursor_map.get(cid)
                     if cur and cur[0]:
                         try:
-                            key = _CHANNEL_READ_KEY.format(
-                                user_id=user_id, channel_id=cid
-                            )
+                            key = _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=cid)
                             value = f"{cur[0]}:{cur[1].isoformat() if cur[1] else ''}"
                             await client.set(key, value, ex=_READ_CURSOR_TTL)
                         except Exception:
                             pass
 
-        # Phase 3: Single SQL query for unread counts across all channels
-        # For channels with a cursor: count messages after the cursor timestamp
-        # For channels without: count all root messages (capped at 100)
+        # Phase 3: ONE query for unread + mention counts across every channel.
+        #
+        # Joins `chat_messages` against `unnest(channel_ids, last_read_ats)`
+        # so each channel's per-user threshold is part of the same plan.
+        # PG resolves the predicate `m.channel_id = c.channel_id AND
+        # m.created_at > c.last_read_at` with a bitmap index scan over
+        # `ix_chat_messages_channel_timeline`, plus the partial GIN
+        # `ix_chat_messages_mentioned_urns` for the mention FILTER.
+        # Channels with no read cursor get the epoch threshold so every
+        # message qualifies as unread (cap of 100 still applies).
+        user_mention_urn = f"urn:uniffy:content:USER:{user_id}"
+
+        ordered_channel_ids: list[UUID] = list(channel_ids)
+        last_read_ats: list[datetime] = []
+        last_read_msg_ids: dict[UUID, UUID | None] = {}
+        for cid in ordered_channel_ids:
+            cur = cursor_map.get(cid)
+            last_read_ats.append(cur[1] if cur and cur[1] is not None else _EPOCH)
+            last_read_msg_ids[cid] = cur[0] if cur else None
+
+        unread_query = text(
+            """
+            SELECT
+                c.channel_id AS channel_id,
+                LEAST(COUNT(*) FILTER (WHERE m.created_at > c.last_read_at), 100)
+                    AS unread,
+                COUNT(*) FILTER (
+                    WHERE m.created_at > c.last_read_at
+                      AND m.mentioned_urns @> ARRAY[:user_mention_urn]::text[]
+                ) AS unread_mentions
+            FROM unnest(
+                CAST(:channel_ids AS UUID[]),
+                CAST(:read_ats AS TIMESTAMP WITH TIME ZONE[])
+            ) AS c(channel_id, last_read_at)
+            JOIN chat_messages m ON c.channel_id = m.channel_id
+            WHERE m.is_deleted = false AND m.root_id IS NULL
+            GROUP BY c.channel_id
+            """
+        )
+
+        result = await self.session.execute(
+            unread_query,
+            {
+                "channel_ids": ordered_channel_ids,
+                "read_ats": last_read_ats,
+                "user_mention_urn": user_mention_urn,
+            },
+        )
         counts: dict[UUID, dict] = {}
+        for row in result.all():
+            cid = row[0] if isinstance(row[0], UUID) else UUID(str(row[0]))
+            counts[cid] = {
+                "unread_count": row[1],
+                "mention_count": row[2],
+                "last_read_message_id": last_read_msg_ids.get(cid),
+            }
 
-        # Channels with read cursors
-        channels_with_cursor = {
-            cid: cur for cid, cur in cursor_map.items() if cur[1] is not None
-        }
-        # Channels without read cursors
-        channels_without_cursor = [
-            cid for cid in channel_ids if cid not in channels_with_cursor
-        ]
-
-        # Query for channels without cursors (never read)
-        if channels_without_cursor:
-            result = await self.session.execute(
-                select(
-                    ChatMessage.channel_id,
-                    func.least(func.count(), 100),
-                )
-                .where(
-                    ChatMessage.channel_id.in_(channels_without_cursor),
-                    ChatMessage.root_id.is_(None),
-                    ChatMessage.is_deleted == False,  # noqa: E712
-                )
-                .group_by(ChatMessage.channel_id)
-            )
-            for row in result.all():
-                counts[row[0]] = {
-                    "unread_count": row[1],
+        # Channels with no rows in `chat_messages` (newly created or empty)
+        # don't appear in the GROUP BY result; fill zeros so every requested
+        # channel maps to a value.
+        for cid in ordered_channel_ids:
+            if cid not in counts:
+                counts[cid] = {
+                    "unread_count": 0,
                     "mention_count": 0,
-                    "last_read_message_id": None,
+                    "last_read_message_id": last_read_msg_ids.get(cid),
                 }
-            # Fill zeros for channels with no messages
-            for cid in channels_without_cursor:
-                if cid not in counts:
-                    counts[cid] = {
-                        "unread_count": 0,
-                        "mention_count": 0,
-                        "last_read_message_id": None,
-                    }
-
-        # Query for channels with cursors (count messages after cursor timestamp)
-        if channels_with_cursor:
-            # Build a single query that counts per-channel with per-channel thresholds
-            # Use a UNION ALL approach for different timestamps per channel
-            from sqlalchemy import literal, union_all
-
-            count_queries = []
-            for cid, (_msg_id, read_at) in channels_with_cursor.items():
-                q = (
-                    select(
-                        literal(str(cid)).label("channel_id"),
-                        func.least(func.count(), 100).label("cnt"),
-                    )
-                    .where(
-                        ChatMessage.channel_id == cid,
-                        ChatMessage.root_id.is_(None),
-                        ChatMessage.is_deleted == False,  # noqa: E712
-                        ChatMessage.created_at > read_at,
-                    )
-                )
-                count_queries.append(q)
-
-            if count_queries:
-                combined = union_all(*count_queries).subquery()
-                result = await self.session.execute(
-                    select(combined.c.channel_id, combined.c.cnt)
-                )
-                for row in result.all():
-                    cid = UUID(row[0]) if isinstance(row[0], str) else row[0]
-                    cursor_data = channels_with_cursor[cid]
-                    counts[cid] = {
-                        "unread_count": row[1],
-                        "mention_count": 0,
-                        "last_read_message_id": cursor_data[0],
-                    }
-
-            # Fill zeros for channels with cursor but no new messages
-            for cid, (msg_id, _) in channels_with_cursor.items():
-                if cid not in counts:
-                    counts[cid] = {
-                        "unread_count": 0,
-                        "mention_count": 0,
-                        "last_read_message_id": msg_id,
-                    }
 
         return counts
+
+    async def batch_get_thread_read_cursors(
+        self,
+        user_id: UUID,
+        root_message_ids: list[UUID],
+    ) -> dict[UUID, datetime]:
+        """Get thread read cursors for multiple threads. Returns {root_message_id: last_read_at}."""
+        if not root_message_ids:
+            return {}
+
+        cursor_map: dict[UUID, datetime] = {}
+        valkey_miss_ids: list[UUID] = []
+
+        client = _get_valkey_client()
+        if client is not None:
+            keys = [
+                _THREAD_READ_KEY.format(user_id=user_id, root_message_id=rid)
+                for rid in root_message_ids
+            ]
+            try:
+                values = await client.mget(*keys)
+                for i, raw in enumerate(values):
+                    rid = root_message_ids[i]
+                    if raw:
+                        try:
+                            cursor_map[rid] = datetime.fromisoformat(str(raw))
+                            continue
+                        except ValueError, TypeError:
+                            pass
+                    valkey_miss_ids.append(rid)
+            except Exception:
+                valkey_miss_ids = list(root_message_ids)
+        else:
+            valkey_miss_ids = list(root_message_ids)
+
+        if valkey_miss_ids:
+            pg_result = await self.session.execute(
+                select(
+                    ChatThreadReadCursor.root_message_id,
+                    ChatThreadReadCursor.last_read_at,
+                ).where(
+                    ChatThreadReadCursor.user_id == user_id,
+                    ChatThreadReadCursor.root_message_id.in_(valkey_miss_ids),
+                )
+            )
+            for row in pg_result.all():
+                cursor_map[row[0]] = row[1]
+
+                if client is not None:
+                    try:
+                        key = _THREAD_READ_KEY.format(user_id=user_id, root_message_id=row[0])
+                        await client.set(key, row[1].isoformat(), ex=_READ_CURSOR_TTL)
+                    except Exception:
+                        pass
+
+        return cursor_map
 
     # Direct PG operations (used by flush job and fallback)
 
