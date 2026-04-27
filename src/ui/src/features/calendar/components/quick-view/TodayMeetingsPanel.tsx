@@ -264,7 +264,7 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
       clearTimeout(timeoutId);
       document.removeEventListener('click', handleClickOutside, true);
     };
-  }, [onClose, isMobile]);
+  }, [onClose, isMobile, anchorRef]);
 
   // Lock body scroll on mobile
   useEffect(() => {

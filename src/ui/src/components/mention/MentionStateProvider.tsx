@@ -145,7 +145,7 @@ interface MentionStateProviderProps {
 
 export function MentionStateProvider({ children }: MentionStateProviderProps) {
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
-  const { mentionDisplay } = useAppearanceSettings();
+  const mentionDisplay = useAppearanceSettings().mentionDisplay as MentionDisplayMode;
 
   // Registered URNs (currently visible in viewport)
   const registeredUrns = useRef(new Map<string, number>()); // urn -> refcount
@@ -283,7 +283,7 @@ const EMPTY_STATES: Map<string, MentionLiveState> = new Map();
  * spin up a redundant batch resolver and own the global state lifecycle).
  */
 export function MentionDisplayBridge({ children }: MentionStateProviderProps) {
-  const { mentionDisplay } = useAppearanceSettings();
+  const mentionDisplay = useAppearanceSettings().mentionDisplay as MentionDisplayMode;
   const value = useMemo<MentionStateContextValue>(
     () => ({
       states: EMPTY_STATES,

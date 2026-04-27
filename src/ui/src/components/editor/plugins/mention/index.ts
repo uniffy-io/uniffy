@@ -339,11 +339,10 @@ class MentionNodeView implements NodeView {
     const store = getStoreRef();
     if (store) {
       this.root.render(
-        React.createElement(
-          Provider,
-          { store },
-          React.createElement(MentionDisplayBridge, null, mentionElement),
-        ),
+        React.createElement(Provider, {
+          store,
+          children: React.createElement(MentionDisplayBridge, null, mentionElement),
+        }),
       );
     } else {
       // Store not yet initialized - render without provider

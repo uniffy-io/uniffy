@@ -82,21 +82,6 @@ function MessageItemInner({
   isHighlighted = false,
   isSelected = false,
 }: MessageItemProps) {
-  // Full-width agent dividers (context_reset) bypass the bubble + avatar
-  // shell entirely. They carry no meaningful sender attribution at the
-  // chat-row level -- the divider's own metadata holds `reset_by_name`.
-  if (message.senderType === 'AGENT' && message.metadata?.['kind'] === 'context_reset') {
-    return (
-      <div
-        className="px-4 py-1"
-        data-testid={`chat-message-${message.id}`}
-        data-message-kind="agent-context-reset"
-      >
-        <AgentMessageBody message={message} />
-      </div>
-    );
-  }
-
   const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -181,6 +166,21 @@ function MessageItemInner({
       content: message.content,
     }));
   }, [dispatch, message.id, message.channelId, message.content]);
+
+  // Full-width agent dividers (context_reset) bypass the bubble + avatar
+  // shell entirely. They carry no meaningful sender attribution at the
+  // chat-row level -- the divider's own metadata holds `reset_by_name`.
+  if (message.senderType === 'AGENT' && message.metadata?.['kind'] === 'context_reset') {
+    return (
+      <div
+        className="px-4 py-1"
+        data-testid={`chat-message-${message.id}`}
+        data-message-kind="agent-context-reset"
+      >
+        <AgentMessageBody message={message} />
+      </div>
+    );
+  }
 
   // System message (join, leave, etc.)
   if (message.senderType === 'SYSTEM') {

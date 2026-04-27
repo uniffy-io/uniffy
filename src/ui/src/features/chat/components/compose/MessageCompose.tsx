@@ -476,7 +476,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
         updateState();
       }
     }
-  }, [mentionActive, handleSend, handleMentionClose, updateState, replyTo, onCancelReply]);
+  }, [mentionActive, handleSend, handleMentionClose, updateState, replyTo, onCancelReply, editingMessage, onCancelEdit]);
 
   // Trigger mention from toolbar @ button
   const handleAtButtonClick = useCallback(() => {
