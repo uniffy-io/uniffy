@@ -35,9 +35,7 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.CHAT_CHANNEL_REMOVED: (
         ProtoNotificationType.NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED
     ),
-    NotificationType.CHAT_THREAD_REPLY: (
-        ProtoNotificationType.NOTIFICATION_TYPE_CHAT_THREAD_REPLY
-    ),
+    NotificationType.CHAT_THREAD_REPLY: (ProtoNotificationType.NOTIFICATION_TYPE_CHAT_THREAD_REPLY),
 }
 
 # Reverse mapping

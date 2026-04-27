@@ -10,7 +10,7 @@ applies it to the new content item's ``access_mode`` and ``baseline_role``
 columns. Users can override per content after creation.
 """
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from uniffy.core.models.shared import AccessMode, ContentRole, ContentType
 
@@ -20,6 +20,13 @@ class PermissionDefaults(TypedDict):
 
     default_access_mode: AccessMode
     default_baseline_role: ContentRole | None
+
+
+DEFAULT_ORG_SETTINGS: dict[str, Any] = {
+    "chat": {
+        "agents_enabled": True,
+    },
+}
 
 
 ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {

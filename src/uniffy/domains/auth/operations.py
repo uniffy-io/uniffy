@@ -93,9 +93,11 @@ class AuthOperations:
             organization_role = None
             domain_admin_domains: list[str] | None = None
             if organization_slug:
-                organization_id, organization_role, domain_admin_domains = (
-                    await self._verify_org_membership(user.id, organization_slug)
-                )
+                (
+                    organization_id,
+                    organization_role,
+                    domain_admin_domains,
+                ) = await self._verify_org_membership(user.id, organization_slug)
 
             # Create session record
             session_record = await self._create_session(user.id, user_agent)
@@ -290,9 +292,11 @@ class AuthOperations:
             organization_role = None
             domain_admin_domains: list[str] | None = None
             if organization_slug:
-                organization_id, organization_role, domain_admin_domains = (
-                    await self._verify_org_membership(user_id, organization_slug)
-                )
+                (
+                    organization_id,
+                    organization_role,
+                    domain_admin_domains,
+                ) = await self._verify_org_membership(user_id, organization_slug)
 
             # Create new tokens with current token_version, preserving session_id
             access_token = create_access_token(
@@ -424,9 +428,7 @@ class AuthOperations:
 
         # Rotate cache_key_seed to invalidate all device caches
         await self._session.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(cache_key_seed=os.urandom(32))
+            update(User).where(User.id == user_id).values(cache_key_seed=os.urandom(32))
         )
 
         await self._session.commit()
@@ -458,9 +460,7 @@ class AuthOperations:
             If user not found.
 
         """
-        result = await self._session.execute(
-            select(User.cache_key_seed).where(User.id == user_id)
-        )
+        result = await self._session.execute(select(User.cache_key_seed).where(User.id == user_id))
         seed = result.scalar_one_or_none()
         if seed is None:
             raise AuthenticationError("User not found")
@@ -491,9 +491,7 @@ class AuthOperations:
         new_seed = os.urandom(32)
 
         await self._session.execute(
-            update(User)
-            .where(User.id == effective_user_id)
-            .values(cache_key_seed=new_seed)
+            update(User).where(User.id == effective_user_id).values(cache_key_seed=new_seed)
         )
         await self._session.commit()
 

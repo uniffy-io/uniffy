@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.cache import invalidate_user as invalidate_perm_user
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
@@ -159,8 +160,22 @@ class GroupOperations:
 
         """
         group = await self.get_by_id(group_id)
+
+        # Capture active members BEFORE the delete cascades through
+        # GroupMember rows so we can wipe their cached perm entries.
+        member_ids_result = await self._session.execute(
+            select(GroupMember.user_id).where(
+                GroupMember.group_id == group_id,
+                GroupMember.is_active == True,  # noqa: E712
+            )
+        )
+        member_user_ids = [row[0] for row in member_ids_result.all()]
+
         await self._session.delete(group)
         await self._session.commit()
+
+        for user_id in member_user_ids:
+            await invalidate_perm_user(user_id)
 
     async def list_in_organization(
         self,
@@ -261,6 +276,9 @@ class GroupOperations:
         self._session.add(membership)
         await self._session.commit()
         await self._session.refresh(membership)
+
+        await invalidate_perm_user(user_id)
+
         return membership
 
     async def update_member_role(
@@ -329,6 +347,7 @@ class GroupOperations:
         if membership:
             await self._session.delete(membership)
             await self._session.commit()
+            await invalidate_perm_user(user_id)
 
     async def get_member(self, group_id: UUID, user_id: UUID) -> tuple[GroupMember, User]:
         """

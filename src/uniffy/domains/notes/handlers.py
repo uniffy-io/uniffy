@@ -63,7 +63,7 @@ def _parse_canvas_content(content: str | None) -> dict | None:
         return None
     try:
         parsed = json.loads(content)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
     return parsed if isinstance(parsed, dict) else None
 
@@ -92,20 +92,14 @@ class NotesHandlers:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
-            content_role_from_proto(request.baseline_role)
-            if request.baseline_role
-            else None
+            content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
         node_type = node_type_from_proto(request.node_type)
 
         parent_id = (
-            _parse_uuid(request.parent_id, "parent_id")
-            if request.HasField("parent_id")
-            else None
+            _parse_uuid(request.parent_id, "parent_id") if request.HasField("parent_id") else None
         )
         group_ids = [_parse_uuid(gid, "group_id") for gid in request.group_ids] or None
 
@@ -187,8 +181,8 @@ class NotesHandlers:
 
         parent_id: UUID | str | None = None
         if request.HasField("parent_id"):
-            parent_id = "" if request.parent_id == "" else _parse_uuid(
-                request.parent_id, "parent_id"
+            parent_id = (
+                "" if request.parent_id == "" else _parse_uuid(request.parent_id, "parent_id")
             )
 
         metadata = dict(request.metadata) if request.metadata else None
@@ -242,9 +236,7 @@ class NotesHandlers:
                     note_id=note_id,
                     permanent=request.permanent,
                 )
-                message = (
-                    "Note permanently deleted" if request.permanent else "Note deleted"
-                )
+                message = "Note permanently deleted" if request.permanent else "Note deleted"
                 return DeleteNoteResponse(success=True, message=message)
         except ConnectError:
             raise
@@ -281,17 +273,13 @@ class NotesHandlers:
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         group_id = (
-            _parse_uuid(request.group_id, "group_id")
-            if request.HasField("group_id")
-            else None
+            _parse_uuid(request.group_id, "group_id") if request.HasField("group_id") else None
         )
 
         parent_id: UUID | str | None = None
         if request.HasField("parent_id"):
             parent_id = (
-                "root" if request.parent_id == "" else _parse_uuid(
-                    request.parent_id, "parent_id"
-                )
+                "root" if request.parent_id == "" else _parse_uuid(request.parent_id, "parent_id")
             )
 
         access_mode_filter = (
@@ -475,30 +463,20 @@ class NotesHandlers:
 
     async def share_note_with_group(self, request, ctx: RequestContext):
         """Replaced by ``permissions.v1.MembersService.AddMember``."""
-        raise ConnectError(
-            Code.UNIMPLEMENTED, "Use MembersService.AddMember instead"
-        )
+        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.AddMember instead")
 
     async def unshare_note_from_group(self, request, ctx: RequestContext):
         """Replaced by ``permissions.v1.MembersService.RemoveMember``."""
-        raise ConnectError(
-            Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead"
-        )
+        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead")
 
     async def get_note_sharing(self, request, ctx: RequestContext):
         """Replaced by ``permissions.v1.MembersService.ListMembers``."""
-        raise ConnectError(
-            Code.UNIMPLEMENTED, "Use MembersService.ListMembers instead"
-        )
+        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.ListMembers instead")
 
     async def grant_permission(self, request, ctx: RequestContext):
         """Replaced by ``permissions.v1.MembersService.AddMember``."""
-        raise ConnectError(
-            Code.UNIMPLEMENTED, "Use MembersService.AddMember instead"
-        )
+        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.AddMember instead")
 
     async def revoke_permission(self, request, ctx: RequestContext):
         """Replaced by ``permissions.v1.MembersService.RemoveMember``."""
-        raise ConnectError(
-            Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead"
-        )
+        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead")

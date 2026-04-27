@@ -93,6 +93,7 @@ class AppearanceDefaults:
     sidebar_collapsed: bool = False
     compact_mode: bool = False
     default_editor: str = "crepe"  # Default editor for notes: "crepe", "markdown", "readonly"
+    mention_display: str = "expanded"  # Mention chip display: "expanded" or "compact"
 
 
 DEFAULT_REMINDER_INTERVALS: list[int] = [15]
@@ -149,6 +150,7 @@ def get_appearance_defaults_dict() -> dict[str, Any]:
         "sidebar_collapsed": APPEARANCE_DEFAULTS.sidebar_collapsed,
         "compact_mode": APPEARANCE_DEFAULTS.compact_mode,
         "default_editor": APPEARANCE_DEFAULTS.default_editor,
+        "mention_display": APPEARANCE_DEFAULTS.mention_display,
     }
 
 

@@ -101,6 +101,9 @@ def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance
     if settings.get("default_editor") is not None:
         proto.default_editor = settings["default_editor"]
 
+    if settings.get("mention_display") is not None:
+        proto.mention_display = settings["mention_display"]
+
     return proto
 
 
@@ -250,6 +253,9 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
     if proto.HasField("default_editor"):
         result["default_editor"] = proto.default_editor
+
+    if proto.HasField("mention_display"):
+        result["mention_display"] = proto.mention_display
 
     return result if result else None
 

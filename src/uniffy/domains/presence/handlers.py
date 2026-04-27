@@ -20,7 +20,7 @@ from uniffy_proto.presence.v1.presence_pb2 import (
     UserPresence,
 )
 
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_organization_id_from_context,
     get_user_id_from_context,
@@ -69,7 +69,7 @@ class PresenceHandlers:
         client = request.client or "web"
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = PresenceOperations(session)
                 await ops.set_presence(user_id, organization_id, status_string, client)
                 return SetPresenceResponse()
@@ -116,7 +116,7 @@ class PresenceHandlers:
             )
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = PresenceOperations(session)
                 results = await ops.get_bulk_presence(
                     organization_id,
@@ -198,7 +198,7 @@ class PresenceHandlers:
             expires_at = request.expires_at.ToDatetime().replace(tzinfo=UTC)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = PresenceOperations(session)
                 custom_data = await ops.set_custom_status(
                     user_id,
@@ -251,7 +251,7 @@ class PresenceHandlers:
         organization_id = get_organization_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = PresenceOperations(session)
                 await ops.clear_custom_status(user_id, organization_id)
                 return ClearCustomStatusResponse()

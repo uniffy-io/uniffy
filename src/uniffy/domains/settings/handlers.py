@@ -23,7 +23,7 @@ from uniffy_proto.settings.v1.settings_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, ValidationError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.settings.converters import (
     appearance_dict_to_proto,
@@ -67,7 +67,7 @@ class SettingsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
 
                 profile = await ops.create_profile(
@@ -120,7 +120,7 @@ class SettingsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid profile ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
                 profile = await ops.get_profile(user_id, profile_id)
                 return ProfileResponse(profile=profile_to_proto(profile))
@@ -164,7 +164,7 @@ class SettingsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid profile ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
 
                 # Extract optional fields
@@ -224,7 +224,7 @@ class SettingsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid profile ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
                 await ops.delete_profile(user_id, profile_id)
                 return DeleteProfileResponse(success=True, message="Profile deleted successfully")
@@ -265,7 +265,7 @@ class SettingsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
                 profiles = await ops.list_profiles(user_id)
 
@@ -306,7 +306,7 @@ class SettingsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
 
                 # Get specific profile or default
@@ -366,7 +366,7 @@ class SettingsHandlers:
         get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
                 schema = ops.get_settings_schema()
 
@@ -417,7 +417,7 @@ class SettingsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid profile ID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = SettingsOperations(session)
                 profile = await ops.set_default_profile(user_id, profile_id)
                 return ProfileResponse(profile=profile_to_proto(profile))

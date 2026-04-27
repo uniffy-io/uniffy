@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.domains.users.avatars import (
     delete_avatar as s3_delete_avatar,
 )
@@ -131,6 +132,8 @@ class UserOperations:
             await self._user_indexer.index_for_all_organizations(user)
             await self._session.commit()
 
+        await invalidate_user_profile(user_id)
+
         return user
 
     async def admin_update(
@@ -213,6 +216,8 @@ class UserOperations:
             await self._user_indexer.index_for_all_organizations(user)
             await self._session.commit()
 
+        await invalidate_user_profile(user_id)
+
         return user
 
     async def admin_create(
@@ -292,6 +297,8 @@ class UserOperations:
         # Delete the user
         await self._session.delete(user)
         await self._session.commit()
+
+        await invalidate_user_profile(user_id)
 
         return True
 
@@ -394,6 +401,9 @@ class UserOperations:
 
         await self._session.commit()
         await self._session.refresh(user)
+
+        await invalidate_user_profile(user_id)
+
         return user
 
     async def delete_avatar(self, user_id: UUID) -> User:
@@ -420,6 +430,7 @@ class UserOperations:
             user.avatar_key = None
             await self._session.commit()
             await self._session.refresh(user)
+            await invalidate_user_profile(user_id)
 
         return user
 

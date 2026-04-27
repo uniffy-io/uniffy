@@ -29,7 +29,7 @@ from uniffy_proto.users.v1.users_pb2 import (
 
 from uniffy.core.converters import member_info_to_proto, org_role_from_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.auth.passwords import hash_password
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -49,7 +49,7 @@ class UsersHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 user = await ops.get_by_id(user_id)
                 return user_to_profile(user)
@@ -68,7 +68,7 @@ class UsersHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 user = await ops.update_profile(
                     user_id=user_id,
@@ -98,7 +98,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Filename is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 user = await ops.upload_avatar(
                     user_id=user_id,
@@ -123,7 +123,7 @@ class UsersHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 user = await ops.delete_avatar(user_id)
                 return user_to_profile(user)
@@ -142,7 +142,7 @@ class UsersHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
@@ -194,7 +194,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid user_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
@@ -220,7 +220,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Email and password are required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
@@ -266,7 +266,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid user_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
@@ -313,7 +313,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Cannot delete yourself")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
@@ -341,7 +341,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid user_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
@@ -375,7 +375,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid user_id or organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
@@ -416,7 +416,7 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid user_id or organization_id")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 

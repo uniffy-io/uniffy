@@ -11,7 +11,7 @@ from uniffy.core.converters import (
     group_member_info_to_proto,
     group_role_from_proto,
 )
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.groups.converters import group_with_count_to_proto
 from uniffy.domains.groups.operations import GroupOperations
@@ -50,7 +50,7 @@ class GroupsHandlers:
             page = request.pagination.page or 1
             page_size = request.pagination.page_size or 20
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             groups_with_counts, total = await ops.list_in_organization(
                 organization_id=org_id,
@@ -96,7 +96,7 @@ class GroupsHandlers:
         get_user_id_from_context(ctx)  # Verify authenticated
         group_id = UUID(request.group_id)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             group = await ops.get_by_id(group_id)
 
@@ -126,7 +126,7 @@ class GroupsHandlers:
         user_id = get_user_id_from_context(ctx)
         org_id = UUID(request.organization_id)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             group = await ops.create(
                 organization_id=org_id,
@@ -163,7 +163,7 @@ class GroupsHandlers:
         get_user_id_from_context(ctx)  # Verify authenticated
         group_id = UUID(request.group_id)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             group = await ops.update(
                 group_id=group_id,
@@ -199,7 +199,7 @@ class GroupsHandlers:
         get_user_id_from_context(ctx)  # Verify authenticated
         group_id = UUID(request.group_id)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             await ops.delete(group_id)
 
@@ -239,7 +239,7 @@ class GroupsHandlers:
         if request.HasField("role_filter"):
             role_filter = group_role_from_proto(request.role_filter)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             members, total = await ops.list_members(
                 group_id=group_id,
@@ -284,7 +284,7 @@ class GroupsHandlers:
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             membership = await ops.add_member(
                 group_id=group_id,
@@ -322,7 +322,7 @@ class GroupsHandlers:
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             membership = await ops.update_member_role(
                 group_id=group_id,
@@ -359,7 +359,7 @@ class GroupsHandlers:
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             await ops.remove_member(group_id, target_user_id)
 
@@ -390,7 +390,7 @@ class GroupsHandlers:
         org_id = UUID(request.organization_id)
         target_user_id = UUID(request.user_id)
 
-        async for session in get_async_session():
+        async with open_session() as session:
             ops = GroupOperations(session)
             groups = await ops.get_user_groups(target_user_id, org_id)
 

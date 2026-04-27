@@ -31,7 +31,7 @@ from uniffy_proto.comments.v1.comments_pb2 import (
 
 from uniffy.core.converters import content_type_from_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.comments.converters import (
     anchor_type_from_proto,
@@ -95,7 +95,7 @@ class CommentsHandlers:
             anchor_data = MessageToDict(request.anchor_data)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 comment, author_name, author_avatar = await ops.create_comment(
                     user_id=user_id,
@@ -164,7 +164,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Comment body is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 comment, author_name, author_avatar = await ops.update_comment(
                     user_id=user_id,
@@ -228,7 +228,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 success = await ops.delete_comment(
                     user_id=user_id,
@@ -291,7 +291,7 @@ class CommentsHandlers:
             anchor_type = anchor_type_from_proto(request.anchor_type)
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 (
                     comments_data,
@@ -369,7 +369,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 (
                     comment,
@@ -458,7 +458,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 comment, author_name, author_avatar = await ops.resolve_comment(
                     user_id=user_id,
@@ -521,7 +521,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 comment, author_name, author_avatar = await ops.reopen_comment(
                     user_id=user_id,
@@ -587,7 +587,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Emoji is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 success = await ops.add_reaction(
                     user_id=user_id,
@@ -640,7 +640,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Emoji is required")
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 success = await ops.remove_reaction(
                     user_id=user_id,
@@ -694,7 +694,7 @@ class CommentsHandlers:
                 continue
 
         try:
-            async for session in get_async_session():
+            async with open_session() as session:
                 ops = CommentOperations(session)
                 counts = await ops.get_comment_counts(
                     user_id=user_id,

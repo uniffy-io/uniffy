@@ -127,13 +127,9 @@ class CalendarHandlers:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
-            content_role_from_proto(request.baseline_role)
-            if request.baseline_role
-            else None
+            content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
 
         category_id = None
@@ -153,8 +149,7 @@ class CalendarHandlers:
         linked_resources = None
         if request.linked_resource_urns:
             linked_resources = [
-                {"id": urn, "type": "NOTE", "name": ""}
-                for urn in request.linked_resource_urns
+                {"id": urn, "type": "NOTE", "name": ""} for urn in request.linked_resource_urns
             ]
 
         room_id = None
@@ -267,9 +262,7 @@ class CalendarHandlers:
             kwargs["calendar_id"] = _parse_uuid(request.calendar_id, "calendar_id")
         if request.HasField("category_id"):
             kwargs["category_id"] = (
-                _parse_uuid(request.category_id, "category_id")
-                if request.category_id
-                else None
+                _parse_uuid(request.category_id, "category_id") if request.category_id else None
             )
         if request.HasField("recurrence"):
             kwargs["recurrence_config"] = recurrence_config_from_proto(request.recurrence)
@@ -279,8 +272,7 @@ class CalendarHandlers:
             kwargs["tags"] = list(request.tags)
         if request.linked_resource_urns:
             kwargs["linked_resources"] = [
-                {"id": urn, "type": "NOTE", "name": ""}
-                for urn in request.linked_resource_urns
+                {"id": urn, "type": "NOTE", "name": ""} for urn in request.linked_resource_urns
             ]
         if request.attendee_ids:
             kwargs["attendee_ids"] = [
@@ -297,9 +289,7 @@ class CalendarHandlers:
             try:
                 kwargs["occurrence_date"] = date_type.fromisoformat(request.occurrence_date)
             except ValueError as exc:
-                raise ConnectError(
-                    Code.INVALID_ARGUMENT, f"Invalid occurrence_date: {exc}"
-                ) from exc
+                raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid occurrence_date: {exc}") from exc
 
         if request.HasField("room_id"):
             kwargs["room_id"] = request.room_id
@@ -343,9 +333,7 @@ class CalendarHandlers:
             try:
                 occ_date = date_type.fromisoformat(request.occurrence_date)
             except ValueError as exc:
-                raise ConnectError(
-                    Code.INVALID_ARGUMENT, f"Invalid occurrence_date: {exc}"
-                ) from exc
+                raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid occurrence_date: {exc}") from exc
 
         try:
             async with open_session() as session:
@@ -358,9 +346,7 @@ class CalendarHandlers:
                     recurrence_edit_scope=edit_scope,
                     occurrence_date=occ_date,
                 )
-                message = (
-                    "Event permanently deleted" if request.permanent else "Event deleted"
-                )
+                message = "Event permanently deleted" if request.permanent else "Event deleted"
                 return DeleteEventResponse(success=True, message=message)
         except ConnectError:
             raise
@@ -473,11 +459,13 @@ class CalendarHandlers:
                     real_id_str = str(real_id)
                     if real_id_str not in attendees_cache:
                         attendees_cache[real_id_str] = await queries.get_event_attendees(
-                            session, real_id,
+                            session,
+                            real_id,
                         )
                     if real_id_str not in room_info_cache:
                         room_info_cache[real_id_str] = await self._get_event_room_info(
-                            session, real_id,
+                            session,
+                            real_id,
                         )
                     proto_events.append(
                         event_to_proto(
@@ -624,9 +612,7 @@ class CalendarHandlers:
                 ops = CategoryOperations(session)
                 await ops.ensure_defaults(user_id, organization_id)
                 categories = await ops.list_categories(user_id, organization_id)
-                return ListCategoriesResponse(
-                    categories=[category_to_proto(c) for c in categories]
-                )
+                return ListCategoriesResponse(categories=[category_to_proto(c) for c in categories])
         except ConnectError:
             raise
         except Exception as exc:
@@ -729,13 +715,9 @@ class CalendarHandlers:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
-        access_mode = (
-            access_mode_from_proto(request.access_mode) if request.access_mode else None
-        )
+        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
-            content_role_from_proto(request.baseline_role)
-            if request.baseline_role
-            else None
+            content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
 
         category_id = None
@@ -843,9 +825,7 @@ class CalendarHandlers:
             async with open_session() as session:
                 ops = EventTemplateOperations(session)
                 await ops.delete(template_id, organization_id, user_id)
-                return DeleteEventTemplateResponse(
-                    success=True, message="Template deleted"
-                )
+                return DeleteEventTemplateResponse(success=True, message="Template deleted")
         except ConnectError:
             raise
         except Exception as exc:
