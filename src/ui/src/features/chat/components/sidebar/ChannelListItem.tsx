@@ -1,12 +1,12 @@
 /**
  * ChannelListItem - Single channel row in the sidebar.
  *
- * Shows hash/lock icon, channel name, unread badge, and mention badge.
- * Supports right-click context menu for split view and other actions.
+ * Shows hash/lock icon, channel name, muted indicator, unread badge, and mention badge.
+ * Supports right-click context menu for split view and notification settings.
  */
 
 import { useState, useCallback } from 'react';
-import { Hash, Lock } from '@phosphor-icons/react';
+import { Hash, Lock, SpeakerSlash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { type ChatChannel } from '@/features/chat/types';
 import { ChannelContextMenu } from '@/features/chat/components/sidebar/ChannelContextMenu';
@@ -50,11 +50,16 @@ export function ChannelListItem({
           isActive
             ? "bg-primary/10 text-primary font-medium"
             : isMuted
-              ? "text-muted-foreground/60 hover:bg-muted hover:text-muted-foreground"
+              ? "text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground"
               : hasUnread
-                ? "font-semibold text-foreground hover:bg-muted"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "font-semibold text-foreground hover:bg-accent"
+                : "text-foreground/90 hover:bg-accent hover:text-foreground"
         )}
+        data-testid={`chat-sidebar-channel-${channel.id}`}
+        data-channel-type={isPrivate ? 'private' : 'public'}
+        data-active={isActive ? 'true' : 'false'}
+        data-muted={isMuted ? 'true' : 'false'}
+        data-unread={hasUnread ? 'true' : 'false'}
       >
         <Icon
           size={isPrivate ? 12 : 14}
@@ -64,16 +69,31 @@ export function ChannelListItem({
           )}
         />
 
-        <span className="truncate text-sm flex-1">{channel.name}</span>
+        <span
+          className="truncate text-[0.9rem] flex-1"
+          data-testid={`chat-sidebar-channel-name-${channel.id}`}
+        >
+          {channel.name}
+        </span>
+
+        {isMuted && (
+          <SpeakerSlash size={12} className="shrink-0 text-muted-foreground/50" />
+        )}
 
         {mentionCount > 0 && (
-          <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0">
+          <span
+            className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0"
+            data-testid={`chat-sidebar-channel-mention-badge-${channel.id}`}
+          >
             {mentionCount}
           </span>
         )}
 
-        {hasUnread && mentionCount === 0 && (
-          <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+        {hasUnread && mentionCount === 0 && !isMuted && (
+          <span
+            className="w-2 h-2 rounded-full bg-primary shrink-0"
+            data-testid={`chat-sidebar-channel-unread-badge-${channel.id}`}
+          />
         )}
       </button>
 

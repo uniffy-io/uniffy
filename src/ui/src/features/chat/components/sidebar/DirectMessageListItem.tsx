@@ -1,23 +1,26 @@
 /**
  * DirectMessageListItem - DM row in the sidebar.
  *
- * Shows user avatar with presence, name, and unread badge.
+ * Shows user avatar with presence, name, muted indicator, and unread badge.
  * For group DMs, shows participant count.
- * Supports right-click context menu for split view and other actions.
+ * Supports right-click context menu for split view and notification settings.
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { SpeakerSlash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useAppSelector } from '@/app/hooks';
 import { type ChatChannel } from '@/features/chat/types';
 import { SubjectAvatar, SubjectAvatarById } from '@/components/subject';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
+import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
 import { ChannelContextMenu } from '@/features/chat/components/sidebar/ChannelContextMenu';
 
 interface DirectMessageListItemProps {
   channel: ChatChannel;
   isActive: boolean;
   unreadCount?: number;
+  isMuted?: boolean;
   onClick: () => void;
 }
 
@@ -25,6 +28,7 @@ export function DirectMessageListItem({
   channel,
   isActive,
   unreadCount = 0,
+  isMuted = false,
   onClick,
 }: DirectMessageListItemProps) {
   const hasUnread = unreadCount > 0;
@@ -32,16 +36,12 @@ export function DirectMessageListItem({
   const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
 
-  // Strip the current user's name so each user sees the other participant(s)
   const displayName = useMemo(() => {
     if (!currentUserName) return channel.name;
     const parts = channel.name.split(', ').filter((n) => n !== currentUserName);
     return parts.length > 0 ? parts.join(', ') : channel.name;
   }, [channel.name, currentUserName]);
 
-  // For 1:1 DMs, resolve the other person's user ID for avatar/presence.
-  // dmMemberIds has all participants; pick the one that isn't us.
-  // Fallback to ownerId for older channels without dmMemberIds.
   const otherUserId = useMemo(() => {
     if (isGroupDm) return '';
     if (channel.dmMemberIds.length > 0) {
@@ -50,10 +50,15 @@ export function DirectMessageListItem({
     return channel.ownerId;
   }, [channel.dmMemberIds, channel.ownerId, currentUserId, isGroupDm]);
 
-  // Group DM subject (violet group avatar style)
+  // `dmMemberIds` carries mixed subject ids (users + agents). If the other
+  // subject is present in the agents slice, treat this DM as an agent DM.
+  const agent = useAppSelector((state) =>
+    otherUserId && !isGroupDm ? state.agents.agents[otherUserId] ?? null : null,
+  );
+  const isAgentDm = !!agent;
+
   const groupSubject = useMemo<Subject | null>(() => {
     if (!isGroupDm) return null;
-    // For group DMs, also strip current user from the display name
     const groupDisplayName = currentUserName
       ? channel.name.split(', ').filter((n) => n !== currentUserName).join(', ')
       : channel.name;
@@ -82,26 +87,49 @@ export function DirectMessageListItem({
           "max-w-[calc(100%-12px)]",
           isActive
             ? "bg-primary/10 text-primary font-medium"
-            : hasUnread
-              ? "font-semibold text-foreground hover:bg-muted"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            : isMuted
+              ? "text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground"
+              : hasUnread
+                ? "font-semibold text-foreground hover:bg-accent"
+                : "text-foreground/90 hover:bg-accent hover:text-foreground"
         )}
+        data-testid={`chat-sidebar-dm-${channel.id}`}
+        data-dm-kind={isGroupDm ? 'group' : isAgentDm ? 'agent' : 'user'}
+        data-active={isActive ? 'true' : 'false'}
+        data-muted={isMuted ? 'true' : 'false'}
+        data-unread={hasUnread ? 'true' : 'false'}
       >
-        {/* Avatar with presence */}
         <div className="shrink-0">
           {groupSubject ? (
             <SubjectAvatar subject={groupSubject} size="sm" />
+          ) : isAgentDm ? (
+            <AgentAvatar
+              avatarKey={agent?.avatarKey}
+              avatarEmoji={agent?.avatarEmoji}
+              agentName={agent?.name ?? displayName}
+              size="sm"
+            />
           ) : (
             <SubjectAvatarById userId={otherUserId} displayName={displayName} size="sm" showPresence />
           )}
         </div>
 
-        <span className="truncate text-sm flex-1">
-          {displayName}
+        <span
+          className="truncate text-[0.9rem] flex-1"
+          data-testid={`chat-sidebar-dm-name-${channel.id}`}
+        >
+          {isAgentDm ? agent?.name ?? displayName : displayName}
         </span>
 
-        {hasUnread && (
-          <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0">
+        {isMuted && (
+          <SpeakerSlash size={12} className="shrink-0 text-muted-foreground/50" />
+        )}
+
+        {hasUnread && !isMuted && (
+          <span
+            className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0"
+            data-testid={`chat-sidebar-dm-unread-badge-${channel.id}`}
+          >
             {unreadCount}
           </span>
         )}

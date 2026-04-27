@@ -5,8 +5,9 @@
  * Compose box at the bottom for replying.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
-import { X, ArrowSquareOut } from '@phosphor-icons/react';
+import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
+import { X, LinkSimple } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { closeThreadPanel, selectReplyToMessage, clearReplyToMessage } from '@/features/chat/store/chatUiSlice';
 import {
@@ -15,25 +16,27 @@ import {
   selectActiveThreadMessages,
 } from '@/features/chat/store/chatThreadsSlice';
 import { fetchThreadMessages, sendMessage } from '@/features/chat/store/chatThunks';
+import { selectTypingInThread } from '@/features/chat/store/chatMessagesSlice';
 import { MessageItem } from '@/features/chat/components/channel/MessageItem';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
+import { TypingIndicator } from '@/features/chat/components/channel/TypingIndicator';
 
 export function ThreadPanel() {
   const dispatch = useAppDispatch();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
 
   const activeThreadId = useAppSelector(selectActiveThreadId);
   const threadMessages = useAppSelector(selectActiveThreadMessages);
+  const threadTyping = useAppSelector((state) =>
+    activeThreadId ? selectTypingInThread(state, activeThreadId) : [],
+  );
 
   // Find the root message from the channel messages
-  const rootMessage = useAppSelector((state) => {
-    if (!activeThreadId) return null;
-    for (const messages of Object.values(state.chatMessages.messagesByChannel)) {
-      const found = messages.find(m => m.id === activeThreadId);
-      if (found) return found;
-    }
-    return null;
-  });
+  const rootMessage = useAppSelector((state) =>
+    activeThreadId ? state.chatMessages.byId[activeThreadId] ?? null : null,
+  );
 
   // Find the channel name for the header
   const channelName = useAppSelector((state) => {
@@ -52,17 +55,54 @@ export function ThreadPanel() {
     }
   }, [activeThreadId, rootMessage, dispatch]);
 
-  // Auto-scroll to bottom on new messages
+  // Reset stick-to-bottom when switching threads
+  useLayoutEffect(() => {
+    stickToBottomRef.current = true;
+  }, [activeThreadId]);
+
+  // Auto-scroll to bottom whenever content height changes (covers async image/mention layout)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [threadMessages.length]);
+    const scrollEl = scrollRef.current;
+    const contentEl = contentRef.current;
+    if (!scrollEl || !contentEl) return;
+
+    const scrollToBottom = () => {
+      if (stickToBottomRef.current) {
+        scrollEl.scrollTop = scrollEl.scrollHeight;
+      }
+    };
+
+    const onScroll = () => {
+      const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+      stickToBottomRef.current = distanceFromBottom < 40;
+    };
+
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    const observer = new ResizeObserver(scrollToBottom);
+    observer.observe(contentEl);
+    scrollToBottom();
+
+    return () => {
+      scrollEl.removeEventListener('scroll', onScroll);
+      observer.disconnect();
+    };
+  }, [activeThreadId]);
 
   const handleClose = useCallback(() => {
     dispatch(closeThreadPanel());
     dispatch(setActiveThread(null));
   }, [dispatch]);
+
+  const handleCopyThreadLink = useCallback(async () => {
+    if (!rootMessage) return;
+    const url = `${window.location.origin}/chat/${rootMessage.channelId}#${rootMessage.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Thread link copied');
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  }, [rootMessage]);
 
   const replyToMessage = useAppSelector(selectReplyToMessage);
 
@@ -88,7 +128,7 @@ export function ThreadPanel() {
   // If root message not found (edge case), show a minimal state
   if (!rootMessage) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-full bg-background">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-sm font-semibold text-foreground">Thread</span>
           <button
@@ -108,28 +148,39 @@ export function ThreadPanel() {
   const replyCount = threadMessages.length;
 
   return (
-    <div className="flex flex-col h-full bg-card">
+    <div
+      className="flex flex-col h-full bg-background"
+      data-testid="chat-thread-panel"
+      data-thread-root-id={activeThreadId}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-semibold text-foreground">Thread</span>
           {channelName && (
-            <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors truncate">
+            <button
+              onClick={handleCopyThreadLink}
+              title="Copy thread link"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors truncate"
+              data-testid="chat-thread-copy-link"
+            >
               <span className="truncate">{channelName}</span>
-              <ArrowSquareOut size={10} />
+              <LinkSimple size={10} />
             </button>
           )}
         </div>
         <button
           onClick={handleClose}
           className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+          data-testid="chat-thread-close"
         >
           <X size={16} />
         </button>
       </div>
 
       {/* Scrollable content */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto" data-testid="chat-thread-scroll">
+       <div ref={contentRef} data-testid="chat-thread-messages" data-reply-count={replyCount}>
         {/* Root message */}
         <div className="border-b border-border">
           <MessageItem
@@ -166,7 +217,11 @@ export function ThreadPanel() {
               />
           );
         })}
+       </div>
       </div>
+
+      {/* Typing indicator (scoped to this thread's root_id) */}
+      <TypingIndicator typingUsers={threadTyping} />
 
       {/* Thread compose */}
       <MessageCompose

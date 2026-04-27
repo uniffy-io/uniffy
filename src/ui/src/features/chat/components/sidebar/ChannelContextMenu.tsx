@@ -1,15 +1,17 @@
 /**
  * ChannelContextMenu - Right-click context menu for channel list items.
  *
- * Provides actions like opening a channel in split view and muting.
- * Renders as a fixed-position menu at the cursor location.
+ * Provides actions like opening a channel in split view and granular
+ * notification settings (mute duration, notification level, thread follow).
  */
 
-import { useEffect, useRef, useCallback } from 'react';
-import { SquareSplitHorizontal, SpeakerSlash } from '@phosphor-icons/react';
-import { useAppDispatch } from '@/app/hooks';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { SquareSplitHorizontal, SpeakerSlash, SpeakerHigh, CaretRight } from '@phosphor-icons/react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setSplitChannel } from '@/features/chat/store/chatChannelsSlice';
 import { activateSplit } from '@/features/chat/store/chatUiSlice';
+import { selectChannelPreferences } from '@/features/chat/store/chatChannelsSlice';
+import { ChannelNotificationMenu } from '@/features/chat/components/sidebar/ChannelNotificationMenu';
 
 interface ChannelContextMenuProps {
   channelId: string;
@@ -20,8 +22,13 @@ interface ChannelContextMenuProps {
 export function ChannelContextMenu({ channelId, position, onClose }: ChannelContextMenuProps) {
   const dispatch = useAppDispatch();
   const menuRef = useRef<HTMLDivElement>(null);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const prefs = useAppSelector(selectChannelPreferences);
+  const members = useAppSelector((state) => state.chatChannels.channelMembers[channelId]);
+  const memberMuted = members?.find((m) => m.userId === currentUserId)?.isMuted ?? false;
+  const isMuted = prefs[channelId]?.isMuted ?? memberMuted;
+  const [showNotificationMenu, setShowNotificationMenu] = useState(false);
 
-  // Close on click outside
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -37,7 +44,6 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
     };
   }, [onClose]);
 
-  // Close on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -52,16 +58,13 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
     onClose();
   }, [dispatch, channelId, onClose]);
 
-  const handleMute = useCallback(() => {
-    // Placeholder - mute functionality not yet implemented
-    onClose();
-  }, [onClose]);
-
-  // Adjust position to keep menu on screen
   const menuStyle = {
     top: position.y,
     left: position.x,
   };
+
+  const MuteIcon = isMuted ? SpeakerHigh : SpeakerSlash;
+  const btnClass = "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer w-full text-left transition-colors text-foreground";
 
   return (
     <div
@@ -72,7 +75,7 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
       <button
         type="button"
         onClick={handleOpenInSplit}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted cursor-pointer w-full text-left transition-colors text-foreground"
+        className={btnClass}
       >
         <SquareSplitHorizontal size={16} className="text-muted-foreground" />
         <span>Open in Split View</span>
@@ -82,12 +85,20 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
 
       <button
         type="button"
-        onClick={handleMute}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted cursor-pointer w-full text-left transition-colors text-foreground"
+        onClick={() => setShowNotificationMenu(!showNotificationMenu)}
+        className={btnClass}
       >
-        <SpeakerSlash size={16} className="text-muted-foreground" />
-        <span>Mute channel</span>
+        <MuteIcon size={16} className="text-muted-foreground" />
+        <span className="flex-1">{isMuted ? 'Muted' : 'Notification settings'}</span>
+        <CaretRight size={12} className="text-muted-foreground" />
       </button>
+
+      {showNotificationMenu && (
+        <>
+          <div className="my-1 h-px bg-border mx-2" />
+          <ChannelNotificationMenu channelId={channelId} onClose={onClose} />
+        </>
+      )}
     </div>
   );
 }

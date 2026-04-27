@@ -96,6 +96,7 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
       ref={containerRef}
       className="fixed z-[1000]"
       style={{ top: position.top, left: position.left }}
+      data-testid="chat-emoji-picker"
     >
       <div className="rounded-xl border border-border bg-card shadow-xl overflow-hidden">
         <Picker

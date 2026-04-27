@@ -2,14 +2,23 @@
  * TypingIndicator - Shows who is currently typing in the channel.
  *
  * Renders a fixed-height container (always present to prevent layout shift)
- * with avatars, animated dots, and user names when people are typing.
+ * with avatars, animated dots, and subject names when people or agents are typing.
+ * Entries with `isAgent: true` resolve their avatar from the agents Redux slice.
  */
 
 import { cn } from '@/shared/utils/cn';
+import { useAppSelector } from '@/app/hooks';
 import { SubjectAvatarById } from '@/components/subject';
+import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
+
+interface TypingEntry {
+  userId: string;
+  displayName: string;
+  isAgent?: boolean;
+}
 
 interface TypingIndicatorProps {
-  typingUsers: { userId: string; displayName: string }[];
+  typingUsers: TypingEntry[];
 }
 
 function buildTypingText(users: { displayName: string }[]): string {
@@ -17,6 +26,23 @@ function buildTypingText(users: { displayName: string }[]): string {
   if (users.length === 1) return `${users[0].displayName} is typing`;
   if (users.length === 2) return `${users[0].displayName} and ${users[1].displayName} are typing`;
   return 'Several people are typing';
+}
+
+function TypingAvatar({ entry }: { entry: TypingEntry }) {
+  const agent = useAppSelector((state) =>
+    entry.isAgent ? state.agents.agents[entry.userId] ?? null : null,
+  );
+  if (entry.isAgent) {
+    return (
+      <AgentAvatar
+        avatarKey={agent?.avatarKey}
+        avatarEmoji={agent?.avatarEmoji}
+        agentName={agent?.name ?? entry.displayName}
+        size="xs"
+      />
+    );
+  }
+  return <SubjectAvatarById userId={entry.userId} displayName={entry.displayName} size="xs" />;
 }
 
 export function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
@@ -29,16 +55,14 @@ export function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
 
   return (
     <div className="h-6 flex items-center gap-2 px-4 text-xs text-muted-foreground transition-opacity duration-150">
-      {/* Avatars */}
       <div className="flex items-center -space-x-1">
         {visible.map((u) => (
           <div key={u.userId} className="border border-background rounded-full">
-            <SubjectAvatarById userId={u.userId} displayName={u.displayName} size="xs" />
+            <TypingAvatar entry={u} />
           </div>
         ))}
       </div>
 
-      {/* Typing text with animated dots */}
       <span className="flex items-center gap-0.5">
         <span>{typingText}</span>
         <span className="flex items-center gap-[2px] ml-0.5">

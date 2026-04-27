@@ -37,7 +37,7 @@ export function ThreadsInbox() {
   }, [dispatch, navigate]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-testid="chat-threads-inbox" data-filter={filter}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <span className="text-sm font-semibold text-foreground">Threads</span>
@@ -53,6 +53,8 @@ export function ThreadsInbox() {
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
+          data-testid="chat-threads-inbox-tab-all"
+          data-active={filter === 'all' ? 'true' : 'false'}
         >
           All Threads
         </button>
@@ -64,6 +66,8 @@ export function ThreadsInbox() {
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
+          data-testid="chat-threads-inbox-tab-unreads"
+          data-active={filter === 'unreads' ? 'true' : 'false'}
         >
           Unreads
         </button>

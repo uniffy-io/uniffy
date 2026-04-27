@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { ChatChannel, ChatChannelMember, ChatChannelCategory } from '@/features/chat/types';
+import type { ChatChannel, ChatChannelMember, ChatChannelCategory, ChannelPreferences } from '@/features/chat/types';
 import type { RootState } from '@/app/store';
 
 interface ChatChannelsState {
@@ -7,6 +7,7 @@ interface ChatChannelsState {
   activeChannelId: string | null;
   splitChannelId: string | null;
   channelMembers: Record<string, ChatChannelMember[]>;
+  channelPreferences: Record<string, ChannelPreferences>;
   categories: ChatChannelCategory[];
   isLoading: boolean;
 }
@@ -16,6 +17,7 @@ const initialState: ChatChannelsState = {
   activeChannelId: null,
   splitChannelId: null,
   channelMembers: {},
+  channelPreferences: {},
   categories: [],
   isLoading: false,
 };
@@ -28,7 +30,16 @@ export const chatChannelsSlice = createSlice({
       state.channels = action.payload;
     },
     addChannel: (state, action: PayloadAction<ChatChannel>) => {
-      state.channels.push(action.payload);
+      // Idempotent: backend dedups DMs against existing pairs and returns the
+      // existing channel, so a "create" call may yield an id we already hold.
+      // Replace in place so the sidebar doesn't grow duplicate entries that
+      // both point at the same channel id.
+      const index = state.channels.findIndex((c) => c.id === action.payload.id);
+      if (index >= 0) {
+        state.channels[index] = action.payload;
+      } else {
+        state.channels.push(action.payload);
+      }
     },
     removeChannel: (state, action: PayloadAction<string>) => {
       state.channels = state.channels.filter((c) => c.id !== action.payload);
@@ -82,12 +93,38 @@ export const chatChannelsSlice = createSlice({
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
+    setChannelPreferences: (
+      state,
+      action: PayloadAction<Record<string, ChannelPreferences>>,
+    ) => {
+      state.channelPreferences = action.payload;
+    },
+    updateChannelPreference: (
+      state,
+      action: PayloadAction<{ channelId: string; prefs: Partial<ChannelPreferences> }>,
+    ) => {
+      const existing = state.channelPreferences[action.payload.channelId];
+      if (existing) {
+        state.channelPreferences[action.payload.channelId] = {
+          ...existing,
+          ...action.payload.prefs,
+        };
+      } else {
+        state.channelPreferences[action.payload.channelId] = {
+          isMuted: false,
+          notificationLevel: 'ALL',
+          mutedUntil: null,
+          ...action.payload.prefs,
+        };
+      }
+    },
     setSplitChannel: (state, action: PayloadAction<string>) => {
       state.splitChannelId = action.payload;
     },
     clearSplitChannel: (state) => {
       state.splitChannelId = null;
     },
+    clearChatChannels: () => initialState,
   },
 });
 
@@ -100,10 +137,13 @@ export const {
   updateUnreadCounts,
   incrementUnreadCount,
   setChannelMembers,
+  setChannelPreferences,
+  updateChannelPreference,
   setCategories,
   setLoading,
   setSplitChannel,
   clearSplitChannel,
+  clearChatChannels,
 } = chatChannelsSlice.actions;
 
 // -- Selectors --
@@ -151,6 +191,9 @@ export const selectCategories = (state: RootState): ChatChannelCategory[] =>
 
 export const selectIsLoading = (state: RootState): boolean =>
   state.chatChannels.isLoading;
+
+export const selectChannelPreferences = (state: RootState): Record<string, ChannelPreferences> =>
+  state.chatChannels.channelPreferences;
 
 export const selectSplitChannelId = (state: RootState): string | null =>
   state.chatChannels.splitChannelId;

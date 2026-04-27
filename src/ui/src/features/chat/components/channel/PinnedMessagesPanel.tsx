@@ -6,14 +6,16 @@
  * in the channel. Renders via portal to avoid overflow issues.
  */
 
-import { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PushPin, X } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { SubjectAvatarById } from '@/components/subject';
-import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
+import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
+import { fetchPinnedMessages } from '@/features/chat/store/chatThunks';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { MessageContent } from '@/features/chat/components/channel/MessageContent';
+import type { ChatMessage } from '@/features/chat/types';
 
 interface PinnedMessagesPanelProps {
   channelId: string;
@@ -24,12 +26,24 @@ interface PinnedMessagesPanelProps {
 
 export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMessage }: PinnedMessagesPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const messages = useAppSelector((state) => selectMessagesForChannel(state, channelId));
+  const dispatch = useAppDispatch();
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const agentsById = useAppSelector((state) => state.agents.agents);
+  const [pinnedMessages, setPinnedMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const pinnedMessages = useMemo(
-    () => messages.filter(m => m.isPinned && !m.isDeleted),
-    [messages],
-  );
+  useEffect(() => {
+    if (!organizationId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state tied to async fetch lifecycle
+    setIsLoading(true);
+    dispatch(fetchPinnedMessages(channelId))
+      .unwrap()
+      .then((messages) => { if (!cancelled) setPinnedMessages(messages); })
+      .catch(() => { if (!cancelled) setPinnedMessages([]); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [channelId, organizationId, dispatch]);
 
   // Position below the anchor
   const [position, setPosition] = useState({ top: 100, left: 100 });
@@ -103,7 +117,11 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
 
       {/* Pinned messages list */}
       <div className="flex-1 overflow-y-auto">
-        {pinnedMessages.length === 0 ? (
+        {isLoading ? (
+          <div className="py-8 px-4 text-center">
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        ) : pinnedMessages.length === 0 ? (
           <div className="py-8 px-4 text-center">
             <PushPin size={32} className="mx-auto mb-2 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">No pinned messages</p>
@@ -113,7 +131,12 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
           </div>
         ) : (
           pinnedMessages.map(message => {
-            const senderName = message.senderName ?? 'Unknown';
+            const isAgent = message.senderType === 'AGENT';
+            const agent = isAgent ? agentsById[message.senderId] ?? null : null;
+            const senderName =
+              (isAgent ? agent?.name : null) ??
+              message.senderName ??
+              (isAgent ? 'Agent' : 'Unknown User');
 
             return (
               <div
@@ -126,7 +149,16 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
               >
                 {/* Sender info */}
                 <div className="flex items-center gap-2 mb-1.5">
-                  <SubjectAvatarById userId={message.senderId} displayName={senderName} size="xs" />
+                  {isAgent ? (
+                    <AgentAvatar
+                      avatarKey={agent?.avatarKey}
+                      avatarEmoji={agent?.avatarEmoji}
+                      agentName={senderName}
+                      size="xs"
+                    />
+                  ) : (
+                    <SubjectAvatarById userId={message.senderId} displayName={senderName} size="xs" />
+                  )}
                   <span className="text-sm font-semibold text-foreground">{senderName}</span>
                   <span className="text-xs text-muted-foreground">{formatRelativeTime(message.createdAt)}</span>
                 </div>

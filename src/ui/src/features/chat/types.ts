@@ -6,6 +6,14 @@ export type SenderType = 'USER' | 'AGENT' | 'SYSTEM' | 'GUEST';
 export type NotificationLevel = 'ALL' | 'MENTIONS' | 'NONE';
 export type MessageDensity = 'comfortable' | 'compact';
 
+export interface MessageAttachment {
+  id: string;
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface ChatChannelCategory {
   id: string;
   organizationId: string;
@@ -78,21 +86,36 @@ export interface ChatMessage {
     replyCount: number;
     lastReplyAt: string;
     participantIds: string[];
+    hasUnread: boolean;
   };
   // Reaction groups from API
   reactions?: ReactionGroupData[];
   // Denormalized sender info
   senderName?: string;
   senderAvatarUrl?: string;
+  // File attachments linked to this message
+  attachments?: MessageAttachment[];
 }
 
 export interface ChatChannelMember {
   channelId: string;
   userId: string;
+  subjectType: 'USER' | 'AGENT';
+  subjectId: string;
+  displayName?: string;
+  avatarUrl?: string;
   role: ChannelRole;
   notificationLevel: NotificationLevel;
   isMuted: boolean;
+  mutedUntil: string | null;
+  followAllThreads: boolean;
   joinedAt: string;
+}
+
+export interface ChannelPreferences {
+  isMuted: boolean;
+  notificationLevel: NotificationLevel;
+  mutedUntil: string | null;
 }
 
 export interface ChatReaction {
@@ -125,6 +148,7 @@ export interface ChatResource {
   lastMentionedAt: string;
   mentionCount: number;
   firstMentionedBy: string;
+  title?: string;
 }
 
 export interface ThreadInboxItem {

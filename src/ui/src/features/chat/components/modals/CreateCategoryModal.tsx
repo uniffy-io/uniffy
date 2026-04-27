@@ -57,6 +57,7 @@ export function CreateCategoryModal() {
 
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-sm">
+      <div data-testid="chat-create-category-modal">
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <h2 className="text-xl font-semibold text-foreground">
@@ -67,6 +68,7 @@ export function CreateCategoryModal() {
           onClick={handleClose}
           disabled={isSubmitting}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          data-testid="chat-create-category-close"
         >
           <X size={20} />
         </button>
@@ -106,6 +108,7 @@ export function CreateCategoryModal() {
               className={cn(
                 showError && 'border-red-500 focus-visible:ring-red-500',
               )}
+              data-testid="chat-create-category-name-input"
             />
             <div className="flex items-center justify-between mt-1">
               {showError ? (
@@ -132,15 +135,22 @@ export function CreateCategoryModal() {
             variant="ghost"
             onClick={handleClose}
             disabled={isSubmitting}
+            data-testid="chat-create-category-cancel"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={!isNameValid || isSubmitting} loading={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={!isNameValid || isSubmitting}
+            loading={isSubmitting}
+            data-testid="chat-create-category-submit"
+          >
             <FolderSimplePlus size={16} className="mr-1.5" />
             Create category
           </Button>
         </div>
       </form>
+      </div>
     </Modal>
   );
 }

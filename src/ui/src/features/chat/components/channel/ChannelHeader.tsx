@@ -19,6 +19,8 @@ import {
   CaretUp,
   SquareSplitHorizontal,
   X,
+  LinkSimple,
+  Gauge,
 } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import {
@@ -26,24 +28,28 @@ import {
 } from '@/features/chat/store/chatChannelsSlice';
 import {
   toggleChannelHeaderExpanded,
-  toggleSearch,
   expandSidebar,
   selectChannelHeaderExpanded,
   selectSidebarOpen,
   selectSplitActive,
   deactivateSplit,
 } from '@/features/chat/store/chatUiSlice';
+import { ChatSearchPanel } from '@/features/chat/components/search/ChatSearchPanel';
 import {
   setSplitChannel,
   clearSplitChannel,
 } from '@/features/chat/store/chatChannelsSlice';
 import { activateSplit, openChannelSettingsModal } from '@/features/chat/store/chatUiSlice';
+import { openResourcePanel, selectResourcePanelOpen } from '@/features/chat/store/chatUiSlice';
+import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
+import { AgentContextBar } from '@/features/chat/components/channel/AgentContextBar';
+import { ChannelAgentsPopover } from '@/features/chat/components/channel/ChannelAgentsPopover';
 import { cn } from '@/shared/utils/cn';
 import { formatDateFull } from '@/shared/utils/dateFormatting';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { SplitChannelPicker } from '@/features/chat/components/channel/SplitChannelPicker';
 import { PinnedMessagesPanel } from '@/features/chat/components/channel/PinnedMessagesPanel';
-import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
+import { selectPinnedCountForChannel } from '@/features/chat/store/chatMessagesSlice';
 import { jumpToMessage } from '@/features/chat/store/chatUiSlice';
 
 const headerButtonClass =
@@ -68,10 +74,16 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const splitActive = useAppSelector(selectSplitActive);
   const { isMobileOrTablet } = useBreakpoint();
 
+  const resourcePanelOpen = useAppSelector(selectResourcePanelOpen);
   const [showPicker, setShowPicker] = useState(false);
   const [showPinned, setShowPinned] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showContextBar, setShowContextBar] = useState(false);
+  const [showAgentsPopover, setShowAgentsPopover] = useState(false);
   const splitBtnRef = useRef<HTMLButtonElement>(null);
   const pinnedBtnRef = useRef<HTMLButtonElement>(null);
+  const searchBtnRef = useRef<HTMLButtonElement>(null);
+  const contextBtnRef = useRef<HTMLButtonElement>(null);
 
   // Close picker on Escape
   useEffect(() => {
@@ -99,39 +111,77 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   }, [dispatch]);
 
   const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
-  const currentChannelMessages = useAppSelector((state) =>
-    activeChannel ? selectMessagesForChannel(state, activeChannel.id) : [],
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
+  const pinnedCount = useAppSelector((state) =>
+    activeChannel ? selectPinnedCountForChannel(state, activeChannel.id) : 0,
   );
 
   const isDm = activeChannel?.channelType === 'DIRECT' || activeChannel?.channelType === 'GROUP_DM';
+  const isOneOnOneDm = activeChannel?.channelType === 'DIRECT';
 
-  // For DMs, strip the current user's name to show only the other participant(s)
+  // For 1:1 DMs, the "other" subject id can be an agent. `dmMemberIds` carries
+  // mixed user/agent ids; we resolve the non-self id and check the agents slice.
+  const otherSubjectId = useMemo(() => {
+    if (!activeChannel || !isOneOnOneDm) return '';
+    const ids = activeChannel.dmMemberIds ?? [];
+    if (ids.length > 0) {
+      return ids.find((id) => id !== currentUserId) ?? activeChannel.ownerId;
+    }
+    return activeChannel.ownerId;
+  }, [activeChannel, isOneOnOneDm, currentUserId]);
+
+  const agent = useAppSelector((state) =>
+    otherSubjectId ? state.agents.agents[otherSubjectId] ?? null : null,
+  );
+  const isAgentDm = !!agent;
+
+  // Show the Gauge icon on every non-(1:1-DM) channel regardless of whether
+  // we have already fetched its member roster. Conditioning on
+  // `hasAgentMembers` made the button flicker between renders while the
+  // members slice was loading; the popover handles the empty state itself.
+  const isGroupChannel = !isOneOnOneDm;
+
   const headerName = useMemo(() => {
-    if (!activeChannel || !isDm || !currentUserName) return activeChannel?.name ?? '';
+    if (!activeChannel) return '';
+    if (isAgentDm && agent) return agent.name;
+    if (!isDm || !currentUserName) return activeChannel.name;
     const parts = activeChannel.name.split(', ').filter((n) => n !== currentUserName);
     return parts.length > 0 ? parts.join(', ') : activeChannel.name;
-  }, [isDm, activeChannel, currentUserName]);
+  }, [isDm, isAgentDm, agent, activeChannel, currentUserName]);
 
   if (!activeChannel) return null;
 
   const isPrivate = activeChannel.channelType === 'PRIVATE';
   const ChannelIcon = isPrivate ? Lock : Hash;
-  const pinnedCount = currentChannelMessages.filter(m => m.isPinned && !m.isDeleted).length;
   const createdDate = formatDateFull(activeChannel.createdAt);
   const currentChannelId = activeChannel.id;
 
   return (
-    <div className="border-b border-border bg-card">
+    <div
+      className="border-b border-border/60 bg-card"
+      data-testid="chat-channel-header"
+      data-channel-id={activeChannel.id}
+      data-channel-type={activeChannel.channelType}
+    >
       {/* Compact header row */}
       <div className="flex items-center gap-3 px-4 py-2">
         {/* Channel name + chevron (clickable to expand) */}
         {!isDm && (
           <ChannelIcon size={16} className="text-muted-foreground shrink-0" />
         )}
+        {isAgentDm && (
+          <AgentAvatar
+            avatarKey={agent?.avatarKey}
+            avatarEmoji={agent?.avatarEmoji}
+            agentName={agent?.name ?? headerName}
+            size="sm"
+          />
+        )}
         <button
           type="button"
           onClick={() => dispatch(toggleChannelHeaderExpanded())}
           className="flex items-center gap-1 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+          data-testid="chat-channel-name"
         >
           <span>{headerName}</span>
           {!isDm && (
@@ -145,6 +195,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             type="button"
             onClick={() => dispatch(openChannelSettingsModal('members'))}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="chat-channel-members-button"
           >
             <Users size={14} />
             <span>{activeChannel.memberCount} members</span>
@@ -156,14 +207,60 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
 
         {/* Right action buttons */}
         <div className="flex items-center gap-0.5">
+          {isAgentDm && agent && (
+            <button
+              type="button"
+              onClick={() => setShowContextBar((prev) => !prev)}
+              className={cn(headerButtonClass, showContextBar && 'text-primary bg-primary/10')}
+              aria-label={showContextBar ? 'Hide agent context' : 'Show agent context'}
+              title="Agent context"
+              data-testid="chat-channel-agent-context-toggle"
+              data-state={showContextBar ? 'open' : 'closed'}
+            >
+              <Gauge size={16} />
+            </button>
+          )}
+          {isGroupChannel && (
+            <button
+              ref={contextBtnRef}
+              type="button"
+              onClick={() => setShowAgentsPopover((prev) => !prev)}
+              className={cn(headerButtonClass, showAgentsPopover && 'text-primary bg-primary/10')}
+              aria-label={showAgentsPopover ? 'Hide agent context' : 'Show agent context'}
+              title="Agent context"
+              data-testid="chat-channel-agents-toggle"
+              data-state={showAgentsPopover ? 'open' : 'closed'}
+            >
+              <Gauge size={16} />
+            </button>
+          )}
+          {showAgentsPopover && activeChannel && (
+            <ChannelAgentsPopover
+              channelId={activeChannel.id}
+              anchorRef={contextBtnRef}
+              onClose={() => setShowAgentsPopover(false)}
+            />
+          )}
+
           <button
+            ref={searchBtnRef}
             type="button"
-            onClick={() => dispatch(toggleSearch())}
-            className={headerButtonClass}
+            onClick={() => setShowSearch(prev => !prev)}
+            className={cn(headerButtonClass, showSearch && 'text-primary bg-primary/10')}
             aria-label="Search messages"
+            data-testid="chat-channel-search-button"
+            data-state={showSearch ? 'open' : 'closed'}
           >
             <MagnifyingGlass size={16} />
           </button>
+          {showSearch && activeChannel && (
+            <ChatSearchPanel
+              channelId={activeChannel.id}
+              channelName={activeChannel.name}
+              anchorRef={searchBtnRef}
+              onClose={() => setShowSearch(false)}
+            />
+          )}
 
           <button
             ref={pinnedBtnRef}
@@ -171,10 +268,15 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             onClick={() => setShowPinned(prev => !prev)}
             className={cn(headerButtonClass, 'relative', showPinned && 'text-primary bg-primary/10')}
             aria-label="Pinned messages"
+            data-testid="chat-channel-pinned-button"
+            data-state={showPinned ? 'open' : 'closed'}
           >
             <PushPin size={16} />
             {pinnedCount > 0 && !showPinned && (
-              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground text-[9px] font-medium leading-none">
+              <span
+                className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground text-[9px] font-medium leading-none"
+                data-testid="chat-channel-pinned-count"
+              >
                 {pinnedCount}
               </span>
             )}
@@ -188,6 +290,17 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             />
           )}
 
+          <button
+            type="button"
+            onClick={() => dispatch(openResourcePanel())}
+            className={cn(headerButtonClass, resourcePanelOpen && 'text-primary bg-primary/10')}
+            aria-label="Channel resources"
+            data-testid="chat-channel-resources-button"
+            data-state={resourcePanelOpen ? 'open' : 'closed'}
+          >
+            <LinkSimple size={16} />
+          </button>
+
           {/* Split-screen button - desktop only */}
           {!isMobileOrTablet && !showCloseButton && (
             <div className="relative">
@@ -200,6 +313,8 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
                   splitActive && 'text-primary bg-primary/10',
                 )}
                 aria-label={splitActive ? 'Close split view' : 'Open split view'}
+                data-testid="chat-channel-split-button"
+                data-state={splitActive ? 'active' : 'inactive'}
               >
                 <SquareSplitHorizontal size={16} />
               </button>
@@ -220,6 +335,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               onClick={() => dispatch(openChannelSettingsModal('overview'))}
               className={headerButtonClass}
               aria-label="Channel settings"
+              data-testid="chat-channel-settings-button"
             >
               <GearSix size={16} />
             </button>
@@ -232,6 +348,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               onClick={onClose}
               className={headerButtonClass}
               aria-label="Close split pane"
+              data-testid="chat-channel-close-split-button"
             >
               <X size={16} />
             </button>
@@ -250,6 +367,16 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           )}
         </div>
       </div>
+
+      {/* Per-(channel, agent) context bar for 1:1 agent DMs.
+          Collapsed by default; toggled via the Gauge icon above. */}
+      {isAgentDm && agent && showContextBar && (
+        <AgentContextBar
+          channelId={activeChannel.id}
+          agentId={agent.id}
+          agentName={agent.name}
+        />
+      )}
 
       {/* Expandable description section */}
       {!isDm && (

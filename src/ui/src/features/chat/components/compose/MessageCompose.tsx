@@ -16,6 +16,7 @@ import {
   TextB,
   PaperPlaneRight,
   ArrowBendUpLeft,
+  Pencil,
   X,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
@@ -23,12 +24,26 @@ import { ChatMentionPopup } from '@/features/agents/components/chat/ChatMentionP
 import { getUrnTypeTheme } from '@/config/theme/urnColors';
 import { parseUrn } from '@/shared/utils/urn';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
+import { AttachmentPreviewBar } from '@/features/chat/components/compose/AttachmentPreviewBar';
+import { filesApi } from '@/features/files/api/filesApi';
+import { attachmentsApi } from '@/features/attachments';
+import { randomUUID } from '@/shared/utils/uuid';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
+
+interface PendingFile {
+  id: string;
+  name: string;
+  size: number;
+  progress: number;
+  fileId?: string;
+  aborted?: boolean;
+}
 
 interface MessageComposeProps {
   channelName: string;
   placeholder?: string;
-  onSend?: (content: string) => void;
+  organizationId?: string;
+  onSend?: (content: string, fileIds: string[]) => void;
   onTyping?: () => void;
   replyTo?: {
     id: string;
@@ -36,6 +51,13 @@ interface MessageComposeProps {
     contentPreview: string;
   } | null;
   onCancelReply?: () => void;
+  editingMessage?: {
+    id: string;
+    channelId: string;
+    content: string;
+  } | null;
+  onSaveEdit?: (content: string) => void;
+  onCancelEdit?: () => void;
 }
 
 const MAX_HEIGHT = 200;
@@ -138,8 +160,9 @@ function createMentionElement(label: string, urn: string): HTMLSpanElement {
   return chip;
 }
 
-export function MessageCompose({ channelName, placeholder, onSend, onTyping, replyTo, onCancelReply }: MessageComposeProps) {
+export function MessageCompose({ channelName, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit }: MessageComposeProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [isEmpty, setIsEmpty] = useState(true);
   const [charCount, setCharCount] = useState(0);
@@ -148,6 +171,88 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
   const [mentionQuery, setMentionQuery] = useState('');
   const mentionStartNodeRef = useRef<Node | null>(null);
   const mentionStartOffsetRef = useRef(0);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+
+  const uploadFile = useCallback(async (file: File, pendingId: string) => {
+    if (!organizationId) return;
+
+    try {
+      const folderRes = await attachmentsApi.getAttachmentsFolder({ organizationId });
+      const folderId = folderRes.folderId;
+
+      const initRes = await filesApi.initiateUpload({
+        organizationId,
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        totalSize: BigInt(file.size),
+        folderId,
+      });
+
+      const { uploadId, chunkSize, totalChunks } = initRes;
+      const fileBuffer = await file.arrayBuffer();
+
+      for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
+        const start = (chunkNumber - 1) * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunkData = new Uint8Array(fileBuffer.slice(start, end));
+
+        await filesApi.uploadChunk({
+          uploadId,
+          chunkNumber,
+          data: chunkData,
+          isLast: chunkNumber === totalChunks,
+        });
+
+        const progress = Math.round((chunkNumber / totalChunks) * 90);
+        setPendingFiles((prev) =>
+          prev.map((pf) => (pf.id === pendingId ? { ...pf, progress } : pf)),
+        );
+      }
+
+      const completeRes = await filesApi.completeUpload({ uploadId });
+      const fileId = completeRes.file?.id;
+      if (!fileId) throw new Error('Upload completed but no file ID returned');
+
+      setPendingFiles((prev) =>
+        prev.map((pf) => (pf.id === pendingId ? { ...pf, fileId, progress: 100 } : pf)),
+      );
+    } catch (err) {
+      console.error('[MessageCompose] Upload failed:', err);
+      setPendingFiles((prev) => prev.filter((pf) => pf.id !== pendingId));
+    }
+  }, [organizationId]);
+
+  const handleFilesSelected = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      const id = randomUUID();
+      setPendingFiles((prev) => [...prev, { id, name: file.name, size: file.size, progress: 0 }]);
+      uploadFile(file, id);
+    }
+  }, [uploadFile]);
+
+  const handleRemovePendingFile = useCallback((id: string) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  const handleAttachClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFilesSelected(e.target.files);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [handleFilesSelected]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    handleFilesSelected(e.dataTransfer.files);
+  }, [handleFilesSelected]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
 
   // Auto-focus editor when replying to a message
   useEffect(() => {
@@ -162,9 +267,34 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
     const el = editorRef.current;
     if (!el) return;
     const text = el.textContent ?? '';
-    setIsEmpty(text.trim().length === 0 && el.querySelectorAll(`[${MENTION_ATTR}]`).length === 0);
+    const hasText = text.trim().length > 0 || el.querySelectorAll(`[${MENTION_ATTR}]`).length > 0;
+    setIsEmpty(!hasText && pendingFiles.length === 0);
     setCharCount(text.length);
-  }, []);
+  }, [pendingFiles.length]);
+
+  // Populate editor with message content when entering edit mode
+  const prevEditIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    if (editingMessage && editingMessage.id !== prevEditIdRef.current) {
+      prevEditIdRef.current = editingMessage.id;
+      el.textContent = editingMessage.content;
+      updateState();
+      el.focus();
+      // Move cursor to end
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    } else if (!editingMessage && prevEditIdRef.current) {
+      prevEditIdRef.current = null;
+      el.innerHTML = '';
+      updateState();
+    }
+  }, [editingMessage, updateState]);
 
   // Handle input changes
   const handleInput = useCallback(() => {
@@ -268,12 +398,27 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
 
     const markdown = serializeToMarkdown(el);
     const trimmed = markdown.trim();
-    if (!trimmed) return;
 
-    onSend?.(trimmed);
+    if (editingMessage) {
+      if (trimmed && trimmed !== editingMessage.content) {
+        onSaveEdit?.(trimmed);
+      } else {
+        onCancelEdit?.();
+      }
+      el.innerHTML = '';
+      updateState();
+      return;
+    }
+
+    const fileIds = pendingFiles.filter((f) => f.fileId).map((f) => f.fileId!);
+
+    if (!trimmed && fileIds.length === 0) return;
+
+    onSend?.(trimmed, fileIds);
     el.innerHTML = '';
+    setPendingFiles([]);
     updateState();
-  }, [onSend, updateState]);
+  }, [onSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit]);
 
   // Handle keydown
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -283,10 +428,14 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
       return;
     }
 
-    // Escape closes mention popup, or clears reply preview
+    // Escape closes mention popup, cancels edit, or clears reply preview
     if (e.key === 'Escape') {
       if (mentionActive) {
         handleMentionClose();
+        return;
+      }
+      if (editingMessage) {
+        onCancelEdit?.();
         return;
       }
       if (replyTo) {
@@ -462,10 +611,48 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
 
   return (
     <>
-      <div className="mx-4 mb-4 border border-border rounded-xl bg-muted/30 focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all">
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
+      <div
+        className="mx-4 mb-4 border border-border rounded-xl bg-muted focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        data-testid="chat-compose-root"
+        data-mode={editingMessage ? 'edit' : replyTo ? 'reply' : 'normal'}
+      >
+        {/* Edit mode banner */}
+        {editingMessage && (
+          <div
+            className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border/50 bg-primary/5 rounded-t-xl"
+            data-testid="chat-compose-edit-banner"
+          >
+            <div className="flex items-center gap-2 min-w-0 text-xs">
+              <Pencil size={14} className="shrink-0 text-primary" />
+              <span className="text-muted-foreground shrink-0">Editing message</span>
+              <span className="text-muted-foreground/60 hidden sm:inline">Escape to cancel, Enter to save</span>
+            </div>
+            <button
+              type="button"
+              className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              onClick={onCancelEdit}
+              data-testid="chat-compose-edit-cancel"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Reply preview banner */}
-        {replyTo && (
-          <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border/50 bg-muted/40 rounded-t-xl">
+        {replyTo && !editingMessage && (
+          <div
+            className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border/50 bg-muted/40 rounded-t-xl"
+            data-testid="chat-compose-reply-banner"
+          >
             <div className="flex items-center gap-2 min-w-0 text-xs">
               <ArrowBendUpLeft size={14} className="shrink-0 text-primary" />
               <span className="text-muted-foreground shrink-0">Replying to</span>
@@ -476,6 +663,7 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
               type="button"
               className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
               onClick={onCancelReply}
+              data-testid="chat-compose-reply-cancel"
             >
               <X size={14} />
             </button>
@@ -510,14 +698,28 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
             onKeyDown={handleKeyDown}
             className="w-full px-4 pt-3 pb-2 text-sm min-h-[40px] outline-none text-foreground break-words whitespace-pre-wrap"
             suppressContentEditableWarning
+            data-testid="chat-compose-input"
+            data-empty={isEmpty ? 'true' : 'false'}
           />
         </div>
+
+        {/* Pending attachments */}
+        <AttachmentPreviewBar
+          files={pendingFiles}
+          onRemove={handleRemovePendingFile}
+        />
 
         {/* Toolbar */}
         <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50">
           {/* Left actions */}
           <div className="flex items-center gap-0.5">
-            <button type="button" className={toolbarButtonClass} aria-label="Attach file">
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              aria-label="Attach file"
+              onClick={handleAttachClick}
+              data-testid="chat-compose-attach-button"
+            >
               <Plus size={18} />
             </button>
             <button
@@ -526,6 +728,8 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
               className={toolbarButtonClass}
               aria-label="Add emoji"
               onClick={() => setShowEmojiPicker((prev) => !prev)}
+              data-testid="chat-compose-emoji-button"
+              data-state={showEmojiPicker ? 'open' : 'closed'}
             >
               <Smiley size={18} />
             </button>
@@ -541,6 +745,7 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
               className={toolbarButtonClass}
               aria-label="Mention someone"
               onClick={handleAtButtonClick}
+              data-testid="chat-compose-mention-button"
             >
               <At size={18} />
             </button>
@@ -549,6 +754,7 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
               className={toolbarButtonClass}
               aria-label="Insert code block"
               onClick={handleCodeBlockInsert}
+              data-testid="chat-compose-code-button"
             >
               <Code size={18} />
             </button>
@@ -561,6 +767,7 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
               className={toolbarButtonClass}
               aria-label="Toggle formatting"
               onClick={handleBoldInsert}
+              data-testid="chat-compose-bold-button"
             >
               <TextB size={18} />
             </button>
@@ -575,6 +782,8 @@ export function MessageCompose({ channelName, placeholder, onSend, onTyping, rep
                   ? 'text-primary hover:bg-primary/10 cursor-pointer'
                   : 'text-muted-foreground/50 cursor-not-allowed',
               )}
+              data-testid="chat-compose-send-button"
+              data-disabled={isEmpty ? 'true' : 'false'}
             >
               <PaperPlaneRight size={18} />
             </button>

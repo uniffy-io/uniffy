@@ -77,6 +77,7 @@ export function BrowseChannelsModal() {
 
   return (
     <Modal onClose={handleClose} className="flex flex-col max-h-[80vh]">
+      <div data-testid="chat-browse-channels-modal" className="flex flex-col max-h-[80vh]">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
@@ -89,6 +90,7 @@ export function BrowseChannelsModal() {
           type="button"
           onClick={handleClose}
           className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          data-testid="chat-browse-channels-close"
         >
           <X size={20} />
         </button>
@@ -107,6 +109,7 @@ export function BrowseChannelsModal() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8"
+              data-testid="chat-browse-channels-search"
             />
           </div>
         </div>
@@ -133,6 +136,8 @@ export function BrowseChannelsModal() {
                 <div
                   key={channel.id}
                   className="flex items-start gap-3 px-6 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors"
+                  data-testid={`chat-browse-channels-row-${channel.id}`}
+                  data-member={isMember ? 'true' : 'false'}
                 >
                   {/* Channel info */}
                   <div className="flex-1 min-w-0">
@@ -160,6 +165,7 @@ export function BrowseChannelsModal() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleOpen(channel.id)}
+                        data-testid={`chat-browse-channels-open-${channel.id}`}
                       >
                         Open
                       </Button>
@@ -169,6 +175,7 @@ export function BrowseChannelsModal() {
                         onClick={() => handleJoin(channel.id)}
                         loading={joiningId === channel.id}
                         disabled={joiningId !== null}
+                        data-testid={`chat-browse-channels-join-${channel.id}`}
                       >
                         <SignIn size={14} className="mr-1" />
                         Join
@@ -180,6 +187,7 @@ export function BrowseChannelsModal() {
             })
           )}
         </div>
+      </div>
     </Modal>
   );
 }

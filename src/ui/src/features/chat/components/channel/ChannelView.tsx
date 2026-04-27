@@ -11,8 +11,11 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { ChannelHeader } from '@/features/chat/components/channel/ChannelHeader';
 import { MessageList } from '@/features/chat/components/channel/MessageList';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
-import { sendMessage, sendTyping } from '@/features/chat/store/chatThunks';
-import { selectReplyToMessage, clearReplyToMessage } from '@/features/chat/store/chatUiSlice';
+import { sendMessage, sendTyping, editMessage } from '@/features/chat/store/chatThunks';
+import { updateMessage } from '@/features/chat/store/chatMessagesSlice';
+import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearEditingMessage } from '@/features/chat/store/chatUiSlice';
+import { attachmentsApi } from '@/features/attachments';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
 const TYPING_THROTTLE_MS = 3000;
 
@@ -30,27 +33,76 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   // Use prop if provided, otherwise read from Redux
   const activeChannelIdFromRedux = useAppSelector((state) => state.chatChannels.activeChannelId);
   const effectiveChannelId = channelIdProp ?? activeChannelIdFromRedux;
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const activeChannel = useAppSelector((state) =>
     state.chatChannels.channels.find((c) => c.id === effectiveChannelId),
   );
   const replyToMessage = useAppSelector(selectReplyToMessage);
+  const editingMessage = useAppSelector(selectEditingMessage);
 
   const handleSend = useCallback(
-    (content: string) => {
+    async (content: string, fileIds: string[]) => {
       if (!activeChannel || !effectiveChannelId) return;
-      dispatch(sendMessage({
+      const result = await dispatch(sendMessage({
         channelId: effectiveChannelId,
-        content,
+        content: content || '',
         replyToId: replyToMessage?.id,
-      }));
+      })).unwrap();
       dispatch(clearReplyToMessage());
+
+      if (fileIds.length > 0 && organizationId && result.id) {
+        const attachResults = await Promise.all(
+          fileIds.map((fileId) =>
+            attachmentsApi.attachFile({
+              organizationId,
+              sourceFileId: fileId,
+              contentType: ContentType.CHAT_MESSAGE,
+              contentId: result.id,
+            }).catch((err) => {
+              console.error('[ChannelView] Failed to attach file:', err);
+              return null;
+            })
+          )
+        );
+
+        const attachments = attachResults
+          .filter((r): r is NonNullable<typeof r> => r !== null && !!r.attachment)
+          .map((r) => ({
+            id: r.attachment!.id,
+            fileId: r.attachment!.fileId,
+            filename: r.attachment!.filename,
+            mimeType: r.attachment!.mimeType,
+            sizeBytes: Number(r.attachment!.sizeBytes),
+          }));
+
+        if (attachments.length > 0) {
+          dispatch(updateMessage({
+            channelId: effectiveChannelId,
+            message: { ...result, attachments },
+          }));
+        }
+      }
     },
-    [activeChannel, effectiveChannelId, replyToMessage, dispatch],
+    [activeChannel, effectiveChannelId, replyToMessage, dispatch, organizationId],
   );
 
   const handleCancelReply = useCallback(() => {
     dispatch(clearReplyToMessage());
+  }, [dispatch]);
+
+  const handleEdit = useCallback(async (content: string) => {
+    if (!editingMessage) return;
+    await dispatch(editMessage({
+      channelId: editingMessage.channelId,
+      messageId: editingMessage.id,
+      content,
+    }));
+    dispatch(clearEditingMessage());
+  }, [editingMessage, dispatch]);
+
+  const handleCancelEdit = useCallback(() => {
+    dispatch(clearEditingMessage());
   }, [dispatch]);
 
   const handleTyping = useCallback(() => {
@@ -79,15 +131,24 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
       : `#${activeChannel.name}`;
 
   return (
-    <div className="flex flex-col h-full" onMouseDown={onFocus}>
+    <div
+      className="flex flex-col h-full"
+      onMouseDown={onFocus}
+      data-testid="chat-channel-view"
+      data-channel-id={effectiveChannelId ?? ''}
+    >
       <ChannelHeader channelId={effectiveChannelId ?? undefined} showCloseButton={showCloseButton} onClose={onClose} />
       <MessageList channelId={effectiveChannelId ?? undefined} />
       <MessageCompose
         channelName={channelDisplayName}
+        organizationId={organizationId ?? undefined}
         onSend={handleSend}
         onTyping={handleTyping}
         replyTo={replyToMessage}
         onCancelReply={handleCancelReply}
+        editingMessage={editingMessage}
+        onSaveEdit={handleEdit}
+        onCancelEdit={handleCancelEdit}
       />
     </div>
   );

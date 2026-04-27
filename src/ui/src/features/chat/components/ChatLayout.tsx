@@ -130,7 +130,7 @@ export function ChatLayout({
               defaultSize={isMobileOrTablet ? 200 : 260}
               minSize={180}
               maxSize={isMobileOrTablet ? 280 : 320}
-              className="bg-card overflow-hidden"
+              className="bg-background overflow-hidden"
             >
               {sidebar}
             </Panel>
@@ -141,7 +141,7 @@ export function ChatLayout({
 
         {/* Main Channel View */}
         <Panel id="chat-channel" minSize={isMobileOrTablet ? 200 : 400}>
-          <div className={cn("h-full overflow-hidden bg-background", showCollapsedRail && "ml-12")}>
+          <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
             {showSplit && splitView ? (
               <div className="flex h-full">
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -164,10 +164,10 @@ export function ChatLayout({
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
             <Panel
               id="chat-right-panel"
-              defaultSize={360}
+              defaultSize={720}
               minSize={320}
-              maxSize={500}
-              className="bg-card overflow-hidden"
+              maxSize={900}
+              className="bg-background overflow-hidden"
             >
               {rightPanel}
             </Panel>

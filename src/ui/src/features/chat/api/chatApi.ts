@@ -41,6 +41,13 @@ import type {
   ListCategoriesRequest,
   ReorderCategoriesRequest,
   MoveChannelToCategoryRequest,
+  UpdateChannelMemberRequest,
+  RespondToAgentConfirmationRequest,
+  GetChannelPendingApprovalsRequest,
+  GetChannelAgentContextStatsRequest,
+  GetChannelAgentContextStatsBatchRequest,
+  CompactChannelAgentContextRequest,
+  ResetChannelAgentContextRequest,
 } from '@uniffy/proto/chat/v1/chat_pb';
 import type {
   StreamUserChatEventsRequest,
@@ -75,6 +82,8 @@ export const chatApi = {
     chatClient.removeMembers(req),
   getMembers: (req: PartialMessage<GetMembersRequest>) =>
     chatClient.getMembers(req),
+  updateChannelMember: (req: PartialMessage<UpdateChannelMemberRequest>) =>
+    chatClient.updateChannelMember(req),
 
   // Messages
   sendMessage: (req: PartialMessage<SendMessageRequest>) =>
@@ -141,6 +150,23 @@ export const chatApi = {
     chatClient.reorderCategories(req),
   moveChannelToCategory: (req: PartialMessage<MoveChannelToCategoryRequest>) =>
     chatClient.moveChannelToCategory(req),
+
+  // Agent confirmations
+  respondToAgentConfirmation: (req: PartialMessage<RespondToAgentConfirmationRequest>) =>
+    chatClient.respondToAgentConfirmation(req),
+  getChannelPendingApprovals: (req: PartialMessage<GetChannelPendingApprovalsRequest>) =>
+    chatClient.getChannelPendingApprovals(req),
+
+  // Per-(channel, agent) context management
+  getChannelAgentContextStats: (req: PartialMessage<GetChannelAgentContextStatsRequest>) =>
+    chatClient.getChannelAgentContextStats(req),
+  getChannelAgentContextStatsBatch: (
+    req: PartialMessage<GetChannelAgentContextStatsBatchRequest>,
+  ) => chatClient.getChannelAgentContextStatsBatch(req),
+  compactChannelAgentContext: (req: PartialMessage<CompactChannelAgentContextRequest>) =>
+    chatClient.compactChannelAgentContext(req),
+  resetChannelAgentContext: (req: PartialMessage<ResetChannelAgentContextRequest>) =>
+    chatClient.resetChannelAgentContext(req),
 };
 
 export const chatStreamApi = {

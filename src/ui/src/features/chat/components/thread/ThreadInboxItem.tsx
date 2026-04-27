@@ -31,6 +31,8 @@ export function ThreadInboxItem({ thread, onClick }: ThreadInboxItemProps) {
         "w-full text-left px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors",
         thread.hasUnread && "bg-primary/5"
       )}
+      data-testid={`chat-thread-inbox-item-${thread.rootMessageId}`}
+      data-unread={thread.hasUnread ? 'true' : 'false'}
     >
       {/* Channel name */}
       <div className="flex items-center gap-1.5 mb-1">

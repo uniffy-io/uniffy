@@ -1,5 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { chatApi } from '@/features/chat/api/chatApi';
+import { attachmentsApi } from '@/features/attachments';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import {
   channelToPlain,
   messageToPlain,
@@ -13,6 +15,8 @@ import {
   removeChannel,
   updateChannel,
   setChannelMembers,
+  setChannelPreferences,
+  updateChannelPreference,
   setCategories,
   setLoading,
   updateUnreadCounts,
@@ -25,6 +29,7 @@ import {
   updateMessage,
   deleteMessage,
   setHasMore,
+  setUnreadSeparator,
   setChannelLoading,
   addReactionToMessage,
   removeReactionFromMessage,
@@ -38,9 +43,11 @@ import {
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
+import { fetchAgents } from '@/features/agents/store/agentsThunks';
 import type { RootState } from '@/app/store';
 import type { ChatMessage, ChatChannel, ChatChannelMember } from '@/features/chat/types';
-import { ChannelType as ProtoChannelType } from '@uniffy/proto/chat/v1/chat_pb';
+import { ChannelType as ProtoChannelType, ChatNotificationLevel, AgentConfirmationDecision } from '@uniffy/proto/chat/v1/chat_pb';
+import { SubjectType } from '@uniffy/proto/common/v1/common_pb';
 
 const getOrganizationId = (state: RootState): string => {
   const orgId = state.auth.currentOrganizationId;
@@ -58,8 +65,14 @@ export const fetchChannels = createAsyncThunk<
   try {
     dispatch(setLoading(true));
     const organizationId = getOrganizationId(getState());
-    const response = await chatApi.listChannels({ organizationId });
-    dispatch(setChannels(response.channels.map(channelToPlain)));
+    const collected: ChatChannel[] = [];
+    let cursor: string | undefined;
+    do {
+      const response = await chatApi.listChannels({ organizationId, cursor });
+      collected.push(...response.channels.map(channelToPlain));
+      cursor = response.nextCursor || undefined;
+    } while (cursor);
+    dispatch(setChannels(collected));
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch channels');
   } finally {
@@ -74,8 +87,18 @@ export const fetchPublicChannels = createAsyncThunk<
 >('chat/fetchPublicChannels', async (_, { getState, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const response = await chatApi.listChannels({ organizationId, browsePublic: true });
-    return response.channels.map(channelToPlain);
+    const collected: ChatChannel[] = [];
+    let cursor: string | undefined;
+    do {
+      const response = await chatApi.listChannels({
+        organizationId,
+        browsePublic: true,
+        cursor,
+      });
+      collected.push(...response.channels.map(channelToPlain));
+      cursor = response.nextCursor || undefined;
+    } while (cursor);
+    return collected;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch public channels');
   }
@@ -83,7 +106,15 @@ export const fetchPublicChannels = createAsyncThunk<
 
 export const createChannel = createAsyncThunk<
   ChatChannel,
-  { name: string; channelType: ProtoChannelType; description?: string; icon?: string; categoryId?: string; memberIds?: string[] },
+  {
+    name: string;
+    channelType: ProtoChannelType;
+    description?: string;
+    icon?: string;
+    categoryId?: string;
+    memberIds?: string[];
+    subjects?: { type: 'USER' | 'AGENT'; id: string }[];
+  },
   { state: RootState; rejectValue: string }
 >('chat/createChannel', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
@@ -96,6 +127,10 @@ export const createChannel = createAsyncThunk<
       icon: params.icon,
       categoryId: params.categoryId,
       memberIds: params.memberIds ?? [],
+      members: (params.subjects ?? []).map((s) => ({
+        type: s.type === 'AGENT' ? SubjectType.AGENT : SubjectType.USER,
+        id: s.id,
+      })),
     });
     if (!response.channel) {
       return rejectWithValue('Failed to create channel');
@@ -152,13 +187,15 @@ export const leaveChannel = createAsyncThunk<
 });
 
 export const archiveChannel = createAsyncThunk<
-  void,
+  string,
   string,
   { state: RootState; rejectValue: string }
->('chat/archiveChannel', async (channelId, { getState, rejectWithValue }) => {
+>('chat/archiveChannel', async (channelId, { getState, dispatch, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.archiveChannel({ organizationId, channelId });
+    dispatch(removeChannel(channelId));
+    return channelId;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to archive channel');
   }
@@ -181,7 +218,7 @@ export const deleteChannel = createAsyncThunk<
 
 export const fetchMessages = createAsyncThunk<
   { messages: ChatMessage[]; hasMore: boolean },
-  { channelId: string; beforeId?: string; limit?: number },
+  { channelId: string; beforeId?: string; aroundId?: string; limit?: number },
   { state: RootState; rejectValue: string }
 >('chat/fetchMessages', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
@@ -191,14 +228,63 @@ export const fetchMessages = createAsyncThunk<
       organizationId,
       channelId: params.channelId,
       beforeId: params.beforeId,
+      aroundId: params.aroundId,
       limit: params.limit ?? 50,
       rootOnly: true,
     });
     const messages = response.messages.map(messageToPlain);
+
+    // Batch-fetch attachments for all messages in parallel
+    const attachmentResults = await Promise.allSettled(
+      messages.map((msg) =>
+        attachmentsApi.listAttachments({
+          organizationId,
+          contentType: ContentType.CHAT_MESSAGE,
+          contentId: msg.id,
+        })
+      )
+    );
+    for (let i = 0; i < messages.length; i++) {
+      const result = attachmentResults[i];
+      if (result.status === 'fulfilled' && result.value.attachments.length > 0) {
+        messages[i] = {
+          ...messages[i],
+          attachments: result.value.attachments.map((a) => ({
+            id: a.id,
+            fileId: a.fileId,
+            filename: a.filename,
+            mimeType: a.mimeType,
+            sizeBytes: Number(a.sizeBytes),
+          })),
+        };
+      }
+    }
+
     if (params.beforeId) {
       dispatch(prependMessages({ channelId: params.channelId, messages }));
     } else {
+      // Compute unread separator position before marking as read
+      const state = getState();
+      const channel = state.chatChannels.channels.find(
+        (c) => c.id === params.channelId
+      );
+      const unreadCount = channel?.unreadCount ?? 0;
+      if (unreadCount > 0 && messages.length > 0) {
+        const separatorIndex = messages.length - unreadCount;
+        if (separatorIndex >= 0 && separatorIndex < messages.length) {
+          dispatch(setUnreadSeparator({
+            channelId: params.channelId,
+            messageId: messages[separatorIndex].id,
+          }));
+        }
+      }
+
       dispatch(setMessages({ channelId: params.channelId, messages }));
+
+      // Re-hydrate any live agent approval cards that survived process
+      // restart in Valkey but got dropped from Redux by the reload. Fire
+      // and forget — a failure here should never block the channel open.
+      dispatch(fetchChannelPendingApprovals({ channelId: params.channelId }));
 
       // Mark channel as read when opening it (not when paginating)
       const lastMessage = messages[messages.length - 1];
@@ -358,11 +444,11 @@ export const addReaction = createAsyncThunk<
   { channelId: string; messageId: string; emoji: string },
   { state: RootState; rejectValue: string }
 >('chat/addReaction', async (params, { getState, dispatch, rejectWithValue }) => {
-  try {
-    const state = getState();
-    const organizationId = getOrganizationId(state);
-    const currentUserId = state.auth.user?.id ?? '';
+  const state = getState();
+  const organizationId = getOrganizationId(state);
+  const currentUserId = state.auth.user?.id ?? '';
 
+  try {
     // Optimistic update - channel messages
     dispatch(addReactionToMessage({
       channelId: params.channelId,
@@ -387,6 +473,20 @@ export const addReaction = createAsyncThunk<
       emoji: params.emoji,
     });
   } catch (error) {
+    // Rollback optimistic updates
+    dispatch(removeReactionFromMessage({
+      channelId: params.channelId,
+      messageId: params.messageId,
+      emoji: params.emoji,
+      userId: currentUserId,
+      currentUserId,
+    }));
+    dispatch(removeReactionFromThreadMessage({
+      messageId: params.messageId,
+      emoji: params.emoji,
+      userId: currentUserId,
+      currentUserId,
+    }));
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to add reaction');
   }
 });
@@ -396,11 +496,11 @@ export const removeReaction = createAsyncThunk<
   { channelId: string; messageId: string; emoji: string },
   { state: RootState; rejectValue: string }
 >('chat/removeReaction', async (params, { getState, dispatch, rejectWithValue }) => {
-  try {
-    const state = getState();
-    const organizationId = getOrganizationId(state);
-    const currentUserId = state.auth.user?.id ?? '';
+  const state = getState();
+  const organizationId = getOrganizationId(state);
+  const currentUserId = state.auth.user?.id ?? '';
 
+  try {
     // Optimistic update - channel messages
     dispatch(removeReactionFromMessage({
       channelId: params.channelId,
@@ -425,6 +525,20 @@ export const removeReaction = createAsyncThunk<
       emoji: params.emoji,
     });
   } catch (error) {
+    // Rollback optimistic updates
+    dispatch(addReactionToMessage({
+      channelId: params.channelId,
+      messageId: params.messageId,
+      emoji: params.emoji,
+      userId: currentUserId,
+      currentUserId,
+    }));
+    dispatch(addReactionToThreadMessage({
+      messageId: params.messageId,
+      emoji: params.emoji,
+      userId: currentUserId,
+      currentUserId,
+    }));
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to remove reaction');
   }
 });
@@ -474,6 +588,65 @@ export const fetchThreadMessages = createAsyncThunk<
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch thread messages');
   }
+});
+
+/**
+ * Resolve the thread root for a given message. Handles three cases:
+ * - Message is already loaded in the channel as a reply → returns its rootId.
+ * - Message is a thread root with replies → returns its own id.
+ * - Message is not loaded → fetches from server to determine rootId.
+ * Also ensures the root message is in the channel messages store so ThreadPanel can render it.
+ */
+export const resolveThreadForMessage = createAsyncThunk<
+  { rootMessageId: string; targetMessageId: string } | null,
+  { channelId: string; messageId: string },
+  { state: RootState; rejectValue: string }
+>('chat/resolveThreadForMessage', async (params, { getState, dispatch }) => {
+  const state = getState();
+  const organizationId = getOrganizationId(state);
+  const existing = state.chatMessages.byId[params.messageId];
+
+  let rootId: string | null = null;
+  if (existing && state.chatMessages.idSetByChannel[params.channelId]?.[params.messageId]) {
+    if (existing.rootId) {
+      rootId = existing.rootId;
+    } else if (existing.thread && existing.thread.replyCount > 0) {
+      rootId = existing.id;
+    }
+  } else {
+    try {
+      const resp = await chatApi.getMessage({
+        organizationId,
+        channelId: params.channelId,
+        messageId: params.messageId,
+      });
+      if (!resp.message) return null;
+      const plain = messageToPlain(resp.message);
+      rootId = plain.rootId ?? (plain.thread && plain.thread.replyCount > 0 ? plain.id : null);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!rootId) return null;
+
+  const rootInChannel = state.chatMessages.idSetByChannel[params.channelId]?.[rootId] === true;
+  if (!rootInChannel) {
+    try {
+      const resp = await chatApi.getMessage({
+        organizationId,
+        channelId: params.channelId,
+        messageId: rootId,
+      });
+      if (resp.message) {
+        dispatch(appendMessage({ channelId: params.channelId, message: messageToPlain(resp.message) }));
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return { rootMessageId: rootId, targetMessageId: params.messageId };
 });
 
 export const fetchThreadsInbox = createAsyncThunk<
@@ -563,6 +736,12 @@ export const fetchUnreadCounts = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >('chat/fetchUnreadCounts', async (_, { getState, dispatch, rejectWithValue }) => {
   try {
+    const nlMap: Record<number, 'ALL' | 'MENTIONS' | 'NONE'> = {
+      [ChatNotificationLevel.ALL]: 'ALL',
+      [ChatNotificationLevel.MENTIONS]: 'MENTIONS',
+      [ChatNotificationLevel.NONE]: 'NONE',
+    };
+
     const organizationId = getOrganizationId(getState());
     const response = await chatApi.getUnreadCounts({ organizationId });
     dispatch(updateUnreadCounts(
@@ -572,6 +751,16 @@ export const fetchUnreadCounts = createAsyncThunk<
         mentionCount: c.mentionCount,
       })),
     ));
+
+    const prefs: Record<string, { isMuted: boolean; notificationLevel: 'ALL' | 'MENTIONS' | 'NONE'; mutedUntil: string | null }> = {};
+    for (const c of response.channels) {
+      prefs[c.channelId] = {
+        isMuted: c.isMuted,
+        notificationLevel: nlMap[c.notificationLevel] ?? 'ALL',
+        mutedUntil: c.mutedUntil ? new Date(Number(c.mutedUntil.seconds) * 1000).toISOString() : null,
+      };
+    }
+    dispatch(setChannelPreferences(prefs));
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch unread counts');
   }
@@ -634,6 +823,38 @@ export const createCategoryThunk = createAsyncThunk<
   }
 });
 
+export const updateCategoryThunk = createAsyncThunk<
+  void,
+  { categoryId: string; name: string },
+  { state: RootState; rejectValue: string }
+>('chat/updateCategory', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.updateCategory({
+      organizationId,
+      categoryId: params.categoryId,
+      name: params.name,
+    });
+    dispatch(fetchCategories());
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to update category');
+  }
+});
+
+export const deleteCategoryThunk = createAsyncThunk<
+  void,
+  string,
+  { state: RootState; rejectValue: string }
+>('chat/deleteCategory', async (categoryId, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.deleteCategory({ organizationId, categoryId });
+    dispatch(fetchCategories());
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete category');
+  }
+});
+
 export const fetchMembers = createAsyncThunk<
   void,
   string,
@@ -641,10 +862,16 @@ export const fetchMembers = createAsyncThunk<
 >('chat/fetchMembers', async (channelId, { getState, dispatch, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const response = await chatApi.getMembers({ organizationId, channelId });
+    const collected: ReturnType<typeof memberToPlain>[] = [];
+    let cursor: string | undefined;
+    do {
+      const response = await chatApi.getMembers({ organizationId, channelId, cursor });
+      collected.push(...response.members.map(memberToPlain));
+      cursor = response.nextCursor || undefined;
+    } while (cursor);
     dispatch(setChannelMembers({
       channelId,
-      members: response.members.map(memberToPlain),
+      members: collected,
     }));
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch members');
@@ -689,7 +916,11 @@ export const updateChannelThunk = createAsyncThunk<
 
 export const addMembersThunk = createAsyncThunk<
   ChatChannelMember[],
-  { channelId: string; userIds: string[] },
+  {
+    channelId: string;
+    userIds?: string[];
+    subjects?: { type: 'USER' | 'AGENT'; id: string }[];
+  },
   { state: RootState; rejectValue: string }
 >('chat/addMembers', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
@@ -697,10 +928,13 @@ export const addMembersThunk = createAsyncThunk<
     const response = await chatApi.addMembers({
       organizationId,
       channelId: params.channelId,
-      userIds: params.userIds,
+      userIds: params.userIds ?? [],
+      subjects: (params.subjects ?? []).map((s) => ({
+        type: s.type === 'AGENT' ? SubjectType.AGENT : SubjectType.USER,
+        id: s.id,
+      })),
     });
     const members = response.members.map(memberToPlain);
-    // Refresh full member list
     dispatch(fetchMembers(params.channelId));
     return members;
   } catch (error) {
@@ -709,37 +943,133 @@ export const addMembersThunk = createAsyncThunk<
 });
 
 export const removeMemberThunk = createAsyncThunk<
-  { channelId: string; userId: string },
-  { channelId: string; userId: string },
+  { channelId: string; subjectId: string },
+  { channelId: string; userId?: string; subject?: { type: 'USER' | 'AGENT'; id: string } },
   { state: RootState; rejectValue: string }
 >('chat/removeMember', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
+    const subject = params.subject;
     await chatApi.removeMembers({
       organizationId,
       channelId: params.channelId,
-      userIds: [params.userId],
+      userIds: subject ? [] : (params.userId ? [params.userId] : []),
+      subjects: subject
+        ? [{
+            type: subject.type === 'AGENT' ? SubjectType.AGENT : SubjectType.USER,
+            id: subject.id,
+          }]
+        : [],
     });
-    // Refresh full member list
     dispatch(fetchMembers(params.channelId));
-    return { channelId: params.channelId, userId: params.userId };
+    return {
+      channelId: params.channelId,
+      subjectId: subject?.id ?? params.userId ?? '',
+    };
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to remove member');
   }
 });
 
+export const fetchChannelResources = createAsyncThunk<
+  { resources: import('@/features/chat/types').ChatResource[]; totalCount: number },
+  { channelId: string; contentTypeFilter?: string; limit?: number; offset?: number },
+  { state: RootState; rejectValue: string }
+>('chat/fetchChannelResources', async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.getChannelResources({
+      organizationId,
+      channelId: params.channelId,
+      contentTypeFilter: params.contentTypeFilter,
+      limit: params.limit ?? 50,
+      offset: params.offset ?? 0,
+    });
+    return {
+      resources: response.resources.map((r) => ({
+        id: r.id,
+        channelId: r.channelId,
+        urn: r.urn,
+        contentType: r.contentType,
+        firstMentionedAt: r.firstMentionedAt?.toDate().toISOString() ?? '',
+        lastMentionedAt: r.lastMentionedAt?.toDate().toISOString() ?? '',
+        mentionCount: r.mentionCount,
+        firstMentionedBy: r.firstMentionedBy,
+        title: r.title || undefined,
+      })),
+      totalCount: response.totalCount,
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch resources');
+  }
+});
+
+export const updateChannelMember = createAsyncThunk<
+  ChatChannelMember,
+  {
+    channelId: string;
+    userId: string;
+    isMuted?: boolean;
+    notificationLevel?: number;
+    mutedUntil?: string;
+    followAllThreads?: boolean;
+    badgeAllMessages?: boolean;
+  },
+  { state: RootState; rejectValue: string }
+>('chat/updateChannelMember', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const reqPayload: Record<string, unknown> = {
+      organizationId,
+      channelId: params.channelId,
+      userId: params.userId,
+      isMuted: params.isMuted,
+      notificationLevel: params.notificationLevel,
+      followAllThreads: params.followAllThreads,
+      badgeAllMessages: params.badgeAllMessages,
+    };
+    if (params.mutedUntil) {
+      const seconds = BigInt(Math.floor(new Date(params.mutedUntil).getTime() / 1000));
+      reqPayload.mutedUntil = { seconds, nanos: 0 };
+    }
+    const response = await chatApi.updateChannelMember(reqPayload);
+    if (!response.member) {
+      return rejectWithValue('Failed to update member');
+    }
+    const plain = memberToPlain(response.member);
+
+    dispatch(updateChannelPreference({
+      channelId: params.channelId,
+      prefs: {
+        isMuted: plain.isMuted,
+        notificationLevel: plain.notificationLevel,
+        mutedUntil: plain.mutedUntil,
+      },
+    }));
+
+    dispatch(fetchMembers(params.channelId));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to update member');
+  }
+});
+
 export const initializeChat = createAsyncThunk<
   void,
-  string | undefined,
+  { channelId?: string; messageId?: string },
   { state: RootState; rejectValue: string }
->('chat/initialize', async (initialChannelId, { getState, dispatch, rejectWithValue }) => {
+>('chat/initialize', async ({ channelId: initialChannelId, messageId }, { getState, dispatch, rejectWithValue }) => {
   try {
-    // Load channels, categories, and unread counts in parallel
+    // Load channels, categories, unread counts, and agents in parallel.
+    // Agents power DM sidebar avatars, typing indicators, and the @-mention
+    // / new-DM pickers — fetched here so chat-only users never see empty
+    // agent state.
     await Promise.all([
       dispatch(fetchChannels()).unwrap(),
       dispatch(fetchCategories()).unwrap(),
       dispatch(fetchUnreadCounts()).unwrap(),
       dispatch(fetchThreadsInbox()).unwrap(),
+      dispatch(fetchAgents()).unwrap().catch(() => {}),
     ]);
 
     // Set active channel from URL or default to first
@@ -749,10 +1079,96 @@ export const initializeChat = createAsyncThunk<
 
     if (targetChannelId) {
       dispatch(setActiveChannel(targetChannelId));
-      // Fetch messages immediately so they are ready when the channel renders
-      dispatch(fetchMessages({ channelId: targetChannelId }));
+      // If a specific message is targeted, fetch around it; otherwise fetch latest
+      dispatch(fetchMessages({
+        channelId: targetChannelId,
+        aroundId: messageId,
+      }));
     }
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to initialize chat');
+  }
+});
+
+export const respondToAgentConfirmation = createAsyncThunk<
+  { requestId: string; approved: boolean },
+  { channelId: string; messageId: string; requestId: string; approved: boolean; rationale?: string },
+  { state: RootState; rejectValue: string }
+>('chat/respondToAgentConfirmation', async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.respondToAgentConfirmation({
+      organizationId,
+      channelId: params.channelId,
+      messageId: params.messageId,
+      requestId: params.requestId,
+      decision: params.approved ? AgentConfirmationDecision.APPROVE : AgentConfirmationDecision.DENY,
+      rationale: params.rationale,
+    });
+    return { requestId: params.requestId, approved: params.approved };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to respond to agent confirmation');
+  }
+});
+
+/**
+ * Restore synthetic confirmation-request cards after a page reload.
+ *
+ * The approval state itself lives in Valkey (ApprovalStore, TTL 24h). The
+ * synthetic message rows that render the card live only in Redux, so a
+ * reload mid-flight drops them. We call this on channel mount and append
+ * one synthetic row per pending approval, mirroring the shape the
+ * AGENT_CONFIRMATION_REQUESTED stream event would have injected.
+ */
+export const fetchChannelPendingApprovals = createAsyncThunk<
+  void,
+  { channelId: string },
+  { state: RootState; rejectValue: string }
+>('chat/fetchChannelPendingApprovals', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.getChannelPendingApprovals({
+      organizationId,
+      channelId: params.channelId,
+    });
+    const existingIds = getState().chatMessages.idSetByChannel[params.channelId] ?? {};
+
+    for (const a of response.approvals) {
+      if (existingIds[a.requestId]) continue;
+      const requestedIso = a.requestedAt
+        ? new Date(Number(a.requestedAt.seconds) * 1000 + Math.floor(a.requestedAt.nanos / 1e6)).toISOString()
+        : new Date().toISOString();
+      const expiresIso = a.expiresAt
+        ? new Date(Number(a.expiresAt.seconds) * 1000 + Math.floor(a.expiresAt.nanos / 1e6)).toISOString()
+        : null;
+      const synthetic: ChatMessage = {
+        id: a.requestId,
+        channelId: params.channelId,
+        senderId: a.agentId,
+        senderType: 'AGENT',
+        content: '',
+        rootId: null,
+        replyToId: null,
+        editedAt: null,
+        isDeleted: false,
+        isPinned: false,
+        metadata: {
+          kind: 'confirmation_request',
+          agent_id: a.agentId,
+          request_id: a.requestId,
+          message_id: a.messageId,
+          tool_name: a.toolName,
+          args_preview: a.argsPreview,
+          actor_user_id: a.actorUserId,
+          ...(expiresIso ? { expires_at: expiresIso } : {}),
+        },
+        createdAt: requestedIso,
+        updatedAt: requestedIso,
+        reactions: [],
+      };
+      dispatch(appendMessage({ channelId: params.channelId, message: synthetic }));
+    }
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch pending approvals');
   }
 });

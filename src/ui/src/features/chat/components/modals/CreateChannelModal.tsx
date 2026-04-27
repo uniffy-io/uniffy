@@ -83,6 +83,7 @@ export function CreateChannelModal() {
 
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting}>
+      <div data-testid="chat-create-channel-modal">
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <h2 className="text-xl font-semibold text-foreground">
@@ -93,6 +94,7 @@ export function CreateChannelModal() {
           onClick={handleClose}
           disabled={isSubmitting}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          data-testid="chat-create-channel-close"
         >
           <X size={20} />
         </button>
@@ -119,6 +121,7 @@ export function CreateChannelModal() {
                 className={cn(
                   showError && 'border-red-500 focus-visible:ring-red-500',
                 )}
+                data-testid="chat-create-channel-name-input"
               />
               <div className="flex items-center justify-between mt-1">
                 {showError ? (
@@ -148,6 +151,8 @@ export function CreateChannelModal() {
                     ? 'border-primary bg-primary/5'
                     : 'border-border bg-muted/30 hover:border-muted-foreground/30'
                 )}
+                data-testid="chat-create-channel-type-public"
+                data-selected={channelType === 'public' ? 'true' : 'false'}
               >
                 <div className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
@@ -175,6 +180,8 @@ export function CreateChannelModal() {
                     ? 'border-primary bg-primary/5'
                     : 'border-border bg-muted/30 hover:border-muted-foreground/30'
                 )}
+                data-testid="chat-create-channel-type-private"
+                data-selected={channelType === 'private' ? 'true' : 'false'}
               >
                 <div className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
@@ -223,6 +230,7 @@ export function CreateChannelModal() {
                 disabled={isSubmitting}
                 rows={3}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                data-testid="chat-create-channel-description-input"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 This will be displayed when browsing for channels.
@@ -237,14 +245,21 @@ export function CreateChannelModal() {
               variant="ghost"
               onClick={handleClose}
               disabled={isSubmitting}
+              data-testid="chat-create-channel-cancel"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!isNameValid || isSubmitting} loading={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={!isNameValid || isSubmitting}
+              loading={isSubmitting}
+              data-testid="chat-create-channel-submit"
+            >
               Create channel
             </Button>
           </div>
         </form>
+      </div>
     </Modal>
   );
 }
