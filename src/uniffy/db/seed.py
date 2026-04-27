@@ -87,6 +87,21 @@ async def seed_initial_data() -> None:
     """
     Seed initial data if the database is empty.
 
+    Serialised across Granian workers / k8s replicas with the seed startup
+    advisory lock. Late workers acquire the lock after the leader finishes,
+    re-check via the existing-org query in the body, and exit cleanly. The
+    body is idempotent (the existing-org check is the gate).
+    """
+    from uniffy.db.session import SEED_LOCK_ID, startup_advisory_lock
+
+    with startup_advisory_lock(SEED_LOCK_ID, "initial seed"):
+        await _seed_initial_data_locked()
+
+
+async def _seed_initial_data_locked() -> None:
+    """
+    Seed initial data if the database is empty.
+
     Creates a default organization, system admin user, and seed notes from docs/.
     Internal markdown links are converted to URN mentions.
     """
