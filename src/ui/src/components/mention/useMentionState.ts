@@ -15,12 +15,21 @@
  */
 
 import { useContext, useEffect, useState } from 'react';
-import { MentionStateContext, MENTION_NOOP } from '@/components/mention/MentionStateProvider';
+import { MentionStateContext, MENTION_NOOP, type MentionDisplayMode } from '@/components/mention/MentionStateProvider';
 import {
   getMentionState,
   onMentionStateChange,
 } from '@/components/mention/mentionStateEmitter';
 import type { MentionLiveState } from '@/components/mention/types';
+
+/**
+ * Resolved mention display mode from the provider. Falls back to `'expanded'`
+ * when no provider is mounted (default context value), keeping standalone
+ * renders sane.
+ */
+export function useMentionDisplay(): MentionDisplayMode {
+  return useContext(MentionStateContext).mentionDisplay;
+}
 
 /**
  * Get live state for a URN. Automatically registers with the provider
