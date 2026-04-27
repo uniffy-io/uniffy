@@ -38,7 +38,7 @@ export function CollapsibleSidebarRail({
   return (
     <div className="group/sidebar h-full relative">
       {/* Icon rail - always visible */}
-      <div className="h-full flex flex-col items-center pt-3 gap-0.5 bg-card border-r border-border">
+      <div className="h-full flex flex-col items-center pt-3 gap-0.5 bg-background border-r border-border">
         <button
           type="button"
           onClick={onExpand}
@@ -78,7 +78,7 @@ export function CollapsibleSidebarRail({
           'w-0 group-hover/sidebar:w-72',
           'overflow-hidden',
           'transition-[width,box-shadow] duration-200 ease-out',
-          'bg-card',
+          'bg-background',
           'group-hover/sidebar:shadow-xl',
           'group-hover/sidebar:border-r group-hover/sidebar:border-border'
         )}

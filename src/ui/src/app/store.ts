@@ -15,9 +15,10 @@ import { adminReducer } from '@/features/admin/store/adminSlice';
 import { setStoreRef } from '@/app/storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
 import { zenModeReducer } from '@/app/zenModeSlice';
-import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, viewerReducer } from '@/features/files';
+import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, viewerReducer, trashReducer } from '@/features/files';
 import { imageEditorReducer } from '@/features/files/store/imageEditorSlice';
 import { notificationsReducer } from '@/features/notifications/store/notificationsSlice';
+import { notificationsPageReducer } from '@/features/notifications/store/notificationsPageSlice';
 import { sessionsReducer } from '@/features/settings/store/sessionsSlice';
 import { commentsReducer } from '@/features/comments/store/commentsSlice';
 import { projectsReducer } from '@/features/projects/store/projectsSlice';
@@ -184,8 +185,10 @@ const rootReducer = combineReducers({
   upload: uploadReducer,
   savedFilters: savedFiltersReducer,
   fileViewer: viewerReducer,
+  trash: trashReducer,
   imageEditor: imageEditorReducer,
   notifications: notificationsReducer,
+  notificationsPage: notificationsPageReducer,
   presence: presenceReducer,
   sessions: sessionsReducer,
   comments: commentsReducer,

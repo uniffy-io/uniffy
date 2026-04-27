@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import React from 'react';
 import { Provider } from 'react-redux';
-import { MentionChip } from '@/components/mention';
+import { MentionChip, MentionDisplayBridge } from '@/components/mention';
 import { getStoreRef } from '@/app/storeRef';
 import { urnToPath } from '@/shared/utils/urn';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
@@ -242,6 +242,10 @@ class MentionNodeView implements NodeView {
       // Only handle left clicks
       if (e.button !== 0) return;
 
+      // Let interactive elements (expand/collapse buttons) handle their own events
+      const target = e.target as HTMLElement;
+      if (target.closest('button')) return;
+
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
@@ -321,7 +325,9 @@ class MentionNodeView implements NodeView {
 
     const { urn, label } = this.node.attrs as { urn: string; label: string };
 
-    // Wrap with Redux Provider since this React root is outside the main app tree
+    // Wrap with Redux Provider since this React root is outside the main app tree.
+    // MentionDisplayBridge supplies the user's mentionDisplay setting via context;
+    // live state falls back to the module-level emitter inside useMentionState.
     const mentionElement = React.createElement(MentionChip, {
       urn,
       label,
@@ -333,7 +339,11 @@ class MentionNodeView implements NodeView {
     const store = getStoreRef();
     if (store) {
       this.root.render(
-        React.createElement(Provider, { store, children: mentionElement })
+        React.createElement(
+          Provider,
+          { store },
+          React.createElement(MentionDisplayBridge, null, mentionElement),
+        ),
       );
     } else {
       // Store not yet initialized - render without provider
@@ -365,10 +375,10 @@ class MentionNodeView implements NodeView {
     this.root.unmount();
   }
 
-  stopEvent() {
-    // Return true to stop ProseMirror from handling the event
-    // This allows our click handler to work
-    return true;
+  stopEvent(event: Event) {
+    // Block mouse events so our click handler works,
+    // but let keyboard events through for arrow-key navigation
+    return event instanceof MouseEvent;
   }
 }
 

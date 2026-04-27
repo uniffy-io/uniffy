@@ -61,7 +61,7 @@ export function useSubjectResolver(ids: string[]): {
     }, [groups]);
 
     const subjects = useMemo(() => {
-        return ids.map((id): Subject => {
+        return (ids ?? []).map((id): Subject => {
             const member = memberMap[id];
             if (member) {
                 return {

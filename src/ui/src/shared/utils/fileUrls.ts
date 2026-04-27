@@ -36,6 +36,11 @@ export function buildAvatarUrl(userId: string, size: string): string {
     return `/api/avatars/${userId}/${size}?_v=2`;
 }
 
+/** Build an agent avatar URL: /api/agents/avatars/{agentId}/{size} */
+export function buildAgentAvatarUrl(agentId: string, size: string = 'sm'): string {
+    return `/api/agents/avatars/${agentId}/${size}`;
+}
+
 // -- URL Patterns (for service worker and CSS attribute selectors) --
 
 /** Matches /api/files/{orgId}/{fileId} - groups: [orgId, fileId] */
