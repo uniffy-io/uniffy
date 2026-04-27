@@ -108,7 +108,9 @@ proto3.util.setEnumType(ContentType, "common.v1.ContentType", [
 ]);
 
 /**
- * SubjectType defines who can be granted permissions.
+ * SubjectType defines who can be granted permissions or participate in
+ * chat channels/threads. AGENT is permitted as a chat participant and as a
+ * content permission grantee.
  *
  * @generated from enum common.v1.SubjectType
  */
@@ -132,6 +134,11 @@ export enum SubjectType {
    * @generated from enum value: SUBJECT_TYPE_ORGANIZATION = 3;
    */
   ORGANIZATION = 3,
+
+  /**
+   * @generated from enum value: SUBJECT_TYPE_AGENT = 4;
+   */
+  AGENT = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SubjectType)
 proto3.util.setEnumType(SubjectType, "common.v1.SubjectType", [
@@ -139,6 +146,7 @@ proto3.util.setEnumType(SubjectType, "common.v1.SubjectType", [
   { no: 1, name: "SUBJECT_TYPE_USER" },
   { no: 2, name: "SUBJECT_TYPE_GROUP" },
   { no: 3, name: "SUBJECT_TYPE_ORGANIZATION" },
+  { no: 4, name: "SUBJECT_TYPE_AGENT" },
 ]);
 
 /**

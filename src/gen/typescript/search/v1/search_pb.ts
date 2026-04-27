@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3 } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 
 /**
  * @generated from enum search.v1.SearchResultType
@@ -139,6 +139,13 @@ export class SearchRequest extends Message<SearchRequest> {
    */
   excludeTypes: SearchResultType[] = [];
 
+  /**
+   * Metadata field filters (e.g., {"channel_id": "uuid"} for chat message scoping)
+   *
+   * @generated from field: map<string, string> metadata_filters = 10;
+   */
+  metadataFilters: { [key: string]: string } = {};
+
   constructor(data?: PartialMessage<SearchRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -156,6 +163,7 @@ export class SearchRequest extends Message<SearchRequest> {
     { no: 7, name: "my_content_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "owner_filter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "exclude_types", kind: "enum", T: proto3.getEnumType(SearchResultType), repeated: true },
+    { no: 10, name: "metadata_filters", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SearchRequest {
@@ -784,6 +792,218 @@ export class UrnMetadata extends Message<UrnMetadata> {
    */
   updatedByName = "";
 
+  /**
+   * Task enrichment
+   *
+   * task priority option ID
+   *
+   * @generated from field: string priority = 20;
+   */
+  priority = "";
+
+  /**
+   * resolved label (e.g., "High")
+   *
+   * @generated from field: string priority_label = 21;
+   */
+  priorityLabel = "";
+
+  /**
+   * resolved hex color (e.g., "#ef4444")
+   *
+   * @generated from field: string priority_color = 22;
+   */
+  priorityColor = "";
+
+  /**
+   * resolved label (e.g., "In Progress")
+   *
+   * @generated from field: string status_label = 23;
+   */
+  statusLabel = "";
+
+  /**
+   * resolved hex color (e.g., "#3b82f6")
+   *
+   * @generated from field: string status_color = 24;
+   */
+  statusColor = "";
+
+  /**
+   * task/bug/feature/story/epic
+   *
+   * @generated from field: string task_type = 25;
+   */
+  taskType = "";
+
+  /**
+   * sequential number within project
+   *
+   * @generated from field: int32 task_number = 26;
+   */
+  taskNumber = 0;
+
+  /**
+   * parent project name
+   *
+   * @generated from field: string project_name = 27;
+   */
+  projectName = "";
+
+  /**
+   * parent project slug for "SLUG-123" display
+   *
+   * @generated from field: string project_slug = 28;
+   */
+  projectSlug = "";
+
+  /**
+   * parent project hex color
+   *
+   * @generated from field: string project_color = 29;
+   */
+  projectColor = "";
+
+  /**
+   * completed subtask count
+   *
+   * @generated from field: int32 subtask_completed = 30;
+   */
+  subtaskCompleted = 0;
+
+  /**
+   * total subtask count
+   *
+   * @generated from field: int32 subtask_total = 31;
+   */
+  subtaskTotal = 0;
+
+  /**
+   * number of blocking tasks
+   *
+   * @generated from field: int32 blocked_by_count = 32;
+   */
+  blockedByCount = 0;
+
+  /**
+   * Calendar enrichment
+   *
+   * ISO datetime
+   *
+   * @generated from field: string event_start_time = 33;
+   */
+  eventStartTime = "";
+
+  /**
+   * ISO datetime
+   *
+   * @generated from field: string event_end_time = 34;
+   */
+  eventEndTime = "";
+
+  /**
+   * all-day flag
+   *
+   * @generated from field: bool event_is_all_day = 35;
+   */
+  eventIsAllDay = false;
+
+  /**
+   * location text
+   *
+   * @generated from field: string event_location = 36;
+   */
+  eventLocation = "";
+
+  /**
+   * video call URL
+   *
+   * @generated from field: string event_meeting_url = 37;
+   */
+  eventMeetingUrl = "";
+
+  /**
+   * File enrichment
+   *
+   * MIME type
+   *
+   * @generated from field: string file_mime_type = 38;
+   */
+  fileMimeType = "";
+
+  /**
+   * size in bytes
+   *
+   * @generated from field: int64 file_size = 39;
+   */
+  fileSize = protoInt64.zero;
+
+  /**
+   * Note enrichment
+   *
+   * NOTE/FOLDER/TEMPLATE/CANVAS
+   *
+   * @generated from field: string note_node_type = 40;
+   */
+  noteNodeType = "";
+
+  /**
+   * Chat enrichment
+   *
+   * PUBLIC/PRIVATE/DIRECT/GROUP_DM
+   *
+   * @generated from field: string channel_type = 41;
+   */
+  channelType = "";
+
+  /**
+   * Agent enrichment
+   *
+   * avatar emoji
+   *
+   * @generated from field: string agent_emoji = 42;
+   */
+  agentEmoji = "";
+
+  /**
+   * theme color hex
+   *
+   * @generated from field: string agent_theme_color = 43;
+   */
+  agentThemeColor = "";
+
+  /**
+   * User enrichment
+   *
+   * avatar image URL
+   *
+   * @generated from field: string user_avatar_url = 44;
+   */
+  userAvatarUrl = "";
+
+  /**
+   * email address
+   *
+   * @generated from field: string user_email = 45;
+   */
+  userEmail = "";
+
+  /**
+   * Shared
+   *
+   * user IDs for avatar rendering
+   *
+   * @generated from field: repeated string assignee_ids = 46;
+   */
+  assigneeIds: string[] = [];
+
+  /**
+   * content tags
+   *
+   * @generated from field: repeated string content_tags = 47;
+   */
+  contentTags: string[] = [];
+
   constructor(data?: PartialMessage<UrnMetadata>) {
     super();
     proto3.util.initPartial(data, this);
@@ -805,6 +1025,34 @@ export class UrnMetadata extends Message<UrnMetadata> {
     { no: 17, name: "total_tasks", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 18, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 19, name: "updated_by_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 20, name: "priority", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 21, name: "priority_label", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 22, name: "priority_color", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 23, name: "status_label", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 24, name: "status_color", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 25, name: "task_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 26, name: "task_number", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 27, name: "project_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 28, name: "project_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 29, name: "project_color", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 30, name: "subtask_completed", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 31, name: "subtask_total", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 32, name: "blocked_by_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 33, name: "event_start_time", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 34, name: "event_end_time", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 35, name: "event_is_all_day", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 36, name: "event_location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 37, name: "event_meeting_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 38, name: "file_mime_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 39, name: "file_size", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 40, name: "note_node_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 41, name: "channel_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 42, name: "agent_emoji", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 43, name: "agent_theme_color", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 44, name: "user_avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 45, name: "user_email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 46, name: "assignee_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 47, name: "content_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UrnMetadata {

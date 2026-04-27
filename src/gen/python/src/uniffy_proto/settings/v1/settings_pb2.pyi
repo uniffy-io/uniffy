@@ -144,20 +144,22 @@ class EffectiveSettings(_message.Message):
     def __init__(self, appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ...) -> None: ...
 
 class AppearanceSettings(_message.Message):
-    __slots__ = ("theme", "accent_color", "font_family", "sidebar_collapsed", "compact_mode", "default_editor")
+    __slots__ = ("theme", "accent_color", "font_family", "sidebar_collapsed", "compact_mode", "default_editor", "mention_display")
     THEME_FIELD_NUMBER: _ClassVar[int]
     ACCENT_COLOR_FIELD_NUMBER: _ClassVar[int]
     FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
     SIDEBAR_COLLAPSED_FIELD_NUMBER: _ClassVar[int]
     COMPACT_MODE_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_EDITOR_FIELD_NUMBER: _ClassVar[int]
+    MENTION_DISPLAY_FIELD_NUMBER: _ClassVar[int]
     theme: str
     accent_color: str
     font_family: str
     sidebar_collapsed: bool
     compact_mode: bool
     default_editor: str
-    def __init__(self, theme: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., sidebar_collapsed: _Optional[bool] = ..., compact_mode: _Optional[bool] = ..., default_editor: _Optional[str] = ...) -> None: ...
+    mention_display: str
+    def __init__(self, theme: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., sidebar_collapsed: _Optional[bool] = ..., compact_mode: _Optional[bool] = ..., default_editor: _Optional[str] = ..., mention_display: _Optional[str] = ...) -> None: ...
 
 class KeyboardShortcutsSettings(_message.Message):
     __slots__ = ("bindings",)
@@ -173,7 +175,7 @@ class KeyboardShortcutsSettings(_message.Message):
     def __init__(self, bindings: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class NotificationsSettings(_message.Message):
-    __slots__ = ("browser_enabled", "email_enabled", "sound_enabled", "email_frequency", "quiet_hours_start", "quiet_hours_end", "channel_overrides", "default_reminder_intervals")
+    __slots__ = ("browser_enabled", "email_enabled", "sound_enabled", "email_frequency", "quiet_hours_start", "quiet_hours_end", "channel_overrides", "default_reminder_intervals", "toast_enabled")
     class ChannelOverridesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -189,6 +191,7 @@ class NotificationsSettings(_message.Message):
     QUIET_HOURS_END_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_OVERRIDES_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_REMINDER_INTERVALS_FIELD_NUMBER: _ClassVar[int]
+    TOAST_ENABLED_FIELD_NUMBER: _ClassVar[int]
     browser_enabled: bool
     email_enabled: bool
     sound_enabled: bool
@@ -197,7 +200,8 @@ class NotificationsSettings(_message.Message):
     quiet_hours_end: str
     channel_overrides: _containers.MessageMap[str, NotificationChannelPreference]
     default_reminder_intervals: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, browser_enabled: _Optional[bool] = ..., email_enabled: _Optional[bool] = ..., sound_enabled: _Optional[bool] = ..., email_frequency: _Optional[str] = ..., quiet_hours_start: _Optional[str] = ..., quiet_hours_end: _Optional[str] = ..., channel_overrides: _Optional[_Mapping[str, NotificationChannelPreference]] = ..., default_reminder_intervals: _Optional[_Iterable[int]] = ...) -> None: ...
+    toast_enabled: bool
+    def __init__(self, browser_enabled: _Optional[bool] = ..., email_enabled: _Optional[bool] = ..., sound_enabled: _Optional[bool] = ..., email_frequency: _Optional[str] = ..., quiet_hours_start: _Optional[str] = ..., quiet_hours_end: _Optional[str] = ..., channel_overrides: _Optional[_Mapping[str, NotificationChannelPreference]] = ..., default_reminder_intervals: _Optional[_Iterable[int]] = ..., toast_enabled: _Optional[bool] = ...) -> None: ...
 
 class NotificationChannelPreference(_message.Message):
     __slots__ = ("in_app", "browser", "email")

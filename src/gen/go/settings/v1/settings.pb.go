@@ -925,8 +925,10 @@ type AppearanceSettings struct {
 	CompactMode *bool `protobuf:"varint,5,opt,name=compact_mode,json=compactMode,proto3,oneof" json:"compact_mode,omitempty"`
 	// Default editor mode for notes: "crepe", "markdown", "readonly"
 	DefaultEditor *string `protobuf:"bytes,6,opt,name=default_editor,json=defaultEditor,proto3,oneof" json:"default_editor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Default mention chip display: "expanded" (rich card) or "compact" (inline chip)
+	MentionDisplay *string `protobuf:"bytes,7,opt,name=mention_display,json=mentionDisplay,proto3,oneof" json:"mention_display,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AppearanceSettings) Reset() {
@@ -1001,6 +1003,13 @@ func (x *AppearanceSettings) GetDefaultEditor() string {
 	return ""
 }
 
+func (x *AppearanceSettings) GetMentionDisplay() string {
+	if x != nil && x.MentionDisplay != nil {
+		return *x.MentionDisplay
+	}
+	return ""
+}
+
 // Keyboard shortcuts settings
 type KeyboardShortcutsSettings struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1069,8 +1078,10 @@ type NotificationsSettings struct {
 	ChannelOverrides map[string]*NotificationChannelPreference `protobuf:"bytes,7,rep,name=channel_overrides,json=channelOverrides,proto3" json:"channel_overrides,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Default reminder intervals in minutes for new calendar events
 	DefaultReminderIntervals []int32 `protobuf:"varint,8,rep,packed,name=default_reminder_intervals,json=defaultReminderIntervals,proto3" json:"default_reminder_intervals,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Enable in-app toast notifications for real-time alerts
+	ToastEnabled  *bool `protobuf:"varint,9,opt,name=toast_enabled,json=toastEnabled,proto3,oneof" json:"toast_enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *NotificationsSettings) Reset() {
@@ -1157,6 +1168,13 @@ func (x *NotificationsSettings) GetDefaultReminderIntervals() []int32 {
 		return x.DefaultReminderIntervals
 	}
 	return nil
+}
+
+func (x *NotificationsSettings) GetToastEnabled() bool {
+	if x != nil && x.ToastEnabled != nil {
+		return *x.ToastEnabled
+	}
+	return false
 }
 
 // Per-channel preference for a notification type
@@ -1301,7 +1319,7 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"appearance\x18\x01 \x01(\v2\x1f.settings.v1.AppearanceSettingsR\n" +
 	"appearance\x12U\n" +
 	"\x12keyboard_shortcuts\x18\x02 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x11keyboardShortcuts\x12H\n" +
-	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\"\xe8\x02\n" +
+	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\"\xaa\x03\n" +
 	"\x12AppearanceSettings\x12\x19\n" +
 	"\x05theme\x18\x01 \x01(\tH\x00R\x05theme\x88\x01\x01\x12&\n" +
 	"\faccent_color\x18\x02 \x01(\tH\x01R\vaccentColor\x88\x01\x01\x12$\n" +
@@ -1309,18 +1327,20 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"fontFamily\x88\x01\x01\x120\n" +
 	"\x11sidebar_collapsed\x18\x04 \x01(\bH\x03R\x10sidebarCollapsed\x88\x01\x01\x12&\n" +
 	"\fcompact_mode\x18\x05 \x01(\bH\x04R\vcompactMode\x88\x01\x01\x12*\n" +
-	"\x0edefault_editor\x18\x06 \x01(\tH\x05R\rdefaultEditor\x88\x01\x01B\b\n" +
+	"\x0edefault_editor\x18\x06 \x01(\tH\x05R\rdefaultEditor\x88\x01\x01\x12,\n" +
+	"\x0fmention_display\x18\a \x01(\tH\x06R\x0ementionDisplay\x88\x01\x01B\b\n" +
 	"\x06_themeB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
 	"\f_font_familyB\x14\n" +
 	"\x12_sidebar_collapsedB\x0f\n" +
 	"\r_compact_modeB\x11\n" +
-	"\x0f_default_editor\"\xaa\x01\n" +
+	"\x0f_default_editorB\x12\n" +
+	"\x10_mention_display\"\xaa\x01\n" +
 	"\x19KeyboardShortcutsSettings\x12P\n" +
 	"\bbindings\x18\x01 \x03(\v24.settings.v1.KeyboardShortcutsSettings.BindingsEntryR\bbindings\x1a;\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb1\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xed\x05\n" +
 	"\x15NotificationsSettings\x12,\n" +
 	"\x0fbrowser_enabled\x18\x01 \x01(\bH\x00R\x0ebrowserEnabled\x88\x01\x01\x12(\n" +
 	"\remail_enabled\x18\x02 \x01(\bH\x01R\femailEnabled\x88\x01\x01\x12(\n" +
@@ -1329,7 +1349,8 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x11quiet_hours_start\x18\x05 \x01(\tH\x04R\x0fquietHoursStart\x88\x01\x01\x12+\n" +
 	"\x0fquiet_hours_end\x18\x06 \x01(\tH\x05R\rquietHoursEnd\x88\x01\x01\x12e\n" +
 	"\x11channel_overrides\x18\a \x03(\v28.settings.v1.NotificationsSettings.ChannelOverridesEntryR\x10channelOverrides\x12<\n" +
-	"\x1adefault_reminder_intervals\x18\b \x03(\x05R\x18defaultReminderIntervals\x1ao\n" +
+	"\x1adefault_reminder_intervals\x18\b \x03(\x05R\x18defaultReminderIntervals\x12(\n" +
+	"\rtoast_enabled\x18\t \x01(\bH\x06R\ftoastEnabled\x88\x01\x01\x1ao\n" +
 	"\x15ChannelOverridesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12@\n" +
 	"\x05value\x18\x02 \x01(\v2*.settings.v1.NotificationChannelPreferenceR\x05value:\x028\x01B\x12\n" +
@@ -1338,7 +1359,8 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x0e_sound_enabledB\x12\n" +
 	"\x10_email_frequencyB\x14\n" +
 	"\x12_quiet_hours_startB\x12\n" +
-	"\x10_quiet_hours_end\"\x9c\x01\n" +
+	"\x10_quiet_hours_endB\x10\n" +
+	"\x0e_toast_enabled\"\x9c\x01\n" +
 	"\x1dNotificationChannelPreference\x12\x1a\n" +
 	"\x06in_app\x18\x01 \x01(\bH\x00R\x05inApp\x88\x01\x01\x12\x1d\n" +
 	"\abrowser\x18\x03 \x01(\bH\x01R\abrowser\x88\x01\x01\x12\x19\n" +

@@ -19,43 +19,50 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChatService_CreateChannel_FullMethodName         = "/chat.v1.ChatService/CreateChannel"
-	ChatService_GetChannel_FullMethodName            = "/chat.v1.ChatService/GetChannel"
-	ChatService_UpdateChannel_FullMethodName         = "/chat.v1.ChatService/UpdateChannel"
-	ChatService_ArchiveChannel_FullMethodName        = "/chat.v1.ChatService/ArchiveChannel"
-	ChatService_DeleteChannel_FullMethodName         = "/chat.v1.ChatService/DeleteChannel"
-	ChatService_ListChannels_FullMethodName          = "/chat.v1.ChatService/ListChannels"
-	ChatService_JoinChannel_FullMethodName           = "/chat.v1.ChatService/JoinChannel"
-	ChatService_LeaveChannel_FullMethodName          = "/chat.v1.ChatService/LeaveChannel"
-	ChatService_AddMembers_FullMethodName            = "/chat.v1.ChatService/AddMembers"
-	ChatService_RemoveMembers_FullMethodName         = "/chat.v1.ChatService/RemoveMembers"
-	ChatService_GetMembers_FullMethodName            = "/chat.v1.ChatService/GetMembers"
-	ChatService_SendMessage_FullMethodName           = "/chat.v1.ChatService/SendMessage"
-	ChatService_GetMessages_FullMethodName           = "/chat.v1.ChatService/GetMessages"
-	ChatService_GetMessage_FullMethodName            = "/chat.v1.ChatService/GetMessage"
-	ChatService_UpdateMessage_FullMethodName         = "/chat.v1.ChatService/UpdateMessage"
-	ChatService_DeleteMessage_FullMethodName         = "/chat.v1.ChatService/DeleteMessage"
-	ChatService_PinMessage_FullMethodName            = "/chat.v1.ChatService/PinMessage"
-	ChatService_UnpinMessage_FullMethodName          = "/chat.v1.ChatService/UnpinMessage"
-	ChatService_GetPinnedMessages_FullMethodName     = "/chat.v1.ChatService/GetPinnedMessages"
-	ChatService_GetThread_FullMethodName             = "/chat.v1.ChatService/GetThread"
-	ChatService_GetThreadMessages_FullMethodName     = "/chat.v1.ChatService/GetThreadMessages"
-	ChatService_GetThreadsInbox_FullMethodName       = "/chat.v1.ChatService/GetThreadsInbox"
-	ChatService_FollowThread_FullMethodName          = "/chat.v1.ChatService/FollowThread"
-	ChatService_UnfollowThread_FullMethodName        = "/chat.v1.ChatService/UnfollowThread"
-	ChatService_AddReaction_FullMethodName           = "/chat.v1.ChatService/AddReaction"
-	ChatService_RemoveReaction_FullMethodName        = "/chat.v1.ChatService/RemoveReaction"
-	ChatService_SetTyping_FullMethodName             = "/chat.v1.ChatService/SetTyping"
-	ChatService_MarkChannelRead_FullMethodName       = "/chat.v1.ChatService/MarkChannelRead"
-	ChatService_MarkThreadRead_FullMethodName        = "/chat.v1.ChatService/MarkThreadRead"
-	ChatService_GetUnreadCounts_FullMethodName       = "/chat.v1.ChatService/GetUnreadCounts"
-	ChatService_GetChannelResources_FullMethodName   = "/chat.v1.ChatService/GetChannelResources"
-	ChatService_CreateCategory_FullMethodName        = "/chat.v1.ChatService/CreateCategory"
-	ChatService_UpdateCategory_FullMethodName        = "/chat.v1.ChatService/UpdateCategory"
-	ChatService_DeleteCategory_FullMethodName        = "/chat.v1.ChatService/DeleteCategory"
-	ChatService_ListCategories_FullMethodName        = "/chat.v1.ChatService/ListCategories"
-	ChatService_ReorderCategories_FullMethodName     = "/chat.v1.ChatService/ReorderCategories"
-	ChatService_MoveChannelToCategory_FullMethodName = "/chat.v1.ChatService/MoveChannelToCategory"
+	ChatService_CreateChannel_FullMethodName                    = "/chat.v1.ChatService/CreateChannel"
+	ChatService_GetChannel_FullMethodName                       = "/chat.v1.ChatService/GetChannel"
+	ChatService_UpdateChannel_FullMethodName                    = "/chat.v1.ChatService/UpdateChannel"
+	ChatService_ArchiveChannel_FullMethodName                   = "/chat.v1.ChatService/ArchiveChannel"
+	ChatService_DeleteChannel_FullMethodName                    = "/chat.v1.ChatService/DeleteChannel"
+	ChatService_ListChannels_FullMethodName                     = "/chat.v1.ChatService/ListChannels"
+	ChatService_JoinChannel_FullMethodName                      = "/chat.v1.ChatService/JoinChannel"
+	ChatService_LeaveChannel_FullMethodName                     = "/chat.v1.ChatService/LeaveChannel"
+	ChatService_AddMembers_FullMethodName                       = "/chat.v1.ChatService/AddMembers"
+	ChatService_RemoveMembers_FullMethodName                    = "/chat.v1.ChatService/RemoveMembers"
+	ChatService_GetMembers_FullMethodName                       = "/chat.v1.ChatService/GetMembers"
+	ChatService_UpdateChannelMember_FullMethodName              = "/chat.v1.ChatService/UpdateChannelMember"
+	ChatService_SendMessage_FullMethodName                      = "/chat.v1.ChatService/SendMessage"
+	ChatService_GetMessages_FullMethodName                      = "/chat.v1.ChatService/GetMessages"
+	ChatService_GetMessage_FullMethodName                       = "/chat.v1.ChatService/GetMessage"
+	ChatService_UpdateMessage_FullMethodName                    = "/chat.v1.ChatService/UpdateMessage"
+	ChatService_DeleteMessage_FullMethodName                    = "/chat.v1.ChatService/DeleteMessage"
+	ChatService_PinMessage_FullMethodName                       = "/chat.v1.ChatService/PinMessage"
+	ChatService_UnpinMessage_FullMethodName                     = "/chat.v1.ChatService/UnpinMessage"
+	ChatService_GetPinnedMessages_FullMethodName                = "/chat.v1.ChatService/GetPinnedMessages"
+	ChatService_GetThread_FullMethodName                        = "/chat.v1.ChatService/GetThread"
+	ChatService_GetThreadMessages_FullMethodName                = "/chat.v1.ChatService/GetThreadMessages"
+	ChatService_GetThreadsInbox_FullMethodName                  = "/chat.v1.ChatService/GetThreadsInbox"
+	ChatService_FollowThread_FullMethodName                     = "/chat.v1.ChatService/FollowThread"
+	ChatService_UnfollowThread_FullMethodName                   = "/chat.v1.ChatService/UnfollowThread"
+	ChatService_AddReaction_FullMethodName                      = "/chat.v1.ChatService/AddReaction"
+	ChatService_RemoveReaction_FullMethodName                   = "/chat.v1.ChatService/RemoveReaction"
+	ChatService_SetTyping_FullMethodName                        = "/chat.v1.ChatService/SetTyping"
+	ChatService_MarkChannelRead_FullMethodName                  = "/chat.v1.ChatService/MarkChannelRead"
+	ChatService_MarkThreadRead_FullMethodName                   = "/chat.v1.ChatService/MarkThreadRead"
+	ChatService_GetUnreadCounts_FullMethodName                  = "/chat.v1.ChatService/GetUnreadCounts"
+	ChatService_GetChannelResources_FullMethodName              = "/chat.v1.ChatService/GetChannelResources"
+	ChatService_CreateCategory_FullMethodName                   = "/chat.v1.ChatService/CreateCategory"
+	ChatService_UpdateCategory_FullMethodName                   = "/chat.v1.ChatService/UpdateCategory"
+	ChatService_DeleteCategory_FullMethodName                   = "/chat.v1.ChatService/DeleteCategory"
+	ChatService_ListCategories_FullMethodName                   = "/chat.v1.ChatService/ListCategories"
+	ChatService_ReorderCategories_FullMethodName                = "/chat.v1.ChatService/ReorderCategories"
+	ChatService_MoveChannelToCategory_FullMethodName            = "/chat.v1.ChatService/MoveChannelToCategory"
+	ChatService_RespondToAgentConfirmation_FullMethodName       = "/chat.v1.ChatService/RespondToAgentConfirmation"
+	ChatService_GetChannelPendingApprovals_FullMethodName       = "/chat.v1.ChatService/GetChannelPendingApprovals"
+	ChatService_GetChannelAgentContextStats_FullMethodName      = "/chat.v1.ChatService/GetChannelAgentContextStats"
+	ChatService_GetChannelAgentContextStatsBatch_FullMethodName = "/chat.v1.ChatService/GetChannelAgentContextStatsBatch"
+	ChatService_CompactChannelAgentContext_FullMethodName       = "/chat.v1.ChatService/CompactChannelAgentContext"
+	ChatService_ResetChannelAgentContext_FullMethodName         = "/chat.v1.ChatService/ResetChannelAgentContext"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -77,6 +84,7 @@ type ChatServiceClient interface {
 	AddMembers(ctx context.Context, in *AddMembersRequest, opts ...grpc.CallOption) (*AddMembersResponse, error)
 	RemoveMembers(ctx context.Context, in *RemoveMembersRequest, opts ...grpc.CallOption) (*RemoveMembersResponse, error)
 	GetMembers(ctx context.Context, in *GetMembersRequest, opts ...grpc.CallOption) (*GetMembersResponse, error)
+	UpdateChannelMember(ctx context.Context, in *UpdateChannelMemberRequest, opts ...grpc.CallOption) (*UpdateChannelMemberResponse, error)
 	// Messages
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 	GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*GetMessagesResponse, error)
@@ -109,6 +117,35 @@ type ChatServiceClient interface {
 	ListCategories(ctx context.Context, in *ListCategoriesRequest, opts ...grpc.CallOption) (*ListCategoriesResponse, error)
 	ReorderCategories(ctx context.Context, in *ReorderCategoriesRequest, opts ...grpc.CallOption) (*ReorderCategoriesResponse, error)
 	MoveChannelToCategory(ctx context.Context, in *MoveChannelToCategoryRequest, opts ...grpc.CallOption) (*MoveChannelToCategoryResponse, error)
+	// Respond to a destructive-tool confirmation request raised by an agent
+	// running inside a chat channel. The chat layer is the front door; it
+	// forwards the decision to the agents runtime via the bridge.
+	RespondToAgentConfirmation(ctx context.Context, in *RespondToAgentConfirmationRequest, opts ...grpc.CallOption) (*RespondToAgentConfirmationResponse, error)
+	// List pending agent destructive-tool approvals still open for a channel.
+	// Used on channel mount so synthetic confirmation cards survive page reloads
+	// (the approval state itself lives in Valkey up to its TTL).
+	GetChannelPendingApprovals(ctx context.Context, in *GetChannelPendingApprovalsRequest, opts ...grpc.CallOption) (*GetChannelPendingApprovalsResponse, error)
+	// Per-(channel, agent) context window stats. Drives the chat header meter
+	// and group-channel per-agent popover. Mirrors `agents.v1.SessionsService.
+	// GetSessionContextStats` but is keyed on the channel/agent binding.
+	GetChannelAgentContextStats(ctx context.Context, in *GetChannelAgentContextStatsRequest, opts ...grpc.CallOption) (*GetChannelAgentContextStatsResponse, error)
+	// Batched variant of `GetChannelAgentContextStats`. Returns per-(channel,
+	// agent) stats for N agents in one round-trip. Drives the group-channel
+	// ChannelAgentsPopover (one row per agent member) so the popover does not
+	// fan out N parallel single-agent fetches. Agents the caller can't see or
+	// that are not bound to the channel are simply absent from the response
+	// map (not an error).
+	GetChannelAgentContextStatsBatch(ctx context.Context, in *GetChannelAgentContextStatsBatchRequest, opts ...grpc.CallOption) (*GetChannelAgentContextStatsBatchResponse, error)
+	// Force compaction for one (channel, agent) pair. Writes a chat message
+	// with metadata.kind="summary" and bumps the binding's compaction pointer
+	// so subsequent prompts roll the older history into the summary row.
+	CompactChannelAgentContext(ctx context.Context, in *CompactChannelAgentContextRequest, opts ...grpc.CallOption) (*CompactChannelAgentContextResponse, error)
+	// Reset one agent's view of the channel. Writes a metadata.kind=
+	// "context_reset" divider message AND sets binding.manual_reset_at = now()
+	// so `load_context_messages` excludes everything older for this agent.
+	// Per-agent: resetting agent A in a multi-agent channel does not affect
+	// agent B's view.
+	ResetChannelAgentContext(ctx context.Context, in *ResetChannelAgentContextRequest, opts ...grpc.CallOption) (*ResetChannelAgentContextResponse, error)
 }
 
 type chatServiceClient struct {
@@ -223,6 +260,16 @@ func (c *chatServiceClient) GetMembers(ctx context.Context, in *GetMembersReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetMembersResponse)
 	err := c.cc.Invoke(ctx, ChatService_GetMembers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UpdateChannelMember(ctx context.Context, in *UpdateChannelMemberRequest, opts ...grpc.CallOption) (*UpdateChannelMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateChannelMemberResponse)
+	err := c.cc.Invoke(ctx, ChatService_UpdateChannelMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -489,6 +536,66 @@ func (c *chatServiceClient) MoveChannelToCategory(ctx context.Context, in *MoveC
 	return out, nil
 }
 
+func (c *chatServiceClient) RespondToAgentConfirmation(ctx context.Context, in *RespondToAgentConfirmationRequest, opts ...grpc.CallOption) (*RespondToAgentConfirmationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RespondToAgentConfirmationResponse)
+	err := c.cc.Invoke(ctx, ChatService_RespondToAgentConfirmation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) GetChannelPendingApprovals(ctx context.Context, in *GetChannelPendingApprovalsRequest, opts ...grpc.CallOption) (*GetChannelPendingApprovalsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChannelPendingApprovalsResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetChannelPendingApprovals_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) GetChannelAgentContextStats(ctx context.Context, in *GetChannelAgentContextStatsRequest, opts ...grpc.CallOption) (*GetChannelAgentContextStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChannelAgentContextStatsResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetChannelAgentContextStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) GetChannelAgentContextStatsBatch(ctx context.Context, in *GetChannelAgentContextStatsBatchRequest, opts ...grpc.CallOption) (*GetChannelAgentContextStatsBatchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChannelAgentContextStatsBatchResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetChannelAgentContextStatsBatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) CompactChannelAgentContext(ctx context.Context, in *CompactChannelAgentContextRequest, opts ...grpc.CallOption) (*CompactChannelAgentContextResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CompactChannelAgentContextResponse)
+	err := c.cc.Invoke(ctx, ChatService_CompactChannelAgentContext_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) ResetChannelAgentContext(ctx context.Context, in *ResetChannelAgentContextRequest, opts ...grpc.CallOption) (*ResetChannelAgentContextResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetChannelAgentContextResponse)
+	err := c.cc.Invoke(ctx, ChatService_ResetChannelAgentContext_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility.
@@ -508,6 +615,7 @@ type ChatServiceServer interface {
 	AddMembers(context.Context, *AddMembersRequest) (*AddMembersResponse, error)
 	RemoveMembers(context.Context, *RemoveMembersRequest) (*RemoveMembersResponse, error)
 	GetMembers(context.Context, *GetMembersRequest) (*GetMembersResponse, error)
+	UpdateChannelMember(context.Context, *UpdateChannelMemberRequest) (*UpdateChannelMemberResponse, error)
 	// Messages
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
 	GetMessages(context.Context, *GetMessagesRequest) (*GetMessagesResponse, error)
@@ -540,6 +648,35 @@ type ChatServiceServer interface {
 	ListCategories(context.Context, *ListCategoriesRequest) (*ListCategoriesResponse, error)
 	ReorderCategories(context.Context, *ReorderCategoriesRequest) (*ReorderCategoriesResponse, error)
 	MoveChannelToCategory(context.Context, *MoveChannelToCategoryRequest) (*MoveChannelToCategoryResponse, error)
+	// Respond to a destructive-tool confirmation request raised by an agent
+	// running inside a chat channel. The chat layer is the front door; it
+	// forwards the decision to the agents runtime via the bridge.
+	RespondToAgentConfirmation(context.Context, *RespondToAgentConfirmationRequest) (*RespondToAgentConfirmationResponse, error)
+	// List pending agent destructive-tool approvals still open for a channel.
+	// Used on channel mount so synthetic confirmation cards survive page reloads
+	// (the approval state itself lives in Valkey up to its TTL).
+	GetChannelPendingApprovals(context.Context, *GetChannelPendingApprovalsRequest) (*GetChannelPendingApprovalsResponse, error)
+	// Per-(channel, agent) context window stats. Drives the chat header meter
+	// and group-channel per-agent popover. Mirrors `agents.v1.SessionsService.
+	// GetSessionContextStats` but is keyed on the channel/agent binding.
+	GetChannelAgentContextStats(context.Context, *GetChannelAgentContextStatsRequest) (*GetChannelAgentContextStatsResponse, error)
+	// Batched variant of `GetChannelAgentContextStats`. Returns per-(channel,
+	// agent) stats for N agents in one round-trip. Drives the group-channel
+	// ChannelAgentsPopover (one row per agent member) so the popover does not
+	// fan out N parallel single-agent fetches. Agents the caller can't see or
+	// that are not bound to the channel are simply absent from the response
+	// map (not an error).
+	GetChannelAgentContextStatsBatch(context.Context, *GetChannelAgentContextStatsBatchRequest) (*GetChannelAgentContextStatsBatchResponse, error)
+	// Force compaction for one (channel, agent) pair. Writes a chat message
+	// with metadata.kind="summary" and bumps the binding's compaction pointer
+	// so subsequent prompts roll the older history into the summary row.
+	CompactChannelAgentContext(context.Context, *CompactChannelAgentContextRequest) (*CompactChannelAgentContextResponse, error)
+	// Reset one agent's view of the channel. Writes a metadata.kind=
+	// "context_reset" divider message AND sets binding.manual_reset_at = now()
+	// so `load_context_messages` excludes everything older for this agent.
+	// Per-agent: resetting agent A in a multi-agent channel does not affect
+	// agent B's view.
+	ResetChannelAgentContext(context.Context, *ResetChannelAgentContextRequest) (*ResetChannelAgentContextResponse, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -582,6 +719,9 @@ func (UnimplementedChatServiceServer) RemoveMembers(context.Context, *RemoveMemb
 }
 func (UnimplementedChatServiceServer) GetMembers(context.Context, *GetMembersRequest) (*GetMembersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMembers not implemented")
+}
+func (UnimplementedChatServiceServer) UpdateChannelMember(context.Context, *UpdateChannelMemberRequest) (*UpdateChannelMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateChannelMember not implemented")
 }
 func (UnimplementedChatServiceServer) SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendMessage not implemented")
@@ -660,6 +800,24 @@ func (UnimplementedChatServiceServer) ReorderCategories(context.Context, *Reorde
 }
 func (UnimplementedChatServiceServer) MoveChannelToCategory(context.Context, *MoveChannelToCategoryRequest) (*MoveChannelToCategoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MoveChannelToCategory not implemented")
+}
+func (UnimplementedChatServiceServer) RespondToAgentConfirmation(context.Context, *RespondToAgentConfirmationRequest) (*RespondToAgentConfirmationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RespondToAgentConfirmation not implemented")
+}
+func (UnimplementedChatServiceServer) GetChannelPendingApprovals(context.Context, *GetChannelPendingApprovalsRequest) (*GetChannelPendingApprovalsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetChannelPendingApprovals not implemented")
+}
+func (UnimplementedChatServiceServer) GetChannelAgentContextStats(context.Context, *GetChannelAgentContextStatsRequest) (*GetChannelAgentContextStatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetChannelAgentContextStats not implemented")
+}
+func (UnimplementedChatServiceServer) GetChannelAgentContextStatsBatch(context.Context, *GetChannelAgentContextStatsBatchRequest) (*GetChannelAgentContextStatsBatchResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetChannelAgentContextStatsBatch not implemented")
+}
+func (UnimplementedChatServiceServer) CompactChannelAgentContext(context.Context, *CompactChannelAgentContextRequest) (*CompactChannelAgentContextResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompactChannelAgentContext not implemented")
+}
+func (UnimplementedChatServiceServer) ResetChannelAgentContext(context.Context, *ResetChannelAgentContextRequest) (*ResetChannelAgentContextResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetChannelAgentContext not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 func (UnimplementedChatServiceServer) testEmbeddedByValue()                     {}
@@ -876,6 +1034,24 @@ func _ChatService_GetMembers_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).GetMembers(ctx, req.(*GetMembersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UpdateChannelMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateChannelMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UpdateChannelMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UpdateChannelMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UpdateChannelMember(ctx, req.(*UpdateChannelMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1348,6 +1524,114 @@ func _ChatService_MoveChannelToCategory_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_RespondToAgentConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RespondToAgentConfirmationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).RespondToAgentConfirmation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_RespondToAgentConfirmation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).RespondToAgentConfirmation(ctx, req.(*RespondToAgentConfirmationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_GetChannelPendingApprovals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelPendingApprovalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetChannelPendingApprovals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetChannelPendingApprovals_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetChannelPendingApprovals(ctx, req.(*GetChannelPendingApprovalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_GetChannelAgentContextStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelAgentContextStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetChannelAgentContextStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetChannelAgentContextStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetChannelAgentContextStats(ctx, req.(*GetChannelAgentContextStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_GetChannelAgentContextStatsBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelAgentContextStatsBatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetChannelAgentContextStatsBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetChannelAgentContextStatsBatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetChannelAgentContextStatsBatch(ctx, req.(*GetChannelAgentContextStatsBatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_CompactChannelAgentContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompactChannelAgentContextRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).CompactChannelAgentContext(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_CompactChannelAgentContext_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).CompactChannelAgentContext(ctx, req.(*CompactChannelAgentContextRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_ResetChannelAgentContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetChannelAgentContextRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ResetChannelAgentContext(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ResetChannelAgentContext_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ResetChannelAgentContext(ctx, req.(*ResetChannelAgentContextRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1398,6 +1682,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMembers",
 			Handler:    _ChatService_GetMembers_Handler,
+		},
+		{
+			MethodName: "UpdateChannelMember",
+			Handler:    _ChatService_UpdateChannelMember_Handler,
 		},
 		{
 			MethodName: "SendMessage",
@@ -1502,6 +1790,30 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MoveChannelToCategory",
 			Handler:    _ChatService_MoveChannelToCategory_Handler,
+		},
+		{
+			MethodName: "RespondToAgentConfirmation",
+			Handler:    _ChatService_RespondToAgentConfirmation_Handler,
+		},
+		{
+			MethodName: "GetChannelPendingApprovals",
+			Handler:    _ChatService_GetChannelPendingApprovals_Handler,
+		},
+		{
+			MethodName: "GetChannelAgentContextStats",
+			Handler:    _ChatService_GetChannelAgentContextStats_Handler,
+		},
+		{
+			MethodName: "GetChannelAgentContextStatsBatch",
+			Handler:    _ChatService_GetChannelAgentContextStatsBatch_Handler,
+		},
+		{
+			MethodName: "CompactChannelAgentContext",
+			Handler:    _ChatService_CompactChannelAgentContext_Handler,
+		},
+		{
+			MethodName: "ResetChannelAgentContext",
+			Handler:    _ChatService_ResetChannelAgentContext_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

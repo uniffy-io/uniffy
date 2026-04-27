@@ -52,7 +52,11 @@ type AgentInfo struct {
 	// Prompt template ID (empty = no template, uses soul_prompt directly)
 	PromptId string `protobuf:"bytes,24,opt,name=prompt_id,json=promptId,proto3" json:"prompt_id,omitempty"`
 	// Baseline role granted by access mode (when applicable)
-	BaselineRole  *v1.ContentRole `protobuf:"varint,25,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	BaselineRole *v1.ContentRole `protobuf:"varint,25,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	// Effective role of the requesting user on this agent (if known).
+	// Set by the server so the UI can render edit/share affordances
+	// without re-resolving permissions client-side.
+	UserRole      *v1.ContentRole `protobuf:"varint,26,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole,oneof" json:"user_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -230,6 +234,13 @@ func (x *AgentInfo) GetPromptId() string {
 func (x *AgentInfo) GetBaselineRole() v1.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *AgentInfo) GetUserRole() v1.ContentRole {
+	if x != nil && x.UserRole != nil {
+		return *x.UserRole
 	}
 	return v1.ContentRole(0)
 }
@@ -1135,7 +1146,7 @@ var File_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xf2\x06\n" +
+	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16common/v1/common.proto\"\xba\a\n" +
 	"\tAgentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1166,8 +1177,11 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x17primary_provider_key_id\x18\x16 \x01(\tR\x14primaryProviderKeyId\x121\n" +
 	"\x15image_provider_key_id\x18\x17 \x01(\tR\x12imageProviderKeyId\x12\x1b\n" +
 	"\tprompt_id\x18\x18 \x01(\tR\bpromptId\x12@\n" +
-	"\rbaseline_role\x18\x19 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01B\x10\n" +
-	"\x0e_baseline_roleJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"\rbaseline_role\x18\x19 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x128\n" +
+	"\tuser_role\x18\x1a \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\buserRole\x88\x01\x01B\x10\n" +
+	"\x0e_baseline_roleB\f\n" +
+	"\n" +
+	"_user_roleJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
 	"J\x04\b\x12\x10\x13J\x04\b\x14\x10\x15\"\xa1\a\n" +
 	"\x12CreateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
@@ -1337,36 +1351,37 @@ var file_agents_v1_agents_proto_depIdxs = []int32{
 	13, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
 	14, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
 	15, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
-	14, // 4: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
-	15, // 5: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
-	0,  // 6: agents.v1.AgentResponse.agent:type_name -> agents.v1.AgentInfo
-	16, // 7: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
-	14, // 8: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
-	0,  // 9: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
-	17, // 10: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
-	14, // 11: agents.v1.UpdateAgentRequest.access_mode:type_name -> common.v1.AccessMode
-	15, // 12: agents.v1.UpdateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 13: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
-	3,  // 14: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
-	4,  // 15: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
-	6,  // 16: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
-	7,  // 17: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
-	9,  // 18: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
-	10, // 19: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
-	11, // 20: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
-	2,  // 21: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.AgentResponse
-	2,  // 22: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.AgentResponse
-	5,  // 23: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
-	2,  // 24: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.AgentResponse
-	8,  // 25: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
-	2,  // 26: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.AgentResponse
-	2,  // 27: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.AgentResponse
-	12, // 28: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
-	21, // [21:29] is the sub-list for method output_type
-	13, // [13:21] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	15, // 4: agents.v1.AgentInfo.user_role:type_name -> common.v1.ContentRole
+	14, // 5: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	15, // 6: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 7: agents.v1.AgentResponse.agent:type_name -> agents.v1.AgentInfo
+	16, // 8: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
+	14, // 9: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
+	0,  // 10: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
+	17, // 11: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
+	14, // 12: agents.v1.UpdateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	15, // 13: agents.v1.UpdateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 14: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
+	3,  // 15: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
+	4,  // 16: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
+	6,  // 17: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
+	7,  // 18: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
+	9,  // 19: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
+	10, // 20: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
+	11, // 21: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
+	2,  // 22: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.AgentResponse
+	2,  // 23: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.AgentResponse
+	5,  // 24: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
+	2,  // 25: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.AgentResponse
+	8,  // 26: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
+	2,  // 27: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.AgentResponse
+	2,  // 28: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.AgentResponse
+	12, // 29: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
+	22, // [22:30] is the sub-list for method output_type
+	14, // [14:22] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_agents_proto_init() }

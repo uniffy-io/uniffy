@@ -130,6 +130,15 @@ export class AgentInfo extends Message<AgentInfo> {
    */
   baselineRole?: ContentRole;
 
+  /**
+   * Effective role of the requesting user on this agent (if known).
+   * Set by the server so the UI can render edit/share affordances
+   * without re-resolving permissions client-side.
+   *
+   * @generated from field: optional common.v1.ContentRole user_role = 26;
+   */
+  userRole?: ContentRole;
+
   constructor(data?: PartialMessage<AgentInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -159,6 +168,7 @@ export class AgentInfo extends Message<AgentInfo> {
     { no: 23, name: "image_provider_key_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 24, name: "prompt_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 25, name: "baseline_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
+    { no: 26, name: "user_role", kind: "enum", T: proto3.getEnumType(ContentRole), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AgentInfo {

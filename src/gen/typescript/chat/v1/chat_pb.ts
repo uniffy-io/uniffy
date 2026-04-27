@@ -5,6 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
+import { SubjectType } from "../../common/v1/common_pb.js";
 
 /**
  * @generated from enum chat.v1.ChannelType
@@ -145,6 +146,83 @@ proto3.util.setEnumType(ChatNotificationLevel, "chat.v1.ChatNotificationLevel", 
   { no: 2, name: "CHAT_NOTIFICATION_LEVEL_MENTIONS" },
   { no: 3, name: "CHAT_NOTIFICATION_LEVEL_NONE" },
 ]);
+
+/**
+ * AgentConfirmationDecision is the user's response to a destructive-tool
+ * confirmation request raised by an agent.
+ *
+ * @generated from enum chat.v1.AgentConfirmationDecision
+ */
+export enum AgentConfirmationDecision {
+  /**
+   * @generated from enum value: AGENT_CONFIRMATION_DECISION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: AGENT_CONFIRMATION_DECISION_APPROVE = 1;
+   */
+  APPROVE = 1,
+
+  /**
+   * @generated from enum value: AGENT_CONFIRMATION_DECISION_DENY = 2;
+   */
+  DENY = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(AgentConfirmationDecision)
+proto3.util.setEnumType(AgentConfirmationDecision, "chat.v1.AgentConfirmationDecision", [
+  { no: 0, name: "AGENT_CONFIRMATION_DECISION_UNSPECIFIED" },
+  { no: 1, name: "AGENT_CONFIRMATION_DECISION_APPROVE" },
+  { no: 2, name: "AGENT_CONFIRMATION_DECISION_DENY" },
+]);
+
+/**
+ * ChatSubject is a polymorphic channel/thread participant.
+ * Currently supports SUBJECT_TYPE_USER and SUBJECT_TYPE_AGENT. Other subject
+ * types from common.SubjectType are reserved and will be rejected at the
+ * handler boundary until first-class support lands.
+ *
+ * @generated from message chat.v1.ChatSubject
+ */
+export class ChatSubject extends Message<ChatSubject> {
+  /**
+   * @generated from field: common.v1.SubjectType type = 1;
+   */
+  type = SubjectType.UNSPECIFIED;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<ChatSubject>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ChatSubject";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(SubjectType) },
+    { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatSubject {
+    return new ChatSubject().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChatSubject {
+    return new ChatSubject().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChatSubject {
+    return new ChatSubject().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChatSubject | PlainMessage<ChatSubject> | undefined, b: ChatSubject | PlainMessage<ChatSubject> | undefined): boolean {
+    return proto3.util.equals(ChatSubject, a, b);
+  }
+}
 
 /**
  * ChatChannel represents a channel with embedded stats.
@@ -639,6 +717,9 @@ export class ChatChannelMember extends Message<ChatChannelMember> {
   channelId = "";
 
   /**
+   * Legacy: populated when subject.type == SUBJECT_TYPE_USER. For agent
+   * members, this is the empty string and `subject` is set.
+   *
    * @generated from field: string user_id = 2;
    */
   userId = "";
@@ -664,7 +745,7 @@ export class ChatChannelMember extends Message<ChatChannelMember> {
   joinedAt?: Timestamp;
 
   /**
-   * Denormalized user info
+   * Denormalized identity info (works for users and agents).
    *
    * @generated from field: optional string display_name = 10;
    */
@@ -679,6 +760,26 @@ export class ChatChannelMember extends Message<ChatChannelMember> {
    * @generated from field: optional string avatar_url = 12;
    */
   avatarUrl?: string;
+
+  /**
+   * Extended notification preferences
+   *
+   * @generated from field: optional google.protobuf.Timestamp muted_until = 13;
+   */
+  mutedUntil?: Timestamp;
+
+  /**
+   * @generated from field: bool follow_all_threads = 14;
+   */
+  followAllThreads = false;
+
+  /**
+   * Polymorphic identity. Set on every row going forward; user_id stays
+   * populated for SUBJECT_TYPE_USER until clients migrate.
+   *
+   * @generated from field: optional chat.v1.ChatSubject subject = 15;
+   */
+  subject?: ChatSubject;
 
   constructor(data?: PartialMessage<ChatChannelMember>) {
     super();
@@ -697,6 +798,9 @@ export class ChatChannelMember extends Message<ChatChannelMember> {
     { no: 10, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 12, name: "avatar_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 13, name: "muted_until", kind: "message", T: Timestamp, opt: true },
+    { no: 14, name: "follow_all_threads", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 15, name: "subject", kind: "message", T: ChatSubject, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatChannelMember {
@@ -1054,11 +1158,18 @@ export class CreateChannelRequest extends Message<CreateChannelRequest> {
   categoryId?: string;
 
   /**
-   * For DM/GROUP_DM: user IDs to include
+   * For DM/GROUP_DM: user IDs to include (legacy; users only).
    *
    * @generated from field: repeated string member_ids = 10;
    */
   memberIds: string[] = [];
+
+  /**
+   * For DM/GROUP_DM: polymorphic initial members (users + agents). Preferred.
+   *
+   * @generated from field: repeated chat.v1.ChatSubject members = 11;
+   */
+  members: ChatSubject[] = [];
 
   constructor(data?: PartialMessage<CreateChannelRequest>) {
     super();
@@ -1076,6 +1187,7 @@ export class CreateChannelRequest extends Message<CreateChannelRequest> {
     { no: 6, name: "is_default", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "category_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "member_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 11, name: "members", kind: "message", T: ChatSubject, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateChannelRequest {
@@ -1480,6 +1592,24 @@ export class ListChannelsRequest extends Message<ListChannelsRequest> {
    */
   browsePublic = false;
 
+  /**
+   * Opaque cursor for pagination. First page omits this; subsequent pages
+   * pass the `next_cursor` returned by the previous response. Cursor encodes
+   * the (last_root_message_at, channel_id) tuple for the user's-channels path
+   * and the (member_count, channel_id) tuple for browse_public.
+   *
+   * @generated from field: optional string cursor = 3;
+   */
+  cursor?: string;
+
+  /**
+   * Max channels to return per page. Server clamps to <= 500. Defaults to 200
+   * when unset / zero.
+   *
+   * @generated from field: optional int32 page_size = 4;
+   */
+  pageSize?: number;
+
   constructor(data?: PartialMessage<ListChannelsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1490,6 +1620,8 @@ export class ListChannelsRequest extends Message<ListChannelsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "browse_public", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListChannelsRequest {
@@ -1518,6 +1650,13 @@ export class ListChannelsResponse extends Message<ListChannelsResponse> {
    */
   channels: ChatChannel[] = [];
 
+  /**
+   * Set when more pages exist. Pass back as `cursor` on the next request.
+   *
+   * @generated from field: optional string next_cursor = 2;
+   */
+  nextCursor?: string;
+
   constructor(data?: PartialMessage<ListChannelsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1527,6 +1666,7 @@ export class ListChannelsResponse extends Message<ListChannelsResponse> {
   static readonly typeName = "chat.v1.ListChannelsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "channels", kind: "message", T: ChatChannel, repeated: true },
+    { no: 2, name: "next_cursor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListChannelsResponse {
@@ -1715,9 +1855,19 @@ export class AddMembersRequest extends Message<AddMembersRequest> {
   channelId = "";
 
   /**
+   * Legacy: user-only members. Kept for backward compatibility.
+   *
    * @generated from field: repeated string user_ids = 3;
    */
   userIds: string[] = [];
+
+  /**
+   * New: polymorphic subjects (users + agents). Preferred. Server unions
+   * user_ids into subjects with SUBJECT_TYPE_USER when both are sent.
+   *
+   * @generated from field: repeated chat.v1.ChatSubject subjects = 4;
+   */
+  subjects: ChatSubject[] = [];
 
   constructor(data?: PartialMessage<AddMembersRequest>) {
     super();
@@ -1730,6 +1880,7 @@ export class AddMembersRequest extends Message<AddMembersRequest> {
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "user_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "subjects", kind: "message", T: ChatSubject, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddMembersRequest {
@@ -1801,9 +1952,18 @@ export class RemoveMembersRequest extends Message<RemoveMembersRequest> {
   channelId = "";
 
   /**
+   * Legacy: user-only.
+   *
    * @generated from field: repeated string user_ids = 3;
    */
   userIds: string[] = [];
+
+  /**
+   * New: polymorphic subjects (users + agents).
+   *
+   * @generated from field: repeated chat.v1.ChatSubject subjects = 4;
+   */
+  subjects: ChatSubject[] = [];
 
   constructor(data?: PartialMessage<RemoveMembersRequest>) {
     super();
@@ -1816,6 +1976,7 @@ export class RemoveMembersRequest extends Message<RemoveMembersRequest> {
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "user_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "subjects", kind: "message", T: ChatSubject, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveMembersRequest {
@@ -1880,6 +2041,21 @@ export class GetMembersRequest extends Message<GetMembersRequest> {
    */
   channelId = "";
 
+  /**
+   * Opaque cursor for pagination. Cursor encodes (joined_at, subject_id).
+   *
+   * @generated from field: optional string cursor = 3;
+   */
+  cursor?: string;
+
+  /**
+   * Max members per page. Server clamps to <= 500. Defaults to 200 when
+   * unset / zero.
+   *
+   * @generated from field: optional int32 page_size = 4;
+   */
+  pageSize?: number;
+
   constructor(data?: PartialMessage<GetMembersRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1890,6 +2066,8 @@ export class GetMembersRequest extends Message<GetMembersRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMembersRequest {
@@ -1918,6 +2096,13 @@ export class GetMembersResponse extends Message<GetMembersResponse> {
    */
   members: ChatChannelMember[] = [];
 
+  /**
+   * Set when more pages exist. Pass back as `cursor` on the next request.
+   *
+   * @generated from field: optional string next_cursor = 2;
+   */
+  nextCursor?: string;
+
   constructor(data?: PartialMessage<GetMembersResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1927,6 +2112,7 @@ export class GetMembersResponse extends Message<GetMembersResponse> {
   static readonly typeName = "chat.v1.GetMembersResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "members", kind: "message", T: ChatChannelMember, repeated: true },
+    { no: 2, name: "next_cursor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMembersResponse {
@@ -1943,6 +2129,122 @@ export class GetMembersResponse extends Message<GetMembersResponse> {
 
   static equals(a: GetMembersResponse | PlainMessage<GetMembersResponse> | undefined, b: GetMembersResponse | PlainMessage<GetMembersResponse> | undefined): boolean {
     return proto3.util.equals(GetMembersResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.UpdateChannelMemberRequest
+ */
+export class UpdateChannelMemberRequest extends Message<UpdateChannelMemberRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  /**
+   * @generated from field: string user_id = 3;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: optional bool is_muted = 4;
+   */
+  isMuted?: boolean;
+
+  /**
+   * @generated from field: optional chat.v1.ChatNotificationLevel notification_level = 5;
+   */
+  notificationLevel?: ChatNotificationLevel;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp muted_until = 6;
+   */
+  mutedUntil?: Timestamp;
+
+  /**
+   * @generated from field: optional bool follow_all_threads = 7;
+   */
+  followAllThreads?: boolean;
+
+  /**
+   * @generated from field: optional bool badge_all_messages = 8;
+   */
+  badgeAllMessages?: boolean;
+
+  constructor(data?: PartialMessage<UpdateChannelMemberRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.UpdateChannelMemberRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "is_muted", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 5, name: "notification_level", kind: "enum", T: proto3.getEnumType(ChatNotificationLevel), opt: true },
+    { no: 6, name: "muted_until", kind: "message", T: Timestamp, opt: true },
+    { no: 7, name: "follow_all_threads", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 8, name: "badge_all_messages", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateChannelMemberRequest {
+    return new UpdateChannelMemberRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateChannelMemberRequest {
+    return new UpdateChannelMemberRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateChannelMemberRequest {
+    return new UpdateChannelMemberRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateChannelMemberRequest | PlainMessage<UpdateChannelMemberRequest> | undefined, b: UpdateChannelMemberRequest | PlainMessage<UpdateChannelMemberRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateChannelMemberRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.UpdateChannelMemberResponse
+ */
+export class UpdateChannelMemberResponse extends Message<UpdateChannelMemberResponse> {
+  /**
+   * @generated from field: chat.v1.ChatChannelMember member = 1;
+   */
+  member?: ChatChannelMember;
+
+  constructor(data?: PartialMessage<UpdateChannelMemberResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.UpdateChannelMemberResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "member", kind: "message", T: ChatChannelMember },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateChannelMemberResponse {
+    return new UpdateChannelMemberResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateChannelMemberResponse {
+    return new UpdateChannelMemberResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateChannelMemberResponse {
+    return new UpdateChannelMemberResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateChannelMemberResponse | PlainMessage<UpdateChannelMemberResponse> | undefined, b: UpdateChannelMemberResponse | PlainMessage<UpdateChannelMemberResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateChannelMemberResponse, a, b);
   }
 }
 
@@ -2094,6 +2396,13 @@ export class GetMessagesRequest extends Message<GetMessagesRequest> {
    */
   rootOnly = false;
 
+  /**
+   * Fetch messages around this message (inclusive). Returns limit/2 before + target + limit/2 after.
+   *
+   * @generated from field: optional string around_id = 7;
+   */
+  aroundId?: string;
+
   constructor(data?: PartialMessage<GetMessagesRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2108,6 +2417,7 @@ export class GetMessagesRequest extends Message<GetMessagesRequest> {
     { no: 4, name: "after_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 6, name: "root_only", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "around_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMessagesRequest {
@@ -2749,6 +3059,9 @@ export class GetThreadResponse extends Message<GetThreadResponse> {
   lastReplyAt?: Timestamp;
 
   /**
+   * Capped preview list (up to THREAD_PARTICIPANT_PREVIEW_LIMIT=20 ids).
+   * Use total_participants for the absolute count when rendering "+N".
+   *
    * @generated from field: repeated string participant_ids = 4;
    */
   participantIds: string[] = [];
@@ -2757,6 +3070,11 @@ export class GetThreadResponse extends Message<GetThreadResponse> {
    * @generated from field: bool is_following = 5;
    */
   isFollowing = false;
+
+  /**
+   * @generated from field: int32 total_participants = 6;
+   */
+  totalParticipants = 0;
 
   constructor(data?: PartialMessage<GetThreadResponse>) {
     super();
@@ -2771,6 +3089,7 @@ export class GetThreadResponse extends Message<GetThreadResponse> {
     { no: 3, name: "last_reply_at", kind: "message", T: Timestamp },
     { no: 4, name: "participant_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "is_following", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "total_participants", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetThreadResponse {
@@ -3658,6 +3977,21 @@ export class ChannelUnreadCount extends Message<ChannelUnreadCount> {
    */
   lastReadMessageId?: string;
 
+  /**
+   * @generated from field: bool is_muted = 5;
+   */
+  isMuted = false;
+
+  /**
+   * @generated from field: chat.v1.ChatNotificationLevel notification_level = 6;
+   */
+  notificationLevel = ChatNotificationLevel.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp muted_until = 7;
+   */
+  mutedUntil?: Timestamp;
+
   constructor(data?: PartialMessage<ChannelUnreadCount>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3670,6 +4004,9 @@ export class ChannelUnreadCount extends Message<ChannelUnreadCount> {
     { no: 2, name: "unread_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "mention_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "last_read_message_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "is_muted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "notification_level", kind: "enum", T: proto3.getEnumType(ChatNotificationLevel) },
+    { no: 7, name: "muted_until", kind: "message", T: Timestamp, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelUnreadCount {
@@ -4276,6 +4613,797 @@ export class MoveChannelToCategoryResponse extends Message<MoveChannelToCategory
 
   static equals(a: MoveChannelToCategoryResponse | PlainMessage<MoveChannelToCategoryResponse> | undefined, b: MoveChannelToCategoryResponse | PlainMessage<MoveChannelToCategoryResponse> | undefined): boolean {
     return proto3.util.equals(MoveChannelToCategoryResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.RespondToAgentConfirmationRequest
+ */
+export class RespondToAgentConfirmationRequest extends Message<RespondToAgentConfirmationRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  /**
+   * ID of the agent message that carries the confirmation_request metadata.
+   *
+   * @generated from field: string message_id = 3;
+   */
+  messageId = "";
+
+  /**
+   * Opaque request identifier produced by the agents runtime.
+   *
+   * @generated from field: string request_id = 4;
+   */
+  requestId = "";
+
+  /**
+   * @generated from field: chat.v1.AgentConfirmationDecision decision = 5;
+   */
+  decision = AgentConfirmationDecision.UNSPECIFIED;
+
+  /**
+   * @generated from field: optional string rationale = 6;
+   */
+  rationale?: string;
+
+  constructor(data?: PartialMessage<RespondToAgentConfirmationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.RespondToAgentConfirmationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "request_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "decision", kind: "enum", T: proto3.getEnumType(AgentConfirmationDecision) },
+    { no: 6, name: "rationale", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RespondToAgentConfirmationRequest {
+    return new RespondToAgentConfirmationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RespondToAgentConfirmationRequest {
+    return new RespondToAgentConfirmationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RespondToAgentConfirmationRequest {
+    return new RespondToAgentConfirmationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RespondToAgentConfirmationRequest | PlainMessage<RespondToAgentConfirmationRequest> | undefined, b: RespondToAgentConfirmationRequest | PlainMessage<RespondToAgentConfirmationRequest> | undefined): boolean {
+    return proto3.util.equals(RespondToAgentConfirmationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.RespondToAgentConfirmationResponse
+ */
+export class RespondToAgentConfirmationResponse extends Message<RespondToAgentConfirmationResponse> {
+  /**
+   * Echo of the resolved status; useful for optimistic UI reconciliation.
+   *
+   * @generated from field: chat.v1.AgentConfirmationDecision decision = 1;
+   */
+  decision = AgentConfirmationDecision.UNSPECIFIED;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp decided_at = 2;
+   */
+  decidedAt?: Timestamp;
+
+  constructor(data?: PartialMessage<RespondToAgentConfirmationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.RespondToAgentConfirmationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "decision", kind: "enum", T: proto3.getEnumType(AgentConfirmationDecision) },
+    { no: 2, name: "decided_at", kind: "message", T: Timestamp },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RespondToAgentConfirmationResponse {
+    return new RespondToAgentConfirmationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RespondToAgentConfirmationResponse {
+    return new RespondToAgentConfirmationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RespondToAgentConfirmationResponse {
+    return new RespondToAgentConfirmationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RespondToAgentConfirmationResponse | PlainMessage<RespondToAgentConfirmationResponse> | undefined, b: RespondToAgentConfirmationResponse | PlainMessage<RespondToAgentConfirmationResponse> | undefined): boolean {
+    return proto3.util.equals(RespondToAgentConfirmationResponse, a, b);
+  }
+}
+
+/**
+ * A single pending agent tool-call approval still awaiting a user decision.
+ * Mirrors the fields the AGENT_CONFIRMATION_REQUESTED stream event carries so
+ * the frontend can synthesise the same confirmation card shape on reload.
+ *
+ * @generated from message chat.v1.PendingAgentApproval
+ */
+export class PendingAgentApproval extends Message<PendingAgentApproval> {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId = "";
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId = "";
+
+  /**
+   * @generated from field: string message_id = 3;
+   */
+  messageId = "";
+
+  /**
+   * @generated from field: string tool_name = 4;
+   */
+  toolName = "";
+
+  /**
+   * @generated from field: string args_preview = 5;
+   */
+  argsPreview = "";
+
+  /**
+   * @generated from field: string actor_user_id = 6;
+   */
+  actorUserId = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp requested_at = 7;
+   */
+  requestedAt?: Timestamp;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp expires_at = 8;
+   */
+  expiresAt?: Timestamp;
+
+  constructor(data?: PartialMessage<PendingAgentApproval>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.PendingAgentApproval";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "request_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "tool_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "args_preview", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "actor_user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "requested_at", kind: "message", T: Timestamp },
+    { no: 8, name: "expires_at", kind: "message", T: Timestamp, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PendingAgentApproval {
+    return new PendingAgentApproval().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PendingAgentApproval {
+    return new PendingAgentApproval().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PendingAgentApproval {
+    return new PendingAgentApproval().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PendingAgentApproval | PlainMessage<PendingAgentApproval> | undefined, b: PendingAgentApproval | PlainMessage<PendingAgentApproval> | undefined): boolean {
+    return proto3.util.equals(PendingAgentApproval, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.GetChannelPendingApprovalsRequest
+ */
+export class GetChannelPendingApprovalsRequest extends Message<GetChannelPendingApprovalsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  constructor(data?: PartialMessage<GetChannelPendingApprovalsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.GetChannelPendingApprovalsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChannelPendingApprovalsRequest {
+    return new GetChannelPendingApprovalsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChannelPendingApprovalsRequest {
+    return new GetChannelPendingApprovalsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChannelPendingApprovalsRequest {
+    return new GetChannelPendingApprovalsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChannelPendingApprovalsRequest | PlainMessage<GetChannelPendingApprovalsRequest> | undefined, b: GetChannelPendingApprovalsRequest | PlainMessage<GetChannelPendingApprovalsRequest> | undefined): boolean {
+    return proto3.util.equals(GetChannelPendingApprovalsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.GetChannelPendingApprovalsResponse
+ */
+export class GetChannelPendingApprovalsResponse extends Message<GetChannelPendingApprovalsResponse> {
+  /**
+   * @generated from field: repeated chat.v1.PendingAgentApproval approvals = 1;
+   */
+  approvals: PendingAgentApproval[] = [];
+
+  constructor(data?: PartialMessage<GetChannelPendingApprovalsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.GetChannelPendingApprovalsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "approvals", kind: "message", T: PendingAgentApproval, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChannelPendingApprovalsResponse {
+    return new GetChannelPendingApprovalsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChannelPendingApprovalsResponse {
+    return new GetChannelPendingApprovalsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChannelPendingApprovalsResponse {
+    return new GetChannelPendingApprovalsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChannelPendingApprovalsResponse | PlainMessage<GetChannelPendingApprovalsResponse> | undefined, b: GetChannelPendingApprovalsResponse | PlainMessage<GetChannelPendingApprovalsResponse> | undefined): boolean {
+    return proto3.util.equals(GetChannelPendingApprovalsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.ChannelAgentContextStats
+ */
+export class ChannelAgentContextStats extends Message<ChannelAgentContextStats> {
+  /**
+   * Total chat messages in the channel since `manual_reset_at` (or all-time
+   * when never reset). Includes messages by other senders, since they may
+   * be loaded into the agent's prompt window.
+   *
+   * @generated from field: int32 total_messages = 1;
+   */
+  totalMessages = 0;
+
+  /**
+   * Messages currently active (visible to load_context_messages, post-reset,
+   * not yet rolled into a summary).
+   *
+   * @generated from field: int32 active_messages = 2;
+   */
+  activeMessages = 0;
+
+  /**
+   * Count of msg_ids tracked in `binding.compaction_summary_msg_ids`.
+   *
+   * @generated from field: int32 compacted_messages = 3;
+   */
+  compactedMessages = 0;
+
+  /**
+   * Count of metadata.kind="summary" rows authored by this agent.
+   *
+   * @generated from field: int32 summary_count = 4;
+   */
+  summaryCount = 0;
+
+  /**
+   * Cached estimate updated by the runtime after each turn
+   * (`binding.last_active_token_estimate`).
+   *
+   * @generated from field: int32 active_tokens = 5;
+   */
+  activeTokens = 0;
+
+  /**
+   * Token budget for chat history (65% of context window).
+   *
+   * @generated from field: int32 token_budget = 6;
+   */
+  tokenBudget = 0;
+
+  /**
+   * Estimated tokens remaining before auto-compaction triggers.
+   *
+   * @generated from field: int32 tokens_until_compaction = 7;
+   */
+  tokensUntilCompaction = 0;
+
+  /**
+   * Resolved model context window in tokens (from agent.primary_model).
+   *
+   * @generated from field: int32 context_window_tokens = 8;
+   */
+  contextWindowTokens = 0;
+
+  /**
+   * True when the binding has a non-NULL `manual_reset_at`. The UI uses this
+   * to render a "Conversation reset on ..." indicator.
+   *
+   * @generated from field: bool was_reset = 9;
+   */
+  wasReset = false;
+
+  /**
+   * The timestamp of the last manual reset (NULL when `was_reset=false`).
+   *
+   * @generated from field: optional google.protobuf.Timestamp manual_reset_at = 10;
+   */
+  manualResetAt?: Timestamp;
+
+  constructor(data?: PartialMessage<ChannelAgentContextStats>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ChannelAgentContextStats";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "total_messages", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "active_messages", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "compacted_messages", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "summary_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "active_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "token_budget", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "tokens_until_compaction", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "context_window_tokens", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "was_reset", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "manual_reset_at", kind: "message", T: Timestamp, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelAgentContextStats {
+    return new ChannelAgentContextStats().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelAgentContextStats {
+    return new ChannelAgentContextStats().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelAgentContextStats {
+    return new ChannelAgentContextStats().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChannelAgentContextStats | PlainMessage<ChannelAgentContextStats> | undefined, b: ChannelAgentContextStats | PlainMessage<ChannelAgentContextStats> | undefined): boolean {
+    return proto3.util.equals(ChannelAgentContextStats, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.GetChannelAgentContextStatsRequest
+ */
+export class GetChannelAgentContextStatsRequest extends Message<GetChannelAgentContextStatsRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  /**
+   * @generated from field: string agent_id = 3;
+   */
+  agentId = "";
+
+  constructor(data?: PartialMessage<GetChannelAgentContextStatsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.GetChannelAgentContextStatsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChannelAgentContextStatsRequest {
+    return new GetChannelAgentContextStatsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsRequest {
+    return new GetChannelAgentContextStatsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsRequest {
+    return new GetChannelAgentContextStatsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChannelAgentContextStatsRequest | PlainMessage<GetChannelAgentContextStatsRequest> | undefined, b: GetChannelAgentContextStatsRequest | PlainMessage<GetChannelAgentContextStatsRequest> | undefined): boolean {
+    return proto3.util.equals(GetChannelAgentContextStatsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.GetChannelAgentContextStatsResponse
+ */
+export class GetChannelAgentContextStatsResponse extends Message<GetChannelAgentContextStatsResponse> {
+  /**
+   * @generated from field: chat.v1.ChannelAgentContextStats stats = 1;
+   */
+  stats?: ChannelAgentContextStats;
+
+  constructor(data?: PartialMessage<GetChannelAgentContextStatsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.GetChannelAgentContextStatsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "stats", kind: "message", T: ChannelAgentContextStats },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChannelAgentContextStatsResponse {
+    return new GetChannelAgentContextStatsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsResponse {
+    return new GetChannelAgentContextStatsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsResponse {
+    return new GetChannelAgentContextStatsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChannelAgentContextStatsResponse | PlainMessage<GetChannelAgentContextStatsResponse> | undefined, b: GetChannelAgentContextStatsResponse | PlainMessage<GetChannelAgentContextStatsResponse> | undefined): boolean {
+    return proto3.util.equals(GetChannelAgentContextStatsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.GetChannelAgentContextStatsBatchRequest
+ */
+export class GetChannelAgentContextStatsBatchRequest extends Message<GetChannelAgentContextStatsBatchRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  /**
+   * Up to 100 agent ids. The handler rejects larger batches.
+   *
+   * @generated from field: repeated string agent_ids = 3;
+   */
+  agentIds: string[] = [];
+
+  constructor(data?: PartialMessage<GetChannelAgentContextStatsBatchRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.GetChannelAgentContextStatsBatchRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "agent_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChannelAgentContextStatsBatchRequest {
+    return new GetChannelAgentContextStatsBatchRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsBatchRequest {
+    return new GetChannelAgentContextStatsBatchRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsBatchRequest {
+    return new GetChannelAgentContextStatsBatchRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChannelAgentContextStatsBatchRequest | PlainMessage<GetChannelAgentContextStatsBatchRequest> | undefined, b: GetChannelAgentContextStatsBatchRequest | PlainMessage<GetChannelAgentContextStatsBatchRequest> | undefined): boolean {
+    return proto3.util.equals(GetChannelAgentContextStatsBatchRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.GetChannelAgentContextStatsBatchResponse
+ */
+export class GetChannelAgentContextStatsBatchResponse extends Message<GetChannelAgentContextStatsBatchResponse> {
+  /**
+   * Keyed by agent_id (string UUID). Agents that were not bound to the
+   * channel, soft-deleted, or otherwise unreadable are simply absent from
+   * the map. The frontend renders the union of what came back.
+   *
+   * @generated from field: map<string, chat.v1.ChannelAgentContextStats> stats = 1;
+   */
+  stats: { [key: string]: ChannelAgentContextStats } = {};
+
+  constructor(data?: PartialMessage<GetChannelAgentContextStatsBatchResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.GetChannelAgentContextStatsBatchResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "stats", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: ChannelAgentContextStats} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChannelAgentContextStatsBatchResponse {
+    return new GetChannelAgentContextStatsBatchResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsBatchResponse {
+    return new GetChannelAgentContextStatsBatchResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChannelAgentContextStatsBatchResponse {
+    return new GetChannelAgentContextStatsBatchResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChannelAgentContextStatsBatchResponse | PlainMessage<GetChannelAgentContextStatsBatchResponse> | undefined, b: GetChannelAgentContextStatsBatchResponse | PlainMessage<GetChannelAgentContextStatsBatchResponse> | undefined): boolean {
+    return proto3.util.equals(GetChannelAgentContextStatsBatchResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.CompactChannelAgentContextRequest
+ */
+export class CompactChannelAgentContextRequest extends Message<CompactChannelAgentContextRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  /**
+   * @generated from field: string agent_id = 3;
+   */
+  agentId = "";
+
+  constructor(data?: PartialMessage<CompactChannelAgentContextRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.CompactChannelAgentContextRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompactChannelAgentContextRequest {
+    return new CompactChannelAgentContextRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompactChannelAgentContextRequest {
+    return new CompactChannelAgentContextRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompactChannelAgentContextRequest {
+    return new CompactChannelAgentContextRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompactChannelAgentContextRequest | PlainMessage<CompactChannelAgentContextRequest> | undefined, b: CompactChannelAgentContextRequest | PlainMessage<CompactChannelAgentContextRequest> | undefined): boolean {
+    return proto3.util.equals(CompactChannelAgentContextRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.CompactChannelAgentContextResponse
+ */
+export class CompactChannelAgentContextResponse extends Message<CompactChannelAgentContextResponse> {
+  /**
+   * @generated from field: bool compacted = 1;
+   */
+  compacted = false;
+
+  /**
+   * @generated from field: chat.v1.ChannelAgentContextStats stats = 2;
+   */
+  stats?: ChannelAgentContextStats;
+
+  /**
+   * @generated from field: int32 messages_compacted = 3;
+   */
+  messagesCompacted = 0;
+
+  /**
+   * @generated from field: int32 tokens_before = 4;
+   */
+  tokensBefore = 0;
+
+  /**
+   * @generated from field: int32 tokens_after = 5;
+   */
+  tokensAfter = 0;
+
+  /**
+   * @generated from field: int32 tokens_saved = 6;
+   */
+  tokensSaved = 0;
+
+  constructor(data?: PartialMessage<CompactChannelAgentContextResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.CompactChannelAgentContextResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "compacted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "stats", kind: "message", T: ChannelAgentContextStats },
+    { no: 3, name: "messages_compacted", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "tokens_before", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "tokens_after", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "tokens_saved", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompactChannelAgentContextResponse {
+    return new CompactChannelAgentContextResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompactChannelAgentContextResponse {
+    return new CompactChannelAgentContextResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompactChannelAgentContextResponse {
+    return new CompactChannelAgentContextResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompactChannelAgentContextResponse | PlainMessage<CompactChannelAgentContextResponse> | undefined, b: CompactChannelAgentContextResponse | PlainMessage<CompactChannelAgentContextResponse> | undefined): boolean {
+    return proto3.util.equals(CompactChannelAgentContextResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.ResetChannelAgentContextRequest
+ */
+export class ResetChannelAgentContextRequest extends Message<ResetChannelAgentContextRequest> {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId = "";
+
+  /**
+   * @generated from field: string agent_id = 3;
+   */
+  agentId = "";
+
+  constructor(data?: PartialMessage<ResetChannelAgentContextRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ResetChannelAgentContextRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResetChannelAgentContextRequest {
+    return new ResetChannelAgentContextRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResetChannelAgentContextRequest {
+    return new ResetChannelAgentContextRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResetChannelAgentContextRequest {
+    return new ResetChannelAgentContextRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ResetChannelAgentContextRequest | PlainMessage<ResetChannelAgentContextRequest> | undefined, b: ResetChannelAgentContextRequest | PlainMessage<ResetChannelAgentContextRequest> | undefined): boolean {
+    return proto3.util.equals(ResetChannelAgentContextRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message chat.v1.ResetChannelAgentContextResponse
+ */
+export class ResetChannelAgentContextResponse extends Message<ResetChannelAgentContextResponse> {
+  /**
+   * The newly-written kind="context_reset" divider message id, so the
+   * frontend can locate it in the message list (it lands in the channel
+   * stream too via MESSAGE_CREATED).
+   *
+   * @generated from field: string divider_message_id = 1;
+   */
+  dividerMessageId = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp reset_at = 2;
+   */
+  resetAt?: Timestamp;
+
+  /**
+   * @generated from field: chat.v1.ChannelAgentContextStats stats = 3;
+   */
+  stats?: ChannelAgentContextStats;
+
+  constructor(data?: PartialMessage<ResetChannelAgentContextResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chat.v1.ResetChannelAgentContextResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "divider_message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "reset_at", kind: "message", T: Timestamp },
+    { no: 3, name: "stats", kind: "message", T: ChannelAgentContextStats },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResetChannelAgentContextResponse {
+    return new ResetChannelAgentContextResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResetChannelAgentContextResponse {
+    return new ResetChannelAgentContextResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResetChannelAgentContextResponse {
+    return new ResetChannelAgentContextResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ResetChannelAgentContextResponse | PlainMessage<ResetChannelAgentContextResponse> | undefined, b: ResetChannelAgentContextResponse | PlainMessage<ResetChannelAgentContextResponse> | undefined): boolean {
+    return proto3.util.equals(ResetChannelAgentContextResponse, a, b);
   }
 }
 

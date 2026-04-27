@@ -1,6 +1,7 @@
 import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from common.v1 import common_pb2 as _common_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -39,6 +40,12 @@ class ChatNotificationLevel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CHAT_NOTIFICATION_LEVEL_ALL: _ClassVar[ChatNotificationLevel]
     CHAT_NOTIFICATION_LEVEL_MENTIONS: _ClassVar[ChatNotificationLevel]
     CHAT_NOTIFICATION_LEVEL_NONE: _ClassVar[ChatNotificationLevel]
+
+class AgentConfirmationDecision(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    AGENT_CONFIRMATION_DECISION_UNSPECIFIED: _ClassVar[AgentConfirmationDecision]
+    AGENT_CONFIRMATION_DECISION_APPROVE: _ClassVar[AgentConfirmationDecision]
+    AGENT_CONFIRMATION_DECISION_DENY: _ClassVar[AgentConfirmationDecision]
 CHANNEL_TYPE_UNSPECIFIED: ChannelType
 CHANNEL_TYPE_PUBLIC: ChannelType
 CHANNEL_TYPE_PRIVATE: ChannelType
@@ -57,6 +64,17 @@ CHAT_NOTIFICATION_LEVEL_UNSPECIFIED: ChatNotificationLevel
 CHAT_NOTIFICATION_LEVEL_ALL: ChatNotificationLevel
 CHAT_NOTIFICATION_LEVEL_MENTIONS: ChatNotificationLevel
 CHAT_NOTIFICATION_LEVEL_NONE: ChatNotificationLevel
+AGENT_CONFIRMATION_DECISION_UNSPECIFIED: AgentConfirmationDecision
+AGENT_CONFIRMATION_DECISION_APPROVE: AgentConfirmationDecision
+AGENT_CONFIRMATION_DECISION_DENY: AgentConfirmationDecision
+
+class ChatSubject(_message.Message):
+    __slots__ = ("type", "id")
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    type: _common_pb2.SubjectType
+    id: str
+    def __init__(self, type: _Optional[_Union[_common_pb2.SubjectType, str]] = ..., id: _Optional[str] = ...) -> None: ...
 
 class ChatChannel(_message.Message):
     __slots__ = ("id", "organization_id", "owner_id", "name", "slug", "description", "channel_type", "is_encrypted", "is_archived", "is_default", "icon", "category_id", "created_at", "updated_at", "message_count", "root_message_count", "member_count", "last_message_at", "last_root_message_at", "current_user_role", "is_member", "dm_member_ids")
@@ -186,7 +204,7 @@ class ReactionGroup(_message.Message):
     def __init__(self, emoji: _Optional[str] = ..., count: _Optional[int] = ..., user_ids: _Optional[_Iterable[str]] = ..., current_user_reacted: _Optional[bool] = ...) -> None: ...
 
 class ChatChannelMember(_message.Message):
-    __slots__ = ("channel_id", "user_id", "role", "notification_level", "is_muted", "joined_at", "display_name", "email", "avatar_url")
+    __slots__ = ("channel_id", "user_id", "role", "notification_level", "is_muted", "joined_at", "display_name", "email", "avatar_url", "muted_until", "follow_all_threads", "subject")
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
@@ -196,6 +214,9 @@ class ChatChannelMember(_message.Message):
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
+    MUTED_UNTIL_FIELD_NUMBER: _ClassVar[int]
+    FOLLOW_ALL_THREADS_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_FIELD_NUMBER: _ClassVar[int]
     channel_id: str
     user_id: str
     role: ChannelRole
@@ -205,7 +226,10 @@ class ChatChannelMember(_message.Message):
     display_name: str
     email: str
     avatar_url: str
-    def __init__(self, channel_id: _Optional[str] = ..., user_id: _Optional[str] = ..., role: _Optional[_Union[ChannelRole, str]] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., is_muted: _Optional[bool] = ..., joined_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., display_name: _Optional[str] = ..., email: _Optional[str] = ..., avatar_url: _Optional[str] = ...) -> None: ...
+    muted_until: _timestamp_pb2.Timestamp
+    follow_all_threads: bool
+    subject: ChatSubject
+    def __init__(self, channel_id: _Optional[str] = ..., user_id: _Optional[str] = ..., role: _Optional[_Union[ChannelRole, str]] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., is_muted: _Optional[bool] = ..., joined_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., display_name: _Optional[str] = ..., email: _Optional[str] = ..., avatar_url: _Optional[str] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., follow_all_threads: _Optional[bool] = ..., subject: _Optional[_Union[ChatSubject, _Mapping]] = ...) -> None: ...
 
 class ChatChannelCategory(_message.Message):
     __slots__ = ("id", "organization_id", "name", "position", "created_at", "updated_at")
@@ -278,7 +302,7 @@ class TypingUser(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., display_name: _Optional[str] = ...) -> None: ...
 
 class CreateChannelRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "channel_type", "description", "icon", "is_default", "category_id", "member_ids")
+    __slots__ = ("organization_id", "name", "channel_type", "description", "icon", "is_default", "category_id", "member_ids", "members")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -287,6 +311,7 @@ class CreateChannelRequest(_message.Message):
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
     CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
     MEMBER_IDS_FIELD_NUMBER: _ClassVar[int]
+    MEMBERS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     channel_type: ChannelType
@@ -295,7 +320,8 @@ class CreateChannelRequest(_message.Message):
     is_default: bool
     category_id: str
     member_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., is_default: _Optional[bool] = ..., category_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    members: _containers.RepeatedCompositeFieldContainer[ChatSubject]
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., is_default: _Optional[bool] = ..., category_id: _Optional[str] = ..., member_ids: _Optional[_Iterable[str]] = ..., members: _Optional[_Iterable[_Union[ChatSubject, _Mapping]]] = ...) -> None: ...
 
 class CreateChannelResponse(_message.Message):
     __slots__ = ("channel",)
@@ -364,18 +390,24 @@ class DeleteChannelResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class ListChannelsRequest(_message.Message):
-    __slots__ = ("organization_id", "browse_public")
+    __slots__ = ("organization_id", "browse_public", "cursor", "page_size")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     BROWSE_PUBLIC_FIELD_NUMBER: _ClassVar[int]
+    CURSOR_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     browse_public: bool
-    def __init__(self, organization_id: _Optional[str] = ..., browse_public: _Optional[bool] = ...) -> None: ...
+    cursor: str
+    page_size: int
+    def __init__(self, organization_id: _Optional[str] = ..., browse_public: _Optional[bool] = ..., cursor: _Optional[str] = ..., page_size: _Optional[int] = ...) -> None: ...
 
 class ListChannelsResponse(_message.Message):
-    __slots__ = ("channels",)
+    __slots__ = ("channels", "next_cursor")
     CHANNELS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_CURSOR_FIELD_NUMBER: _ClassVar[int]
     channels: _containers.RepeatedCompositeFieldContainer[ChatChannel]
-    def __init__(self, channels: _Optional[_Iterable[_Union[ChatChannel, _Mapping]]] = ...) -> None: ...
+    next_cursor: str
+    def __init__(self, channels: _Optional[_Iterable[_Union[ChatChannel, _Mapping]]] = ..., next_cursor: _Optional[str] = ...) -> None: ...
 
 class JoinChannelRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id")
@@ -404,14 +436,16 @@ class LeaveChannelResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class AddMembersRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "user_ids")
+    __slots__ = ("organization_id", "channel_id", "user_ids", "subjects")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     USER_IDS_FIELD_NUMBER: _ClassVar[int]
+    SUBJECTS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     user_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., user_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    subjects: _containers.RepeatedCompositeFieldContainer[ChatSubject]
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., user_ids: _Optional[_Iterable[str]] = ..., subjects: _Optional[_Iterable[_Union[ChatSubject, _Mapping]]] = ...) -> None: ...
 
 class AddMembersResponse(_message.Message):
     __slots__ = ("members",)
@@ -420,32 +454,66 @@ class AddMembersResponse(_message.Message):
     def __init__(self, members: _Optional[_Iterable[_Union[ChatChannelMember, _Mapping]]] = ...) -> None: ...
 
 class RemoveMembersRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "user_ids")
+    __slots__ = ("organization_id", "channel_id", "user_ids", "subjects")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     USER_IDS_FIELD_NUMBER: _ClassVar[int]
+    SUBJECTS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     user_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., user_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    subjects: _containers.RepeatedCompositeFieldContainer[ChatSubject]
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., user_ids: _Optional[_Iterable[str]] = ..., subjects: _Optional[_Iterable[_Union[ChatSubject, _Mapping]]] = ...) -> None: ...
 
 class RemoveMembersResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
 class GetMembersRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id")
+    __slots__ = ("organization_id", "channel_id", "cursor", "page_size")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    CURSOR_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ...) -> None: ...
+    cursor: str
+    page_size: int
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., cursor: _Optional[str] = ..., page_size: _Optional[int] = ...) -> None: ...
 
 class GetMembersResponse(_message.Message):
-    __slots__ = ("members",)
+    __slots__ = ("members", "next_cursor")
     MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_CURSOR_FIELD_NUMBER: _ClassVar[int]
     members: _containers.RepeatedCompositeFieldContainer[ChatChannelMember]
-    def __init__(self, members: _Optional[_Iterable[_Union[ChatChannelMember, _Mapping]]] = ...) -> None: ...
+    next_cursor: str
+    def __init__(self, members: _Optional[_Iterable[_Union[ChatChannelMember, _Mapping]]] = ..., next_cursor: _Optional[str] = ...) -> None: ...
+
+class UpdateChannelMemberRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "user_id", "is_muted", "notification_level", "muted_until", "follow_all_threads", "badge_all_messages")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    IS_MUTED_FIELD_NUMBER: _ClassVar[int]
+    NOTIFICATION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    MUTED_UNTIL_FIELD_NUMBER: _ClassVar[int]
+    FOLLOW_ALL_THREADS_FIELD_NUMBER: _ClassVar[int]
+    BADGE_ALL_MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    user_id: str
+    is_muted: bool
+    notification_level: ChatNotificationLevel
+    muted_until: _timestamp_pb2.Timestamp
+    follow_all_threads: bool
+    badge_all_messages: bool
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., user_id: _Optional[str] = ..., is_muted: _Optional[bool] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., follow_all_threads: _Optional[bool] = ..., badge_all_messages: _Optional[bool] = ...) -> None: ...
+
+class UpdateChannelMemberResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: ChatChannelMember
+    def __init__(self, member: _Optional[_Union[ChatChannelMember, _Mapping]] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id", "content", "root_id", "metadata", "reply_to_id")
@@ -477,20 +545,22 @@ class SendMessageResponse(_message.Message):
     def __init__(self, message: _Optional[_Union[ChatMessage, _Mapping]] = ...) -> None: ...
 
 class GetMessagesRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "before_id", "after_id", "limit", "root_only")
+    __slots__ = ("organization_id", "channel_id", "before_id", "after_id", "limit", "root_only", "around_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     BEFORE_ID_FIELD_NUMBER: _ClassVar[int]
     AFTER_ID_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     ROOT_ONLY_FIELD_NUMBER: _ClassVar[int]
+    AROUND_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     before_id: str
     after_id: str
     limit: int
     root_only: bool
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., before_id: _Optional[str] = ..., after_id: _Optional[str] = ..., limit: _Optional[int] = ..., root_only: _Optional[bool] = ...) -> None: ...
+    around_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., before_id: _Optional[str] = ..., after_id: _Optional[str] = ..., limit: _Optional[int] = ..., root_only: _Optional[bool] = ..., around_id: _Optional[str] = ...) -> None: ...
 
 class GetMessagesResponse(_message.Message):
     __slots__ = ("messages", "has_more")
@@ -605,18 +675,20 @@ class GetThreadRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., root_message_id: _Optional[str] = ...) -> None: ...
 
 class GetThreadResponse(_message.Message):
-    __slots__ = ("root_message", "reply_count", "last_reply_at", "participant_ids", "is_following")
+    __slots__ = ("root_message", "reply_count", "last_reply_at", "participant_ids", "is_following", "total_participants")
     ROOT_MESSAGE_FIELD_NUMBER: _ClassVar[int]
     REPLY_COUNT_FIELD_NUMBER: _ClassVar[int]
     LAST_REPLY_AT_FIELD_NUMBER: _ClassVar[int]
     PARTICIPANT_IDS_FIELD_NUMBER: _ClassVar[int]
     IS_FOLLOWING_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_PARTICIPANTS_FIELD_NUMBER: _ClassVar[int]
     root_message: ChatMessage
     reply_count: int
     last_reply_at: _timestamp_pb2.Timestamp
     participant_ids: _containers.RepeatedScalarFieldContainer[str]
     is_following: bool
-    def __init__(self, root_message: _Optional[_Union[ChatMessage, _Mapping]] = ..., reply_count: _Optional[int] = ..., last_reply_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., participant_ids: _Optional[_Iterable[str]] = ..., is_following: _Optional[bool] = ...) -> None: ...
+    total_participants: int
+    def __init__(self, root_message: _Optional[_Union[ChatMessage, _Mapping]] = ..., reply_count: _Optional[int] = ..., last_reply_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., participant_ids: _Optional[_Iterable[str]] = ..., is_following: _Optional[bool] = ..., total_participants: _Optional[int] = ...) -> None: ...
 
 class GetThreadMessagesRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id", "root_message_id", "before_id", "after_id", "limit")
@@ -773,16 +845,22 @@ class GetUnreadCountsResponse(_message.Message):
     def __init__(self, channels: _Optional[_Iterable[_Union[ChannelUnreadCount, _Mapping]]] = ...) -> None: ...
 
 class ChannelUnreadCount(_message.Message):
-    __slots__ = ("channel_id", "unread_count", "mention_count", "last_read_message_id")
+    __slots__ = ("channel_id", "unread_count", "mention_count", "last_read_message_id", "is_muted", "notification_level", "muted_until")
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
     MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
     LAST_READ_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    IS_MUTED_FIELD_NUMBER: _ClassVar[int]
+    NOTIFICATION_LEVEL_FIELD_NUMBER: _ClassVar[int]
+    MUTED_UNTIL_FIELD_NUMBER: _ClassVar[int]
     channel_id: str
     unread_count: int
     mention_count: int
     last_read_message_id: str
-    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ...) -> None: ...
+    is_muted: bool
+    notification_level: ChatNotificationLevel
+    muted_until: _timestamp_pb2.Timestamp
+    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ..., is_muted: _Optional[bool] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class GetChannelResourcesRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id", "content_type_filter", "limit", "offset")
@@ -889,3 +967,170 @@ class MoveChannelToCategoryResponse(_message.Message):
     CHANNEL_FIELD_NUMBER: _ClassVar[int]
     channel: ChatChannel
     def __init__(self, channel: _Optional[_Union[ChatChannel, _Mapping]] = ...) -> None: ...
+
+class RespondToAgentConfirmationRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "message_id", "request_id", "decision", "rationale")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    DECISION_FIELD_NUMBER: _ClassVar[int]
+    RATIONALE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    message_id: str
+    request_id: str
+    decision: AgentConfirmationDecision
+    rationale: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., message_id: _Optional[str] = ..., request_id: _Optional[str] = ..., decision: _Optional[_Union[AgentConfirmationDecision, str]] = ..., rationale: _Optional[str] = ...) -> None: ...
+
+class RespondToAgentConfirmationResponse(_message.Message):
+    __slots__ = ("decision", "decided_at")
+    DECISION_FIELD_NUMBER: _ClassVar[int]
+    DECIDED_AT_FIELD_NUMBER: _ClassVar[int]
+    decision: AgentConfirmationDecision
+    decided_at: _timestamp_pb2.Timestamp
+    def __init__(self, decision: _Optional[_Union[AgentConfirmationDecision, str]] = ..., decided_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class PendingAgentApproval(_message.Message):
+    __slots__ = ("request_id", "agent_id", "message_id", "tool_name", "args_preview", "actor_user_id", "requested_at", "expires_at")
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
+    ARGS_PREVIEW_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUESTED_AT_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    request_id: str
+    agent_id: str
+    message_id: str
+    tool_name: str
+    args_preview: str
+    actor_user_id: str
+    requested_at: _timestamp_pb2.Timestamp
+    expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, request_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., message_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., args_preview: _Optional[str] = ..., actor_user_id: _Optional[str] = ..., requested_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetChannelPendingApprovalsRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ...) -> None: ...
+
+class GetChannelPendingApprovalsResponse(_message.Message):
+    __slots__ = ("approvals",)
+    APPROVALS_FIELD_NUMBER: _ClassVar[int]
+    approvals: _containers.RepeatedCompositeFieldContainer[PendingAgentApproval]
+    def __init__(self, approvals: _Optional[_Iterable[_Union[PendingAgentApproval, _Mapping]]] = ...) -> None: ...
+
+class ChannelAgentContextStats(_message.Message):
+    __slots__ = ("total_messages", "active_messages", "compacted_messages", "summary_count", "active_tokens", "token_budget", "tokens_until_compaction", "context_window_tokens", "was_reset", "manual_reset_at")
+    TOTAL_MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    COMPACTED_MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    SUMMARY_COUNT_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_BUDGET_FIELD_NUMBER: _ClassVar[int]
+    TOKENS_UNTIL_COMPACTION_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_WINDOW_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    WAS_RESET_FIELD_NUMBER: _ClassVar[int]
+    MANUAL_RESET_AT_FIELD_NUMBER: _ClassVar[int]
+    total_messages: int
+    active_messages: int
+    compacted_messages: int
+    summary_count: int
+    active_tokens: int
+    token_budget: int
+    tokens_until_compaction: int
+    context_window_tokens: int
+    was_reset: bool
+    manual_reset_at: _timestamp_pb2.Timestamp
+    def __init__(self, total_messages: _Optional[int] = ..., active_messages: _Optional[int] = ..., compacted_messages: _Optional[int] = ..., summary_count: _Optional[int] = ..., active_tokens: _Optional[int] = ..., token_budget: _Optional[int] = ..., tokens_until_compaction: _Optional[int] = ..., context_window_tokens: _Optional[int] = ..., was_reset: _Optional[bool] = ..., manual_reset_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetChannelAgentContextStatsRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "agent_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    agent_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
+
+class GetChannelAgentContextStatsResponse(_message.Message):
+    __slots__ = ("stats",)
+    STATS_FIELD_NUMBER: _ClassVar[int]
+    stats: ChannelAgentContextStats
+    def __init__(self, stats: _Optional[_Union[ChannelAgentContextStats, _Mapping]] = ...) -> None: ...
+
+class GetChannelAgentContextStatsBatchRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "agent_ids")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_IDS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    agent_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class GetChannelAgentContextStatsBatchResponse(_message.Message):
+    __slots__ = ("stats",)
+    class StatsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: ChannelAgentContextStats
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[ChannelAgentContextStats, _Mapping]] = ...) -> None: ...
+    STATS_FIELD_NUMBER: _ClassVar[int]
+    stats: _containers.MessageMap[str, ChannelAgentContextStats]
+    def __init__(self, stats: _Optional[_Mapping[str, ChannelAgentContextStats]] = ...) -> None: ...
+
+class CompactChannelAgentContextRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "agent_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    agent_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
+
+class CompactChannelAgentContextResponse(_message.Message):
+    __slots__ = ("compacted", "stats", "messages_compacted", "tokens_before", "tokens_after", "tokens_saved")
+    COMPACTED_FIELD_NUMBER: _ClassVar[int]
+    STATS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGES_COMPACTED_FIELD_NUMBER: _ClassVar[int]
+    TOKENS_BEFORE_FIELD_NUMBER: _ClassVar[int]
+    TOKENS_AFTER_FIELD_NUMBER: _ClassVar[int]
+    TOKENS_SAVED_FIELD_NUMBER: _ClassVar[int]
+    compacted: bool
+    stats: ChannelAgentContextStats
+    messages_compacted: int
+    tokens_before: int
+    tokens_after: int
+    tokens_saved: int
+    def __init__(self, compacted: _Optional[bool] = ..., stats: _Optional[_Union[ChannelAgentContextStats, _Mapping]] = ..., messages_compacted: _Optional[int] = ..., tokens_before: _Optional[int] = ..., tokens_after: _Optional[int] = ..., tokens_saved: _Optional[int] = ...) -> None: ...
+
+class ResetChannelAgentContextRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "agent_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    agent_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
+
+class ResetChannelAgentContextResponse(_message.Message):
+    __slots__ = ("divider_message_id", "reset_at", "stats")
+    DIVIDER_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    RESET_AT_FIELD_NUMBER: _ClassVar[int]
+    STATS_FIELD_NUMBER: _ClassVar[int]
+    divider_message_id: str
+    reset_at: _timestamp_pb2.Timestamp
+    stats: ChannelAgentContextStats
+    def __init__(self, divider_message_id: _Optional[str] = ..., reset_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., stats: _Optional[_Union[ChannelAgentContextStats, _Mapping]] = ...) -> None: ...

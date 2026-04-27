@@ -31,6 +31,22 @@ enum ChatEventType {
   CHAT_EVENT_TYPE_CHANNEL_UPDATED = 10;
   CHAT_EVENT_TYPE_THREAD_UPDATED = 11;
   CHAT_EVENT_TYPE_HEARTBEAT = 12;
+  // Batched membership change events. The non-batched MEMBER_JOINED /
+  // MEMBER_LEFT remain for single-actor flows (self-join, leave). Batch
+  // adds/removes initiated by an admin go through these so the server
+  // sends ONE event per call instead of one per affected user.
+  CHAT_EVENT_TYPE_MEMBERS_ADDED = 22;
+  CHAT_EVENT_TYPE_MEMBERS_REMOVED = 23;
+  // Agent runtime events. AGENT_TYPING fires while the runtime is generating
+  // tokens (analogous to a human typing). AGENT_TOKEN_DELTA carries
+  // incremental content for an in-flight agent message. AGENT_TOOL_CALL
+  // signals the runtime is executing a tool. AGENT_CONFIRMATION_REQUESTED
+  // and AGENT_CONFIRMATION_RESOLVED bracket destructive-tool approvals.
+  CHAT_EVENT_TYPE_AGENT_TYPING = 13;
+  CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA = 14;
+  CHAT_EVENT_TYPE_AGENT_TOOL_CALL = 15;
+  CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED = 16;
+  CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED = 17;
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.
@@ -57,6 +73,15 @@ message ChatEvent {
     // THREAD_UPDATED
     ThreadUpdatedPayload thread_updated = 16;
     // HEARTBEAT (no payload needed)
+    // AGENT_TYPING, AGENT_TOKEN_DELTA, AGENT_TOOL_CALL,
+    // AGENT_CONFIRMATION_REQUESTED, AGENT_CONFIRMATION_RESOLVED
+    AgentTypingPayload agent_typing = 17;
+    AgentTokenDeltaPayload agent_token_delta = 18;
+    AgentToolCallPayload agent_tool_call = 19;
+    AgentConfirmationRequestedPayload agent_confirmation_requested = 20;
+    AgentConfirmationResolvedPayload agent_confirmation_resolved = 21;
+    // MEMBERS_ADDED, MEMBERS_REMOVED
+    MembersChangedPayload members_changed = 22;
   }
 }
 
@@ -84,11 +109,92 @@ message MemberPayload {
   ChannelRole role = 4;
 }
 
+// MembersChangedPayload announces a batched add or remove. A single
+// MEMBERS_ADDED or MEMBERS_REMOVED event covers all subjects affected
+// by the same admin call so the frontend can refresh the member list
+// once instead of per affected user.
+message MembersChangedPayload {
+  repeated string user_ids = 1;
+}
+
 message ThreadUpdatedPayload {
   string root_message_id = 1;
   int32 reply_count = 2;
   google.protobuf.Timestamp last_reply_at = 3;
   string latest_participant_id = 4;
+}
+
+// AGENT EVENT PAYLOADS
+
+// AgentTypingPayload announces an agent is generating a response.
+// Mirrors TypingPayload but identifies the agent rather than a user.
+message AgentTypingPayload {
+  string agent_id = 1;
+  string display_name = 2;
+  // Empty when the agent stops typing (paired AGENT_TYPING events).
+  bool started = 3;
+  // Set when the trigger was a thread reply. Frontend scopes the typing
+  // indicator to the thread panel identified by this root. When unset the
+  // indicator renders at the channel root.
+  optional string root_id = 4;
+}
+
+// AgentTokenDeltaPayload patches an in-flight agent message with new tokens.
+// The frontend appends `delta` to the message identified by `message_id`.
+// `sequence` is monotonic per message and lets clients drop late deltas.
+message AgentTokenDeltaPayload {
+  string message_id = 1;
+  string agent_id = 2;
+  string delta = 3;
+  int32 sequence = 4;
+  // True on the final delta; clients may persist message state on this edge.
+  bool final = 5;
+}
+
+// AgentToolCallPayload signals a tool invocation by an agent.
+// Status follows: STARTED -> COMPLETED/FAILED.
+message AgentToolCallPayload {
+  string message_id = 1;
+  string agent_id = 2;
+  string tool_name = 3;
+  // Stable identifier for matching STARTED to COMPLETED.
+  string tool_call_id = 4;
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_STARTED = 1;
+    STATUS_COMPLETED = 2;
+    STATUS_FAILED = 3;
+  }
+  Status status = 5;
+  // Arguments preview (truncated JSON) for STARTED; result preview for
+  // COMPLETED/FAILED. Heavy payloads are persisted on the message metadata.
+  optional string preview = 6;
+  optional string error_message = 7;
+}
+
+// AgentConfirmationRequestedPayload mirrors the runtime confirmation event
+// but is published into the chat stream so the chat UI can render an inline
+// approval card. The card is interactive only for `actor_user_id`.
+message AgentConfirmationRequestedPayload {
+  string message_id = 1;
+  string agent_id = 2;
+  // Opaque correlation id used by RespondToAgentConfirmation.
+  string request_id = 3;
+  string tool_name = 4;
+  string args_preview = 5;
+  // Only this user can approve/deny; others see disabled UI.
+  string actor_user_id = 6;
+  google.protobuf.Timestamp expires_at = 7;
+}
+
+// AgentConfirmationResolvedPayload announces approval/denial.
+// Reuses chat.v1.AgentConfirmationDecision via the chat.proto import above.
+message AgentConfirmationResolvedPayload {
+  string request_id = 1;
+  string message_id = 2;
+  AgentConfirmationDecision decision = 3;
+  string decided_by_user_id = 4;
+  google.protobuf.Timestamp decided_at = 5;
 }
 
 // USER-LEVEL EVENT STREAMING

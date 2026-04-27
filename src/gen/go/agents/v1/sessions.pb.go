@@ -1206,7 +1206,6 @@ type GetSessionContextRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	MaxMessages    *int32                 `protobuf:"varint,3,opt,name=max_messages,json=maxMessages,proto3,oneof" json:"max_messages,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1253,13 +1252,6 @@ func (x *GetSessionContextRequest) GetSessionId() string {
 		return x.SessionId
 	}
 	return ""
-}
-
-func (x *GetSessionContextRequest) GetMaxMessages() int32 {
-	if x != nil && x.MaxMessages != nil {
-		return *x.MaxMessages
-	}
-	return 0
 }
 
 type GetSessionContextResponse struct {
@@ -1765,13 +1757,11 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\bmessages\x18\x01 \x03(\v2\x16.agents.v1.MessageInfoR\bmessages\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\x9b\x01\n" +
+	"pagination\"b\n" +
 	"\x18GetSessionContextRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\x12&\n" +
-	"\fmax_messages\x18\x03 \x01(\x05H\x00R\vmaxMessages\x88\x01\x01B\x0f\n" +
-	"\r_max_messages\"v\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\"v\n" +
 	"\x19GetSessionContextResponse\x122\n" +
 	"\bmessages\x18\x01 \x03(\v2\x16.agents.v1.MessageInfoR\bmessages\x12%\n" +
 	"\x0etotal_messages\x18\x02 \x01(\x05R\rtotalMessages\"g\n" +
@@ -1925,7 +1915,6 @@ func file_agents_v1_sessions_proto_init() {
 	file_agents_v1_sessions_proto_msgTypes[7].OneofWrappers = []any{}
 	file_agents_v1_sessions_proto_msgTypes[10].OneofWrappers = []any{}
 	file_agents_v1_sessions_proto_msgTypes[12].OneofWrappers = []any{}
-	file_agents_v1_sessions_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

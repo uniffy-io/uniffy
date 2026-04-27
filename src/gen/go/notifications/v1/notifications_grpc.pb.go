@@ -28,6 +28,10 @@ const (
 	NotificationsService_UnregisterPushSubscription_FullMethodName = "/notifications.v1.NotificationsService/UnregisterPushSubscription"
 	NotificationsService_StreamNotifications_FullMethodName        = "/notifications.v1.NotificationsService/StreamNotifications"
 	NotificationsService_GetVapidPublicKey_FullMethodName          = "/notifications.v1.NotificationsService/GetVapidPublicKey"
+	NotificationsService_SearchNotifications_FullMethodName        = "/notifications.v1.NotificationsService/SearchNotifications"
+	NotificationsService_GetNotificationStats_FullMethodName       = "/notifications.v1.NotificationsService/GetNotificationStats"
+	NotificationsService_BulkMarkAsRead_FullMethodName             = "/notifications.v1.NotificationsService/BulkMarkAsRead"
+	NotificationsService_BulkDeleteNotifications_FullMethodName    = "/notifications.v1.NotificationsService/BulkDeleteNotifications"
 )
 
 // NotificationsServiceClient is the client API for NotificationsService service.
@@ -54,6 +58,14 @@ type NotificationsServiceClient interface {
 	StreamNotifications(ctx context.Context, in *StreamNotificationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamNotificationEvent], error)
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(ctx context.Context, in *GetVapidPublicKeyRequest, opts ...grpc.CallOption) (*GetVapidPublicKeyResponse, error)
+	// Search notifications with full-text search and advanced filters
+	SearchNotifications(ctx context.Context, in *SearchNotificationsRequest, opts ...grpc.CallOption) (*SearchNotificationsResponse, error)
+	// Get aggregated notification statistics for analytics
+	GetNotificationStats(ctx context.Context, in *GetNotificationStatsRequest, opts ...grpc.CallOption) (*GetNotificationStatsResponse, error)
+	// Mark multiple notifications as read in bulk
+	BulkMarkAsRead(ctx context.Context, in *BulkMarkAsReadRequest, opts ...grpc.CallOption) (*BulkMarkAsReadResponse, error)
+	// Delete multiple notifications in bulk
+	BulkDeleteNotifications(ctx context.Context, in *BulkDeleteNotificationsRequest, opts ...grpc.CallOption) (*BulkDeleteNotificationsResponse, error)
 }
 
 type notificationsServiceClient struct {
@@ -163,6 +175,46 @@ func (c *notificationsServiceClient) GetVapidPublicKey(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *notificationsServiceClient) SearchNotifications(ctx context.Context, in *SearchNotificationsRequest, opts ...grpc.CallOption) (*SearchNotificationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchNotificationsResponse)
+	err := c.cc.Invoke(ctx, NotificationsService_SearchNotifications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *notificationsServiceClient) GetNotificationStats(ctx context.Context, in *GetNotificationStatsRequest, opts ...grpc.CallOption) (*GetNotificationStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetNotificationStatsResponse)
+	err := c.cc.Invoke(ctx, NotificationsService_GetNotificationStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *notificationsServiceClient) BulkMarkAsRead(ctx context.Context, in *BulkMarkAsReadRequest, opts ...grpc.CallOption) (*BulkMarkAsReadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkMarkAsReadResponse)
+	err := c.cc.Invoke(ctx, NotificationsService_BulkMarkAsRead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *notificationsServiceClient) BulkDeleteNotifications(ctx context.Context, in *BulkDeleteNotificationsRequest, opts ...grpc.CallOption) (*BulkDeleteNotificationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkDeleteNotificationsResponse)
+	err := c.cc.Invoke(ctx, NotificationsService_BulkDeleteNotifications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NotificationsServiceServer is the server API for NotificationsService service.
 // All implementations must embed UnimplementedNotificationsServiceServer
 // for forward compatibility.
@@ -187,6 +239,14 @@ type NotificationsServiceServer interface {
 	StreamNotifications(*StreamNotificationsRequest, grpc.ServerStreamingServer[StreamNotificationEvent]) error
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(context.Context, *GetVapidPublicKeyRequest) (*GetVapidPublicKeyResponse, error)
+	// Search notifications with full-text search and advanced filters
+	SearchNotifications(context.Context, *SearchNotificationsRequest) (*SearchNotificationsResponse, error)
+	// Get aggregated notification statistics for analytics
+	GetNotificationStats(context.Context, *GetNotificationStatsRequest) (*GetNotificationStatsResponse, error)
+	// Mark multiple notifications as read in bulk
+	BulkMarkAsRead(context.Context, *BulkMarkAsReadRequest) (*BulkMarkAsReadResponse, error)
+	// Delete multiple notifications in bulk
+	BulkDeleteNotifications(context.Context, *BulkDeleteNotificationsRequest) (*BulkDeleteNotificationsResponse, error)
 	mustEmbedUnimplementedNotificationsServiceServer()
 }
 
@@ -223,6 +283,18 @@ func (UnimplementedNotificationsServiceServer) StreamNotifications(*StreamNotifi
 }
 func (UnimplementedNotificationsServiceServer) GetVapidPublicKey(context.Context, *GetVapidPublicKeyRequest) (*GetVapidPublicKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetVapidPublicKey not implemented")
+}
+func (UnimplementedNotificationsServiceServer) SearchNotifications(context.Context, *SearchNotificationsRequest) (*SearchNotificationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SearchNotifications not implemented")
+}
+func (UnimplementedNotificationsServiceServer) GetNotificationStats(context.Context, *GetNotificationStatsRequest) (*GetNotificationStatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetNotificationStats not implemented")
+}
+func (UnimplementedNotificationsServiceServer) BulkMarkAsRead(context.Context, *BulkMarkAsReadRequest) (*BulkMarkAsReadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkMarkAsRead not implemented")
+}
+func (UnimplementedNotificationsServiceServer) BulkDeleteNotifications(context.Context, *BulkDeleteNotificationsRequest) (*BulkDeleteNotificationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkDeleteNotifications not implemented")
 }
 func (UnimplementedNotificationsServiceServer) mustEmbedUnimplementedNotificationsServiceServer() {}
 func (UnimplementedNotificationsServiceServer) testEmbeddedByValue()                              {}
@@ -400,6 +472,78 @@ func _NotificationsService_GetVapidPublicKey_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NotificationsService_SearchNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchNotificationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationsServiceServer).SearchNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationsService_SearchNotifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationsServiceServer).SearchNotifications(ctx, req.(*SearchNotificationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NotificationsService_GetNotificationStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNotificationStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationsServiceServer).GetNotificationStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationsService_GetNotificationStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationsServiceServer).GetNotificationStats(ctx, req.(*GetNotificationStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NotificationsService_BulkMarkAsRead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkMarkAsReadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationsServiceServer).BulkMarkAsRead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationsService_BulkMarkAsRead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationsServiceServer).BulkMarkAsRead(ctx, req.(*BulkMarkAsReadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NotificationsService_BulkDeleteNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkDeleteNotificationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationsServiceServer).BulkDeleteNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationsService_BulkDeleteNotifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationsServiceServer).BulkDeleteNotifications(ctx, req.(*BulkDeleteNotificationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NotificationsService_ServiceDesc is the grpc.ServiceDesc for NotificationsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -438,6 +582,22 @@ var NotificationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetVapidPublicKey",
 			Handler:    _NotificationsService_GetVapidPublicKey_Handler,
+		},
+		{
+			MethodName: "SearchNotifications",
+			Handler:    _NotificationsService_SearchNotifications_Handler,
+		},
+		{
+			MethodName: "GetNotificationStats",
+			Handler:    _NotificationsService_GetNotificationStats_Handler,
+		},
+		{
+			MethodName: "BulkMarkAsRead",
+			Handler:    _NotificationsService_BulkMarkAsRead_Handler,
+		},
+		{
+			MethodName: "BulkDeleteNotifications",
+			Handler:    _NotificationsService_BulkDeleteNotifications_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

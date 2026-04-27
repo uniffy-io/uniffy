@@ -608,6 +608,28 @@ class EmptyTrashResponse(_message.Message):
     folders_deleted: int
     def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ..., files_deleted: _Optional[int] = ..., folders_deleted: _Optional[int] = ...) -> None: ...
 
+class ListTrashRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class ListTrashResponse(_message.Message):
+    __slots__ = ("files", "folders")
+    FILES_FIELD_NUMBER: _ClassVar[int]
+    FOLDERS_FIELD_NUMBER: _ClassVar[int]
+    files: _containers.RepeatedCompositeFieldContainer[File]
+    folders: _containers.RepeatedCompositeFieldContainer[Folder]
+    def __init__(self, files: _Optional[_Iterable[_Union[File, _Mapping]]] = ..., folders: _Optional[_Iterable[_Union[Folder, _Mapping]]] = ...) -> None: ...
+
+class RestoreFolderRequest(_message.Message):
+    __slots__ = ("folder_id", "organization_id")
+    FOLDER_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    folder_id: str
+    organization_id: str
+    def __init__(self, folder_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
 class FileVersion(_message.Message):
     __slots__ = ("id", "file_id", "version_number", "size_bytes", "checksum_sha256", "uploaded_by", "created_at")
     ID_FIELD_NUMBER: _ClassVar[int]
@@ -789,3 +811,273 @@ class ListSavedFiltersResponse(_message.Message):
     FILTERS_FIELD_NUMBER: _ClassVar[int]
     filters: _containers.RepeatedCompositeFieldContainer[SavedFilter]
     def __init__(self, filters: _Optional[_Iterable[_Union[SavedFilter, _Mapping]]] = ...) -> None: ...
+
+class OrgStorageQuota(_message.Message):
+    __slots__ = ("id", "organization_id", "org_quota_bytes", "default_user_quota_bytes", "warn_at_percent", "enforce", "created_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ORG_QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_USER_QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    WARN_AT_PERCENT_FIELD_NUMBER: _ClassVar[int]
+    ENFORCE_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    organization_id: str
+    org_quota_bytes: int
+    default_user_quota_bytes: int
+    warn_at_percent: int
+    enforce: bool
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., org_quota_bytes: _Optional[int] = ..., default_user_quota_bytes: _Optional[int] = ..., warn_at_percent: _Optional[int] = ..., enforce: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetOrgStorageQuotaRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class GetOrgStorageQuotaResponse(_message.Message):
+    __slots__ = ("quota", "total_used_bytes", "total_file_count")
+    QUOTA_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_USED_BYTES_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_FILE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    quota: OrgStorageQuota
+    total_used_bytes: int
+    total_file_count: int
+    def __init__(self, quota: _Optional[_Union[OrgStorageQuota, _Mapping]] = ..., total_used_bytes: _Optional[int] = ..., total_file_count: _Optional[int] = ...) -> None: ...
+
+class SetOrgStorageQuotaRequest(_message.Message):
+    __slots__ = ("organization_id", "org_quota_bytes", "default_user_quota_bytes", "warn_at_percent", "enforce")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ORG_QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_USER_QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    WARN_AT_PERCENT_FIELD_NUMBER: _ClassVar[int]
+    ENFORCE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    org_quota_bytes: int
+    default_user_quota_bytes: int
+    warn_at_percent: int
+    enforce: bool
+    def __init__(self, organization_id: _Optional[str] = ..., org_quota_bytes: _Optional[int] = ..., default_user_quota_bytes: _Optional[int] = ..., warn_at_percent: _Optional[int] = ..., enforce: _Optional[bool] = ...) -> None: ...
+
+class SetOrgStorageQuotaResponse(_message.Message):
+    __slots__ = ("quota",)
+    QUOTA_FIELD_NUMBER: _ClassVar[int]
+    quota: OrgStorageQuota
+    def __init__(self, quota: _Optional[_Union[OrgStorageQuota, _Mapping]] = ...) -> None: ...
+
+class UserStorageQuotaOverrideInfo(_message.Message):
+    __slots__ = ("id", "organization_id", "user_id", "quota_bytes", "note", "created_by", "created_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BY_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    organization_id: str
+    user_id: str
+    quota_bytes: int
+    note: str
+    created_by: str
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., quota_bytes: _Optional[int] = ..., note: _Optional[str] = ..., created_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetUserStorageQuotaRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class GetUserStorageQuotaResponse(_message.Message):
+    __slots__ = ("effective_quota_bytes", "used_bytes", "file_count", "usage_percent", "override")
+    EFFECTIVE_QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    USED_BYTES_FIELD_NUMBER: _ClassVar[int]
+    FILE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    USAGE_PERCENT_FIELD_NUMBER: _ClassVar[int]
+    OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    effective_quota_bytes: int
+    used_bytes: int
+    file_count: int
+    usage_percent: float
+    override: UserStorageQuotaOverrideInfo
+    def __init__(self, effective_quota_bytes: _Optional[int] = ..., used_bytes: _Optional[int] = ..., file_count: _Optional[int] = ..., usage_percent: _Optional[float] = ..., override: _Optional[_Union[UserStorageQuotaOverrideInfo, _Mapping]] = ...) -> None: ...
+
+class SetUserStorageQuotaOverrideRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id", "quota_bytes", "note")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    quota_bytes: int
+    note: str
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., quota_bytes: _Optional[int] = ..., note: _Optional[str] = ...) -> None: ...
+
+class SetUserStorageQuotaOverrideResponse(_message.Message):
+    __slots__ = ("override",)
+    OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    override: UserStorageQuotaOverrideInfo
+    def __init__(self, override: _Optional[_Union[UserStorageQuotaOverrideInfo, _Mapping]] = ...) -> None: ...
+
+class RemoveUserStorageQuotaOverrideRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class RemoveUserStorageQuotaOverrideResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class ListUserStorageQuotaOverridesRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class ListUserStorageQuotaOverridesResponse(_message.Message):
+    __slots__ = ("overrides",)
+    OVERRIDES_FIELD_NUMBER: _ClassVar[int]
+    overrides: _containers.RepeatedCompositeFieldContainer[UserStorageQuotaOverrideInfo]
+    def __init__(self, overrides: _Optional[_Iterable[_Union[UserStorageQuotaOverrideInfo, _Mapping]]] = ...) -> None: ...
+
+class StorageUsageInfo(_message.Message):
+    __slots__ = ("user_id", "organization_id", "used_bytes", "file_count", "effective_quota_bytes", "usage_percent", "has_override", "last_recalculated_at")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USED_BYTES_FIELD_NUMBER: _ClassVar[int]
+    FILE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    EFFECTIVE_QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    USAGE_PERCENT_FIELD_NUMBER: _ClassVar[int]
+    HAS_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    LAST_RECALCULATED_AT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    organization_id: str
+    used_bytes: int
+    file_count: int
+    effective_quota_bytes: int
+    usage_percent: float
+    has_override: bool
+    last_recalculated_at: _timestamp_pb2.Timestamp
+    def __init__(self, user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., used_bytes: _Optional[int] = ..., file_count: _Optional[int] = ..., effective_quota_bytes: _Optional[int] = ..., usage_percent: _Optional[float] = ..., has_override: _Optional[bool] = ..., last_recalculated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetStorageUsageRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class GetStorageUsageResponse(_message.Message):
+    __slots__ = ("usage",)
+    USAGE_FIELD_NUMBER: _ClassVar[int]
+    usage: StorageUsageInfo
+    def __init__(self, usage: _Optional[_Union[StorageUsageInfo, _Mapping]] = ...) -> None: ...
+
+class ListOrgStorageUsageRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class ListOrgStorageUsageResponse(_message.Message):
+    __slots__ = ("users", "total_used_bytes", "total_file_count")
+    USERS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_USED_BYTES_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_FILE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    users: _containers.RepeatedCompositeFieldContainer[StorageUsageInfo]
+    total_used_bytes: int
+    total_file_count: int
+    def __init__(self, users: _Optional[_Iterable[_Union[StorageUsageInfo, _Mapping]]] = ..., total_used_bytes: _Optional[int] = ..., total_file_count: _Optional[int] = ...) -> None: ...
+
+class RecalculateStorageUsageRequest(_message.Message):
+    __slots__ = ("organization_id", "user_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class RecalculateStorageUsageResponse(_message.Message):
+    __slots__ = ("recalculated",)
+    RECALCULATED_FIELD_NUMBER: _ClassVar[int]
+    recalculated: _containers.RepeatedCompositeFieldContainer[StorageUsageInfo]
+    def __init__(self, recalculated: _Optional[_Iterable[_Union[StorageUsageInfo, _Mapping]]] = ...) -> None: ...
+
+class CheckStorageQuotaRequest(_message.Message):
+    __slots__ = ("organization_id", "additional_bytes")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ADDITIONAL_BYTES_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    additional_bytes: int
+    def __init__(self, organization_id: _Optional[str] = ..., additional_bytes: _Optional[int] = ...) -> None: ...
+
+class CheckStorageQuotaResponse(_message.Message):
+    __slots__ = ("allowed", "reason", "current_used_bytes", "quota_bytes", "remaining_bytes", "usage_percent")
+    ALLOWED_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CURRENT_USED_BYTES_FIELD_NUMBER: _ClassVar[int]
+    QUOTA_BYTES_FIELD_NUMBER: _ClassVar[int]
+    REMAINING_BYTES_FIELD_NUMBER: _ClassVar[int]
+    USAGE_PERCENT_FIELD_NUMBER: _ClassVar[int]
+    allowed: bool
+    reason: str
+    current_used_bytes: int
+    quota_bytes: int
+    remaining_bytes: int
+    usage_percent: float
+    def __init__(self, allowed: _Optional[bool] = ..., reason: _Optional[str] = ..., current_used_bytes: _Optional[int] = ..., quota_bytes: _Optional[int] = ..., remaining_bytes: _Optional[int] = ..., usage_percent: _Optional[float] = ...) -> None: ...
+
+class FolderTreeNode(_message.Message):
+    __slots__ = ("name", "children")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    CHILDREN_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    children: _containers.RepeatedCompositeFieldContainer[FolderTreeNode]
+    def __init__(self, name: _Optional[str] = ..., children: _Optional[_Iterable[_Union[FolderTreeNode, _Mapping]]] = ...) -> None: ...
+
+class CreatedFolderInfo(_message.Message):
+    __slots__ = ("id", "name", "path", "parent_id")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    PARENT_ID_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    name: str
+    path: str
+    parent_id: str
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., path: _Optional[str] = ..., parent_id: _Optional[str] = ...) -> None: ...
+
+class CreateFolderTreeRequest(_message.Message):
+    __slots__ = ("organization_id", "parent_folder_id", "tree", "access_mode", "baseline_role")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    PARENT_FOLDER_ID_FIELD_NUMBER: _ClassVar[int]
+    TREE_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    parent_folder_id: str
+    tree: _containers.RepeatedCompositeFieldContainer[FolderTreeNode]
+    access_mode: _common_pb2.AccessMode
+    baseline_role: _common_pb2.ContentRole
+    def __init__(self, organization_id: _Optional[str] = ..., parent_folder_id: _Optional[str] = ..., tree: _Optional[_Iterable[_Union[FolderTreeNode, _Mapping]]] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+
+class CreateFolderTreeResponse(_message.Message):
+    __slots__ = ("folders",)
+    FOLDERS_FIELD_NUMBER: _ClassVar[int]
+    folders: _containers.RepeatedCompositeFieldContainer[CreatedFolderInfo]
+    def __init__(self, folders: _Optional[_Iterable[_Union[CreatedFolderInfo, _Mapping]]] = ...) -> None: ...

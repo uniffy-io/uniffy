@@ -73,6 +73,11 @@ service FilesService {
   // Get the full file/folder tree.
   rpc GetFilesTree(GetFilesTreeRequest) returns (GetFilesTreeResponse);
 
+  // === Batch Folder Creation ===
+
+  // Create a folder tree in a single transaction (for recursive folder upload).
+  rpc CreateFolderTree(CreateFolderTreeRequest) returns (CreateFolderTreeResponse);
+
   // === Bulk Operations ===
 
   // Move files/folders to a different parent.
@@ -87,6 +92,12 @@ service FilesService {
   // Empty trash (permanently delete all soft-deleted files).
   rpc EmptyTrash(EmptyTrashRequest) returns (EmptyTrashResponse);
 
+  // List deleted files and folders (trash).
+  rpc ListTrash(ListTrashRequest) returns (ListTrashResponse);
+
+  // Restore a soft-deleted folder (and its contents) back to its parent.
+  rpc RestoreFolder(RestoreFolderRequest) returns (FolderResponse);
+
   // === Versions ===
 
   // List version history for a file.
@@ -94,6 +105,38 @@ service FilesService {
 
   // Restore a previous version of a file.
   rpc RestoreFileVersion(RestoreFileVersionRequest) returns (FileResponse);
+
+  // === Storage Quotas ===
+
+  // Get the organization storage quota configuration.
+  rpc GetOrgStorageQuota(GetOrgStorageQuotaRequest) returns (GetOrgStorageQuotaResponse);
+
+  // Set or update the organization storage quota configuration.
+  rpc SetOrgStorageQuota(SetOrgStorageQuotaRequest) returns (SetOrgStorageQuotaResponse);
+
+  // Get a user's effective storage quota and current usage.
+  rpc GetUserStorageQuota(GetUserStorageQuotaRequest) returns (GetUserStorageQuotaResponse);
+
+  // Set or update a per-user quota override.
+  rpc SetUserStorageQuotaOverride(SetUserStorageQuotaOverrideRequest) returns (SetUserStorageQuotaOverrideResponse);
+
+  // Remove a per-user quota override (reverts to org default).
+  rpc RemoveUserStorageQuotaOverride(RemoveUserStorageQuotaOverrideRequest) returns (RemoveUserStorageQuotaOverrideResponse);
+
+  // List all per-user quota overrides in an organization.
+  rpc ListUserStorageQuotaOverrides(ListUserStorageQuotaOverridesRequest) returns (ListUserStorageQuotaOverridesResponse);
+
+  // Get storage usage for a specific user (own usage for regular users).
+  rpc GetStorageUsage(GetStorageUsageRequest) returns (GetStorageUsageResponse);
+
+  // List storage usage for all users in an organization (admin only).
+  rpc ListOrgStorageUsage(ListOrgStorageUsageRequest) returns (ListOrgStorageUsageResponse);
+
+  // Recalculate storage usage from actual files (admin, drift correction).
+  rpc RecalculateStorageUsage(RecalculateStorageUsageRequest) returns (RecalculateStorageUsageResponse);
+
+  // Pre-check whether an upload of a given size is allowed under quota.
+  rpc CheckStorageQuota(CheckStorageQuotaRequest) returns (CheckStorageQuotaResponse);
 
   // === Saved Filters ===
 
@@ -479,6 +522,20 @@ message EmptyTrashResponse {
   int32 folders_deleted = 4;
 }
 
+message ListTrashRequest {
+  string organization_id = 1;
+}
+
+message ListTrashResponse {
+  repeated File files = 1;
+  repeated Folder folders = 2;
+}
+
+message RestoreFolderRequest {
+  string folder_id = 1;
+  string organization_id = 2;
+}
+
 // VERSION MESSAGES
 
 message FileVersion {
@@ -590,4 +647,172 @@ message ListSavedFiltersRequest {
 
 message ListSavedFiltersResponse {
   repeated SavedFilter filters = 1;
+}
+
+// STORAGE QUOTA MESSAGES
+
+// Organization-level quota configuration.
+message OrgStorageQuota {
+  string id = 1;
+  string organization_id = 2;
+  optional int64 org_quota_bytes = 3;
+  optional int64 default_user_quota_bytes = 4;
+  int32 warn_at_percent = 5;
+  bool enforce = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message GetOrgStorageQuotaRequest {
+  string organization_id = 1;
+}
+
+message GetOrgStorageQuotaResponse {
+  OrgStorageQuota quota = 1;
+  int64 total_used_bytes = 2;
+  int32 total_file_count = 3;
+}
+
+message SetOrgStorageQuotaRequest {
+  string organization_id = 1;
+  optional int64 org_quota_bytes = 2;
+  optional int64 default_user_quota_bytes = 3;
+  optional int32 warn_at_percent = 4;
+  optional bool enforce = 5;
+}
+
+message SetOrgStorageQuotaResponse {
+  OrgStorageQuota quota = 1;
+}
+
+// Per-user quota override.
+message UserStorageQuotaOverrideInfo {
+  string id = 1;
+  string organization_id = 2;
+  string user_id = 3;
+  int64 quota_bytes = 4;
+  optional string note = 5;
+  string created_by = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message GetUserStorageQuotaRequest {
+  string organization_id = 1;
+  string user_id = 2;
+}
+
+message GetUserStorageQuotaResponse {
+  optional int64 effective_quota_bytes = 1;
+  int64 used_bytes = 2;
+  int32 file_count = 3;
+  float usage_percent = 4;
+  optional UserStorageQuotaOverrideInfo override = 5;
+}
+
+message SetUserStorageQuotaOverrideRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  int64 quota_bytes = 3;
+  optional string note = 4;
+}
+
+message SetUserStorageQuotaOverrideResponse {
+  UserStorageQuotaOverrideInfo override = 1;
+}
+
+message RemoveUserStorageQuotaOverrideRequest {
+  string organization_id = 1;
+  string user_id = 2;
+}
+
+message RemoveUserStorageQuotaOverrideResponse {
+  bool success = 1;
+}
+
+message ListUserStorageQuotaOverridesRequest {
+  string organization_id = 1;
+}
+
+message ListUserStorageQuotaOverridesResponse {
+  repeated UserStorageQuotaOverrideInfo overrides = 1;
+}
+
+// Storage usage tracking.
+message StorageUsageInfo {
+  string user_id = 1;
+  string organization_id = 2;
+  int64 used_bytes = 3;
+  int32 file_count = 4;
+  optional int64 effective_quota_bytes = 5;
+  float usage_percent = 6;
+  bool has_override = 7;
+  optional google.protobuf.Timestamp last_recalculated_at = 8;
+}
+
+message GetStorageUsageRequest {
+  string organization_id = 1;
+  optional string user_id = 2;
+}
+
+message GetStorageUsageResponse {
+  StorageUsageInfo usage = 1;
+}
+
+message ListOrgStorageUsageRequest {
+  string organization_id = 1;
+}
+
+message ListOrgStorageUsageResponse {
+  repeated StorageUsageInfo users = 1;
+  int64 total_used_bytes = 2;
+  int32 total_file_count = 3;
+}
+
+message RecalculateStorageUsageRequest {
+  string organization_id = 1;
+  optional string user_id = 2;
+}
+
+message RecalculateStorageUsageResponse {
+  repeated StorageUsageInfo recalculated = 1;
+}
+
+message CheckStorageQuotaRequest {
+  string organization_id = 1;
+  int64 additional_bytes = 2;
+}
+
+message CheckStorageQuotaResponse {
+  bool allowed = 1;
+  string reason = 2;
+  int64 current_used_bytes = 3;
+  optional int64 quota_bytes = 4;
+  optional int64 remaining_bytes = 5;
+  float usage_percent = 6;
+}
+
+// Batch folder creation for recursive folder upload.
+message FolderTreeNode {
+  string name = 1;
+  repeated FolderTreeNode children = 2;
+}
+
+message CreatedFolderInfo {
+  string id = 1;
+  string name = 2;
+  string path = 3;
+  optional string parent_id = 4;
+}
+
+message CreateFolderTreeRequest {
+  string organization_id = 1;
+  optional string parent_folder_id = 2;
+  repeated FolderTreeNode tree = 3;
+  common.v1.AccessMode access_mode = 4;
+  optional common.v1.ContentRole baseline_role = 5;
+}
+
+message CreateFolderTreeResponse {
+  repeated CreatedFolderInfo folders = 1;
 }

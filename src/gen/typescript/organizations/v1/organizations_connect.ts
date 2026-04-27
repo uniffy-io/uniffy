@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddMemberRequest, ContentTypeDefaults, CreateOrganizationRequest, DeleteOrganizationRequest, DeleteOrganizationResponse, GetOrganizationOverviewRequest, GetOrganizationRequest, GetPermissionDefaultsRequest, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, ListDomainAdminsRequest, ListDomainAdminsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, ListOrganizationsRequest, ListOrganizationsResponse, OrganizationDetail, OrganizationOverview, PermissionDefaultsResponse, RemoveMemberRequest, RemoveMemberResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, UpdateMemberRoleRequest, UpdateOrganizationRequest, UpdatePermissionDefaultsRequest } from "./organizations_pb.js";
+import { AddMemberRequest, ContentTypeDefaults, CreateOrganizationRequest, DeleteOrganizationRequest, DeleteOrganizationResponse, GetOrganizationOverviewRequest, GetOrganizationRequest, GetOrganizationSettingsRequest, GetPermissionDefaultsRequest, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, ListDomainAdminsRequest, ListDomainAdminsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, ListOrganizationsRequest, ListOrganizationsResponse, OrganizationDetail, OrganizationOverview, OrganizationSettings, PermissionDefaultsResponse, RemoveMemberRequest, RemoveMemberResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, UpdateMemberRoleRequest, UpdateOrganizationRequest, UpdateOrganizationSettingsRequest, UpdatePermissionDefaultsRequest } from "./organizations_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 import { DomainAdminInfo, MemberInfo, OrganizationInfo } from "../../common/v1/common_pb.js";
 
@@ -138,6 +138,26 @@ export const OrganizationsService = {
       name: "UpdatePermissionDefaults",
       I: UpdatePermissionDefaultsRequest,
       O: ContentTypeDefaults,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Organization settings (Org Admin) — org-scoped JSONB preferences.
+     *
+     * @generated from rpc organizations.v1.OrganizationsService.GetOrganizationSettings
+     */
+    getOrganizationSettings: {
+      name: "GetOrganizationSettings",
+      I: GetOrganizationSettingsRequest,
+      O: OrganizationSettings,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc organizations.v1.OrganizationsService.UpdateOrganizationSettings
+     */
+    updateOrganizationSettings: {
+      name: "UpdateOrganizationSettings",
+      I: UpdateOrganizationSettingsRequest,
+      O: OrganizationSettings,
       kind: MethodKind.Unary,
     },
     /**

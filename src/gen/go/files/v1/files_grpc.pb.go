@@ -19,34 +19,47 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FilesService_InitiateUpload_FullMethodName     = "/files.v1.FilesService/InitiateUpload"
-	FilesService_UploadChunk_FullMethodName        = "/files.v1.FilesService/UploadChunk"
-	FilesService_CompleteUpload_FullMethodName     = "/files.v1.FilesService/CompleteUpload"
-	FilesService_UploadChunks_FullMethodName       = "/files.v1.FilesService/UploadChunks"
-	FilesService_GetUploadStatus_FullMethodName    = "/files.v1.FilesService/GetUploadStatus"
-	FilesService_AbortUpload_FullMethodName        = "/files.v1.FilesService/AbortUpload"
-	FilesService_DownloadFile_FullMethodName       = "/files.v1.FilesService/DownloadFile"
-	FilesService_StreamFileRange_FullMethodName    = "/files.v1.FilesService/StreamFileRange"
-	FilesService_GetFile_FullMethodName            = "/files.v1.FilesService/GetFile"
-	FilesService_UpdateFile_FullMethodName         = "/files.v1.FilesService/UpdateFile"
-	FilesService_DeleteFile_FullMethodName         = "/files.v1.FilesService/DeleteFile"
-	FilesService_RestoreFile_FullMethodName        = "/files.v1.FilesService/RestoreFile"
-	FilesService_ListFiles_FullMethodName          = "/files.v1.FilesService/ListFiles"
-	FilesService_CreateFolder_FullMethodName       = "/files.v1.FilesService/CreateFolder"
-	FilesService_UpdateFolder_FullMethodName       = "/files.v1.FilesService/UpdateFolder"
-	FilesService_DeleteFolder_FullMethodName       = "/files.v1.FilesService/DeleteFolder"
-	FilesService_GetFilesTree_FullMethodName       = "/files.v1.FilesService/GetFilesTree"
-	FilesService_MoveItems_FullMethodName          = "/files.v1.FilesService/MoveItems"
-	FilesService_CopyItems_FullMethodName          = "/files.v1.FilesService/CopyItems"
-	FilesService_BulkDelete_FullMethodName         = "/files.v1.FilesService/BulkDelete"
-	FilesService_EmptyTrash_FullMethodName         = "/files.v1.FilesService/EmptyTrash"
-	FilesService_ListFileVersions_FullMethodName   = "/files.v1.FilesService/ListFileVersions"
-	FilesService_RestoreFileVersion_FullMethodName = "/files.v1.FilesService/RestoreFileVersion"
-	FilesService_CreateSavedFilter_FullMethodName  = "/files.v1.FilesService/CreateSavedFilter"
-	FilesService_GetSavedFilter_FullMethodName     = "/files.v1.FilesService/GetSavedFilter"
-	FilesService_UpdateSavedFilter_FullMethodName  = "/files.v1.FilesService/UpdateSavedFilter"
-	FilesService_DeleteSavedFilter_FullMethodName  = "/files.v1.FilesService/DeleteSavedFilter"
-	FilesService_ListSavedFilters_FullMethodName   = "/files.v1.FilesService/ListSavedFilters"
+	FilesService_InitiateUpload_FullMethodName                 = "/files.v1.FilesService/InitiateUpload"
+	FilesService_UploadChunk_FullMethodName                    = "/files.v1.FilesService/UploadChunk"
+	FilesService_CompleteUpload_FullMethodName                 = "/files.v1.FilesService/CompleteUpload"
+	FilesService_UploadChunks_FullMethodName                   = "/files.v1.FilesService/UploadChunks"
+	FilesService_GetUploadStatus_FullMethodName                = "/files.v1.FilesService/GetUploadStatus"
+	FilesService_AbortUpload_FullMethodName                    = "/files.v1.FilesService/AbortUpload"
+	FilesService_DownloadFile_FullMethodName                   = "/files.v1.FilesService/DownloadFile"
+	FilesService_StreamFileRange_FullMethodName                = "/files.v1.FilesService/StreamFileRange"
+	FilesService_GetFile_FullMethodName                        = "/files.v1.FilesService/GetFile"
+	FilesService_UpdateFile_FullMethodName                     = "/files.v1.FilesService/UpdateFile"
+	FilesService_DeleteFile_FullMethodName                     = "/files.v1.FilesService/DeleteFile"
+	FilesService_RestoreFile_FullMethodName                    = "/files.v1.FilesService/RestoreFile"
+	FilesService_ListFiles_FullMethodName                      = "/files.v1.FilesService/ListFiles"
+	FilesService_CreateFolder_FullMethodName                   = "/files.v1.FilesService/CreateFolder"
+	FilesService_UpdateFolder_FullMethodName                   = "/files.v1.FilesService/UpdateFolder"
+	FilesService_DeleteFolder_FullMethodName                   = "/files.v1.FilesService/DeleteFolder"
+	FilesService_GetFilesTree_FullMethodName                   = "/files.v1.FilesService/GetFilesTree"
+	FilesService_CreateFolderTree_FullMethodName               = "/files.v1.FilesService/CreateFolderTree"
+	FilesService_MoveItems_FullMethodName                      = "/files.v1.FilesService/MoveItems"
+	FilesService_CopyItems_FullMethodName                      = "/files.v1.FilesService/CopyItems"
+	FilesService_BulkDelete_FullMethodName                     = "/files.v1.FilesService/BulkDelete"
+	FilesService_EmptyTrash_FullMethodName                     = "/files.v1.FilesService/EmptyTrash"
+	FilesService_ListTrash_FullMethodName                      = "/files.v1.FilesService/ListTrash"
+	FilesService_RestoreFolder_FullMethodName                  = "/files.v1.FilesService/RestoreFolder"
+	FilesService_ListFileVersions_FullMethodName               = "/files.v1.FilesService/ListFileVersions"
+	FilesService_RestoreFileVersion_FullMethodName             = "/files.v1.FilesService/RestoreFileVersion"
+	FilesService_GetOrgStorageQuota_FullMethodName             = "/files.v1.FilesService/GetOrgStorageQuota"
+	FilesService_SetOrgStorageQuota_FullMethodName             = "/files.v1.FilesService/SetOrgStorageQuota"
+	FilesService_GetUserStorageQuota_FullMethodName            = "/files.v1.FilesService/GetUserStorageQuota"
+	FilesService_SetUserStorageQuotaOverride_FullMethodName    = "/files.v1.FilesService/SetUserStorageQuotaOverride"
+	FilesService_RemoveUserStorageQuotaOverride_FullMethodName = "/files.v1.FilesService/RemoveUserStorageQuotaOverride"
+	FilesService_ListUserStorageQuotaOverrides_FullMethodName  = "/files.v1.FilesService/ListUserStorageQuotaOverrides"
+	FilesService_GetStorageUsage_FullMethodName                = "/files.v1.FilesService/GetStorageUsage"
+	FilesService_ListOrgStorageUsage_FullMethodName            = "/files.v1.FilesService/ListOrgStorageUsage"
+	FilesService_RecalculateStorageUsage_FullMethodName        = "/files.v1.FilesService/RecalculateStorageUsage"
+	FilesService_CheckStorageQuota_FullMethodName              = "/files.v1.FilesService/CheckStorageQuota"
+	FilesService_CreateSavedFilter_FullMethodName              = "/files.v1.FilesService/CreateSavedFilter"
+	FilesService_GetSavedFilter_FullMethodName                 = "/files.v1.FilesService/GetSavedFilter"
+	FilesService_UpdateSavedFilter_FullMethodName              = "/files.v1.FilesService/UpdateSavedFilter"
+	FilesService_DeleteSavedFilter_FullMethodName              = "/files.v1.FilesService/DeleteSavedFilter"
+	FilesService_ListSavedFilters_FullMethodName               = "/files.v1.FilesService/ListSavedFilters"
 )
 
 // FilesServiceClient is the client API for FilesService service.
@@ -92,6 +105,8 @@ type FilesServiceClient interface {
 	DeleteFolder(ctx context.Context, in *DeleteFolderRequest, opts ...grpc.CallOption) (*DeleteFolderResponse, error)
 	// Get the full file/folder tree.
 	GetFilesTree(ctx context.Context, in *GetFilesTreeRequest, opts ...grpc.CallOption) (*GetFilesTreeResponse, error)
+	// Create a folder tree in a single transaction (for recursive folder upload).
+	CreateFolderTree(ctx context.Context, in *CreateFolderTreeRequest, opts ...grpc.CallOption) (*CreateFolderTreeResponse, error)
 	// Move files/folders to a different parent.
 	MoveItems(ctx context.Context, in *MoveItemsRequest, opts ...grpc.CallOption) (*MoveItemsResponse, error)
 	// Copy files (not folders) to a different location.
@@ -100,10 +115,34 @@ type FilesServiceClient interface {
 	BulkDelete(ctx context.Context, in *BulkDeleteRequest, opts ...grpc.CallOption) (*BulkDeleteResponse, error)
 	// Empty trash (permanently delete all soft-deleted files).
 	EmptyTrash(ctx context.Context, in *EmptyTrashRequest, opts ...grpc.CallOption) (*EmptyTrashResponse, error)
+	// List deleted files and folders (trash).
+	ListTrash(ctx context.Context, in *ListTrashRequest, opts ...grpc.CallOption) (*ListTrashResponse, error)
+	// Restore a soft-deleted folder (and its contents) back to its parent.
+	RestoreFolder(ctx context.Context, in *RestoreFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error)
 	// List version history for a file.
 	ListFileVersions(ctx context.Context, in *ListFileVersionsRequest, opts ...grpc.CallOption) (*ListFileVersionsResponse, error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(ctx context.Context, in *RestoreFileVersionRequest, opts ...grpc.CallOption) (*FileResponse, error)
+	// Get the organization storage quota configuration.
+	GetOrgStorageQuota(ctx context.Context, in *GetOrgStorageQuotaRequest, opts ...grpc.CallOption) (*GetOrgStorageQuotaResponse, error)
+	// Set or update the organization storage quota configuration.
+	SetOrgStorageQuota(ctx context.Context, in *SetOrgStorageQuotaRequest, opts ...grpc.CallOption) (*SetOrgStorageQuotaResponse, error)
+	// Get a user's effective storage quota and current usage.
+	GetUserStorageQuota(ctx context.Context, in *GetUserStorageQuotaRequest, opts ...grpc.CallOption) (*GetUserStorageQuotaResponse, error)
+	// Set or update a per-user quota override.
+	SetUserStorageQuotaOverride(ctx context.Context, in *SetUserStorageQuotaOverrideRequest, opts ...grpc.CallOption) (*SetUserStorageQuotaOverrideResponse, error)
+	// Remove a per-user quota override (reverts to org default).
+	RemoveUserStorageQuotaOverride(ctx context.Context, in *RemoveUserStorageQuotaOverrideRequest, opts ...grpc.CallOption) (*RemoveUserStorageQuotaOverrideResponse, error)
+	// List all per-user quota overrides in an organization.
+	ListUserStorageQuotaOverrides(ctx context.Context, in *ListUserStorageQuotaOverridesRequest, opts ...grpc.CallOption) (*ListUserStorageQuotaOverridesResponse, error)
+	// Get storage usage for a specific user (own usage for regular users).
+	GetStorageUsage(ctx context.Context, in *GetStorageUsageRequest, opts ...grpc.CallOption) (*GetStorageUsageResponse, error)
+	// List storage usage for all users in an organization (admin only).
+	ListOrgStorageUsage(ctx context.Context, in *ListOrgStorageUsageRequest, opts ...grpc.CallOption) (*ListOrgStorageUsageResponse, error)
+	// Recalculate storage usage from actual files (admin, drift correction).
+	RecalculateStorageUsage(ctx context.Context, in *RecalculateStorageUsageRequest, opts ...grpc.CallOption) (*RecalculateStorageUsageResponse, error)
+	// Pre-check whether an upload of a given size is allowed under quota.
+	CheckStorageQuota(ctx context.Context, in *CheckStorageQuotaRequest, opts ...grpc.CallOption) (*CheckStorageQuotaResponse, error)
 	// Create a new saved filter.
 	CreateSavedFilter(ctx context.Context, in *CreateSavedFilterRequest, opts ...grpc.CallOption) (*SavedFilterResponse, error)
 	// Get a saved filter by ID.
@@ -315,6 +354,16 @@ func (c *filesServiceClient) GetFilesTree(ctx context.Context, in *GetFilesTreeR
 	return out, nil
 }
 
+func (c *filesServiceClient) CreateFolderTree(ctx context.Context, in *CreateFolderTreeRequest, opts ...grpc.CallOption) (*CreateFolderTreeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateFolderTreeResponse)
+	err := c.cc.Invoke(ctx, FilesService_CreateFolderTree_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *filesServiceClient) MoveItems(ctx context.Context, in *MoveItemsRequest, opts ...grpc.CallOption) (*MoveItemsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MoveItemsResponse)
@@ -355,6 +404,26 @@ func (c *filesServiceClient) EmptyTrash(ctx context.Context, in *EmptyTrashReque
 	return out, nil
 }
 
+func (c *filesServiceClient) ListTrash(ctx context.Context, in *ListTrashRequest, opts ...grpc.CallOption) (*ListTrashResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTrashResponse)
+	err := c.cc.Invoke(ctx, FilesService_ListTrash_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) RestoreFolder(ctx context.Context, in *RestoreFolderRequest, opts ...grpc.CallOption) (*FolderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FolderResponse)
+	err := c.cc.Invoke(ctx, FilesService_RestoreFolder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *filesServiceClient) ListFileVersions(ctx context.Context, in *ListFileVersionsRequest, opts ...grpc.CallOption) (*ListFileVersionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListFileVersionsResponse)
@@ -369,6 +438,106 @@ func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, in *Restore
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FileResponse)
 	err := c.cc.Invoke(ctx, FilesService_RestoreFileVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) GetOrgStorageQuota(ctx context.Context, in *GetOrgStorageQuotaRequest, opts ...grpc.CallOption) (*GetOrgStorageQuotaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOrgStorageQuotaResponse)
+	err := c.cc.Invoke(ctx, FilesService_GetOrgStorageQuota_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) SetOrgStorageQuota(ctx context.Context, in *SetOrgStorageQuotaRequest, opts ...grpc.CallOption) (*SetOrgStorageQuotaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetOrgStorageQuotaResponse)
+	err := c.cc.Invoke(ctx, FilesService_SetOrgStorageQuota_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) GetUserStorageQuota(ctx context.Context, in *GetUserStorageQuotaRequest, opts ...grpc.CallOption) (*GetUserStorageQuotaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserStorageQuotaResponse)
+	err := c.cc.Invoke(ctx, FilesService_GetUserStorageQuota_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) SetUserStorageQuotaOverride(ctx context.Context, in *SetUserStorageQuotaOverrideRequest, opts ...grpc.CallOption) (*SetUserStorageQuotaOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetUserStorageQuotaOverrideResponse)
+	err := c.cc.Invoke(ctx, FilesService_SetUserStorageQuotaOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) RemoveUserStorageQuotaOverride(ctx context.Context, in *RemoveUserStorageQuotaOverrideRequest, opts ...grpc.CallOption) (*RemoveUserStorageQuotaOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveUserStorageQuotaOverrideResponse)
+	err := c.cc.Invoke(ctx, FilesService_RemoveUserStorageQuotaOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) ListUserStorageQuotaOverrides(ctx context.Context, in *ListUserStorageQuotaOverridesRequest, opts ...grpc.CallOption) (*ListUserStorageQuotaOverridesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUserStorageQuotaOverridesResponse)
+	err := c.cc.Invoke(ctx, FilesService_ListUserStorageQuotaOverrides_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) GetStorageUsage(ctx context.Context, in *GetStorageUsageRequest, opts ...grpc.CallOption) (*GetStorageUsageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetStorageUsageResponse)
+	err := c.cc.Invoke(ctx, FilesService_GetStorageUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) ListOrgStorageUsage(ctx context.Context, in *ListOrgStorageUsageRequest, opts ...grpc.CallOption) (*ListOrgStorageUsageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOrgStorageUsageResponse)
+	err := c.cc.Invoke(ctx, FilesService_ListOrgStorageUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) RecalculateStorageUsage(ctx context.Context, in *RecalculateStorageUsageRequest, opts ...grpc.CallOption) (*RecalculateStorageUsageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecalculateStorageUsageResponse)
+	err := c.cc.Invoke(ctx, FilesService_RecalculateStorageUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) CheckStorageQuota(ctx context.Context, in *CheckStorageQuotaRequest, opts ...grpc.CallOption) (*CheckStorageQuotaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckStorageQuotaResponse)
+	err := c.cc.Invoke(ctx, FilesService_CheckStorageQuota_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -468,6 +637,8 @@ type FilesServiceServer interface {
 	DeleteFolder(context.Context, *DeleteFolderRequest) (*DeleteFolderResponse, error)
 	// Get the full file/folder tree.
 	GetFilesTree(context.Context, *GetFilesTreeRequest) (*GetFilesTreeResponse, error)
+	// Create a folder tree in a single transaction (for recursive folder upload).
+	CreateFolderTree(context.Context, *CreateFolderTreeRequest) (*CreateFolderTreeResponse, error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *MoveItemsRequest) (*MoveItemsResponse, error)
 	// Copy files (not folders) to a different location.
@@ -476,10 +647,34 @@ type FilesServiceServer interface {
 	BulkDelete(context.Context, *BulkDeleteRequest) (*BulkDeleteResponse, error)
 	// Empty trash (permanently delete all soft-deleted files).
 	EmptyTrash(context.Context, *EmptyTrashRequest) (*EmptyTrashResponse, error)
+	// List deleted files and folders (trash).
+	ListTrash(context.Context, *ListTrashRequest) (*ListTrashResponse, error)
+	// Restore a soft-deleted folder (and its contents) back to its parent.
+	RestoreFolder(context.Context, *RestoreFolderRequest) (*FolderResponse, error)
 	// List version history for a file.
 	ListFileVersions(context.Context, *ListFileVersionsRequest) (*ListFileVersionsResponse, error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*FileResponse, error)
+	// Get the organization storage quota configuration.
+	GetOrgStorageQuota(context.Context, *GetOrgStorageQuotaRequest) (*GetOrgStorageQuotaResponse, error)
+	// Set or update the organization storage quota configuration.
+	SetOrgStorageQuota(context.Context, *SetOrgStorageQuotaRequest) (*SetOrgStorageQuotaResponse, error)
+	// Get a user's effective storage quota and current usage.
+	GetUserStorageQuota(context.Context, *GetUserStorageQuotaRequest) (*GetUserStorageQuotaResponse, error)
+	// Set or update a per-user quota override.
+	SetUserStorageQuotaOverride(context.Context, *SetUserStorageQuotaOverrideRequest) (*SetUserStorageQuotaOverrideResponse, error)
+	// Remove a per-user quota override (reverts to org default).
+	RemoveUserStorageQuotaOverride(context.Context, *RemoveUserStorageQuotaOverrideRequest) (*RemoveUserStorageQuotaOverrideResponse, error)
+	// List all per-user quota overrides in an organization.
+	ListUserStorageQuotaOverrides(context.Context, *ListUserStorageQuotaOverridesRequest) (*ListUserStorageQuotaOverridesResponse, error)
+	// Get storage usage for a specific user (own usage for regular users).
+	GetStorageUsage(context.Context, *GetStorageUsageRequest) (*GetStorageUsageResponse, error)
+	// List storage usage for all users in an organization (admin only).
+	ListOrgStorageUsage(context.Context, *ListOrgStorageUsageRequest) (*ListOrgStorageUsageResponse, error)
+	// Recalculate storage usage from actual files (admin, drift correction).
+	RecalculateStorageUsage(context.Context, *RecalculateStorageUsageRequest) (*RecalculateStorageUsageResponse, error)
+	// Pre-check whether an upload of a given size is allowed under quota.
+	CheckStorageQuota(context.Context, *CheckStorageQuotaRequest) (*CheckStorageQuotaResponse, error)
 	// Create a new saved filter.
 	CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*SavedFilterResponse, error)
 	// Get a saved filter by ID.
@@ -551,6 +746,9 @@ func (UnimplementedFilesServiceServer) DeleteFolder(context.Context, *DeleteFold
 func (UnimplementedFilesServiceServer) GetFilesTree(context.Context, *GetFilesTreeRequest) (*GetFilesTreeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetFilesTree not implemented")
 }
+func (UnimplementedFilesServiceServer) CreateFolderTree(context.Context, *CreateFolderTreeRequest) (*CreateFolderTreeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateFolderTree not implemented")
+}
 func (UnimplementedFilesServiceServer) MoveItems(context.Context, *MoveItemsRequest) (*MoveItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MoveItems not implemented")
 }
@@ -563,11 +761,47 @@ func (UnimplementedFilesServiceServer) BulkDelete(context.Context, *BulkDeleteRe
 func (UnimplementedFilesServiceServer) EmptyTrash(context.Context, *EmptyTrashRequest) (*EmptyTrashResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method EmptyTrash not implemented")
 }
+func (UnimplementedFilesServiceServer) ListTrash(context.Context, *ListTrashRequest) (*ListTrashResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTrash not implemented")
+}
+func (UnimplementedFilesServiceServer) RestoreFolder(context.Context, *RestoreFolderRequest) (*FolderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestoreFolder not implemented")
+}
 func (UnimplementedFilesServiceServer) ListFileVersions(context.Context, *ListFileVersionsRequest) (*ListFileVersionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListFileVersions not implemented")
 }
 func (UnimplementedFilesServiceServer) RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*FileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestoreFileVersion not implemented")
+}
+func (UnimplementedFilesServiceServer) GetOrgStorageQuota(context.Context, *GetOrgStorageQuotaRequest) (*GetOrgStorageQuotaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrgStorageQuota not implemented")
+}
+func (UnimplementedFilesServiceServer) SetOrgStorageQuota(context.Context, *SetOrgStorageQuotaRequest) (*SetOrgStorageQuotaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetOrgStorageQuota not implemented")
+}
+func (UnimplementedFilesServiceServer) GetUserStorageQuota(context.Context, *GetUserStorageQuotaRequest) (*GetUserStorageQuotaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserStorageQuota not implemented")
+}
+func (UnimplementedFilesServiceServer) SetUserStorageQuotaOverride(context.Context, *SetUserStorageQuotaOverrideRequest) (*SetUserStorageQuotaOverrideResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetUserStorageQuotaOverride not implemented")
+}
+func (UnimplementedFilesServiceServer) RemoveUserStorageQuotaOverride(context.Context, *RemoveUserStorageQuotaOverrideRequest) (*RemoveUserStorageQuotaOverrideResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveUserStorageQuotaOverride not implemented")
+}
+func (UnimplementedFilesServiceServer) ListUserStorageQuotaOverrides(context.Context, *ListUserStorageQuotaOverridesRequest) (*ListUserStorageQuotaOverridesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListUserStorageQuotaOverrides not implemented")
+}
+func (UnimplementedFilesServiceServer) GetStorageUsage(context.Context, *GetStorageUsageRequest) (*GetStorageUsageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetStorageUsage not implemented")
+}
+func (UnimplementedFilesServiceServer) ListOrgStorageUsage(context.Context, *ListOrgStorageUsageRequest) (*ListOrgStorageUsageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOrgStorageUsage not implemented")
+}
+func (UnimplementedFilesServiceServer) RecalculateStorageUsage(context.Context, *RecalculateStorageUsageRequest) (*RecalculateStorageUsageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecalculateStorageUsage not implemented")
+}
+func (UnimplementedFilesServiceServer) CheckStorageQuota(context.Context, *CheckStorageQuotaRequest) (*CheckStorageQuotaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckStorageQuota not implemented")
 }
 func (UnimplementedFilesServiceServer) CreateSavedFilter(context.Context, *CreateSavedFilterRequest) (*SavedFilterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSavedFilter not implemented")
@@ -886,6 +1120,24 @@ func _FilesService_GetFilesTree_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FilesService_CreateFolderTree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateFolderTreeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).CreateFolderTree(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_CreateFolderTree_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).CreateFolderTree(ctx, req.(*CreateFolderTreeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FilesService_MoveItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MoveItemsRequest)
 	if err := dec(in); err != nil {
@@ -958,6 +1210,42 @@ func _FilesService_EmptyTrash_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FilesService_ListTrash_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTrashRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).ListTrash(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_ListTrash_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).ListTrash(ctx, req.(*ListTrashRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_RestoreFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestoreFolderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).RestoreFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_RestoreFolder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).RestoreFolder(ctx, req.(*RestoreFolderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FilesService_ListFileVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListFileVersionsRequest)
 	if err := dec(in); err != nil {
@@ -990,6 +1278,186 @@ func _FilesService_RestoreFileVersion_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FilesServiceServer).RestoreFileVersion(ctx, req.(*RestoreFileVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_GetOrgStorageQuota_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrgStorageQuotaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).GetOrgStorageQuota(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_GetOrgStorageQuota_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).GetOrgStorageQuota(ctx, req.(*GetOrgStorageQuotaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_SetOrgStorageQuota_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetOrgStorageQuotaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).SetOrgStorageQuota(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_SetOrgStorageQuota_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).SetOrgStorageQuota(ctx, req.(*SetOrgStorageQuotaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_GetUserStorageQuota_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserStorageQuotaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).GetUserStorageQuota(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_GetUserStorageQuota_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).GetUserStorageQuota(ctx, req.(*GetUserStorageQuotaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_SetUserStorageQuotaOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserStorageQuotaOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).SetUserStorageQuotaOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_SetUserStorageQuotaOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).SetUserStorageQuotaOverride(ctx, req.(*SetUserStorageQuotaOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_RemoveUserStorageQuotaOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveUserStorageQuotaOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).RemoveUserStorageQuotaOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_RemoveUserStorageQuotaOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).RemoveUserStorageQuotaOverride(ctx, req.(*RemoveUserStorageQuotaOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_ListUserStorageQuotaOverrides_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUserStorageQuotaOverridesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).ListUserStorageQuotaOverrides(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_ListUserStorageQuotaOverrides_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).ListUserStorageQuotaOverrides(ctx, req.(*ListUserStorageQuotaOverridesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_GetStorageUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStorageUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).GetStorageUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_GetStorageUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).GetStorageUsage(ctx, req.(*GetStorageUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_ListOrgStorageUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOrgStorageUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).ListOrgStorageUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_ListOrgStorageUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).ListOrgStorageUsage(ctx, req.(*ListOrgStorageUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_RecalculateStorageUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecalculateStorageUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).RecalculateStorageUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_RecalculateStorageUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).RecalculateStorageUsage(ctx, req.(*RecalculateStorageUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_CheckStorageQuota_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckStorageQuotaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).CheckStorageQuota(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_CheckStorageQuota_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).CheckStorageQuota(ctx, req.(*CheckStorageQuotaRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1148,6 +1616,10 @@ var FilesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FilesService_GetFilesTree_Handler,
 		},
 		{
+			MethodName: "CreateFolderTree",
+			Handler:    _FilesService_CreateFolderTree_Handler,
+		},
+		{
 			MethodName: "MoveItems",
 			Handler:    _FilesService_MoveItems_Handler,
 		},
@@ -1164,12 +1636,60 @@ var FilesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FilesService_EmptyTrash_Handler,
 		},
 		{
+			MethodName: "ListTrash",
+			Handler:    _FilesService_ListTrash_Handler,
+		},
+		{
+			MethodName: "RestoreFolder",
+			Handler:    _FilesService_RestoreFolder_Handler,
+		},
+		{
 			MethodName: "ListFileVersions",
 			Handler:    _FilesService_ListFileVersions_Handler,
 		},
 		{
 			MethodName: "RestoreFileVersion",
 			Handler:    _FilesService_RestoreFileVersion_Handler,
+		},
+		{
+			MethodName: "GetOrgStorageQuota",
+			Handler:    _FilesService_GetOrgStorageQuota_Handler,
+		},
+		{
+			MethodName: "SetOrgStorageQuota",
+			Handler:    _FilesService_SetOrgStorageQuota_Handler,
+		},
+		{
+			MethodName: "GetUserStorageQuota",
+			Handler:    _FilesService_GetUserStorageQuota_Handler,
+		},
+		{
+			MethodName: "SetUserStorageQuotaOverride",
+			Handler:    _FilesService_SetUserStorageQuotaOverride_Handler,
+		},
+		{
+			MethodName: "RemoveUserStorageQuotaOverride",
+			Handler:    _FilesService_RemoveUserStorageQuotaOverride_Handler,
+		},
+		{
+			MethodName: "ListUserStorageQuotaOverrides",
+			Handler:    _FilesService_ListUserStorageQuotaOverrides_Handler,
+		},
+		{
+			MethodName: "GetStorageUsage",
+			Handler:    _FilesService_GetStorageUsage_Handler,
+		},
+		{
+			MethodName: "ListOrgStorageUsage",
+			Handler:    _FilesService_ListOrgStorageUsage_Handler,
+		},
+		{
+			MethodName: "RecalculateStorageUsage",
+			Handler:    _FilesService_RecalculateStorageUsage_Handler,
+		},
+		{
+			MethodName: "CheckStorageQuota",
+			Handler:    _FilesService_CheckStorageQuota_Handler,
 		},
 		{
 			MethodName: "CreateSavedFilter",

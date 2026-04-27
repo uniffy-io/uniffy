@@ -62,6 +62,9 @@ const (
 	ChatServiceRemoveMembersProcedure = "/chat.v1.ChatService/RemoveMembers"
 	// ChatServiceGetMembersProcedure is the fully-qualified name of the ChatService's GetMembers RPC.
 	ChatServiceGetMembersProcedure = "/chat.v1.ChatService/GetMembers"
+	// ChatServiceUpdateChannelMemberProcedure is the fully-qualified name of the ChatService's
+	// UpdateChannelMember RPC.
+	ChatServiceUpdateChannelMemberProcedure = "/chat.v1.ChatService/UpdateChannelMember"
 	// ChatServiceSendMessageProcedure is the fully-qualified name of the ChatService's SendMessage RPC.
 	ChatServiceSendMessageProcedure = "/chat.v1.ChatService/SendMessage"
 	// ChatServiceGetMessagesProcedure is the fully-qualified name of the ChatService's GetMessages RPC.
@@ -133,6 +136,24 @@ const (
 	// ChatServiceMoveChannelToCategoryProcedure is the fully-qualified name of the ChatService's
 	// MoveChannelToCategory RPC.
 	ChatServiceMoveChannelToCategoryProcedure = "/chat.v1.ChatService/MoveChannelToCategory"
+	// ChatServiceRespondToAgentConfirmationProcedure is the fully-qualified name of the ChatService's
+	// RespondToAgentConfirmation RPC.
+	ChatServiceRespondToAgentConfirmationProcedure = "/chat.v1.ChatService/RespondToAgentConfirmation"
+	// ChatServiceGetChannelPendingApprovalsProcedure is the fully-qualified name of the ChatService's
+	// GetChannelPendingApprovals RPC.
+	ChatServiceGetChannelPendingApprovalsProcedure = "/chat.v1.ChatService/GetChannelPendingApprovals"
+	// ChatServiceGetChannelAgentContextStatsProcedure is the fully-qualified name of the ChatService's
+	// GetChannelAgentContextStats RPC.
+	ChatServiceGetChannelAgentContextStatsProcedure = "/chat.v1.ChatService/GetChannelAgentContextStats"
+	// ChatServiceGetChannelAgentContextStatsBatchProcedure is the fully-qualified name of the
+	// ChatService's GetChannelAgentContextStatsBatch RPC.
+	ChatServiceGetChannelAgentContextStatsBatchProcedure = "/chat.v1.ChatService/GetChannelAgentContextStatsBatch"
+	// ChatServiceCompactChannelAgentContextProcedure is the fully-qualified name of the ChatService's
+	// CompactChannelAgentContext RPC.
+	ChatServiceCompactChannelAgentContextProcedure = "/chat.v1.ChatService/CompactChannelAgentContext"
+	// ChatServiceResetChannelAgentContextProcedure is the fully-qualified name of the ChatService's
+	// ResetChannelAgentContext RPC.
+	ChatServiceResetChannelAgentContextProcedure = "/chat.v1.ChatService/ResetChannelAgentContext"
 )
 
 // ChatServiceClient is a client for the chat.v1.ChatService service.
@@ -150,6 +171,7 @@ type ChatServiceClient interface {
 	AddMembers(context.Context, *connect.Request[v1.AddMembersRequest]) (*connect.Response[v1.AddMembersResponse], error)
 	RemoveMembers(context.Context, *connect.Request[v1.RemoveMembersRequest]) (*connect.Response[v1.RemoveMembersResponse], error)
 	GetMembers(context.Context, *connect.Request[v1.GetMembersRequest]) (*connect.Response[v1.GetMembersResponse], error)
+	UpdateChannelMember(context.Context, *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error)
 	// Messages
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	GetMessages(context.Context, *connect.Request[v1.GetMessagesRequest]) (*connect.Response[v1.GetMessagesResponse], error)
@@ -182,6 +204,35 @@ type ChatServiceClient interface {
 	ListCategories(context.Context, *connect.Request[v1.ListCategoriesRequest]) (*connect.Response[v1.ListCategoriesResponse], error)
 	ReorderCategories(context.Context, *connect.Request[v1.ReorderCategoriesRequest]) (*connect.Response[v1.ReorderCategoriesResponse], error)
 	MoveChannelToCategory(context.Context, *connect.Request[v1.MoveChannelToCategoryRequest]) (*connect.Response[v1.MoveChannelToCategoryResponse], error)
+	// Respond to a destructive-tool confirmation request raised by an agent
+	// running inside a chat channel. The chat layer is the front door; it
+	// forwards the decision to the agents runtime via the bridge.
+	RespondToAgentConfirmation(context.Context, *connect.Request[v1.RespondToAgentConfirmationRequest]) (*connect.Response[v1.RespondToAgentConfirmationResponse], error)
+	// List pending agent destructive-tool approvals still open for a channel.
+	// Used on channel mount so synthetic confirmation cards survive page reloads
+	// (the approval state itself lives in Valkey up to its TTL).
+	GetChannelPendingApprovals(context.Context, *connect.Request[v1.GetChannelPendingApprovalsRequest]) (*connect.Response[v1.GetChannelPendingApprovalsResponse], error)
+	// Per-(channel, agent) context window stats. Drives the chat header meter
+	// and group-channel per-agent popover. Mirrors `agents.v1.SessionsService.
+	// GetSessionContextStats` but is keyed on the channel/agent binding.
+	GetChannelAgentContextStats(context.Context, *connect.Request[v1.GetChannelAgentContextStatsRequest]) (*connect.Response[v1.GetChannelAgentContextStatsResponse], error)
+	// Batched variant of `GetChannelAgentContextStats`. Returns per-(channel,
+	// agent) stats for N agents in one round-trip. Drives the group-channel
+	// ChannelAgentsPopover (one row per agent member) so the popover does not
+	// fan out N parallel single-agent fetches. Agents the caller can't see or
+	// that are not bound to the channel are simply absent from the response
+	// map (not an error).
+	GetChannelAgentContextStatsBatch(context.Context, *connect.Request[v1.GetChannelAgentContextStatsBatchRequest]) (*connect.Response[v1.GetChannelAgentContextStatsBatchResponse], error)
+	// Force compaction for one (channel, agent) pair. Writes a chat message
+	// with metadata.kind="summary" and bumps the binding's compaction pointer
+	// so subsequent prompts roll the older history into the summary row.
+	CompactChannelAgentContext(context.Context, *connect.Request[v1.CompactChannelAgentContextRequest]) (*connect.Response[v1.CompactChannelAgentContextResponse], error)
+	// Reset one agent's view of the channel. Writes a metadata.kind=
+	// "context_reset" divider message AND sets binding.manual_reset_at = now()
+	// so `load_context_messages` excludes everything older for this agent.
+	// Per-agent: resetting agent A in a multi-agent channel does not affect
+	// agent B's view.
+	ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the chat.v1.ChatService service. By default, it uses
@@ -259,6 +310,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ChatServiceGetMembersProcedure,
 			connect.WithSchema(chatServiceMethods.ByName("GetMembers")),
+			connect.WithClientOptions(opts...),
+		),
+		updateChannelMember: connect.NewClient[v1.UpdateChannelMemberRequest, v1.UpdateChannelMemberResponse](
+			httpClient,
+			baseURL+ChatServiceUpdateChannelMemberProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UpdateChannelMember")),
 			connect.WithClientOptions(opts...),
 		),
 		sendMessage: connect.NewClient[v1.SendMessageRequest, v1.SendMessageResponse](
@@ -417,48 +474,91 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("MoveChannelToCategory")),
 			connect.WithClientOptions(opts...),
 		),
+		respondToAgentConfirmation: connect.NewClient[v1.RespondToAgentConfirmationRequest, v1.RespondToAgentConfirmationResponse](
+			httpClient,
+			baseURL+ChatServiceRespondToAgentConfirmationProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("RespondToAgentConfirmation")),
+			connect.WithClientOptions(opts...),
+		),
+		getChannelPendingApprovals: connect.NewClient[v1.GetChannelPendingApprovalsRequest, v1.GetChannelPendingApprovalsResponse](
+			httpClient,
+			baseURL+ChatServiceGetChannelPendingApprovalsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetChannelPendingApprovals")),
+			connect.WithClientOptions(opts...),
+		),
+		getChannelAgentContextStats: connect.NewClient[v1.GetChannelAgentContextStatsRequest, v1.GetChannelAgentContextStatsResponse](
+			httpClient,
+			baseURL+ChatServiceGetChannelAgentContextStatsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetChannelAgentContextStats")),
+			connect.WithClientOptions(opts...),
+		),
+		getChannelAgentContextStatsBatch: connect.NewClient[v1.GetChannelAgentContextStatsBatchRequest, v1.GetChannelAgentContextStatsBatchResponse](
+			httpClient,
+			baseURL+ChatServiceGetChannelAgentContextStatsBatchProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetChannelAgentContextStatsBatch")),
+			connect.WithClientOptions(opts...),
+		),
+		compactChannelAgentContext: connect.NewClient[v1.CompactChannelAgentContextRequest, v1.CompactChannelAgentContextResponse](
+			httpClient,
+			baseURL+ChatServiceCompactChannelAgentContextProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("CompactChannelAgentContext")),
+			connect.WithClientOptions(opts...),
+		),
+		resetChannelAgentContext: connect.NewClient[v1.ResetChannelAgentContextRequest, v1.ResetChannelAgentContextResponse](
+			httpClient,
+			baseURL+ChatServiceResetChannelAgentContextProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ResetChannelAgentContext")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // chatServiceClient implements ChatServiceClient.
 type chatServiceClient struct {
-	createChannel         *connect.Client[v1.CreateChannelRequest, v1.CreateChannelResponse]
-	getChannel            *connect.Client[v1.GetChannelRequest, v1.GetChannelResponse]
-	updateChannel         *connect.Client[v1.UpdateChannelRequest, v1.UpdateChannelResponse]
-	archiveChannel        *connect.Client[v1.ArchiveChannelRequest, v1.ArchiveChannelResponse]
-	deleteChannel         *connect.Client[v1.DeleteChannelRequest, v1.DeleteChannelResponse]
-	listChannels          *connect.Client[v1.ListChannelsRequest, v1.ListChannelsResponse]
-	joinChannel           *connect.Client[v1.JoinChannelRequest, v1.JoinChannelResponse]
-	leaveChannel          *connect.Client[v1.LeaveChannelRequest, v1.LeaveChannelResponse]
-	addMembers            *connect.Client[v1.AddMembersRequest, v1.AddMembersResponse]
-	removeMembers         *connect.Client[v1.RemoveMembersRequest, v1.RemoveMembersResponse]
-	getMembers            *connect.Client[v1.GetMembersRequest, v1.GetMembersResponse]
-	sendMessage           *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
-	getMessages           *connect.Client[v1.GetMessagesRequest, v1.GetMessagesResponse]
-	getMessage            *connect.Client[v1.GetMessageRequest, v1.GetMessageResponse]
-	updateMessage         *connect.Client[v1.UpdateMessageRequest, v1.UpdateMessageResponse]
-	deleteMessage         *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
-	pinMessage            *connect.Client[v1.PinMessageRequest, v1.PinMessageResponse]
-	unpinMessage          *connect.Client[v1.UnpinMessageRequest, v1.UnpinMessageResponse]
-	getPinnedMessages     *connect.Client[v1.GetPinnedMessagesRequest, v1.GetPinnedMessagesResponse]
-	getThread             *connect.Client[v1.GetThreadRequest, v1.GetThreadResponse]
-	getThreadMessages     *connect.Client[v1.GetThreadMessagesRequest, v1.GetThreadMessagesResponse]
-	getThreadsInbox       *connect.Client[v1.GetThreadsInboxRequest, v1.GetThreadsInboxResponse]
-	followThread          *connect.Client[v1.FollowThreadRequest, v1.FollowThreadResponse]
-	unfollowThread        *connect.Client[v1.UnfollowThreadRequest, v1.UnfollowThreadResponse]
-	addReaction           *connect.Client[v1.AddReactionRequest, v1.AddReactionResponse]
-	removeReaction        *connect.Client[v1.RemoveReactionRequest, v1.RemoveReactionResponse]
-	setTyping             *connect.Client[v1.SetTypingRequest, v1.SetTypingResponse]
-	markChannelRead       *connect.Client[v1.MarkChannelReadRequest, v1.MarkChannelReadResponse]
-	markThreadRead        *connect.Client[v1.MarkThreadReadRequest, v1.MarkThreadReadResponse]
-	getUnreadCounts       *connect.Client[v1.GetUnreadCountsRequest, v1.GetUnreadCountsResponse]
-	getChannelResources   *connect.Client[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse]
-	createCategory        *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
-	updateCategory        *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
-	deleteCategory        *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
-	listCategories        *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
-	reorderCategories     *connect.Client[v1.ReorderCategoriesRequest, v1.ReorderCategoriesResponse]
-	moveChannelToCategory *connect.Client[v1.MoveChannelToCategoryRequest, v1.MoveChannelToCategoryResponse]
+	createChannel                    *connect.Client[v1.CreateChannelRequest, v1.CreateChannelResponse]
+	getChannel                       *connect.Client[v1.GetChannelRequest, v1.GetChannelResponse]
+	updateChannel                    *connect.Client[v1.UpdateChannelRequest, v1.UpdateChannelResponse]
+	archiveChannel                   *connect.Client[v1.ArchiveChannelRequest, v1.ArchiveChannelResponse]
+	deleteChannel                    *connect.Client[v1.DeleteChannelRequest, v1.DeleteChannelResponse]
+	listChannels                     *connect.Client[v1.ListChannelsRequest, v1.ListChannelsResponse]
+	joinChannel                      *connect.Client[v1.JoinChannelRequest, v1.JoinChannelResponse]
+	leaveChannel                     *connect.Client[v1.LeaveChannelRequest, v1.LeaveChannelResponse]
+	addMembers                       *connect.Client[v1.AddMembersRequest, v1.AddMembersResponse]
+	removeMembers                    *connect.Client[v1.RemoveMembersRequest, v1.RemoveMembersResponse]
+	getMembers                       *connect.Client[v1.GetMembersRequest, v1.GetMembersResponse]
+	updateChannelMember              *connect.Client[v1.UpdateChannelMemberRequest, v1.UpdateChannelMemberResponse]
+	sendMessage                      *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
+	getMessages                      *connect.Client[v1.GetMessagesRequest, v1.GetMessagesResponse]
+	getMessage                       *connect.Client[v1.GetMessageRequest, v1.GetMessageResponse]
+	updateMessage                    *connect.Client[v1.UpdateMessageRequest, v1.UpdateMessageResponse]
+	deleteMessage                    *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
+	pinMessage                       *connect.Client[v1.PinMessageRequest, v1.PinMessageResponse]
+	unpinMessage                     *connect.Client[v1.UnpinMessageRequest, v1.UnpinMessageResponse]
+	getPinnedMessages                *connect.Client[v1.GetPinnedMessagesRequest, v1.GetPinnedMessagesResponse]
+	getThread                        *connect.Client[v1.GetThreadRequest, v1.GetThreadResponse]
+	getThreadMessages                *connect.Client[v1.GetThreadMessagesRequest, v1.GetThreadMessagesResponse]
+	getThreadsInbox                  *connect.Client[v1.GetThreadsInboxRequest, v1.GetThreadsInboxResponse]
+	followThread                     *connect.Client[v1.FollowThreadRequest, v1.FollowThreadResponse]
+	unfollowThread                   *connect.Client[v1.UnfollowThreadRequest, v1.UnfollowThreadResponse]
+	addReaction                      *connect.Client[v1.AddReactionRequest, v1.AddReactionResponse]
+	removeReaction                   *connect.Client[v1.RemoveReactionRequest, v1.RemoveReactionResponse]
+	setTyping                        *connect.Client[v1.SetTypingRequest, v1.SetTypingResponse]
+	markChannelRead                  *connect.Client[v1.MarkChannelReadRequest, v1.MarkChannelReadResponse]
+	markThreadRead                   *connect.Client[v1.MarkThreadReadRequest, v1.MarkThreadReadResponse]
+	getUnreadCounts                  *connect.Client[v1.GetUnreadCountsRequest, v1.GetUnreadCountsResponse]
+	getChannelResources              *connect.Client[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse]
+	createCategory                   *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
+	updateCategory                   *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
+	deleteCategory                   *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
+	listCategories                   *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
+	reorderCategories                *connect.Client[v1.ReorderCategoriesRequest, v1.ReorderCategoriesResponse]
+	moveChannelToCategory            *connect.Client[v1.MoveChannelToCategoryRequest, v1.MoveChannelToCategoryResponse]
+	respondToAgentConfirmation       *connect.Client[v1.RespondToAgentConfirmationRequest, v1.RespondToAgentConfirmationResponse]
+	getChannelPendingApprovals       *connect.Client[v1.GetChannelPendingApprovalsRequest, v1.GetChannelPendingApprovalsResponse]
+	getChannelAgentContextStats      *connect.Client[v1.GetChannelAgentContextStatsRequest, v1.GetChannelAgentContextStatsResponse]
+	getChannelAgentContextStatsBatch *connect.Client[v1.GetChannelAgentContextStatsBatchRequest, v1.GetChannelAgentContextStatsBatchResponse]
+	compactChannelAgentContext       *connect.Client[v1.CompactChannelAgentContextRequest, v1.CompactChannelAgentContextResponse]
+	resetChannelAgentContext         *connect.Client[v1.ResetChannelAgentContextRequest, v1.ResetChannelAgentContextResponse]
 }
 
 // CreateChannel calls chat.v1.ChatService.CreateChannel.
@@ -514,6 +614,11 @@ func (c *chatServiceClient) RemoveMembers(ctx context.Context, req *connect.Requ
 // GetMembers calls chat.v1.ChatService.GetMembers.
 func (c *chatServiceClient) GetMembers(ctx context.Context, req *connect.Request[v1.GetMembersRequest]) (*connect.Response[v1.GetMembersResponse], error) {
 	return c.getMembers.CallUnary(ctx, req)
+}
+
+// UpdateChannelMember calls chat.v1.ChatService.UpdateChannelMember.
+func (c *chatServiceClient) UpdateChannelMember(ctx context.Context, req *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error) {
+	return c.updateChannelMember.CallUnary(ctx, req)
 }
 
 // SendMessage calls chat.v1.ChatService.SendMessage.
@@ -646,6 +751,36 @@ func (c *chatServiceClient) MoveChannelToCategory(ctx context.Context, req *conn
 	return c.moveChannelToCategory.CallUnary(ctx, req)
 }
 
+// RespondToAgentConfirmation calls chat.v1.ChatService.RespondToAgentConfirmation.
+func (c *chatServiceClient) RespondToAgentConfirmation(ctx context.Context, req *connect.Request[v1.RespondToAgentConfirmationRequest]) (*connect.Response[v1.RespondToAgentConfirmationResponse], error) {
+	return c.respondToAgentConfirmation.CallUnary(ctx, req)
+}
+
+// GetChannelPendingApprovals calls chat.v1.ChatService.GetChannelPendingApprovals.
+func (c *chatServiceClient) GetChannelPendingApprovals(ctx context.Context, req *connect.Request[v1.GetChannelPendingApprovalsRequest]) (*connect.Response[v1.GetChannelPendingApprovalsResponse], error) {
+	return c.getChannelPendingApprovals.CallUnary(ctx, req)
+}
+
+// GetChannelAgentContextStats calls chat.v1.ChatService.GetChannelAgentContextStats.
+func (c *chatServiceClient) GetChannelAgentContextStats(ctx context.Context, req *connect.Request[v1.GetChannelAgentContextStatsRequest]) (*connect.Response[v1.GetChannelAgentContextStatsResponse], error) {
+	return c.getChannelAgentContextStats.CallUnary(ctx, req)
+}
+
+// GetChannelAgentContextStatsBatch calls chat.v1.ChatService.GetChannelAgentContextStatsBatch.
+func (c *chatServiceClient) GetChannelAgentContextStatsBatch(ctx context.Context, req *connect.Request[v1.GetChannelAgentContextStatsBatchRequest]) (*connect.Response[v1.GetChannelAgentContextStatsBatchResponse], error) {
+	return c.getChannelAgentContextStatsBatch.CallUnary(ctx, req)
+}
+
+// CompactChannelAgentContext calls chat.v1.ChatService.CompactChannelAgentContext.
+func (c *chatServiceClient) CompactChannelAgentContext(ctx context.Context, req *connect.Request[v1.CompactChannelAgentContextRequest]) (*connect.Response[v1.CompactChannelAgentContextResponse], error) {
+	return c.compactChannelAgentContext.CallUnary(ctx, req)
+}
+
+// ResetChannelAgentContext calls chat.v1.ChatService.ResetChannelAgentContext.
+func (c *chatServiceClient) ResetChannelAgentContext(ctx context.Context, req *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error) {
+	return c.resetChannelAgentContext.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the chat.v1.ChatService service.
 type ChatServiceHandler interface {
 	// Channel CRUD
@@ -661,6 +796,7 @@ type ChatServiceHandler interface {
 	AddMembers(context.Context, *connect.Request[v1.AddMembersRequest]) (*connect.Response[v1.AddMembersResponse], error)
 	RemoveMembers(context.Context, *connect.Request[v1.RemoveMembersRequest]) (*connect.Response[v1.RemoveMembersResponse], error)
 	GetMembers(context.Context, *connect.Request[v1.GetMembersRequest]) (*connect.Response[v1.GetMembersResponse], error)
+	UpdateChannelMember(context.Context, *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error)
 	// Messages
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	GetMessages(context.Context, *connect.Request[v1.GetMessagesRequest]) (*connect.Response[v1.GetMessagesResponse], error)
@@ -693,6 +829,35 @@ type ChatServiceHandler interface {
 	ListCategories(context.Context, *connect.Request[v1.ListCategoriesRequest]) (*connect.Response[v1.ListCategoriesResponse], error)
 	ReorderCategories(context.Context, *connect.Request[v1.ReorderCategoriesRequest]) (*connect.Response[v1.ReorderCategoriesResponse], error)
 	MoveChannelToCategory(context.Context, *connect.Request[v1.MoveChannelToCategoryRequest]) (*connect.Response[v1.MoveChannelToCategoryResponse], error)
+	// Respond to a destructive-tool confirmation request raised by an agent
+	// running inside a chat channel. The chat layer is the front door; it
+	// forwards the decision to the agents runtime via the bridge.
+	RespondToAgentConfirmation(context.Context, *connect.Request[v1.RespondToAgentConfirmationRequest]) (*connect.Response[v1.RespondToAgentConfirmationResponse], error)
+	// List pending agent destructive-tool approvals still open for a channel.
+	// Used on channel mount so synthetic confirmation cards survive page reloads
+	// (the approval state itself lives in Valkey up to its TTL).
+	GetChannelPendingApprovals(context.Context, *connect.Request[v1.GetChannelPendingApprovalsRequest]) (*connect.Response[v1.GetChannelPendingApprovalsResponse], error)
+	// Per-(channel, agent) context window stats. Drives the chat header meter
+	// and group-channel per-agent popover. Mirrors `agents.v1.SessionsService.
+	// GetSessionContextStats` but is keyed on the channel/agent binding.
+	GetChannelAgentContextStats(context.Context, *connect.Request[v1.GetChannelAgentContextStatsRequest]) (*connect.Response[v1.GetChannelAgentContextStatsResponse], error)
+	// Batched variant of `GetChannelAgentContextStats`. Returns per-(channel,
+	// agent) stats for N agents in one round-trip. Drives the group-channel
+	// ChannelAgentsPopover (one row per agent member) so the popover does not
+	// fan out N parallel single-agent fetches. Agents the caller can't see or
+	// that are not bound to the channel are simply absent from the response
+	// map (not an error).
+	GetChannelAgentContextStatsBatch(context.Context, *connect.Request[v1.GetChannelAgentContextStatsBatchRequest]) (*connect.Response[v1.GetChannelAgentContextStatsBatchResponse], error)
+	// Force compaction for one (channel, agent) pair. Writes a chat message
+	// with metadata.kind="summary" and bumps the binding's compaction pointer
+	// so subsequent prompts roll the older history into the summary row.
+	CompactChannelAgentContext(context.Context, *connect.Request[v1.CompactChannelAgentContextRequest]) (*connect.Response[v1.CompactChannelAgentContextResponse], error)
+	// Reset one agent's view of the channel. Writes a metadata.kind=
+	// "context_reset" divider message AND sets binding.manual_reset_at = now()
+	// so `load_context_messages` excludes everything older for this agent.
+	// Per-agent: resetting agent A in a multi-agent channel does not affect
+	// agent B's view.
+	ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -766,6 +931,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		ChatServiceGetMembersProcedure,
 		svc.GetMembers,
 		connect.WithSchema(chatServiceMethods.ByName("GetMembers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUpdateChannelMemberHandler := connect.NewUnaryHandler(
+		ChatServiceUpdateChannelMemberProcedure,
+		svc.UpdateChannelMember,
+		connect.WithSchema(chatServiceMethods.ByName("UpdateChannelMember")),
 		connect.WithHandlerOptions(opts...),
 	)
 	chatServiceSendMessageHandler := connect.NewUnaryHandler(
@@ -924,6 +1095,42 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("MoveChannelToCategory")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceRespondToAgentConfirmationHandler := connect.NewUnaryHandler(
+		ChatServiceRespondToAgentConfirmationProcedure,
+		svc.RespondToAgentConfirmation,
+		connect.WithSchema(chatServiceMethods.ByName("RespondToAgentConfirmation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceGetChannelPendingApprovalsHandler := connect.NewUnaryHandler(
+		ChatServiceGetChannelPendingApprovalsProcedure,
+		svc.GetChannelPendingApprovals,
+		connect.WithSchema(chatServiceMethods.ByName("GetChannelPendingApprovals")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceGetChannelAgentContextStatsHandler := connect.NewUnaryHandler(
+		ChatServiceGetChannelAgentContextStatsProcedure,
+		svc.GetChannelAgentContextStats,
+		connect.WithSchema(chatServiceMethods.ByName("GetChannelAgentContextStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceGetChannelAgentContextStatsBatchHandler := connect.NewUnaryHandler(
+		ChatServiceGetChannelAgentContextStatsBatchProcedure,
+		svc.GetChannelAgentContextStatsBatch,
+		connect.WithSchema(chatServiceMethods.ByName("GetChannelAgentContextStatsBatch")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceCompactChannelAgentContextHandler := connect.NewUnaryHandler(
+		ChatServiceCompactChannelAgentContextProcedure,
+		svc.CompactChannelAgentContext,
+		connect.WithSchema(chatServiceMethods.ByName("CompactChannelAgentContext")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceResetChannelAgentContextHandler := connect.NewUnaryHandler(
+		ChatServiceResetChannelAgentContextProcedure,
+		svc.ResetChannelAgentContext,
+		connect.WithSchema(chatServiceMethods.ByName("ResetChannelAgentContext")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/chat.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceCreateChannelProcedure:
@@ -948,6 +1155,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceRemoveMembersHandler.ServeHTTP(w, r)
 		case ChatServiceGetMembersProcedure:
 			chatServiceGetMembersHandler.ServeHTTP(w, r)
+		case ChatServiceUpdateChannelMemberProcedure:
+			chatServiceUpdateChannelMemberHandler.ServeHTTP(w, r)
 		case ChatServiceSendMessageProcedure:
 			chatServiceSendMessageHandler.ServeHTTP(w, r)
 		case ChatServiceGetMessagesProcedure:
@@ -1000,6 +1209,18 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceReorderCategoriesHandler.ServeHTTP(w, r)
 		case ChatServiceMoveChannelToCategoryProcedure:
 			chatServiceMoveChannelToCategoryHandler.ServeHTTP(w, r)
+		case ChatServiceRespondToAgentConfirmationProcedure:
+			chatServiceRespondToAgentConfirmationHandler.ServeHTTP(w, r)
+		case ChatServiceGetChannelPendingApprovalsProcedure:
+			chatServiceGetChannelPendingApprovalsHandler.ServeHTTP(w, r)
+		case ChatServiceGetChannelAgentContextStatsProcedure:
+			chatServiceGetChannelAgentContextStatsHandler.ServeHTTP(w, r)
+		case ChatServiceGetChannelAgentContextStatsBatchProcedure:
+			chatServiceGetChannelAgentContextStatsBatchHandler.ServeHTTP(w, r)
+		case ChatServiceCompactChannelAgentContextProcedure:
+			chatServiceCompactChannelAgentContextHandler.ServeHTTP(w, r)
+		case ChatServiceResetChannelAgentContextProcedure:
+			chatServiceResetChannelAgentContextHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1051,6 +1272,10 @@ func (UnimplementedChatServiceHandler) RemoveMembers(context.Context, *connect.R
 
 func (UnimplementedChatServiceHandler) GetMembers(context.Context, *connect.Request[v1.GetMembersRequest]) (*connect.Response[v1.GetMembersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetMembers is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UpdateChannelMember(context.Context, *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UpdateChannelMember is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
@@ -1155,4 +1380,28 @@ func (UnimplementedChatServiceHandler) ReorderCategories(context.Context, *conne
 
 func (UnimplementedChatServiceHandler) MoveChannelToCategory(context.Context, *connect.Request[v1.MoveChannelToCategoryRequest]) (*connect.Response[v1.MoveChannelToCategoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.MoveChannelToCategory is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) RespondToAgentConfirmation(context.Context, *connect.Request[v1.RespondToAgentConfirmationRequest]) (*connect.Response[v1.RespondToAgentConfirmationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.RespondToAgentConfirmation is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetChannelPendingApprovals(context.Context, *connect.Request[v1.GetChannelPendingApprovalsRequest]) (*connect.Response[v1.GetChannelPendingApprovalsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetChannelPendingApprovals is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetChannelAgentContextStats(context.Context, *connect.Request[v1.GetChannelAgentContextStatsRequest]) (*connect.Response[v1.GetChannelAgentContextStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetChannelAgentContextStats is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetChannelAgentContextStatsBatch(context.Context, *connect.Request[v1.GetChannelAgentContextStatsBatchRequest]) (*connect.Response[v1.GetChannelAgentContextStatsBatchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetChannelAgentContextStatsBatch is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) CompactChannelAgentContext(context.Context, *connect.Request[v1.CompactChannelAgentContextRequest]) (*connect.Response[v1.CompactChannelAgentContextResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.CompactChannelAgentContext is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ResetChannelAgentContext is not implemented"))
 }

@@ -575,6 +575,9 @@ export class SendMessageRequest extends Message<SendMessageRequest> {
   organizationId = "";
 
   /**
+   * Legacy: addresses an isolated AgentSession. Used by the builder Test
+   * tab and historical playgrounds.
+   *
    * @generated from field: string session_id = 2;
    */
   sessionId = "";
@@ -598,6 +601,16 @@ export class SendMessageRequest extends Message<SendMessageRequest> {
    */
   userTimezone = "";
 
+  /**
+   * New: invokes the agent inside a chat channel. When set, the runtime
+   * reads context from chat_messages (scoped per the channel binding) and
+   * writes outputs back as chat messages via the AgentChatBridge. Mutually
+   * exclusive with session_id at the handler boundary.
+   *
+   * @generated from field: optional agents.v1.ChatChannelContext chat_context = 6;
+   */
+  chatContext?: ChatChannelContext;
+
   constructor(data?: PartialMessage<SendMessageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -611,6 +624,7 @@ export class SendMessageRequest extends Message<SendMessageRequest> {
     { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "file_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "user_timezone", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "chat_context", kind: "message", T: ChatChannelContext, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SendMessageRequest {
@@ -627,6 +641,73 @@ export class SendMessageRequest extends Message<SendMessageRequest> {
 
   static equals(a: SendMessageRequest | PlainMessage<SendMessageRequest> | undefined, b: SendMessageRequest | PlainMessage<SendMessageRequest> | undefined): boolean {
     return proto3.util.equals(SendMessageRequest, a, b);
+  }
+}
+
+/**
+ * ChatChannelContext binds an agent invocation to a chat channel and
+ * the user message that triggered it. Used by the AgentChatBridge to
+ * build the scoped context window and route streaming output.
+ *
+ * @generated from message agents.v1.ChatChannelContext
+ */
+export class ChatChannelContext extends Message<ChatChannelContext> {
+  /**
+   * @generated from field: string channel_id = 1;
+   */
+  channelId = "";
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId = "";
+
+  /**
+   * The chat message that triggered this invocation (the user's message
+   * containing the @mention, reply, or DM payload).
+   *
+   * @generated from field: string trigger_message_id = 3;
+   */
+  triggerMessageId = "";
+
+  /**
+   * Optional ephemeral prompt hint for embedded Agent Dock invocations.
+   * Format: URN of the resource the user is currently viewing. Injected
+   * into the system prompt for THIS invocation only; not persisted as a
+   * chat message and does not branch the channel.
+   *
+   * @generated from field: optional string context_urn = 4;
+   */
+  contextUrn?: string;
+
+  constructor(data?: PartialMessage<ChatChannelContext>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "agents.v1.ChatChannelContext";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "channel_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "agent_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "trigger_message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "context_urn", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChatChannelContext {
+    return new ChatChannelContext().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChatChannelContext {
+    return new ChatChannelContext().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChatChannelContext {
+    return new ChatChannelContext().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChatChannelContext | PlainMessage<ChatChannelContext> | undefined, b: ChatChannelContext | PlainMessage<ChatChannelContext> | undefined): boolean {
+    return proto3.util.equals(ChatChannelContext, a, b);
   }
 }
 

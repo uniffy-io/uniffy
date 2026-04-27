@@ -80,6 +80,9 @@ const (
 	// FilesServiceGetFilesTreeProcedure is the fully-qualified name of the FilesService's GetFilesTree
 	// RPC.
 	FilesServiceGetFilesTreeProcedure = "/files.v1.FilesService/GetFilesTree"
+	// FilesServiceCreateFolderTreeProcedure is the fully-qualified name of the FilesService's
+	// CreateFolderTree RPC.
+	FilesServiceCreateFolderTreeProcedure = "/files.v1.FilesService/CreateFolderTree"
 	// FilesServiceMoveItemsProcedure is the fully-qualified name of the FilesService's MoveItems RPC.
 	FilesServiceMoveItemsProcedure = "/files.v1.FilesService/MoveItems"
 	// FilesServiceCopyItemsProcedure is the fully-qualified name of the FilesService's CopyItems RPC.
@@ -88,12 +91,47 @@ const (
 	FilesServiceBulkDeleteProcedure = "/files.v1.FilesService/BulkDelete"
 	// FilesServiceEmptyTrashProcedure is the fully-qualified name of the FilesService's EmptyTrash RPC.
 	FilesServiceEmptyTrashProcedure = "/files.v1.FilesService/EmptyTrash"
+	// FilesServiceListTrashProcedure is the fully-qualified name of the FilesService's ListTrash RPC.
+	FilesServiceListTrashProcedure = "/files.v1.FilesService/ListTrash"
+	// FilesServiceRestoreFolderProcedure is the fully-qualified name of the FilesService's
+	// RestoreFolder RPC.
+	FilesServiceRestoreFolderProcedure = "/files.v1.FilesService/RestoreFolder"
 	// FilesServiceListFileVersionsProcedure is the fully-qualified name of the FilesService's
 	// ListFileVersions RPC.
 	FilesServiceListFileVersionsProcedure = "/files.v1.FilesService/ListFileVersions"
 	// FilesServiceRestoreFileVersionProcedure is the fully-qualified name of the FilesService's
 	// RestoreFileVersion RPC.
 	FilesServiceRestoreFileVersionProcedure = "/files.v1.FilesService/RestoreFileVersion"
+	// FilesServiceGetOrgStorageQuotaProcedure is the fully-qualified name of the FilesService's
+	// GetOrgStorageQuota RPC.
+	FilesServiceGetOrgStorageQuotaProcedure = "/files.v1.FilesService/GetOrgStorageQuota"
+	// FilesServiceSetOrgStorageQuotaProcedure is the fully-qualified name of the FilesService's
+	// SetOrgStorageQuota RPC.
+	FilesServiceSetOrgStorageQuotaProcedure = "/files.v1.FilesService/SetOrgStorageQuota"
+	// FilesServiceGetUserStorageQuotaProcedure is the fully-qualified name of the FilesService's
+	// GetUserStorageQuota RPC.
+	FilesServiceGetUserStorageQuotaProcedure = "/files.v1.FilesService/GetUserStorageQuota"
+	// FilesServiceSetUserStorageQuotaOverrideProcedure is the fully-qualified name of the
+	// FilesService's SetUserStorageQuotaOverride RPC.
+	FilesServiceSetUserStorageQuotaOverrideProcedure = "/files.v1.FilesService/SetUserStorageQuotaOverride"
+	// FilesServiceRemoveUserStorageQuotaOverrideProcedure is the fully-qualified name of the
+	// FilesService's RemoveUserStorageQuotaOverride RPC.
+	FilesServiceRemoveUserStorageQuotaOverrideProcedure = "/files.v1.FilesService/RemoveUserStorageQuotaOverride"
+	// FilesServiceListUserStorageQuotaOverridesProcedure is the fully-qualified name of the
+	// FilesService's ListUserStorageQuotaOverrides RPC.
+	FilesServiceListUserStorageQuotaOverridesProcedure = "/files.v1.FilesService/ListUserStorageQuotaOverrides"
+	// FilesServiceGetStorageUsageProcedure is the fully-qualified name of the FilesService's
+	// GetStorageUsage RPC.
+	FilesServiceGetStorageUsageProcedure = "/files.v1.FilesService/GetStorageUsage"
+	// FilesServiceListOrgStorageUsageProcedure is the fully-qualified name of the FilesService's
+	// ListOrgStorageUsage RPC.
+	FilesServiceListOrgStorageUsageProcedure = "/files.v1.FilesService/ListOrgStorageUsage"
+	// FilesServiceRecalculateStorageUsageProcedure is the fully-qualified name of the FilesService's
+	// RecalculateStorageUsage RPC.
+	FilesServiceRecalculateStorageUsageProcedure = "/files.v1.FilesService/RecalculateStorageUsage"
+	// FilesServiceCheckStorageQuotaProcedure is the fully-qualified name of the FilesService's
+	// CheckStorageQuota RPC.
+	FilesServiceCheckStorageQuotaProcedure = "/files.v1.FilesService/CheckStorageQuota"
 	// FilesServiceCreateSavedFilterProcedure is the fully-qualified name of the FilesService's
 	// CreateSavedFilter RPC.
 	FilesServiceCreateSavedFilterProcedure = "/files.v1.FilesService/CreateSavedFilter"
@@ -150,6 +188,8 @@ type FilesServiceClient interface {
 	DeleteFolder(context.Context, *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error)
 	// Get the full file/folder tree.
 	GetFilesTree(context.Context, *connect.Request[v1.GetFilesTreeRequest]) (*connect.Response[v1.GetFilesTreeResponse], error)
+	// Create a folder tree in a single transaction (for recursive folder upload).
+	CreateFolderTree(context.Context, *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error)
 	// Copy files (not folders) to a different location.
@@ -158,10 +198,34 @@ type FilesServiceClient interface {
 	BulkDelete(context.Context, *connect.Request[v1.BulkDeleteRequest]) (*connect.Response[v1.BulkDeleteResponse], error)
 	// Empty trash (permanently delete all soft-deleted files).
 	EmptyTrash(context.Context, *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error)
+	// List deleted files and folders (trash).
+	ListTrash(context.Context, *connect.Request[v1.ListTrashRequest]) (*connect.Response[v1.ListTrashResponse], error)
+	// Restore a soft-deleted folder (and its contents) back to its parent.
+	RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error)
 	// List version history for a file.
 	ListFileVersions(context.Context, *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error)
+	// Get the organization storage quota configuration.
+	GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error)
+	// Set or update the organization storage quota configuration.
+	SetOrgStorageQuota(context.Context, *connect.Request[v1.SetOrgStorageQuotaRequest]) (*connect.Response[v1.SetOrgStorageQuotaResponse], error)
+	// Get a user's effective storage quota and current usage.
+	GetUserStorageQuota(context.Context, *connect.Request[v1.GetUserStorageQuotaRequest]) (*connect.Response[v1.GetUserStorageQuotaResponse], error)
+	// Set or update a per-user quota override.
+	SetUserStorageQuotaOverride(context.Context, *connect.Request[v1.SetUserStorageQuotaOverrideRequest]) (*connect.Response[v1.SetUserStorageQuotaOverrideResponse], error)
+	// Remove a per-user quota override (reverts to org default).
+	RemoveUserStorageQuotaOverride(context.Context, *connect.Request[v1.RemoveUserStorageQuotaOverrideRequest]) (*connect.Response[v1.RemoveUserStorageQuotaOverrideResponse], error)
+	// List all per-user quota overrides in an organization.
+	ListUserStorageQuotaOverrides(context.Context, *connect.Request[v1.ListUserStorageQuotaOverridesRequest]) (*connect.Response[v1.ListUserStorageQuotaOverridesResponse], error)
+	// Get storage usage for a specific user (own usage for regular users).
+	GetStorageUsage(context.Context, *connect.Request[v1.GetStorageUsageRequest]) (*connect.Response[v1.GetStorageUsageResponse], error)
+	// List storage usage for all users in an organization (admin only).
+	ListOrgStorageUsage(context.Context, *connect.Request[v1.ListOrgStorageUsageRequest]) (*connect.Response[v1.ListOrgStorageUsageResponse], error)
+	// Recalculate storage usage from actual files (admin, drift correction).
+	RecalculateStorageUsage(context.Context, *connect.Request[v1.RecalculateStorageUsageRequest]) (*connect.Response[v1.RecalculateStorageUsageResponse], error)
+	// Pre-check whether an upload of a given size is allowed under quota.
+	CheckStorageQuota(context.Context, *connect.Request[v1.CheckStorageQuotaRequest]) (*connect.Response[v1.CheckStorageQuotaResponse], error)
 	// Create a new saved filter.
 	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
 	// Get a saved filter by ID.
@@ -287,6 +351,12 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("GetFilesTree")),
 			connect.WithClientOptions(opts...),
 		),
+		createFolderTree: connect.NewClient[v1.CreateFolderTreeRequest, v1.CreateFolderTreeResponse](
+			httpClient,
+			baseURL+FilesServiceCreateFolderTreeProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("CreateFolderTree")),
+			connect.WithClientOptions(opts...),
+		),
 		moveItems: connect.NewClient[v1.MoveItemsRequest, v1.MoveItemsResponse](
 			httpClient,
 			baseURL+FilesServiceMoveItemsProcedure,
@@ -311,6 +381,18 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("EmptyTrash")),
 			connect.WithClientOptions(opts...),
 		),
+		listTrash: connect.NewClient[v1.ListTrashRequest, v1.ListTrashResponse](
+			httpClient,
+			baseURL+FilesServiceListTrashProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("ListTrash")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreFolder: connect.NewClient[v1.RestoreFolderRequest, v1.FolderResponse](
+			httpClient,
+			baseURL+FilesServiceRestoreFolderProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("RestoreFolder")),
+			connect.WithClientOptions(opts...),
+		),
 		listFileVersions: connect.NewClient[v1.ListFileVersionsRequest, v1.ListFileVersionsResponse](
 			httpClient,
 			baseURL+FilesServiceListFileVersionsProcedure,
@@ -321,6 +403,66 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+FilesServiceRestoreFileVersionProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("RestoreFileVersion")),
+			connect.WithClientOptions(opts...),
+		),
+		getOrgStorageQuota: connect.NewClient[v1.GetOrgStorageQuotaRequest, v1.GetOrgStorageQuotaResponse](
+			httpClient,
+			baseURL+FilesServiceGetOrgStorageQuotaProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("GetOrgStorageQuota")),
+			connect.WithClientOptions(opts...),
+		),
+		setOrgStorageQuota: connect.NewClient[v1.SetOrgStorageQuotaRequest, v1.SetOrgStorageQuotaResponse](
+			httpClient,
+			baseURL+FilesServiceSetOrgStorageQuotaProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("SetOrgStorageQuota")),
+			connect.WithClientOptions(opts...),
+		),
+		getUserStorageQuota: connect.NewClient[v1.GetUserStorageQuotaRequest, v1.GetUserStorageQuotaResponse](
+			httpClient,
+			baseURL+FilesServiceGetUserStorageQuotaProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("GetUserStorageQuota")),
+			connect.WithClientOptions(opts...),
+		),
+		setUserStorageQuotaOverride: connect.NewClient[v1.SetUserStorageQuotaOverrideRequest, v1.SetUserStorageQuotaOverrideResponse](
+			httpClient,
+			baseURL+FilesServiceSetUserStorageQuotaOverrideProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("SetUserStorageQuotaOverride")),
+			connect.WithClientOptions(opts...),
+		),
+		removeUserStorageQuotaOverride: connect.NewClient[v1.RemoveUserStorageQuotaOverrideRequest, v1.RemoveUserStorageQuotaOverrideResponse](
+			httpClient,
+			baseURL+FilesServiceRemoveUserStorageQuotaOverrideProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("RemoveUserStorageQuotaOverride")),
+			connect.WithClientOptions(opts...),
+		),
+		listUserStorageQuotaOverrides: connect.NewClient[v1.ListUserStorageQuotaOverridesRequest, v1.ListUserStorageQuotaOverridesResponse](
+			httpClient,
+			baseURL+FilesServiceListUserStorageQuotaOverridesProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("ListUserStorageQuotaOverrides")),
+			connect.WithClientOptions(opts...),
+		),
+		getStorageUsage: connect.NewClient[v1.GetStorageUsageRequest, v1.GetStorageUsageResponse](
+			httpClient,
+			baseURL+FilesServiceGetStorageUsageProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("GetStorageUsage")),
+			connect.WithClientOptions(opts...),
+		),
+		listOrgStorageUsage: connect.NewClient[v1.ListOrgStorageUsageRequest, v1.ListOrgStorageUsageResponse](
+			httpClient,
+			baseURL+FilesServiceListOrgStorageUsageProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("ListOrgStorageUsage")),
+			connect.WithClientOptions(opts...),
+		),
+		recalculateStorageUsage: connect.NewClient[v1.RecalculateStorageUsageRequest, v1.RecalculateStorageUsageResponse](
+			httpClient,
+			baseURL+FilesServiceRecalculateStorageUsageProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("RecalculateStorageUsage")),
+			connect.WithClientOptions(opts...),
+		),
+		checkStorageQuota: connect.NewClient[v1.CheckStorageQuotaRequest, v1.CheckStorageQuotaResponse](
+			httpClient,
+			baseURL+FilesServiceCheckStorageQuotaProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("CheckStorageQuota")),
 			connect.WithClientOptions(opts...),
 		),
 		createSavedFilter: connect.NewClient[v1.CreateSavedFilterRequest, v1.SavedFilterResponse](
@@ -358,34 +500,47 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // filesServiceClient implements FilesServiceClient.
 type filesServiceClient struct {
-	initiateUpload     *connect.Client[v1.InitiateUploadRequest, v1.InitiateUploadResponse]
-	uploadChunk        *connect.Client[v1.UploadChunkRequest, v1.UploadChunkResponse]
-	completeUpload     *connect.Client[v1.CompleteUploadRequest, v1.UploadChunksResponse]
-	uploadChunks       *connect.Client[v1.UploadChunkRequest, v1.UploadChunksResponse]
-	getUploadStatus    *connect.Client[v1.GetUploadStatusRequest, v1.GetUploadStatusResponse]
-	abortUpload        *connect.Client[v1.AbortUploadRequest, v1.AbortUploadResponse]
-	downloadFile       *connect.Client[v1.DownloadFileRequest, v1.DownloadChunkResponse]
-	streamFileRange    *connect.Client[v1.StreamFileRangeRequest, v1.StreamFileRangeResponse]
-	getFile            *connect.Client[v1.GetFileRequest, v1.FileResponse]
-	updateFile         *connect.Client[v1.UpdateFileRequest, v1.FileResponse]
-	deleteFile         *connect.Client[v1.DeleteFileRequest, v1.DeleteFileResponse]
-	restoreFile        *connect.Client[v1.RestoreFileRequest, v1.FileResponse]
-	listFiles          *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
-	createFolder       *connect.Client[v1.CreateFolderRequest, v1.FolderResponse]
-	updateFolder       *connect.Client[v1.UpdateFolderRequest, v1.FolderResponse]
-	deleteFolder       *connect.Client[v1.DeleteFolderRequest, v1.DeleteFolderResponse]
-	getFilesTree       *connect.Client[v1.GetFilesTreeRequest, v1.GetFilesTreeResponse]
-	moveItems          *connect.Client[v1.MoveItemsRequest, v1.MoveItemsResponse]
-	copyItems          *connect.Client[v1.CopyItemsRequest, v1.CopyItemsResponse]
-	bulkDelete         *connect.Client[v1.BulkDeleteRequest, v1.BulkDeleteResponse]
-	emptyTrash         *connect.Client[v1.EmptyTrashRequest, v1.EmptyTrashResponse]
-	listFileVersions   *connect.Client[v1.ListFileVersionsRequest, v1.ListFileVersionsResponse]
-	restoreFileVersion *connect.Client[v1.RestoreFileVersionRequest, v1.FileResponse]
-	createSavedFilter  *connect.Client[v1.CreateSavedFilterRequest, v1.SavedFilterResponse]
-	getSavedFilter     *connect.Client[v1.GetSavedFilterRequest, v1.SavedFilterResponse]
-	updateSavedFilter  *connect.Client[v1.UpdateSavedFilterRequest, v1.SavedFilterResponse]
-	deleteSavedFilter  *connect.Client[v1.DeleteSavedFilterRequest, v1.DeleteSavedFilterResponse]
-	listSavedFilters   *connect.Client[v1.ListSavedFiltersRequest, v1.ListSavedFiltersResponse]
+	initiateUpload                 *connect.Client[v1.InitiateUploadRequest, v1.InitiateUploadResponse]
+	uploadChunk                    *connect.Client[v1.UploadChunkRequest, v1.UploadChunkResponse]
+	completeUpload                 *connect.Client[v1.CompleteUploadRequest, v1.UploadChunksResponse]
+	uploadChunks                   *connect.Client[v1.UploadChunkRequest, v1.UploadChunksResponse]
+	getUploadStatus                *connect.Client[v1.GetUploadStatusRequest, v1.GetUploadStatusResponse]
+	abortUpload                    *connect.Client[v1.AbortUploadRequest, v1.AbortUploadResponse]
+	downloadFile                   *connect.Client[v1.DownloadFileRequest, v1.DownloadChunkResponse]
+	streamFileRange                *connect.Client[v1.StreamFileRangeRequest, v1.StreamFileRangeResponse]
+	getFile                        *connect.Client[v1.GetFileRequest, v1.FileResponse]
+	updateFile                     *connect.Client[v1.UpdateFileRequest, v1.FileResponse]
+	deleteFile                     *connect.Client[v1.DeleteFileRequest, v1.DeleteFileResponse]
+	restoreFile                    *connect.Client[v1.RestoreFileRequest, v1.FileResponse]
+	listFiles                      *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
+	createFolder                   *connect.Client[v1.CreateFolderRequest, v1.FolderResponse]
+	updateFolder                   *connect.Client[v1.UpdateFolderRequest, v1.FolderResponse]
+	deleteFolder                   *connect.Client[v1.DeleteFolderRequest, v1.DeleteFolderResponse]
+	getFilesTree                   *connect.Client[v1.GetFilesTreeRequest, v1.GetFilesTreeResponse]
+	createFolderTree               *connect.Client[v1.CreateFolderTreeRequest, v1.CreateFolderTreeResponse]
+	moveItems                      *connect.Client[v1.MoveItemsRequest, v1.MoveItemsResponse]
+	copyItems                      *connect.Client[v1.CopyItemsRequest, v1.CopyItemsResponse]
+	bulkDelete                     *connect.Client[v1.BulkDeleteRequest, v1.BulkDeleteResponse]
+	emptyTrash                     *connect.Client[v1.EmptyTrashRequest, v1.EmptyTrashResponse]
+	listTrash                      *connect.Client[v1.ListTrashRequest, v1.ListTrashResponse]
+	restoreFolder                  *connect.Client[v1.RestoreFolderRequest, v1.FolderResponse]
+	listFileVersions               *connect.Client[v1.ListFileVersionsRequest, v1.ListFileVersionsResponse]
+	restoreFileVersion             *connect.Client[v1.RestoreFileVersionRequest, v1.FileResponse]
+	getOrgStorageQuota             *connect.Client[v1.GetOrgStorageQuotaRequest, v1.GetOrgStorageQuotaResponse]
+	setOrgStorageQuota             *connect.Client[v1.SetOrgStorageQuotaRequest, v1.SetOrgStorageQuotaResponse]
+	getUserStorageQuota            *connect.Client[v1.GetUserStorageQuotaRequest, v1.GetUserStorageQuotaResponse]
+	setUserStorageQuotaOverride    *connect.Client[v1.SetUserStorageQuotaOverrideRequest, v1.SetUserStorageQuotaOverrideResponse]
+	removeUserStorageQuotaOverride *connect.Client[v1.RemoveUserStorageQuotaOverrideRequest, v1.RemoveUserStorageQuotaOverrideResponse]
+	listUserStorageQuotaOverrides  *connect.Client[v1.ListUserStorageQuotaOverridesRequest, v1.ListUserStorageQuotaOverridesResponse]
+	getStorageUsage                *connect.Client[v1.GetStorageUsageRequest, v1.GetStorageUsageResponse]
+	listOrgStorageUsage            *connect.Client[v1.ListOrgStorageUsageRequest, v1.ListOrgStorageUsageResponse]
+	recalculateStorageUsage        *connect.Client[v1.RecalculateStorageUsageRequest, v1.RecalculateStorageUsageResponse]
+	checkStorageQuota              *connect.Client[v1.CheckStorageQuotaRequest, v1.CheckStorageQuotaResponse]
+	createSavedFilter              *connect.Client[v1.CreateSavedFilterRequest, v1.SavedFilterResponse]
+	getSavedFilter                 *connect.Client[v1.GetSavedFilterRequest, v1.SavedFilterResponse]
+	updateSavedFilter              *connect.Client[v1.UpdateSavedFilterRequest, v1.SavedFilterResponse]
+	deleteSavedFilter              *connect.Client[v1.DeleteSavedFilterRequest, v1.DeleteSavedFilterResponse]
+	listSavedFilters               *connect.Client[v1.ListSavedFiltersRequest, v1.ListSavedFiltersResponse]
 }
 
 // InitiateUpload calls files.v1.FilesService.InitiateUpload.
@@ -473,6 +628,11 @@ func (c *filesServiceClient) GetFilesTree(ctx context.Context, req *connect.Requ
 	return c.getFilesTree.CallUnary(ctx, req)
 }
 
+// CreateFolderTree calls files.v1.FilesService.CreateFolderTree.
+func (c *filesServiceClient) CreateFolderTree(ctx context.Context, req *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error) {
+	return c.createFolderTree.CallUnary(ctx, req)
+}
+
 // MoveItems calls files.v1.FilesService.MoveItems.
 func (c *filesServiceClient) MoveItems(ctx context.Context, req *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error) {
 	return c.moveItems.CallUnary(ctx, req)
@@ -493,6 +653,16 @@ func (c *filesServiceClient) EmptyTrash(ctx context.Context, req *connect.Reques
 	return c.emptyTrash.CallUnary(ctx, req)
 }
 
+// ListTrash calls files.v1.FilesService.ListTrash.
+func (c *filesServiceClient) ListTrash(ctx context.Context, req *connect.Request[v1.ListTrashRequest]) (*connect.Response[v1.ListTrashResponse], error) {
+	return c.listTrash.CallUnary(ctx, req)
+}
+
+// RestoreFolder calls files.v1.FilesService.RestoreFolder.
+func (c *filesServiceClient) RestoreFolder(ctx context.Context, req *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+	return c.restoreFolder.CallUnary(ctx, req)
+}
+
 // ListFileVersions calls files.v1.FilesService.ListFileVersions.
 func (c *filesServiceClient) ListFileVersions(ctx context.Context, req *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error) {
 	return c.listFileVersions.CallUnary(ctx, req)
@@ -501,6 +671,56 @@ func (c *filesServiceClient) ListFileVersions(ctx context.Context, req *connect.
 // RestoreFileVersion calls files.v1.FilesService.RestoreFileVersion.
 func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, req *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error) {
 	return c.restoreFileVersion.CallUnary(ctx, req)
+}
+
+// GetOrgStorageQuota calls files.v1.FilesService.GetOrgStorageQuota.
+func (c *filesServiceClient) GetOrgStorageQuota(ctx context.Context, req *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error) {
+	return c.getOrgStorageQuota.CallUnary(ctx, req)
+}
+
+// SetOrgStorageQuota calls files.v1.FilesService.SetOrgStorageQuota.
+func (c *filesServiceClient) SetOrgStorageQuota(ctx context.Context, req *connect.Request[v1.SetOrgStorageQuotaRequest]) (*connect.Response[v1.SetOrgStorageQuotaResponse], error) {
+	return c.setOrgStorageQuota.CallUnary(ctx, req)
+}
+
+// GetUserStorageQuota calls files.v1.FilesService.GetUserStorageQuota.
+func (c *filesServiceClient) GetUserStorageQuota(ctx context.Context, req *connect.Request[v1.GetUserStorageQuotaRequest]) (*connect.Response[v1.GetUserStorageQuotaResponse], error) {
+	return c.getUserStorageQuota.CallUnary(ctx, req)
+}
+
+// SetUserStorageQuotaOverride calls files.v1.FilesService.SetUserStorageQuotaOverride.
+func (c *filesServiceClient) SetUserStorageQuotaOverride(ctx context.Context, req *connect.Request[v1.SetUserStorageQuotaOverrideRequest]) (*connect.Response[v1.SetUserStorageQuotaOverrideResponse], error) {
+	return c.setUserStorageQuotaOverride.CallUnary(ctx, req)
+}
+
+// RemoveUserStorageQuotaOverride calls files.v1.FilesService.RemoveUserStorageQuotaOverride.
+func (c *filesServiceClient) RemoveUserStorageQuotaOverride(ctx context.Context, req *connect.Request[v1.RemoveUserStorageQuotaOverrideRequest]) (*connect.Response[v1.RemoveUserStorageQuotaOverrideResponse], error) {
+	return c.removeUserStorageQuotaOverride.CallUnary(ctx, req)
+}
+
+// ListUserStorageQuotaOverrides calls files.v1.FilesService.ListUserStorageQuotaOverrides.
+func (c *filesServiceClient) ListUserStorageQuotaOverrides(ctx context.Context, req *connect.Request[v1.ListUserStorageQuotaOverridesRequest]) (*connect.Response[v1.ListUserStorageQuotaOverridesResponse], error) {
+	return c.listUserStorageQuotaOverrides.CallUnary(ctx, req)
+}
+
+// GetStorageUsage calls files.v1.FilesService.GetStorageUsage.
+func (c *filesServiceClient) GetStorageUsage(ctx context.Context, req *connect.Request[v1.GetStorageUsageRequest]) (*connect.Response[v1.GetStorageUsageResponse], error) {
+	return c.getStorageUsage.CallUnary(ctx, req)
+}
+
+// ListOrgStorageUsage calls files.v1.FilesService.ListOrgStorageUsage.
+func (c *filesServiceClient) ListOrgStorageUsage(ctx context.Context, req *connect.Request[v1.ListOrgStorageUsageRequest]) (*connect.Response[v1.ListOrgStorageUsageResponse], error) {
+	return c.listOrgStorageUsage.CallUnary(ctx, req)
+}
+
+// RecalculateStorageUsage calls files.v1.FilesService.RecalculateStorageUsage.
+func (c *filesServiceClient) RecalculateStorageUsage(ctx context.Context, req *connect.Request[v1.RecalculateStorageUsageRequest]) (*connect.Response[v1.RecalculateStorageUsageResponse], error) {
+	return c.recalculateStorageUsage.CallUnary(ctx, req)
+}
+
+// CheckStorageQuota calls files.v1.FilesService.CheckStorageQuota.
+func (c *filesServiceClient) CheckStorageQuota(ctx context.Context, req *connect.Request[v1.CheckStorageQuotaRequest]) (*connect.Response[v1.CheckStorageQuotaResponse], error) {
+	return c.checkStorageQuota.CallUnary(ctx, req)
 }
 
 // CreateSavedFilter calls files.v1.FilesService.CreateSavedFilter.
@@ -567,6 +787,8 @@ type FilesServiceHandler interface {
 	DeleteFolder(context.Context, *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error)
 	// Get the full file/folder tree.
 	GetFilesTree(context.Context, *connect.Request[v1.GetFilesTreeRequest]) (*connect.Response[v1.GetFilesTreeResponse], error)
+	// Create a folder tree in a single transaction (for recursive folder upload).
+	CreateFolderTree(context.Context, *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error)
 	// Move files/folders to a different parent.
 	MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error)
 	// Copy files (not folders) to a different location.
@@ -575,10 +797,34 @@ type FilesServiceHandler interface {
 	BulkDelete(context.Context, *connect.Request[v1.BulkDeleteRequest]) (*connect.Response[v1.BulkDeleteResponse], error)
 	// Empty trash (permanently delete all soft-deleted files).
 	EmptyTrash(context.Context, *connect.Request[v1.EmptyTrashRequest]) (*connect.Response[v1.EmptyTrashResponse], error)
+	// List deleted files and folders (trash).
+	ListTrash(context.Context, *connect.Request[v1.ListTrashRequest]) (*connect.Response[v1.ListTrashResponse], error)
+	// Restore a soft-deleted folder (and its contents) back to its parent.
+	RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error)
 	// List version history for a file.
 	ListFileVersions(context.Context, *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error)
+	// Get the organization storage quota configuration.
+	GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error)
+	// Set or update the organization storage quota configuration.
+	SetOrgStorageQuota(context.Context, *connect.Request[v1.SetOrgStorageQuotaRequest]) (*connect.Response[v1.SetOrgStorageQuotaResponse], error)
+	// Get a user's effective storage quota and current usage.
+	GetUserStorageQuota(context.Context, *connect.Request[v1.GetUserStorageQuotaRequest]) (*connect.Response[v1.GetUserStorageQuotaResponse], error)
+	// Set or update a per-user quota override.
+	SetUserStorageQuotaOverride(context.Context, *connect.Request[v1.SetUserStorageQuotaOverrideRequest]) (*connect.Response[v1.SetUserStorageQuotaOverrideResponse], error)
+	// Remove a per-user quota override (reverts to org default).
+	RemoveUserStorageQuotaOverride(context.Context, *connect.Request[v1.RemoveUserStorageQuotaOverrideRequest]) (*connect.Response[v1.RemoveUserStorageQuotaOverrideResponse], error)
+	// List all per-user quota overrides in an organization.
+	ListUserStorageQuotaOverrides(context.Context, *connect.Request[v1.ListUserStorageQuotaOverridesRequest]) (*connect.Response[v1.ListUserStorageQuotaOverridesResponse], error)
+	// Get storage usage for a specific user (own usage for regular users).
+	GetStorageUsage(context.Context, *connect.Request[v1.GetStorageUsageRequest]) (*connect.Response[v1.GetStorageUsageResponse], error)
+	// List storage usage for all users in an organization (admin only).
+	ListOrgStorageUsage(context.Context, *connect.Request[v1.ListOrgStorageUsageRequest]) (*connect.Response[v1.ListOrgStorageUsageResponse], error)
+	// Recalculate storage usage from actual files (admin, drift correction).
+	RecalculateStorageUsage(context.Context, *connect.Request[v1.RecalculateStorageUsageRequest]) (*connect.Response[v1.RecalculateStorageUsageResponse], error)
+	// Pre-check whether an upload of a given size is allowed under quota.
+	CheckStorageQuota(context.Context, *connect.Request[v1.CheckStorageQuotaRequest]) (*connect.Response[v1.CheckStorageQuotaResponse], error)
 	// Create a new saved filter.
 	CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error)
 	// Get a saved filter by ID.
@@ -700,6 +946,12 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(filesServiceMethods.ByName("GetFilesTree")),
 		connect.WithHandlerOptions(opts...),
 	)
+	filesServiceCreateFolderTreeHandler := connect.NewUnaryHandler(
+		FilesServiceCreateFolderTreeProcedure,
+		svc.CreateFolderTree,
+		connect.WithSchema(filesServiceMethods.ByName("CreateFolderTree")),
+		connect.WithHandlerOptions(opts...),
+	)
 	filesServiceMoveItemsHandler := connect.NewUnaryHandler(
 		FilesServiceMoveItemsProcedure,
 		svc.MoveItems,
@@ -724,6 +976,18 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(filesServiceMethods.ByName("EmptyTrash")),
 		connect.WithHandlerOptions(opts...),
 	)
+	filesServiceListTrashHandler := connect.NewUnaryHandler(
+		FilesServiceListTrashProcedure,
+		svc.ListTrash,
+		connect.WithSchema(filesServiceMethods.ByName("ListTrash")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceRestoreFolderHandler := connect.NewUnaryHandler(
+		FilesServiceRestoreFolderProcedure,
+		svc.RestoreFolder,
+		connect.WithSchema(filesServiceMethods.ByName("RestoreFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
 	filesServiceListFileVersionsHandler := connect.NewUnaryHandler(
 		FilesServiceListFileVersionsProcedure,
 		svc.ListFileVersions,
@@ -734,6 +998,66 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 		FilesServiceRestoreFileVersionProcedure,
 		svc.RestoreFileVersion,
 		connect.WithSchema(filesServiceMethods.ByName("RestoreFileVersion")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceGetOrgStorageQuotaHandler := connect.NewUnaryHandler(
+		FilesServiceGetOrgStorageQuotaProcedure,
+		svc.GetOrgStorageQuota,
+		connect.WithSchema(filesServiceMethods.ByName("GetOrgStorageQuota")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceSetOrgStorageQuotaHandler := connect.NewUnaryHandler(
+		FilesServiceSetOrgStorageQuotaProcedure,
+		svc.SetOrgStorageQuota,
+		connect.WithSchema(filesServiceMethods.ByName("SetOrgStorageQuota")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceGetUserStorageQuotaHandler := connect.NewUnaryHandler(
+		FilesServiceGetUserStorageQuotaProcedure,
+		svc.GetUserStorageQuota,
+		connect.WithSchema(filesServiceMethods.ByName("GetUserStorageQuota")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceSetUserStorageQuotaOverrideHandler := connect.NewUnaryHandler(
+		FilesServiceSetUserStorageQuotaOverrideProcedure,
+		svc.SetUserStorageQuotaOverride,
+		connect.WithSchema(filesServiceMethods.ByName("SetUserStorageQuotaOverride")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceRemoveUserStorageQuotaOverrideHandler := connect.NewUnaryHandler(
+		FilesServiceRemoveUserStorageQuotaOverrideProcedure,
+		svc.RemoveUserStorageQuotaOverride,
+		connect.WithSchema(filesServiceMethods.ByName("RemoveUserStorageQuotaOverride")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceListUserStorageQuotaOverridesHandler := connect.NewUnaryHandler(
+		FilesServiceListUserStorageQuotaOverridesProcedure,
+		svc.ListUserStorageQuotaOverrides,
+		connect.WithSchema(filesServiceMethods.ByName("ListUserStorageQuotaOverrides")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceGetStorageUsageHandler := connect.NewUnaryHandler(
+		FilesServiceGetStorageUsageProcedure,
+		svc.GetStorageUsage,
+		connect.WithSchema(filesServiceMethods.ByName("GetStorageUsage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceListOrgStorageUsageHandler := connect.NewUnaryHandler(
+		FilesServiceListOrgStorageUsageProcedure,
+		svc.ListOrgStorageUsage,
+		connect.WithSchema(filesServiceMethods.ByName("ListOrgStorageUsage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceRecalculateStorageUsageHandler := connect.NewUnaryHandler(
+		FilesServiceRecalculateStorageUsageProcedure,
+		svc.RecalculateStorageUsage,
+		connect.WithSchema(filesServiceMethods.ByName("RecalculateStorageUsage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceCheckStorageQuotaHandler := connect.NewUnaryHandler(
+		FilesServiceCheckStorageQuotaProcedure,
+		svc.CheckStorageQuota,
+		connect.WithSchema(filesServiceMethods.ByName("CheckStorageQuota")),
 		connect.WithHandlerOptions(opts...),
 	)
 	filesServiceCreateSavedFilterHandler := connect.NewUnaryHandler(
@@ -802,6 +1126,8 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 			filesServiceDeleteFolderHandler.ServeHTTP(w, r)
 		case FilesServiceGetFilesTreeProcedure:
 			filesServiceGetFilesTreeHandler.ServeHTTP(w, r)
+		case FilesServiceCreateFolderTreeProcedure:
+			filesServiceCreateFolderTreeHandler.ServeHTTP(w, r)
 		case FilesServiceMoveItemsProcedure:
 			filesServiceMoveItemsHandler.ServeHTTP(w, r)
 		case FilesServiceCopyItemsProcedure:
@@ -810,10 +1136,34 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 			filesServiceBulkDeleteHandler.ServeHTTP(w, r)
 		case FilesServiceEmptyTrashProcedure:
 			filesServiceEmptyTrashHandler.ServeHTTP(w, r)
+		case FilesServiceListTrashProcedure:
+			filesServiceListTrashHandler.ServeHTTP(w, r)
+		case FilesServiceRestoreFolderProcedure:
+			filesServiceRestoreFolderHandler.ServeHTTP(w, r)
 		case FilesServiceListFileVersionsProcedure:
 			filesServiceListFileVersionsHandler.ServeHTTP(w, r)
 		case FilesServiceRestoreFileVersionProcedure:
 			filesServiceRestoreFileVersionHandler.ServeHTTP(w, r)
+		case FilesServiceGetOrgStorageQuotaProcedure:
+			filesServiceGetOrgStorageQuotaHandler.ServeHTTP(w, r)
+		case FilesServiceSetOrgStorageQuotaProcedure:
+			filesServiceSetOrgStorageQuotaHandler.ServeHTTP(w, r)
+		case FilesServiceGetUserStorageQuotaProcedure:
+			filesServiceGetUserStorageQuotaHandler.ServeHTTP(w, r)
+		case FilesServiceSetUserStorageQuotaOverrideProcedure:
+			filesServiceSetUserStorageQuotaOverrideHandler.ServeHTTP(w, r)
+		case FilesServiceRemoveUserStorageQuotaOverrideProcedure:
+			filesServiceRemoveUserStorageQuotaOverrideHandler.ServeHTTP(w, r)
+		case FilesServiceListUserStorageQuotaOverridesProcedure:
+			filesServiceListUserStorageQuotaOverridesHandler.ServeHTTP(w, r)
+		case FilesServiceGetStorageUsageProcedure:
+			filesServiceGetStorageUsageHandler.ServeHTTP(w, r)
+		case FilesServiceListOrgStorageUsageProcedure:
+			filesServiceListOrgStorageUsageHandler.ServeHTTP(w, r)
+		case FilesServiceRecalculateStorageUsageProcedure:
+			filesServiceRecalculateStorageUsageHandler.ServeHTTP(w, r)
+		case FilesServiceCheckStorageQuotaProcedure:
+			filesServiceCheckStorageQuotaHandler.ServeHTTP(w, r)
 		case FilesServiceCreateSavedFilterProcedure:
 			filesServiceCreateSavedFilterHandler.ServeHTTP(w, r)
 		case FilesServiceGetSavedFilterProcedure:
@@ -901,6 +1251,10 @@ func (UnimplementedFilesServiceHandler) GetFilesTree(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetFilesTree is not implemented"))
 }
 
+func (UnimplementedFilesServiceHandler) CreateFolderTree(context.Context, *connect.Request[v1.CreateFolderTreeRequest]) (*connect.Response[v1.CreateFolderTreeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CreateFolderTree is not implemented"))
+}
+
 func (UnimplementedFilesServiceHandler) MoveItems(context.Context, *connect.Request[v1.MoveItemsRequest]) (*connect.Response[v1.MoveItemsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.MoveItems is not implemented"))
 }
@@ -917,12 +1271,60 @@ func (UnimplementedFilesServiceHandler) EmptyTrash(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.EmptyTrash is not implemented"))
 }
 
+func (UnimplementedFilesServiceHandler) ListTrash(context.Context, *connect.Request[v1.ListTrashRequest]) (*connect.Response[v1.ListTrashResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListTrash is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) RestoreFolder(context.Context, *connect.Request[v1.RestoreFolderRequest]) (*connect.Response[v1.FolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RestoreFolder is not implemented"))
+}
+
 func (UnimplementedFilesServiceHandler) ListFileVersions(context.Context, *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListFileVersions is not implemented"))
 }
 
 func (UnimplementedFilesServiceHandler) RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.FileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RestoreFileVersion is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetOrgStorageQuota is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) SetOrgStorageQuota(context.Context, *connect.Request[v1.SetOrgStorageQuotaRequest]) (*connect.Response[v1.SetOrgStorageQuotaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.SetOrgStorageQuota is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) GetUserStorageQuota(context.Context, *connect.Request[v1.GetUserStorageQuotaRequest]) (*connect.Response[v1.GetUserStorageQuotaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetUserStorageQuota is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) SetUserStorageQuotaOverride(context.Context, *connect.Request[v1.SetUserStorageQuotaOverrideRequest]) (*connect.Response[v1.SetUserStorageQuotaOverrideResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.SetUserStorageQuotaOverride is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) RemoveUserStorageQuotaOverride(context.Context, *connect.Request[v1.RemoveUserStorageQuotaOverrideRequest]) (*connect.Response[v1.RemoveUserStorageQuotaOverrideResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RemoveUserStorageQuotaOverride is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) ListUserStorageQuotaOverrides(context.Context, *connect.Request[v1.ListUserStorageQuotaOverridesRequest]) (*connect.Response[v1.ListUserStorageQuotaOverridesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListUserStorageQuotaOverrides is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) GetStorageUsage(context.Context, *connect.Request[v1.GetStorageUsageRequest]) (*connect.Response[v1.GetStorageUsageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetStorageUsage is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) ListOrgStorageUsage(context.Context, *connect.Request[v1.ListOrgStorageUsageRequest]) (*connect.Response[v1.ListOrgStorageUsageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListOrgStorageUsage is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) RecalculateStorageUsage(context.Context, *connect.Request[v1.RecalculateStorageUsageRequest]) (*connect.Response[v1.RecalculateStorageUsageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RecalculateStorageUsage is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) CheckStorageQuota(context.Context, *connect.Request[v1.CheckStorageQuotaRequest]) (*connect.Response[v1.CheckStorageQuotaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.CheckStorageQuota is not implemented"))
 }
 
 func (UnimplementedFilesServiceHandler) CreateSavedFilter(context.Context, *connect.Request[v1.CreateSavedFilterRequest]) (*connect.Response[v1.SavedFilterResponse], error) {

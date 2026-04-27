@@ -5,6 +5,7 @@ package chat.v1;
 option go_package = "github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1";
 
 import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
 
 // ChatService provides channel, message, thread, reaction, and category management.
 service ChatService {
@@ -22,6 +23,7 @@ service ChatService {
   rpc AddMembers(AddMembersRequest) returns (AddMembersResponse) {}
   rpc RemoveMembers(RemoveMembersRequest) returns (RemoveMembersResponse) {}
   rpc GetMembers(GetMembersRequest) returns (GetMembersResponse) {}
+  rpc UpdateChannelMember(UpdateChannelMemberRequest) returns (UpdateChannelMemberResponse) {}
 
   // Messages
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
@@ -60,6 +62,50 @@ service ChatService {
   rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse) {}
   rpc ReorderCategories(ReorderCategoriesRequest) returns (ReorderCategoriesResponse) {}
   rpc MoveChannelToCategory(MoveChannelToCategoryRequest) returns (MoveChannelToCategoryResponse) {}
+
+  // Respond to a destructive-tool confirmation request raised by an agent
+  // running inside a chat channel. The chat layer is the front door; it
+  // forwards the decision to the agents runtime via the bridge.
+  rpc RespondToAgentConfirmation(RespondToAgentConfirmationRequest) returns (RespondToAgentConfirmationResponse) {}
+
+  // List pending agent destructive-tool approvals still open for a channel.
+  // Used on channel mount so synthetic confirmation cards survive page reloads
+  // (the approval state itself lives in Valkey up to its TTL).
+  rpc GetChannelPendingApprovals(GetChannelPendingApprovalsRequest) returns (GetChannelPendingApprovalsResponse) {}
+
+  // Per-(channel, agent) context window stats. Drives the chat header meter
+  // and group-channel per-agent popover. Mirrors `agents.v1.SessionsService.
+  // GetSessionContextStats` but is keyed on the channel/agent binding.
+  rpc GetChannelAgentContextStats(GetChannelAgentContextStatsRequest) returns (GetChannelAgentContextStatsResponse) {}
+
+  // Batched variant of `GetChannelAgentContextStats`. Returns per-(channel,
+  // agent) stats for N agents in one round-trip. Drives the group-channel
+  // ChannelAgentsPopover (one row per agent member) so the popover does not
+  // fan out N parallel single-agent fetches. Agents the caller can't see or
+  // that are not bound to the channel are simply absent from the response
+  // map (not an error).
+  rpc GetChannelAgentContextStatsBatch(GetChannelAgentContextStatsBatchRequest) returns (GetChannelAgentContextStatsBatchResponse) {}
+
+  // Force compaction for one (channel, agent) pair. Writes a chat message
+  // with metadata.kind="summary" and bumps the binding's compaction pointer
+  // so subsequent prompts roll the older history into the summary row.
+  rpc CompactChannelAgentContext(CompactChannelAgentContextRequest) returns (CompactChannelAgentContextResponse) {}
+
+  // Reset one agent's view of the channel. Writes a metadata.kind=
+  // "context_reset" divider message AND sets binding.manual_reset_at = now()
+  // so `load_context_messages` excludes everything older for this agent.
+  // Per-agent: resetting agent A in a multi-agent channel does not affect
+  // agent B's view.
+  rpc ResetChannelAgentContext(ResetChannelAgentContextRequest) returns (ResetChannelAgentContextResponse) {}
+}
+
+// ChatSubject is a polymorphic channel/thread participant.
+// Currently supports SUBJECT_TYPE_USER and SUBJECT_TYPE_AGENT. Other subject
+// types from common.SubjectType are reserved and will be rejected at the
+// handler boundary until first-class support lands.
+message ChatSubject {
+  common.v1.SubjectType type = 1;
+  string id = 2;
 }
 
 // ENUMS
@@ -177,15 +223,23 @@ message ReactionGroup {
 // ChatChannelMember represents a user's membership in a channel.
 message ChatChannelMember {
   string channel_id = 1;
+  // Legacy: populated when subject.type == SUBJECT_TYPE_USER. For agent
+  // members, this is the empty string and `subject` is set.
   string user_id = 2;
   ChannelRole role = 3;
   ChatNotificationLevel notification_level = 4;
   bool is_muted = 5;
   google.protobuf.Timestamp joined_at = 6;
-  // Denormalized user info
+  // Denormalized identity info (works for users and agents).
   optional string display_name = 10;
   optional string email = 11;
   optional string avatar_url = 12;
+  // Extended notification preferences
+  optional google.protobuf.Timestamp muted_until = 13;
+  bool follow_all_threads = 14;
+  // Polymorphic identity. Set on every row going forward; user_id stays
+  // populated for SUBJECT_TYPE_USER until clients migrate.
+  optional ChatSubject subject = 15;
 }
 
 // ChatChannelCategory represents a sidebar category for organizing channels.
@@ -243,8 +297,10 @@ message CreateChannelRequest {
   optional string icon = 5;
   optional bool is_default = 6;
   optional string category_id = 7;
-  // For DM/GROUP_DM: user IDs to include
+  // For DM/GROUP_DM: user IDs to include (legacy; users only).
   repeated string member_ids = 10;
+  // For DM/GROUP_DM: polymorphic initial members (users + agents). Preferred.
+  repeated ChatSubject members = 11;
 }
 
 message CreateChannelResponse {
@@ -291,10 +347,20 @@ message ListChannelsRequest {
   string organization_id = 1;
   // If true, list all public channels (for browse). If false, list user's channels (for sidebar).
   bool browse_public = 2;
+  // Opaque cursor for pagination. First page omits this; subsequent pages
+  // pass the `next_cursor` returned by the previous response. Cursor encodes
+  // the (last_root_message_at, channel_id) tuple for the user's-channels path
+  // and the (member_count, channel_id) tuple for browse_public.
+  optional string cursor = 3;
+  // Max channels to return per page. Server clamps to <= 500. Defaults to 200
+  // when unset / zero.
+  optional int32 page_size = 4;
 }
 
 message ListChannelsResponse {
   repeated ChatChannel channels = 1;
+  // Set when more pages exist. Pass back as `cursor` on the next request.
+  optional string next_cursor = 2;
 }
 
 // MEMBERSHIP REQUESTS/RESPONSES
@@ -318,7 +384,11 @@ message LeaveChannelResponse {}
 message AddMembersRequest {
   string organization_id = 1;
   string channel_id = 2;
+  // Legacy: user-only members. Kept for backward compatibility.
   repeated string user_ids = 3;
+  // New: polymorphic subjects (users + agents). Preferred. Server unions
+  // user_ids into subjects with SUBJECT_TYPE_USER when both are sent.
+  repeated ChatSubject subjects = 4;
 }
 
 message AddMembersResponse {
@@ -328,7 +398,10 @@ message AddMembersResponse {
 message RemoveMembersRequest {
   string organization_id = 1;
   string channel_id = 2;
+  // Legacy: user-only.
   repeated string user_ids = 3;
+  // New: polymorphic subjects (users + agents).
+  repeated ChatSubject subjects = 4;
 }
 
 message RemoveMembersResponse {}
@@ -336,10 +409,32 @@ message RemoveMembersResponse {}
 message GetMembersRequest {
   string organization_id = 1;
   string channel_id = 2;
+  // Opaque cursor for pagination. Cursor encodes (joined_at, subject_id).
+  optional string cursor = 3;
+  // Max members per page. Server clamps to <= 500. Defaults to 200 when
+  // unset / zero.
+  optional int32 page_size = 4;
 }
 
 message GetMembersResponse {
   repeated ChatChannelMember members = 1;
+  // Set when more pages exist. Pass back as `cursor` on the next request.
+  optional string next_cursor = 2;
+}
+
+message UpdateChannelMemberRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string user_id = 3;
+  optional bool is_muted = 4;
+  optional ChatNotificationLevel notification_level = 5;
+  optional google.protobuf.Timestamp muted_until = 6;
+  optional bool follow_all_threads = 7;
+  optional bool badge_all_messages = 8;
+}
+
+message UpdateChannelMemberResponse {
+  ChatChannelMember member = 1;
 }
 
 // MESSAGE REQUESTS/RESPONSES
@@ -369,6 +464,8 @@ message GetMessagesRequest {
   int32 limit = 5;
   // If true, only return root messages (no thread replies)
   bool root_only = 6;
+  // Fetch messages around this message (inclusive). Returns limit/2 before + target + limit/2 after.
+  optional string around_id = 7;
 }
 
 message GetMessagesResponse {
@@ -446,8 +543,11 @@ message GetThreadResponse {
   ChatMessage root_message = 1;
   int32 reply_count = 2;
   google.protobuf.Timestamp last_reply_at = 3;
+  // Capped preview list (up to THREAD_PARTICIPANT_PREVIEW_LIMIT=20 ids).
+  // Use total_participants for the absolute count when rendering "+N".
   repeated string participant_ids = 4;
   bool is_following = 5;
+  int32 total_participants = 6;
 }
 
 message GetThreadMessagesRequest {
@@ -551,6 +651,9 @@ message ChannelUnreadCount {
   int32 unread_count = 2;
   int32 mention_count = 3;
   optional string last_read_message_id = 4;
+  bool is_muted = 5;
+  ChatNotificationLevel notification_level = 6;
+  optional google.protobuf.Timestamp muted_until = 7;
 }
 
 // CHANNEL RESOURCES
@@ -624,4 +727,140 @@ message MoveChannelToCategoryRequest {
 
 message MoveChannelToCategoryResponse {
   ChatChannel channel = 1;
+}
+
+// AgentConfirmationDecision is the user's response to a destructive-tool
+// confirmation request raised by an agent.
+enum AgentConfirmationDecision {
+  AGENT_CONFIRMATION_DECISION_UNSPECIFIED = 0;
+  AGENT_CONFIRMATION_DECISION_APPROVE = 1;
+  AGENT_CONFIRMATION_DECISION_DENY = 2;
+}
+
+message RespondToAgentConfirmationRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // ID of the agent message that carries the confirmation_request metadata.
+  string message_id = 3;
+  // Opaque request identifier produced by the agents runtime.
+  string request_id = 4;
+  AgentConfirmationDecision decision = 5;
+  optional string rationale = 6;
+}
+
+message RespondToAgentConfirmationResponse {
+  // Echo of the resolved status; useful for optimistic UI reconciliation.
+  AgentConfirmationDecision decision = 1;
+  google.protobuf.Timestamp decided_at = 2;
+}
+
+// A single pending agent tool-call approval still awaiting a user decision.
+// Mirrors the fields the AGENT_CONFIRMATION_REQUESTED stream event carries so
+// the frontend can synthesise the same confirmation card shape on reload.
+message PendingAgentApproval {
+  string request_id = 1;
+  string agent_id = 2;
+  string message_id = 3;
+  string tool_name = 4;
+  string args_preview = 5;
+  string actor_user_id = 6;
+  google.protobuf.Timestamp requested_at = 7;
+  optional google.protobuf.Timestamp expires_at = 8;
+}
+
+message GetChannelPendingApprovalsRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message GetChannelPendingApprovalsResponse {
+  repeated PendingAgentApproval approvals = 1;
+}
+
+// CHANNEL AGENT CONTEXT MANAGEMENT
+//
+// Per-(channel, agent) view of the LLM context window for chat. Mirrors the
+// shape of `agents.v1.SessionsService.GetSessionContextStatsResponse` so the
+// frontend can render the same meter component for both surfaces.
+
+message ChannelAgentContextStats {
+  // Total chat messages in the channel since `manual_reset_at` (or all-time
+  // when never reset). Includes messages by other senders, since they may
+  // be loaded into the agent's prompt window.
+  int32 total_messages = 1;
+  // Messages currently active (visible to load_context_messages, post-reset,
+  // not yet rolled into a summary).
+  int32 active_messages = 2;
+  // Count of msg_ids tracked in `binding.compaction_summary_msg_ids`.
+  int32 compacted_messages = 3;
+  // Count of metadata.kind="summary" rows authored by this agent.
+  int32 summary_count = 4;
+  // Cached estimate updated by the runtime after each turn
+  // (`binding.last_active_token_estimate`).
+  int32 active_tokens = 5;
+  // Token budget for chat history (65% of context window).
+  int32 token_budget = 6;
+  // Estimated tokens remaining before auto-compaction triggers.
+  int32 tokens_until_compaction = 7;
+  // Resolved model context window in tokens (from agent.primary_model).
+  int32 context_window_tokens = 8;
+  // True when the binding has a non-NULL `manual_reset_at`. The UI uses this
+  // to render a "Conversation reset on ..." indicator.
+  bool was_reset = 9;
+  // The timestamp of the last manual reset (NULL when `was_reset=false`).
+  optional google.protobuf.Timestamp manual_reset_at = 10;
+}
+
+message GetChannelAgentContextStatsRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string agent_id = 3;
+}
+
+message GetChannelAgentContextStatsResponse {
+  ChannelAgentContextStats stats = 1;
+}
+
+message GetChannelAgentContextStatsBatchRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Up to 100 agent ids. The handler rejects larger batches.
+  repeated string agent_ids = 3;
+}
+
+message GetChannelAgentContextStatsBatchResponse {
+  // Keyed by agent_id (string UUID). Agents that were not bound to the
+  // channel, soft-deleted, or otherwise unreadable are simply absent from
+  // the map. The frontend renders the union of what came back.
+  map<string, ChannelAgentContextStats> stats = 1;
+}
+
+message CompactChannelAgentContextRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string agent_id = 3;
+}
+
+message CompactChannelAgentContextResponse {
+  bool compacted = 1;
+  ChannelAgentContextStats stats = 2;
+  int32 messages_compacted = 3;
+  int32 tokens_before = 4;
+  int32 tokens_after = 5;
+  int32 tokens_saved = 6;
+}
+
+message ResetChannelAgentContextRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string agent_id = 3;
+}
+
+message ResetChannelAgentContextResponse {
+  // The newly-written kind="context_reset" divider message id, so the
+  // frontend can locate it in the message list (it lands in the channel
+  // stream too via MESSAGE_CREATED).
+  string divider_message_id = 1;
+  google.protobuf.Timestamp reset_at = 2;
+  ChannelAgentContextStats stats = 3;
 }

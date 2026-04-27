@@ -220,6 +220,32 @@ class ContentTypeDefaults(_message.Message):
     default_baseline_role: _common_pb2.ContentRole
     def __init__(self, content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., default_access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., default_baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
+class OrganizationSettings(_message.Message):
+    __slots__ = ("chat",)
+    CHAT_FIELD_NUMBER: _ClassVar[int]
+    chat: ChatSettings
+    def __init__(self, chat: _Optional[_Union[ChatSettings, _Mapping]] = ...) -> None: ...
+
+class ChatSettings(_message.Message):
+    __slots__ = ("agents_enabled",)
+    AGENTS_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    agents_enabled: bool
+    def __init__(self, agents_enabled: _Optional[bool] = ...) -> None: ...
+
+class GetOrganizationSettingsRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class UpdateOrganizationSettingsRequest(_message.Message):
+    __slots__ = ("organization_id", "chat")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHAT_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    chat: ChatSettings
+    def __init__(self, organization_id: _Optional[str] = ..., chat: _Optional[_Union[ChatSettings, _Mapping]] = ...) -> None: ...
+
 class GrantDomainAdminRequest(_message.Message):
     __slots__ = ("organization_id", "user_id", "domain")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]

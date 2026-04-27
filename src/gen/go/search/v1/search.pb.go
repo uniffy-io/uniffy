@@ -110,9 +110,11 @@ type SearchRequest struct {
 	MyContentOnly  bool     `protobuf:"varint,7,opt,name=my_content_only,json=myContentOnly,proto3" json:"my_content_only,omitempty"`
 	OwnerFilter    string   `protobuf:"bytes,8,opt,name=owner_filter,json=ownerFilter,proto3" json:"owner_filter,omitempty"`
 	// Types to exclude from results (e.g., exclude chat_message when not in chat domain)
-	ExcludeTypes  []SearchResultType `protobuf:"varint,9,rep,packed,name=exclude_types,json=excludeTypes,proto3,enum=search.v1.SearchResultType" json:"exclude_types,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ExcludeTypes []SearchResultType `protobuf:"varint,9,rep,packed,name=exclude_types,json=excludeTypes,proto3,enum=search.v1.SearchResultType" json:"exclude_types,omitempty"`
+	// Metadata field filters (e.g., {"channel_id": "uuid"} for chat message scoping)
+	MetadataFilters map[string]string `protobuf:"bytes,10,rep,name=metadata_filters,json=metadataFilters,proto3" json:"metadata_filters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SearchRequest) Reset() {
@@ -204,6 +206,13 @@ func (x *SearchRequest) GetOwnerFilter() string {
 func (x *SearchRequest) GetExcludeTypes() []SearchResultType {
 	if x != nil {
 		return x.ExcludeTypes
+	}
+	return nil
+}
+
+func (x *SearchRequest) GetMetadataFilters() map[string]string {
+	if x != nil {
+		return x.MetadataFilters
 	}
 	return nil
 }
@@ -828,8 +837,44 @@ type UrnMetadata struct {
 	TotalTasks       int32  `protobuf:"varint,17,opt,name=total_tasks,json=totalTasks,proto3" json:"total_tasks,omitempty"`                  // project total task count
 	MemberCount      int32  `protobuf:"varint,18,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`               // group/chat member count
 	UpdatedByName    string `protobuf:"bytes,19,opt,name=updated_by_name,json=updatedByName,proto3" json:"updated_by_name,omitempty"`        // who last modified the content
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Task enrichment
+	Priority         string `protobuf:"bytes,20,opt,name=priority,proto3" json:"priority,omitempty"`                                          // task priority option ID
+	PriorityLabel    string `protobuf:"bytes,21,opt,name=priority_label,json=priorityLabel,proto3" json:"priority_label,omitempty"`           // resolved label (e.g., "High")
+	PriorityColor    string `protobuf:"bytes,22,opt,name=priority_color,json=priorityColor,proto3" json:"priority_color,omitempty"`           // resolved hex color (e.g., "#ef4444")
+	StatusLabel      string `protobuf:"bytes,23,opt,name=status_label,json=statusLabel,proto3" json:"status_label,omitempty"`                 // resolved label (e.g., "In Progress")
+	StatusColor      string `protobuf:"bytes,24,opt,name=status_color,json=statusColor,proto3" json:"status_color,omitempty"`                 // resolved hex color (e.g., "#3b82f6")
+	TaskType         string `protobuf:"bytes,25,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`                          // task/bug/feature/story/epic
+	TaskNumber       int32  `protobuf:"varint,26,opt,name=task_number,json=taskNumber,proto3" json:"task_number,omitempty"`                   // sequential number within project
+	ProjectName      string `protobuf:"bytes,27,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`                 // parent project name
+	ProjectSlug      string `protobuf:"bytes,28,opt,name=project_slug,json=projectSlug,proto3" json:"project_slug,omitempty"`                 // parent project slug for "SLUG-123" display
+	ProjectColor     string `protobuf:"bytes,29,opt,name=project_color,json=projectColor,proto3" json:"project_color,omitempty"`              // parent project hex color
+	SubtaskCompleted int32  `protobuf:"varint,30,opt,name=subtask_completed,json=subtaskCompleted,proto3" json:"subtask_completed,omitempty"` // completed subtask count
+	SubtaskTotal     int32  `protobuf:"varint,31,opt,name=subtask_total,json=subtaskTotal,proto3" json:"subtask_total,omitempty"`             // total subtask count
+	BlockedByCount   int32  `protobuf:"varint,32,opt,name=blocked_by_count,json=blockedByCount,proto3" json:"blocked_by_count,omitempty"`     // number of blocking tasks
+	// Calendar enrichment
+	EventStartTime  string `protobuf:"bytes,33,opt,name=event_start_time,json=eventStartTime,proto3" json:"event_start_time,omitempty"`    // ISO datetime
+	EventEndTime    string `protobuf:"bytes,34,opt,name=event_end_time,json=eventEndTime,proto3" json:"event_end_time,omitempty"`          // ISO datetime
+	EventIsAllDay   bool   `protobuf:"varint,35,opt,name=event_is_all_day,json=eventIsAllDay,proto3" json:"event_is_all_day,omitempty"`    // all-day flag
+	EventLocation   string `protobuf:"bytes,36,opt,name=event_location,json=eventLocation,proto3" json:"event_location,omitempty"`         // location text
+	EventMeetingUrl string `protobuf:"bytes,37,opt,name=event_meeting_url,json=eventMeetingUrl,proto3" json:"event_meeting_url,omitempty"` // video call URL
+	// File enrichment
+	FileMimeType string `protobuf:"bytes,38,opt,name=file_mime_type,json=fileMimeType,proto3" json:"file_mime_type,omitempty"` // MIME type
+	FileSize     int64  `protobuf:"varint,39,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`              // size in bytes
+	// Note enrichment
+	NoteNodeType string `protobuf:"bytes,40,opt,name=note_node_type,json=noteNodeType,proto3" json:"note_node_type,omitempty"` // NOTE/FOLDER/TEMPLATE/CANVAS
+	// Chat enrichment
+	ChannelType string `protobuf:"bytes,41,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"` // PUBLIC/PRIVATE/DIRECT/GROUP_DM
+	// Agent enrichment
+	AgentEmoji      string `protobuf:"bytes,42,opt,name=agent_emoji,json=agentEmoji,proto3" json:"agent_emoji,omitempty"`                  // avatar emoji
+	AgentThemeColor string `protobuf:"bytes,43,opt,name=agent_theme_color,json=agentThemeColor,proto3" json:"agent_theme_color,omitempty"` // theme color hex
+	// User enrichment
+	UserAvatarUrl string `protobuf:"bytes,44,opt,name=user_avatar_url,json=userAvatarUrl,proto3" json:"user_avatar_url,omitempty"` // avatar image URL
+	UserEmail     string `protobuf:"bytes,45,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty"`               // email address
+	// Shared
+	AssigneeIds   []string `protobuf:"bytes,46,rep,name=assignee_ids,json=assigneeIds,proto3" json:"assignee_ids,omitempty"` // user IDs for avatar rendering
+	ContentTags   []string `protobuf:"bytes,47,rep,name=content_tags,json=contentTags,proto3" json:"content_tags,omitempty"` // content tags
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UrnMetadata) Reset() {
@@ -953,11 +998,207 @@ func (x *UrnMetadata) GetUpdatedByName() string {
 	return ""
 }
 
+func (x *UrnMetadata) GetPriority() string {
+	if x != nil {
+		return x.Priority
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetPriorityLabel() string {
+	if x != nil {
+		return x.PriorityLabel
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetPriorityColor() string {
+	if x != nil {
+		return x.PriorityColor
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetStatusLabel() string {
+	if x != nil {
+		return x.StatusLabel
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetStatusColor() string {
+	if x != nil {
+		return x.StatusColor
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetTaskType() string {
+	if x != nil {
+		return x.TaskType
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetTaskNumber() int32 {
+	if x != nil {
+		return x.TaskNumber
+	}
+	return 0
+}
+
+func (x *UrnMetadata) GetProjectName() string {
+	if x != nil {
+		return x.ProjectName
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetProjectSlug() string {
+	if x != nil {
+		return x.ProjectSlug
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetProjectColor() string {
+	if x != nil {
+		return x.ProjectColor
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetSubtaskCompleted() int32 {
+	if x != nil {
+		return x.SubtaskCompleted
+	}
+	return 0
+}
+
+func (x *UrnMetadata) GetSubtaskTotal() int32 {
+	if x != nil {
+		return x.SubtaskTotal
+	}
+	return 0
+}
+
+func (x *UrnMetadata) GetBlockedByCount() int32 {
+	if x != nil {
+		return x.BlockedByCount
+	}
+	return 0
+}
+
+func (x *UrnMetadata) GetEventStartTime() string {
+	if x != nil {
+		return x.EventStartTime
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetEventEndTime() string {
+	if x != nil {
+		return x.EventEndTime
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetEventIsAllDay() bool {
+	if x != nil {
+		return x.EventIsAllDay
+	}
+	return false
+}
+
+func (x *UrnMetadata) GetEventLocation() string {
+	if x != nil {
+		return x.EventLocation
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetEventMeetingUrl() string {
+	if x != nil {
+		return x.EventMeetingUrl
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetFileMimeType() string {
+	if x != nil {
+		return x.FileMimeType
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetFileSize() int64 {
+	if x != nil {
+		return x.FileSize
+	}
+	return 0
+}
+
+func (x *UrnMetadata) GetNoteNodeType() string {
+	if x != nil {
+		return x.NoteNodeType
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetChannelType() string {
+	if x != nil {
+		return x.ChannelType
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetAgentEmoji() string {
+	if x != nil {
+		return x.AgentEmoji
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetAgentThemeColor() string {
+	if x != nil {
+		return x.AgentThemeColor
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetUserAvatarUrl() string {
+	if x != nil {
+		return x.UserAvatarUrl
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetUserEmail() string {
+	if x != nil {
+		return x.UserEmail
+	}
+	return ""
+}
+
+func (x *UrnMetadata) GetAssigneeIds() []string {
+	if x != nil {
+		return x.AssigneeIds
+	}
+	return nil
+}
+
+func (x *UrnMetadata) GetContentTags() []string {
+	if x != nil {
+		return x.ContentTags
+	}
+	return nil
+}
+
 var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x16search/v1/search.proto\x12\tsearch.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfb\x02\n" +
+	"\x16search/v1/search.proto\x12\tsearch.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x99\x04\n" +
 	"\rSearchRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12>\n" +
@@ -968,7 +1209,12 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x0fproject_filters\x18\x06 \x03(\tR\x0eprojectFilters\x12&\n" +
 	"\x0fmy_content_only\x18\a \x01(\bR\rmyContentOnly\x12!\n" +
 	"\fowner_filter\x18\b \x01(\tR\vownerFilter\x12@\n" +
-	"\rexclude_types\x18\t \x03(\x0e2\x1b.search.v1.SearchResultTypeR\fexcludeTypes\"C\n" +
+	"\rexclude_types\x18\t \x03(\x0e2\x1b.search.v1.SearchResultTypeR\fexcludeTypes\x12X\n" +
+	"\x10metadata_filters\x18\n" +
+	" \x03(\v2-.search.v1.SearchRequest.MetadataFiltersEntryR\x0fmetadataFilters\x1aB\n" +
+	"\x14MetadataFiltersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
 	"\x0eSearchResponse\x121\n" +
 	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\"\xcd\x02\n" +
 	"\x10SearchResultItem\x12\x10\n" +
@@ -1018,7 +1264,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\bresolved\x18\x01 \x03(\v2,.search.v1.ResolveUrnsResponse.ResolvedEntryR\bresolved\x1aS\n" +
 	"\rResolvedEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xa1\x04\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xa8\f\n" +
 	"\vUrnMetadata\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12/\n" +
@@ -1034,7 +1280,38 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\vtotal_tasks\x18\x11 \x01(\x05R\n" +
 	"totalTasks\x12!\n" +
 	"\fmember_count\x18\x12 \x01(\x05R\vmemberCount\x12&\n" +
-	"\x0fupdated_by_name\x18\x13 \x01(\tR\rupdatedByName\x1a;\n" +
+	"\x0fupdated_by_name\x18\x13 \x01(\tR\rupdatedByName\x12\x1a\n" +
+	"\bpriority\x18\x14 \x01(\tR\bpriority\x12%\n" +
+	"\x0epriority_label\x18\x15 \x01(\tR\rpriorityLabel\x12%\n" +
+	"\x0epriority_color\x18\x16 \x01(\tR\rpriorityColor\x12!\n" +
+	"\fstatus_label\x18\x17 \x01(\tR\vstatusLabel\x12!\n" +
+	"\fstatus_color\x18\x18 \x01(\tR\vstatusColor\x12\x1b\n" +
+	"\ttask_type\x18\x19 \x01(\tR\btaskType\x12\x1f\n" +
+	"\vtask_number\x18\x1a \x01(\x05R\n" +
+	"taskNumber\x12!\n" +
+	"\fproject_name\x18\x1b \x01(\tR\vprojectName\x12!\n" +
+	"\fproject_slug\x18\x1c \x01(\tR\vprojectSlug\x12#\n" +
+	"\rproject_color\x18\x1d \x01(\tR\fprojectColor\x12+\n" +
+	"\x11subtask_completed\x18\x1e \x01(\x05R\x10subtaskCompleted\x12#\n" +
+	"\rsubtask_total\x18\x1f \x01(\x05R\fsubtaskTotal\x12(\n" +
+	"\x10blocked_by_count\x18  \x01(\x05R\x0eblockedByCount\x12(\n" +
+	"\x10event_start_time\x18! \x01(\tR\x0eeventStartTime\x12$\n" +
+	"\x0eevent_end_time\x18\" \x01(\tR\feventEndTime\x12'\n" +
+	"\x10event_is_all_day\x18# \x01(\bR\reventIsAllDay\x12%\n" +
+	"\x0eevent_location\x18$ \x01(\tR\reventLocation\x12*\n" +
+	"\x11event_meeting_url\x18% \x01(\tR\x0feventMeetingUrl\x12$\n" +
+	"\x0efile_mime_type\x18& \x01(\tR\ffileMimeType\x12\x1b\n" +
+	"\tfile_size\x18' \x01(\x03R\bfileSize\x12$\n" +
+	"\x0enote_node_type\x18( \x01(\tR\fnoteNodeType\x12!\n" +
+	"\fchannel_type\x18) \x01(\tR\vchannelType\x12\x1f\n" +
+	"\vagent_emoji\x18* \x01(\tR\n" +
+	"agentEmoji\x12*\n" +
+	"\x11agent_theme_color\x18+ \x01(\tR\x0fagentThemeColor\x12&\n" +
+	"\x0fuser_avatar_url\x18, \x01(\tR\ruserAvatarUrl\x12\x1d\n" +
+	"\n" +
+	"user_email\x18- \x01(\tR\tuserEmail\x12!\n" +
+	"\fassignee_ids\x18. \x03(\tR\vassigneeIds\x12!\n" +
+	"\fcontent_tags\x18/ \x03(\tR\vcontentTags\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x8d\x03\n" +
@@ -1073,7 +1350,7 @@ func file_search_v1_search_proto_rawDescGZIP() []byte {
 }
 
 var file_search_v1_search_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_search_v1_search_proto_goTypes = []any{
 	(SearchResultType)(0),         // 0: search.v1.SearchResultType
 	(*SearchRequest)(nil),         // 1: search.v1.SearchRequest
@@ -1088,40 +1365,42 @@ var file_search_v1_search_proto_goTypes = []any{
 	(*ResolveUrnsRequest)(nil),    // 10: search.v1.ResolveUrnsRequest
 	(*ResolveUrnsResponse)(nil),   // 11: search.v1.ResolveUrnsResponse
 	(*UrnMetadata)(nil),           // 12: search.v1.UrnMetadata
-	nil,                           // 13: search.v1.SearchResultItem.MetadataEntry
-	nil,                           // 14: search.v1.IndexItemRequest.MetadataEntry
-	nil,                           // 15: search.v1.ResolveUrnsResponse.ResolvedEntry
-	nil,                           // 16: search.v1.UrnMetadata.MetadataEntry
+	nil,                           // 13: search.v1.SearchRequest.MetadataFiltersEntry
+	nil,                           // 14: search.v1.SearchResultItem.MetadataEntry
+	nil,                           // 15: search.v1.IndexItemRequest.MetadataEntry
+	nil,                           // 16: search.v1.ResolveUrnsResponse.ResolvedEntry
+	nil,                           // 17: search.v1.UrnMetadata.MetadataEntry
 }
 var file_search_v1_search_proto_depIdxs = []int32{
 	0,  // 0: search.v1.SearchRequest.type_filters:type_name -> search.v1.SearchResultType
 	0,  // 1: search.v1.SearchRequest.exclude_types:type_name -> search.v1.SearchResultType
-	3,  // 2: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
-	0,  // 3: search.v1.SearchResultItem.type:type_name -> search.v1.SearchResultType
-	13, // 4: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
-	0,  // 5: search.v1.IndexItemRequest.type:type_name -> search.v1.SearchResultType
-	14, // 6: search.v1.IndexItemRequest.metadata:type_name -> search.v1.IndexItemRequest.MetadataEntry
-	0,  // 7: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
-	3,  // 8: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
-	15, // 9: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
-	0,  // 10: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
-	16, // 11: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
-	12, // 12: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
-	1,  // 13: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
-	4,  // 14: search.v1.SearchService.IndexItem:input_type -> search.v1.IndexItemRequest
-	6,  // 15: search.v1.SearchService.DeleteItem:input_type -> search.v1.DeleteItemRequest
-	8,  // 16: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
-	10, // 17: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
-	2,  // 18: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
-	5,  // 19: search.v1.SearchService.IndexItem:output_type -> search.v1.IndexItemResponse
-	7,  // 20: search.v1.SearchService.DeleteItem:output_type -> search.v1.DeleteItemResponse
-	9,  // 21: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
-	11, // 22: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
-	18, // [18:23] is the sub-list for method output_type
-	13, // [13:18] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	13, // 2: search.v1.SearchRequest.metadata_filters:type_name -> search.v1.SearchRequest.MetadataFiltersEntry
+	3,  // 3: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
+	0,  // 4: search.v1.SearchResultItem.type:type_name -> search.v1.SearchResultType
+	14, // 5: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
+	0,  // 6: search.v1.IndexItemRequest.type:type_name -> search.v1.SearchResultType
+	15, // 7: search.v1.IndexItemRequest.metadata:type_name -> search.v1.IndexItemRequest.MetadataEntry
+	0,  // 8: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
+	3,  // 9: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
+	16, // 10: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
+	0,  // 11: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
+	17, // 12: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
+	12, // 13: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
+	1,  // 14: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
+	4,  // 15: search.v1.SearchService.IndexItem:input_type -> search.v1.IndexItemRequest
+	6,  // 16: search.v1.SearchService.DeleteItem:input_type -> search.v1.DeleteItemRequest
+	8,  // 17: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
+	10, // 18: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
+	2,  // 19: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
+	5,  // 20: search.v1.SearchService.IndexItem:output_type -> search.v1.IndexItemResponse
+	7,  // 21: search.v1.SearchService.DeleteItem:output_type -> search.v1.DeleteItemResponse
+	9,  // 22: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
+	11, // 23: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
+	19, // [19:24] is the sub-list for method output_type
+	14, // [14:19] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_search_v1_search_proto_init() }
@@ -1135,7 +1414,7 @@ func file_search_v1_search_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_search_v1_search_proto_rawDesc), len(file_search_v1_search_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

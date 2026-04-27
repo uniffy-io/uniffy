@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AddMembersRequest, AddMembersResponse, AddReactionRequest, AddReactionResponse, ArchiveChannelRequest, ArchiveChannelResponse, CreateCategoryRequest, CreateCategoryResponse, CreateChannelRequest, CreateChannelResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteMessageRequest, DeleteMessageResponse, FollowThreadRequest, FollowThreadResponse, GetChannelRequest, GetChannelResourcesRequest, GetChannelResourcesResponse, GetChannelResponse, GetMembersRequest, GetMembersResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest, GetMessagesResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetThreadMessagesRequest, GetThreadMessagesResponse, GetThreadRequest, GetThreadResponse, GetThreadsInboxRequest, GetThreadsInboxResponse, GetUnreadCountsRequest, GetUnreadCountsResponse, JoinChannelRequest, JoinChannelResponse, LeaveChannelRequest, LeaveChannelResponse, ListCategoriesRequest, ListCategoriesResponse, ListChannelsRequest, ListChannelsResponse, MarkChannelReadRequest, MarkChannelReadResponse, MarkThreadReadRequest, MarkThreadReadResponse, MoveChannelToCategoryRequest, MoveChannelToCategoryResponse, PinMessageRequest, PinMessageResponse, RemoveMembersRequest, RemoveMembersResponse, RemoveReactionRequest, RemoveReactionResponse, ReorderCategoriesRequest, ReorderCategoriesResponse, SendMessageRequest, SendMessageResponse, SetTypingRequest, SetTypingResponse, UnfollowThreadRequest, UnfollowThreadResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateMessageRequest, UpdateMessageResponse } from "./chat_pb.js";
+import { AddMembersRequest, AddMembersResponse, AddReactionRequest, AddReactionResponse, ArchiveChannelRequest, ArchiveChannelResponse, CompactChannelAgentContextRequest, CompactChannelAgentContextResponse, CreateCategoryRequest, CreateCategoryResponse, CreateChannelRequest, CreateChannelResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteMessageRequest, DeleteMessageResponse, FollowThreadRequest, FollowThreadResponse, GetChannelAgentContextStatsBatchRequest, GetChannelAgentContextStatsBatchResponse, GetChannelAgentContextStatsRequest, GetChannelAgentContextStatsResponse, GetChannelPendingApprovalsRequest, GetChannelPendingApprovalsResponse, GetChannelRequest, GetChannelResourcesRequest, GetChannelResourcesResponse, GetChannelResponse, GetMembersRequest, GetMembersResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest, GetMessagesResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetThreadMessagesRequest, GetThreadMessagesResponse, GetThreadRequest, GetThreadResponse, GetThreadsInboxRequest, GetThreadsInboxResponse, GetUnreadCountsRequest, GetUnreadCountsResponse, JoinChannelRequest, JoinChannelResponse, LeaveChannelRequest, LeaveChannelResponse, ListCategoriesRequest, ListCategoriesResponse, ListChannelsRequest, ListChannelsResponse, MarkChannelReadRequest, MarkChannelReadResponse, MarkThreadReadRequest, MarkThreadReadResponse, MoveChannelToCategoryRequest, MoveChannelToCategoryResponse, PinMessageRequest, PinMessageResponse, RemoveMembersRequest, RemoveMembersResponse, RemoveReactionRequest, RemoveReactionResponse, ReorderCategoriesRequest, ReorderCategoriesResponse, ResetChannelAgentContextRequest, ResetChannelAgentContextResponse, RespondToAgentConfirmationRequest, RespondToAgentConfirmationResponse, SendMessageRequest, SendMessageResponse, SetTypingRequest, SetTypingResponse, UnfollowThreadRequest, UnfollowThreadResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateChannelMemberRequest, UpdateChannelMemberResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateMessageRequest, UpdateMessageResponse } from "./chat_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -115,6 +115,15 @@ export const ChatService = {
       name: "GetMembers",
       I: GetMembersRequest,
       O: GetMembersResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc chat.v1.ChatService.UpdateChannelMember
+     */
+    updateChannelMember: {
+      name: "UpdateChannelMember",
+      I: UpdateChannelMemberRequest,
+      O: UpdateChannelMemberResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -361,6 +370,89 @@ export const ChatService = {
       name: "MoveChannelToCategory",
       I: MoveChannelToCategoryRequest,
       O: MoveChannelToCategoryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Respond to a destructive-tool confirmation request raised by an agent
+     * running inside a chat channel. The chat layer is the front door; it
+     * forwards the decision to the agents runtime via the bridge.
+     *
+     * @generated from rpc chat.v1.ChatService.RespondToAgentConfirmation
+     */
+    respondToAgentConfirmation: {
+      name: "RespondToAgentConfirmation",
+      I: RespondToAgentConfirmationRequest,
+      O: RespondToAgentConfirmationResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * List pending agent destructive-tool approvals still open for a channel.
+     * Used on channel mount so synthetic confirmation cards survive page reloads
+     * (the approval state itself lives in Valkey up to its TTL).
+     *
+     * @generated from rpc chat.v1.ChatService.GetChannelPendingApprovals
+     */
+    getChannelPendingApprovals: {
+      name: "GetChannelPendingApprovals",
+      I: GetChannelPendingApprovalsRequest,
+      O: GetChannelPendingApprovalsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Per-(channel, agent) context window stats. Drives the chat header meter
+     * and group-channel per-agent popover. Mirrors `agents.v1.SessionsService.
+     * GetSessionContextStats` but is keyed on the channel/agent binding.
+     *
+     * @generated from rpc chat.v1.ChatService.GetChannelAgentContextStats
+     */
+    getChannelAgentContextStats: {
+      name: "GetChannelAgentContextStats",
+      I: GetChannelAgentContextStatsRequest,
+      O: GetChannelAgentContextStatsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Batched variant of `GetChannelAgentContextStats`. Returns per-(channel,
+     * agent) stats for N agents in one round-trip. Drives the group-channel
+     * ChannelAgentsPopover (one row per agent member) so the popover does not
+     * fan out N parallel single-agent fetches. Agents the caller can't see or
+     * that are not bound to the channel are simply absent from the response
+     * map (not an error).
+     *
+     * @generated from rpc chat.v1.ChatService.GetChannelAgentContextStatsBatch
+     */
+    getChannelAgentContextStatsBatch: {
+      name: "GetChannelAgentContextStatsBatch",
+      I: GetChannelAgentContextStatsBatchRequest,
+      O: GetChannelAgentContextStatsBatchResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Force compaction for one (channel, agent) pair. Writes a chat message
+     * with metadata.kind="summary" and bumps the binding's compaction pointer
+     * so subsequent prompts roll the older history into the summary row.
+     *
+     * @generated from rpc chat.v1.ChatService.CompactChannelAgentContext
+     */
+    compactChannelAgentContext: {
+      name: "CompactChannelAgentContext",
+      I: CompactChannelAgentContextRequest,
+      O: CompactChannelAgentContextResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Reset one agent's view of the channel. Writes a metadata.kind=
+     * "context_reset" divider message AND sets binding.manual_reset_at = now()
+     * so `load_context_messages` excludes everything older for this agent.
+     * Per-agent: resetting agent A in a multi-agent channel does not affect
+     * agent B's view.
+     *
+     * @generated from rpc chat.v1.ChatService.ResetChannelAgentContext
+     */
+    resetChannelAgentContext: {
+      name: "ResetChannelAgentContext",
+      I: ResetChannelAgentContextRequest,
+      O: ResetChannelAgentContextResponse,
       kind: MethodKind.Unary,
     },
   }

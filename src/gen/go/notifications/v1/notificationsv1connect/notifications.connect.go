@@ -60,6 +60,18 @@ const (
 	// NotificationsServiceGetVapidPublicKeyProcedure is the fully-qualified name of the
 	// NotificationsService's GetVapidPublicKey RPC.
 	NotificationsServiceGetVapidPublicKeyProcedure = "/notifications.v1.NotificationsService/GetVapidPublicKey"
+	// NotificationsServiceSearchNotificationsProcedure is the fully-qualified name of the
+	// NotificationsService's SearchNotifications RPC.
+	NotificationsServiceSearchNotificationsProcedure = "/notifications.v1.NotificationsService/SearchNotifications"
+	// NotificationsServiceGetNotificationStatsProcedure is the fully-qualified name of the
+	// NotificationsService's GetNotificationStats RPC.
+	NotificationsServiceGetNotificationStatsProcedure = "/notifications.v1.NotificationsService/GetNotificationStats"
+	// NotificationsServiceBulkMarkAsReadProcedure is the fully-qualified name of the
+	// NotificationsService's BulkMarkAsRead RPC.
+	NotificationsServiceBulkMarkAsReadProcedure = "/notifications.v1.NotificationsService/BulkMarkAsRead"
+	// NotificationsServiceBulkDeleteNotificationsProcedure is the fully-qualified name of the
+	// NotificationsService's BulkDeleteNotifications RPC.
+	NotificationsServiceBulkDeleteNotificationsProcedure = "/notifications.v1.NotificationsService/BulkDeleteNotifications"
 )
 
 // NotificationsServiceClient is a client for the notifications.v1.NotificationsService service.
@@ -82,6 +94,14 @@ type NotificationsServiceClient interface {
 	StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest]) (*connect.ServerStreamForClient[v1.StreamNotificationEvent], error)
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(context.Context, *connect.Request[v1.GetVapidPublicKeyRequest]) (*connect.Response[v1.GetVapidPublicKeyResponse], error)
+	// Search notifications with full-text search and advanced filters
+	SearchNotifications(context.Context, *connect.Request[v1.SearchNotificationsRequest]) (*connect.Response[v1.SearchNotificationsResponse], error)
+	// Get aggregated notification statistics for analytics
+	GetNotificationStats(context.Context, *connect.Request[v1.GetNotificationStatsRequest]) (*connect.Response[v1.GetNotificationStatsResponse], error)
+	// Mark multiple notifications as read in bulk
+	BulkMarkAsRead(context.Context, *connect.Request[v1.BulkMarkAsReadRequest]) (*connect.Response[v1.BulkMarkAsReadResponse], error)
+	// Delete multiple notifications in bulk
+	BulkDeleteNotifications(context.Context, *connect.Request[v1.BulkDeleteNotificationsRequest]) (*connect.Response[v1.BulkDeleteNotificationsResponse], error)
 }
 
 // NewNotificationsServiceClient constructs a client for the notifications.v1.NotificationsService
@@ -149,6 +169,30 @@ func NewNotificationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(notificationsServiceMethods.ByName("GetVapidPublicKey")),
 			connect.WithClientOptions(opts...),
 		),
+		searchNotifications: connect.NewClient[v1.SearchNotificationsRequest, v1.SearchNotificationsResponse](
+			httpClient,
+			baseURL+NotificationsServiceSearchNotificationsProcedure,
+			connect.WithSchema(notificationsServiceMethods.ByName("SearchNotifications")),
+			connect.WithClientOptions(opts...),
+		),
+		getNotificationStats: connect.NewClient[v1.GetNotificationStatsRequest, v1.GetNotificationStatsResponse](
+			httpClient,
+			baseURL+NotificationsServiceGetNotificationStatsProcedure,
+			connect.WithSchema(notificationsServiceMethods.ByName("GetNotificationStats")),
+			connect.WithClientOptions(opts...),
+		),
+		bulkMarkAsRead: connect.NewClient[v1.BulkMarkAsReadRequest, v1.BulkMarkAsReadResponse](
+			httpClient,
+			baseURL+NotificationsServiceBulkMarkAsReadProcedure,
+			connect.WithSchema(notificationsServiceMethods.ByName("BulkMarkAsRead")),
+			connect.WithClientOptions(opts...),
+		),
+		bulkDeleteNotifications: connect.NewClient[v1.BulkDeleteNotificationsRequest, v1.BulkDeleteNotificationsResponse](
+			httpClient,
+			baseURL+NotificationsServiceBulkDeleteNotificationsProcedure,
+			connect.WithSchema(notificationsServiceMethods.ByName("BulkDeleteNotifications")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -163,6 +207,10 @@ type notificationsServiceClient struct {
 	unregisterPushSubscription *connect.Client[v1.UnregisterPushSubscriptionRequest, v1.UnregisterPushSubscriptionResponse]
 	streamNotifications        *connect.Client[v1.StreamNotificationsRequest, v1.StreamNotificationEvent]
 	getVapidPublicKey          *connect.Client[v1.GetVapidPublicKeyRequest, v1.GetVapidPublicKeyResponse]
+	searchNotifications        *connect.Client[v1.SearchNotificationsRequest, v1.SearchNotificationsResponse]
+	getNotificationStats       *connect.Client[v1.GetNotificationStatsRequest, v1.GetNotificationStatsResponse]
+	bulkMarkAsRead             *connect.Client[v1.BulkMarkAsReadRequest, v1.BulkMarkAsReadResponse]
+	bulkDeleteNotifications    *connect.Client[v1.BulkDeleteNotificationsRequest, v1.BulkDeleteNotificationsResponse]
 }
 
 // ListNotifications calls notifications.v1.NotificationsService.ListNotifications.
@@ -211,6 +259,26 @@ func (c *notificationsServiceClient) GetVapidPublicKey(ctx context.Context, req 
 	return c.getVapidPublicKey.CallUnary(ctx, req)
 }
 
+// SearchNotifications calls notifications.v1.NotificationsService.SearchNotifications.
+func (c *notificationsServiceClient) SearchNotifications(ctx context.Context, req *connect.Request[v1.SearchNotificationsRequest]) (*connect.Response[v1.SearchNotificationsResponse], error) {
+	return c.searchNotifications.CallUnary(ctx, req)
+}
+
+// GetNotificationStats calls notifications.v1.NotificationsService.GetNotificationStats.
+func (c *notificationsServiceClient) GetNotificationStats(ctx context.Context, req *connect.Request[v1.GetNotificationStatsRequest]) (*connect.Response[v1.GetNotificationStatsResponse], error) {
+	return c.getNotificationStats.CallUnary(ctx, req)
+}
+
+// BulkMarkAsRead calls notifications.v1.NotificationsService.BulkMarkAsRead.
+func (c *notificationsServiceClient) BulkMarkAsRead(ctx context.Context, req *connect.Request[v1.BulkMarkAsReadRequest]) (*connect.Response[v1.BulkMarkAsReadResponse], error) {
+	return c.bulkMarkAsRead.CallUnary(ctx, req)
+}
+
+// BulkDeleteNotifications calls notifications.v1.NotificationsService.BulkDeleteNotifications.
+func (c *notificationsServiceClient) BulkDeleteNotifications(ctx context.Context, req *connect.Request[v1.BulkDeleteNotificationsRequest]) (*connect.Response[v1.BulkDeleteNotificationsResponse], error) {
+	return c.bulkDeleteNotifications.CallUnary(ctx, req)
+}
+
 // NotificationsServiceHandler is an implementation of the notifications.v1.NotificationsService
 // service.
 type NotificationsServiceHandler interface {
@@ -232,6 +300,14 @@ type NotificationsServiceHandler interface {
 	StreamNotifications(context.Context, *connect.Request[v1.StreamNotificationsRequest], *connect.ServerStream[v1.StreamNotificationEvent]) error
 	// Get the VAPID public key for Web Push subscription
 	GetVapidPublicKey(context.Context, *connect.Request[v1.GetVapidPublicKeyRequest]) (*connect.Response[v1.GetVapidPublicKeyResponse], error)
+	// Search notifications with full-text search and advanced filters
+	SearchNotifications(context.Context, *connect.Request[v1.SearchNotificationsRequest]) (*connect.Response[v1.SearchNotificationsResponse], error)
+	// Get aggregated notification statistics for analytics
+	GetNotificationStats(context.Context, *connect.Request[v1.GetNotificationStatsRequest]) (*connect.Response[v1.GetNotificationStatsResponse], error)
+	// Mark multiple notifications as read in bulk
+	BulkMarkAsRead(context.Context, *connect.Request[v1.BulkMarkAsReadRequest]) (*connect.Response[v1.BulkMarkAsReadResponse], error)
+	// Delete multiple notifications in bulk
+	BulkDeleteNotifications(context.Context, *connect.Request[v1.BulkDeleteNotificationsRequest]) (*connect.Response[v1.BulkDeleteNotificationsResponse], error)
 }
 
 // NewNotificationsServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -295,6 +371,30 @@ func NewNotificationsServiceHandler(svc NotificationsServiceHandler, opts ...con
 		connect.WithSchema(notificationsServiceMethods.ByName("GetVapidPublicKey")),
 		connect.WithHandlerOptions(opts...),
 	)
+	notificationsServiceSearchNotificationsHandler := connect.NewUnaryHandler(
+		NotificationsServiceSearchNotificationsProcedure,
+		svc.SearchNotifications,
+		connect.WithSchema(notificationsServiceMethods.ByName("SearchNotifications")),
+		connect.WithHandlerOptions(opts...),
+	)
+	notificationsServiceGetNotificationStatsHandler := connect.NewUnaryHandler(
+		NotificationsServiceGetNotificationStatsProcedure,
+		svc.GetNotificationStats,
+		connect.WithSchema(notificationsServiceMethods.ByName("GetNotificationStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	notificationsServiceBulkMarkAsReadHandler := connect.NewUnaryHandler(
+		NotificationsServiceBulkMarkAsReadProcedure,
+		svc.BulkMarkAsRead,
+		connect.WithSchema(notificationsServiceMethods.ByName("BulkMarkAsRead")),
+		connect.WithHandlerOptions(opts...),
+	)
+	notificationsServiceBulkDeleteNotificationsHandler := connect.NewUnaryHandler(
+		NotificationsServiceBulkDeleteNotificationsProcedure,
+		svc.BulkDeleteNotifications,
+		connect.WithSchema(notificationsServiceMethods.ByName("BulkDeleteNotifications")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/notifications.v1.NotificationsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case NotificationsServiceListNotificationsProcedure:
@@ -315,6 +415,14 @@ func NewNotificationsServiceHandler(svc NotificationsServiceHandler, opts ...con
 			notificationsServiceStreamNotificationsHandler.ServeHTTP(w, r)
 		case NotificationsServiceGetVapidPublicKeyProcedure:
 			notificationsServiceGetVapidPublicKeyHandler.ServeHTTP(w, r)
+		case NotificationsServiceSearchNotificationsProcedure:
+			notificationsServiceSearchNotificationsHandler.ServeHTTP(w, r)
+		case NotificationsServiceGetNotificationStatsProcedure:
+			notificationsServiceGetNotificationStatsHandler.ServeHTTP(w, r)
+		case NotificationsServiceBulkMarkAsReadProcedure:
+			notificationsServiceBulkMarkAsReadHandler.ServeHTTP(w, r)
+		case NotificationsServiceBulkDeleteNotificationsProcedure:
+			notificationsServiceBulkDeleteNotificationsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -358,4 +466,20 @@ func (UnimplementedNotificationsServiceHandler) StreamNotifications(context.Cont
 
 func (UnimplementedNotificationsServiceHandler) GetVapidPublicKey(context.Context, *connect.Request[v1.GetVapidPublicKeyRequest]) (*connect.Response[v1.GetVapidPublicKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.NotificationsService.GetVapidPublicKey is not implemented"))
+}
+
+func (UnimplementedNotificationsServiceHandler) SearchNotifications(context.Context, *connect.Request[v1.SearchNotificationsRequest]) (*connect.Response[v1.SearchNotificationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.NotificationsService.SearchNotifications is not implemented"))
+}
+
+func (UnimplementedNotificationsServiceHandler) GetNotificationStats(context.Context, *connect.Request[v1.GetNotificationStatsRequest]) (*connect.Response[v1.GetNotificationStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.NotificationsService.GetNotificationStats is not implemented"))
+}
+
+func (UnimplementedNotificationsServiceHandler) BulkMarkAsRead(context.Context, *connect.Request[v1.BulkMarkAsReadRequest]) (*connect.Response[v1.BulkMarkAsReadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.NotificationsService.BulkMarkAsRead is not implemented"))
+}
+
+func (UnimplementedNotificationsServiceHandler) BulkDeleteNotifications(context.Context, *connect.Request[v1.BulkDeleteNotificationsRequest]) (*connect.Response[v1.BulkDeleteNotificationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.NotificationsService.BulkDeleteNotifications is not implemented"))
 }

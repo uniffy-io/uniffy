@@ -38,6 +38,22 @@ const (
 	ChatEventType_CHAT_EVENT_TYPE_CHANNEL_UPDATED  ChatEventType = 10
 	ChatEventType_CHAT_EVENT_TYPE_THREAD_UPDATED   ChatEventType = 11
 	ChatEventType_CHAT_EVENT_TYPE_HEARTBEAT        ChatEventType = 12
+	// Batched membership change events. The non-batched MEMBER_JOINED /
+	// MEMBER_LEFT remain for single-actor flows (self-join, leave). Batch
+	// adds/removes initiated by an admin go through these so the server
+	// sends ONE event per call instead of one per affected user.
+	ChatEventType_CHAT_EVENT_TYPE_MEMBERS_ADDED   ChatEventType = 22
+	ChatEventType_CHAT_EVENT_TYPE_MEMBERS_REMOVED ChatEventType = 23
+	// Agent runtime events. AGENT_TYPING fires while the runtime is generating
+	// tokens (analogous to a human typing). AGENT_TOKEN_DELTA carries
+	// incremental content for an in-flight agent message. AGENT_TOOL_CALL
+	// signals the runtime is executing a tool. AGENT_CONFIRMATION_REQUESTED
+	// and AGENT_CONFIRMATION_RESOLVED bracket destructive-tool approvals.
+	ChatEventType_CHAT_EVENT_TYPE_AGENT_TYPING                 ChatEventType = 13
+	ChatEventType_CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA            ChatEventType = 14
+	ChatEventType_CHAT_EVENT_TYPE_AGENT_TOOL_CALL              ChatEventType = 15
+	ChatEventType_CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED ChatEventType = 16
+	ChatEventType_CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED  ChatEventType = 17
 )
 
 // Enum value maps for ChatEventType.
@@ -56,21 +72,35 @@ var (
 		10: "CHAT_EVENT_TYPE_CHANNEL_UPDATED",
 		11: "CHAT_EVENT_TYPE_THREAD_UPDATED",
 		12: "CHAT_EVENT_TYPE_HEARTBEAT",
+		22: "CHAT_EVENT_TYPE_MEMBERS_ADDED",
+		23: "CHAT_EVENT_TYPE_MEMBERS_REMOVED",
+		13: "CHAT_EVENT_TYPE_AGENT_TYPING",
+		14: "CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA",
+		15: "CHAT_EVENT_TYPE_AGENT_TOOL_CALL",
+		16: "CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED",
+		17: "CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED",
 	}
 	ChatEventType_value = map[string]int32{
-		"CHAT_EVENT_TYPE_UNSPECIFIED":      0,
-		"CHAT_EVENT_TYPE_MESSAGE_CREATED":  1,
-		"CHAT_EVENT_TYPE_MESSAGE_UPDATED":  2,
-		"CHAT_EVENT_TYPE_MESSAGE_DELETED":  3,
-		"CHAT_EVENT_TYPE_REACTION_ADDED":   4,
-		"CHAT_EVENT_TYPE_REACTION_REMOVED": 5,
-		"CHAT_EVENT_TYPE_TYPING_STARTED":   6,
-		"CHAT_EVENT_TYPE_TYPING_STOPPED":   7,
-		"CHAT_EVENT_TYPE_MEMBER_JOINED":    8,
-		"CHAT_EVENT_TYPE_MEMBER_LEFT":      9,
-		"CHAT_EVENT_TYPE_CHANNEL_UPDATED":  10,
-		"CHAT_EVENT_TYPE_THREAD_UPDATED":   11,
-		"CHAT_EVENT_TYPE_HEARTBEAT":        12,
+		"CHAT_EVENT_TYPE_UNSPECIFIED":                  0,
+		"CHAT_EVENT_TYPE_MESSAGE_CREATED":              1,
+		"CHAT_EVENT_TYPE_MESSAGE_UPDATED":              2,
+		"CHAT_EVENT_TYPE_MESSAGE_DELETED":              3,
+		"CHAT_EVENT_TYPE_REACTION_ADDED":               4,
+		"CHAT_EVENT_TYPE_REACTION_REMOVED":             5,
+		"CHAT_EVENT_TYPE_TYPING_STARTED":               6,
+		"CHAT_EVENT_TYPE_TYPING_STOPPED":               7,
+		"CHAT_EVENT_TYPE_MEMBER_JOINED":                8,
+		"CHAT_EVENT_TYPE_MEMBER_LEFT":                  9,
+		"CHAT_EVENT_TYPE_CHANNEL_UPDATED":              10,
+		"CHAT_EVENT_TYPE_THREAD_UPDATED":               11,
+		"CHAT_EVENT_TYPE_HEARTBEAT":                    12,
+		"CHAT_EVENT_TYPE_MEMBERS_ADDED":                22,
+		"CHAT_EVENT_TYPE_MEMBERS_REMOVED":              23,
+		"CHAT_EVENT_TYPE_AGENT_TYPING":                 13,
+		"CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA":            14,
+		"CHAT_EVENT_TYPE_AGENT_TOOL_CALL":              15,
+		"CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED": 16,
+		"CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED":  17,
 	}
 )
 
@@ -160,6 +190,58 @@ func (UserChatEventType) EnumDescriptor() ([]byte, []int) {
 	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{1}
 }
 
+type AgentToolCallPayload_Status int32
+
+const (
+	AgentToolCallPayload_STATUS_UNSPECIFIED AgentToolCallPayload_Status = 0
+	AgentToolCallPayload_STATUS_STARTED     AgentToolCallPayload_Status = 1
+	AgentToolCallPayload_STATUS_COMPLETED   AgentToolCallPayload_Status = 2
+	AgentToolCallPayload_STATUS_FAILED      AgentToolCallPayload_Status = 3
+)
+
+// Enum value maps for AgentToolCallPayload_Status.
+var (
+	AgentToolCallPayload_Status_name = map[int32]string{
+		0: "STATUS_UNSPECIFIED",
+		1: "STATUS_STARTED",
+		2: "STATUS_COMPLETED",
+		3: "STATUS_FAILED",
+	}
+	AgentToolCallPayload_Status_value = map[string]int32{
+		"STATUS_UNSPECIFIED": 0,
+		"STATUS_STARTED":     1,
+		"STATUS_COMPLETED":   2,
+		"STATUS_FAILED":      3,
+	}
+)
+
+func (x AgentToolCallPayload_Status) Enum() *AgentToolCallPayload_Status {
+	p := new(AgentToolCallPayload_Status)
+	*p = x
+	return p
+}
+
+func (x AgentToolCallPayload_Status) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AgentToolCallPayload_Status) Descriptor() protoreflect.EnumDescriptor {
+	return file_chat_v1_chat_stream_proto_enumTypes[2].Descriptor()
+}
+
+func (AgentToolCallPayload_Status) Type() protoreflect.EnumType {
+	return &file_chat_v1_chat_stream_proto_enumTypes[2]
+}
+
+func (x AgentToolCallPayload_Status) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AgentToolCallPayload_Status.Descriptor instead.
+func (AgentToolCallPayload_Status) EnumDescriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{9, 0}
+}
+
 // ChatEvent is a single channel-level event delivered through the unified stream.
 type ChatEvent struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
@@ -177,6 +259,12 @@ type ChatEvent struct {
 	//	*ChatEvent_Member
 	//	*ChatEvent_ChannelUpdated
 	//	*ChatEvent_ThreadUpdated
+	//	*ChatEvent_AgentTyping
+	//	*ChatEvent_AgentTokenDelta
+	//	*ChatEvent_AgentToolCall
+	//	*ChatEvent_AgentConfirmationRequested
+	//	*ChatEvent_AgentConfirmationResolved
+	//	*ChatEvent_MembersChanged
 	Payload       isChatEvent_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -303,6 +391,60 @@ func (x *ChatEvent) GetThreadUpdated() *ThreadUpdatedPayload {
 	return nil
 }
 
+func (x *ChatEvent) GetAgentTyping() *AgentTypingPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_AgentTyping); ok {
+			return x.AgentTyping
+		}
+	}
+	return nil
+}
+
+func (x *ChatEvent) GetAgentTokenDelta() *AgentTokenDeltaPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_AgentTokenDelta); ok {
+			return x.AgentTokenDelta
+		}
+	}
+	return nil
+}
+
+func (x *ChatEvent) GetAgentToolCall() *AgentToolCallPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_AgentToolCall); ok {
+			return x.AgentToolCall
+		}
+	}
+	return nil
+}
+
+func (x *ChatEvent) GetAgentConfirmationRequested() *AgentConfirmationRequestedPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_AgentConfirmationRequested); ok {
+			return x.AgentConfirmationRequested
+		}
+	}
+	return nil
+}
+
+func (x *ChatEvent) GetAgentConfirmationResolved() *AgentConfirmationResolvedPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_AgentConfirmationResolved); ok {
+			return x.AgentConfirmationResolved
+		}
+	}
+	return nil
+}
+
+func (x *ChatEvent) GetMembersChanged() *MembersChangedPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_MembersChanged); ok {
+			return x.MembersChanged
+		}
+	}
+	return nil
+}
+
 type isChatEvent_Payload interface {
 	isChatEvent_Payload()
 }
@@ -339,7 +481,35 @@ type ChatEvent_ChannelUpdated struct {
 
 type ChatEvent_ThreadUpdated struct {
 	// THREAD_UPDATED
-	ThreadUpdated *ThreadUpdatedPayload `protobuf:"bytes,16,opt,name=thread_updated,json=threadUpdated,proto3,oneof"` // HEARTBEAT (no payload needed)
+	ThreadUpdated *ThreadUpdatedPayload `protobuf:"bytes,16,opt,name=thread_updated,json=threadUpdated,proto3,oneof"`
+}
+
+type ChatEvent_AgentTyping struct {
+	// HEARTBEAT (no payload needed)
+	// AGENT_TYPING, AGENT_TOKEN_DELTA, AGENT_TOOL_CALL,
+	// AGENT_CONFIRMATION_REQUESTED, AGENT_CONFIRMATION_RESOLVED
+	AgentTyping *AgentTypingPayload `protobuf:"bytes,17,opt,name=agent_typing,json=agentTyping,proto3,oneof"`
+}
+
+type ChatEvent_AgentTokenDelta struct {
+	AgentTokenDelta *AgentTokenDeltaPayload `protobuf:"bytes,18,opt,name=agent_token_delta,json=agentTokenDelta,proto3,oneof"`
+}
+
+type ChatEvent_AgentToolCall struct {
+	AgentToolCall *AgentToolCallPayload `protobuf:"bytes,19,opt,name=agent_tool_call,json=agentToolCall,proto3,oneof"`
+}
+
+type ChatEvent_AgentConfirmationRequested struct {
+	AgentConfirmationRequested *AgentConfirmationRequestedPayload `protobuf:"bytes,20,opt,name=agent_confirmation_requested,json=agentConfirmationRequested,proto3,oneof"`
+}
+
+type ChatEvent_AgentConfirmationResolved struct {
+	AgentConfirmationResolved *AgentConfirmationResolvedPayload `protobuf:"bytes,21,opt,name=agent_confirmation_resolved,json=agentConfirmationResolved,proto3,oneof"`
+}
+
+type ChatEvent_MembersChanged struct {
+	// MEMBERS_ADDED, MEMBERS_REMOVED
+	MembersChanged *MembersChangedPayload `protobuf:"bytes,22,opt,name=members_changed,json=membersChanged,proto3,oneof"`
 }
 
 func (*ChatEvent_Message) isChatEvent_Payload() {}
@@ -355,6 +525,18 @@ func (*ChatEvent_Member) isChatEvent_Payload() {}
 func (*ChatEvent_ChannelUpdated) isChatEvent_Payload() {}
 
 func (*ChatEvent_ThreadUpdated) isChatEvent_Payload() {}
+
+func (*ChatEvent_AgentTyping) isChatEvent_Payload() {}
+
+func (*ChatEvent_AgentTokenDelta) isChatEvent_Payload() {}
+
+func (*ChatEvent_AgentToolCall) isChatEvent_Payload() {}
+
+func (*ChatEvent_AgentConfirmationRequested) isChatEvent_Payload() {}
+
+func (*ChatEvent_AgentConfirmationResolved) isChatEvent_Payload() {}
+
+func (*ChatEvent_MembersChanged) isChatEvent_Payload() {}
 
 type MessageDeletedPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -596,6 +778,54 @@ func (x *MemberPayload) GetRole() ChannelRole {
 	return ChannelRole_CHANNEL_ROLE_UNSPECIFIED
 }
 
+// MembersChangedPayload announces a batched add or remove. A single
+// MEMBERS_ADDED or MEMBERS_REMOVED event covers all subjects affected
+// by the same admin call so the frontend can refresh the member list
+// once instead of per affected user.
+type MembersChangedPayload struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserIds       []string               `protobuf:"bytes,1,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MembersChangedPayload) Reset() {
+	*x = MembersChangedPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MembersChangedPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MembersChangedPayload) ProtoMessage() {}
+
+func (x *MembersChangedPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MembersChangedPayload.ProtoReflect.Descriptor instead.
+func (*MembersChangedPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *MembersChangedPayload) GetUserIds() []string {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
 type ThreadUpdatedPayload struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	RootMessageId       string                 `protobuf:"bytes,1,opt,name=root_message_id,json=rootMessageId,proto3" json:"root_message_id,omitempty"`
@@ -608,7 +838,7 @@ type ThreadUpdatedPayload struct {
 
 func (x *ThreadUpdatedPayload) Reset() {
 	*x = ThreadUpdatedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[5]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -620,7 +850,7 @@ func (x *ThreadUpdatedPayload) String() string {
 func (*ThreadUpdatedPayload) ProtoMessage() {}
 
 func (x *ThreadUpdatedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[5]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,7 +863,7 @@ func (x *ThreadUpdatedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadUpdatedPayload.ProtoReflect.Descriptor instead.
 func (*ThreadUpdatedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{5}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ThreadUpdatedPayload) GetRootMessageId() string {
@@ -664,6 +894,432 @@ func (x *ThreadUpdatedPayload) GetLatestParticipantId() string {
 	return ""
 }
 
+// AgentTypingPayload announces an agent is generating a response.
+// Mirrors TypingPayload but identifies the agent rather than a user.
+type AgentTypingPayload struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	AgentId     string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Empty when the agent stops typing (paired AGENT_TYPING events).
+	Started bool `protobuf:"varint,3,opt,name=started,proto3" json:"started,omitempty"`
+	// Set when the trigger was a thread reply. Frontend scopes the typing
+	// indicator to the thread panel identified by this root. When unset the
+	// indicator renders at the channel root.
+	RootId        *string `protobuf:"bytes,4,opt,name=root_id,json=rootId,proto3,oneof" json:"root_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentTypingPayload) Reset() {
+	*x = AgentTypingPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentTypingPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentTypingPayload) ProtoMessage() {}
+
+func (x *AgentTypingPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentTypingPayload.ProtoReflect.Descriptor instead.
+func (*AgentTypingPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AgentTypingPayload) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *AgentTypingPayload) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *AgentTypingPayload) GetStarted() bool {
+	if x != nil {
+		return x.Started
+	}
+	return false
+}
+
+func (x *AgentTypingPayload) GetRootId() string {
+	if x != nil && x.RootId != nil {
+		return *x.RootId
+	}
+	return ""
+}
+
+// AgentTokenDeltaPayload patches an in-flight agent message with new tokens.
+// The frontend appends `delta` to the message identified by `message_id`.
+// `sequence` is monotonic per message and lets clients drop late deltas.
+type AgentTokenDeltaPayload struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	AgentId   string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Delta     string                 `protobuf:"bytes,3,opt,name=delta,proto3" json:"delta,omitempty"`
+	Sequence  int32                  `protobuf:"varint,4,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	// True on the final delta; clients may persist message state on this edge.
+	Final         bool `protobuf:"varint,5,opt,name=final,proto3" json:"final,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentTokenDeltaPayload) Reset() {
+	*x = AgentTokenDeltaPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentTokenDeltaPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentTokenDeltaPayload) ProtoMessage() {}
+
+func (x *AgentTokenDeltaPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentTokenDeltaPayload.ProtoReflect.Descriptor instead.
+func (*AgentTokenDeltaPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *AgentTokenDeltaPayload) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *AgentTokenDeltaPayload) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *AgentTokenDeltaPayload) GetDelta() string {
+	if x != nil {
+		return x.Delta
+	}
+	return ""
+}
+
+func (x *AgentTokenDeltaPayload) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *AgentTokenDeltaPayload) GetFinal() bool {
+	if x != nil {
+		return x.Final
+	}
+	return false
+}
+
+// AgentToolCallPayload signals a tool invocation by an agent.
+// Status follows: STARTED -> COMPLETED/FAILED.
+type AgentToolCallPayload struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	AgentId   string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	ToolName  string                 `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	// Stable identifier for matching STARTED to COMPLETED.
+	ToolCallId string                      `protobuf:"bytes,4,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	Status     AgentToolCallPayload_Status `protobuf:"varint,5,opt,name=status,proto3,enum=chat.v1.AgentToolCallPayload_Status" json:"status,omitempty"`
+	// Arguments preview (truncated JSON) for STARTED; result preview for
+	// COMPLETED/FAILED. Heavy payloads are persisted on the message metadata.
+	Preview       *string `protobuf:"bytes,6,opt,name=preview,proto3,oneof" json:"preview,omitempty"`
+	ErrorMessage  *string `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentToolCallPayload) Reset() {
+	*x = AgentToolCallPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentToolCallPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentToolCallPayload) ProtoMessage() {}
+
+func (x *AgentToolCallPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentToolCallPayload.ProtoReflect.Descriptor instead.
+func (*AgentToolCallPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AgentToolCallPayload) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *AgentToolCallPayload) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *AgentToolCallPayload) GetToolName() string {
+	if x != nil {
+		return x.ToolName
+	}
+	return ""
+}
+
+func (x *AgentToolCallPayload) GetToolCallId() string {
+	if x != nil {
+		return x.ToolCallId
+	}
+	return ""
+}
+
+func (x *AgentToolCallPayload) GetStatus() AgentToolCallPayload_Status {
+	if x != nil {
+		return x.Status
+	}
+	return AgentToolCallPayload_STATUS_UNSPECIFIED
+}
+
+func (x *AgentToolCallPayload) GetPreview() string {
+	if x != nil && x.Preview != nil {
+		return *x.Preview
+	}
+	return ""
+}
+
+func (x *AgentToolCallPayload) GetErrorMessage() string {
+	if x != nil && x.ErrorMessage != nil {
+		return *x.ErrorMessage
+	}
+	return ""
+}
+
+// AgentConfirmationRequestedPayload mirrors the runtime confirmation event
+// but is published into the chat stream so the chat UI can render an inline
+// approval card. The card is interactive only for `actor_user_id`.
+type AgentConfirmationRequestedPayload struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	AgentId   string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	// Opaque correlation id used by RespondToAgentConfirmation.
+	RequestId   string `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	ToolName    string `protobuf:"bytes,4,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	ArgsPreview string `protobuf:"bytes,5,opt,name=args_preview,json=argsPreview,proto3" json:"args_preview,omitempty"`
+	// Only this user can approve/deny; others see disabled UI.
+	ActorUserId   string                 `protobuf:"bytes,6,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentConfirmationRequestedPayload) Reset() {
+	*x = AgentConfirmationRequestedPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentConfirmationRequestedPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentConfirmationRequestedPayload) ProtoMessage() {}
+
+func (x *AgentConfirmationRequestedPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentConfirmationRequestedPayload.ProtoReflect.Descriptor instead.
+func (*AgentConfirmationRequestedPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AgentConfirmationRequestedPayload) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *AgentConfirmationRequestedPayload) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *AgentConfirmationRequestedPayload) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *AgentConfirmationRequestedPayload) GetToolName() string {
+	if x != nil {
+		return x.ToolName
+	}
+	return ""
+}
+
+func (x *AgentConfirmationRequestedPayload) GetArgsPreview() string {
+	if x != nil {
+		return x.ArgsPreview
+	}
+	return ""
+}
+
+func (x *AgentConfirmationRequestedPayload) GetActorUserId() string {
+	if x != nil {
+		return x.ActorUserId
+	}
+	return ""
+}
+
+func (x *AgentConfirmationRequestedPayload) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+// AgentConfirmationResolvedPayload announces approval/denial.
+// Reuses chat.v1.AgentConfirmationDecision via the chat.proto import above.
+type AgentConfirmationResolvedPayload struct {
+	state           protoimpl.MessageState    `protogen:"open.v1"`
+	RequestId       string                    `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	MessageId       string                    `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Decision        AgentConfirmationDecision `protobuf:"varint,3,opt,name=decision,proto3,enum=chat.v1.AgentConfirmationDecision" json:"decision,omitempty"`
+	DecidedByUserId string                    `protobuf:"bytes,4,opt,name=decided_by_user_id,json=decidedByUserId,proto3" json:"decided_by_user_id,omitempty"`
+	DecidedAt       *timestamppb.Timestamp    `protobuf:"bytes,5,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AgentConfirmationResolvedPayload) Reset() {
+	*x = AgentConfirmationResolvedPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentConfirmationResolvedPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentConfirmationResolvedPayload) ProtoMessage() {}
+
+func (x *AgentConfirmationResolvedPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentConfirmationResolvedPayload.ProtoReflect.Descriptor instead.
+func (*AgentConfirmationResolvedPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *AgentConfirmationResolvedPayload) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *AgentConfirmationResolvedPayload) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *AgentConfirmationResolvedPayload) GetDecision() AgentConfirmationDecision {
+	if x != nil {
+		return x.Decision
+	}
+	return AgentConfirmationDecision_AGENT_CONFIRMATION_DECISION_UNSPECIFIED
+}
+
+func (x *AgentConfirmationResolvedPayload) GetDecidedByUserId() string {
+	if x != nil {
+		return x.DecidedByUserId
+	}
+	return ""
+}
+
+func (x *AgentConfirmationResolvedPayload) GetDecidedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DecidedAt
+	}
+	return nil
+}
+
 type StreamUserChatEventsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -673,7 +1329,7 @@ type StreamUserChatEventsRequest struct {
 
 func (x *StreamUserChatEventsRequest) Reset() {
 	*x = StreamUserChatEventsRequest{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[6]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -685,7 +1341,7 @@ func (x *StreamUserChatEventsRequest) String() string {
 func (*StreamUserChatEventsRequest) ProtoMessage() {}
 
 func (x *StreamUserChatEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[6]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -698,7 +1354,7 @@ func (x *StreamUserChatEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamUserChatEventsRequest.ProtoReflect.Descriptor instead.
 func (*StreamUserChatEventsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{6}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *StreamUserChatEventsRequest) GetOrganizationId() string {
@@ -725,7 +1381,7 @@ type UserChatEvent struct {
 
 func (x *UserChatEvent) Reset() {
 	*x = UserChatEvent{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[7]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -737,7 +1393,7 @@ func (x *UserChatEvent) String() string {
 func (*UserChatEvent) ProtoMessage() {}
 
 func (x *UserChatEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[7]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -750,7 +1406,7 @@ func (x *UserChatEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserChatEvent.ProtoReflect.Descriptor instead.
 func (*UserChatEvent) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{7}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UserChatEvent) GetEventType() UserChatEventType {
@@ -850,7 +1506,7 @@ type UnreadCountPayload struct {
 
 func (x *UnreadCountPayload) Reset() {
 	*x = UnreadCountPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[8]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +1518,7 @@ func (x *UnreadCountPayload) String() string {
 func (*UnreadCountPayload) ProtoMessage() {}
 
 func (x *UnreadCountPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[8]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +1531,7 @@ func (x *UnreadCountPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnreadCountPayload.ProtoReflect.Descriptor instead.
 func (*UnreadCountPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{8}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *UnreadCountPayload) GetChannelId() string {
@@ -912,7 +1568,7 @@ type ThreadActivityPayload struct {
 
 func (x *ThreadActivityPayload) Reset() {
 	*x = ThreadActivityPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -924,7 +1580,7 @@ func (x *ThreadActivityPayload) String() string {
 func (*ThreadActivityPayload) ProtoMessage() {}
 
 func (x *ThreadActivityPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -937,7 +1593,7 @@ func (x *ThreadActivityPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadActivityPayload.ProtoReflect.Descriptor instead.
 func (*ThreadActivityPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{9}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ThreadActivityPayload) GetRootMessageId() string {
@@ -990,7 +1646,7 @@ type MentionReceivedPayload struct {
 
 func (x *MentionReceivedPayload) Reset() {
 	*x = MentionReceivedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1002,7 +1658,7 @@ func (x *MentionReceivedPayload) String() string {
 func (*MentionReceivedPayload) ProtoMessage() {}
 
 func (x *MentionReceivedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1015,7 +1671,7 @@ func (x *MentionReceivedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MentionReceivedPayload.ProtoReflect.Descriptor instead.
 func (*MentionReceivedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{10}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *MentionReceivedPayload) GetChannelId() string {
@@ -1064,7 +1720,7 @@ var File_chat_v1_chat_stream_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
-	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12chat/v1/chat.proto\"\xc8\x04\n" +
+	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12chat/v1/chat.proto\"\xca\b\n" +
 	"\tChatEvent\x125\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x16.chat.v1.ChatEventTypeR\teventType\x128\n" +
@@ -1078,7 +1734,13 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x06typing\x18\r \x01(\v2\x16.chat.v1.TypingPayloadH\x00R\x06typing\x120\n" +
 	"\x06member\x18\x0e \x01(\v2\x16.chat.v1.MemberPayloadH\x00R\x06member\x12?\n" +
 	"\x0fchannel_updated\x18\x0f \x01(\v2\x14.chat.v1.ChatChannelH\x00R\x0echannelUpdated\x12F\n" +
-	"\x0ethread_updated\x18\x10 \x01(\v2\x1d.chat.v1.ThreadUpdatedPayloadH\x00R\rthreadUpdatedB\t\n" +
+	"\x0ethread_updated\x18\x10 \x01(\v2\x1d.chat.v1.ThreadUpdatedPayloadH\x00R\rthreadUpdated\x12@\n" +
+	"\fagent_typing\x18\x11 \x01(\v2\x1b.chat.v1.AgentTypingPayloadH\x00R\vagentTyping\x12M\n" +
+	"\x11agent_token_delta\x18\x12 \x01(\v2\x1f.chat.v1.AgentTokenDeltaPayloadH\x00R\x0fagentTokenDelta\x12G\n" +
+	"\x0fagent_tool_call\x18\x13 \x01(\v2\x1d.chat.v1.AgentToolCallPayloadH\x00R\ragentToolCall\x12n\n" +
+	"\x1cagent_confirmation_requested\x18\x14 \x01(\v2*.chat.v1.AgentConfirmationRequestedPayloadH\x00R\x1aagentConfirmationRequested\x12k\n" +
+	"\x1bagent_confirmation_resolved\x18\x15 \x01(\v2).chat.v1.AgentConfirmationResolvedPayloadH\x00R\x19agentConfirmationResolved\x12I\n" +
+	"\x0fmembers_changed\x18\x16 \x01(\v2\x1e.chat.v1.MembersChangedPayloadH\x00R\x0emembersChangedB\t\n" +
 	"\apayload\"q\n" +
 	"\x15MessageDeletedPayload\x12\x1d\n" +
 	"\n" +
@@ -1100,13 +1762,67 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
 	"avatar_url\x18\x03 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12(\n" +
 	"\x04role\x18\x04 \x01(\x0e2\x14.chat.v1.ChannelRoleR\x04roleB\r\n" +
-	"\v_avatar_url\"\xd3\x01\n" +
+	"\v_avatar_url\"2\n" +
+	"\x15MembersChangedPayload\x12\x19\n" +
+	"\buser_ids\x18\x01 \x03(\tR\auserIds\"\xd3\x01\n" +
 	"\x14ThreadUpdatedPayload\x12&\n" +
 	"\x0froot_message_id\x18\x01 \x01(\tR\rrootMessageId\x12\x1f\n" +
 	"\vreply_count\x18\x02 \x01(\x05R\n" +
 	"replyCount\x12>\n" +
 	"\rlast_reply_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vlastReplyAt\x122\n" +
-	"\x15latest_participant_id\x18\x04 \x01(\tR\x13latestParticipantId\"F\n" +
+	"\x15latest_participant_id\x18\x04 \x01(\tR\x13latestParticipantId\"\x96\x01\n" +
+	"\x12AgentTypingPayload\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x18\n" +
+	"\astarted\x18\x03 \x01(\bR\astarted\x12\x1c\n" +
+	"\aroot_id\x18\x04 \x01(\tH\x00R\x06rootId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_root_id\"\x9a\x01\n" +
+	"\x16AgentTokenDeltaPayload\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x14\n" +
+	"\x05delta\x18\x03 \x01(\tR\x05delta\x12\x1a\n" +
+	"\bsequence\x18\x04 \x01(\x05R\bsequence\x12\x14\n" +
+	"\x05final\x18\x05 \x01(\bR\x05final\"\x93\x03\n" +
+	"\x14AgentToolCallPayload\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1b\n" +
+	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12 \n" +
+	"\ftool_call_id\x18\x04 \x01(\tR\n" +
+	"toolCallId\x12<\n" +
+	"\x06status\x18\x05 \x01(\x0e2$.chat.v1.AgentToolCallPayload.StatusR\x06status\x12\x1d\n" +
+	"\apreview\x18\x06 \x01(\tH\x00R\apreview\x88\x01\x01\x12(\n" +
+	"\rerror_message\x18\a \x01(\tH\x01R\ferrorMessage\x88\x01\x01\"]\n" +
+	"\x06Status\x12\x16\n" +
+	"\x12STATUS_UNSPECIFIED\x10\x00\x12\x12\n" +
+	"\x0eSTATUS_STARTED\x10\x01\x12\x14\n" +
+	"\x10STATUS_COMPLETED\x10\x02\x12\x11\n" +
+	"\rSTATUS_FAILED\x10\x03B\n" +
+	"\n" +
+	"\b_previewB\x10\n" +
+	"\x0e_error_message\"\x9b\x02\n" +
+	"!AgentConfirmationRequestedPayload\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12\x1b\n" +
+	"\ttool_name\x18\x04 \x01(\tR\btoolName\x12!\n" +
+	"\fargs_preview\x18\x05 \x01(\tR\vargsPreview\x12\"\n" +
+	"\ractor_user_id\x18\x06 \x01(\tR\vactorUserId\x129\n" +
+	"\n" +
+	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\x88\x02\n" +
+	" AgentConfirmationResolvedPayload\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12>\n" +
+	"\bdecision\x18\x03 \x01(\x0e2\".chat.v1.AgentConfirmationDecisionR\bdecision\x12+\n" +
+	"\x12decided_by_user_id\x18\x04 \x01(\tR\x0fdecidedByUserId\x129\n" +
+	"\n" +
+	"decided_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\"F\n" +
 	"\x1bStreamUserChatEventsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xa5\x03\n" +
 	"\rUserChatEvent\x129\n" +
@@ -1141,7 +1857,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x1f\n" +
 	"\vsender_name\x18\x05 \x01(\tR\n" +
 	"senderName\x12\x18\n" +
-	"\apreview\x18\x06 \x01(\tR\apreview*\xdd\x03\n" +
+	"\apreview\x18\x06 \x01(\tR\apreview*\xf6\x05\n" +
 	"\rChatEventType\x12\x1f\n" +
 	"\x1bCHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_MESSAGE_CREATED\x10\x01\x12#\n" +
@@ -1156,7 +1872,14 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x1fCHAT_EVENT_TYPE_CHANNEL_UPDATED\x10\n" +
 	"\x12\"\n" +
 	"\x1eCHAT_EVENT_TYPE_THREAD_UPDATED\x10\v\x12\x1d\n" +
-	"\x19CHAT_EVENT_TYPE_HEARTBEAT\x10\f*\x89\x02\n" +
+	"\x19CHAT_EVENT_TYPE_HEARTBEAT\x10\f\x12!\n" +
+	"\x1dCHAT_EVENT_TYPE_MEMBERS_ADDED\x10\x16\x12#\n" +
+	"\x1fCHAT_EVENT_TYPE_MEMBERS_REMOVED\x10\x17\x12 \n" +
+	"\x1cCHAT_EVENT_TYPE_AGENT_TYPING\x10\r\x12%\n" +
+	"!CHAT_EVENT_TYPE_AGENT_TOKEN_DELTA\x10\x0e\x12#\n" +
+	"\x1fCHAT_EVENT_TYPE_AGENT_TOOL_CALL\x10\x0f\x120\n" +
+	",CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED\x10\x10\x12/\n" +
+	"+CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED\x10\x11*\x89\x02\n" +
 	"\x11UserChatEventType\x12$\n" +
 	" USER_CHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12-\n" +
 	")USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED\x10\x01\x12(\n" +
@@ -1179,54 +1902,72 @@ func file_chat_v1_chat_stream_proto_rawDescGZIP() []byte {
 	return file_chat_v1_chat_stream_proto_rawDescData
 }
 
-var file_chat_v1_chat_stream_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_chat_v1_chat_stream_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_chat_v1_chat_stream_proto_goTypes = []any{
-	(ChatEventType)(0),                  // 0: chat.v1.ChatEventType
-	(UserChatEventType)(0),              // 1: chat.v1.UserChatEventType
-	(*ChatEvent)(nil),                   // 2: chat.v1.ChatEvent
-	(*MessageDeletedPayload)(nil),       // 3: chat.v1.MessageDeletedPayload
-	(*ReactionPayload)(nil),             // 4: chat.v1.ReactionPayload
-	(*TypingPayload)(nil),               // 5: chat.v1.TypingPayload
-	(*MemberPayload)(nil),               // 6: chat.v1.MemberPayload
-	(*ThreadUpdatedPayload)(nil),        // 7: chat.v1.ThreadUpdatedPayload
-	(*StreamUserChatEventsRequest)(nil), // 8: chat.v1.StreamUserChatEventsRequest
-	(*UserChatEvent)(nil),               // 9: chat.v1.UserChatEvent
-	(*UnreadCountPayload)(nil),          // 10: chat.v1.UnreadCountPayload
-	(*ThreadActivityPayload)(nil),       // 11: chat.v1.ThreadActivityPayload
-	(*MentionReceivedPayload)(nil),      // 12: chat.v1.MentionReceivedPayload
-	(*timestamppb.Timestamp)(nil),       // 13: google.protobuf.Timestamp
-	(*ChatMessage)(nil),                 // 14: chat.v1.ChatMessage
-	(*ChatChannel)(nil),                 // 15: chat.v1.ChatChannel
-	(ChannelRole)(0),                    // 16: chat.v1.ChannelRole
+	(ChatEventType)(0),                        // 0: chat.v1.ChatEventType
+	(UserChatEventType)(0),                    // 1: chat.v1.UserChatEventType
+	(AgentToolCallPayload_Status)(0),          // 2: chat.v1.AgentToolCallPayload.Status
+	(*ChatEvent)(nil),                         // 3: chat.v1.ChatEvent
+	(*MessageDeletedPayload)(nil),             // 4: chat.v1.MessageDeletedPayload
+	(*ReactionPayload)(nil),                   // 5: chat.v1.ReactionPayload
+	(*TypingPayload)(nil),                     // 6: chat.v1.TypingPayload
+	(*MemberPayload)(nil),                     // 7: chat.v1.MemberPayload
+	(*MembersChangedPayload)(nil),             // 8: chat.v1.MembersChangedPayload
+	(*ThreadUpdatedPayload)(nil),              // 9: chat.v1.ThreadUpdatedPayload
+	(*AgentTypingPayload)(nil),                // 10: chat.v1.AgentTypingPayload
+	(*AgentTokenDeltaPayload)(nil),            // 11: chat.v1.AgentTokenDeltaPayload
+	(*AgentToolCallPayload)(nil),              // 12: chat.v1.AgentToolCallPayload
+	(*AgentConfirmationRequestedPayload)(nil), // 13: chat.v1.AgentConfirmationRequestedPayload
+	(*AgentConfirmationResolvedPayload)(nil),  // 14: chat.v1.AgentConfirmationResolvedPayload
+	(*StreamUserChatEventsRequest)(nil),       // 15: chat.v1.StreamUserChatEventsRequest
+	(*UserChatEvent)(nil),                     // 16: chat.v1.UserChatEvent
+	(*UnreadCountPayload)(nil),                // 17: chat.v1.UnreadCountPayload
+	(*ThreadActivityPayload)(nil),             // 18: chat.v1.ThreadActivityPayload
+	(*MentionReceivedPayload)(nil),            // 19: chat.v1.MentionReceivedPayload
+	(*timestamppb.Timestamp)(nil),             // 20: google.protobuf.Timestamp
+	(*ChatMessage)(nil),                       // 21: chat.v1.ChatMessage
+	(*ChatChannel)(nil),                       // 22: chat.v1.ChatChannel
+	(ChannelRole)(0),                          // 23: chat.v1.ChannelRole
+	(AgentConfirmationDecision)(0),            // 24: chat.v1.AgentConfirmationDecision
 }
 var file_chat_v1_chat_stream_proto_depIdxs = []int32{
 	0,  // 0: chat.v1.ChatEvent.event_type:type_name -> chat.v1.ChatEventType
-	13, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
-	3,  // 3: chat.v1.ChatEvent.message_deleted:type_name -> chat.v1.MessageDeletedPayload
-	4,  // 4: chat.v1.ChatEvent.reaction:type_name -> chat.v1.ReactionPayload
-	5,  // 5: chat.v1.ChatEvent.typing:type_name -> chat.v1.TypingPayload
-	6,  // 6: chat.v1.ChatEvent.member:type_name -> chat.v1.MemberPayload
-	15, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
-	7,  // 8: chat.v1.ChatEvent.thread_updated:type_name -> chat.v1.ThreadUpdatedPayload
-	13, // 9: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
-	16, // 10: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
-	13, // 11: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
-	1,  // 12: chat.v1.UserChatEvent.event_type:type_name -> chat.v1.UserChatEventType
-	13, // 13: chat.v1.UserChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	10, // 14: chat.v1.UserChatEvent.unread_count:type_name -> chat.v1.UnreadCountPayload
-	11, // 15: chat.v1.UserChatEvent.thread_activity:type_name -> chat.v1.ThreadActivityPayload
-	12, // 16: chat.v1.UserChatEvent.mention_received:type_name -> chat.v1.MentionReceivedPayload
-	2,  // 17: chat.v1.UserChatEvent.channel_event:type_name -> chat.v1.ChatEvent
-	13, // 18: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
-	8,  // 19: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
-	9,  // 20: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.UserChatEvent
-	20, // [20:21] is the sub-list for method output_type
-	19, // [19:20] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	20, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	21, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
+	4,  // 3: chat.v1.ChatEvent.message_deleted:type_name -> chat.v1.MessageDeletedPayload
+	5,  // 4: chat.v1.ChatEvent.reaction:type_name -> chat.v1.ReactionPayload
+	6,  // 5: chat.v1.ChatEvent.typing:type_name -> chat.v1.TypingPayload
+	7,  // 6: chat.v1.ChatEvent.member:type_name -> chat.v1.MemberPayload
+	22, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
+	9,  // 8: chat.v1.ChatEvent.thread_updated:type_name -> chat.v1.ThreadUpdatedPayload
+	10, // 9: chat.v1.ChatEvent.agent_typing:type_name -> chat.v1.AgentTypingPayload
+	11, // 10: chat.v1.ChatEvent.agent_token_delta:type_name -> chat.v1.AgentTokenDeltaPayload
+	12, // 11: chat.v1.ChatEvent.agent_tool_call:type_name -> chat.v1.AgentToolCallPayload
+	13, // 12: chat.v1.ChatEvent.agent_confirmation_requested:type_name -> chat.v1.AgentConfirmationRequestedPayload
+	14, // 13: chat.v1.ChatEvent.agent_confirmation_resolved:type_name -> chat.v1.AgentConfirmationResolvedPayload
+	8,  // 14: chat.v1.ChatEvent.members_changed:type_name -> chat.v1.MembersChangedPayload
+	20, // 15: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
+	23, // 16: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
+	20, // 17: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	2,  // 18: chat.v1.AgentToolCallPayload.status:type_name -> chat.v1.AgentToolCallPayload.Status
+	20, // 19: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
+	24, // 20: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
+	20, // 21: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
+	1,  // 22: chat.v1.UserChatEvent.event_type:type_name -> chat.v1.UserChatEventType
+	20, // 23: chat.v1.UserChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	17, // 24: chat.v1.UserChatEvent.unread_count:type_name -> chat.v1.UnreadCountPayload
+	18, // 25: chat.v1.UserChatEvent.thread_activity:type_name -> chat.v1.ThreadActivityPayload
+	19, // 26: chat.v1.UserChatEvent.mention_received:type_name -> chat.v1.MentionReceivedPayload
+	3,  // 27: chat.v1.UserChatEvent.channel_event:type_name -> chat.v1.ChatEvent
+	20, // 28: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	15, // 29: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
+	16, // 30: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.UserChatEvent
+	30, // [30:31] is the sub-list for method output_type
+	29, // [29:30] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_chat_v1_chat_stream_proto_init() }
@@ -1243,9 +1984,17 @@ func file_chat_v1_chat_stream_proto_init() {
 		(*ChatEvent_Member)(nil),
 		(*ChatEvent_ChannelUpdated)(nil),
 		(*ChatEvent_ThreadUpdated)(nil),
+		(*ChatEvent_AgentTyping)(nil),
+		(*ChatEvent_AgentTokenDelta)(nil),
+		(*ChatEvent_AgentToolCall)(nil),
+		(*ChatEvent_AgentConfirmationRequested)(nil),
+		(*ChatEvent_AgentConfirmationResolved)(nil),
+		(*ChatEvent_MembersChanged)(nil),
 	}
 	file_chat_v1_chat_stream_proto_msgTypes[4].OneofWrappers = []any{}
-	file_chat_v1_chat_stream_proto_msgTypes[7].OneofWrappers = []any{
+	file_chat_v1_chat_stream_proto_msgTypes[7].OneofWrappers = []any{}
+	file_chat_v1_chat_stream_proto_msgTypes[9].OneofWrappers = []any{}
+	file_chat_v1_chat_stream_proto_msgTypes[13].OneofWrappers = []any{
 		(*UserChatEvent_UnreadCount)(nil),
 		(*UserChatEvent_ThreadActivity)(nil),
 		(*UserChatEvent_MentionReceived)(nil),
@@ -1256,8 +2005,8 @@ func file_chat_v1_chat_stream_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_v1_chat_stream_proto_rawDesc), len(file_chat_v1_chat_stream_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   11,
+			NumEnums:      3,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

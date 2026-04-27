@@ -234,14 +234,12 @@ class ListMessagesResponse(_message.Message):
     def __init__(self, messages: _Optional[_Iterable[_Union[MessageInfo, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class GetSessionContextRequest(_message.Message):
-    __slots__ = ("organization_id", "session_id", "max_messages")
+    __slots__ = ("organization_id", "session_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
-    MAX_MESSAGES_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     session_id: str
-    max_messages: int
-    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., max_messages: _Optional[int] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ...) -> None: ...
 
 class GetSessionContextResponse(_message.Message):
     __slots__ = ("messages", "total_messages")
