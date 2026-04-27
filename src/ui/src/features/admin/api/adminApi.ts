@@ -13,6 +13,8 @@ import type {
     GetPermissionDefaultsRequest,
     UpdatePermissionDefaultsRequest,
     GetOrganizationOverviewRequest,
+    GetOrganizationSettingsRequest,
+    UpdateOrganizationSettingsRequest,
     ListMembersRequest,
     UpdateMemberRoleRequest,
     RemoveMemberRequest,
@@ -55,6 +57,15 @@ export const adminApi = {
     // Organization Overview (from organizations service)
     getOrganizationOverview: async (request: PartialMessage<GetOrganizationOverviewRequest>) => {
         return organizationsClient.getOrganizationOverview(request);
+    },
+
+    // Organization Settings (from organizations service)
+    getOrganizationSettings: async (request: PartialMessage<GetOrganizationSettingsRequest>) => {
+        return organizationsClient.getOrganizationSettings(request);
+    },
+
+    updateOrganizationSettings: async (request: PartialMessage<UpdateOrganizationSettingsRequest>) => {
+        return organizationsClient.updateOrganizationSettings(request);
     },
 
     // Members (from organizations service)

@@ -158,7 +158,7 @@ export function AgentsLayout() {
               defaultSize={220}
               minSize={160}
               maxSize={320}
-              className="bg-card border-r border-border overflow-hidden"
+              className="bg-background border-r border-border overflow-hidden"
             >
               <AgentsSidebar collapsed={false} />
             </Panel>

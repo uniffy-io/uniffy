@@ -5,7 +5,7 @@
  * Supports creating folders and navigating the file tree.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
     CaretDown,
@@ -13,6 +13,7 @@ import {
     CaretUp,
     CaretDoubleLeft,
     Folder,
+    FolderOpen,
     FolderPlus,
     LockSimple,
     Buildings,
@@ -25,17 +26,14 @@ import {
     CloudArrowUp,
     CloudArrowDown,
     UsersThree,
-    ArrowUUpLeft,
     Funnel,
     Tag,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useBookmarks } from '@/features/bookmarks';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { filesApi } from '@/features/files/api/filesApi';
 import {
     toggleNodeExpanded,
     setSelectedFolder,
@@ -47,9 +45,9 @@ import {
     expandAll,
     collapseAll,
 } from '@/features/files/store/filesTreeSlice';
-import { setFolderId, setViewScope, initializeFilesData, restoreFile } from '@/features/files/store/filesSlice';
+import { setFolderId, setViewScope, initializeFilesData } from '@/features/files/store/filesSlice';
 import { openViewer } from '@/features/files/store/viewerSlice';
-import { selectDeletedFiles } from '@/features/files/store/selectors';
+import { StorageUsageIndicator } from '@/features/admin/components/storage/StorageUsageIndicator';
 import { toggleUploadPanel } from '@/features/files/store/uploadSlice';
 import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
 
@@ -309,12 +307,13 @@ function FolderNode({
 interface FilesSidebarProps {
     onToggleSidebar?: () => void;
     onUpload?: () => void;
+    onUploadFolder?: () => void;
 }
 
 /**
  * Main Files Sidebar component.
  */
-export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
+export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: FilesSidebarProps) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const location = useLocation();
@@ -330,20 +329,11 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
 
     // Local state
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [showTrash, setShowTrash] = useState(false);
-    const [restoringFileId, setRestoringFileId] = useState<string | null>(null);
-    const [showEmptyTrashConfirm, setShowEmptyTrashConfirm] = useState(false);
-    const [emptyingTrash, setEmptyingTrash] = useState(false);
-    const [emptyTrashError, setEmptyTrashError] = useState<string | null>(null);
 
     // Bookmarks state
     useBookmarks(); // Auto-fetches bookmarks on organization change
     const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);
     const files = useAppSelector((state) => state.files.files);
-
-    // Trash state (deleted files)
-    const deletedFiles = useAppSelector(selectDeletedFiles);
-    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
     // Upload/Download status
     const isUploading = useAppSelector((state) => state.upload.isUploading);
@@ -536,16 +526,61 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
         navigate('/files'); // Clear folder param
     }, [dispatch, navigate]);
 
+    // Upload menu popover (shown when idle so user can pick files vs folder)
+    const uploadButtonRef = useRef<HTMLButtonElement>(null);
+    const uploadMenuRef = useRef<HTMLDivElement>(null);
+    const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
+    const [uploadMenuPos, setUploadMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    useEffect(() => {
+        if (!uploadMenuOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                uploadMenuRef.current && !uploadMenuRef.current.contains(e.target as Node) &&
+                uploadButtonRef.current && !uploadButtonRef.current.contains(e.target as Node)
+            ) {
+                setUploadMenuOpen(false);
+            }
+        };
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setUploadMenuOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [uploadMenuOpen]);
+
     // Handle upload button click
     const handleUploadClick = useCallback(() => {
         if (hasTransferActivity) {
             // When there's activity, toggle the status panel
             dispatch(toggleUploadPanel());
-        } else {
-            // When idle, trigger file upload
-            onUpload?.();
+            return;
         }
-    }, [dispatch, hasTransferActivity, onUpload]);
+        // When idle, open a small menu so the user can pick files or a folder
+        const rect = uploadButtonRef.current?.getBoundingClientRect();
+        if (rect) {
+            const menuWidth = 180;
+            const menuHeight = 90;
+            const x = rect.left + menuWidth > window.innerWidth ? rect.right - menuWidth : rect.left;
+            const y = rect.bottom + menuHeight > window.innerHeight ? rect.top - menuHeight - 4 : rect.bottom + 4;
+            setUploadMenuPos({ x, y });
+        }
+        setUploadMenuOpen((prev) => !prev);
+    }, [dispatch, hasTransferActivity]);
+
+    const handleSelectUploadFiles = useCallback(() => {
+        setUploadMenuOpen(false);
+        onUpload?.();
+    }, [onUpload]);
+
+    const handleSelectUploadFolder = useCallback(() => {
+        setUploadMenuOpen(false);
+        onUploadFolder?.();
+    }, [onUploadFolder]);
 
     // Open bookmarked file in viewer
     const handleOpenBookmarkedFile = useCallback(
@@ -554,51 +589,6 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
         },
         [dispatch]
     );
-
-    // Restore file from trash
-    const handleRestoreFile = useCallback(
-        async (fileId: string, e: React.MouseEvent) => {
-            e.stopPropagation();
-            try {
-                setRestoringFileId(fileId);
-                await dispatch(restoreFile(fileId)).unwrap();
-                dispatch(fetchFilesTree({ includeFiles: false }));
-            } catch (error) {
-                console.error('Failed to restore file:', error);
-            } finally {
-                setRestoringFileId(null);
-            }
-        },
-        [dispatch]
-    );
-
-    // Show empty trash confirmation modal
-    const handleEmptyTrashClick = useCallback(() => {
-        if (deletedFiles.length === 0 || !organizationId) return;
-        setShowEmptyTrashConfirm(true);
-    }, [deletedFiles.length, organizationId]);
-
-    // Handle confirmed empty trash
-    const handleEmptyTrashConfirm = useCallback(async () => {
-        if (!organizationId) return;
-
-        try {
-            setEmptyingTrash(true);
-            setEmptyTrashError(null);
-            await filesApi.emptyTrash({ organizationId });
-
-            // Force refresh both files and folder tree
-            dispatch(initializeFilesData({ forceRefresh: true }));
-            dispatch(fetchFilesTree({ includeFiles: false }));
-            setShowEmptyTrashConfirm(false);
-        } catch (error) {
-            console.error('Failed to empty trash:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Failed to empty trash';
-            setEmptyTrashError(errorMessage);
-        } finally {
-            setEmptyingTrash(false);
-        }
-    }, [organizationId, dispatch]);
 
     // Render section
     const renderSection = (config: SectionConfig) => {
@@ -677,76 +667,20 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
         );
     };
 
-    // Render trash section
-    const renderTrash = () => {
-        if (deletedFiles.length === 0) return null;
-
-        return (
-            <div className="mt-2 pt-2 border-t border-border">
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => setShowTrash(!showTrash)}
-                        className="flex-1 flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left"
-                    >
-                        {showTrash ? (
-                            <CaretDown size={16} weight="bold" className="text-muted-foreground" />
-                        ) : (
-                            <CaretRight size={16} weight="bold" className="text-muted-foreground" />
-                        )}
-                        <Trash size={16} weight="duotone" className="text-muted-foreground" />
-                        <span className="flex-1">Trash</span>
-                    </button>
-                    <button
-                        onClick={handleEmptyTrashClick}
-                        disabled={emptyingTrash || deletedFiles.length === 0}
-                        className="px-2 py-1.5 text-xs rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Empty trash"
-                    >
-                        {emptyingTrash ? 'Emptying...' : 'Empty'}
-                    </button>
-                </div>
-
-                {showTrash && (
-                    <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
-                        {deletedFiles.map((file) => (
-                            <div
-                                key={file.id}
-                                className="group w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left opacity-60 cursor-default"
-                            >
-                                <File size={16} weight="duotone" className="text-muted-foreground flex-shrink-0" />
-                                <span className="truncate flex-1">{file.filename}</span>
-                                <button
-                                    onClick={(e) => handleRestoreFile(file.id, e)}
-                                    disabled={restoringFileId === file.id}
-                                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-primary/10 hover:text-primary transition-all disabled:opacity-50"
-                                    title="Restore"
-                                >
-                                    {restoringFileId === file.id ? (
-                                        <ArrowsClockwise size={14} weight="bold" className="animate-spin" />
-                                    ) : (
-                                        <ArrowUUpLeft size={14} weight="bold" />
-                                    )}
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
                 {/* Upload/Status Button */}
                 <button
+                    ref={uploadButtonRef}
                     onClick={handleUploadClick}
                     className={cn(
                         "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5",
-                        showPanel && hasTransferActivity && "bg-muted"
+                        showPanel && hasTransferActivity && "bg-muted",
+                        uploadMenuOpen && "bg-muted"
                     )}
-                    title={hasTransferActivity ? "View transfer status" : "Upload files"}
+                    title={hasTransferActivity ? "View transfer status" : "Upload"}
                 >
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
                     <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out text-muted-foreground group-hover:text-primary">
@@ -768,6 +702,32 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                         )}
                     </span>
                 </button>
+                {uploadMenuOpen && (
+                    <div
+                        ref={uploadMenuRef}
+                        className="fixed z-50 min-w-44 overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+                        style={{ top: uploadMenuPos.y, left: uploadMenuPos.x }}
+                    >
+                        <div className="py-1">
+                            <button
+                                onClick={handleSelectUploadFiles}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                            >
+                                <File size={16} weight="duotone" className="text-primary" />
+                                Upload Files
+                            </button>
+                            {onUploadFolder && (
+                                <button
+                                    onClick={handleSelectUploadFolder}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                >
+                                    <FolderOpen size={16} weight="duotone" className="text-primary" />
+                                    Upload Folder
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
                 {filesNavItems.map((item) => {
                     const isActive = item.path === '/files'
                         ? location.pathname === '/files' && !location.search.includes('folder=')
@@ -850,64 +810,32 @@ export function FilesSidebar({ onToggleSidebar, onUpload }: FilesSidebarProps) {
                     </div>
 
                     {/* Trash */}
-                    {renderTrash()}
+                    <div className="mt-2 pt-2 border-t border-border">
+                        <Link
+                            to="/files/trash"
+                            className={cn(
+                                "w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md transition-colors text-left",
+                                location.pathname === '/files/trash'
+                                    ? "bg-accent text-accent-foreground"
+                                    : "hover:bg-accent"
+                            )}
+                        >
+                            <Trash
+                                size={16}
+                                weight={location.pathname === '/files/trash' ? "fill" : "duotone"}
+                                className={location.pathname === '/files/trash' ? "text-primary" : "text-muted-foreground"}
+                            />
+                            <span className="flex-1">Trash</span>
+                        </Link>
+                    </div>
+
                 </nav>
             </div>
 
-            {/* Empty Trash Confirmation Modal */}
-            {showEmptyTrashConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-background w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
-                            <div className="rounded-lg bg-destructive/10 p-2">
-                                <Trash size={20} weight="duotone" className="text-destructive" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-semibold">Empty Trash</h2>
-                                <p className="text-xs text-muted-foreground">This action cannot be undone</p>
-                            </div>
-                        </div>
-
-                        {/* Body */}
-                        <div className="p-6 space-y-3">
-                            <p className="text-sm text-muted-foreground">
-                                Are you sure you want to permanently delete{' '}
-                                <span className="font-medium text-foreground">{deletedFiles.length} file{deletedFiles.length !== 1 ? 's' : ''}</span>{' '}
-                                from the trash? This will free up space but the files cannot be recovered.
-                            </p>
-                            {emptyTrashError && (
-                                <div className="p-3 rounded-md bg-destructive/10 border border-destructive/30">
-                                    <p className="text-sm text-destructive">{emptyTrashError}</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
-                            <Button
-                                variant="outline"
-                                size="md"
-                                onClick={() => {
-                                    setShowEmptyTrashConfirm(false);
-                                    setEmptyTrashError(null);
-                                }}
-                                disabled={emptyingTrash}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                size="md"
-                                onClick={handleEmptyTrashConfirm}
-                                disabled={emptyingTrash}
-                            >
-                                {emptyingTrash ? 'Deleting...' : 'Delete Permanently'}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Storage Usage */}
+            <div className="px-1 pb-2 pt-1 border-t border-border mt-auto">
+                <StorageUsageIndicator />
+            </div>
         </div>
     );
 }

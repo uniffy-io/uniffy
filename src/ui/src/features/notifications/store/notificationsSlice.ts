@@ -11,6 +11,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
+import { NotificationType } from '@uniffy/proto/notifications/v1/notifications_pb';
 import type { Notification } from '@uniffy/proto/notifications/v1/notifications_pb';
 
 export interface SerializedNotification {
@@ -29,6 +30,16 @@ export interface SerializedNotification {
     createdAt: string;
     expiresAt: string | null;
 }
+
+export type NotificationFilterType =
+    | 'all'
+    | 'unread'
+    | 'content'
+    | 'calendar'
+    | 'permissions'
+    | 'tasks'
+    | 'chat'
+    | 'system';
 
 export interface NotificationsState {
     /** Ordered list of notifications (newest first) */
@@ -51,6 +62,12 @@ export interface NotificationsState {
 
     /** Whether the notification panel is open */
     panelOpen: boolean;
+
+    /** Search query for filtering notifications in the panel */
+    searchQuery: string;
+
+    /** Active filter type for the panel */
+    activeFilter: NotificationFilterType;
 }
 
 const initialState: NotificationsState = {
@@ -61,6 +78,8 @@ const initialState: NotificationsState = {
     error: null,
     totalCount: 0,
     panelOpen: false,
+    searchQuery: '',
+    activeFilter: 'all',
 };
 
 const notificationToPlain = (n: Notification): SerializedNotification => ({
@@ -245,6 +264,20 @@ const notificationsSlice = createSlice({
         clearError: (state) => {
             state.error = null;
         },
+
+        /**
+         * Set the search query for panel filtering.
+         */
+        setSearchQuery: (state, action: PayloadAction<string>) => {
+            state.searchQuery = action.payload;
+        },
+
+        /**
+         * Set the active filter type for the panel.
+         */
+        setActiveFilter: (state, action: PayloadAction<NotificationFilterType>) => {
+            state.activeFilter = action.payload;
+        },
     },
     extraReducers: (builder) => {
         // Fetch notifications
@@ -329,8 +362,104 @@ const notificationsSlice = createSlice({
                 state.updating = false;
                 state.error = action.payload ?? 'Failed to delete notification';
             });
+
+        builder
+            .addMatcher(
+                (action): action is { type: string; meta: { arg: string[] } } =>
+                    action.type === 'notificationsPage/bulkMarkAsRead/fulfilled',
+                (state, action) => {
+                    const ids = new Set(action.meta.arg);
+                    let unreadMarked = 0;
+                    for (const n of state.notifications) {
+                        if (ids.has(n.id) && !n.isRead) {
+                            n.isRead = true;
+                            n.readAt = new Date().toISOString();
+                            unreadMarked++;
+                        }
+                    }
+                    state.unreadCount = Math.max(0, state.unreadCount - unreadMarked);
+                },
+            )
+            .addMatcher(
+                (action): action is { type: string; meta: { arg: string[] } } =>
+                    action.type === 'notificationsPage/bulkDelete/fulfilled',
+                (state, action) => {
+                    const ids = new Set(action.meta.arg);
+                    let unreadDeleted = 0;
+                    state.notifications = state.notifications.filter((n) => {
+                        if (ids.has(n.id)) {
+                            if (!n.isRead) unreadDeleted++;
+                            return false;
+                        }
+                        return true;
+                    });
+                    state.totalCount = Math.max(0, state.totalCount - ids.size);
+                    state.unreadCount = Math.max(0, state.unreadCount - unreadDeleted);
+                },
+            );
     },
 });
+
+const FILTER_TYPE_MAP: Record<string, number[]> = {
+    content: [
+        NotificationType.CONTENT_SHARED,
+        NotificationType.CONTENT_MENTIONED,
+        NotificationType.CONTENT_EDITED,
+    ],
+    calendar: [
+        NotificationType.CALENDAR_REMINDER,
+        NotificationType.CALENDAR_INVITE,
+        NotificationType.CALENDAR_RESPONSE,
+    ],
+    permissions: [
+        NotificationType.PERMISSION_GRANTED,
+        NotificationType.PERMISSION_REVOKED,
+    ],
+    tasks: [
+        NotificationType.TASK_ASSIGNED,
+        NotificationType.TASK_DUE_SOON,
+        NotificationType.TASK_OVERDUE,
+    ],
+    chat: [
+        NotificationType.CHAT_MENTION,
+        NotificationType.CHAT_DM,
+        NotificationType.CHAT_CHANNEL_INVITE,
+        NotificationType.CHAT_CHANNEL_REMOVED,
+        NotificationType.CHAT_THREAD_REPLY,
+    ],
+    system: [
+        NotificationType.SYSTEM_ANNOUNCEMENT,
+    ],
+};
+
+/**
+ * Select filtered notifications based on search query and active filter.
+ */
+export function selectFilteredNotifications(state: RootState): SerializedNotification[] {
+    const { notifications, searchQuery, activeFilter } = state.notifications;
+
+    let filtered = notifications;
+
+    if (activeFilter === 'unread') {
+        filtered = filtered.filter((n) => !n.isRead);
+    } else if (activeFilter !== 'all') {
+        const allowedTypes = FILTER_TYPE_MAP[activeFilter];
+        if (allowedTypes) {
+            filtered = filtered.filter((n) => allowedTypes.includes(n.notificationType));
+        }
+    }
+
+    if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        filtered = filtered.filter((n) =>
+            n.title.toLowerCase().includes(query) ||
+            n.body.toLowerCase().includes(query) ||
+            n.actorName.toLowerCase().includes(query)
+        );
+    }
+
+    return filtered;
+}
 
 export const {
     clearNotifications,
@@ -339,5 +468,7 @@ export const {
     addRealtimeNotification,
     setUnreadCount,
     clearError,
+    setSearchQuery,
+    setActiveFilter,
 } = notificationsSlice.actions;
 export const notificationsReducer = notificationsSlice.reducer;

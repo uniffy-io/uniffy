@@ -189,6 +189,7 @@ export function useAppearanceSettings() {
         sidebarCollapsed: effectiveSettings?.appearance.sidebarCollapsed ?? false,
         compactMode: effectiveSettings?.appearance.compactMode ?? false,
         defaultEditor: effectiveSettings?.appearance.defaultEditor ?? 'crepe',
+        mentionDisplay: effectiveSettings?.appearance.mentionDisplay ?? 'expanded',
     };
 }
 
@@ -207,5 +208,6 @@ export function useNotificationSettings() {
         quietHoursEnd: effectiveSettings?.notifications.quietHoursEnd ?? undefined,
         channelOverrides: effectiveSettings?.notifications.channelOverrides ?? {},
         defaultReminderIntervals: effectiveSettings?.notifications.defaultReminderIntervals ?? [15],
+        toastEnabled: effectiveSettings?.notifications.toastEnabled ?? false,
     };
 }

@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { uploadImage } from "@/components/editor/utils/imageUploader";
-import { MentionChipCompact } from "@/components/editor/plugins/mention";
+import { MentionChipCompact } from "@/components/mention";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { SessionKind } from "@uniffy/proto/agents/v1/sessions_pb";
 import { parseUrn, urnToPath } from "@/shared/utils/urn";

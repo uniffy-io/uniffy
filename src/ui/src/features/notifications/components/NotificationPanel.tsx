@@ -1,21 +1,31 @@
 /**
- * Notification panel - dropdown on desktop, full-screen sheet on mobile.
+ * Notification panel - wider dropdown on desktop, bottom sheet on mobile.
  *
  * Groups notifications by: Today, Yesterday, This Week, Earlier.
- * Provides filter tabs (All / Unread), mark-all-read, and refresh.
+ * Provides filter chips (All, Unread, Content, Calendar, etc.),
+ * search input, mark-all-read, and link to full notifications page.
  */
 
-import { useEffect, useRef, useMemo, useState } from 'react';
-import { CheckCircle, ArrowsClockwise, BellSimple, Funnel, X } from '@phosphor-icons/react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { CheckCircle, ArrowsClockwise, BellSimple, X, ArrowRight } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useNotifications } from '@/features/notifications/hooks/useNotifications';
 import { NotificationItem } from '@/features/notifications/components/NotificationItem';
+import { NotificationFilterBar } from '@/features/notifications/components/NotificationFilterBar';
+import { NotificationSearch } from '@/features/notifications/components/NotificationSearch';
+import {
+    selectFilteredNotifications,
+    setSearchQuery,
+    setActiveFilter,
+} from '@/features/notifications/store/notificationsSlice';
+import type {
+    SerializedNotification,
+    NotificationFilterType,
+} from '@/features/notifications/store/notificationsSlice';
 import { useNavigate } from 'react-router-dom';
 import { parseUrn, urnToPath } from '@/shared/utils/urn';
-import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
-
-type FilterMode = 'all' | 'unread';
 
 interface TimeGroup {
     label: string;
@@ -60,12 +70,7 @@ interface NotificationPanelProps {
     anchorRef?: React.RefObject<HTMLElement | null>;
 }
 
-/**
- * Shared content used by both mobile and desktop views.
- */
-function NotificationContent({
-    filter,
-    setFilter,
+function PanelContent({
     loading,
     unreadCount,
     refresh,
@@ -78,9 +83,12 @@ function NotificationContent({
     remove,
     onClose,
     isMobile,
+    searchQuery,
+    activeFilter,
+    onSearchChange,
+    onFilterChange,
+    onViewAll,
 }: {
-    filter: FilterMode;
-    setFilter: (f: FilterMode) => void;
     loading: boolean;
     unreadCount: number;
     refresh: () => void;
@@ -93,12 +101,16 @@ function NotificationContent({
     remove: (id: string) => void;
     onClose: () => void;
     isMobile: boolean;
+    searchQuery: string;
+    activeFilter: NotificationFilterType;
+    onSearchChange: (query: string) => void;
+    onFilterChange: (filter: NotificationFilterType) => void;
+    onViewAll: () => void;
 }) {
     return (
         <>
-            {/* Header */}
-            <div className="px-4 pt-3.5 pb-2.5 border-b border-border shrink-0">
-                <div className="flex items-center justify-between mb-2.5">
+            <div className="px-4 pt-3.5 pb-2.5 border-b border-border shrink-0 space-y-2.5">
+                <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-foreground">
                         Notifications
                     </h3>
@@ -135,48 +147,20 @@ function NotificationContent({
                     </div>
                 </div>
 
-                {/* Filter tabs */}
-                <div className="flex gap-1">
-                    <button
-                        onClick={() => setFilter('all')}
-                        className={cn(
-                            'px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                            filter === 'all'
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        )}
-                    >
-                        All
-                    </button>
-                    <button
-                        onClick={() => setFilter('unread')}
-                        className={cn(
-                            'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                            filter === 'unread'
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        )}
-                    >
-                        <Funnel size={11} weight={filter === 'unread' ? 'fill' : 'regular'} />
-                        Unread
-                        {unreadCount > 0 && (
-                            <span className={cn(
-                                'ml-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold leading-4 text-center',
-                                filter === 'unread'
-                                    ? 'bg-primary/20 text-primary'
-                                    : 'bg-muted text-muted-foreground'
-                            )}>
-                                {unreadCount > 99 ? '99+' : unreadCount}
-                            </span>
-                        )}
-                    </button>
-                </div>
+                <NotificationSearch
+                    value={searchQuery}
+                    onChange={onSearchChange}
+                />
+
+                <NotificationFilterBar
+                    activeFilter={activeFilter}
+                    onFilterChange={onFilterChange}
+                    unreadCount={unreadCount}
+                />
             </div>
 
-            {/* Notification list */}
             <div className="flex-1 overflow-y-auto">
                 {loading && notifications.length === 0 ? (
-                    /* Loading skeleton */
                     <div className="px-4 py-3 space-y-4">
                         {[1, 2, 3].map((i) => (
                             <div key={i} className="flex gap-3 animate-pulse">
@@ -190,33 +174,31 @@ function NotificationContent({
                         ))}
                     </div>
                 ) : filteredNotifications.length === 0 ? (
-                    /* Empty state */
                     <div className="flex flex-col items-center justify-center py-12 px-6">
                         <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted/50 mb-3">
                             <BellSimple size={24} weight="duotone" className="text-muted-foreground/50" />
                         </div>
                         <p className="text-sm font-medium text-foreground/60 mb-1">
-                            {filter === 'unread' ? 'All caught up' : 'No notifications yet'}
+                            {activeFilter === 'unread' ? 'All caught up' : searchQuery ? 'No matches' : 'No notifications yet'}
                         </p>
                         <p className="text-xs text-muted-foreground/60 text-center max-w-[200px]">
-                            {filter === 'unread'
+                            {activeFilter === 'unread'
                                 ? 'You have no unread notifications'
-                                : 'Notifications about shares, mentions, and updates will appear here'
+                                : searchQuery
+                                    ? 'Try a different search term or filter'
+                                    : 'Notifications about shares, mentions, and updates will appear here'
                             }
                         </p>
                     </div>
                 ) : (
-                    /* Time-grouped list */
                     <div>
                         {timeGroups.map((group) => (
                             <div key={group.label}>
-                                {/* Section header */}
                                 <div className="sticky top-0 z-10 px-4 py-1.5 bg-card/95 backdrop-blur-sm border-b border-border/50">
                                     <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                                         {group.label}
                                     </span>
                                 </div>
-                                {/* Notifications in group */}
                                 <div>
                                     {group.notifications.map((notification) => (
                                         <NotificationItem
@@ -233,11 +215,26 @@ function NotificationContent({
                     </div>
                 )}
             </div>
+
+            <div className="shrink-0 border-t border-border">
+                <button
+                    onClick={onViewAll}
+                    className={cn(
+                        'flex items-center justify-center gap-1.5 w-full px-4 py-2.5',
+                        'text-xs font-medium text-muted-foreground',
+                        'hover:text-primary hover:bg-muted/30 transition-colors'
+                    )}
+                >
+                    View all notifications
+                    <ArrowRight size={12} />
+                </button>
+            </div>
         </>
     );
 }
 
 export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps) {
+    const dispatch = useAppDispatch();
     const {
         notifications,
         unreadCount,
@@ -249,15 +246,16 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
     } = useNotifications();
     const navigate = useNavigate();
     const panelRef = useRef<HTMLDivElement>(null);
-    const [filter, setFilter] = useState<FilterMode>('all');
     const { isMobile } = useBreakpoint();
 
-    // Fetch notifications on mount
+    const searchQuery = useAppSelector((s) => s.notifications.searchQuery);
+    const activeFilter = useAppSelector((s) => s.notifications.activeFilter);
+    const filteredNotifications = useAppSelector(selectFilteredNotifications);
+
     useEffect(() => {
         refresh();
     }, [refresh]);
 
-    // Close on click outside (desktop only - mobile has explicit close button)
     useEffect(() => {
         if (isMobile) return;
 
@@ -277,9 +275,8 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
             clearTimeout(timeoutId);
             document.removeEventListener('click', handleClickOutside, true);
         };
-    }, [onClose, isMobile]);
+    }, [onClose, isMobile, anchorRef]);
 
-    // Lock body scroll on mobile
     useEffect(() => {
         if (!isMobile) return;
         document.body.style.overflow = 'hidden';
@@ -288,16 +285,9 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
         };
     }, [isMobile]);
 
-    const filteredNotifications = useMemo(() => {
-        if (filter === 'unread') {
-            return notifications.filter((n) => !n.isRead);
-        }
-        return notifications;
-    }, [notifications, filter]);
-
     const timeGroups = useMemo(() => groupByTime(filteredNotifications), [filteredNotifications]);
 
-    const handleNotificationClick = (notification: SerializedNotification) => {
+    const handleNotificationClick = useCallback((notification: SerializedNotification) => {
         if (!notification.isRead) {
             markAsRead(notification.id);
         }
@@ -312,11 +302,22 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
                 }
             }
         }
-    };
+    }, [markAsRead, navigate, onClose]);
+
+    const handleSearchChange = useCallback((query: string) => {
+        dispatch(setSearchQuery(query));
+    }, [dispatch]);
+
+    const handleFilterChange = useCallback((filter: NotificationFilterType) => {
+        dispatch(setActiveFilter(filter));
+    }, [dispatch]);
+
+    const handleViewAll = useCallback(() => {
+        navigate('/notifications');
+        onClose();
+    }, [navigate, onClose]);
 
     const contentProps = {
-        filter,
-        setFilter,
         loading,
         unreadCount,
         refresh,
@@ -329,18 +330,20 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
         remove,
         onClose,
         isMobile,
+        searchQuery,
+        activeFilter,
+        onSearchChange: handleSearchChange,
+        onFilterChange: handleFilterChange,
+        onViewAll: handleViewAll,
     };
 
-    // Mobile: fixed full-screen overlay
     if (isMobile) {
         return (
             <>
-                {/* Backdrop */}
                 <div
                     className="fixed inset-0 z-[99] bg-black/50 animate-in fade-in duration-200"
                     onClick={onClose}
                 />
-                {/* Sheet */}
                 <div
                     ref={panelRef}
                     className={cn(
@@ -350,28 +353,26 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
                         'flex flex-col overflow-hidden'
                     )}
                 >
-                    {/* Drag handle */}
                     <div className="flex justify-center pt-2 pb-1 shrink-0">
                         <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
                     </div>
-                    <NotificationContent {...contentProps} />
+                    <PanelContent {...contentProps} />
                 </div>
             </>
         );
     }
 
-    // Desktop: absolute dropdown
     return (
         <div
             ref={panelRef}
             className={cn(
-                'absolute right-0 z-[100] mt-1.5 w-[min(400px,calc(100vw-2rem))] max-h-[70vh] origin-top-right rounded-xl',
+                'absolute right-0 z-[100] mt-1.5 w-[min(440px,calc(100vw-2rem))] max-h-[70vh] origin-top-right rounded-xl',
                 'bg-card shadow-xl border border-border',
                 'animate-in fade-in slide-in-from-top-2 duration-200',
                 'flex flex-col overflow-hidden'
             )}
         >
-            <NotificationContent {...contentProps} />
+            <PanelContent {...contentProps} />
         </div>
     );
 }

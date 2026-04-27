@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
-import { MentionChipCompact } from "@/components/editor/plugins/mention";
+import { MentionChipCompact } from "@/components/mention";
 import { selectTasksMap, selectCurrentProject, selectTasksForProject, optimisticUpdateTask } from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
 import { closeDetailPanel, selectTask } from "@/features/projects/store/projectsUiSlice";

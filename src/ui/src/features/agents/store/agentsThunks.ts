@@ -33,6 +33,7 @@ export const agentToPlain = (agent: AgentInfo) => ({
     enabledSkills: [...agent.enabledSkills],
     accessMode: agent.accessMode,
     baselineRole: agent.baselineRole,
+    userRole: agent.userRole,
     imageModel: agent.imageModel,
     promptId: agent.promptId || "",
     primaryProviderKeyId: agent.primaryProviderKeyId || "",

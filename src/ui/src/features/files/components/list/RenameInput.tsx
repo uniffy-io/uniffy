@@ -8,6 +8,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Check, X } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 
+const MAX_NAME_LENGTH = 255;
+
 interface RenameInputProps {
     /** Initial name value */
     initialValue: string;
@@ -54,7 +56,7 @@ export function RenameInput({ initialValue, onConfirm, onCancel, className, vari
 
     if (variant === 'list') {
         return (
-            <div className={cn("flex items-center gap-2 flex-1", className)}>
+            <div className={cn("flex items-center gap-2 flex-1 min-w-0", className)}>
                 <input
                     ref={inputRef}
                     type="text"
@@ -62,7 +64,8 @@ export function RenameInput({ initialValue, onConfirm, onCancel, className, vari
                     onChange={(e) => setValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onBlur={handleConfirm}
-                    className="flex-1 px-2 py-1 text-sm bg-background border border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                    maxLength={MAX_NAME_LENGTH}
+                    className="flex-1 min-w-0 px-2 py-1 text-sm bg-background border border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <button
                     onClick={(e) => {
@@ -92,9 +95,9 @@ export function RenameInput({ initialValue, onConfirm, onCancel, className, vari
         );
     }
 
-    // Grid variant - simpler inline input
+    // Grid variant - constrained to card width
     return (
-        <div className={cn("flex items-center gap-1 px-2 py-1", className)}>
+        <div className={cn("flex items-center gap-1 min-w-0", className)}>
             <input
                 ref={inputRef}
                 type="text"
@@ -103,7 +106,8 @@ export function RenameInput({ initialValue, onConfirm, onCancel, className, vari
                 onKeyDown={handleKeyDown}
                 onBlur={handleConfirm}
                 onClick={(e) => e.stopPropagation()}
-                className="flex-1 px-1 py-0.5 text-sm bg-background border border-primary rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                maxLength={MAX_NAME_LENGTH}
+                className="w-full min-w-0 px-1 py-0.5 text-sm bg-background border border-primary rounded focus:outline-none focus:ring-1 focus:ring-primary"
             />
         </div>
     );

@@ -39,7 +39,12 @@ function flushPendingPresence() {
     );
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function requestPresence(userId: string) {
+    // Agent subjects and placeholder strings shouldn't hit the presence RPC;
+    // the backend expects a valid UUID and raises INVALID_ARGUMENT otherwise.
+    if (!userId || !UUID_RE.test(userId)) return;
     pendingUserIds.add(userId);
     if (flushTimer) clearTimeout(flushTimer);
     flushTimer = setTimeout(flushPendingPresence, 150);

@@ -8,16 +8,20 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+import { createElement } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { fetchFile } from '@/features/files/store/filesSlice';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
-import { addRealtimeNotification } from '@/features/notifications/store/notificationsSlice';
+import { addRealtimeNotification, markNotificationAsRead } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { updatePresenceWithCustomStatus } from '@/features/presence/store/presenceSlice';
 import { setDomainAdminDomains } from '@/features/auth/store/authSlice';
 import { adminApi } from '@/features/admin/api/adminApi';
 import { emitMentionStateChange } from '@/components/mention';
 import { StreamNotificationEvent_EventType } from '@uniffy/proto/notifications/v1/notifications_pb';
+import { getState } from '@/app/storeRef';
+import { NotificationToast } from '@/features/notifications/components/NotificationToast';
 
 const MAX_BACKOFF_MS = 30000;
 const INITIAL_BACKOFF_MS = 1000;
@@ -89,6 +93,31 @@ export function useNotificationStream() {
                                 expiresAt: n.expiresAt?.toDate().toISOString() ?? null,
                             };
                             dispatch(addRealtimeNotification(serialized));
+
+                            // Toast notification logic
+                            const currentState = getState();
+                            if (currentState) {
+                                const toastEnabled = currentState.settings.effectiveSettings?.notifications.toastEnabled ?? false;
+                                const isZenMode = currentState.zenMode.isActive;
+                                const isPanelOpen = currentState.notifications.panelOpen;
+
+                                if (toastEnabled && !isZenMode && !isPanelOpen) {
+                                    const toastId = `notification-${serialized.id}`;
+                                    toast.custom(
+                                        (id) => createElement(NotificationToast, {
+                                            notification: serialized,
+                                            toastId: id,
+                                            onMarkAsRead: (notifId: string) => {
+                                                dispatch(markNotificationAsRead(notifId));
+                                            },
+                                        }),
+                                        {
+                                            id: toastId,
+                                            duration: 5000,
+                                        }
+                                    );
+                                }
+                            }
                         }
 
                         // File processing completed -- debounce per file

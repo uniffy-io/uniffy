@@ -22,10 +22,14 @@ import type {
     DeleteFolderRequest,
     GetFilesTreeRequest,
     EmptyTrashRequest,
+    ListTrashRequest,
+    RestoreFolderRequest,
     ListFileVersionsRequest,
     UploadChunkRequest,
     CompleteUploadRequest,
     MoveItemsRequest,
+    CreateFolderTreeRequest,
+    CheckStorageQuotaRequest,
 } from '@uniffy/proto/files/v1/files_pb';
 import type { PartialMessage } from '@bufbuild/protobuf';
 
@@ -175,6 +179,20 @@ export const filesApi = {
     },
 
     /**
+     * List deleted files and folders in trash.
+     */
+    listTrash: async (request: PartialMessage<ListTrashRequest>) => {
+        return filesClient.listTrash(request);
+    },
+
+    /**
+     * Restore a soft-deleted folder (and its soft-deleted contents).
+     */
+    restoreFolder: async (request: PartialMessage<RestoreFolderRequest>) => {
+        return filesClient.restoreFolder(request);
+    },
+
+    /**
      * List version history for a file.
      */
     listFileVersions: async (request: PartialMessage<ListFileVersionsRequest>) => {
@@ -186,5 +204,19 @@ export const filesApi = {
      */
     moveItems: async (request: PartialMessage<MoveItemsRequest>) => {
         return filesClient.moveItems(request);
+    },
+
+    /**
+     * Create a folder tree in a single transaction (for recursive folder upload).
+     */
+    createFolderTree: async (request: PartialMessage<CreateFolderTreeRequest>) => {
+        return filesClient.createFolderTree(request);
+    },
+
+    /**
+     * Pre-check whether an upload of a given size is allowed under quota.
+     */
+    checkStorageQuota: async (request: PartialMessage<CheckStorageQuotaRequest>) => {
+        return filesClient.checkStorageQuota(request);
     },
 };

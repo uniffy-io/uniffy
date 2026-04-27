@@ -32,6 +32,16 @@ import {
     fetchDomainAdmins,
     grantDomainAdmin,
     revokeDomainAdmin,
+    fetchOrgStorageQuota,
+    setOrgStorageQuota,
+    fetchOrgStorageUsage,
+    fetchUserStorageQuotaOverrides,
+    setUserStorageQuotaOverride,
+    removeUserStorageQuotaOverride,
+    recalculateStorageUsage,
+    fetchOrganizationSettings,
+    updateOrganizationSettings,
+    type SerializedOrgSettings,
 } from '@/features/admin/store/adminThunks';
 
 /**
@@ -188,6 +198,43 @@ export function serializeOrgOverview(o: OrganizationOverview): SerializedOrgOver
     };
 }
 
+/**
+ * Serialized org storage quota.
+ */
+export interface SerializedOrgStorageQuota {
+    id: string;
+    organizationId: string;
+    orgQuotaBytes: number | null;
+    defaultUserQuotaBytes: number | null;
+    warnAtPercent: number;
+    enforce: boolean;
+}
+
+/**
+ * Serialized user storage quota override.
+ */
+export interface SerializedUserQuotaOverride {
+    id: string;
+    organizationId: string;
+    userId: string;
+    quotaBytes: number;
+    note: string | null;
+    createdBy: string;
+}
+
+/**
+ * Serialized storage usage for a user.
+ */
+export interface SerializedStorageUsageInfo {
+    userId: string;
+    organizationId: string;
+    usedBytes: number;
+    fileCount: number;
+    effectiveQuotaBytes: number | null;
+    usagePercent: number;
+    hasOverride: boolean;
+}
+
 export interface AdminState {
     // Permission defaults
     permissionDefaults: SerializedContentTypeDefaults[];
@@ -220,6 +267,21 @@ export interface AdminState {
     domainAdminsFetched: boolean;
     domainAdminsTotalCount: number;
 
+    // Storage quotas
+    orgQuota: SerializedOrgStorageQuota | null;
+    orgQuotaLoading: boolean;
+    orgTotalUsedBytes: number;
+    orgTotalFileCount: number;
+    userOverrides: SerializedUserQuotaOverride[];
+    userOverridesLoading: boolean;
+    userUsageList: SerializedStorageUsageInfo[];
+    userUsageListLoading: boolean;
+
+    // Organization settings (JSONB blob)
+    orgSettings: SerializedOrgSettings | null;
+    orgSettingsLoading: boolean;
+    orgSettingsSaving: boolean;
+
     // General error
     error: string | null;
 }
@@ -244,6 +306,17 @@ const initialState: AdminState = {
     domainAdminsLoading: false,
     domainAdminsFetched: false,
     domainAdminsTotalCount: 0,
+    orgQuota: null,
+    orgQuotaLoading: false,
+    orgTotalUsedBytes: 0,
+    orgTotalFileCount: 0,
+    userOverrides: [],
+    userOverridesLoading: false,
+    userUsageList: [],
+    userUsageListLoading: false,
+    orgSettings: null,
+    orgSettingsLoading: false,
+    orgSettingsSaving: false,
     error: null,
 };
 
@@ -418,6 +491,103 @@ const adminSlice = createSlice({
                 (da) => !(da.userId === userId && da.domain === domain)
             );
             state.domainAdminsTotalCount = Math.max(0, state.domainAdminsTotalCount - 1);
+        });
+
+        // Storage: org quota
+        builder.addCase(fetchOrgStorageQuota.pending, (state) => {
+            state.orgQuotaLoading = true;
+        });
+        builder.addCase(fetchOrgStorageQuota.fulfilled, (state, action) => {
+            state.orgQuotaLoading = false;
+            state.orgQuota = action.payload.quota;
+            state.orgTotalUsedBytes = action.payload.totalUsedBytes;
+            state.orgTotalFileCount = action.payload.totalFileCount;
+        });
+        builder.addCase(fetchOrgStorageQuota.rejected, (state, action) => {
+            state.orgQuotaLoading = false;
+            state.error = action.error.message || 'Failed to fetch storage quota';
+        });
+
+        builder.addCase(setOrgStorageQuota.fulfilled, (state, action) => {
+            state.orgQuota = action.payload;
+        });
+
+        // Storage: user overrides
+        builder.addCase(fetchUserStorageQuotaOverrides.pending, (state) => {
+            state.userOverridesLoading = true;
+        });
+        builder.addCase(fetchUserStorageQuotaOverrides.fulfilled, (state, action) => {
+            state.userOverridesLoading = false;
+            state.userOverrides = action.payload;
+        });
+        builder.addCase(fetchUserStorageQuotaOverrides.rejected, (state, action) => {
+            state.userOverridesLoading = false;
+            state.error = action.error.message || 'Failed to fetch quota overrides';
+        });
+
+        builder.addCase(setUserStorageQuotaOverride.fulfilled, (state, action) => {
+            const idx = state.userOverrides.findIndex((o) => o.userId === action.payload.userId);
+            if (idx !== -1) {
+                state.userOverrides[idx] = action.payload;
+            } else {
+                state.userOverrides.push(action.payload);
+            }
+        });
+
+        builder.addCase(removeUserStorageQuotaOverride.fulfilled, (state, action) => {
+            state.userOverrides = state.userOverrides.filter(
+                (o) => o.userId !== action.meta.arg.userId
+            );
+        });
+
+        // Storage: org usage list
+        builder.addCase(fetchOrgStorageUsage.pending, (state) => {
+            state.userUsageListLoading = true;
+        });
+        builder.addCase(fetchOrgStorageUsage.fulfilled, (state, action) => {
+            state.userUsageListLoading = false;
+            state.userUsageList = action.payload.users;
+            state.orgTotalUsedBytes = action.payload.totalUsedBytes;
+            state.orgTotalFileCount = action.payload.totalFileCount;
+        });
+        builder.addCase(fetchOrgStorageUsage.rejected, (state, action) => {
+            state.userUsageListLoading = false;
+            state.error = action.error.message || 'Failed to fetch storage usage';
+        });
+
+        builder.addCase(recalculateStorageUsage.fulfilled, (state, action) => {
+            for (const recalc of action.payload) {
+                const idx = state.userUsageList.findIndex(
+                    (u) => u.userId === recalc.userId
+                );
+                if (idx !== -1) {
+                    state.userUsageList[idx] = recalc;
+                }
+            }
+        });
+
+        builder.addCase(fetchOrganizationSettings.pending, (state) => {
+            state.orgSettingsLoading = true;
+        });
+        builder.addCase(fetchOrganizationSettings.fulfilled, (state, action) => {
+            state.orgSettingsLoading = false;
+            state.orgSettings = action.payload;
+        });
+        builder.addCase(fetchOrganizationSettings.rejected, (state, action) => {
+            state.orgSettingsLoading = false;
+            state.error = action.error.message || 'Failed to fetch organization settings';
+        });
+
+        builder.addCase(updateOrganizationSettings.pending, (state) => {
+            state.orgSettingsSaving = true;
+        });
+        builder.addCase(updateOrganizationSettings.fulfilled, (state, action) => {
+            state.orgSettingsSaving = false;
+            state.orgSettings = action.payload;
+        });
+        builder.addCase(updateOrganizationSettings.rejected, (state, action) => {
+            state.orgSettingsSaving = false;
+            state.error = action.error.message || 'Failed to update organization settings';
         });
     },
 });

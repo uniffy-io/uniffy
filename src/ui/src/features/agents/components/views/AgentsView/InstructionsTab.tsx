@@ -519,7 +519,7 @@ function SoulPromptEditor({
 
 export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
-    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
     const canEdit = roleCanEdit(myRole);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const promptsMap = useAppSelector(selectAllPrompts);

@@ -114,7 +114,7 @@ export function CalendarLayout({
               defaultSize={isMobileOrTablet ? 200 : LAYOUT.SIDEBAR_WIDTH}
               minSize={160}
               maxSize={isMobileOrTablet ? 300 : LAYOUT.SIDEBAR_MAX_WIDTH}
-              className="bg-card overflow-hidden"
+              className="bg-background overflow-hidden"
             >
               {sidebar}
             </Panel>

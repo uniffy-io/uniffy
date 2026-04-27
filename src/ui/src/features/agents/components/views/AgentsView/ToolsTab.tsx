@@ -175,7 +175,7 @@ function CategorySection({
 
 export function ToolsTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
-    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
     const canEdit = roleCanEdit(myRole);
 
     const enabledTools = useMemo(

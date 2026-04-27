@@ -510,6 +510,7 @@ function AuthInput({
           borderColor: BRAND_ACCENT,
           boxShadow: `0 0 0 2px ${BRAND_ACCENT_RING}, 0 1px 2px 0 rgba(0,0,0,0.05)`,
         } : undefined}
+        data-testid={`auth-input-${id}`}
       />
 
       {/* Floating label */}
@@ -803,6 +804,8 @@ export function AuthForms() {
                   onClick={() => { setMode('login'); setError(null); }}
                   className={`relative z-10 flex-1 py-2 text-sm font-medium rounded-md transition-colors duration-200 cursor-pointer ${mode === 'login' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                     }`}
+                  data-testid="auth-mode-login"
+                  data-active={mode === 'login' ? 'true' : 'false'}
                 >
                   Sign in
                 </button>
@@ -811,6 +814,8 @@ export function AuthForms() {
                   onClick={() => { setMode('register'); setError(null); }}
                   className={`relative z-10 flex-1 py-2 text-sm font-medium rounded-md transition-colors duration-200 cursor-pointer ${mode === 'register' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                     }`}
+                  data-testid="auth-mode-register"
+                  data-active={mode === 'register' ? 'true' : 'false'}
                 >
                   Register
                 </button>
@@ -822,6 +827,7 @@ export function AuthForms() {
               <div
                 className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
                 style={{ animation: 'auth-fade-in 0.2s ease-out' }}
+                data-testid="auth-error-banner"
               >
                 <svg className="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
                   <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-10.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM8 12a1 1 0 100-2 1 1 0 000 2z" />
@@ -837,7 +843,7 @@ export function AuthForms() {
               style={{ animation: 'auth-slide-up 0.5s ease-out 0.3s forwards' }}
             >
               {mode === 'register' ? (
-                <form onSubmit={handleRegister} className="space-y-4">
+                <form onSubmit={handleRegister} className="space-y-4" data-testid="auth-form-register">
                   <AuthInput
                     id="reg-email"
                     label="Email"
@@ -881,6 +887,8 @@ export function AuthForms() {
                     type="submit"
                     disabled={loading}
                     className="auth-btn w-full mt-2 h-11 text-sm font-semibold tracking-wide rounded-lg cursor-pointer transition-colors duration-200"
+                    data-testid="auth-submit-register"
+                    data-loading={loading ? 'true' : 'false'}
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -894,7 +902,7 @@ export function AuthForms() {
                   </button>
                 </form>
               ) : (
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4" data-testid="auth-form-login">
                   <AuthInput
                     id="login-email"
                     label="Email"
@@ -919,6 +927,8 @@ export function AuthForms() {
                     type="submit"
                     disabled={loading}
                     className="auth-btn w-full mt-2 h-11 text-sm font-semibold tracking-wide rounded-lg cursor-pointer transition-colors duration-200"
+                    data-testid="auth-submit-login"
+                    data-loading={loading ? 'true' : 'false'}
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">

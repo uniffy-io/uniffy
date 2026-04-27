@@ -103,7 +103,7 @@ export function FilesLayout({
                             defaultSize={isMobileOrTablet ? 200 : 260}
                             minSize={160}
                             maxSize={isMobileOrTablet ? 300 : 400}
-                            className="bg-card overflow-hidden"
+                            className="bg-background overflow-hidden"
                         >
                             {sidebar}
                         </Panel>

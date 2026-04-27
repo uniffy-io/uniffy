@@ -227,7 +227,7 @@ export function SkillsTab({ agent }: { agent: SerializedAgent }) {
     const skillsMap = useAppSelector(selectAllSkills);
     const loading = useAppSelector(selectSkillsLoading);
     const currentUserId = useAppSelector((state) => state.auth.user?.id);
-    const myRole = useMyContentRole(ContentType.AGENT, agent.id);
+    const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
     const canEdit = roleCanEdit(myRole);
     const [showNewForm, setShowNewForm] = useState(false);
 

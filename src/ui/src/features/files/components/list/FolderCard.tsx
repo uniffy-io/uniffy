@@ -34,6 +34,9 @@ export interface FolderCardProps {
     isChecked: boolean;
     onToggleCheck: (id: string, shiftKey: boolean) => void;
     canShare?: boolean;
+    trashMode?: boolean;
+    onRestore?: (id: string) => void;
+    canRestore?: boolean;
 }
 
 export function FolderCard({
@@ -51,6 +54,9 @@ export function FolderCard({
     isChecked,
     onToggleCheck,
     canShare = true,
+    trashMode = false,
+    onRestore,
+    canRestore = true,
 }: FolderCardProps) {
     const showOwner = viewScope === 'shared' || viewScope === 'organization';
     const [isRenaming, setIsRenaming] = useState(false);
@@ -202,6 +208,9 @@ export function FolderCard({
                         bookmarkToggling={bookmarkToggling}
                         onMove={() => onMove(folder.id)}
                         canShare={canShare}
+                        trashMode={trashMode}
+                        onRestore={onRestore ? () => onRestore(folder.id) : undefined}
+                        canRestore={canRestore}
                     />
                 )}
             </div>
@@ -255,9 +264,9 @@ export function FolderCard({
             </div>
 
             {/* Folder info */}
-            <div className={cn("p-2", config.iconSize >= 48 && "p-3")}>
+            <div className={cn("p-2 min-w-0 overflow-hidden", config.iconSize >= 48 && "p-3")}>
                 {isRenaming ? (
-                    <div onClick={(e) => e.stopPropagation()}>
+                    <div onClick={(e) => e.stopPropagation()} className="min-w-0">
                         <RenameInput
                             initialValue={folder.name}
                             onConfirm={handleRenameConfirm}
@@ -301,6 +310,9 @@ export function FolderCard({
                     bookmarkToggling={bookmarkToggling}
                     onMove={() => onMove(folder.id)}
                     canShare={canShare}
+                    trashMode={trashMode}
+                    onRestore={onRestore ? () => onRestore(folder.id) : undefined}
+                    canRestore={canRestore}
                 />
             )}
         </div>

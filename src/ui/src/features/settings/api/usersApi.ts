@@ -12,6 +12,13 @@ const usersClient = createClient(UsersService, transport);
 
 export const usersApi = {
     /**
+     * Get a user's profile by ID.
+     */
+    getUser: async (userId: string) => {
+        return usersClient.getUser({ userId });
+    },
+
+    /**
      * Upload a user avatar image.
      */
     uploadAvatar: async (imageData: Uint8Array, filename: string) => {
