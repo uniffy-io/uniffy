@@ -47,9 +47,7 @@ class RoomBooking(SQLModel, table=True):
     """
 
     __tablename__ = "rooms_bookings"
-    __table_args__ = (
-        Index("ix_rooms_bookings_conflict", "room_id", "start_time", "end_time"),
-    )
+    __table_args__ = (Index("ix_rooms_bookings_conflict", "room_id", "start_time", "end_time"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     room_id: UUID = Field(foreign_key="rooms_rooms.id", nullable=False, index=True)

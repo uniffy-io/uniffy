@@ -15,9 +15,7 @@ class ChatReaction(SQLModel, table=True):
     """
 
     __tablename__ = "chat_reactions"
-    __table_args__ = (
-        Index("ix_chat_reactions_message", "message_id", "emoji"),
-    )
+    __table_args__ = (Index("ix_chat_reactions_message", "message_id", "emoji"),)
 
     message_id: UUID = Field(
         sa_column=Column(

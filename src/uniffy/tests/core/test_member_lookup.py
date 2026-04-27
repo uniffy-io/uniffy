@@ -37,9 +37,7 @@ def _run_lookup(direct_role, group_roles):
     session.execute = AsyncMock(side_effect=[direct_result, group_result])
 
     checker = PermissionChecker(session)
-    return asyncio.run(
-        checker._get_member_role(org_id, ContentType.NOTE, content_id, user_id)
-    )
+    return asyncio.run(checker._get_member_role(org_id, ContentType.NOTE, content_id, user_id))
 
 
 class TestDirectUserGrant:

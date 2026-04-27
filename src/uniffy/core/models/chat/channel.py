@@ -29,9 +29,7 @@ class ChatChannel(SQLModel, table=True):
     """
 
     __tablename__ = "chat_channels"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "slug", name="uq_chat_channels_org_slug"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "slug", name="uq_chat_channels_org_slug"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)

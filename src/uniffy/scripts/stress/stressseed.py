@@ -306,7 +306,7 @@ async def run_stress_seed(config: StressConfig) -> None:
     from uniffy.core.search.indexer import SearchIndexer, build_content_urn
     from uniffy.core.search.meilisearch import init_meilisearch
     from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
-    from uniffy.db.session import close_db, get_async_session, init_db
+    from uniffy.db.session import close_db, init_db, open_session
 
     # Load environment variables
     load_dotenv()
@@ -329,7 +329,7 @@ async def run_stress_seed(config: StressConfig) -> None:
     await init_meilisearch()
 
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             # Get the default organization and admin user
             result = await session.execute(
                 select(Organization).where(Organization.slug == "default")
@@ -540,9 +540,7 @@ async def run_stress_seed(config: StressConfig) -> None:
                         url_path=f"/notes/{item.id}",
                         access_mode=item.access_mode.value,
                         baseline_role=(
-                            item.baseline_role.value
-                            if item.baseline_role is not None
-                            else None
+                            item.baseline_role.value if item.baseline_role is not None else None
                         ),
                         owner_id=admin.id,
                         keywords=" ".join([item.title] + (item.tags or [])),

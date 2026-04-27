@@ -124,20 +124,24 @@ class TestOwnerCheck:
             patch.object(checker, "_is_domain_admin_for_content", AsyncMock(return_value=False)),
             patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
         ):
-            role = _call(checker, owner_id=other_owner, user_id=user_id,
-                access_mode=AccessMode.OWNER_ONLY)
+            role = _call(
+                checker, owner_id=other_owner, user_id=user_id, access_mode=AccessMode.OWNER_ONLY
+            )
         assert role is None
 
 
 class TestExplicitMemberRole:
     """Direct or group-derived ContentMember rows override the baseline."""
 
-    @pytest.mark.parametrize("member_role", [
-        ContentRole.ADMIN,
-        ContentRole.EDITOR,
-        ContentRole.COMMENTER,
-        ContentRole.VIEWER,
-    ])
+    @pytest.mark.parametrize(
+        "member_role",
+        [
+            ContentRole.ADMIN,
+            ContentRole.EDITOR,
+            ContentRole.COMMENTER,
+            ContentRole.VIEWER,
+        ],
+    )
     def test_non_blocked_member_role_returned_directly(self, member_role: ContentRole) -> None:
         checker = _make_checker()
         with (
@@ -146,8 +150,8 @@ class TestExplicitMemberRole:
             patch.object(checker, "_get_member_role", AsyncMock(return_value=member_role)),
         ):
             role = _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER)
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.VIEWER
+            )
         assert role == member_role
 
     def test_blocked_member_returns_none(self) -> None:
@@ -159,8 +163,8 @@ class TestExplicitMemberRole:
             patch.object(checker, "_get_member_role", AsyncMock(return_value=ContentRole.BLOCKED)),
         ):
             role = _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.EDITOR)
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.EDITOR
+            )
         assert role is None
 
     def test_explicit_role_beats_open_to_org_baseline(self) -> None:
@@ -172,8 +176,8 @@ class TestExplicitMemberRole:
             patch.object(checker, "_get_member_role", AsyncMock(return_value=ContentRole.EDITOR)),
         ):
             role = _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER)
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.VIEWER
+            )
         assert role == ContentRole.EDITOR
 
 
@@ -209,8 +213,8 @@ class TestAccessModeBaseline:
             patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=True)),
         ):
             role = _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER)
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.VIEWER
+            )
         assert role == ContentRole.VIEWER
 
     def test_open_to_org_denies_user_not_in_org(self) -> None:
@@ -222,8 +226,8 @@ class TestAccessModeBaseline:
             patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=False)),
         ):
             role = _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.VIEWER)
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.VIEWER
+            )
         assert role is None
 
     def test_open_to_org_with_null_baseline_denies(self) -> None:
@@ -249,8 +253,8 @@ class TestAccessModeBaseline:
             patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=True)),
         ):
             role = _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.EDITOR)
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.EDITOR
+            )
         assert role is None
 
     def test_open_to_org_editor_baseline_granted(self) -> None:
@@ -262,6 +266,6 @@ class TestAccessModeBaseline:
             patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=True)),
         ):
             role = _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
-                baseline_role=ContentRole.EDITOR)
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.EDITOR
+            )
         assert role == ContentRole.EDITOR

@@ -143,37 +143,27 @@ class SearchIndexer:
         for item in items:
             org_id = item["organization_id"]
             urn = item["urn"]
-            documents.append(
-                {
-                    "id": build_document_id(urn, org_id),
-                    "urn": urn,
-                    "organization_id": str(org_id),
-                    "title": item.get("title", ""),
-                    "content": item.get("keywords", ""),
-                    "description": item.get("description", ""),
-                    "entity_type": item.get("entity_type", ""),
-                    "url_path": item.get("url_path", ""),
-                    "access_mode": item.get("access_mode", AccessMode.OWNER_ONLY),
-                    "baseline_role": item.get("baseline_role"),
-                    "owner_id": str(item.get("owner_id", "")),
-                    "shared_user_ids": [
-                        str(uid) for uid in (item.get("shared_user_ids") or [])
-                    ],
-                    "shared_group_ids": [
-                        str(gid) for gid in (item.get("shared_group_ids") or [])
-                    ],
-                    "blocked_user_ids": [
-                        str(uid) for uid in (item.get("blocked_user_ids") or [])
-                    ],
-                    "blocked_group_ids": [
-                        str(gid) for gid in (item.get("blocked_group_ids") or [])
-                    ],
-                    "tags": item.get("tags") or [],
-                    "rank_score": item.get("rank_score", 1.0),
-                    "metadata": item.get("metadata") or {},
-                    "updated_at": int(datetime.now(UTC).timestamp()),
-                }
-            )
+            documents.append({
+                "id": build_document_id(urn, org_id),
+                "urn": urn,
+                "organization_id": str(org_id),
+                "title": item.get("title", ""),
+                "content": item.get("keywords", ""),
+                "description": item.get("description", ""),
+                "entity_type": item.get("entity_type", ""),
+                "url_path": item.get("url_path", ""),
+                "access_mode": item.get("access_mode", AccessMode.OWNER_ONLY),
+                "baseline_role": item.get("baseline_role"),
+                "owner_id": str(item.get("owner_id", "")),
+                "shared_user_ids": [str(uid) for uid in (item.get("shared_user_ids") or [])],
+                "shared_group_ids": [str(gid) for gid in (item.get("shared_group_ids") or [])],
+                "blocked_user_ids": [str(uid) for uid in (item.get("blocked_user_ids") or [])],
+                "blocked_group_ids": [str(gid) for gid in (item.get("blocked_group_ids") or [])],
+                "tags": item.get("tags") or [],
+                "rank_score": item.get("rank_score", 1.0),
+                "metadata": item.get("metadata") or {},
+                "updated_at": int(datetime.now(UTC).timestamp()),
+            })
 
         client = get_meilisearch_client()
         await client.batch_index_documents(documents)

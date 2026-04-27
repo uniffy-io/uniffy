@@ -245,6 +245,39 @@ def extract_urns_with_types(content: str) -> list[tuple[str, ContentType]]:
     return results
 
 
+def extract_mentioned_agent_ids_from_content(content: str) -> set[UUID]:
+    """Extract agent UUIDs from [[[label|urn:uniffy:content:AGENT:uuid]]] mentions.
+
+    Mirror of ``extract_mentioned_user_ids_from_content`` for agents. Used by
+    the chat domain to populate ``chat_messages.mentioned_agent_ids`` on
+    send/update so the agent context-builder can query by GIN index.
+
+    Parameters
+    ----------
+    content : str
+        Markdown content to parse.
+
+    Returns
+    -------
+    set[UUID]
+        Set of mentioned agent IDs.
+
+    """
+    if not content:
+        return set()
+
+    agent_prefix = f"{_URN_PREFIX}AGENT:"
+    result: set[UUID] = set()
+    for match in MENTION_PATTERN.finditer(content):
+        urn = match.group(2)
+        if urn and urn.startswith(agent_prefix):
+            try:
+                result.add(UUID(urn[len(agent_prefix) :]))
+            except ValueError:
+                continue
+    return result
+
+
 def extract_mentioned_user_ids_from_content(content: str) -> set[UUID]:
     """Extract user UUIDs from [[[label|urn:uniffy:content:USER:uuid]]] mentions.
 
@@ -273,7 +306,7 @@ def extract_mentioned_user_ids_from_content(content: str) -> set[UUID]:
         urn = match.group(2)
         if urn and urn.startswith(user_prefix):
             try:
-                result.add(UUID(urn[len(user_prefix):]))
+                result.add(UUID(urn[len(user_prefix) :]))
             except ValueError:
                 continue
     return result

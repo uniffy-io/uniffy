@@ -20,7 +20,10 @@ from uniffy.core.auth.permissions.audit import (
     record_ownership_transferred,
 )
 from uniffy.core.auth.permissions.checker import PermissionChecker
-from uniffy.core.auth.permissions.defaults import resolve_content_defaults
+from uniffy.core.auth.permissions.defaults import (
+    resolve_access_policy,
+    resolve_content_defaults,
+)
 from uniffy.core.auth.permissions.helpers import (
     require_delete,
     require_edit,
@@ -64,6 +67,7 @@ __all__ = [
     "record_member_removed",
     "record_member_role_changed",
     "record_ownership_transferred",
+    "resolve_access_policy",
     "resolve_content_defaults",
     "require_delete",
     "require_edit",

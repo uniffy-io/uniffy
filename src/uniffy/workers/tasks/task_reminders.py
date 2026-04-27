@@ -19,7 +19,7 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import get_async_session
+from uniffy.db import open_session
 
 
 async def _already_notified_today(
@@ -143,7 +143,7 @@ async def check_task_due_dates(ctx: dict[str, Any]) -> dict[str, Any]:
 
     """
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             count = await _process_due_tasks(session)
             if count > 0:
                 logger.info(f"Sent {count} task due date reminder(s)")

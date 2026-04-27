@@ -20,7 +20,7 @@ from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage.s3_client import get_s3_client
 from uniffy.core.types import ContentType
 from uniffy.core.valkey import publish_notification
-from uniffy.db.session import get_async_session
+from uniffy.db.session import open_session
 
 _task = "content_extraction"
 
@@ -60,7 +60,7 @@ async def extract_document_content(
     file_uuid = UUID(file_id)
     s3 = get_s3_client()
 
-    async for session in get_async_session():
+    async with open_session() as session:
         file = await session.get(
             File,
             file_uuid,
@@ -204,9 +204,7 @@ async def _reindex_file(file: File, extracted_text: str) -> None:
             entity_type=ContentType.FILE.value,
             url_path=f"/files/{file.id}",
             access_mode=file.access_mode.value,
-            baseline_role=(
-                file.baseline_role.value if file.baseline_role is not None else None
-            ),
+            baseline_role=(file.baseline_role.value if file.baseline_role is not None else None),
             owner_id=file.owner_id,
             keywords=keywords,
             description=file.description,

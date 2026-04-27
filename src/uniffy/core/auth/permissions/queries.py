@@ -63,61 +63,52 @@ class ContentAccessQuery:
 
         now = datetime.now(UTC)
 
-        user_groups_subq = (
-            select(GroupMember.group_id)
-            .where(
-                GroupMember.user_id == user_id,
-                GroupMember.is_active == True,  # noqa: E712
-            )
+        user_groups_subq = select(GroupMember.group_id).where(
+            GroupMember.user_id == user_id,
+            GroupMember.is_active == True,  # noqa: E712
         )
 
         # Content IDs the user is BLOCKED on (direct or via group).
         # These must be excluded regardless of any other grant.
-        blocked_subq = (
-            select(ContentMember.content_id)
-            .where(
-                ContentMember.organization_id == organization_id,
-                ContentMember.content_type == content_type,
-                ContentMember.role == ContentRole.BLOCKED,
-                or_(
-                    ContentMember.expires_at.is_(None),
-                    ContentMember.expires_at > now,
+        blocked_subq = select(ContentMember.content_id).where(
+            ContentMember.organization_id == organization_id,
+            ContentMember.content_type == content_type,
+            ContentMember.role == ContentRole.BLOCKED,
+            or_(
+                ContentMember.expires_at.is_(None),
+                ContentMember.expires_at > now,
+            ),
+            or_(
+                and_(
+                    ContentMember.subject_type == SubjectType.USER,
+                    ContentMember.subject_id == user_id,
                 ),
-                or_(
-                    and_(
-                        ContentMember.subject_type == SubjectType.USER,
-                        ContentMember.subject_id == user_id,
-                    ),
-                    and_(
-                        ContentMember.subject_type == SubjectType.GROUP,
-                        ContentMember.subject_id.in_(user_groups_subq),
-                    ),
+                and_(
+                    ContentMember.subject_type == SubjectType.GROUP,
+                    ContentMember.subject_id.in_(user_groups_subq),
                 ),
-            )
+            ),
         )
 
         # Content IDs the user has a non-BLOCKED explicit grant on.
-        explicit_member_subq = (
-            select(ContentMember.content_id)
-            .where(
-                ContentMember.organization_id == organization_id,
-                ContentMember.content_type == content_type,
-                ContentMember.role != ContentRole.BLOCKED,
-                or_(
-                    ContentMember.expires_at.is_(None),
-                    ContentMember.expires_at > now,
+        explicit_member_subq = select(ContentMember.content_id).where(
+            ContentMember.organization_id == organization_id,
+            ContentMember.content_type == content_type,
+            ContentMember.role != ContentRole.BLOCKED,
+            or_(
+                ContentMember.expires_at.is_(None),
+                ContentMember.expires_at > now,
+            ),
+            or_(
+                and_(
+                    ContentMember.subject_type == SubjectType.USER,
+                    ContentMember.subject_id == user_id,
                 ),
-                or_(
-                    and_(
-                        ContentMember.subject_type == SubjectType.USER,
-                        ContentMember.subject_id == user_id,
-                    ),
-                    and_(
-                        ContentMember.subject_type == SubjectType.GROUP,
-                        ContentMember.subject_id.in_(user_groups_subq),
-                    ),
+                and_(
+                    ContentMember.subject_type == SubjectType.GROUP,
+                    ContentMember.subject_id.in_(user_groups_subq),
                 ),
-            )
+            ),
         )
 
         ownership = owner_id_column == user_id

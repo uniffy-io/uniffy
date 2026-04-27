@@ -130,9 +130,7 @@ async def cascade_member_grant(
     failures do not roll back grants on other references. BLOCKED does
     not cascade (it is not called from BLOCKED grants anyway).
     """
-    refs = await collect_referenced_content(
-        session, content_type, content_id, organization_id
-    )
+    refs = await collect_referenced_content(session, content_type, content_id, organization_id)
     if not refs:
         return
 

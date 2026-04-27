@@ -147,8 +147,8 @@ CODE_SNIPPETS = [
     (
         "```bash\ncurl -X POST https://api.example.com/webhook"
         " \\\\\n  -H 'Content-Type: application/json'"
-        " \\\\\n  -d '{\"event\": \"deploy\","
-        " \"status\": \"success\"}'\n```"
+        ' \\\\\n  -d \'{"event": "deploy",'
+        ' "status": "success"}\'\n```'
     ),
 ]
 
@@ -161,16 +161,16 @@ EMOJI_MESSAGES = [
 ]
 
 REACTION_EMOJIS = [
-    "\U0001F44D",  # thumbs up
-    "\u2764\uFE0F",  # red heart
-    "\U0001F604",  # grinning
-    "\U0001F389",  # party
-    "\U0001F44F",  # clapping
-    "\U0001F525",  # fire
-    "\U0001F680",  # rocket
-    "\U0001F440",  # eyes
+    "\U0001f44d",  # thumbs up
+    "\u2764\ufe0f",  # red heart
+    "\U0001f604",  # grinning
+    "\U0001f389",  # party
+    "\U0001f44f",  # clapping
+    "\U0001f525",  # fire
+    "\U0001f680",  # rocket
+    "\U0001f440",  # eyes
     "\u2705",  # check mark
-    "\U0001F4AF",  # 100
+    "\U0001f4af",  # 100
 ]
 
 
@@ -202,7 +202,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
     from uniffy.core.models.chat.reaction import ChatReaction
     from uniffy.core.search.meilisearch import close_meilisearch, init_meilisearch
     from uniffy.core.types import generate_id
-    from uniffy.db.session import close_db, get_async_session, init_db
+    from uniffy.db.session import close_db, init_db, open_session
 
     load_dotenv()
 
@@ -221,7 +221,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
     await init_meilisearch()
 
     try:
-        async for session in get_async_session():
+        async with open_session() as session:
             # Get org - resolve slug from env (same logic as seed.py)
             org_slug = os.environ.get("DEFAULT_ORG_SLUG")
             if not org_slug:
@@ -230,9 +230,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                 org_name = os.environ.get("DEFAULT_ORG_NAME", "Default")
                 org_slug = slugify(org_name)
 
-            result = await session.execute(
-                select(Organization).where(Organization.slug == org_slug)
-            )
+            result = await session.execute(select(Organization).where(Organization.slug == org_slug))
             org = result.scalar_one_or_none()
             if not org:
                 logger.error(
@@ -268,9 +266,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             )
             existing = result.scalar_one_or_none()
             if existing:
-                logger.warning(
-                    f"Stress channel #{config.channel_name} already exists. Skipping."
-                )
+                logger.warning(f"Stress channel #{config.channel_name} already exists. Skipping.")
                 return
 
             # Create the channel
@@ -322,23 +318,19 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             # Determine visibility for search index
             is_public = channel.channel_type == ChannelType.PUBLIC
             search_visibility = "ORGANIZATION" if is_public else "PRIVATE"
-            member_id_strs = (
-                None if is_public else [u.id for u in users]
-            )
+            member_id_strs = None if is_public else [u.id for u in users]
 
             for i in range(config.message_count):
                 sender = random.choice(users)
-                msg_time = start_time + (time_step * i) + timedelta(
-                    seconds=random.randint(0, int(time_step.total_seconds()))
+                msg_time = (
+                    start_time
+                    + (time_step * i)
+                    + timedelta(seconds=random.randint(0, int(time_step.total_seconds())))
                 )
                 content = generate_message_content()
 
                 # Decide if this is a thread reply
-                is_reply = (
-                    root_message_ids
-                    and random.random() < 0.15
-                    and len(root_message_ids) > 0
-                )
+                is_reply = root_message_ids and random.random() < 0.15 and len(root_message_ids) > 0
                 root_id = random.choice(root_message_ids) if is_reply else None
 
                 msg = ChatMessage(

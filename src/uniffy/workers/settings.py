@@ -32,8 +32,10 @@ setup_observability(
 from arq.cron import cron
 
 from uniffy.workers.tasks import (
+    auto_unmute_channels,
     check_calendar_reminders,
     check_task_due_dates,
+    compact_session,
     deliver_email_notification,
     deliver_push_notification,
     execute_agent_cron_tasks,
@@ -50,6 +52,8 @@ from uniffy.workers.tasks import (
     on_shutdown,
     on_startup,
     process_notification_event,
+    recalculate_all_storage_usage,
+    respond_to_chat_message,
     send_email_digest,
 )
 
@@ -99,6 +103,9 @@ class WorkerSettings:
         extract_document_content,
         # Agent cron (on-demand trigger)
         execute_single_agent_cron_task,
+        # Agent chat responses
+        respond_to_chat_message,
+        compact_session,
         process_notification_event,
         deliver_push_notification,
         deliver_email_notification,
@@ -111,6 +118,8 @@ class WorkerSettings:
         cron(execute_agent_cron_tasks, minute=None),  # Every minute
         cron(check_task_due_dates, minute=None),  # Every minute
         cron(flush_chat_read_cursors, second={0, 30}),  # Every 30 seconds
+        cron(auto_unmute_channels, minute=None, second={0}),  # Every minute at :00
+        cron(recalculate_all_storage_usage, hour=3, minute=0),  # Daily at 3:00 AM
     ]
 
     # Lifecycle hooks
@@ -120,7 +129,7 @@ class WorkerSettings:
     on_job_end = on_job_end
 
     # Valkey/Redis connection (loaded from environment at module import)
-    redis_settings = ValkeyConfig.from_env().to_redis_settings()
+    redis_settings = ValkeyConfig.from_env().to_arq_redis_settings()
 
     # Queue configuration (uses default ARQ queue name)
     # All values configurable via environment variables

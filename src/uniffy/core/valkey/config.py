@@ -1,19 +1,53 @@
 """Shared Valkey connection configuration.
 
-Centralizes environment-variable reading for all Valkey consumers
-(ARQ queue, Pub/Sub publisher, Pub/Sub subscribers).
+Three connection tiers, each tuned for its access pattern:
+
+- **ARQ queue** -- ``to_arq_redis_settings()``. Long-lived job dequeue
+  pool. 10s socket timeout, 5 retries. ARQ owns its own pool.
+- **Pub/Sub publisher + subscribers** -- ``to_pubsub_kwargs()``. 5s
+  socket timeout, retry on transient errors, 30s health check. Pubsub
+  connections enter a special mode and cannot be used for regular
+  commands.
+- **Ops client** -- ``to_ops_kwargs()``. Fail-fast profile for cache,
+  presence, rate-limit and mention-state. 200ms connect, 100ms read,
+  zero retries, no health checks. Sub-millisecond on a healthy node;
+  hard-fails fast when Valkey is slow / down so callers fall through
+  to PG inside the per-call deadline guard (see ``valkey.ops``).
+
+The host/port/password/database fields are the only env-driven values.
+Per-tier timeouts are constants here -- a single dial, set centrally.
 """
 
 import os
 from dataclasses import dataclass
+from typing import Any
 
 from arq.connections import RedisSettings
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
+
+_PUBSUB_SOCKET_CONNECT_TIMEOUT = 5
+_PUBSUB_SOCKET_TIMEOUT = 5
+_PUBSUB_HEALTH_CHECK_INTERVAL = 30
+_PUBSUB_RETRY_ERRORS = (
+    RedisConnectionError,
+    RedisTimeoutError,
+    OSError,
+    ConnectionResetError,
+)
+
+_OPS_SOCKET_CONNECT_TIMEOUT = 0.2
+_OPS_SOCKET_TIMEOUT = 0.1
+_OPS_MAX_CONNECTIONS = 10
+
+_ARQ_CONN_TIMEOUT = 10
+_ARQ_CONN_RETRIES = 5
+_ARQ_CONN_RETRY_DELAY = 1.0
 
 
 @dataclass
 class ValkeyConfig:
-    """
-    Valkey connection configuration.
+    """Valkey connection configuration.
 
     Attributes
     ----------
@@ -25,14 +59,6 @@ class ValkeyConfig:
         Authentication password.
     database : int
         Database number (default: 0).
-    conn_timeout : int
-        Connection timeout in seconds (default: 10).
-    conn_retries : int
-        Number of connection retry attempts (default: 5).
-    conn_retry_delay : float
-        Delay between retries in seconds (default: 1.0).
-    socket_keepalive : bool
-        Enable TCP keepalive on connections (default: True).
 
     """
 
@@ -40,15 +66,10 @@ class ValkeyConfig:
     port: int
     password: str
     database: int = 0
-    conn_timeout: int = 10
-    conn_retries: int = 5
-    conn_retry_delay: float = 1.0
-    socket_keepalive: bool = True
 
     @classmethod
     def from_env(cls) -> ValkeyConfig:
-        """
-        Create config from environment variables.
+        """Create config from environment variables.
 
         Environment Variables
         ---------------------
@@ -60,12 +81,6 @@ class ValkeyConfig:
             Valkey password (default: uniffy-valkey-dev)
         VALKEY_DATABASE : int
             Database number (default: 0)
-        VALKEY_CONN_TIMEOUT : int
-            Connection timeout in seconds (default: 10)
-        VALKEY_CONN_RETRIES : int
-            Number of connection retry attempts (default: 5)
-        VALKEY_CONN_RETRY_DELAY : float
-            Delay between retries in seconds (default: 1.0)
 
         """
         return cls(
@@ -73,40 +88,51 @@ class ValkeyConfig:
             port=int(os.getenv("VALKEY_PORT", "6380")),
             password=os.getenv("VALKEY_PASSWORD", "uniffy-valkey-dev"),
             database=int(os.getenv("VALKEY_DATABASE", "0")),
-            conn_timeout=int(os.getenv("VALKEY_CONN_TIMEOUT", "10")),
-            conn_retries=int(os.getenv("VALKEY_CONN_RETRIES", "5")),
-            conn_retry_delay=float(os.getenv("VALKEY_CONN_RETRY_DELAY", "1.0")),
         )
 
-    def to_redis_settings(self) -> RedisSettings:
-        """
-        Convert to ARQ RedisSettings.
+    def to_url(self) -> str:
+        """Build a redis:// URL for use with the redis-py async client."""
+        return f"redis://:{self.password}@{self.host}:{self.port}/{self.database}"
 
-        Returns
-        -------
-        RedisSettings
-            ARQ-compatible Redis connection settings with retry and timeout
-            configuration for network resilience.
-
-        """
+    def to_arq_redis_settings(self) -> RedisSettings:
+        """ARQ-compatible Redis settings for the worker queue pool."""
         return RedisSettings(
             host=self.host,
             port=self.port,
             password=self.password,
             database=self.database,
-            conn_timeout=self.conn_timeout,
-            conn_retries=self.conn_retries,
-            conn_retry_delay=self.conn_retry_delay,
+            conn_timeout=_ARQ_CONN_TIMEOUT,
+            conn_retries=_ARQ_CONN_RETRIES,
+            conn_retry_delay=_ARQ_CONN_RETRY_DELAY,
         )
 
-    def to_url(self) -> str:
-        """
-        Build a redis:// URL for use with redis-py async client.
+    def to_pubsub_kwargs(self) -> dict[str, Any]:
+        """Kwargs for ``aioredis.from_url`` on the pubsub publisher / subscribers."""
+        return {
+            "decode_responses": True,
+            "socket_connect_timeout": _PUBSUB_SOCKET_CONNECT_TIMEOUT,
+            "socket_timeout": _PUBSUB_SOCKET_TIMEOUT,
+            "socket_keepalive": True,
+            "socket_keepalive_options": {},
+            "retry_on_error": list(_PUBSUB_RETRY_ERRORS),
+            "retry_on_timeout": True,
+            "health_check_interval": _PUBSUB_HEALTH_CHECK_INTERVAL,
+        }
 
-        Returns
-        -------
-        str
-            Connection URL in the form ``redis://:password@host:port/db``.
+    def to_ops_kwargs(self) -> dict[str, Any]:
+        """Kwargs for ``aioredis.from_url`` on the fail-fast ops client.
 
+        Tuned so a single cache call costs at most ~100ms when Valkey is
+        slow / unreachable. Combined with the 150ms ``ops_call`` deadline
+        guard in ``valkey.ops``, the worst-case wall time on a Valkey
+        outage is bounded; callers fall through to PG immediately.
         """
-        return f"redis://:{self.password}@{self.host}:{self.port}/{self.database}"
+        return {
+            "decode_responses": True,
+            "socket_connect_timeout": _OPS_SOCKET_CONNECT_TIMEOUT,
+            "socket_timeout": _OPS_SOCKET_TIMEOUT,
+            "retry_on_error": [],
+            "retry_on_timeout": False,
+            "health_check_interval": 0,
+            "max_connections": _OPS_MAX_CONNECTIONS,
+        }

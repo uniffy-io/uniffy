@@ -10,9 +10,20 @@ from typing import Any
 
 from loguru import logger
 
+from uniffy.core.llm_providers import (
+    close_provider_invalidation_subscriber,
+    init_provider_invalidation_subscriber,
+)
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
-from uniffy.core.valkey import close_pubsub, close_queue, init_pubsub, init_queue
+from uniffy.core.valkey import (
+    close_ops_client,
+    close_pubsub,
+    close_queue,
+    init_ops_client,
+    init_pubsub,
+    init_queue,
+)
 from uniffy.db import close_db, init_db
 from uniffy.observability.metrics import (
     WORKER_JOB_DURATION,
@@ -70,6 +81,18 @@ async def on_startup(ctx: dict[str, Any]) -> None:
     except Exception as e:
         logger.warning(f"Worker: Pub/Sub not available: {e}")
 
+    # Fail-fast ops client (cache + presence + rate-limit + mention-state)
+    try:
+        await init_ops_client()
+        logger.info("Worker: Valkey ops client initialized")
+    except Exception as e:
+        logger.warning(f"Worker: Valkey ops client not available: {e}")
+
+    try:
+        await init_provider_invalidation_subscriber()
+    except Exception as e:
+        logger.warning(f"Worker: Provider invalidation subscriber not available: {e}")
+
     # Load VAPID config from DB/env (non-blocking - push works without it)
     try:
         from uniffy.core.config.push import load_vapid_config
@@ -96,6 +119,8 @@ async def on_shutdown(ctx: dict[str, Any]) -> None:
     logger.info("Worker shutting down - cleaning up resources...")
 
     for name, coro in [
+        ("provider_lru_subscriber", close_provider_invalidation_subscriber()),
+        ("ops_client", close_ops_client()),
         ("queue", close_queue()),
         ("pubsub", close_pubsub()),
         ("meilisearch", close_meilisearch()),

@@ -90,6 +90,8 @@ INDEX_SETTINGS = MeilisearchSettings(
         "blocked_group_ids",
         "tags",
         "updated_at",  # Time-bounded searches (e.g., "modified this week")
+        "metadata.channel_id",  # Chat message scoping by channel
+        "metadata.sender_id",  # Chat message filtering by sender
     ],
     # Fields available for sorting
     sortable_attributes=[
@@ -452,6 +454,7 @@ class MeilisearchClient:
         tag_filters: list[str] | None = None,
         my_content_only: bool = False,
         owner_filter: UUID | None = None,
+        metadata_filters: dict[str, str] | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> SearchResults:
@@ -476,6 +479,8 @@ class MeilisearchClient:
             Only return content owned by the user.
         owner_filter : UUID | None
             Filter by specific owner.
+        metadata_filters : dict[str, str] | None
+            Filter by metadata fields (e.g., channel_id, sender_id).
         limit : int
             Maximum results to return.
         offset : int
@@ -505,15 +510,20 @@ class MeilisearchClient:
 
         # Add type exclusion filters
         if exclude_type_filters:
-            exclude_filter = " AND ".join(
-                f'entity_type != "{t}"' for t in exclude_type_filters
-            )
+            exclude_filter = " AND ".join(f'entity_type != "{t}"' for t in exclude_type_filters)
             filters = f"({filters}) AND ({exclude_filter})"
 
         # Add tag filters (AND - all tags must match)
         if tag_filters:
             tag_conditions = " AND ".join(f'tags = "{tag}"' for tag in tag_filters)
             filters = f"({filters}) AND ({tag_conditions})"
+
+        # Add metadata filters (e.g., channel_id, sender_id for chat)
+        if metadata_filters:
+            meta_conditions = " AND ".join(
+                f'metadata.{key} = "{value}"' for key, value in metadata_filters.items()
+            )
+            filters = f"({filters}) AND ({meta_conditions})"
 
         # Execute search
         start = time.perf_counter()
@@ -576,18 +586,14 @@ class MeilisearchClient:
             '(access_mode = "OPEN_TO_ORG" AND baseline_role EXISTS)',
         ]
         if user_group_ids:
-            group_allow = " OR ".join(
-                f'shared_group_ids = "{gid}"' for gid in user_group_ids
-            )
+            group_allow = " OR ".join(f'shared_group_ids = "{gid}"' for gid in user_group_ids)
             permission_conditions.append(f"({group_allow})")
         permission_filter = " OR ".join(permission_conditions)
 
         # Block conditions (deny when any of these is true)
         block_conditions = [f'NOT blocked_user_ids = "{user_id}"']
         if user_group_ids:
-            block_conditions.extend(
-                f'NOT blocked_group_ids = "{gid}"' for gid in user_group_ids
-            )
+            block_conditions.extend(f'NOT blocked_group_ids = "{gid}"' for gid in user_group_ids)
         block_filter = " AND ".join(block_conditions)
 
         return f"{org_filter} AND ({block_filter}) AND ({permission_filter})"
@@ -668,9 +674,7 @@ class MeilisearchClient:
         await index.update_documents([partial])
         elapsed_ms = (time.perf_counter() - start) * 1000
         SEARCH_OPERATIONS_TOTAL.labels(operation="update_access_policy").inc()
-        SEARCH_OPERATION_DURATION.labels(operation="update_access_policy").observe(
-            elapsed_ms / 1000
-        )
+        SEARCH_OPERATION_DURATION.labels(operation="update_access_policy").observe(elapsed_ms / 1000)
         logger.info(
             f"Meilisearch: update_access_policy mode={access_mode} baseline={baseline_role}",
             ms=f"{elapsed_ms:.1f}",

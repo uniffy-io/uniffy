@@ -77,9 +77,9 @@ async def load_vapid_config() -> None:
         from uniffy.core.models.app_settings.application_setting import (
             ApplicationSetting,
         )
-        from uniffy.db.session import get_async_session
+        from uniffy.db.session import open_session
 
-        async for session in get_async_session():
+        async with open_session() as session:
             result = await session.execute(
                 select(ApplicationSetting).where(
                     ApplicationSetting.key.in_([

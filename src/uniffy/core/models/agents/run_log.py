@@ -65,7 +65,13 @@ class AgentRunLog(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    session_id: UUID = Field(nullable=False)
+    # Nullable so chat-triggered runs (which have no AgentSession) can
+    # still be persisted. The usage page filters by organization_id +
+    # created_at and uses count(distinct session_id) for the "sessions"
+    # tile, which ignores NULL by SQL semantics.
+    session_id: UUID | None = Field(default=None, nullable=True)
+    # Set on chat-triggered runs so we can later slice usage by channel.
+    channel_id: UUID | None = Field(default=None, nullable=True)
     agent_id: UUID = Field(nullable=False)
     user_id: UUID = Field(nullable=False)
     organization_id: UUID = Field(nullable=False)

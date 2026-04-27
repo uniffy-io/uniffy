@@ -61,12 +61,15 @@ class TestValidateAccessMode:
         with pytest.raises(ValidationError, match="BLOCKED"):
             ops._validate_access_mode(AccessMode.OPEN_TO_ORG, ContentRole.BLOCKED)
 
-    @pytest.mark.parametrize("valid_baseline", [
-        ContentRole.VIEWER,
-        ContentRole.COMMENTER,
-        ContentRole.EDITOR,
-        ContentRole.ADMIN,
-    ])
+    @pytest.mark.parametrize(
+        "valid_baseline",
+        [
+            ContentRole.VIEWER,
+            ContentRole.COMMENTER,
+            ContentRole.EDITOR,
+            ContentRole.ADMIN,
+        ],
+    )
     def test_open_to_org_accepts_valid_baselines(self, valid_baseline: ContentRole) -> None:
         ops = _make_ops()
         ops._validate_access_mode(AccessMode.OPEN_TO_ORG, valid_baseline)
@@ -157,11 +160,16 @@ class TestAddMemberRejections:
         content = _fake_content()
         target_user_id = uuid7()
         p1, p2 = self._patch_prereqs(ops, content)
-        with p1, p2, patch.object(
-            ops.permission_checker,
-            "is_org_admin",
-            AsyncMock(return_value=True),
-        ), pytest.raises(ValidationError, match="Organization admins cannot be blocked"):
+        with (
+            p1,
+            p2,
+            patch.object(
+                ops.permission_checker,
+                "is_org_admin",
+                AsyncMock(return_value=True),
+            ),
+            pytest.raises(ValidationError, match="Organization admins cannot be blocked"),
+        ):
             asyncio.run(
                 ops.add_member(
                     actor_user_id=uuid7(),
@@ -277,7 +285,9 @@ class TestSetAccessModeRejections:
 
         p1, p2 = self._patch_prereqs(ops, content)
         with (
-            p1, p2, patch.object(ops, "_sync_search_sharing", search_sync_mock),
+            p1,
+            p2,
+            patch.object(ops, "_sync_search_sharing", search_sync_mock),
             patch.object(ops, "_sync_search_access_policy", AsyncMock()),
         ):
             asyncio.run(
